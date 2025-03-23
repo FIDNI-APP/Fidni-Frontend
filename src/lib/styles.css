@@ -1,0 +1,456 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;700&display=swap');
+  
+  .cube-unit {
+    fill-opacity: .9;
+    stroke-miterlimit: 0;
+  }
+
+
+
+.cube-unit {
+  fill-opacity: .9;
+  stroke-miterlimit:0;
+}
+
+.logo-container img {
+    transition: opacity 0.3s ease;
+  }
+  .custom-gradient {
+    background: linear-gradient(to right, rgb(44, 57, 48), rgb(162, 123, 92));
+  }
+
+
+
+
+  :root {
+    --customblue: #F4F7F9;
+    --customblue1:  #DDE5ED;
+    --customblue2: #2C5282;
+    --customblue3: #2B6CB0;
+  }
+  
+  .custom-gradient1 {
+    background: linear-gradient(to right, var(--customblue), var(--customblue1));
+  }
+
+  .custom-gradient {
+    background: linear-gradient(to right, var(--customblue1), var(--customblue), var(--customblue3));
+  }
+
+  .fjalla-one-regular {
+    font-family: "Fjalla One", serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+  .ProseMirror {
+          min-height: 400px;
+          outline: none;
+        }
+        
+        /* Styling for the math editor and render */
+        .Tiptap-mathematics-editor {
+          background-color: rgba(0, 0, 0, 0.04);
+          border-radius: 3px;
+          padding: 0 4px;
+          font-family: monospace;
+        }
+        
+        .Tiptap-mathematics-render {
+          display: inline-block;
+          padding: 0 4px;
+        }
+        
+        /* Style block math differently */
+        .ProseMirror p:has(.Tiptap-mathematics-render:only-child:has(.katex-display)) {
+          display: flex;
+          justify-content: center;
+          margin: 1rem 0;}
+/* TipTap Read-only Editor Styles */
+/* TipTap Read-only Editor Styles */
+.tiptap-readonly-editor {
+  /* Remove editor-like UI */
+  outline: none;
+  cursor: auto;
+}
+
+.tiptap-readonly-editor .ProseMirror {
+  outline: none !important;
+  /* Prevent any editing UI */
+  caret-color: transparent;
+  /* Remove minimum height and extra padding */
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Handle math rendering */
+.tiptap-readonly-editor [data-math] {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tiptap-readonly-editor [data-math-display="block"] {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+/* Improve LaTeX style */
+/* Make sure images don't overflow */
+.tiptap-readonly-editor img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Text styling */
+.tiptap-readonly-editor strong {
+  font-weight: bold;
+}
+
+.tiptap-readonly-editor em {
+  font-style: italic;
+}
+
+/* Fix for long LaTeX formulas */
+.tiptap-readonly-editor .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* Color applied text */
+.tiptap-readonly-editor [style*="color"] {
+  display: inline;
+}
+/* TipTap Read-only Editor Styles */
+.tiptap-readonly-editor {
+  /* Remove editor-like UI */
+  outline: none;
+  cursor: auto;
+}
+
+.tiptap-readonly-editor .ProseMirror {
+  outline: none !important;
+  /* Prevent any editing UI */
+  caret-color: transparent;
+}
+
+/* Compact mode for cards and previews */
+.tiptap-compact .ProseMirror {
+  /* Remove minimum height and extra padding */
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure paragraphs don't add extra bottom spacing in compact mode */
+.tiptap-compact .ProseMirror > p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Ensure last element doesn't add extra space */
+.tiptap-compact .ProseMirror > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Handle math rendering */
+.tiptap-readonly-editor [data-math] {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tiptap-readonly-editor [data-math-display="block"] {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+/* Improve LaTeX style */
+.latex-style {
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1.5;
+}
+
+.latex-style .ProseMirror p {
+  margin-bottom: 1rem;
+}
+
+/* Make sure images don't overflow and display properly */
+.tiptap-readonly-editor img,
+.tiptap-readonly-editor .content-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.5rem 0;
+  border-radius: 4px;
+}
+
+/* Text styling */
+.tiptap-readonly-editor strong {
+  font-weight: bold;
+}
+
+.tiptap-readonly-editor em {
+  font-style: italic;
+}
+
+/* Fix for long LaTeX formulas */
+.tiptap-readonly-editor .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* Color applied text */
+.tiptap-readonly-editor [style*="color"] {
+  display: inline;
+}
+
+  .latex-style {
+    font-family: "Latin Modern Roman", serif;
+    font-weight: 400;
+    font-style: normal;
+}
+.mathpazo-style {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+
+  /* styles.css or the CSS file you use for your app */
+
+/* Add these styles to make KaTeX formulas wrap better in your cards */
+
+/* Wrapper for content with KaTeX */
+.katex-container {
+  width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+/* For inline math */
+.katex-inline {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+/* For block math */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0;
+  margin: 0.5em 0;
+}
+
+/* For long math expressions, allow scrolling only when needed */
+.prose .math-block {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1em 0;
+}
+
+/* For regular text, ensure it wraps properly */
+.prose p, .prose span:not(.katex) {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+
+/* Make complex KaTeX expressions scrollable horizontally if they're too long */
+.katex-html {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px; /* Space for scrollbar */
+}
+
+/* Optional: Hide scrollbar but keep functionality */
+.katex-html::-webkit-scrollbar {
+  height: 4px;
+}
+
+.katex-html::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+/* Ajoutez ce CSS dans votre fichier de styles global */
+
+/* Style pour le conteneur de contenu */
+.content-card .prose {
+  max-width: none;
+  width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Style pour les éléments de texte spécifiques */
+.text-wrapper {
+  word-break: break-all !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  -webkit-hyphens: auto !important;
+  hyphens: auto !important;
+}
+
+
+.component {
+  white-space: normal;
+  width: 200px; /* Set a width to make the content overflow */
+}
+
+
+
+/* Style pour gérer les formules mathématiques */
+.math-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Fix pour les expressions KaTex avec des caractères spéciaux */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+}
+
+/* Assure que KaTeX ne dépasse pas la largeur */
+.katex-html {
+  max-width: 100%;
+}
+
+/* Override pour les sélecteurs spécifiques de KaTeX */
+.katex, .katex-mathml {
+  max-width: 100%;
+}
+
+/* Correction pour les énumérations et listes */
+
+/* Réparation des problèmes avec les longues chaînes de texte sans espace */
+.content-card {
+  overflow-wrap: break-words; /* Ensures long words wrap on overflow */
+  white-space: normal; /* Prevents non-breaking spaces from preventing wrapping */
+  width: 100%; /* Makes sure the container takes full width of its parent */
+  height: auto; /* Ensures the container height adjusts based on content */
+  
+  
+}
+
+/* Math Formulas Dropdown Styles */
+
+/* Scrollbar styling for the formulas dropdown */
+.math-formulas-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.math-formulas-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.math-formulas-dropdown::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.math-formulas-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Formula button hover effect */
+.formula-button:hover {
+  background-color: rgba(79, 70, 229, 0.1);
+}
+
+/* Category header styling */
+.formula-category {
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+}
+
+/* Tooltip for formula descriptions */
+.formula-tooltip {
+  position: relative;
+}
+
+.formula-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: rgba(55, 65, 81, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  z-index: 30;
+  max-width: 200px;
+}
+
+/* Make sure formulas with longer content display block */
+[data-math-display="block"] {
+  overflow-x: auto;
+  margin: 1rem 0;
+  text-align: center;
+  width: 100%;
+}
+
+/* Additional styling for rendered math in the editor */
+.ProseMirror [data-math]:not([data-math-display="block"]) {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.ProseMirror [data-math-display="block"] {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.math-block {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+/* Ensure inline math is properly aligned */
+.math-inline {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Additional styling for LaTeX content */
+.ProseMirror .katex-display {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+/* Fix for display mode equations */
+[data-type="mathematics"][data-mode="display"] {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 1rem 0;
+}
