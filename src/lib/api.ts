@@ -38,86 +38,9 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Intercepteur de requête pour ajouter le token CSRF
-api.interceptors.request.use((config) => {
-  const csrfToken = Cookies.get('csrftoken');
-  if (csrfToken) {
-    config.headers['X-CSRFToken'] = csrfToken;
-  }
-  
-  // Ajouter le token JWT s'il existe
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  return config;
-});
 
 // Intercepteur de réponse pour gérer les erreurs et le rafraîchissement du token
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // Si l'erreur n'est pas 401 ou si la demande a déjà été retentée, rejeter directement
-    if (error.response?.status !== 401 || originalRequest._retry) {
-      return Promise.reject(error);
-    }
-    
-    // Si nous sommes déjà en train de rafraîchir le token, mettre la demande en file d'attente
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject, config: originalRequest });
-      })
-        .then(token => {
-          return api(originalRequest);
-        })
-        .catch(err => {
-          return Promise.reject(err);
-        });
-    }
-    
-    originalRequest._retry = true;
-    isRefreshing = true;
-    
-    // Tenter de rafraîchir le token
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-      
-      // Utiliser notre instance API configurée plutôt qu'axios directement
-      const response = await api.post('/auth/token/refresh/', {
-        refresh: refreshToken
-      });
-      
-      if (response.status === 200) {
-        localStorage.setItem('token', response.data.access);
-        originalRequest.headers['Authorization'] = `Bearer ${response.data.access}`;
-        
-        // Traiter la file d'attente avec le nouveau token
-        processQueue(null, response.data.access);
-        return api(originalRequest);
-      }
-    } catch (refreshError) {
-      // En cas d'échec du rafraîchissement, déconnecter l'utilisateur
-      processQueue(refreshError, null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      
-      // Rediriger vers la page de connexion si nécessaire
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-      
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
-  }
-);
+
 
 // Add these functions to your existing lib/api.ts file
 
