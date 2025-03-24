@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Filter, BookOpen, GraduationCap, ChevronUp, ChevronDown, Tag, BarChart3 } from 'lucide-react';
-import { getClassLevels, getSubjects, getChapters } from '@/lib/api';
-import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty } from '@/types';
+import { X, Filter, BookOpen, GraduationCap, ChevronUp, ChevronDown, Tag, BarChart3, FileText, Award } from 'lucide-react';
+import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems } from '@/lib/api';
+import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty, Subfield, Theorem } from '@/types';
 
 interface FiltersProps {
   onFilterChange: (filters: {
     classLevels: string[];
     subjects: string[];
+    subfields: string[];
     chapters: string[];
+    theorems: string[];
     difficulties: Difficulty[];
   }) => void;
 }
@@ -15,7 +17,9 @@ interface FiltersProps {
 type FilterCategories = {
   classLevels: string[];
   subjects: string[];
+  subfields: string[];
   chapters: string[];
+  theorems: string[];
   difficulties: Difficulty[];
 };
 
@@ -28,30 +32,48 @@ type FilterSection = {
 export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   const [classLevels, setClassLevels] = useState<ClassLevelModel[]>([]);
   const [subjects, setSubjects] = useState<SubjectModel[]>([]);
+  const [subfields, setSubfields] = useState<Subfield[]>([]);
   const [chapters, setChapters] = useState<ChapterModel[]>([]);
+  const [theorems, setTheorems] = useState<Theorem[]>([]);
   const [selectedFilters, setSelectedFilters] = useState<FilterCategories>({
     classLevels: [],
     subjects: [],
+    subfields: [],
     chapters: [],
+    theorems: [],
     difficulties: [],
   });
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     classLevels: true,
     subjects: true,
+    subfields: true,
     chapters: true,
+    theorems: true,
     difficulties: true,
   });
+  const [isLoadingSubfields, setIsLoadingSubfields] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
+  const [isLoadingTheorems, setIsLoadingTheorems] = useState(false);
 
-  // Condition to check if both class levels and subjects are selected
-  const shouldShowChapterOptions = () => {
+  // Conditions to check if we should load data for hierarchical filters
+  const shouldShowSubfieldOptions = () => {
     return selectedFilters.classLevels.length > 0 && selectedFilters.subjects.length > 0;
+  };
+
+  const shouldShowChapterOptions = () => {
+    return shouldShowSubfieldOptions() && selectedFilters.subfields.length > 0;
+  };
+
+  const shouldShowTheoremOptions = () => {
+    return shouldShowChapterOptions() && selectedFilters.chapters.length > 0;
   };
 
   const filterSections: FilterSection[] = [
     { title: 'Niveau', category: 'classLevels', icon: <GraduationCap className="w-4 h-4 text-indigo-600" /> },
     { title: 'Matières', category: 'subjects', icon: <BookOpen className="w-4 h-4 text-purple-600" /> },
-    { title: 'Chapitres', category: 'chapters', icon: <Tag className="w-4 h-4 text-indigo-600" /> },
+    { title: 'Sous-domaines', category: 'subfields', icon: <FileText className="w-4 h-4 text-indigo-600" /> },
+    { title: 'Chapitres', category: 'chapters', icon: <Tag className="w-4 h-4 text-purple-600" /> },
+    { title: 'Théorèmes', category: 'theorems', icon: <Award className="w-4 h-4 text-indigo-600" /> },
     { title: 'Difficulté', category: 'difficulties', icon: <BarChart3 className="w-4 h-4 text-purple-600" /> },
   ];
 
@@ -64,6 +86,19 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   }, [selectedFilters.classLevels]);
 
   useEffect(() => {
+    if (shouldShowSubfieldOptions()) {
+      loadSubfields();
+    } else {
+      // Clear subfields when conditions aren't met
+      setSelectedFilters(prev => ({
+        ...prev,
+        subfields: []
+      }));
+      setSubfields([]);
+    }
+  }, [selectedFilters.subjects, selectedFilters.classLevels]);
+
+  useEffect(() => {
     if (shouldShowChapterOptions()) {
       loadChapters();
     } else {
@@ -72,8 +107,22 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         ...prev,
         chapters: []
       }));
+      setChapters([]);
     }
-  }, [selectedFilters.subjects, selectedFilters.classLevels]);
+  }, [selectedFilters.subfields, selectedFilters.subjects, selectedFilters.classLevels]);
+
+  useEffect(() => {
+    if (shouldShowTheoremOptions()) {
+      loadTheorems();
+    } else {
+      // Clear theorems when conditions aren't met
+      setSelectedFilters(prev => ({
+        ...prev,
+        theorems: []
+      }));
+      setTheorems([]);
+    }
+  }, [selectedFilters.chapters, selectedFilters.subfields, selectedFilters.subjects, selectedFilters.classLevels]);
 
   useEffect(() => {
     onFilterChange(selectedFilters);
@@ -102,15 +151,41 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     }
   };
 
+  const loadSubfields = async () => {
+    try {
+      setIsLoadingSubfields(true);
+      // On attend d'avoir au moins un sujet sélectionné
+      if (selectedFilters.subjects.length === 0) {
+        setSubfields([]);
+        return;
+      }
+      
+      // Charger les sous-domaines pour chaque sujet sélectionné
+      const promiseResults = await Promise.all(
+        selectedFilters.subjects.map(subjectId => 
+          getSubfields(subjectId, selectedFilters.classLevels)
+        )
+      );
+      
+      // Fusionner et dédupliquer les résultats
+      const allSubfields = promiseResults.flat();
+      const uniqueSubfields = getUniqueById(allSubfields);
+      setSubfields(uniqueSubfields);
+    } catch (error) {
+      console.error('Failed to load subfields:', error);
+    } finally {
+      setIsLoadingSubfields(false);
+    }
+  };
+
   const loadChapters = async () => {
     try {
       setIsLoadingChapters(true);
       
-      // If your API has pagination, you can fetch all chapters by making multiple requests
-      // This is just an example - adjust according to your actual API implementation
       const data = await getChapters(
-        selectedFilters.subjects, 
-        selectedFilters.classLevels
+        selectedFilters.subjects[0], // On utilise le premier sujet sélectionné
+        selectedFilters.classLevels,
+        selectedFilters.subfields
       );
       
       const uniqueChapters = getUniqueById(data);
@@ -119,6 +194,26 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       console.error('Failed to load chapters:', error);
     } finally {
       setIsLoadingChapters(false);
+    }
+  };
+
+  const loadTheorems = async () => {
+    try {
+      setIsLoadingTheorems(true);
+      
+      const data = await getTheorems(
+        selectedFilters.subjects[0], // On utilise le premier sujet sélectionné
+        selectedFilters.classLevels,
+        selectedFilters.subfields,
+        selectedFilters.chapters
+      );
+      
+      const uniqueTheorems = getUniqueById(data);
+      setTheorems(uniqueTheorems);
+    } catch (error) {
+      console.error('Failed to load theorems:', error);
+    } finally {
+      setIsLoadingTheorems(false);
     }
   };
 
@@ -143,9 +238,16 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   };
 
   const getFilterName = (category: keyof FilterCategories, id: string) => {
-    const source = { classLevels, subjects, chapters };
+    const source: Record<string, any[]> = { 
+      classLevels, 
+      subjects, 
+      subfields,
+      chapters,
+      theorems
+    };
+    
     if (category in source) {
-      const items = source[category as keyof typeof source];
+      const items = source[category];
       const found = items.find(item => item.id === id);
       return found ? found.name : id;
     }
@@ -192,11 +294,34 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     const { title, category, icon } = section;
     const isExpanded = expandedSections[category];
 
-    // For chapters section specifically, add max height and scrolling if many items
-    const isChaptersSection = category === 'chapters';
-    const chaptersContainerClass = isChaptersSection 
-      ? "max-h-[300px] overflow-y-auto pr-2" 
-      : "";
+    // Pour les sections avec beaucoup d'items, ajouter une hauteur max et un défilement
+    const needsScroll = ['chapters', 'theorems', 'subfields'].includes(category);
+    const scrollableClass = needsScroll ? "max-h-[300px] overflow-y-auto pr-2" : "";
+
+    // Déterminer si cette section est désactivée en fonction de la hiérarchie
+    let isDisabled = false;
+    let disabledMessage = "";
+    
+    if (category === 'subfields' && !shouldShowSubfieldOptions()) {
+      isDisabled = true;
+      disabledMessage = "Veuillez sélectionner une matière et un niveau d'abord";
+    } else if (category === 'chapters' && !shouldShowChapterOptions()) {
+      isDisabled = true;
+      disabledMessage = "Veuillez sélectionner un sous-domaine d'abord";
+    } else if (category === 'theorems' && !shouldShowTheoremOptions()) {
+      isDisabled = true;
+      disabledMessage = "Veuillez sélectionner un chapitre d'abord";
+    }
+
+    // Déterminer si cette section est en cours de chargement
+    let isLoading = false;
+    if (category === 'subfields' && isLoadingSubfields) {
+      isLoading = true;
+    } else if (category === 'chapters' && isLoadingChapters) {
+      isLoading = true;
+    } else if (category === 'theorems' && isLoadingTheorems) {
+      isLoading = true;
+    }
 
     return (
       <div className="mb-2 border-b border-gray-100 pb-4">
@@ -208,10 +333,10 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
             {icon}
             <h3 className="text-lg font-medium text-gray-800">{title}</h3>
             
-            {/* Show count of available items for chapters */}
-            {isChaptersSection && chapters.length > 0 && (
+            {/* Afficher le nombre d'éléments disponibles */}
+            {!isDisabled && items.length > 0 && (
               <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
-                {chapters.length}
+                {items.length}
               </span>
             )}
           </div>
@@ -222,16 +347,15 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         </button>
         
         {isExpanded && (
-          <div className={`${chaptersContainerClass}`}>
+          <div className={scrollableClass}>
             <div className="flex flex-wrap gap-2 mt-3">
-              {/* Special handling for chapters */}
-              {category === 'chapters' && !shouldShowChapterOptions() ? (
+              {isDisabled ? (
                 <p className="text-sm text-gray-500 italic w-full">
-                  Veuillez sélectionner une matière et un niveau d'abord
+                  {disabledMessage}
                 </p>
-              ) : isLoadingChapters && category === 'chapters' ? (
+              ) : isLoading ? (
                 <p className="text-sm text-gray-500 italic w-full">
-                  Chargement des chapitres...
+                  Chargement en cours...
                 </p>
               ) : (
                 <>
@@ -247,7 +371,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200';
                     
-                    // Override for difficulty filters
+                    // Override pour les filtres de difficulté
                     if (category === 'difficulties' && !isSelected) {
                       buttonClass = getDifficultyColor(itemId);
                     }
@@ -262,16 +386,11 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
                       </button>
                     );
                   })}
-                  {items.length === 0 && category !== 'chapters' && (
+                  {items.length === 0 && (
                     <p className="text-sm text-gray-500 italic w-full">
                       {category === 'subjects' ? 
                         'Veuillez sélectionner un niveau d\'abord' : 
-                        'Aucun élément disponible'}
-                    </p>
-                  )}
-                  {items.length === 0 && category === 'chapters' && shouldShowChapterOptions() && (
-                    <p className="text-sm text-gray-500 italic w-full">
-                      Aucun chapitre disponible pour cette sélection
+                        'Aucun élément disponible pour cette sélection'}
                     </p>
                   )}
                 </>
@@ -291,7 +410,9 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     setSelectedFilters({
       classLevels: [],
       subjects: [],
+      subfields: [],
       chapters: [],
+      theorems: [],
       difficulties: [],
     });
   };
@@ -327,7 +448,11 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
                 ? classLevels
                 : section.category === 'subjects'
                   ? subjects
-                  : chapters
+                  : section.category === 'subfields'
+                    ? subfields
+                    : section.category === 'theorems'
+                      ? theorems
+                      : chapters
           )
         )}
 

@@ -180,40 +180,6 @@ export function Home() {
         </div>
       </section>
 
-      {/* API Connection Status - Section de débogage à retirer en production */}
-      {apiStatus !== 'success' && (
-        <section className="py-8 px-4 bg-gray-100 border-t border-gray-200">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-xl font-bold mb-4 text-red-600">⚠️ Problème de connexion à l'API</h2>
-            
-            <div className="bg-white p-4 rounded-lg shadow">
-              {apiStatus === 'loading' && (
-                <p className="text-blue-600 flex items-center">
-                  <span className="mr-2 inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                  Test de connexion à l'API en cours...
-                </p>
-              )}
-              {apiStatus === 'error' && (
-                <div>
-                  <p className="text-red-600 mb-2">❌ Erreur de connexion au backend</p>
-                  <p className="text-sm mb-4">{errorMessage}</p>
-                  
-                  <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                    <h3 className="font-semibold mb-2">Comment résoudre ce problème :</h3>
-                    <ol className="list-decimal pl-5 space-y-2 text-sm">
-                      <li>Assurez-vous que votre serveur backend Django est en cours d'exécution sur <code className="bg-gray-200 px-1 rounded">http://127.0.0.1:8000</code></li>
-                      <li>Vérifiez que votre configuration de proxy Vite dans <code className="bg-gray-200 px-1 rounded">vite.config.ts</code> est correcte</li>
-                      <li>Si vous utilisez des URL absolues dans vos appels API, remplacez-les par des chemins relatifs (ex: <code className="bg-gray-200 px-1 rounded">'/api/auth/login'</code> au lieu de <code className="bg-gray-200 px-1 rounded">'http://localhost:8000/api/auth/login'</code>)</li>
-                      <li>Vérifiez que CORS est correctement configuré dans votre backend Django</li>
-                      <li>Essayez d'ouvrir <code className="bg-gray-200 px-1 rounded">http://127.0.0.1:8000/api/class-levels/</code> directement dans votre navigateur pour voir si l'API répond</li>
-                    </ol>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Featured Testimonial */}
       

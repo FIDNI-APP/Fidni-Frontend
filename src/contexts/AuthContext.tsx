@@ -22,6 +22,9 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+
+
   const refreshUser = async () => {
 
     try {
@@ -43,6 +46,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   }, []);
 
+
   const checkAuth = async () => {
     try {
       setIsLoading(true);
@@ -51,6 +55,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(false);
     }
   };
+
+
   const login = async (identifier: string, password: string) => {
     await apiLogin(identifier, password);
     await refreshUser(); // Refresh user data after login
@@ -62,6 +68,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
 
   };
+
+
   const updateUser = (userData: User) => {
     setUser(userData);
   };
