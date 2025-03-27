@@ -20,8 +20,11 @@ import { Button } from './ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { VoteButtons } from './VoteButtons';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { useAuthModal } from '@/components/AuthController';
 
 import '@/lib/styles.css';
+
+
 
 interface ContentCardProps {
   content: Content;
@@ -43,6 +46,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const isAuthor = user?.id === content.author.id;
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [showActions, setShowActions] = useState<boolean>(false);
+  const { isAuthenticated } = useAuth();
+  const { openModal } = useAuthModal(); 
   
   // Check if solution exists
   const hasSolution = !!content.solution;
@@ -54,6 +59,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       // User is selecting text, do not navigate
       return;
     }
+    
+    // If user is not authenticated, prompt login instead of navigating
+    if (!isAuthenticated) {
+      e.preventDefault();
+      openModal(`/exercises/${content.id}`);
+      return;
+    }
+    
     // Navigate to the exercise page
     navigate(`/exercises/${content.id}`);
   };

@@ -7,7 +7,6 @@ import {
   Tag, 
   ChevronDown, 
   Lightbulb, 
-  Award, 
   MessageSquare, 
   GitPullRequest, 
   Activity, 
@@ -23,20 +22,15 @@ import {
   XCircle,
   ThumbsUp,
   Share2,
-  Heart,
-  Star,
   Eye,
   Maximize2,
   Minimize2,
-  Copy,
-  Send,
   Calendar,
   Printer,
   Play,
   Pause,
   Layers,
   BookMarked,
-  Info,
   MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,11 +44,19 @@ import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import Confetti from 'react-confetti';
-
+import { useAuthModal } from '@/components/AuthController';
+import { 
+  markExerciseProgress, 
+  removeExerciseProgress, 
+  saveExercise, 
+  unsaveExercise, 
+  getExerciseUserStatus 
+} from '@/lib/api';
 export function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { openModal } = useAuthModal();
   const [exercise, setExercise] = useState<Content | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,18 +64,23 @@ export function ExerciseDetail() {
   const [solutionVisible, setSolutionVisible] = useState(false);
   const [solution, setSolution] = useState('');
   const [activeSection, setActiveSection] = useState<'exercise' | 'discussions' | 'proposals' | 'activity'>('exercise');
+  const [completed, setCompleted] = useState<'success' | 'review' | null>(null);
+  const [savedForLater, setSavedForLater] = useState<boolean>(false);
+  const [showConfetti, setShowConfetti] = useState<boolean>(false);
+  const [loadingStates, setLoadingStates] = useState({
+    progress: false,
+    save: false
+  });
   
   // User interaction states
   const [timer, setTimer] = useState<number>(0);
   const [timerActive, setTimerActive] = useState<boolean>(false);
-  const [completed, setCompleted] = useState<boolean | null>(null);
-  const [showConfetti, setShowConfetti] = useState<boolean>(false);
-  const [savedForLater, setSavedForLater] = useState<boolean>(false);
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
   const [isSticky, setIsSticky] = useState<boolean>(false);
   const [showAllTags, setShowAllTags] = useState<boolean>(false);
+
   
   // Refs for scroll handling
   const headerRef = useRef<HTMLDivElement>(null);
@@ -85,10 +92,14 @@ export function ExerciseDetail() {
 
   useEffect(() => {
     if (id) {
-      loadExercise(id);
+      if (isAuthenticated) {
+        loadExerciseWithUserStatus(id);
+      } else {
+        loadExercise(id);
+      }
       markContentViewed(id).catch(console.error);
     }
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   // Timer effect
   useEffect(() => {
@@ -104,6 +115,17 @@ export function ExerciseDetail() {
       if (interval) clearInterval(interval);
     };
   }, [timerActive]);
+
+  // Scroll effect to track sticky header
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsSticky(scrollPosition > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Format date as time ago (e.g. "2 hours ago")
   const formatTimeAgo = (dateString: string): string => {
@@ -128,7 +150,6 @@ export function ExerciseDetail() {
     return `Il y a ${diffYears} an${diffYears > 1 ? 's' : ''}`;
   };
 
-
   const getDifficultyColor = (difficulty: Difficulty): string => {
     switch (difficulty) {
       case 'easy':
@@ -141,6 +162,43 @@ export function ExerciseDetail() {
         return 'from-gray-500 to-gray-400 text-white';
     }
   };
+
+  const loadExerciseWithUserStatus = async (exerciseId: string) => {
+    try {
+      setLoading(true);
+      
+      // Load exercise data
+      const exerciseData = await getContentById(exerciseId);
+      setExercise(exerciseData);
+      
+      // Load user-specific data if authenticated
+      if (isAuthenticated) {
+        const userStatus = await getExerciseUserStatus(exerciseId);
+        setCompleted(userStatus.progress.status);
+        setSavedForLater(userStatus.saved);
+      }
+    } catch (err) {
+      console.error('Failed to load exercise:', err);
+      setError('Failed to load exercise. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadExercise = async (exerciseId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getContentById(exerciseId);
+      setExercise(data);
+    } catch (err) {
+      console.error('Failed to load exercise:', err);
+      setError('Failed to load exercise. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddComment = async (content: string, parentId?: string) => {
     if (!id || !exercise) return;
   
@@ -188,7 +246,7 @@ export function ExerciseDetail() {
   
   const handleVoteComment = async (commentId: string, value: VoteValue) => {
     if (!isAuthenticated || !exercise) {
-      navigate('/login');
+      openModal();
       return;
     }
   
@@ -392,23 +450,9 @@ export function ExerciseDetail() {
     }
   };
 
-  const loadExercise = async (exerciseId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getContentById(exerciseId);
-      setExercise(data);
-    } catch (err) {
-      console.error('Failed to load exercise:', err);
-      setError('Failed to load exercise. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleVote = async (value: VoteValue, target: 'exercise' | 'solution' = 'exercise') => {
     if (!isAuthenticated || !id) {
-      navigate('/login');
+      openModal();
       return;
     }
 
@@ -431,9 +475,62 @@ export function ExerciseDetail() {
     }
   };
 
-  // Other handler methods remain the same...
-  // For brevity, I'm not including all the handlers, but they would remain unchanged
+  // Implement progress tracking (Réussi/À revoir)
+  const markAsCompleted = async (status: 'success' | 'review') => {
+    if (!isAuthenticated || !id) {
+      openModal();
+      return;
+    }
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, progress: true }));
+      
+      // If user clicks the same status button again, remove the progress
+      if (completed === status) {
+        await removeExerciseProgress(id);
+        setCompleted(null);
+      } else {
+        await markExerciseProgress(id, status);
+        setCompleted(status);
+        
+        // Show confetti animation when marking as success
+        if (status === 'success') {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update progress:', err);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, progress: false }));
+    }
+  };
+  
+  // Toggle saved status (Enregistrer)
+  const toggleSavedForLater = async () => {
+    if (!isAuthenticated || !id) {
+      openModal();
+      return;
+    }
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, save: true }));
+      
+      if (savedForLater) {
+        await unsaveExercise(id);
+        setSavedForLater(false);
+      } else {
+        await saveExercise(id);
+        setSavedForLater(true);
+      }
+    } catch (err) {
+      console.error('Failed to update saved status:', err);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, save: false }));
+    }
+  };
 
+  // Timer functions
   const toggleTimer = () => {
     setTimerActive(!timerActive);
   };
@@ -449,27 +546,17 @@ export function ExerciseDetail() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const toggleSavedForLater = () => {
-    setSavedForLater(!savedForLater);
-    // API call would go here
-  };
-
-  const markAsCompleted = (status: boolean) => {
-    setCompleted(status);
-    // Show confetti when marking as completed
-    if (status) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-    }
-  };
-
+  // Difficulty rating
   const rateDifficulty = (rating: number) => {
     setDifficultyRating(rating);
-    // API call would go here
+    // TODO: API call would go here
   };
+
+  // Layout control functions
   const toggleFullscreen = () => {
     setFullscreenMode(!fullscreenMode);
   };
+
   const toggleToolbar = () => {
     setShowToolbar(!showToolbar);
   };
@@ -637,13 +724,18 @@ export function ExerciseDetail() {
               <div className="flex items-center gap-2">
                 {/* Save button */}
                 <Button 
-                  onClick={toggleSavedForLater}
-                  variant="ghost"
-                  className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
-                >
-                  <Bookmark className={`w-5 h-5 mr-1.5 ${savedForLater ? 'fill-white' : ''}`} />
-                  {savedForLater ? 'Enregistré' : 'Enregistrer'}
-                </Button>
+        onClick={toggleSavedForLater}
+        variant="ghost"
+        className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
+        disabled={loadingStates.save}
+      >
+        {loadingStates.save ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+        ) : (
+          <Bookmark className={`w-5 h-5 mr-1.5 ${savedForLater ? 'fill-white' : ''}`} />
+        )}
+        {savedForLater ? 'Enregistré' : 'Enregistrer'}
+      </Button>
                 
                 {/* Share button */}
                 <Button 
@@ -892,11 +984,11 @@ export function ExerciseDetail() {
                         <div className="flex items-center gap-2">
                           {/* Completion status buttons */}
                           <Button
-                            onClick={() => markAsCompleted(true)}
-                            variant={completed === true ? "default" : "outline"}
+                            onClick={() => markAsCompleted('success')}
+                            variant={completed === 'success' ? "default" : "outline"}
                             size="sm"
                             className={`rounded-lg ${
-                              completed === true 
+                              completed === 'success' 
                                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
                                 : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
                             }`}
@@ -906,11 +998,11 @@ export function ExerciseDetail() {
                           </Button>
                           
                           <Button
-                            onClick={() => markAsCompleted(false)}
-                            variant={completed === false ? "default" : "outline"}
+                            onClick={() => markAsCompleted("review")}
+                            variant={completed === "review" ? "default" : "outline"}
                             size="sm"
                             className={`rounded-lg ${
-                              completed === false 
+                              completed === "review" 
                                 ? 'bg-rose-500 hover:bg-rose-600 text-white' 
                                 : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
                             }`}
@@ -1188,38 +1280,45 @@ export function ExerciseDetail() {
           </div>
           
           {/* Status Buttons Section */}
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ThumbsUp className="w-4 h-4 text-indigo-600" />
-              <span className="font-medium text-gray-800 text-sm">Suivi de progression</span>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => markAsCompleted(true)} 
-                variant={completed === true ? "default" : "outline"} 
-                className={`flex-1 h-9 text-sm ${
-                  completed === true 
-                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                    : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
-                }`}
-              >
-                <CheckCircle className="w-4 h-4 mr-1.5" />
-                Réussi
-              </Button>
-              <Button 
-                onClick={() => markAsCompleted(false)} 
-                variant={completed === false ? "default" : "outline"} 
-                className={`flex-1 h-9 text-sm ${
-                  completed === false 
-                    ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                    : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
-                }`}
-              >
-                <XCircle className="w-4 h-4 mr-1.5" />
-                À revoir
-              </Button>
-            </div>
-          </div>
+          <div className="flex items-center gap-2">
+        <Button
+          onClick={() => markAsCompleted('success')}
+          variant={completed === 'success' ? "default" : "outline"}
+          size="sm"
+          disabled={loadingStates.progress}
+          className={`rounded-lg ${
+            completed === 'success' 
+              ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+              : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
+          }`}
+        >
+          {loadingStates.progress ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          ) : (
+            <CheckCircle className="w-4 h-4 mr-1.5" />
+          )}
+          Réussi
+        </Button>
+        
+        <Button
+          onClick={() => markAsCompleted('review')}
+          variant={completed === 'review' ? "default" : "outline"}
+          size="sm"
+          disabled={loadingStates.progress}
+          className={`rounded-lg ${
+            completed === 'review' 
+              ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+              : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
+          }`}
+        >
+          {loadingStates.progress ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          ) : (
+            <XCircle className="w-4 h-4 mr-1.5" />
+          )}
+          À revoir
+        </Button>
+      </div>
           
           {/* Difficulty Rating */}
           <div className="p-4">

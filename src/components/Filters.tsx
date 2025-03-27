@@ -83,50 +83,37 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
 
   useEffect(() => {
     loadSubjects();
+    // Clear subject and dependencies when class level changes
+    setSelectedSubject('');
+    setSelectedSubfields([]);
+    setSelectedChapters([]);
+    setSelectedTheorems([]);
   }, [selectedFilters.classLevels]);
 
   useEffect(() => {
-    if (shouldShowSubfieldOptions()) {
-      loadSubfields();
-    } else {
-      // Clear subfields when conditions aren't met
-      setSelectedFilters(prev => ({
-        ...prev,
-        subfields: []
-      }));
-      setSubfields([]);
-    }
+    loadSubfields();
+    // Clear subfields and dependencies when subject changes
+    setSelectedSubfields([]);
+    setSelectedChapters([]);
+    setSelectedTheorems([]);
   }, [selectedFilters.subjects, selectedFilters.classLevels]);
 
   useEffect(() => {
-    if (shouldShowChapterOptions()) {
-      loadChapters();
-    } else {
-      // Clear chapters when conditions aren't met
-      setSelectedFilters(prev => ({
-        ...prev,
-        chapters: []
-      }));
-      setChapters([]);
-    }
-  }, [selectedFilters.subfields, selectedFilters.subjects, selectedFilters.classLevels]);
+    loadChapters();
+    // Clear chapters and theorems when subfields change
+    setSelectedChapters([]);
+    setSelectedTheorems([]);
+  }, [selectedFilters.subfields]);
 
   useEffect(() => {
-    if (shouldShowTheoremOptions()) {
-      loadTheorems();
-    } else {
-      // Clear theorems when conditions aren't met
-      setSelectedFilters(prev => ({
-        ...prev,
-        theorems: []
-      }));
-      setTheorems([]);
-    }
-  }, [selectedFilters.chapters, selectedFilters.subfields, selectedFilters.subjects, selectedFilters.classLevels]);
+    loadTheorems();
+    // Clear theorems when chapters change
+    setSelectedTheorems([]);
+  }, [selectedFilters.chapters]);
 
   useEffect(() => {
     onFilterChange(selectedFilters);
-  }, [selectedFilters]);
+  }, [selectedFilters, onFilterChange]);
 
   const loadClassLevels = async () => {
     try {
@@ -142,6 +129,11 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   };
 
   const loadSubjects = async () => {
+    if (selectedFilters.classLevels.length === 0) {
+      setSubjects([]);
+      return;
+    }
+    
     try {
       const data = await getSubjects(selectedFilters.classLevels);
       const uniqueSubjects = getUniqueById(data);
@@ -287,6 +279,34 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     }));
   };
 
+  const setSelectedSubject = (id: string) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      subjects: id ? [id] : []
+    }));
+  };
+
+  const setSelectedSubfields = (ids: string[]) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      subfields: ids
+    }));
+  };
+
+  const setSelectedChapters = (ids: string[]) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      chapters: ids
+    }));
+  };
+
+  const setSelectedTheorems = (ids: string[]) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      theorems: ids
+    }));
+  };
+
   const renderFilterCategory = (
     section: FilterSection,
     items: { id: string; name: string }[] | Difficulty[]
@@ -324,7 +344,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     }
 
     return (
-      <div className="mb-2 border-b border-gray-100 pb-4">
+      <div className="mb-2 border-b border-gray-100 pb-4" key={`section-${category}`}>
         <button 
           onClick={() => toggleSection(category)}
           className="flex items-center justify-between w-full text-left mb-3"
@@ -439,7 +459,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       </div>
       
       <div className="p-6">
-        {filterSections.map(section => 
+        {filterSections.map((section) => 
           renderFilterCategory(
             section, 
             section.category === 'difficulties' 
@@ -468,9 +488,9 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
             </div>
             <div className="flex flex-wrap gap-3">
               {Object.entries(selectedFilters).map(([category, values]) =>
-                values.map(value => (
+                values.map((value, index) => (
                   <button
-                    key={`${category}-${value}`}
+                    key={`active-${category}-${value}-${index}`}
                     onClick={() => toggleFilter(category as keyof FilterCategories, value)}
                     className="px-3 py-1.5 rounded-full text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center space-x-2 transition-colors"
                   >

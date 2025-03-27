@@ -10,21 +10,43 @@ const api = axios.create({
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  // CSRF Token
-  const csrfToken = Cookies.get('csrftoken');
-  if (csrfToken) {
-    config.headers['X-CSRFToken'] = csrfToken;
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If 401 and not already trying to refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const response = await api.post('/token/refresh/', { 
+            refresh: refreshToken 
+          });
+          
+          if (response.data.access) {
+            localStorage.setItem('token', response.data.access);
+            api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+            
+            // Update the auth header for the original request
+            originalRequest.headers['Authorization'] = `Bearer ${response.data.access}`;
+            
+            // Retry the original request
+            return api(originalRequest);
+          }
+        }
+      } catch (refreshError) {
+        // If refresh fails, clean up
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+      }
+    }
+    
+    return Promise.reject(error);
   }
-
-  // JWT Token
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return config;
-});
+);
 
 // Add response interceptor to handle token storage
 // Ajoutez une logique de rafraîchissement de token
@@ -187,7 +209,13 @@ const voteContent = async (contentId: string, value: VoteValue, target: VoteTarg
 };
 
 export const voteExercise = async (id: string, value: VoteValue) => {
-  return voteContent(id, value, 'exercise');
+  try {
+    const response = await api.post(`/exercises/${id}/vote/`, { value });
+    return response.data.item; // Return the updated exercise
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
 };
 
 export const voteSolution = async (id: string, value: VoteValue) => {
@@ -237,16 +265,39 @@ export const getCurrentUser = async () => {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
-      return null; // Return null instead of throwing error
+      return null; // Return null without making API call if no token exists
     }
+    
+    // Make sure the Authorization header is set correctly before making the request
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     
     const response = await api.get('/auth/user/');
     return response.data;
   } catch (error) {
     console.error('Error getting current user:', error);
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      localStorage.removeItem('token');
-      api.defaults.headers.common['Authorization'] = '';
+      // Token is invalid or expired, try to refresh
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const refreshResponse = await api.post('/token/refresh/', { 
+            refresh: refreshToken 
+          });
+          
+          if (refreshResponse.data.access) {
+            localStorage.setItem('token', refreshResponse.data.access);
+            api.defaults.headers.common['Authorization'] = `Bearer ${refreshResponse.data.access}`;
+            
+            // Retry the original request with new token
+            const retryResponse = await api.get('/auth/user/');
+            return retryResponse.data;
+          }
+        }
+      } catch (refreshError) {
+        // If refresh fails, clean up tokens
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+      }
     }
     return null;
   }
@@ -465,4 +516,52 @@ export const uploadImage = async (file: File) => {
     },
   });
   return response.data.url;
+};
+
+
+/**
+ * Mark exercise progress as 'success' or 'review'
+ * @param exerciseId - Exercise ID
+ * @param status - Status value ('success' or 'review')
+ * @returns Progress object
+ */
+export const markExerciseProgress = async (exerciseId: string, status: 'success' | 'review') => {
+  const response = await api.post(`/exercises/${exerciseId}/mark_progress/`, { status });
+  return response.data;
+};
+
+/**
+ * Remove progress marking from an exercise
+ * @param exerciseId - Exercise ID
+ */
+export const removeExerciseProgress = async (exerciseId: string) => {
+  await api.delete(`/exercises/${exerciseId}/remove_progress/`);
+};
+
+/**
+ * Save an exercise for later
+ * @param exerciseId - Exercise ID
+ * @returns Save record
+ */
+export const saveExercise = async (exerciseId: string) => {
+  const response = await api.post(`/exercises/${exerciseId}/save_exercise/`);
+  return response.data;
+};
+
+/**
+ * Remove exercise from saved list
+ * @param exerciseId - Exercise ID
+ */
+export const unsaveExercise = async (exerciseId: string) => {
+  await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
+};
+
+/**
+ * Get user's progress and saved status for an exercise
+ * @param exerciseId - Exercise ID
+ * @returns Object with progress and saved status
+ */
+export const getExerciseUserStatus = async (exerciseId: string) => {
+  const response = await api.get(`/exercises/${exerciseId}/user_status/`);
+  return response.data;
 };

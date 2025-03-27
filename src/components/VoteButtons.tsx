@@ -1,6 +1,9 @@
+// src/components/VoteButtons.tsx
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuthModal } from '@/components/AuthController';
 
 // Define vote values as 1 or -1 only
 type VoteValue = 1 | -1;
@@ -26,6 +29,7 @@ export function VoteButtons({
   const [score, setScore] = useState(initialVotes);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { openModal } = useAuthModal();
 
   // Update internal state when props change
   useEffect(() => {
@@ -38,7 +42,8 @@ export function VoteButtons({
 
   const handleVote = (value: VoteValue) => {
     if (!isAuthenticated) {
-      navigate('/login');
+      // Use AuthModal instead of direct navigation
+      openModal();
       return;
     }
     
@@ -50,11 +55,11 @@ export function VoteButtons({
     // This is just for a better user experience and will be overridden
     // when the backend response updates the parent component
     if (userVote === value) {
-      // If clicking the same button, provide visual feedback as if toggling off
+      // Clicking the same button toggles it off
       setUserVote(0);
       setScore(score - value);
     } else {
-      // If clicking a different button, provide visual feedback
+      // If clicking a different button
       if (userVote !== 0) {
         // If changing from up to down or vice versa
         setScore(score - userVote + value);
