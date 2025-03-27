@@ -676,7 +676,7 @@ export function ExerciseDetail() {
         </div>
       </div>
       
-      <div className="container mx-auto px-4" style={{ paddingRight: 'calc(100px)' }}>
+<div className="container mx-auto px-4 lg:px-6 relative">
       {/* Sticky header (appears on scroll) */}
         <div className={`fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 transform transition-transform duration-300 ${isSticky ? 'translate-y-0' : '-translate-y-full'}`}>
           <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
