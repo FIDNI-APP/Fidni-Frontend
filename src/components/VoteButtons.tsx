@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-type VoteValue = 1 | -1 | 0;
+// Define vote values as 1 or -1 only
+type VoteValue = 1 | -1;
 
 interface VoteButtonsProps {
   initialVotes: number;
   onVote: (value: VoteValue) => void;
   vertical?: boolean;
-  userVote?: VoteValue;
+  userVote?: 1 | -1 | 0;  // Keep accepting all possible states from props
   onClick?: (e: React.MouseEvent) => void;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -21,7 +22,7 @@ export function VoteButtons({
   onClick,
   size = 'md'
 }: VoteButtonsProps) {
-  const [userVote, setUserVote] = useState<VoteValue>(initialUserVote);
+  const [userVote, setUserVote] = useState<1 | -1 | 0>(initialUserVote);
   const [score, setScore] = useState(initialVotes);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -40,12 +41,29 @@ export function VoteButtons({
       navigate('/login');
       return;
     }
-  
-    // Toggle vote off if clicking the same button
-    const newVote: VoteValue = userVote === value ? 0 : value;
     
-    setUserVote(newVote);
-    onVote(newVote);
+    // Always send 1 or -1 to the backend
+    // The backend will handle the toggle logic
+    onVote(value);
+    
+    // Optional: Provide immediate UI feedback while waiting for the backend
+    // This is just for a better user experience and will be overridden
+    // when the backend response updates the parent component
+    if (userVote === value) {
+      // If clicking the same button, provide visual feedback as if toggling off
+      setUserVote(0);
+      setScore(score - value);
+    } else {
+      // If clicking a different button, provide visual feedback
+      if (userVote !== 0) {
+        // If changing from up to down or vice versa
+        setScore(score - userVote + value);
+      } else {
+        // If changing from neutral
+        setScore(score + value);
+      }
+      setUserVote(value);
+    }
   };
 
   // Size-based classes
@@ -129,7 +147,6 @@ export function VoteButtons({
     
     return `${baseClasses} text-gray-700`;
   };
-
 
   return (
     <div

@@ -36,7 +36,8 @@ import {
   Pause,
   Layers,
   BookMarked,
-  Info
+  Info,
+  MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getContentById, voteExercise, addComment, markContentViewed, deleteContent, voteComment, updateComment, deleteComment, deleteSolution, voteSolution, addSolution } from '@/lib/api';
@@ -103,6 +104,29 @@ export function ExerciseDetail() {
       if (interval) clearInterval(interval);
     };
   }, [timerActive]);
+
+  // Format date as time ago (e.g. "2 hours ago")
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+    
+    if (diffSecs < 60) return `Il y a ${diffSecs} seconde${diffSecs > 1 ? 's' : ''}`;
+    if (diffMins < 60) return `Il y a ${diffMins} minute${diffMins > 1 ? 's' : ''}`;
+    if (diffHours < 24) return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+    if (diffDays < 7) return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+    if (diffWeeks < 4) return `Il y a ${diffWeeks} semaine${diffWeeks > 1 ? 's' : ''}`;
+    if (diffMonths < 12) return `Il y a ${diffMonths} mois`;
+    return `Il y a ${diffYears} an${diffYears > 1 ? 's' : ''}`;
+  };
 
 
   const getDifficultyColor = (difficulty: Difficulty): string => {
@@ -306,6 +330,10 @@ export function ExerciseDetail() {
           solution: newSolution
         };
       });
+      
+      // Show confetti when solution is added
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
     } catch (err) {
       console.error('Failed to add solution:', err);
     }
@@ -428,7 +456,11 @@ export function ExerciseDetail() {
 
   const markAsCompleted = (status: boolean) => {
     setCompleted(status);
-    // API call would go here
+    // Show confetti when marking as completed
+    if (status) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
   };
 
   const rateDifficulty = (rating: number) => {
@@ -509,76 +541,56 @@ export function ExerciseDetail() {
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
       
       {/* Floating toolbar */}
-      <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white rounded-full shadow-lg transition-all duration-300 ${showToolbar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="flex items-center p-1">
+      <div className={`fixed bottom-6 right-6 z-50 bg-white rounded-full shadow-lg transition-all duration-300 ${showToolbar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+        <div className="flex items-center p-2">
           <Button 
             onClick={toggleTimer}
             variant="ghost"
-            className="rounded-full p-3 hover:bg-indigo-50"
+            className="rounded-full p-2.5 hover:bg-indigo-50"
             title={timerActive ? "Pause" : "Start timer"}
           >
-            {timerActive ? <Pause className="w-5 h-5 text-red-500" /> : <Play className="w-5 h-5 text-indigo-600" />}
+            {timerActive ? <Pause className="w-4 h-4 text-red-500" /> : <Play className="w-4 h-4 text-indigo-600" />}
           </Button>
           
-          <div className="px-3 font-mono text-lg font-medium text-indigo-900">
+          <div className="px-3 font-mono text-sm font-medium text-indigo-900">
             {formatTime(timer)}
           </div>
           
-          <div className="h-5 w-px bg-gray-200 mx-1"></div>
+          <div className="h-8 w-px bg-gray-200 mx-0.5"></div>
           
           <Button 
             onClick={toggleFullscreen}
             variant="ghost"
-            className={`rounded-full p-3 ${fullscreenMode ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-indigo-50 text-gray-600'}`}
+            className={`rounded-full p-2.5 ${fullscreenMode ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-indigo-50 text-gray-600'}`}
             title={fullscreenMode ? "Exit fullscreen" : "Enter fullscreen"}
           >
-            {fullscreenMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-          </Button>
-          
-          <Button 
-            onClick={handlePrint}
-            variant="ghost"
-            className="rounded-full p-3 hover:bg-indigo-50 text-gray-600"
-            title="Print"
-          >
-            <Printer className="w-5 h-5" />
-          </Button>
-          
-          <div className="h-5 w-px bg-gray-200 mx-1"></div>
-          
-          <Button 
-            onClick={() => markAsCompleted(true)}
-            variant="ghost"
-            className={`rounded-full p-3 ${completed ? 'bg-emerald-100 text-emerald-600' : 'hover:bg-indigo-50 text-gray-600'}`}
-            title="Mark as completed"
-          >
-            <CheckCircle className="w-5 h-5" />
+            {fullscreenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </Button>
           
           <Button 
             onClick={toggleSavedForLater}
             variant="ghost"
-            className={`rounded-full p-3 ${savedForLater ? 'bg-amber-100 text-amber-600' : 'hover:bg-indigo-50 text-gray-600'}`}
+            className={`rounded-full p-2.5 ${savedForLater ? 'bg-amber-100 text-amber-600' : 'hover:bg-indigo-50 text-gray-600'}`}
             title={savedForLater ? "Saved" : "Save for later"}
           >
-            <Bookmark className={`w-5 h-5 ${savedForLater ? 'fill-amber-500' : ''}`} />
+            <Bookmark className={`w-4 h-4 ${savedForLater ? 'fill-amber-500' : ''}`} />
           </Button>
           
-          <div className="h-5 w-px bg-gray-200 mx-1"></div>
+          <div className="h-8 w-px bg-gray-200 mx-0.5"></div>
           
           <Button 
             onClick={toggleToolbar}
             variant="ghost"
-            className="rounded-full p-3 hover:bg-indigo-50 text-gray-600"
+            className="rounded-full p-2.5 hover:bg-indigo-50 text-gray-600"
             title="Hide toolbar"
           >
-            <ChevronDown className="w-5 h-5" />
+            <ChevronDown className="w-4 h-4" />
           </Button>
         </div>
       </div>
       
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 transition-all duration-300 ${fullscreenMode ? 'max-w-none px-0 sm:px-0' : ''}`}>
-        {/* Sticky header (appears on scroll) */}
+      <div className="container mx-auto px-4" style={{ paddingRight: 'calc(100px)' }}>
+      {/* Sticky header (appears on scroll) */}
         <div className={`fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 transform transition-transform duration-300 ${isSticky ? 'translate-y-0' : '-translate-y-full'}`}>
           <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -608,144 +620,159 @@ export function ExerciseDetail() {
           </div>
         </div>
       
-        {/* Layout using flexbox to position button left of container */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start mt-4">
-          {/* Back button to the left of the container */}
-          <div className="mt-1">
-            <Button 
-              onClick={() => navigate('/exercises')}
-              variant="outline"
-              className="rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour aux exercices
-            </Button>
-          </div>
-          
-          {/* Main content grid */}
-          <div className="flex-1">
-            <div className="grid grid-cols-12 gap-6">
-              {/* Main Content Area - Widened */}
-              <div className={`col-span-12 ${fullscreenMode ? 'lg:col-span-12' : 'lg:col-span-9'}`}>
-                {/* Exercise Header Card */}
-                <motion.div 
-                  ref={headerRef}
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6"
+        {/* New modern header with background gradient */}
+        <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl overflow-hidden shadow-lg mb-6">
+          <div className="px-6 pt-6 pb-4">
+            {/* Navigation row */}
+            <div className="flex justify-between items-center mb-6">
+              <Button 
+                onClick={() => navigate('/exercises')}
+                variant="ghost"
+                className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Retour
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                {/* Save button */}
+                <Button 
+                  onClick={toggleSavedForLater}
+                  variant="ghost"
+                  className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
                 >
-                  <div className="p-6">
-                    <div className="flex flex-col gap-5">
-                      {/* Title with Solution Indicator (if available) and Save Button */}
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                        <div className="flex items-start gap-2">
-                          {/* Simple lightbulb solution indicator, only shown if solution exists */}
-                          {hasSolution && (
-                            <Lightbulb className="w-5 h-5 text-emerald-500 mt-1 flex-shrink-0" />
-                          )}
-                          <div>
-                            <h1 className="text-2xl leading-tight font-bold text-gray-900">
-                              {exercise.title}
-                            </h1>
-                            {/* Date moved near title */}
-                            <div className="flex items-center gap-1.5 mt-1 text-sm text-gray-500">
-                              <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                              <span>{new Date(exercise.created_at).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Right side buttons - Save Flag button */}
-                        <div className="flex items-center">
-                          <Button 
-                            onClick={toggleSavedForLater}
-                            variant="ghost"
-                            className="rounded-full p-2"
-                            title={savedForLater ? "Unsave" : "Save for later"}
-                          >
-                            <Bookmark className={`w-5 h-5 ${savedForLater ? 'text-indigo-600 fill-indigo-600' : 'text-gray-400 hover:text-indigo-600'}`} />
-                          </Button>
-                          
-                          {/* Edit/Delete buttons for author */}
-                          {isAuthor && (
-                            <div className="flex ml-2">
-                              <Button 
-                                variant="outline" 
-                                onClick={() => navigate(`/edit/${exercise.id}`)}
-                                className="rounded-lg text-indigo-700 border-indigo-200"
-                                size="sm"
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                onClick={() => deleteContent(exercise.id)}
-                                className="rounded-lg text-red-600 border-red-200 ml-2"
-                                size="sm"
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Main Category Tags - Subject, Class Level, and Difficulty */}
-                      <div className="flex flex-wrap gap-2">
-                        {/* Subject Badge */}
-                        {exercise.subject && (
-                          <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md text-sm font-medium">
-                            {exercise.subject.name}
-                          </span>
-                        )}
-                        
-                        {/* Class Level Badges */}
-                        {exercise.class_levels && exercise.class_levels.map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center"
-                          >
-                            <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
-                            {tag.name}
-                          </span>
-                        ))}
-                        
-                        {/* Difficulty Badge */}
-                        <span 
-                          className={`bg-gradient-to-r ${getDifficultyColor(exercise.difficulty)} px-3 py-1 rounded-md text-sm font-medium flex items-center gap-1.5`}
-                        >
-                          {getDifficultyIcon(exercise.difficulty)}
-                          <span>{getDifficultyLabel(exercise.difficulty)}</span>
-                        </span>
-                      </div>
-
-                      {/* New Tag Section - All Categories with Heading and Organization */}
+                  <Bookmark className={`w-5 h-5 mr-1.5 ${savedForLater ? 'fill-white' : ''}`} />
+                  {savedForLater ? 'Enregistré' : 'Enregistrer'}
+                </Button>
+                
+                {/* Share button */}
+                <Button 
+                  variant="ghost"
+                  className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+                >
+                  <Share2 className="w-5 h-5 mr-1.5" />
+                  Partager
+                </Button>
+                
+                {/* More options dropdown for author */}
+                {isAuthor && (
+                  <div className="relative">
+                    <Button 
+                      variant="ghost"
+                      className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </Button>
+                    {/* Dropdown menu would be implemented here */}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Exercise title and metadata */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-6">
+              <div className="max-w-3xl">
+                <h1 className="text-3xl font-bold mb-3">{exercise.title}</h1>
+                
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <div className="flex items-center">
+                    <User className="w-4 h-4 mr-1.5 text-indigo-300" />
+                    <span className="text-indigo-100">{exercise.author.username}</span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-1.5 text-indigo-300" />
+                    <span className="text-indigo-100">{formatTimeAgo(exercise.created_at)}</span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Eye className="w-4 h-4 mr-1.5 text-indigo-300" />
+                    <span className="text-indigo-100">{exercise.view_count} vues</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Main Category Tags in header */}
+              <div className="flex flex-wrap gap-2">
+                {exercise.subject && (
+                  <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
+                    <BookOpen className="w-4 h-4 mr-1.5 text-indigo-300" />
+                    {exercise.subject.name}
+                  </span>
+                )}
+                
+                {exercise.class_levels && exercise.class_levels.length > 0 && (
+                  <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
+                    <GraduationCap className="w-4 h-4 mr-1.5 text-indigo-300" />
+                    {exercise.class_levels[0].name}
+                  </span>
+                )}
+                
+                <span className={`bg-gradient-to-r ${getDifficultyColor(exercise.difficulty)} px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5`}>
+                  {getDifficultyIcon(exercise.difficulty)}
+                  <span>{getDifficultyLabel(exercise.difficulty)}</span>
+                </span>
+              </div>
+            </div>
+            
+            {/* Tab Navigation in header */}
+            <div className="flex overflow-x-auto border-b border-white/20 mt-2">
+              <TabButton 
+                active={activeSection === 'exercise'} 
+                onClick={() => setActiveSection('exercise')}
+                icon={<BookOpen className="w-4 h-4" />}
+                label="Exercice"
+              />
+              
+              <TabButton 
+                active={activeSection === 'discussions'} 
+                onClick={() => setActiveSection('discussions')}
+                icon={<MessageSquare className="w-4 h-4" />}
+                label="Discussions"
+                count={exercise.comments?.length}
+              />
+              
+              <TabButton 
+                active={activeSection === 'proposals'} 
+                onClick={() => setActiveSection('proposals')}
+                icon={<GitPullRequest className="w-4 h-4" />}
+                label="Solutions alternatives"
+              />
+              
+              <TabButton 
+                active={activeSection === 'activity'} 
+                onClick={() => setActiveSection('activity')}
+                icon={<Activity className="w-4 h-4" />}
+                label="Activité"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Main content grid */}
+        <div className="w-full">
+        <AnimatePresence mode="wait">
+          {activeSection === 'exercise' && (
+            <motion.div
+              key="exercise-content"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+                  {/* Exercise Content Card */}
+                  <motion.div 
+                    ref={contentInViewRef}
+                    className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                  >
+                    <div className="p-6">
+                      {/* Tags section moved to top */}
                       {(hasSubfields || hasChapters || hasTheorems) && (
-                        <div className="mt-2 pb-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                              <Tag className="w-3.5 h-3.5" />
-                              Tags
-                            </h3>
-                            {(hasSubfields && exercise.subfields.length > 3) || 
-                             (hasChapters && exercise.chapters.length > 3) || 
-                             (hasTheorems && exercise.theorems.length > 3) && (
-                              <Button
-                                variant="ghost"
-                                onClick={() => setShowAllTags(!showAllTags)}
-                                size="sm"
-                                className="h-6 text-xs text-indigo-600 hover:text-indigo-800 px-2 py-0"
-                              >
-                                {showAllTags ? 'Voir moins' : 'Voir tous'}
-                              </Button>
-                            )}
-                          </div>
-                          
-                          {/* Tag Groups with Visual Separation and Better Organization */}
-                          <div className="flex flex-col gap-2">
+                        <div className="bg-gray-50 -mx-6 -mt-6 px-6 py-4 mb-6 border-b border-gray-200">
+                          <div className="flex flex-wrap gap-2">
                             {/* Chapter Tags */}
                             {hasChapters && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-1.5 mr-4">
                                 <span className="flex items-center text-xs text-gray-500 mr-1 whitespace-nowrap">
                                   <Tag className="w-3 h-3 mr-1 text-gray-400" />
                                   Chapitres:
@@ -761,16 +788,19 @@ export function ExerciseDetail() {
                                     </span>
                                   ))}
                                 {!showAllTags && exercise.chapters.length > 3 && (
-                                  <span className="text-xs text-gray-500">
+                                  <button 
+                                    onClick={() => setShowAllTags(true)}
+                                    className="text-xs text-indigo-600 hover:underline"
+                                  >
                                     +{exercise.chapters.length - 3} autres
-                                  </span>
+                                  </button>
                                 )}
                               </div>
                             )}
                             
                             {/* Subfield Tags */}
                             {hasSubfields && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-1.5 mr-4">
                                 <span className="flex items-center text-xs text-gray-500 mr-1 whitespace-nowrap">
                                   <Layers className="w-3 h-3 mr-1 text-gray-400" />
                                   Sous-domaines:
@@ -786,9 +816,12 @@ export function ExerciseDetail() {
                                     </span>
                                   ))}
                                 {!showAllTags && exercise.subfields.length > 3 && (
-                                  <span className="text-xs text-gray-500">
+                                  <button 
+                                    onClick={() => setShowAllTags(true)}
+                                    className="text-xs text-indigo-600 hover:underline"
+                                  >
                                     +{exercise.subfields.length - 3} autres
-                                  </span>
+                                  </button>
                                 )}
                               </div>
                             )}
@@ -811,479 +844,469 @@ export function ExerciseDetail() {
                                     </span>
                                   ))}
                                 {!showAllTags && exercise.theorems.length > 3 && (
-                                  <span className="text-xs text-gray-500">
+                                  <button 
+                                    onClick={() => setShowAllTags(true)}
+                                    className="text-xs text-indigo-600 hover:underline"
+                                  >
                                     +{exercise.theorems.length - 3} autres
-                                  </span>
+                                  </button>
                                 )}
                               </div>
+                            )}
+                            
+                            {showAllTags && (
+                              <button 
+                                onClick={() => setShowAllTags(false)}
+                                className="text-xs text-indigo-600 hover:underline ml-auto"
+                              >
+                                Voir moins
+                              </button>
                             )}
                           </div>
                         </div>
                       )}
-                    </div>
-                  </div>
-                  
-                  {/* Tab Navigation */}
-                  <div className="border-t border-gray-100">
-                    <div className="flex overflow-x-auto">
-                      <TabButton 
-                        active={activeSection === 'exercise'} 
-                        onClick={() => setActiveSection('exercise')}
-                        icon={<BookOpen className="w-4 h-4" />}
-                        label="Exercice"
-                      />
                       
-                      <TabButton 
-                        active={activeSection === 'discussions'} 
-                        onClick={() => setActiveSection('discussions')}
-                        icon={<MessageSquare className="w-4 h-4" />}
-                        label="Discussions"
-                        count={exercise.comments?.length}
-                      />
+                      <div className="prose max-w-none text-gray-800 mb-6">
+                        <TipTapRenderer content={exercise.content} />
+                      </div>
                       
-                      <TabButton 
-                        active={activeSection === 'proposals'} 
-                        onClick={() => setActiveSection('proposals')}
-                        icon={<GitPullRequest className="w-4 h-4" />}
-                        label="Solutions alternatives"
-                      />
-                      
-                      <TabButton 
-                        active={activeSection === 'activity'} 
-                        onClick={() => setActiveSection('activity')}
-                        icon={<Activity className="w-4 h-4" />}
-                        label="Activité"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Tab Content */}
-                <AnimatePresence mode="wait">
-                  {activeSection === 'exercise' && (
-                    <motion.div
-                      key="exercise-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      {/* Exercise Content Card */}
-                      <motion.div 
-                        ref={contentInViewRef}
-                        className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden mb-6"
-                      >
-                        <div className="p-6">
-                          <div className="prose max-w-none text-gray-800 mb-6">
-                            <TipTapRenderer content={exercise.content} />
-                          </div>
+                      {/* Footer with votes, progress tracking, etc */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-4">
+                          {/* Vote Buttons */}
+                          <VoteButtons
+                            initialVotes={exercise.vote_count}
+                            onVote={(value) => handleVote(value, 'exercise')}
+                            vertical={false}
+                            userVote={exercise.user_vote}
+                            size="sm"
+                          />
                           
-                          {/* Footer with votes, views, etc */}
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                            <div className="flex items-center gap-3">
-                              {/* Vote Buttons */}
-                              <VoteButtons
-                                initialVotes={exercise.vote_count}
-                                onVote={(value) => handleVote(value, 'exercise')}
-                                vertical={false}
-                                userVote={exercise.user_vote}
-                                size="sm"
-                              />
-                              
-                              {/* Views count */}
-                              <span className="flex items-center gap-1 text-xs text-gray-500">
-                                <Eye className="w-4 h-4 text-gray-400" />
-                                <span>{exercise.view_count} vues</span>
-                              </span>
-                            </div>
-                            
-                            {/* Print button */}
-                            <Button
-                              variant="outline"
-                              onClick={handlePrint}
-                              className="rounded text-sm h-8 px-3"
-                              size="sm"
-                            >
-                              <Printer className="w-4 h-4 mr-1.5" />
-                              Imprimer
-                            </Button>
-                          </div>
+                          {/* Views count */}
+                          <span className="flex items-center gap-1 text-sm text-gray-500">
+                            <Eye className="w-4 h-4 text-gray-400" />
+                            <span>{exercise.view_count} vues</span>
+                          </span>
                         </div>
-                      </motion.div>
+                        
+                        <div className="flex items-center gap-2">
+                          {/* Completion status buttons */}
+                          <Button
+                            onClick={() => markAsCompleted(true)}
+                            variant={completed === true ? "default" : "outline"}
+                            size="sm"
+                            className={`rounded-lg ${
+                              completed === true 
+                                ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                                : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
+                            }`}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1.5" />
+                            Réussi
+                          </Button>
+                          
+                          <Button
+                            onClick={() => markAsCompleted(false)}
+                            variant={completed === false ? "default" : "outline"}
+                            size="sm"
+                            className={`rounded-lg ${
+                              completed === false 
+                                ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                                : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
+                            }`}
+                          >
+                            <XCircle className="w-4 h-4 mr-1.5" />
+                            À revoir
+                          </Button>
+                          
+                          {/* Print button */}
+                          <Button
+                            variant="outline"
+                            onClick={handlePrint}
+                            className="rounded-lg text-sm"
+                            size="sm"
+                          >
+                            <Printer className="w-4 h-4 mr-1.5" />
+                            Imprimer
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
 
-                      {/* Solution Section */}
-                      {hasSolution ? (
-                        <motion.div
-                          className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden mb-6"
-                        >
-                          <div 
-                            className={`px-6 py-4 cursor-pointer ${solutionVisible ? 'bg-indigo-100' : 'bg-gray-100'} hover:bg-gray-200 border-gray-300 transition-colors `}
+                  {/* Solution Section with better styling */}
+                  {hasSolution ? (
+                    <motion.div
+                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                    >
+                      <div 
+                        className={`px-6 py-4 cursor-pointer ${solutionVisible ? 'bg-indigo-50 border-b border-indigo-100' : 'bg-gray-50 hover:bg-gray-100'} transition-colors`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSolutionVisible(!solutionVisible);
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${solutionVisible ? 'bg-indigo-100' : 'bg-white/90'}`}>
+                              <Lightbulb className={`w-5 h-5 ${solutionVisible ? 'text-indigo-600' : 'text-amber-500'}`} />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold">Solution de l'exercice</h3>
+                              <p className="text-sm text-gray-500">Cliquez pour {solutionVisible ? 'masquer' : 'afficher'} la solution</p>
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="ghost"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSolutionVisible(!solutionVisible);
                             }}
+                            className="text-gray-500 hover:text-indigo-600 h-9 w-9 p-0 rounded-full"
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${solutionVisible ? 'bg-indigo-100' : 'bg-gray-100'}`}>
-                                  <Lightbulb className={`w-5 h-5 ${solutionVisible ? 'text-indigo-600' : 'text-gray-600'}`} />
-                                </div>
-                                <div>
-                                  <h3 className="text-lg font-semibold">Solution</h3>
-                                  <p className="text-sm text-gray-500">Cliquez pour {solutionVisible ? 'masquer' : 'afficher'} la solution</p>
-                                </div>
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${solutionVisible ? "rotate-180" : ""}`} />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <AnimatePresence>
+                        {solutionVisible && exercise.solution && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-6 py-6 bg-white">
+                              <div className="prose max-w-none text-gray-800">
+                                <TipTapRenderer content={exercise.solution.content} />
                               </div>
-
-                              <Button
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSolutionVisible(!solutionVisible);
-                                }}
-                                className="text-gray-500 hover:text-indigo-600 h-9 w-9 p-0 rounded-full"
-                              >
-                                <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${solutionVisible ? "rotate-180" : ""}`} />
-                              </Button>
-                            </div>
-                          </div>
-
-                          <AnimatePresence>
-                            {solutionVisible && exercise.solution && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-                                  <div className="prose max-w-none text-gray-800">
-                                    <TipTapRenderer content={exercise.solution.content} />
-                                  </div>
-                                  <div className="mt-4 flex items-center justify-between">
-                                    <VoteButtons
-                                      initialVotes={exercise.solution.vote_count}
-                                      onVote={(value) => handleVote(value, 'solution')}
-                                      vertical={false}
-                                      userVote={exercise.solution.user_vote}
+                              <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-100">
+                                <VoteButtons
+                                  initialVotes={exercise.solution.vote_count}
+                                  onVote={(value) => handleVote(value, 'solution')}
+                                  vertical={false}
+                                  userVote={exercise.solution.user_vote}
+                                  size="sm"
+                                />
+                                
+                                {canEditSolution && (
+                                  <div className="flex items-center gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={handleEditSolution}
+                                      className="text-indigo-600 border-indigo-200 rounded-lg h-9"
                                       size="sm"
-                                    />
-                                    
-                                    {canEditSolution && (
-                                      <div className="flex items-center gap-2">
-                                        <Button 
-                                          variant="outline" 
-                                          onClick={() => navigate(`/solutions/${exercise.solution?.id}/edit`)}
-                                          className="text-indigo-600 border-indigo-200 rounded h-8"
-                                          size="sm"
-                                        >
-                                          <Edit className="w-3.5 h-3.5 mr-1" />
-                                          Modifier
-                                        </Button>
-                                        <Button 
-                                          variant="outline" 
-                                          onClick={() => deleteSolution(exercise.solution?.id ?? '')}
-                                          className="text-red-600 border-red-200 rounded h-8"
-                                          size="sm"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5 mr-1" />
-                                          Supprimer
-                                        </Button>
-                                      </div>
-                                    )}
+                                    >
+                                      <Edit className="w-4 h-4 mr-1.5" />
+                                      Modifier
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={handleDeleteSolution}
+                                      className="text-red-600 border-red-200 rounded-lg h-9"
+                                      size="sm"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-1.5" />
+                                      Supprimer
+                                    </Button>
                                   </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      ) : isAuthor ? (
-                        /* Add Solution Section for Author */
-                        <motion.div
-                          className="bg-white rounded-3xl shadow-xl overflow-hidden mb-6"
-                        >
-                          <div className="p-6">
-                            <div className="flex items-center gap-4 mb-6">
-                              <div className="p-3 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100">
-                                <PenSquare className="w-5 h-5 text-indigo-600" />
-                              </div>
-                              <div>
-                                <h3 className="text-xl font-semibold">Ajouter une solution</h3>
-                                <p className="text-sm text-gray-500 mt-1">Partagez votre solution pour aider les autres</p>
+                                )}
                               </div>
                             </div>
-                            
-                            <DualPaneEditor 
-                              content={solution} 
-                              setContent={setSolution} 
-                            />
-                            
-                            <div className="mt-6 flex justify-end">
-                              <Button
-                                onClick={() => handleAddSolution(solution)}
-                                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md rounded-full px-6 py-2.5 font-medium transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1"
-                                disabled={!solution.trim()}
-                              >
-                                <Lightbulb className="w-4 h-4 mr-2" />
-                                Publier la solution
-                              </Button>
-                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ) : isAuthor ? (
+                    /* Add Solution Section for Author */
+                    <motion.div
+                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                    >
+                      <div className="p-6">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-3 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100">
+                            <PenSquare className="w-5 h-5 text-indigo-600" />
                           </div>
-                        </motion.div>
-                      ) : (
-                        /* No Solution Message for non-authors */
-                        <motion.div
-                          className="bg-white rounded-3xl shadow-md overflow-hidden mb-6"
-                        >
-                          <div className="px-6 py-6 flex items-center gap-4">
-                            <div className="p-3 rounded-full bg-amber-100">
-                              <Lightbulb className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-800">Aucune solution disponible</h3>
-                              <p className="text-sm text-gray-500 mt-1">
-                                L'auteur n'a pas encore publié de solution pour cet exercice.
-                              </p>
-                            </div>
+                          <div>
+                            <h3 className="text-xl font-semibold">Ajouter une solution</h3>
+                            <p className="text-sm text-gray-500 mt-1">Partagez votre solution pour aider les autres</p>
                           </div>
-                        </motion.div>
-                      )}
+                        </div>
+                        
+                        <DualPaneEditor 
+                          content={solution} 
+                          setContent={setSolution} 
+                        />
+                        
+                        <div className="mt-6 flex justify-end">
+                          <Button
+                            onClick={() => handleAddSolution(solution)}
+                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md rounded-lg px-6 py-2.5 font-medium transition-all duration-300 hover:shadow-lg"
+                            disabled={!solution.trim()}
+                          >
+                            <Lightbulb className="w-4 h-4 mr-2" />
+                            Publier la solution
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    /* No Solution Message for non-authors */
+                    <motion.div
+                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                    >
+                      <div className="px-6 py-6 flex items-center gap-4">
+                        <div className="p-3 rounded-full bg-amber-100">
+                          <Lightbulb className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">Aucune solution disponible</h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            L'auteur n'a pas encore publié de solution pour cet exercice.
+                          </p>
+                        </div>
+                      </div>
                     </motion.div>
                   )}
-
-            {/* Discussions Section - With animation */}
-            {activeSection === 'discussions' && (
-              <motion.div
-                key="discussions-content"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden mb-6"
-              >
-                <div className="p-8" id="comments">
-                  <CommentSection
-                    comments={exercise?.comments || []}
-                    onAddComment={handleAddComment}
-                    onVoteComment={handleVoteComment}
-                    onEditComment={handleEditComment}
-                    onDeleteComment={handleDeleteComment}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Other sections with animations */}
-            {activeSection === 'proposals' && (
-              <motion.div
-                key="proposals-content"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden mb-6"
-              >
-                <div className="p-8 text-center py-20">
-                  <GitPullRequest className="w-16 h-16 text-indigo-200 mx-auto mb-6" />
-                  <h3 className="text-xl font-semibold text-gray-800 mb-3">Solutions alternatives</h3>
-                  <p className="text-gray-600 max-w-md mx-auto mb-6">
-                    Cette fonctionnalité sera bientôt disponible. Elle permettra aux utilisateurs de proposer leurs propres solutions à cet exercice.
-                  </p>
-                  <Button 
-                    className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium rounded-full px-6"
-                  >
-                    Être notifié lorsque disponible
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-            
-            {activeSection === 'activity' && (
-              <motion.div
-                key="activity-content"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden mb-6"
-              >
-                <div className="p-8 text-center py-20">
-                  <Activity className="w-16 h-16 text-indigo-200 mx-auto mb-6" />
-                  <h3 className="text-xl font-semibold text-gray-800 mb-3">Activité</h3>
-                  <p className="text-gray-600 max-w-md mx-auto mb-6">
-                    Le journal d'activité pour cet exercice sera bientôt disponible, montrant les votes, commentaires et autres interactions.
-                  </p>
-                  <Button 
-                    className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium rounded-full px-6"
-                  >
-                    Explorer d'autres exercices
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        
-        {/* Right Sidebar - Enhanced with better styling and animations */}
-        {!fullscreenMode && (
-                <div className="col-span-12 lg:col-span-3 transform translate-x-12">
-                  <motion.div 
-                    ref={sidebarInViewRef}
-                    className="bg-white rounded-lg shadow-sm overflow-hidden sticky top-28 divide-y divide-gray-100"
-                  >
-                    {/* Timer Section - Adjusted for narrower sidebar */}
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-medium flex items-center text-sm">
-                          <Timer className="w-4 h-4 mr-1.5" />
-                          Chronomètre
-                        </h3>
-                        <div className="font-mono text-xl font-bold">{formatTime(timer)}</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={toggleTimer} 
-                          className={`flex-1 h-9 text-sm ${
-                            timerActive 
-                              ? 'bg-red-500 hover:bg-red-600 border-red-400' 
-                              : 'bg-white text-indigo-700 hover:bg-indigo-50'
-                          }`}
-                        >
-                          {timerActive ? 'Pause' : 'Démarrer'}
-                        </Button>
-                        <Button 
-                          onClick={resetTimer} 
-                          variant="outline" 
-                          className="flex-1 h-9 text-sm bg-indigo-500/20 border-indigo-300/30 text-white hover:bg-indigo-500/30"
-                        >
-                          Réinitialiser
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Status Buttons Section - Adjusted for narrower sidebar */}
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ThumbsUp className="w-4 h-4 text-indigo-600" />
-                        <span className="font-medium text-gray-800 text-sm">Suivi de progression</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => markAsCompleted(true)} 
-                          variant={completed === true ? "default" : "outline"} 
-                          className={`flex-1 h-9 text-sm ${
-                            completed === true 
-                              ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                              : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
-                          }`}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1.5" />
-                          Réussi
-                        </Button>
-                        <Button 
-                          onClick={() => markAsCompleted(false)} 
-                          variant={completed === false ? "default" : "outline"} 
-                          className={`flex-1 h-9 text-sm ${
-                            completed === false 
-                              ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                              : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
-                          }`}
-                        >
-                          <XCircle className="w-4 h-4 mr-1.5" />
-                          À revoir
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Difficulty Rating - Adjusted for narrower sidebar */}
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <BarChart3 className="w-4 h-4 text-indigo-600" />
-                        <span className="font-medium text-gray-800 text-sm">Évaluer la difficulté</span>
-                      </div>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map(rating => (
-                          <button 
-                            key={rating}
-                            onClick={() => rateDifficulty(rating)}
-                            className={`flex-1 p-1.5 rounded text-sm transition-all ${
-                              difficultyRating === rating 
-                                ? 'bg-indigo-600 text-white shadow-sm' 
-                                : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            {rating}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Exercise Statistics - Adjusted for narrower sidebar */}
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Vues</span>
-                          <span className="font-medium">{exercise.view_count}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Votes</span>
-                          <span className="font-medium">{exercise.vote_count}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Commentaires</span>
-                          <span className="font-medium">{exercise.comments?.length || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Related Exercises Section - Adjusted for narrower sidebar */}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-gray-800 text-sm flex items-center gap-1.5">
-                          <BookOpen className="w-4 h-4 text-indigo-600" />
-                          Exercices similaires
-                        </h3>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-indigo-600 h-6 p-0 text-xs hover:bg-transparent hover:text-indigo-800"
-                        >
-                          Voir plus
-                        </Button>
-                      </div>
-                      
-                      {/* Example related exercise cards - more compact */}
-                      <div className="space-y-2">
-                        <RelatedExerciseCard 
-                          title="Probabilités conditionnelles avancées"
-                          subject="Mathématiques"
-                          difficulty="easy"
-                        />
-                        <RelatedExerciseCard 
-                          title="Loi binomiale et applications"
-                          subject="Mathématiques"
-                          difficulty="medium"
-                        />
-                        <RelatedExerciseCard 
-                          title="Géométrie dans l'espace"
-                          subject="Mathématiques"
-                          difficulty="hard"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
+                </motion.div>
               )}
+
+              {/* Discussions Section - With animation */}
+              {activeSection === 'discussions' && (
+                <motion.div
+                  key="discussions-content"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                >
+                  <div className="p-6" id="comments">
+                    <CommentSection
+                      comments={exercise?.comments || []}
+                      onAddComment={handleAddComment}
+                      onVoteComment={handleVoteComment}
+                      onEditComment={handleEditComment}
+                      onDeleteComment={handleDeleteComment}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Other sections with animations */}
+              {activeSection === 'proposals' && (
+                <motion.div
+                  key="proposals-content"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                >
+                  <div className="p-8 text-center py-16">
+                    <GitPullRequest className="w-16 h-16 text-indigo-200 mx-auto mb-6" />
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3">Solutions alternatives</h3>
+                    <p className="text-gray-600 max-w-md mx-auto mb-6">
+                      Cette fonctionnalité sera bientôt disponible. Elle permettra aux utilisateurs de proposer leurs propres solutions à cet exercice.
+                    </p>
+                    <Button 
+                      className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium rounded-lg px-6"
+                    >
+                      Être notifié lorsque disponible
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+              
+              {activeSection === 'activity' && (
+                <motion.div
+                  key="activity-content"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                >
+                  <div className="p-8 text-center py-16">
+                    <Activity className="w-16 h-16 text-indigo-200 mx-auto mb-6" />
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3">Activité</h3>
+                    <p className="text-gray-600 max-w-md mx-auto mb-6">
+                      Le journal d'activité pour cet exercice sera bientôt disponible, montrant les votes, commentaires et autres interactions.
+                    </p>
+                    <Button 
+                      className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium rounded-lg px-6"
+                    >
+                      Explorer d'autres exercices
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
+          {/* Right Sidebar - Enhanced with better styling */}
+          {!fullscreenMode && (
+      <div 
+        className="fixed top-28 right-6 w-72 z-30"
+        style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
+      >
+        <motion.div 
+          ref={sidebarInViewRef}
+          className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100"
+        >
+          {/* Timer Section */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center text-sm">
+                <Timer className="w-4 h-4 mr-1.5" />
+                Chronomètre
+              </h3>
+              <div className="font-mono text-xl font-bold">{formatTime(timer)}</div>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={toggleTimer} 
+                className={`flex-1 h-9 text-sm ${
+                  timerActive 
+                    ? 'bg-red-500 hover:bg-red-600 border-red-400' 
+                    : 'bg-white text-indigo-700 hover:bg-indigo-50'
+                }`}
+              >
+                {timerActive ? 'Pause' : 'Démarrer'}
+              </Button>
+              <Button 
+                onClick={resetTimer} 
+                variant="outline" 
+                className="flex-1 h-9 text-sm bg-indigo-500/20 border-indigo-300/30 text-white hover:bg-indigo-500/30"
+              >
+                Réinitialiser
+              </Button>
             </div>
           </div>
+          
+          {/* Status Buttons Section */}
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <ThumbsUp className="w-4 h-4 text-indigo-600" />
+              <span className="font-medium text-gray-800 text-sm">Suivi de progression</span>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => markAsCompleted(true)} 
+                variant={completed === true ? "default" : "outline"} 
+                className={`flex-1 h-9 text-sm ${
+                  completed === true 
+                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                    : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
+                }`}
+              >
+                <CheckCircle className="w-4 h-4 mr-1.5" />
+                Réussi
+              </Button>
+              <Button 
+                onClick={() => markAsCompleted(false)} 
+                variant={completed === false ? "default" : "outline"} 
+                className={`flex-1 h-9 text-sm ${
+                  completed === false 
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                    : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
+                }`}
+              >
+                <XCircle className="w-4 h-4 mr-1.5" />
+                À revoir
+              </Button>
+            </div>
+          </div>
+          
+          {/* Difficulty Rating */}
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="w-4 h-4 text-indigo-600" />
+              <span className="font-medium text-gray-800 text-sm">Évaluer la difficulté</span>
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(rating => (
+                <button 
+                  key={rating}
+                  onClick={() => rateDifficulty(rating)}
+                  className={`flex-1 p-1.5 rounded text-sm transition-all ${
+                    difficultyRating === rating 
+                      ? 'bg-indigo-600 text-white shadow-sm' 
+                      : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {rating}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Exercise Statistics */}
+          <div className="p-4">
+            <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Vues</span>
+                <span className="font-medium">{exercise.view_count}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Votes</span>
+                <span className="font-medium">{exercise.vote_count}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Commentaires</span>
+                <span className="font-medium">{exercise.comments?.length || 0}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Related Exercises Section */}
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium text-gray-800 text-sm flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-indigo-600" />
+                Exercices similaires
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-indigo-600 h-6 p-0 text-xs hover:bg-transparent hover:text-indigo-800"
+              >
+                Voir plus
+              </Button>
+            </div>
+            
+            {/* Example related exercise cards */}
+            <div className="space-y-2">
+              <RelatedExerciseCard 
+                title="Probabilités conditionnelles avancées"
+                subject="Mathématiques"
+                difficulty="easy"
+              />
+              <RelatedExerciseCard 
+                title="Loi binomiale et applications"
+                subject="Mathématiques"
+                difficulty="medium"
+              />
+              <RelatedExerciseCard 
+                title="Géométrie dans l'espace"
+                subject="Mathématiques"
+                difficulty="hard"
+              />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )}
         </div>
       </div>
-    </div>
   );
 }
 
-// Enhanced Tab Button Component
+// Enhanced Tab Button Component in header
 function TabButton({ active, onClick, icon, label, count }: { 
   active: boolean; 
   onClick: () => void; 
@@ -1296,15 +1319,15 @@ function TabButton({ active, onClick, icon, label, count }: {
       onClick={onClick}
       className={`px-4 py-3 flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
         active 
-          ? 'border-indigo-600 text-indigo-700 bg-indigo-50 font-medium' 
-          : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300'
+          ? 'border-white text-white font-medium' 
+          : 'border-transparent text-white/70 hover:text-white hover:border-white/50'
       }`}
     >
       {icon}
       <span>{label}</span>
       {count !== undefined && count > 0 && (
         <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
-          active ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-gray-700'
+          active ? 'bg-white text-indigo-700' : 'bg-white/20 text-white'
         }`}>
           {count}
         </span>
@@ -1313,7 +1336,7 @@ function TabButton({ active, onClick, icon, label, count }: {
   );
 }
 
-// Related Exercise Card Component - More compact for narrower sidebar
+// Related Exercise Card Component
 function RelatedExerciseCard({ 
   title, 
   subject, 
@@ -1353,4 +1376,5 @@ function RelatedExerciseCard({
     </div>
   );
 }
+
 
