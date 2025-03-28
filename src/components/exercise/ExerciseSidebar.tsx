@@ -120,24 +120,6 @@ export const ExerciseSidebar: React.FC<ExerciseSidebarProps> = ({
           </Button>
         </div>
         
-        {/* Example related exercise cards */}
-        <div className="space-y-2">
-          <RelatedExerciseCard 
-            title="Probabilités conditionnelles avancées"
-            subject="Mathématiques"
-            difficulty="easy"
-          />
-          <RelatedExerciseCard 
-            title="Loi binomiale et applications"
-            subject="Mathématiques"
-            difficulty="medium"
-          />
-          <RelatedExerciseCard 
-            title="Géométrie dans l'espace"
-            subject="Mathématiques"
-            difficulty="hard"
-          />
-        </div>
       </div>
     </div>
   );

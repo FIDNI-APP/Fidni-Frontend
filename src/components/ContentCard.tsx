@@ -7,9 +7,7 @@ import {
   Tag, 
   Eye, 
   GraduationCap, 
-  BookOpen, 
-  User,
-  Clock,
+  BookOpen,
   Bookmark,
   Lightbulb,
   Loader2,
@@ -220,7 +218,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         className="flex flex-col h-full bg-white cursor-pointer rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-300 transform hover:-translate-y-1"
         onClick={handleCardClick}
       >
-        {/* Card Header with Advanced Styling */}
+        {/* Card Header with Advanced Styling - TITLE NOW FIRST */}
         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 p-5 relative overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
@@ -235,7 +233,19 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
           
           <div className="relative">
-            {/* Save Button in top right corner */}
+            {/* Title and Solution Indicator - MOVED TO TOP */}
+            <div className="flex items-start gap-2 mb-4">
+              {hasSolution && (
+                <div className="bg-emerald-400 p-1 rounded-full mr-1 flex-shrink-0 mt-1">
+                  <Lightbulb className="w-3 h-3 text-white" />
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-white leading-tight group-hover:underline">
+                {truncateTitle(content.title)}
+              </h2>
+            </div>
+            
+            {/* Save Button */}
             <div className="flex justify-end mb-3">
               <button 
                 onClick={handleSaveClick}
@@ -249,18 +259,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-yellow-300 text-yellow-300' : 'text-white/80'}`} />
                 )}
               </button>
-            </div>
-            
-            {/* Title and Solution Indicator */}
-            <div className="flex items-start gap-2 mb-2">
-              {hasSolution && (
-                <div className="bg-emerald-400 p-1 rounded-full mr-1 flex-shrink-0 mt-1">
-                  <Lightbulb className="w-3 h-3 text-white" />
-                </div>
-              )}
-              <h2 className="text-xl font-bold text-white leading-tight group-hover:underline">
-                {truncateTitle(content.title)}
-              </h2>
             </div>
             
             {/* Difficulty and Tags */}
@@ -296,8 +294,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             <TipTapRenderer content={content.content} />
           </div>
         </div>
-        
-        {/* No Tags Section Here - Moved to Footer */}
         
         {/* Footer Section with Tags Integrated */}
         <div className="mt-auto px-5 py-3 border-t border-gray-100 bg-white flex items-center justify-between">
@@ -422,9 +418,22 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         </div>
         
-        {/* Call to action hover overlay */}
-        <div className={`absolute inset-0 bg-indigo-900/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''}`}>
-          <div className="text-white text-center px-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+        {/* Call to action hover overlay - Completely restructured to ensure buttons remain clickable */}
+        <div 
+          onClick={handleCardClick}
+          className={`absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-40 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''}`}
+          style={{ 
+            pointerEvents: 'none',  // Make the entire overlay non-interactive by default
+          }}
+        >
+          <div 
+            className="text-white text-center px-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 bg-indigo-900/80 p-6 rounded-xl"
+            style={{ pointerEvents: 'auto' }}  // Only the modal itself receives clicks
+            onClick={(e) => {
+              e.stopPropagation();  // Prevent propagation to parent handlers
+              handleCardClick();
+            }}
+          >
             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-white/90" />
             <p className="font-medium text-lg mb-3">Voir l'exercice</p>
             <div className="flex items-center justify-center">

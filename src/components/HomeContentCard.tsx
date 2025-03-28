@@ -4,8 +4,6 @@ import {
   MessageSquare, 
   Tag, 
   Eye, 
-  User, 
-  Clock, 
   BarChart3, 
   GraduationCap,
   Bookmark,
@@ -73,40 +71,6 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
     return title.substring(0, maxLength) + '...';
   };
   
-  // Format time as "time ago"
-  const getTimeAgo = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'à l\'instant';
-    }
-    
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
-      return `il y a ${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'}`;
-    }
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
-      return `il y a ${diffInHours} ${diffInHours === 1 ? 'heure' : 'heures'}`;
-    }
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) {
-      return `il y a ${diffInDays} ${diffInDays === 1 ? 'jour' : 'jours'}`;
-    }
-    
-    const diffInWeeks = Math.floor(diffInDays / 7);
-    if (diffInWeeks < 4) {
-      return `il y a ${diffInWeeks} ${diffInWeeks === 1 ? 'semaine' : 'semaines'}`;
-    }
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    return `il y a ${diffInMonths} ${diffInMonths === 1 ? 'mois' : 'mois'}`;
-  };
-  
   // Check if solution exists
   const hasSolution = !!content.solution;
   
@@ -122,7 +86,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Card Header with Gradient */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 px-4 pt-4 pb-10">
+      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 px-4 pt-4 pb-4">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -135,22 +99,8 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
           </svg>
         </div>
         
-        {/* Author and Date */}
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center">
-            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-medium">
-              {content.author.username.charAt(0).toUpperCase()}
-            </div>
-            <span className="ml-1.5 text-xs text-white/90">{content.author.username}</span>
-          </div>
-          <span className="text-xs text-white/70 flex items-center">
-            <Clock className="w-3 h-3 mr-1" />
-            {getTimeAgo(content.created_at)}
-          </span>
-        </div>
-        
         {/* Title with Solution Indicator */}
-        <div className="flex items-start gap-1.5 mb-2 relative z-10">
+        <div className="flex items-start gap-1.5 mb-3 relative z-10">
           {hasSolution && (
             <div className="flex-shrink-0 bg-emerald-400 p-0.5 rounded-full mt-1">
               <Lightbulb className="w-3 h-3 text-white" />
@@ -187,19 +137,15 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         </div>
       </div>
       
-      {/* Content Area - Card Body with Content Preview */}
-      <div className="px-4 pt-2 pb-4 -mt-6 relative z-10">
-        {/* Content Card - White Background */}
-        <div className="bg-white rounded-xl shadow-md p-4 border border-gray-100">
-          {/* Content Preview */}
-          <div className="prose max-w-none text-sm text-gray-600 line-clamp-3 overflow-hidden">
-            <TipTapRenderer content={content.content} compact={true} />
-          </div>
+      {/* Content Area - SIMPLIFIED: direct content without nested container */}
+      <div className="px-4 py-4">
+        <div className="prose max-w-none text-sm text-gray-600 line-clamp-3 overflow-hidden">
+          <TipTapRenderer content={content.content} compact={true} />
         </div>
       </div>
       
       {/* Card Footer */}
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center mt-auto">
         {/* Left side - Vote and Stats */}
         <div className="flex items-center gap-3">
           <VoteButtons
@@ -247,8 +193,8 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         </div>
       </div>
       
-      {/* Hover Overlay */}
-      <div className={`absolute inset-0 bg-indigo-900/75 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''}`}>
+      {/* Hover Overlay - Modified to make buttons clickable */}
+      <div className={`absolute inset-0 bg-indigo-900/75 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''} pointer-events-none`}>
         <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 text-center">
           <div className="bg-white/20 rounded-full p-3 mx-auto mb-3 w-12 h-12 flex items-center justify-center">
             <ArrowRight className="w-6 h-6 text-white" />
@@ -267,6 +213,4 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
           animation: pulse 2s infinite;
         }
       `}</style>
-    </div>
-  );
-}
+    </div>);}

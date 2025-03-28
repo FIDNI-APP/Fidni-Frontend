@@ -48,6 +48,106 @@ api.interceptors.response.use(
   }
 );
 
+// Updated functions for src/lib/api.ts
+
+/**
+ * Get user profile by username
+ * @param username - Username to look up
+ * @returns User object with profile data
+ */
+export async function getUserById(username: string): Promise<User> {
+  try {
+    // Update this to use a proper endpoint for fetching user profiles
+    const response = await api.get(`/users/${username}/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get exercises created by a specific user
+ * @param username - Username to look up
+ * @returns Object containing results array of Content
+ */
+export async function getUserContributions(username: string): Promise<{ results: Content[] }> {
+  try {
+    const response = await api.get(`/exercises/`, {
+      params: { author: username }
+    });
+    
+    return {
+      results: response.data.results || []
+    };
+  } catch (error) {
+    console.error("Error fetching user contributions:", error);
+    throw error;
+  }
+}
+
+// In src/lib/api.ts
+export async function getSavedContents(): Promise<{ results: Content[] }> {
+  try {
+    // Use your existing endpoint for saved items
+    const response = await api.get(`/saves/`, {
+      params: { type: 'exercise' }  // Filter by exercise type if needed
+    });
+    return {
+      results: response.data.results || []
+    };
+  } catch (error) {
+    console.error("Error fetching saved content:", error);
+    throw error;
+  }
+}
+
+/**
+ * Follow a user
+ * @param username - Username to follow
+ * @returns Success response
+ */
+export async function followUser(username: string): Promise<any> {
+  try {
+    const response = await api.post(`/users/${username}/follow/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error following user:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unfollow a user
+ * @param username - Username to unfollow
+ * @returns Success response
+ */
+export async function unfollowUser(username: string): Promise<any> {
+  try {
+    const response = await api.post(`/users/${username}/unfollow/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error unfollowing user:", error);
+    throw error;
+  }
+}
+
+/**
+ * Check if current user is following another user
+ * @param username - Username to check
+ * @returns Boolean indicating follow status
+ */
+export async function isFollowingUser(username: string): Promise<boolean> {
+  try {
+    const response = await api.get(`/users/${username}/is-following/`);
+    return response.data.is_following;
+  } catch (error) {
+    console.error("Error checking follow status:", error);
+    return false;
+  }
+}
+
+
 // Add response interceptor to handle token storage
 // Ajoutez une logique de rafraîchissement de token
 api.interceptors.response.use(
@@ -101,93 +201,10 @@ import { User, Content } from "@/types";
  * This works with your current backend but uses the current user endpoint
  * for now since there's no specific endpoint for getting other users
  * 
- * @param userId - User ID or username
- * @returns User object
- */
-export async function getUserById(userId: string): Promise<User> {
-  try {
-    // Currently your backend doesn't have a specific endpoint to get user by ID
-    // You should use your current user endpoint for the logged-in user
-    // For other users, we'll need to add that endpoint
-    const response = await fetch('/api/auth/user');
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user: ${response.statusText}`);
-    }
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching user:", error);
 
-    // Fallback for development - remove when backend is updated
-    return {
-      id: userId,
-      username: "user_" + userId.substring(0, 5),
-      email: `user${userId.substring(0, 5)}@example.com`,
-      isAuthenticated: false,
-      joinedAt: new Date().toISOString(),
-      contributionsCount: 0,
-      reputation: 0,
-      bio: "This is a temporary user profile until the backend endpoint is implemented."
-    };
-  }
-}
 
-/**
- * Get exercises created by a specific user
- * @param userId - User ID or username
- * @returns Object containing results array of Content
- */
-export async function getUserContributions(userId: string): Promise<{ results: Content[] }> {
-  try {
-    // You need to create this endpoint in your Django backend
-    const response = await fetch(`/api/exercises?author=${userId}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user contributions: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching user contributions:", error);
-
-    // Return empty results array until backend is implemented
-    return {
-      results: []
-    };
-  }
-}
-
-/**
- * Get exercises saved by the current user
- * Note: This requires authentication
- * @returns Object containing results array of Content
- */
-export async function getSavedContents(): Promise<{ results: Content[] }> {
-  try {
-    // This would use the user history endpoint for upvoted content
-    // since you don't have a specific "saved" functionality yet
-    const response = await fetch('/api/users/history');
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch saved content: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Use the upvoted content from history as "saved" for now
-    return {
-      results: data.upvoted || []
-    };
-  } catch (error) {
-    console.error("Error fetching saved content:", error);
-
-    // Return empty results array until backend is implemented
-    return {
-      results: []
-    };
-  }
-}
 
 /**
  * Get user statistics (works with your current backend)
