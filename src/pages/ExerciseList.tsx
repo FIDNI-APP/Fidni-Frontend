@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, Plus, Filter, SortAsc, BookOpen } from 'lucide-react';
+import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { getContents, voteExercise, deleteContent } from '../lib/api';
 import { Content, SortOption, Difficulty, VoteValue } from '../types';
@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
 
-// Styles pour la barre de défilement personnalisée
+// Styles for the custom scrollbar
 const scrollbarStyles = `
   .custom-scrollbar {
     scrollbar-width: thin;
@@ -175,9 +175,15 @@ export const ExerciseList = () => {
     }
   };
 
+  const handleSortChange = (newSortOption: SortOption) => {
+    setSortBy(newSortOption);
+    // Logging to debug
+    console.log("Sorting changed to:", newSortOption);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
-      {/* Ajout des styles pour la barre de défilement */}
+      {/* Add the styles for the scrollbar */}
       <style>{scrollbarStyles}</style>
       
       {/* Header Section */}
@@ -241,12 +247,12 @@ export const ExerciseList = () => {
               <div className="flex flex-col sm:flex-row justify-between items-center">
                 <div className="flex items-center gap-3 mb-4 sm:mb-0">
                   <span className="text-gray-600 flex items-center font-medium">
-                    <SortAsc className="w-5 h-5 mr-2 text-indigo-600" />
+                    <ArrowUpDown className="w-5 h-5 mr-2 text-indigo-600" />
                     Trier par:
                   </span>
                   <SortDropdown 
                     value={sortBy} 
-                    onChange={(newSort) => setSortBy(newSort)} 
+                    onChange={handleSortChange} 
                   />
                 </div>
                 <div className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full font-medium">

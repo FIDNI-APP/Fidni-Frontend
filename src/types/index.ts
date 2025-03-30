@@ -1,7 +1,7 @@
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type SortOption = 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
 export type VoteValue = 1 | -1 | 0;
-
+export type CompleteValue = 'success' | 'review';
 
 
 export interface ClassLevelModel {
@@ -55,7 +55,6 @@ export interface Solution {
 
 
 
-
 export interface Content {
   id: string;
   title: string;
@@ -74,6 +73,8 @@ export interface Content {
   view_count: number;
   theorems : Theorem[];
   subfields : Subfield[];
+  user_save: boolean;
+  user_complete: CompleteValue;
 }
 
 export interface User {

@@ -22,7 +22,6 @@ import {
   removeExerciseProgress, 
   saveExercise, 
   unsaveExercise, 
-  getExerciseUserStatus 
 } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExerciseHeader } from '@/components/exercise/ExerciseHeader';
@@ -32,7 +31,7 @@ import { ExerciseContent } from '@/components/exercise/ExerciseContent';
 import { ExerciseSidebar } from '@/components/exercise/ExerciseSidebar';
 import { ProposalsEmptyState, ActivityEmptyState } from '@/components/exercise/EmptyStates';
 import { SolutionSection } from '@/components/exercise/SolutionSection';
-
+import 'katex/dist/katex.min.css';
 export function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -136,12 +135,6 @@ export function ExerciseDetail() {
       const exerciseData = await getContentById(exerciseId);
       setExercise(exerciseData);
       
-      // Load user-specific data if authenticated
-      if (isAuthenticated) {
-        const userStatus = await getExerciseUserStatus(exerciseId);
-        setCompleted(userStatus.progress.status);
-        setSavedForLater(userStatus.saved);
-      }
     } catch (err) {
       console.error('Failed to load exercise:', err);
       setError('Failed to load exercise. Please try again.');
@@ -492,9 +485,6 @@ export function ExerciseDetail() {
     setShowToolbar(!showToolbar);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
 
   if (loading) {
     return (
@@ -558,7 +548,194 @@ export function ExerciseDetail() {
       </div>
     );
   }
-
+  const handlePrint = () => {
+    // Create a temporary iframe to handle the printing
+    // This approach isolates the print content and allows us to properly render LaTeX
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'absolute';
+    printFrame.style.top = '-9999px';
+    printFrame.style.left = '-9999px';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    document.body.appendChild(printFrame);
+  
+    // Wait for the iframe to load before adding content
+    printFrame.onload = () => {
+      const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
+      if (!frameDoc) return;
+  
+      // Add necessary styles to the iframe
+      const styleSheet = document.createElement('style');
+      styleSheet.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Latin+Modern+Roman&display=swap');
+        
+        /* Base document styles */
+        body {
+          font-family: 'Latin Modern Roman', 'Computer Modern', 'Times New Roman', Times, serif;
+          font-size: 12pt;
+          line-height: 1.5;
+          margin: 0;
+          padding: 0 2cm;
+          color: black;
+          background: white;
+        }
+        
+        /* Print settings */
+        @page {
+          size: A4;
+          margin: 2cm;
+        }
+        
+        /* Typography */
+        h1 {
+          font-size: 18pt;
+          text-align: center;
+          margin-bottom: 0.5cm;
+          font-weight: bold;
+        }
+        
+        /* Meta information */
+        .exercise-metadata {
+          text-align: center;
+          font-style: italic;
+          margin-bottom: 1cm;
+          font-size: 10pt;
+          color: #333;
+        }
+        
+        /* Content and solution */
+        .exercise-content {
+          text-align: justify;
+          margin-bottom: 1cm;
+        }
+        
+        .solution-section {
+          margin-top: 1cm;
+          padding-top: 0.5cm;
+          border-top: 1pt solid #999;
+        }
+        
+        .solution-title {
+          font-size: 14pt;
+          text-align: center;
+          margin-bottom: 0.5cm;
+          font-weight: bold;
+        }
+        
+        /* Footer */
+        .print-footer {
+          margin-top: 2cm;
+          padding-top: 0.5cm;
+          border-top: 1pt solid #999;
+          text-align: center;
+          font-size: 9pt;
+          font-style: italic;
+        }
+        
+        /* LaTeX math styling */
+        .katex-display {
+          margin: 1em 0;
+          text-align: center;
+        }
+        
+        .katex {
+          font-size: 1.1em;
+          text-indent: 0;
+        }
+      `;
+      
+      // Import KaTeX CSS
+      const katexLink = document.createElement('link');
+      katexLink.rel = 'stylesheet';
+      katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
+      katexLink.integrity = 'sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntxDrP2e2xz2xzZ4wYYTIe1KvzGJ+KexmF';
+      katexLink.crossOrigin = 'anonymous';
+      
+      // Add styles to iframe head
+      frameDoc.head.appendChild(styleSheet);
+      frameDoc.head.appendChild(katexLink);
+      
+      // Set title
+      frameDoc.title = `${exercise.title} - ExercicesMaths.ma`;
+      
+      // Create HTML skeleton
+      frameDoc.body.innerHTML = `
+        <div class="exercise-print-container">
+          <h1>${exercise.title}</h1>
+          
+          <div class="exercise-metadata">
+            <div>Niveau: ${exercise.class_levels?.[0]?.name || 'Non spécifié'}</div>
+            <div>Matière: ${exercise.subject?.name || 'Non spécifiée'}</div>
+            <div>Difficulté: ${
+              exercise.difficulty === 'easy' ? 'Facile' : 
+              exercise.difficulty === 'medium' ? 'Moyen' : 'Difficile'
+            }</div>
+            <div>Date: ${new Date(exercise.created_at).toLocaleDateString()}</div>
+          </div>
+          
+          <div class="exercise-content" id="print-exercise-content"></div>
+          
+          ${exercise.solution && solutionVisible ? `
+            <div class="solution-section">
+              <h2 class="solution-title">Solution</h2>
+              <div class="solution-content" id="print-solution-content"></div>
+            </div>
+          ` : ''}
+          
+          <div class="print-footer">
+            <p>Exercice proposé par ${exercise.author.username} • Imprimé le ${new Date().toLocaleDateString()}</p>
+            <p>ExercicesMaths.ma</p>
+          </div>
+        </div>
+      `;
+      
+      // Clone the actual rendered content with LaTeX
+      // This is critical: we get the rendered DOM elements instead of just the HTML string
+      
+      // Find the actual rendered content in the page
+      const exerciseContentEl = document.querySelector('.exercise-content-body');
+      const solutionContentEl = solutionVisible && exercise.solution ? 
+        document.querySelector('.solution-content') : null;
+      
+      if (exerciseContentEl) {
+        // Clone the nodes to preserve the rendered LaTeX
+        const clonedContent = exerciseContentEl.cloneNode(true);
+        const printContentTarget = frameDoc.getElementById('print-exercise-content');
+        if (printContentTarget) {
+          printContentTarget.appendChild(clonedContent);
+        }
+      }
+      
+      if (solutionContentEl) {
+        // Clone the solution nodes to preserve the rendered LaTeX
+        const clonedSolution = solutionContentEl.cloneNode(true);
+        const printSolutionTarget = frameDoc.getElementById('print-solution-content');
+        if (printSolutionTarget) {
+          printSolutionTarget.appendChild(clonedSolution);
+        }
+      }
+      
+      // Give a moment for styles to apply, then print
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+        } catch (err) {
+          console.error('Print error:', err);
+          // Fallback for browsers that don't support iframe printing
+          window.print();
+        }
+        
+        // Clean up after printing (with a delay to ensure print dialog completes)
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 1000);
+      }, 500);
+    };
+    
+    // Set src to trigger onload
+    printFrame.src = 'about:blank';
+  };
   const isAuthor = user?.id === exercise.author.id;
   const hasSolution = !!exercise.solution;
   const canEditSolution = exercise.solution && user?.id === exercise.solution.author.id;

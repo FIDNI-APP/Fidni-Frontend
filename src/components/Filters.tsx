@@ -29,6 +29,19 @@ type FilterSection = {
   icon: React.ReactNode;
 };
 
+// Debounce utility to prevent rapid successive API calls
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   const [classLevels, setClassLevels] = useState<ClassLevelModel[]>([]);
   const [subjects, setSubjects] = useState<SubjectModel[]>([]);
@@ -46,14 +59,21 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     classLevels: true,
     subjects: true,
-    subfields: true,
-    chapters: true,
-    theorems: true,
+    subfields: false,  // Start collapsed to reduce initial API calls
+    chapters: false,   // Start collapsed to reduce initial API calls 
+    theorems: false,   // Start collapsed to reduce initial API calls
     difficulties: true,
   });
   const [isLoadingSubfields, setIsLoadingSubfields] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [isLoadingTheorems, setIsLoadingTheorems] = useState(false);
+  
+  // Track last request signatures to prevent duplicate calls
+  const [lastRequests, setLastRequests] = useState({
+    subfields: '',
+    chapters: '',
+    theorems: ''
+  });
 
   // Conditions to check if we should load data for hierarchical filters
   const shouldShowSubfieldOptions = () => {
@@ -76,43 +96,84 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     { title: 'Théorèmes', category: 'theorems', icon: <Award className="w-4 h-4 text-indigo-600" /> },
     { title: 'Difficulté', category: 'difficulties', icon: <BarChart3 className="w-4 h-4 text-purple-600" /> },
   ];
-
+  
+  // Load initial data on component mount
   useEffect(() => {
     loadClassLevels();
   }, []);
-
+  
+  // Load subjects when class levels change
   useEffect(() => {
-    loadSubjects();
-    // Clear subject and dependencies when class level changes
-    setSelectedSubject('');
-    setSelectedSubfields([]);
-    setSelectedChapters([]);
-    setSelectedTheorems([]);
+    if (selectedFilters.classLevels.length > 0) {
+      loadSubjects();
+    } else {
+      setSubjects([]);
+      // Clear dependent fields when class level changes
+      setSelectedFilters(prev => ({
+        ...prev,
+        subjects: [],
+        subfields: [],
+        chapters: [],
+        theorems: []
+      }));
+    }
   }, [selectedFilters.classLevels]);
-
+  
+  // Only load subfields when section is expanded and prerequisites are selected
   useEffect(() => {
-    loadSubfields();
-    // Clear subfields and dependencies when subject changes
-    setSelectedSubfields([]);
-    setSelectedChapters([]);
-    setSelectedTheorems([]);
-  }, [selectedFilters.subjects, selectedFilters.classLevels]);
-
+    if (expandedSections.subfields && shouldShowSubfieldOptions()) {
+      loadSubfields();
+    } else if (!shouldShowSubfieldOptions()) {
+      setSubfields([]);
+    }
+  }, [
+    expandedSections.subfields, 
+    selectedFilters.subjects, 
+    selectedFilters.classLevels
+  ]);
+  
+  // Only load chapters when section is expanded and prerequisites are selected
   useEffect(() => {
-    loadChapters();
-    // Clear chapters and theorems when subfields change
-    setSelectedChapters([]);
-    setSelectedTheorems([]);
-  }, [selectedFilters.subfields]);
-
+    if (expandedSections.chapters && shouldShowChapterOptions()) {
+      loadChapters();
+    } else if (!shouldShowChapterOptions()) {
+      setChapters([]);
+    }
+  }, [
+    expandedSections.chapters,
+    selectedFilters.subfields,
+    selectedFilters.subjects,
+    selectedFilters.classLevels
+  ]);
+  
+  // Only load theorems when section is expanded and prerequisites are selected
   useEffect(() => {
-    loadTheorems();
-    // Clear theorems when chapters change
-    setSelectedTheorems([]);
-  }, [selectedFilters.chapters]);
-
+    if (expandedSections.theorems && shouldShowTheoremOptions()) {
+      loadTheorems();
+    } else if (!shouldShowTheoremOptions()) {
+      setTheorems([]);
+    }
+  }, [
+    expandedSections.theorems,
+    selectedFilters.chapters,
+    selectedFilters.subfields,
+    selectedFilters.subjects,
+    selectedFilters.classLevels
+  ]);
+  
+  // Effect to update parent component with selected filters
   useEffect(() => {
-    onFilterChange(selectedFilters);
+    // Use debounce to prevent too many filter updates in rapid succession
+    const debouncedFilterChange = debounce(() => {
+      onFilterChange(selectedFilters);
+    }, 300);
+    
+    debouncedFilterChange();
+    
+    // Cleanup function
+    return () => {
+      // Any cleanup needed
+    };
   }, [selectedFilters, onFilterChange]);
 
   const loadClassLevels = async () => {
@@ -144,24 +205,41 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   };
 
   const loadSubfields = async () => {
+    // Skip if necessary conditions aren't met
+    if (selectedFilters.subjects.length === 0 || selectedFilters.classLevels.length === 0) {
+      setSubfields([]);
+      return;
+    }
+    
+    // Create a request signature to prevent duplicate calls
+    const requestSignature = JSON.stringify({
+      subjects: [...selectedFilters.subjects].sort(),
+      classLevels: [...selectedFilters.classLevels].sort()
+    });
+    
+    // Skip if this is a duplicate of the last request
+    if (requestSignature === lastRequests.subfields) {
+      console.log("Skipping duplicate subfields request");
+      return;
+    }
+    
+    setIsLoadingSubfields(true);
     try {
-      setIsLoadingSubfields(true);
-      // On attend d'avoir au moins un sujet sélectionné
-      if (selectedFilters.subjects.length === 0) {
-        setSubfields([]);
-        return;
-      }
+      // Update last request signature
+      setLastRequests(prev => ({
+        ...prev,
+        subfields: requestSignature
+      }));
       
-      // Charger les sous-domaines pour chaque sujet sélectionné
-      const promiseResults = await Promise.all(
-        selectedFilters.subjects.map(subjectId => 
-          getSubfields(subjectId, selectedFilters.classLevels)
-        )
+      // Load data for each selected subject
+      const promises = selectedFilters.subjects.map(subject => 
+        getSubfields(subject, selectedFilters.classLevels)
       );
       
-      // Fusionner et dédupliquer les résultats
-      const allSubfields = promiseResults.flat();
+      const results = await Promise.all(promises);
+      const allSubfields = results.flat();
       const uniqueSubfields = getUniqueById(allSubfields);
+      
       setSubfields(uniqueSubfields);
     } catch (error) {
       console.error('Failed to load subfields:', error);
@@ -171,11 +249,38 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   };
 
   const loadChapters = async () => {
+    // Skip if necessary conditions aren't met
+    if (selectedFilters.subfields.length === 0 || 
+        selectedFilters.subjects.length === 0 || 
+        selectedFilters.classLevels.length === 0) {
+      setChapters([]);
+      return;
+    }
+    
+    // Create a request signature to prevent duplicate calls
+    const requestSignature = JSON.stringify({
+      subjects: [...selectedFilters.subjects].sort(),
+      classLevels: [...selectedFilters.classLevels].sort(),
+      subfields: [...selectedFilters.subfields].sort()
+    });
+    
+    // Skip if this is a duplicate of the last request
+    if (requestSignature === lastRequests.chapters) {
+      console.log("Skipping duplicate chapters request");
+      return;
+    }
+    
+    setIsLoadingChapters(true);
     try {
-      setIsLoadingChapters(true);
+      // Update last request signature
+      setLastRequests(prev => ({
+        ...prev,
+        chapters: requestSignature
+      }));
       
+      // For simplicity, use the first subject in the list
       const data = await getChapters(
-        selectedFilters.subjects[0], // On utilise le premier sujet sélectionné
+        selectedFilters.subjects[0],
         selectedFilters.classLevels,
         selectedFilters.subfields
       );
@@ -190,11 +295,40 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   };
 
   const loadTheorems = async () => {
+    // Skip if necessary conditions aren't met
+    if (selectedFilters.chapters.length === 0 ||
+        selectedFilters.subfields.length === 0 || 
+        selectedFilters.subjects.length === 0 || 
+        selectedFilters.classLevels.length === 0) {
+      setTheorems([]);
+      return;
+    }
+    
+    // Create a request signature to prevent duplicate calls
+    const requestSignature = JSON.stringify({
+      subjects: [...selectedFilters.subjects].sort(),
+      classLevels: [...selectedFilters.classLevels].sort(),
+      subfields: [...selectedFilters.subfields].sort(),
+      chapters: [...selectedFilters.chapters].sort()
+    });
+    
+    // Skip if this is a duplicate of the last request
+    if (requestSignature === lastRequests.theorems) {
+      console.log("Skipping duplicate theorems request");
+      return;
+    }
+    
+    setIsLoadingTheorems(true);
     try {
-      setIsLoadingTheorems(true);
+      // Update last request signature
+      setLastRequests(prev => ({
+        ...prev,
+        theorems: requestSignature
+      }));
       
+      // For simplicity, use the first subject in the list
       const data = await getTheorems(
-        selectedFilters.subjects[0], // On utilise le premier sujet sélectionné
+        selectedFilters.subjects[0],
         selectedFilters.classLevels,
         selectedFilters.subfields,
         selectedFilters.chapters
@@ -221,6 +355,20 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       } else {
         if (newFilters[category].includes(value as string)) {
           newFilters[category] = newFilters[category].filter(v => v !== value);
+          
+          // Clear dependent fields when parent is deselected
+          if (category === 'classLevels') {
+            // No need for additional clearing here as it's handled in the useEffect
+          } else if (category === 'subjects') {
+            newFilters.subfields = [];
+            newFilters.chapters = [];
+            newFilters.theorems = [];
+          } else if (category === 'subfields') {
+            newFilters.chapters = [];
+            newFilters.theorems = [];
+          } else if (category === 'chapters') {
+            newFilters.theorems = [];
+          }
         } else {
           newFilters[category] = [...newFilters[category], value as string];
         }
@@ -279,34 +427,6 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     }));
   };
 
-  const setSelectedSubject = (id: string) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      subjects: id ? [id] : []
-    }));
-  };
-
-  const setSelectedSubfields = (ids: string[]) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      subfields: ids
-    }));
-  };
-
-  const setSelectedChapters = (ids: string[]) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      chapters: ids
-    }));
-  };
-
-  const setSelectedTheorems = (ids: string[]) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      theorems: ids
-    }));
-  };
-
   const renderFilterCategory = (
     section: FilterSection,
     items: { id: string; name: string }[] | Difficulty[]
@@ -314,11 +434,11 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     const { title, category, icon } = section;
     const isExpanded = expandedSections[category];
 
-    // Pour les sections avec beaucoup d'items, ajouter une hauteur max et un défilement
+    // For sections with many items, add a height max and scrolling
     const needsScroll = ['chapters', 'theorems', 'subfields'].includes(category);
     const scrollableClass = needsScroll ? "max-h-[300px] overflow-y-auto pr-2" : "";
 
-    // Déterminer si cette section est désactivée en fonction de la hiérarchie
+    // Determine if this section is disabled based on hierarchy
     let isDisabled = false;
     let disabledMessage = "";
     
@@ -333,7 +453,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       disabledMessage = "Veuillez sélectionner un chapitre d'abord";
     }
 
-    // Déterminer si cette section est en cours de chargement
+    // Determine if section is loading
     let isLoading = false;
     if (category === 'subfields' && isLoadingSubfields) {
       isLoading = true;
@@ -353,7 +473,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
             {icon}
             <h3 className="text-lg font-medium text-gray-800">{title}</h3>
             
-            {/* Afficher le nombre d'éléments disponibles */}
+            {/* Display count of available items */}
             {!isDisabled && items.length > 0 && (
               <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
                 {items.length}
@@ -391,7 +511,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200';
                     
-                    // Override pour les filtres de difficulté
+                    // Override for difficulty filters
                     if (category === 'difficulties' && !isSelected) {
                       buttonClass = getDifficultyColor(itemId);
                     }
@@ -443,7 +563,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <h2 className="text-xl font-semibold">
-              <Filter className="w-6 h-6 mr-3" />
+              <Filter className="w-6 h-6 mr-3 inline" />
               Filtres
             </h2>
           </div>
@@ -495,7 +615,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
                     className="px-3 py-1.5 rounded-full text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center space-x-2 transition-colors"
                   >
                     <span>{getFilterName(category as keyof FilterCategories, value)}</span>
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 ml-1" />
                   </button>
                 ))
               )}
@@ -505,4 +625,4 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       </div>
     </div>
   );
-};
+}

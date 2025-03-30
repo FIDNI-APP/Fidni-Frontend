@@ -476,6 +476,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                   className="hidden" 
                   accept="image/*" 
                   onChange={handleFileUpload}
+                  title="Télécharger une image"
+                  aria-label="Télécharger une image"
                 />
                 
                 <button
@@ -486,12 +488,14 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                   <Camera className="w-4 h-4 mr-2" />
                   Photo
                 </button>
+                <label htmlFor="camera-input" className="hidden">Prendre une photo</label>
                 <input 
                   type="file" 
+                  id="camera-input"
                   ref={cameraInputRef}
                   className="hidden" 
                   accept="image/*" 
-                  capture="environment"
+                  title="Prendre une photo"
                   onChange={captureImage}
                 />
               </div>

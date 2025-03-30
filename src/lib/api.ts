@@ -48,105 +48,6 @@ api.interceptors.response.use(
   }
 );
 
-// Updated functions for src/lib/api.ts
-
-/**
- * Get user profile by username
- * @param username - Username to look up
- * @returns User object with profile data
- */
-export async function getUserById(username: string): Promise<User> {
-  try {
-    // Update this to use a proper endpoint for fetching user profiles
-    const response = await api.get(`/users/${username}/`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    throw error;
-  }
-}
-
-/**
- * Get exercises created by a specific user
- * @param username - Username to look up
- * @returns Object containing results array of Content
- */
-export async function getUserContributions(username: string): Promise<{ results: Content[] }> {
-  try {
-    const response = await api.get(`/exercises/`, {
-      params: { author: username }
-    });
-    
-    return {
-      results: response.data.results || []
-    };
-  } catch (error) {
-    console.error("Error fetching user contributions:", error);
-    throw error;
-  }
-}
-
-// In src/lib/api.ts
-export async function getSavedContents(): Promise<{ results: Content[] }> {
-  try {
-    // Use your existing endpoint for saved items
-    const response = await api.get(`/saves/`, {
-      params: { type: 'exercise' }  // Filter by exercise type if needed
-    });
-    return {
-      results: response.data.results || []
-    };
-  } catch (error) {
-    console.error("Error fetching saved content:", error);
-    throw error;
-  }
-}
-
-/**
- * Follow a user
- * @param username - Username to follow
- * @returns Success response
- */
-export async function followUser(username: string): Promise<any> {
-  try {
-    const response = await api.post(`/users/${username}/follow/`);
-    return response.data;
-  } catch (error) {
-    console.error("Error following user:", error);
-    throw error;
-  }
-}
-
-/**
- * Unfollow a user
- * @param username - Username to unfollow
- * @returns Success response
- */
-export async function unfollowUser(username: string): Promise<any> {
-  try {
-    const response = await api.post(`/users/${username}/unfollow/`);
-    return response.data;
-  } catch (error) {
-    console.error("Error unfollowing user:", error);
-    throw error;
-  }
-}
-
-/**
- * Check if current user is following another user
- * @param username - Username to check
- * @returns Boolean indicating follow status
- */
-export async function isFollowingUser(username: string): Promise<boolean> {
-  try {
-    const response = await api.get(`/users/${username}/is-following/`);
-    return response.data.is_following;
-  } catch (error) {
-    console.error("Error checking follow status:", error);
-    return false;
-  }
-}
-
 
 // Add response interceptor to handle token storage
 // Ajoutez une logique de rafraîchissement de token
@@ -188,12 +89,6 @@ api.interceptors.response.use(
 
 import { User, Content } from "@/types";
 
-/**
- * Get user profile by ID or username
- * @param userId - User ID or username
- * @returns User object
- */
-// Add these functions to your existing lib/api.ts file
 
 
 /**
@@ -201,9 +96,62 @@ import { User, Content } from "@/types";
  * This works with your current backend but uses the current user endpoint
  * for now since there's no specific endpoint for getting other users
  * 
+ * @param userId - User ID or username
+ * @returns User object
+ */
+export async function getUserById(userId: string): Promise<User> {
+  try {
+    // Currently your backend doesn't have a specific endpoint to get user by ID
+    // You should use your current user endpoint for the logged-in user
+    // For other users, we'll need to add that endpoint
+    const response = await fetch('/api/auth/user');
 
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user: ${response.statusText}`);
+    }
 
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching user:", error);
 
+    // Fallback for development - remove when backend is updated
+    return {
+      id: userId,
+      username: "user_" + userId.substring(0, 5),
+      email: `user${userId.substring(0, 5)}@example.com`,
+      isAuthenticated: false,
+      joinedAt: new Date().toISOString(),
+      contributionsCount: 0,
+      reputation: 0,
+      bio: "This is a temporary user profile until the backend endpoint is implemented."
+    };
+  }
+}
+
+/**
+ * Get exercises created by a specific user
+ * @param userId - User ID or username
+ * @returns Object containing results array of Content
+ */
+export async function getUserContributions(userId: string): Promise<{ results: Content[] }> {
+  try {
+    // You need to create this endpoint in your Django backend
+    const response = await fetch(`/api/exercises?author=${userId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user contributions: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching user contributions:", error);
+
+    // Return empty results array until backend is implemented
+    return {
+      results: []
+    };
+  }
+}
 
 
 /**
@@ -212,18 +160,7 @@ import { User, Content } from "@/types";
  */
 
 type VoteValue = 1 | -1 | 0;  // Matches Vote.UP, Vote.DOWN, Vote.UNVOTE
-type VoteTarget = 'exercise' | 'solution' | 'comment';
 
-const voteContent = async (contentId: string, value: VoteValue, target: VoteTarget) => {
-  const endpoints = {
-    exercise: `/exercises/${contentId}/vote/`,
-    solution: `/solutions/${contentId}/vote/`,
-    comment: `/comments/${contentId}/vote/`,
-  };
-
-  const response = await api.post(endpoints[target], { value });
-  return response.data;
-};
 
 export const voteExercise = async (id: string, value: VoteValue) => {
   try {
@@ -235,13 +172,28 @@ export const voteExercise = async (id: string, value: VoteValue) => {
   }
 };
 
+
 export const voteSolution = async (id: string, value: VoteValue) => {
-  return voteContent(id, value, 'solution');
+  try {
+    const response = await api.post(`/solutions/${id}/vote/`, { value });
+    return response.data.item; // Return the updated exercise
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
 };
 
 export const voteComment = async (id: string, value: VoteValue) => {
-  return voteContent(id, value, 'comment');
+  try {
+    const response = await api.post(`/comments/${id}/vote/`, { value });
+    return response.data.item; // Return the updated exercise
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
 };
+
+
 
 // Auth API
 
@@ -370,6 +322,8 @@ export const createContent = async (data: {
 
 export const getContentById = async (id: string) => {
   const response = await api.get(`/exercises/${id}/`);
+  console.log('heeelllo')
+  console.log(response.data)
   return response.data;
 };
 
@@ -573,12 +527,3 @@ export const unsaveExercise = async (exerciseId: string) => {
   await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
 };
 
-/**
- * Get user's progress and saved status for an exercise
- * @param exerciseId - Exercise ID
- * @returns Object with progress and saved status
- */
-export const getExerciseUserStatus = async (exerciseId: string) => {
-  const response = await api.get(`/exercises/${exerciseId}/user_status/`);
-  return response.data;
-};

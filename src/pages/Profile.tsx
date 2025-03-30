@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserById, getUserContributions, getSavedContents } from '@/lib/api';
+import { getUserById, getUserContributions } from '@/lib/api';
 import { HomeContentCard } from '@/components/HomeContentCard';
 import { Content, User } from '@/types';
 
@@ -45,10 +45,7 @@ export function UserProfile() {
         setUserContributions(contributionsData.results || []);
         
         // Fetch saved content if viewing own profile
-        if (isOwnProfile) {
-          const savedData = await getSavedContents();
-          setSavedContent(savedData.results || []);
-        }
+        
       } catch (err) {
         console.error('Failed to load user profile:', err);
         setError('Failed to load user profile. Please try again.');

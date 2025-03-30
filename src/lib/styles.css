@@ -660,3 +660,203 @@
   width: 100%;
   margin: 1rem 0;
 }
+
+
+/* Import Latin Modern font, which is standard for LaTeX documents */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* Import KaTeX styles */
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css');
+
+@media print {
+  /* Reset all default print styles */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  /* Hide non-essential elements */
+  .navbar, nav, header, footer, .floating-toolbar, 
+  .exercise-sidebar, .tab-navigation, .vote-buttons,
+  button:not(.print-only), .print-hidden {
+    display: none !important;
+  }
+  
+  /* Only show the specific content we want to print */
+  body {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.5 !important;
+    color: #000 !important;
+    background: #fff !important;
+    font-family: 'Noto Serif', 'Latin Modern Roman', 'Times New Roman', serif !important;
+    font-size: 12pt !important;
+  }
+  
+  /* Basic page setup */
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+  
+  /* Main container */
+  .exercise-print-container {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Title */
+  .exercise-title {
+    font-size: 18pt !important;
+    text-align: center !important;
+    margin-bottom: 0.5cm !important;
+    font-weight: bold !important;
+    font-family: 'Noto Serif', 'Latin Modern Roman', 'Times New Roman', serif !important;
+  }
+  
+  /* Metadata */
+  .exercise-metadata {
+    text-align: center !important;
+    font-style: italic !important;
+    margin-bottom: 1cm !important;
+    font-size: 10pt !important;
+    color: #333 !important;
+  }
+  
+  /* Main content */
+  .exercise-content {
+    text-align: justify !important;
+    margin-bottom: 1cm !important;
+    hyphens: auto !important;
+  }
+  
+  /* Solution section */
+  .solution-section {
+    margin-top: 1cm !important;
+    padding-top: 0.5cm !important;
+    border-top: 1pt solid #999 !important;
+  }
+  
+  .solution-title {
+    font-size: 14pt !important;
+    text-align: center !important;
+    margin-bottom: 0.5cm !important;
+    font-weight: bold !important;
+  }
+  
+  /* LaTeX-specific overrides - CRITICAL for proper math rendering */
+  
+  /* Inline math */
+  .tiptap-mathematics-render {
+    display: inline-block !important;
+  }
+  
+  /* Display math */
+  .katex-display, 
+  [data-math-display="block"],
+  .tiptap-mathematics-render[data-math-display="block"] {
+    display: block !important;
+    text-align: center !important;
+    margin: 1em auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Fix font sizes and alignment in KaTeX */
+  .katex {
+    font-size: 1.1em !important;
+    line-height: 1.2 !important;
+    text-indent: 0 !important;
+    text-align: left !important;
+  }
+  
+  /* Keep consistent font */
+  .katex .mathdefault {
+    font-family: 'KaTeX_Math', 'Times New Roman', serif !important;
+  }
+  
+  /* Fix KaTeX scaling in displays */
+  .katex-display > .katex {
+    display: block !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Ensure KaTeX overflow is handled */
+  .katex-display > .katex > .katex-html {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Matrices */
+  .katex .vmatrix, 
+  .katex .bmatrix, 
+  .katex .pmatrix, 
+  .katex .matrix {
+    width: auto !important;
+    text-align: center !important;
+  }
+  
+  /* Ensure other elements look proper */
+  p, h2, h3, h4 {
+    orphans: 3 !important;
+    widows: 3 !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 0.5em !important;
+  }
+  
+  /* Avoid page breaks inside images and tables */
+  img, figure, table {
+    page-break-inside: avoid !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure page breaks aren't placed right after headings */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid !important;
+  }
+  
+  /* Footer */
+  .print-footer {
+    margin-top: 2cm !important;
+    padding-top: 0.5cm !important;
+    border-top: 1pt solid #999 !important;
+    text-align: center !important;
+    font-size: 9pt !important;
+    font-style: italic !important;
+  }
+  
+  /* Prevent background colors from being ignored */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* For tiptap-rendered content in print */
+.tiptap-for-print {
+  font-family: 'Noto Serif', 'Latin Modern Roman', 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+/* Hide print-specific elements when not printing */
+.print-only {
+  display: none;
+}
+
+/* Show print elements only during printing */
+@media print {
+  .print-only {
+    display: block !important;
+  }
+}

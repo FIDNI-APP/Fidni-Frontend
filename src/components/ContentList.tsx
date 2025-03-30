@@ -8,17 +8,16 @@ interface ContentListProps {
   onVote: (id: string, type: VoteValue) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
+  userStatuses?: Record<string, any>;
 }
 
 export const ContentList: React.FC<ContentListProps> = ({ 
   contents, 
   onVote,
   onDelete,
-  onEdit
+  onEdit,
 }) => {
   return (
-    // Return the items directly without the container div
-    // This allows the parent grid to control the layout
     <>
       {contents.map((content) => (
         <ContentCard 

@@ -7,7 +7,9 @@ import {
   Tag, 
   Eye, 
   GraduationCap, 
-  BookOpen,
+  BookOpen, 
+  User,
+  Clock,
   Bookmark,
   Lightbulb,
   Loader2,
@@ -22,7 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { VoteButtons } from './VoteButtons';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { useAuthModal } from '@/components/AuthController';
-import { saveExercise, unsaveExercise, getExerciseUserStatus } from '@/lib/api';
+import { saveExercise, unsaveExercise } from '@/lib/api';
 
 import '@/lib/styles.css';
 
@@ -50,21 +52,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal(); 
   
-  // Check initial save status when component mounts
-  React.useEffect(() => {
-    const checkSaveStatus = async () => {
-      if (isAuthenticated) {
-        try {
-          const status = await getExerciseUserStatus(content.id);
-          setIsSaved(status.saved);
-        } catch (error) {
-          console.error("Error checking save status:", error);
-        }
-      }
-    };
-    
-    checkSaveStatus();
-  }, [content.id, isAuthenticated]);
+
   
   // Check if solution exists
   const hasSolution = !!content.solution;
@@ -218,7 +206,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         className="flex flex-col h-full bg-white cursor-pointer rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-300 transform hover:-translate-y-1"
         onClick={handleCardClick}
       >
-        {/* Card Header with Advanced Styling - TITLE NOW FIRST */}
+        {/* Card Header with Advanced Styling */}
         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 p-5 relative overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
@@ -233,8 +221,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
           
           <div className="relative">
-            {/* Title and Solution Indicator - MOVED TO TOP */}
-            <div className="flex items-start gap-2 mb-4">
+            {/* Save Button in top right corner */}
+            <div className="flex justify-between mb-3">
+              <div className="flex items-start gap-2 mb-2">
               {hasSolution && (
                 <div className="bg-emerald-400 p-1 rounded-full mr-1 flex-shrink-0 mt-1">
                   <Lightbulb className="w-3 h-3 text-white" />
@@ -245,8 +234,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </h2>
             </div>
             
-            {/* Save Button */}
-            <div className="flex justify-end mb-3">
               <button 
                 onClick={handleSaveClick}
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex-shrink-0"
@@ -260,6 +247,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 )}
               </button>
             </div>
+            
+            {/* Title and Solution Indicator */}
             
             {/* Difficulty and Tags */}
             <div className="flex flex-wrap items-center gap-2">
@@ -294,6 +283,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             <TipTapRenderer content={content.content} />
           </div>
         </div>
+        
+        {/* No Tags Section Here - Moved to Footer */}
         
         {/* Footer Section with Tags Integrated */}
         <div className="mt-auto px-5 py-3 border-t border-gray-100 bg-white flex items-center justify-between">
@@ -418,20 +409,20 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         </div>
         
-        {/* Call to action hover overlay - Completely restructured to ensure buttons remain clickable */}
+        {/* Call to action hover overlay */}
         <div 
           onClick={handleCardClick}
-          className={`absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-40 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''}`}
+          className={`absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-30 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''}`}
           style={{ 
             pointerEvents: 'none',  // Make the entire overlay non-interactive by default
           }}
         >
           <div 
             className="text-white text-center px-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 bg-indigo-900/80 p-6 rounded-xl"
-            style={{ pointerEvents: 'auto' }}  // Only the modal itself receives clicks
+            style={{ pointerEvents: 'none' }}  // Only the modal itself receives clicks
             onClick={(e) => {
               e.stopPropagation();  // Prevent propagation to parent handlers
-              handleCardClick();
+              handleCardClick(e);
             }}
           >
             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-white/90" />
