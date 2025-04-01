@@ -9,8 +9,6 @@ import { toast } from 'react-hot-toast';
 
 // Define interfaces for the settings
 interface UserSettings {
-  theme_preference: 'light' | 'dark' | 'system';
-  math_notation: 'latex' | 'ascii';
   display_email: boolean;
   display_stats: boolean;
   email_notifications: boolean;
@@ -21,8 +19,6 @@ interface UserSettings {
 export const UserSettings: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const [settings, setSettings] = useState<UserSettings>({
-    theme_preference: 'system',
-    math_notation: 'latex',
     display_email: false,
     display_stats: true,
     email_notifications: true,
@@ -34,8 +30,6 @@ export const UserSettings: React.FC = () => {
   useEffect(() => {
     if (user && user.profile) {
       setSettings({
-        theme_preference: (user.profile.theme_preference as 'light' | 'dark' | 'system') || 'system',
-        math_notation: (user.profile.math_notation as 'latex' | 'ascii') || 'latex',
         display_email: user.profile.display_email || false,
         display_stats: user.profile.display_stats || true,
         email_notifications: user.profile.email_notifications || true,
@@ -76,56 +70,11 @@ export const UserSettings: React.FC = () => {
       
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Appearance section */}
-        <div className="space-y-6">
-          <h3 className="text-lg font-medium border-b pb-2">Appearance</h3>
+       
           
-          <div className="space-y-4">
-            {/* Theme preference - replace with your UI library's Select component */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Theme</label>
-              {/* Example with a native select (replace with your UI library component) */}
-              <select
-                value={settings.theme_preference}
-                onChange={(e) => handleChange('theme_preference', e.target.value as 'light' | 'dark' | 'system')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="system">System Default</option>
-              </select>
-            </div>
             
             {/* Math notation - replace with your UI library's Radio component */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Math Notation</label>
-              {/* Example with native radio buttons (replace with your UI library component) */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="latex"
-                    name="math_notation"
-                    value="latex"
-                    checked={settings.math_notation === 'latex'}
-                    onChange={() => handleChange('math_notation', 'latex')}
-                  />
-                  <label htmlFor="latex">LaTeX</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="ascii"
-                    name="math_notation"
-                    value="ascii"
-                    checked={settings.math_notation === 'ascii'}
-                    onChange={() => handleChange('math_notation', 'ascii')}
-                  />
-                  <label htmlFor="ascii">ASCII</label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+           
         
         {/* Privacy section */}
         <div className="space-y-6">

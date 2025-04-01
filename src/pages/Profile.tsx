@@ -1,22 +1,26 @@
 // src/pages/Profile.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile, getUserStats, getUserContributions, getUserSavedExercises, getUserHistory } from '@/lib/api';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { StatsDashboard } from '@/components/profile/StatsDashboard';
-import { UserSettings } from '@/components/profile/UserSettings';
-import { ContentList } from '@/components/ContentList';
-import { ViewHistoryList } from '@/components/profile/ViewHistoryList';
-import { User, Content, ViewHistoryItem } from '@/types';
+import { getUserProfile, getUserStats, getUserContributions, getUserSavedExercises, getUserHistory, updateUserProfile } from '@/lib/api';
+import { Content, User, ViewHistoryItem } from '@/types';
 import { Loader2 } from 'lucide-react';
+
+// Import the enhanced components
+import { ProfileHeaderEnhanced } from '@/components/profile/ProfileHeaderEnhanced';
+import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard';
+import { SavedExercisesSection } from '@/components/profile/SavedExercisesSection';
+import { ViewHistorySection } from '@/components/profile/ViewHistorySection';
+import { ProgressSection } from '@/components/profile/ProgressSection';
+import { ContributionsSection } from '@/components/profile/ContributionsSection';
+import { EditProfileForm } from '@/components/profile/EditProfileForm';
 
 export function UserProfile() {
   const { username } = useParams<{ username: string }>();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   
+  // Various states for different data
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
@@ -24,54 +28,113 @@ export function UserProfile() {
   const [contributions, setContributions] = useState<Content[]>([]);
   const [savedExercises, setSavedExercises] = useState<Content[]>([]);
   const [history, setHistory] = useState<ViewHistoryItem[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Additional states for the enhanced progress tracking
+  const [successExercises, setSuccessExercises] = useState<Content[]>([]);
+  const [reviewExercises, setReviewExercises] = useState<Content[]>([]);
   
   const isOwner = currentUser?.username === username;
   
-  useEffect(() => {
-    const fetchUserData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch user profile
-        const profileData = await getUserProfile(username || '');
-        setUserProfile(profileData);
-        
-        // Fetch stats
-        const statsData = await getUserStats(username || '');
-        setStats(statsData);
-        
-        // Fetch contributions
-        const contributionsData = await getUserContributions(username || '');
-        setContributions(contributionsData.results || []);
-        
-        // Fetch additional data for profile owner
-        if (isOwner) {
-          // Fetch saved exercises
-          const savedData = await getUserSavedExercises(username || '');
-          setSavedExercises(savedData.results || []);
-          
-          // Fetch history
-          const historyData = await getUserHistory(username || '');
-          setHistory(historyData.results || []);
-        }
-      } catch (err) {
-        console.error('Failed to load user profile:', err);
-        setError('Failed to load user profile. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // src/pages/Profile.tsx - Fix the error in fetchUserData function
+
+useEffect(() => {
+  const fetchUserData = async () => {
+    setIsLoading(true);
+    setError(null);
     
-    if (username) {
-      fetchUserData();
+    try {
+      // Fetch user profile
+      const profileData = await getUserProfile(username || '');
+      setUserProfile(profileData);
+      
+      // Fetch stats
+      const statsData = await getUserStats(username || '');
+      setStats(statsData);
+      
+      // Fetch contributions
+      const contributionsData = await getUserContributions(username || '');
+      setContributions(contributionsData?.results || []);
+      
+      // Fetch additional data for profile owner
+      if (isOwner) {
+        // Fetch saved exercises
+        const savedData = await getUserSavedExercises(username || '');
+        setSavedExercises(savedData?.results || []);
+        
+        // Fetch history
+        const historyData = await getUserHistory(username || '');
+        const historyResults = historyData?.results || [];
+        setHistory(historyResults);
+        
+        // Extract progress information (exercises marked as complete or review)
+        // Make sure we're safely accessing the data
+        if (historyResults && historyResults.length > 0) {
+          const completedExercises = historyResults
+            .filter(item => item && item.completed)
+            .map(item => item.content);
+          
+          setSuccessExercises(completedExercises);
+          
+          // This is simulated - in a real app you would get the actual review exercises from the API
+          // Here we're just using a subset of the viewed exercises as "to review" for demonstration
+          const reviewItems = historyResults
+            .filter((item, i) => 
+              i % 3 === 0 && 
+              item && 
+              item.content &&
+              !completedExercises.some(ex => ex.id === item.content.id)
+            )
+            .map(item => item.content);
+            
+          setReviewExercises(reviewItems);
+        } else {
+          // Handle case where there's no history data
+          setSuccessExercises([]);
+          setReviewExercises([]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load user profile:', err);
+      setError('Failed to load user profile. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  }, [username, isOwner]);
+  };
+  
+  if (username) {
+    fetchUserData();
+  }
+}, [username, isOwner]);
   
   const handleEditProfile = () => {
-    // Navigate to settings tab or open edit modal
-    // For simplicity, we'll just navigate to settings tab
-    document.getElementById('settings-tab')?.click();
+    setIsEditing(true);
+  };
+  
+  const handleSaveProfile = async (userData: any) => {
+    try {
+      await updateUserProfile(userData);
+      
+      // Update local state with new profile data
+      setUserProfile(prev => {
+        if (!prev) return null;
+        
+        return {
+          ...prev,
+          username: userData.username,
+          email: userData.email,
+          profile: {
+            ...prev.profile,
+            ...userData.profile
+          }
+        };
+      });
+      
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      throw err; // Re-throw to be handled by the form
+    }
   };
   
   if (isLoading) {
@@ -108,93 +171,68 @@ export function UserProfile() {
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Profile Header */}
-        <ProfileHeader 
-          user={userProfile} 
-          isOwner={isOwner}
-          onEditProfile={handleEditProfile}
-        />
+        {/* Enhanced Profile Header */}
+        {isEditing ? (
+          <EditProfileForm 
+            user={userProfile} 
+            onSave={handleSaveProfile}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <ProfileHeaderEnhanced 
+            user={userProfile} 
+            isOwner={isOwner}
+            onEditProfile={handleEditProfile}
+          />
+        )}
         
-        {/* Tabs */}
-        <div className="mt-6">
-          <Tabs defaultValue="stats">
-            <TabsList className="bg-white rounded-xl p-1 shadow-sm mb-6">
-              <TabsTrigger value="stats">
-                Statistics
-              </TabsTrigger>
-              <TabsTrigger value="contributions">
-                Contributions
-              </TabsTrigger>
-              {isOwner && (
-                <>
-                  <TabsTrigger value="saved">
-                    Saved Exercises
-                  </TabsTrigger>
-                  <TabsTrigger value="history">
-                    History
-                  </TabsTrigger>
-                  <TabsTrigger value="settings" id="settings-tab">
-                    Settings
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
+        {/* Main content - only show when not editing */}
+        {!isEditing && (
+          <div className="mt-6 space-y-6">
+            {/* Stats Overview */}
+            <StatsOverviewCard 
+              contributionStats={stats?.contribution_stats}
+              learningStats={isOwner ? stats?.learning_stats : undefined}
+              isLoading={isLoading}
+            />
             
-            <TabsContent value="stats">
-              {stats && (
-                <StatsDashboard 
-                  contributionStats={stats.contribution_stats}
-                  learningStats={isOwner ? stats.learning_stats : undefined}
-                />
-              )}
-            </TabsContent>
-            
-            <TabsContent value="contributions">
-              {contributions.length > 0 ? (
-                <ContentList
-                  contents={contributions}
-                  onVote={() => {}}
-                />
-              ) : (
-                <div className="bg-white rounded-xl p-8 text-center">
-                  <p className="text-gray-500">No contributions yet</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            {isOwner && (
-              <>
-                <TabsContent value="saved">
-                  {savedExercises.length > 0 ? (
-                    <ContentList
-                      contents={savedExercises}
-                      onVote={() => {}}
-                    />
-                  ) : (
-                    <div className="bg-white rounded-xl p-8 text-center">
-                      <p className="text-gray-500">No saved exercises</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="history">
-                  {history.length > 0 ? (
-                    <ViewHistoryList items={history} />
-                  ) : (
-                    <div className="bg-white rounded-xl p-8 text-center">
-                      <p className="text-gray-500">No view history</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="settings">
-                  <UserSettings />
-                </TabsContent>
-              </>
-            )}
-          </Tabs>
-        </div>
-      </div>
+            {/* Grid layout for different sections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Contributions Section */}
+              <ContributionsSection 
+                exercises={contributions} 
+                isLoading={isLoading}
+              />
+              
+              {/* If owner, show saved exercises */}
+  {isOwner && (
+    <SavedExercisesSection 
+      exercises={savedExercises} 
+      isLoading={isLoading}
+    />
+  )}
+</div>
+
+{/* Show Progress and History sections for owner */}
+{isOwner && (
+  <>
+    <ProgressSection 
+      successExercises={successExercises}
+      reviewExercises={reviewExercises}
+      isLoading={isLoading}
+    />
+    
+    <div className="mt-6">
+      <ViewHistorySection 
+        historyItems={history} 
+        isLoading={isLoading}
+      />
     </div>
-  );
+  </>
+)}
+</div>
+)}
+</div>
+</div>
+);
 }

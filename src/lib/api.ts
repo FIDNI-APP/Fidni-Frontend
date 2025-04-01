@@ -474,42 +474,64 @@ export const unsaveExercise = async (exerciseId: string) => {
   await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
 };
 
-export const getUserProfile = async (username: string) => {
-  const response = await api.get(`/users/${username}/`);
-  return response.data;
-};
+// src/lib/api.ts - Add or update functions for user profile data
 
-export const updateUserProfile = async (data: any) => {
-  const response = await api.patch(`/users/${encodeURIComponent(data.username)}/`, data);
-  return response.data;
+export const getUserProfile = async (username: string) => {
+  try {
+    const response = await api.get(`/users/${username}/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    throw error;
+  }
 };
 
 export const getUserStats = async (username: string) => {
-  const response = await api.get(`/users/${username}/stats/`);
-  return response.data;
+  try {
+    const response = await api.get(`/users/${username}/stats/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user stats:", error);
+    throw error;
+  }
 };
 
 export const getUserContributions = async (username: string) => {
-  const response = await api.get(`/users/${username}/contributions/`);
-  return response.data;
+  try {
+    const response = await api.get(`/users/${username}/contributions/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user contributions:", error);
+    throw error;
+  }
 };
 
 export const getUserSavedExercises = async (username: string) => {
-  const response = await api.get(`/users/${username}/saved_exercises/`);
-  return response.data;
+  try {
+    const response = await api.get(`/users/${username}/saved_exercises/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching saved exercises:", error);
+    throw error;
+  }
 };
 
 export const getUserHistory = async (username: string) => {
-  const response = await api.get(`/users/${username}/history/`);
-  return response.data;
+  try {
+    const response = await api.get(`/users/${username}/history/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user history:", error);
+    throw error;
+  }
 };
 
-export const getUserSettings = async () => {
-  const response = await api.get('/auth/settings/');
-  return response.data;
-};
-
-export const updateUserSettings = async (settings: any) => {
-  const response = await api.patch('/auth/settings/', settings);
-  return response.data;
+export const updateUserProfile = async (userData: any) => {
+  try {
+    const response = await api.patch(`/users/${encodeURIComponent(userData.username)}/`, userData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
 };
