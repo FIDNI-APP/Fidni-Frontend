@@ -31,8 +31,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
+      return userData;
     } catch (error) {
+      console.error('Failed to refresh user:', error);
       setUser(null);
+      throw error;
     }
   };
 

@@ -399,6 +399,12 @@ export function ExerciseDetail() {
     }
   };
 
+  useEffect(() => {
+      if (exercise && exercise.user_complete !== undefined) {
+        setCompleted(exercise.user_complete);
+      }
+    }, [exercise]);
+
   // Implement progress tracking (Réussi/À revoir)
   const markAsCompleted = async (status: 'success' | 'review') => {
     if (!isAuthenticated || !id) {
@@ -429,6 +435,11 @@ export function ExerciseDetail() {
       setLoadingStates(prev => ({ ...prev, progress: false }));
     }
   };
+  useEffect(() => {
+      if (exercise && exercise.user_save !== undefined) {
+        setSavedForLater(exercise.user_save);
+      }
+    }, [exercise]);
   
   // Toggle saved status (Enregistrer)
   const toggleSavedForLater = async () => {

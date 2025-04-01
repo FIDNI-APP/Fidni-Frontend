@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -75,6 +75,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     // Navigate to the exercise page
     navigate(`/exercises/${content.id}`);
   };
+  useEffect(() => {
+    if (content && content.user_save !== undefined) {
+      setIsSaved(content.user_save);
+    }
+  }, [content]);
+  
 
   const handleSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -91,13 +97,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       if (isSaved) {
         // If currently saved, unsave it
         await unsaveExercise(content.id);
+        setIsSaved(false);
       } else {
         // If not saved, save it
         await saveExercise(content.id);
+        setIsSaved(true);
       }
-      
-      // Update local state
-      setIsSaved(!isSaved);
       
       // Call the callback if provided
       if (onSave) {

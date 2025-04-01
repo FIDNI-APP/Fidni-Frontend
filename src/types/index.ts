@@ -77,16 +77,67 @@ export interface Content {
   user_complete: CompleteValue;
 }
 
+// src/types/index.ts
+
+// Update the User interface
 export interface User {
   id: string;
   username: string;
   email: string;
-  isAuthenticated: boolean;
-  avatar?: string;
-  bio?: string;
   joinedAt: string;
-  contributionsCount: number;
+  profile: UserProfile;
+  is_self?: boolean;
+  isAuthenticated: boolean;
+
+}
+
+// Create or update the UserProfile interface
+export interface UserProfile {
+  bio: string;
+  avatar: string;
+  favorite_subjects: string[];
   reputation: number;
+  github_username: string;
+  website: string;
+  location: string;
+  last_activity_date: string;
+  joined_at: string;
+  
+  // Settings
+  theme_preference: 'light' | 'dark' | 'system';
+  math_notation: 'latex' | 'ascii';
+  display_email: boolean;
+  display_stats: boolean;
+  email_notifications: boolean;
+  comment_notifications: boolean;
+  solution_notifications: boolean;
+  
+  // Stats (may be conditionally available)
+  contribution_stats?: {
+    exercises: number;
+    solutions: number;
+    comments: number;
+    total_contributions: number;
+    upvotes_received: number;
+    view_count: number;
+  };
+  learning_stats?: {
+    exercises_completed: number;
+    exercises_in_review: number;
+    exercises_saved: number;
+    subjects_studied: string[];
+    total_viewed: number;
+  };
+}
+
+// Add types for user history
+export interface ViewHistoryItem {
+  content: Content;
+  content_title: string;
+  content_difficulty: Difficulty;
+  viewed_at: string;
+  completed: boolean;
+  time_spent: number;
 }
 
 export interface Comment {

@@ -91,73 +91,42 @@ import { User, Content } from "@/types";
 
 
 
-/**
- * Get user profile by ID or username
- * This works with your current backend but uses the current user endpoint
- * for now since there's no specific endpoint for getting other users
- * 
- * @param userId - User ID or username
- * @returns User object
- */
-export async function getUserById(userId: string): Promise<User> {
-  try {
-    // Currently your backend doesn't have a specific endpoint to get user by ID
-    // You should use your current user endpoint for the logged-in user
-    // For other users, we'll need to add that endpoint
-    const response = await fetch('/api/auth/user');
+// /**
+//  * Get user profile by ID or username
+//  * This works with your current backend but uses the current user endpoint
+//  * for now since there's no specific endpoint for getting other users
+//  * 
+//  * @param userId - User ID or username
+//  * @returns User object
+//  */
+// export async function getUserById(userId: string): Promise<User> {
+//   try {
+//     // Currently your backend doesn't have a specific endpoint to get user by ID
+//     // You should use your current user endpoint for the logged-in user
+//     // For other users, we'll need to add that endpoint
+//     const response = await fetch('/api/auth/user');
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user: ${response.statusText}`);
-    }
+//     if (!response.ok) {
+//       throw new Error(`Failed to fetch user: ${response.statusText}`);
+//     }
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching user:", error);
+//     return await response.json();
+//   } catch (error) {
+//     console.error("Error fetching user:", error);
 
-    // Fallback for development - remove when backend is updated
-    return {
-      id: userId,
-      username: "user_" + userId.substring(0, 5),
-      email: `user${userId.substring(0, 5)}@example.com`,
-      isAuthenticated: false,
-      joinedAt: new Date().toISOString(),
-      contributionsCount: 0,
-      reputation: 0,
-      bio: "This is a temporary user profile until the backend endpoint is implemented."
-    };
-  }
-}
-
-/**
- * Get exercises created by a specific user
- * @param userId - User ID or username
- * @returns Object containing results array of Content
- */
-export async function getUserContributions(userId: string): Promise<{ results: Content[] }> {
-  try {
-    // You need to create this endpoint in your Django backend
-    const response = await fetch(`/api/exercises?author=${userId}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user contributions: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching user contributions:", error);
-
-    // Return empty results array until backend is implemented
-    return {
-      results: []
-    };
-  }
-}
+//     // Fallback for development - remove when backend is updated
+//     return {
+//       id: userId,
+//       username: "user_" + userId.substring(0, 5),
+//       email: `user${userId.substring(0, 5)}@example.com`,
+//       isAuthenticated: false,
+//       joinedAt: new Date().toISOString(),
+//       profile:
+//     };
+//   }
+// }
 
 
-/**
- * Get user statistics (works with your current backend)
- * @returns User statistics
- */
 
 type VoteValue = 1 | -1 | 0;  // Matches Vote.UP, Vote.DOWN, Vote.UNVOTE
 
@@ -453,29 +422,7 @@ export const getTheorems = async (subjectId: string, classLevelIds: string[], su
 };
 
 
-// User Profile API
-export const getUserProfile = async (username: string) => {
-  const response = await api.get(`/users/${username}/`);
-  return response.data;
-};
 
-export const updateUserProfile = async (data: any) => {
-  const response = await api.put('/users/profile/', data);
-  return response.data;
-};
-
-
-
-// User History and Stats
-export const getUserHistory = async () => {
-  const response = await api.get('/users/history/');
-  return response.data;
-};
-
-export const getUserStats = async () => {
-  const response = await api.get('/users/stats/');
-  return response.data;
-};
 
 // Image Upload
 export const uploadImage = async (file: File) => {
@@ -527,3 +474,42 @@ export const unsaveExercise = async (exerciseId: string) => {
   await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
 };
 
+export const getUserProfile = async (username: string) => {
+  const response = await api.get(`/users/${username}/`);
+  return response.data;
+};
+
+export const updateUserProfile = async (data: any) => {
+  const response = await api.patch(`/users/${encodeURIComponent(data.username)}/`, data);
+  return response.data;
+};
+
+export const getUserStats = async (username: string) => {
+  const response = await api.get(`/users/${username}/stats/`);
+  return response.data;
+};
+
+export const getUserContributions = async (username: string) => {
+  const response = await api.get(`/users/${username}/contributions/`);
+  return response.data;
+};
+
+export const getUserSavedExercises = async (username: string) => {
+  const response = await api.get(`/users/${username}/saved_exercises/`);
+  return response.data;
+};
+
+export const getUserHistory = async (username: string) => {
+  const response = await api.get(`/users/${username}/history/`);
+  return response.data;
+};
+
+export const getUserSettings = async () => {
+  const response = await api.get('/auth/settings/');
+  return response.data;
+};
+
+export const updateUserSettings = async (settings: any) => {
+  const response = await api.patch('/auth/settings/', settings);
+  return response.data;
+};
