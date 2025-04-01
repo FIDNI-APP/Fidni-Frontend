@@ -96,16 +96,11 @@ export interface UserProfile {
   bio: string;
   avatar: string;
   favorite_subjects: string[];
-  reputation: number;
-  github_username: string;
-  website: string;
   location: string;
   last_activity_date: string;
   joined_at: string;
   
   // Settings
-  theme_preference: 'light' | 'dark' | 'system';
-  math_notation: 'latex' | 'ascii';
   display_email: boolean;
   display_stats: boolean;
   email_notifications: boolean;
