@@ -69,24 +69,18 @@ useEffect(() => {
         
         // Extract progress information (exercises marked as complete or review)
         // Make sure we're safely accessing the data
-        if (historyResults && historyResults.length > 0) {
-          const completedExercises = historyResults
-            .filter(item => item && item.completed)
+        if (history && history.length > 0) {
+          const completedExercises = history
+            .filter(item => item && item.completed === 'success')
             .map(item => item.content);
           
           setSuccessExercises(completedExercises);
           
           // This is simulated - in a real app you would get the actual review exercises from the API
           // Here we're just using a subset of the viewed exercises as "to review" for demonstration
-          const reviewItems = historyResults
-            .filter((item, i) => 
-              i % 3 === 0 && 
-              item && 
-              item.content &&
-              !completedExercises.some(ex => ex.id === item.content.id)
-            )
-            .map(item => item.content);
-            
+          const reviewItems = history
+            .filter(item => item && item.completed === 'review')
+            .map(item => item.content);            
           setReviewExercises(reviewItems);
         } else {
           // Handle case where there's no history data
