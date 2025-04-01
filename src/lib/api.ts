@@ -2,6 +2,10 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import { SortOption, ClassLevelModel, SubjectModel, ChapterModel, Solution, Difficulty, Theorem, Subfield } from '../types';
 
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+// Create an axios instance with default configuration
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   headers: {
@@ -10,43 +14,21 @@ const api = axios.create({
   withCredentials: true,
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // If 401 and not already trying to refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const response = await api.post('/token/refresh/', { 
-            refresh: refreshToken 
-          });
-          
-          if (response.data.access) {
-            localStorage.setItem('token', response.data.access);
-            api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-            
-            // Update the auth header for the original request
-            originalRequest.headers['Authorization'] = `Bearer ${response.data.access}`;
-            
-            // Retry the original request
-            return api(originalRequest);
-          }
-        }
-      } catch (refreshError) {
-        // If refresh fails, clean up
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-      }
+// Add a request interceptor to handle authentication
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-    
+    return config;
+  },
+  (error) => {
     return Promise.reject(error);
   }
 );
+
+// A
 
 
 // Add response interceptor to handle token storage

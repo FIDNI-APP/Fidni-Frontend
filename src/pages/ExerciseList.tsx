@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { getContents, voteExercise, deleteContent } from '../lib/api';
@@ -9,33 +9,53 @@ import { ContentList } from '../components/ContentList';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
+import { VirtualScroll } from '../components/VirtualScroll'; // You'll need to create this component
 
-// Styles for the custom scrollbar
-const scrollbarStyles = `
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(79, 70, 229, 0.3) transparent;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 10px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(79, 70, 229, 0.3);
-    border-radius: 10px;
-    border: transparent;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(79, 70, 229, 0.5);
-  }
-`;
+// Custom hook for debouncing values
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    // Set debouncedValue to value after the specified delay
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    // Cancel the timeout if value changes or unmounts
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+// Custom hook for caching query results
+function useFetchCache() {
+  const cache = useRef<Record<string, { data: any; timestamp: number }>>({});
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache duration
+
+  const getCachedData = useCallback((key: string) => {
+    const cachedItem = cache.current[key];
+    if (cachedItem && Date.now() - cachedItem.timestamp < CACHE_DURATION) {
+      return cachedItem.data;
+    }
+    return null;
+  }, []);
+
+  const setCachedData = useCallback((key: string, data: any) => {
+    cache.current[key] = {
+      data,
+      timestamp: Date.now(),
+    };
+  }, []);
+
+  const invalidateCache = useCallback(() => {
+    cache.current = {};
+  }, []);
+
+  return { getCachedData, setCachedData, invalidateCache };
+}
 
 const ITEMS_PER_PAGE = 20;
 
@@ -61,32 +81,67 @@ export const ExerciseList = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   
-  // Add refs to track previous values
-  const prevFiltersRef = useRef(filters);
-  const prevSortByRef = useRef(sortBy);
-  const prevPageRef = useRef(page);
-  const isInitialRender = useRef(true);
+  // Add refs for tracking scroll position
+  const listRef = useRef<HTMLDivElement>(null);
+  const previousScrollPosition = useRef(0);
   
-  // Use useCallback to prevent fetchContents from being recreated on every render
+  // Implement caching for API results
+  const { getCachedData, setCachedData, invalidateCache } = useFetchCache();
+  
+  // Debounce filter changes to reduce API calls
+  const debouncedFilters = useDebounce(filters, 500);
+  const debouncedSortBy = useDebounce(sortBy, 500);
+  
+  // Use memoization for creating API query parameters
+  const queryParams = useMemo(() => {
+    return {
+      classLevels: debouncedFilters.classLevels,
+      subjects: debouncedFilters.subjects,
+      chapters: debouncedFilters.chapters,
+      difficulties: debouncedFilters.difficulties,
+      subfields: debouncedFilters.subfields,
+      theorems: debouncedFilters.theorems,
+      sort: debouncedSortBy,
+      page,
+      per_page: ITEMS_PER_PAGE
+    };
+  }, [debouncedFilters, debouncedSortBy, page]);
+  
+  // Generate cache key based on query params
+  const getCacheKey = useCallback((params: any) => {
+    return JSON.stringify(params);
+  }, []);
+
+  // Optimized function to fetch contents
   const fetchContents = useCallback(async (isLoadMore = false) => {
     const setLoadingState = isLoadMore ? setLoadingMore : setLoading;
+    
     try {
       setLoadingState(true);
       setError(null);
-  
-      const params = {
-        classLevels: filters.classLevels,
-        subjects: filters.subjects,
-        chapters: filters.chapters,
-        difficulties: filters.difficulties,
-        subfields: filters.subfields,
-        theorems: filters.theorems,
-        sort: sortBy,
-        page,
-        per_page: ITEMS_PER_PAGE
-      };
-  
-      const data = await getContents(params);
+      
+      // Generate cache key from the current query params
+      const cacheKey = getCacheKey(queryParams);
+      
+      // Check if we have cached results
+      const cachedResult = getCachedData(cacheKey);
+      if (cachedResult) {
+        if (isLoadMore) {
+          setContents(prev => [...prev, ...cachedResult.results]);
+        } else {
+          setContents(cachedResult.results);
+        }
+        setTotalCount(cachedResult.count);
+        setHasMore(!!cachedResult.next);
+        setLoadingState(false);
+        return;
+      }
+      
+      // If not cached, fetch from API
+      const data = await getContents(queryParams);
+      
+      // Cache the results
+      setCachedData(cacheKey, data);
       
       setContents(prev => isLoadMore ? [...prev, ...data.results] : data.results);
       setTotalCount(data.count);
@@ -97,41 +152,59 @@ export const ExerciseList = () => {
     } finally {
       setLoadingState(false);
     }
-  }, [filters, sortBy, page]);  // Include dependencies here
+  }, [queryParams, getCacheKey, getCachedData, setCachedData]);
 
-  // Modified useEffect to prevent unnecessary API calls
+  // Load data when debounced filters/sort change or page changes
   useEffect(() => {
-    if (isInitialRender.current) {
-      // On initial render, just fetch the data
-      fetchContents();
-      isInitialRender.current = false;
-      return;
+    const shouldReset = page > 1;
+    if (shouldReset) {
+      setPage(1); // This will trigger another effect call with page=1
+    } else {
+      fetchContents(false);
     }
-    
-    // Check if any values actually changed
-    const filtersChanged = JSON.stringify(prevFiltersRef.current) !== JSON.stringify(filters);
-    const sortByChanged = prevSortByRef.current !== sortBy;
-    const pageChanged = prevPageRef.current !== page;
-    
-    // Only fetch if something meaningful changed
-    if (filtersChanged || sortByChanged || pageChanged) {
-      // When filters or sort changed, reset to page 1 first if needed
-      if ((filtersChanged || sortByChanged) && page !== 1) {
-        setPage(1);
-      } else {
-        fetchContents(pageChanged && page > 1);
-        
-        // Update refs with current values
-        prevFiltersRef.current = { ...filters };
-        prevSortByRef.current = sortBy;
-        prevPageRef.current = page;
-      }
+  }, [debouncedFilters, debouncedSortBy]);
+  
+  // Handle pagination separately
+  useEffect(() => {
+    if (page > 1) {
+      fetchContents(true);
     }
-  }, [sortBy, filters, page, fetchContents]); // Removed extra semicolon
+  }, [page]);
 
-  const handleVote = async (id: string, type: VoteValue) => {
+  // Optimized vote handler with local state updates
+  const handleVote = useCallback(async (id: string, type: VoteValue) => {
     try {
+      // Optimistically update UI
+      setContents(prevContents => 
+        prevContents.map(content => {
+          if (content.id === id) {
+            // Calculate new vote count based on previous state and new vote
+            let newVoteCount = content.vote_count;
+            if (content.user_vote === type) {
+              // User is toggling off their vote
+              newVoteCount -= type;
+            } else if (content.user_vote === 0) {
+              // User is voting when they hadn't before
+              newVoteCount += type;
+            } else {
+              // User is changing their vote
+              newVoteCount = newVoteCount - content.user_vote + type;
+            }
+            
+            return {
+              ...content,
+              user_vote: content.user_vote === type ? 0 : type,
+              vote_count: newVoteCount
+            };
+          }
+          return content;
+        })
+      );
+      
+      // Make API call in background
       const updatedExercise = await voteExercise(id, type);
+      
+      // Update with actual server response to ensure consistency
       setContents(prevContents => 
         prevContents.map(content => 
           content.id === id ? updatedExercise : content
@@ -139,52 +212,157 @@ export const ExerciseList = () => {
       );
     } catch (err) {
       console.error('Failed to vote:', err);
+      // Revert to original state on error
+      fetchContents(false);
     }
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  // Optimized delete handler
+  const handleDelete = useCallback(async (id: string) => {
     if (window.confirm('Are you sure you want to delete this content?')) {
       try {
-        await deleteContent(id);
+        // Optimistically update UI
         setContents(prev => prev.filter(content => content.id !== id));
+        setTotalCount(prev => prev - 1);
+        
+        // Make API call in background
+        await deleteContent(id);
+        
+        // Invalidate cache after deletion
+        invalidateCache();
       } catch (err) {
         console.error('Failed to delete content:', err);
+        // Revert to original state on error
+        fetchContents(false);
       }
     }
-  };
+  }, [invalidateCache]);
 
-  const handleLoadMore = () => {
+  // Load more content with scroll position preservation
+  const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore) {
+      // Save current scroll position before loading more
+      if (listRef.current) {
+        previousScrollPosition.current = listRef.current.scrollTop;
+      }
       setPage(prev => prev + 1);
     }
-  };
+  }, [loadingMore, hasMore]);
 
-  const handleFilterChange = (newFilters: typeof filters) => {
+  // Optimized filter change handler
+  const handleFilterChange = useCallback((newFilters: typeof filters) => {
+    // Reset scroll position when filters change
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+    
     setFilters(newFilters);
-  };
+  }, []);
 
-  const toggleFilters = () => {
-    setIsFilterOpen(!isFilterOpen);
-  };
+  // Restore scroll position after loading more content
+  useEffect(() => {
+    if (!loadingMore && page > 1 && listRef.current) {
+      listRef.current.scrollTop = previousScrollPosition.current;
+    }
+  }, [loadingMore, page]);
 
-  const handleNewExerciseClick = () => {
+  const handleNewExerciseClick = useCallback(() => {
     if (isAuthenticated) {
       navigate('/new');
     } else {
       openModal('/new');
     }
-  };
+  }, [isAuthenticated, navigate, openModal]);
 
-  const handleSortChange = (newSortOption: SortOption) => {
+  const handleSortChange = useCallback((newSortOption: SortOption) => {
+    // Reset scroll position when sort changes
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+    
     setSortBy(newSortOption);
-    // Logging to debug
-    console.log("Sorting changed to:", newSortOption);
-  };
+  }, []);
+
+  // Memoize the sort/filter section to prevent re-renders
+  const SortFilterSection = useMemo(() => (
+    <>
+      {/* Mobile filter toggle */}
+      <div className="md:hidden mb-6">
+        <button 
+          onClick={() => setIsFilterOpen(prev => !prev)}
+          className="w-full bg-white rounded-lg shadow-md p-3 flex items-center justify-center space-x-2 text-indigo-800 font-medium"
+        >
+          <Filter className="w-5 h-5" />
+          <span>{isFilterOpen ? 'Hide filters' : 'Show filters'}</span>
+        </button>
+      </div>
+
+      {/* Sort and Count Section */}
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center">
+          <div className="flex items-center gap-3 mb-4 sm:mb-0">
+            <span className="text-gray-600 flex items-center font-medium">
+              <ArrowUpDown className="w-5 h-5 mr-2 text-indigo-600" />
+              Sort by:
+            </span>
+            <SortDropdown 
+              value={sortBy} 
+              onChange={handleSortChange} 
+            />
+          </div>
+          <div className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full font-medium">
+            {totalCount} exercises found
+          </div>
+        </div>
+      </div>
+    </>
+  ), [isFilterOpen, sortBy, totalCount, handleSortChange]);
+
+  // Memoize filter component to prevent unnecessary re-renders
+  const FilterComponent = useMemo(() => (
+    <div 
+      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
+      style={{ 
+        position: "sticky",
+        top: "100px",
+        height: "fit-content",
+        maxHeight: "calc(100vh - 140px)",
+        overflowY: "auto",
+        padding: "4px"
+      }}
+    >
+      <Filters onFilterChange={handleFilterChange} />
+    </div>
+  ), [isFilterOpen, handleFilterChange]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
       {/* Add the styles for the scrollbar */}
-      <style>{scrollbarStyles}</style>
+      <style>{`
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(79, 70, 229, 0.3) transparent;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+          border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(79, 70, 229, 0.3);
+          border-radius: 10px;
+          border: transparent;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(79, 70, 229, 0.5);
+        }
+      `}</style>
       
       {/* Header Section */}
       <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 text-white py-8 mb-8">
@@ -204,7 +382,7 @@ export const ExerciseList = () => {
               className="bg-white text-indigo-700 hover:bg-indigo-50 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              Ajouter un exercice
+              Add Exercise
             </button>
           </div>
         </div>
@@ -212,55 +390,14 @@ export const ExerciseList = () => {
 
       {/* Main layout */}
       <div className="container mx-auto px-4">
-        {/* Mobile filter toggle */}
-        <div className="md:hidden mb-6">
-          <button 
-            onClick={toggleFilters}
-            className="w-full bg-white rounded-lg shadow-md p-3 flex items-center justify-center space-x-2 text-indigo-800 font-medium"
-          >
-            <Filter className="w-5 h-5" />
-            <span>{isFilterOpen ? 'Masquer les filtres' : 'Afficher les filtres'}</span>
-          </button>
-        </div>
+        {SortFilterSection}
 
         {/* Fixed Left Filter + Content Layout */}
         <div className="flex flex-col md:flex-row md:gap-8">
-          {/* Left Filter avec barre de défilement personnalisée */}
-          <div 
-            className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
-            style={{ 
-              position: "sticky",
-              top: "100px",
-              height: "fit-content",
-              maxHeight: "calc(100vh - 140px)",
-              overflowY: "auto",
-              padding: "4px"
-            }}
-          >
-            <Filters onFilterChange={handleFilterChange} />
-          </div>
+          {FilterComponent}
 
           {/* Content Area */}
-          <div className="flex-grow min-w-0">
-            {/* Sort and Count Section */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-              <div className="flex flex-col sm:flex-row justify-between items-center">
-                <div className="flex items-center gap-3 mb-4 sm:mb-0">
-                  <span className="text-gray-600 flex items-center font-medium">
-                    <ArrowUpDown className="w-5 h-5 mr-2 text-indigo-600" />
-                    Trier par:
-                  </span>
-                  <SortDropdown 
-                    value={sortBy} 
-                    onChange={handleSortChange} 
-                  />
-                </div>
-                <div className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full font-medium">
-                  {totalCount} exercices trouvés
-                </div>
-              </div>
-            </div>
-
+          <div className="flex-grow min-w-0" ref={listRef}>
             {/* Error message if any */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg shadow-sm">
@@ -274,7 +411,7 @@ export const ExerciseList = () => {
                 <div className="flex justify-center items-center h-64">
                   <div className="text-center">
                     <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mx-auto mb-4" />
-                    <p className="text-gray-500">Chargement des exercices...</p>
+                    <p className="text-gray-500">Loading exercises...</p>
                   </div>
                 </div>
               ) : contents.length > 0 ? (
@@ -291,9 +428,9 @@ export const ExerciseList = () => {
                   <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                     <BookOpen className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun exercice trouvé</h3>
+                  <h3 className="text-lg font-medium text-gray-700 mb-2">No exercises found</h3>
                   <p className="text-gray-500 max-w-md mx-auto">
-                    Essayez d'ajuster vos filtres de recherche ou créez un nouvel exercice
+                    Try adjusting your search filters or create a new exercise
                   </p>
                 </div>
               )}
@@ -310,10 +447,10 @@ export const ExerciseList = () => {
                   {loadingMore ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Chargement...
+                      Loading...
                     </>
                   ) : (
-                    'Charger plus d\'exercices'
+                    'Load more exercises'
                   )}
                 </Button>
               </div>
