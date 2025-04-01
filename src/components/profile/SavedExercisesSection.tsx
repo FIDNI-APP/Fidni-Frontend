@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Content } from '@/types';
 import { BookOpen, Calendar, ChevronRight, Eye, BarChart3, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HomeContentCard} from '@/components/HomeContentCard';
 
 interface SavedExercisesSectionProps {
   exercises: Content[];
@@ -67,11 +68,12 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
 
         <div className="space-y-4">
           {exercises.map((exercise) => (
-            <Link 
-              to={`/exercises/${exercise.id}`} 
-              key={exercise.id}
-              className="block bg-white border border-gray-200 hover:border-indigo-300 rounded-lg p-4 transition-all hover:shadow-md"
-            >
+            <div key={exercise.id} className="transform hover:scale-105 transition-all duration-300">
+                  <HomeContentCard 
+                    content={exercise} 
+                    onVote={handleVote}
+                  />
+                </div>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-900 mb-1">{exercise.title}</h3>
