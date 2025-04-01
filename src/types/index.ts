@@ -127,12 +127,14 @@ export interface UserProfile {
 
 // Add types for user history
 export interface ViewHistoryItem {
+  content_type: string;
   content: Content;
   content_title: string;
-  content_difficulty: Difficulty;
+  content_difficulty?: Difficulty;
   viewed_at: string;
-  completed: boolean;
-  time_spent: number;
+  completed?: CompleteValue;
+  time_spent?: number;
+  
 }
 
 export interface Comment {
