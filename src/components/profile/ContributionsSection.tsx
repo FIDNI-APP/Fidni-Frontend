@@ -5,10 +5,10 @@ import { FileText, Eye, MessageSquare, Calendar, BarChart3, ChevronRight, BookOp
 import { Button } from '@/components/ui/button';
 
 interface ContributionsSectionProps {
-  success_exercises?: {
+  success_exercises: {
   exercises: Content[];
 },
-  review_exercises?:{
+  review_exercises:{
     exercises: Content[];
   },
 isLoading: boolean}
@@ -32,7 +32,7 @@ export const ContributionsSection: React.FC<ContributionsSectionProps> = ({ succ
     );
   }
 
-  if (succes_exercises.exercises.length === 0) {
+  if (success_exercises.exercises.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
@@ -82,7 +82,7 @@ export const ContributionsSection: React.FC<ContributionsSectionProps> = ({ succ
         </div>
 
         <div className="space-y-4">
-          {exercises.map((exercise) => (
+          {success_exercises.exercises.map((exercise) => (
             <Link 
               to={`/exercises/${exercise.id}`} 
               key={exercise.id}
@@ -137,7 +137,7 @@ export const ContributionsSection: React.FC<ContributionsSectionProps> = ({ succ
           ))}
         </div>
 
-        {exercises.length > 5 && (
+        {success_exercises.exercises.length > 5 && (
           <div className="mt-4 text-center">
             <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
               View All Contributions

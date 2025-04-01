@@ -61,24 +61,23 @@ useEffect(() => {
         // Fetch saved exercises
         const savedData = await getUserSavedExercises(username || '');
         setSavedExercises(savedData?.results || []);
-        
+        console.log("Saved exercises data:", savedData?.results);
         // Fetch history
         const historyData = await getUserHistory(username || '');
         const historyResults = historyData?.results || [];
         setHistory(historyResults);
+        console.log("History data:", historyResults);
         
         // Extract progress information (exercises marked as complete or review)
         // Make sure we're safely accessing the data
-        if (history && history.length > 0) {
-          const completedExercises = history
+        if (historyResults && historyResults.length > 0) {
+          const completedExercises = historyResults
             .filter(item => item && item.completed === 'success')
             .map(item => item.content);
           
           setSuccessExercises(completedExercises);
           
-          // This is simulated - in a real app you would get the actual review exercises from the API
-          // Here we're just using a subset of the viewed exercises as "to review" for demonstration
-          const reviewItems = history
+          const reviewItems = historyResults
             .filter(item => item && item.completed === 'review')
             .map(item => item.content);            
           setReviewExercises(reviewItems);
@@ -194,7 +193,8 @@ useEffect(() => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Contributions Section */}
               <ContributionsSection 
-                exercises={contributions} 
+                success_exercises={ {exercises : successExercises} }
+                review_exercises={{exercises : reviewExercises}}
                 isLoading={isLoading}
               />
               
