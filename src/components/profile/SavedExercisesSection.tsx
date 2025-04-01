@@ -66,7 +66,7 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
           </Link>
         </div>
 
-        <div className="space-y-4">
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {exercises.map((exercise) => (
             <div key={exercise.id} className="transform hover:scale-105 transition-all duration-300">
                   <HomeContentCard 
@@ -74,43 +74,6 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
                     onVote={handleVote}
                   />
                 </div>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 mb-1">{exercise.title}</h3>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {exercise.subject && (
-                      <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs flex items-center">
-                        <BookOpen className="w-3 h-3 mr-1" />
-                        {exercise.subject.name}
-                      </span>
-                    )}
-                    
-                    <span className={`px-2 py-0.5 rounded text-xs flex items-center 
-                      ${exercise.difficulty === 'easy' 
-                        ? 'bg-green-50 text-green-700' 
-                        : exercise.difficulty === 'medium' 
-                          ? 'bg-yellow-50 text-yellow-700' 
-                          : 'bg-red-50 text-red-700'}`}
-                    >
-                      <BarChart3 className="w-3 h-3 mr-1" />
-                      {exercise.difficulty}
-                    </span>
-                    
-                    <span className="bg-gray-50 text-gray-600 px-2 py-0.5 rounded text-xs flex items-center">
-                      <Eye className="w-3 h-3 mr-1" />
-                      {exercise.view_count} views
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-xs text-gray-500 mb-2 flex items-center">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    {new Date(exercise.created_at).toLocaleDateString()}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-indigo-400" />
-                </div>
-              </div>
-            </Link>
           ))}
         </div>
 
