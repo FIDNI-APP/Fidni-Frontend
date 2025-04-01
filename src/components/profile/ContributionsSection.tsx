@@ -5,11 +5,15 @@ import { FileText, Eye, MessageSquare, Calendar, BarChart3, ChevronRight, BookOp
 import { Button } from '@/components/ui/button';
 
 interface ContributionsSectionProps {
+  success_exercises?: {
   exercises: Content[];
-  isLoading: boolean;
-}
+},
+  review_exercises?:{
+    exercises: Content[];
+  },
+isLoading: boolean}
 
-export const ContributionsSection: React.FC<ContributionsSectionProps> = ({ exercises, isLoading }) => {
+export const ContributionsSection: React.FC<ContributionsSectionProps> = ({ success_exercises,review_exercises,isLoading }) => {
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
@@ -28,24 +32,36 @@ export const ContributionsSection: React.FC<ContributionsSectionProps> = ({ exer
     );
   }
 
-  if (exercises.length === 0) {
+  if (succes_exercises.exercises.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold flex items-center">
             <FileText className="w-5 h-5 mr-2 text-indigo-600" />
-            My Contributions
+            Exercices réussis
           </h2>
         </div>
         <div className="text-center py-10 px-6">
           <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-800 mb-2">No contributions yet</h3>
           <p className="text-gray-500 mb-6">Start creating exercises to contribute to the community</p>
-          <Link to="/new">
-            <Button className="bg-indigo-600 hover:bg-indigo-700">
-              Create Exercise
-            </Button>
-          </Link>
+        </div>
+      </div>
+    );
+  }
+  if (review_exercises.exercises.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold flex items-center">
+            <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+            Exercices à revoir
+          </h2>
+        </div>
+        <div className="text-center py-10 px-6">
+          <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No contributions yet</h3>
+          <p className="text-gray-500 mb-6">Start creating exercises to contribute to the community</p>
         </div>
       </div>
     );
