@@ -506,19 +506,40 @@ export const getUserContributions = async (username: string) => {
   }
 };
 
+// In your API file
 export const getUserSavedExercises = async (username: string) => {
   try {
+    // Get IDs first
     const response = await api.get(`/users/${username}/saved_exercises/`);
-    return response.data;
+    console.log("Saved exercises response:", response.data);
+    
+        // Return in the format your component expects
+    return  response.data;
   } catch (error) {
     console.error("Error fetching saved exercises:", error);
     throw error;
   }
 };
 
+export const getUserProgressExercises = async (username: string, progress : string) => {
+  try {
+    // Get IDs first
+    const response = await api.get(`/users/${username}/${progress}_thing/`);
+    console.log("Saved exercises response:", response.data);
+    
+        // Return in the format your component expects
+    return  response.data;
+  } catch (error) {
+    console.error("Error fetching saved exercises:", error);
+    throw error;
+  }
+};
+
+
 export const getUserHistory = async (username: string) => {
   try {
     const response = await api.get(`/users/${username}/history/`);
+    console.log("User history response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching user history:", error);

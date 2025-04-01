@@ -129,12 +129,8 @@ export interface UserProfile {
 export interface ViewHistoryItem {
   content_type: string;
   content: Content;
-  content_title: string;
-  content_difficulty?: Difficulty;
   viewed_at: string;
-  completed?: CompleteValue;
   time_spent?: number;
-  
 }
 
 export interface Comment {

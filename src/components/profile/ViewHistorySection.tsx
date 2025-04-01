@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ViewHistoryItem } from '@/types';
+import { ViewHistoryItem, VoteValue } from '@/types';
 import { Clock, History, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { HomeContentCard } from '@/components/HomeContentCard';
+import { voteExercise } from '@/lib/api';
 
 interface ViewHistorySectionProps {
   historyItems: ViewHistoryItem[];
@@ -10,11 +14,53 @@ interface ViewHistorySectionProps {
 }
 
 export const ViewHistorySection: React.FC<ViewHistorySectionProps> = ({ historyItems, isLoading }) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [localHistoryItems, setLocalHistoryItems] = useState<ViewHistoryItem[]>(historyItems);
+  
+  // Update local state when props change
+  useEffect(() => {
+    setLocalHistoryItems(historyItems);
+  }, [historyItems]);
+  
+  const handleVote = async (id: string, value: VoteValue) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      const updatedExercise = await voteExercise(id, value);
+      
+      // Update the exercise in the history item that contains it
+      setLocalHistoryItems(prevItems =>
+        prevItems.map(item =>
+          item.content.id === id 
+            ? { ...item, content: updatedExercise } 
+            : item
+        )
+      );
+    } catch (err) {
+      console.error('Failed to vote:', err);
+      setError('Failed to register your vote. Please try again.');
+    }
+  };
+  
   const formatTimeSpent = (seconds: number): string => {
     if (seconds < 60) return `${seconds}s`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
     return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
   };
+
+  // Display error message if vote fails
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-3 mb-4 rounded-lg">
+        {error}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -34,7 +80,7 @@ export const ViewHistorySection: React.FC<ViewHistorySectionProps> = ({ historyI
     );
   }
 
-  if (historyItems.length === 0) {
+  if (localHistoryItems.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
@@ -68,51 +114,17 @@ export const ViewHistorySection: React.FC<ViewHistorySectionProps> = ({ historyI
         </div>
 
         <div className="space-y-3">
-          {historyItems.map((item) => (
-            <Link 
-              to={`/exercises/${item.content.id}`} 
-              key={`${item.content.id}-${item.viewed_at}`}
-              className="block bg-white border border-gray-200 hover:border-indigo-300 rounded-lg p-4 transition-all hover:shadow-md"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{item.content_title}</h3>
-                  <div className="flex items-center text-xs text-gray-500 space-x-3">
-                    <span className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1 text-indigo-400" />
-                      {formatTimeSpent(item.time_spent)}
-                    </span>
-                    
-                    {item.completed && (
-                      <span className="flex items-center text-green-600">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Completed
-                      </span>
-                    )}
-                    
-                    <span className={`px-2 py-0.5 rounded text-xs flex items-center 
-                      ${item.content_difficulty === 'easy' 
-                        ? 'bg-green-50 text-green-700' 
-                        : item.content_difficulty === 'medium' 
-                          ? 'bg-yellow-50 text-yellow-700' 
-                          : 'bg-red-50 text-red-700'}`}
-                    >
-                      {item.content_difficulty}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-xs text-gray-500 mb-2">
-                    {new Date(item.viewed_at).toLocaleString()}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-indigo-400" />
-                </div>
-              </div>
-            </Link>
+          {localHistoryItems.map((item) => (
+            <div key={item.content.id} className="transform hover:scale-105 transition-all duration-300">
+              <HomeContentCard 
+                content={item.content} 
+                onVote={handleVote}
+              />
+            </div>
           ))}
         </div>
 
-        {historyItems.length > 5 && (
+        {localHistoryItems.length > 5 && (
           <div className="mt-4 text-center">
             <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
               View Complete History

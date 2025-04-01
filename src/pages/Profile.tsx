@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile, getUserStats, getUserContributions, getUserSavedExercises, getUserHistory, updateUserProfile } from '@/lib/api';
+import { getUserProfile, getUserStats, getUserContributions, getUserSavedExercises, getUserHistory, updateUserProfile,getUserProgressExercises } from '@/lib/api';
 import { Content, User, ViewHistoryItem } from '@/types';
 import { Loader2 } from 'lucide-react';
 
@@ -60,32 +60,19 @@ useEffect(() => {
       if (isOwner) {
         // Fetch saved exercises
         const savedData = await getUserSavedExercises(username || '');
-        setSavedExercises(savedData?.results || []);
-        console.log("Saved exercises data:", savedData?.results);
+        setSavedExercises(savedData);
+        console.log("Saved exercises data:", savedData);
         // Fetch history
         const historyData = await getUserHistory(username || '');
-        const historyResults = historyData?.results || [];
-        setHistory(historyResults);
-        console.log("History data:", historyResults);
+        setHistory(historyData);
+        console.log("History data:", historyData);
         
         // Extract progress information (exercises marked as complete or review)
         // Make sure we're safely accessing the data
-        if (historyResults && historyResults.length > 0) {
-          const completedExercises = historyResults
-            .filter(item => item && item.completed === 'success')
-            .map(item => item.content);
-          
-          setSuccessExercises(completedExercises);
-          
-          const reviewItems = historyResults
-            .filter(item => item && item.completed === 'review')
-            .map(item => item.content);            
-          setReviewExercises(reviewItems);
-        } else {
-          // Handle case where there's no history data
-          setSuccessExercises([]);
-          setReviewExercises([]);
-        }
+        const successExercisesData = await getUserProgressExercises(username || '', 'success');
+        const reviewExercisesData = await getUserProgressExercises(username || '', 'review');
+        setSuccessExercises(successExercisesData);
+        setReviewExercises(reviewExercisesData);
       }
     } catch (err) {
       console.error('Failed to load user profile:', err);

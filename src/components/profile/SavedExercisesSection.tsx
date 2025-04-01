@@ -21,14 +21,15 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
   // Update local state when props change
   React.useEffect(() => {
     setLocalExercises(exercises);
+    console.log("Setting local exercises:", exercises);
+
   }, [exercises]);
-  
   const handleVote = async (id: string, value: VoteValue) => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-
+    
     try {
       const updatedExercise = await voteExercise(id, value);
       setLocalExercises(prevExercises =>
@@ -85,9 +86,11 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
 
   // Display error message if vote fails
   if (error) {
-    <div className="bg-red-50 border border-red-200 text-red-700 p-3 mb-4 rounded-lg">
-      {error}
-    </div>
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-3 mb-4 rounded-lg">
+        {error}
+      </div>
+    );
   }
 
   return (
