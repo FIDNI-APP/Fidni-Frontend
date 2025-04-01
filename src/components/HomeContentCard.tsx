@@ -1,3 +1,4 @@
+// src/components/HomeContentCard.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -32,22 +33,31 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
   const { openModal } = useAuthModal();
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Check if any text is selected
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      // User is selecting text, do not navigate
+      return;
+    }
+    
     if (!isAuthenticated) {
+      e.preventDefault();
       openModal(`/exercises/${content.id}`);
       return;
     }
+    
     navigate(`/exercises/${content.id}`);
   };
 
   const getDifficultyColor = (difficulty: Difficulty) => {
     switch (difficulty) {
       case 'easy':
-        return 'from-emerald-500 to-green-500 border-emerald-400';
+        return 'from-emerald-500 to-emerald-400 border-emerald-400';
       case 'medium':
-        return 'from-amber-500 to-yellow-500 border-amber-400';
+        return 'from-amber-500 to-amber-400 border-amber-400';
       case 'hard':
-        return 'from-rose-500 to-pink-500 border-rose-400';
+        return 'from-rose-500 to-rose-400 border-rose-400';
       default:
         return 'from-gray-500 to-gray-400 border-gray-400';
     }
@@ -80,13 +90,13 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
 
   return (
     <div 
-      className="relative home-content-card group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-indigo-300 overflow-hidden transform hover:-translate-y-1 cursor-pointer h-full"
+      className="relative group bg-white rounded-xl shadow-md transition-all duration-300 border border-gray-200 overflow-hidden h-full transform hover:-translate-y-1 hover:shadow-xl hover:border-indigo-300 cursor-pointer"
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Card Header with Gradient */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 px-4 pt-4 pb-4">
+      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -102,11 +112,11 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         {/* Title with Solution Indicator */}
         <div className="flex items-start gap-1.5 mb-3 relative z-10">
           {hasSolution && (
-            <div className="flex-shrink-0 bg-emerald-400 p-0.5 rounded-full mt-1">
+            <div className="flex-shrink-0 bg-emerald-400 p-1 rounded-full mt-1 transform transition-transform group-hover:scale-110">
               <Lightbulb className="w-3 h-3 text-white" />
             </div>
           )}
-          <h3 className="text-lg font-bold text-white leading-tight">
+          <h3 className="text-lg font-bold text-white leading-tight group-hover:underline">
             {truncateTitle(content.title)}
           </h3>
         </div>
@@ -137,9 +147,9 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         </div>
       </div>
       
-      {/* Content Area - SIMPLIFIED: direct content without nested container */}
-      <div className="px-4 py-4">
-        <div className="prose max-w-none text-sm text-gray-600 line-clamp-3 overflow-hidden">
+      {/* Content Area */}
+      <div className="px-4 py-4 flex-grow">
+        <div className="prose prose-sm max-w-none text-gray-600 line-clamp-3 overflow-hidden">
           <TipTapRenderer content={content.content} compact={true} />
         </div>
       </div>
@@ -150,7 +160,10 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         <div className="flex items-center gap-3">
           <VoteButtons
             initialVotes={content.vote_count}
-            onVote={(value) => onVote(content.id, value)}
+            onVote={(value) => {
+              onVote(content.id, value);
+              event?.stopPropagation();
+            }}
             vertical={false}
             userVote={content.user_vote}
             size="sm"
@@ -193,24 +206,21 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         </div>
       </div>
       
-      {/* Hover Overlay - Modified to make buttons clickable */}
-      <div className={`absolute inset-0 bg-indigo-900/75 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''} pointer-events-none`}>
-        <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 text-center">
-          <div className="bg-white/20 rounded-full p-3 mx-auto mb-3 w-12 h-12 flex items-center justify-center">
+      {/* Improved Hover Overlay */}
+      <div 
+        className={`absolute inset-0 bg-gradient-to-br from-indigo-900/80 to-purple-900/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-[2px] pointer-events-none`}
+        aria-hidden="true"
+      >
+        <div className="transform translate-y-6 group-hover:translate-y-0 transition-transform duration-300 text-center px-6">
+          <div className="w-12 h-12 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
             <ArrowRight className="w-6 h-6 text-white" />
           </div>
-          <p className="text-white font-medium">Voir l'exercice</p>
+          <p className="text-white font-medium mb-2">View Exercise</p>
+          <div className="text-white/80 text-sm max-w-xs mx-auto">
+            Click to see full details and solution
+          </div>
         </div>
       </div>
-      
-      {/* Animation Styles */}
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.8; }
-          50% { opacity: 1; }
-        }
-        .pulse-animation {
-          animation: pulse 2s infinite;
-        }
-      `}</style>
-    </div>);}
+    </div>
+  );
+};

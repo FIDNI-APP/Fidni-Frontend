@@ -1,7 +1,8 @@
+// src/components/profile/SavedExercisesSection.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Content, VoteValue } from '@/types';  // Added VoteValue import
-import { BookOpen, Calendar, ChevronRight, Eye, BarChart3, Bookmark } from 'lucide-react';
+import { Content, VoteValue } from '@/types';
+import { BookOpen, Bookmark, Search, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HomeContentCard } from '@/components/HomeContentCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,15 +16,23 @@ interface SavedExercisesSectionProps {
 export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ exercises, isLoading }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [localExercises, setLocalExercises] = useState<Content[]>(exercises); // Added local state
-  const [error, setError] = useState<string | null>(null); // Added error state
+  const [localExercises, setLocalExercises] = useState<Content[]>(exercises);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter exercises based on search query
+  const filteredExercises = searchQuery 
+    ? localExercises.filter(ex => 
+        ex.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ex.subject?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : localExercises;
 
   // Update local state when props change
   React.useEffect(() => {
     setLocalExercises(exercises);
-    console.log("Setting local exercises:", exercises);
-
   }, [exercises]);
+
   const handleVote = async (id: string, value: VoteValue) => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -47,14 +56,11 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center">
-            <Bookmark className="w-5 h-5 mr-2 text-indigo-600" />
-            Saved Exercises
-          </h2>
+          <div className="h-6 bg-gray-200 rounded w-48"></div>
         </div>
-        <div className="animate-pulse space-y-4">
+        <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-gray-100 h-24 rounded-lg"></div>
+            <div key={i} className="bg-gray-100 h-48 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -96,29 +102,61 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-xl font-bold flex items-center">
             <Bookmark className="w-5 h-5 mr-2 text-indigo-600" />
             Saved Exercises
           </h2>
+          
+          {/* Search input */}
+          <div className="relative max-w-xs">
+            <input
+              type="text"
+              placeholder="Search saved exercises..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {localExercises.map((exercise) => (
-            <div key={exercise.id} className="transform hover:scale-105 transition-all duration-300">
-              <HomeContentCard 
-                content={exercise} 
-                onVote={handleVote}
-              />
-            </div>
-          ))}
-        </div>
+        {filteredExercises.length === 0 ? (
+          <div className="text-center py-8 px-4 bg-gray-50 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              No exercises match your search
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Try different keywords or clear your search
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => setSearchQuery('')}
+              className="text-indigo-600"
+            >
+              Clear Search
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredExercises.map((exercise) => (
+              <div key={exercise.id} className="transform hover:scale-105 transition-all duration-300">
+                <HomeContentCard 
+                  content={exercise} 
+                  onVote={handleVote}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
-        {localExercises.length > 5 && (
-          <div className="mt-4 text-center">
+        {localExercises.length > 9 && (
+          <div className="mt-6 text-center">
             <Link to="/saved">
               <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-                View All Saved Exercises
+                View All {localExercises.length} Saved Exercises
               </Button>
             </Link>
           </div>
