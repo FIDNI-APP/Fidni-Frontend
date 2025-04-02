@@ -269,7 +269,7 @@ export function CommentSection({
           </div>
           <div>
             <a
-              href={`/user/${comment.author.username}/`}
+              href={`/profile/${comment.author.username}/`}
               className="font-bold text-sm text-gray-900 hover:text-indigo-600 hover:underline"
             >
               {comment.author.username}

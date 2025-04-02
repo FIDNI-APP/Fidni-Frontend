@@ -25,7 +25,7 @@ import { VoteButtons } from './VoteButtons';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { useAuthModal } from '@/components/AuthController';
 import { saveExercise, unsaveExercise } from '@/lib/api';
-
+import axios from 'axios';
 import '@/lib/styles.css';
 
 interface ContentCardProps {
@@ -86,34 +86,45 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      // Prompt login if not authenticated
-      openModal();
-      return;
+        // Prompt login if not authenticated
+        openModal();
+        return;
     }
     
     try {
-      setIsSaving(true);
-      
-      if (isSaved) {
-        // If currently saved, unsave it
-        await unsaveExercise(content.id);
-        setIsSaved(false);
-      } else {
-        // If not saved, save it
-        await saveExercise(content.id);
-        setIsSaved(true);
-      }
-      
-      // Call the callback if provided
-      if (onSave) {
-        onSave(content.id, !isSaved);
-      }
+        setIsSaving(true);
+        
+        if (isSaved) {
+            // If currently saved, unsave it
+            await unsaveExercise(content.id);
+            setIsSaved(false);
+        } else {
+            // If not saved, save it
+            try {
+                await saveExercise(content.id);
+                setIsSaved(true);
+            } catch (error) {
+                // If error is "already saved", consider it a success
+                if (axios.isAxiosError(error) && error.response?.status === 400) {
+                    // Already saved - still update UI
+                    setIsSaved(true);
+                } else {
+                    // Rethrow other errors
+                    throw error;
+                }
+            }
+        }
+        
+        // Call the callback if provided
+        if (onSave) {
+            onSave(content.id, !isSaved);
+        }
     } catch (error) {
-      console.error("Error toggling save status:", error);
+        console.error("Error toggling save status:", error);
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
-  };
+};
   
   const getDifficultyInfo = (difficulty: Difficulty) => {
     switch (difficulty) {

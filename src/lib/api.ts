@@ -1,12 +1,19 @@
+// src/lib/api.ts (updated version)
 import axios from 'axios';
-import Cookies from 'js-cookie';
 import { SortOption, ClassLevelModel, SubjectModel, ChapterModel, Solution, Difficulty, Theorem, Subfield } from '../types';
 
-const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+// Create a public API client without credentials for anonymous requests
+const publicApi = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  // Don't include credentials for anonymous requests
+  withCredentials: false,
+});
 
-// Create an axios instance with default configuration
-const api = axios.create({
+// Create an authenticated API client for requests requiring auth
+const privateApi = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   headers: {
     'Content-Type': 'application/json',
@@ -14,8 +21,8 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Add a request interceptor to handle authentication
-api.interceptors.request.use(
+// Add a request interceptor to handle authentication for the private API
+privateApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -28,12 +35,8 @@ api.interceptors.request.use(
   }
 );
 
-// A
-
-
-// Add response interceptor to handle token storage
-// Ajoutez une logique de rafraîchissement de token
-api.interceptors.response.use(
+// Add response interceptor to handle token refresh for private API
+privateApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
@@ -45,15 +48,15 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
-          const response = await api.post('/token/refresh/', { 
+          const response = await privateApi.post('/token/refresh/', { 
             refresh: refreshToken 
           });
           
           localStorage.setItem('token', response.data.access);
-          api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+          privateApi.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
           
           // Refaire la requête originale avec le nouveau token
-          return api(originalRequest);
+          return privateApi(originalRequest);
         }
       } catch (refreshError) {
         // Si le rafraîchissement échoue, déconnexion
@@ -67,100 +70,26 @@ api.interceptors.response.use(
   }
 );
 
-// Add these functions to your existing lib/api.ts file
-
-import { User, Content } from "@/types";
-
-
-
-// /**
-//  * Get user profile by ID or username
-//  * This works with your current backend but uses the current user endpoint
-//  * for now since there's no specific endpoint for getting other users
-//  * 
-//  * @param userId - User ID or username
-//  * @returns User object
-//  */
-// export async function getUserById(userId: string): Promise<User> {
-//   try {
-//     // Currently your backend doesn't have a specific endpoint to get user by ID
-//     // You should use your current user endpoint for the logged-in user
-//     // For other users, we'll need to add that endpoint
-//     const response = await fetch('/api/auth/user');
-
-//     if (!response.ok) {
-//       throw new Error(`Failed to fetch user: ${response.statusText}`);
-//     }
-
-//     return await response.json();
-//   } catch (error) {
-//     console.error("Error fetching user:", error);
-
-//     // Fallback for development - remove when backend is updated
-//     return {
-//       id: userId,
-//       username: "user_" + userId.substring(0, 5),
-//       email: `user${userId.substring(0, 5)}@example.com`,
-//       isAuthenticated: false,
-//       joinedAt: new Date().toISOString(),
-//       profile:
-//     };
-//   }
-// }
-
-
-
-type VoteValue = 1 | -1 | 0;  // Matches Vote.UP, Vote.DOWN, Vote.UNVOTE
-
-
-export const voteExercise = async (id: string, value: VoteValue) => {
-  try {
-    const response = await api.post(`/exercises/${id}/vote/`, { value });
-    return response.data.item; // Return the updated exercise
-  } catch (error) {
-    console.error('Vote error:', error);
-    throw error;
-  }
+// Helper to select the right API client based on the request type
+const getApiClient = (requiresAuth = false) => {
+  return requiresAuth ? privateApi : publicApi;
 };
 
+// Updated API methods using the appropriate client
 
-export const voteSolution = async (id: string, value: VoteValue) => {
-  try {
-    const response = await api.post(`/solutions/${id}/vote/`, { value });
-    return response.data.item; // Return the updated exercise
-  } catch (error) {
-    console.error('Vote error:', error);
-    throw error;
-  }
-};
-
-export const voteComment = async (id: string, value: VoteValue) => {
-  try {
-    const response = await api.post(`/comments/${id}/vote/`, { value });
-    return response.data.item; // Return the updated exercise
-  } catch (error) {
-    console.error('Vote error:', error);
-    throw error;
-  }
-};
-
-
-
-// Auth API
-
-
+// Authentication API
 export const login = async (identifier: string, password: string) => {
   try {
-    // Utilisez l'endpoint token de SimpleJWT
-    const response = await api.post('/token/', { 
-      username: identifier, // ou email selon votre configuration 
+    // Use public API for login
+    const response = await publicApi.post('/token/', { 
+      username: identifier,
       password 
     });
     
     if (response.data.access) {
       localStorage.setItem('token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+      privateApi.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
     }
     return response.data;
   } catch (error) {
@@ -170,16 +99,18 @@ export const login = async (identifier: string, password: string) => {
 };
 
 export const logout = async () => {
-  const response = await api.post('/auth/logout/');
+  // Use private API for logout
+  const response = await privateApi.post('/auth/logout/');
   localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
   return response.data;
 };
+
 export const register = async (username: string, email: string, password: string) => {
-  const response = await api.post('/auth/register/', { username, email, password });
+  // Use public API for registration
+  const response = await publicApi.post('/auth/register/', { username, email, password });
   return response.data;
 };
-
-
 
 export const getCurrentUser = async () => {
   try {
@@ -189,9 +120,9 @@ export const getCurrentUser = async () => {
     }
     
     // Make sure the Authorization header is set correctly before making the request
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    privateApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     
-    const response = await api.get('/auth/user/');
+    const response = await privateApi.get('/auth/user/');
     return response.data;
   } catch (error) {
     console.error('Error getting current user:', error);
@@ -200,16 +131,16 @@ export const getCurrentUser = async () => {
       try {
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
-          const refreshResponse = await api.post('/token/refresh/', { 
+          const refreshResponse = await privateApi.post('/token/refresh/', { 
             refresh: refreshToken 
           });
           
           if (refreshResponse.data.access) {
             localStorage.setItem('token', refreshResponse.data.access);
-            api.defaults.headers.common['Authorization'] = `Bearer ${refreshResponse.data.access}`;
+            privateApi.defaults.headers.common['Authorization'] = `Bearer ${refreshResponse.data.access}`;
             
             // Retry the original request with new token
-            const retryResponse = await api.get('/auth/user/');
+            const retryResponse = await privateApi.get('/auth/user/');
             return retryResponse.data;
           }
         }
@@ -223,9 +154,7 @@ export const getCurrentUser = async () => {
   }
 };
 
-
-
-// Content API
+// Content API - Public endpoints that don't require auth
 export const getContents = async (params: {
   classLevels?: string[];
   subjects?: string[];
@@ -238,17 +167,20 @@ export const getContents = async (params: {
   type?: string;
   per_page?: number;
 }) => {
-  const response = await api.get('/exercises/', { 
+  // Use public API for read-only content
+  const response = await publicApi.get('/exercises/', { 
     params: {
       class_levels: params.classLevels,
       subjects: params.subjects,
       chapters: params.chapters,
       difficulties: params.difficulties,
-      subfields : params.subfields,
-      theorems : params.theorems
+      subfields: params.subfields,
+      theorems: params.theorems,
+      page: params.page,
+      per_page: params.per_page
     } 
   });
-  console.log(response.data.results)
+  
   return {
     results: response.data.results || [],
     count: response.data.count || 0,
@@ -257,6 +189,13 @@ export const getContents = async (params: {
   };
 };
 
+export const getContentById = async (id: string) => {
+  // Use public API for read-only content
+  const response = await publicApi.get(`/exercises/${id}/`);
+  return response.data;
+};
+
+// Content API - Private endpoints that require auth
 export const createContent = async (data: {
   title: string;
   content: string;
@@ -267,14 +206,8 @@ export const createContent = async (data: {
   difficulty: string;
   solution_content?: string;
 }) => {
-  const response = await api.post('/exercises/', data);
-  return response.data;
-};
-
-export const getContentById = async (id: string) => {
-  const response = await api.get(`/exercises/${id}/`);
-  console.log('heeelllo')
-  console.log(response.data)
+  // Use private API for content creation
+  const response = await privateApi.post('/exercises/', data);
   return response.data;
 };
 
@@ -287,40 +220,44 @@ export const updateContent = async (id: string, data: {
   difficulty: string;
   solution_content?: string;
 }) => {
-  const response = await api.put(`/exercises/${id}/`, data);
+  // Use private API for content updates
+  const response = await privateApi.put(`/exercises/${id}/`, data);
   return response.data;
 };
 
 export const deleteContent = async (id: string) => {
-  await api.delete(`/exercises/${id}/`);
+  // Use private API for content deletion
+  await privateApi.delete(`/exercises/${id}/`);
 };
 
 // Solution API
 export const getSolution = async (id: string) => {
-  const response = await api.get(`/solutions/${id}/`);
+  // Use public API for read-only content
+  const response = await publicApi.get(`/solutions/${id}/`);
   return response.data;
 };
 
 export const updateSolution = async (id: string, data: { content: string }) => {
-  const response = await api.put(`/solutions/${id}/`, data);
+  // Use private API for content updates
+  const response = await privateApi.put(`/solutions/${id}/`, data);
   return response.data;
 };
 
 export const deleteSolution = async (id: string) => {
-  await api.delete(`/solutions/${id}/`);
+  // Use private API for solution deletion
+  await privateApi.delete(`/solutions/${id}/`);
 };
 
-
-
 export const addSolution = async (exerciseId: string, data: { content: string }): Promise<Solution> => {
-  const response = await api.post(`/exercises/${exerciseId}/solution/`, data);
+  // Use private API for adding solutions
+  const response = await privateApi.post(`/exercises/${exerciseId}/solution/`, data);
   return response.data;
 };
 
 // Comment API
-
 export const addComment = async (exerciseId: string, content: string, parentId?: string) => {
-  const response = await api.post(`/exercises/${exerciseId}/comment/`, { 
+  // Use private API for adding comments
+  const response = await privateApi.post(`/exercises/${exerciseId}/comment/`, { 
     content,
     parent: parentId
   });
@@ -328,42 +265,95 @@ export const addComment = async (exerciseId: string, content: string, parentId?:
 };
 
 export const updateComment = async (commentId: string, content: string) => {
-  const response = await api.put(`/comments/${commentId}/`, { content });
+  // Use private API for updating comments
+  const response = await privateApi.put(`/comments/${commentId}/`, { content });
   return response.data;
 };
 
 export const deleteComment = async (commentId: string) => {
-  await api.delete(`/comments/${commentId}/`);
+  // Use private API for deleting comments
+  await privateApi.delete(`/comments/${commentId}/`);
+};
+
+// Voting
+export const voteExercise = async (id: string, value: VoteValue) => {
+  try {
+    // Use private API for voting
+    const response = await privateApi.post(`/exercises/${id}/vote/`, { value });
+    return response.data.item;
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
+};
+
+export const voteSolution = async (id: string, value: VoteValue) => {
+  try {
+    // Use private API for voting
+    const response = await privateApi.post(`/solutions/${id}/vote/`, { value });
+    return response.data.item;
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
+};
+
+export const voteComment = async (id: string, value: VoteValue) => {
+  try {
+    // Use private API for voting
+    const response = await privateApi.post(`/comments/${id}/vote/`, { value });
+    return response.data.item;
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
 };
 
 // Content Tracking
 export const markContentViewed = async (contentId: string) => {
-  const response = await api.post(`/content/${contentId}/view/`);
+  // Use private API for tracking
+  const response = await privateApi.post(`/content/${contentId}/view/`);
   return response.data;
 };
 
-export const markContentCompleted = async (contentId: string) => {
-  const response = await api.post(`/content/${contentId}/complete/`);
+export const markExerciseProgress = async (exerciseId: string, status: 'success' | 'review') => {
+  // Use private API for progress marking
+  const response = await privateApi.post(`/exercises/${exerciseId}/mark_progress/`, { status });
   return response.data;
 };
 
-// Hierarchical Data API
+export const removeExerciseProgress = async (exerciseId: string) => {
+  // Use private API for progress removal
+  await privateApi.delete(`/exercises/${exerciseId}/remove_progress/`);
+};
+
+export const saveExercise = async (exerciseId: string) => {
+  // Use private API for saving exercises
+  const response = await privateApi.post(`/exercises/${exerciseId}/save_exercise/`);
+  return response.data;
+};
+
+export const unsaveExercise = async (exerciseId: string) => {
+  // Use private API for unsaving exercises
+  await privateApi.delete(`/exercises/${exerciseId}/unsave_exercise/`);
+};
+
+// Hierarchical Data API - All public, read-only endpoints
 export const getClassLevels = async (): Promise<ClassLevelModel[]> => {
-  const response = await api.get('/class-levels/');
+  const response = await publicApi.get('/class-levels/');
   
-  // Si la réponse est directement un tableau
+  // Handle different response formats
   if (Array.isArray(response.data)) {
     return response.data;
   }
-  
-  // Si la réponse est un objet avec une propriété results (pour la compatibilité)
   return response.data.results || [];
 };
+
 export const getSubjects = async (classLevelId?: string | string[]): Promise<SubjectModel[]> => {
   const params = classLevelId ? { class_level: classLevelId } : {};
-  const response = await api.get('/subjects/', { params });
+  const response = await publicApi.get('/subjects/', { params });
   
-  // Gère les deux formats de réponse
+  // Handle different response formats
   if (Array.isArray(response.data)) {
     return response.data;
   }
@@ -372,9 +362,9 @@ export const getSubjects = async (classLevelId?: string | string[]): Promise<Sub
 
 export const getSubfields = async (subjectId: string, classLevelIds: string[]): Promise<Subfield[]> => {
   const params = classLevelIds ? { class_level: classLevelIds, subject: subjectId } : {};
-  const response = await api.get('/subfields/', { params });
+  const response = await publicApi.get('/subfields/', { params });
   
-  // Gère les deux formats de réponse
+  // Handle different response formats
   if (Array.isArray(response.data)) {
     return response.data;
   }
@@ -383,9 +373,9 @@ export const getSubfields = async (subjectId: string, classLevelIds: string[]): 
 
 export const getChapters = async (subjectId: string, classLevelIds: string[], subfieldId: string[]): Promise<ChapterModel[]> => {
   const params = classLevelIds ? { class_level: classLevelIds, subject: subjectId, subfields: subfieldId } : {};
-  const response = await api.get('/chapters/', { params });
+  const response = await publicApi.get('/chapters/', { params });
   
-  // Gère les deux formats de réponse
+  // Handle different response formats
   if (Array.isArray(response.data)) {
     return response.data;
   }
@@ -394,73 +384,20 @@ export const getChapters = async (subjectId: string, classLevelIds: string[], su
 
 export const getTheorems = async (subjectId: string, classLevelIds: string[], subfieldId: string[], chaptersId: string[]): Promise<Theorem[]> => {
   const params = classLevelIds ? { class_level: classLevelIds, subject: subjectId, subfields: subfieldId, chapters: chaptersId } : {};
-  const response = await api.get('/theorems/', { params });
+  const response = await publicApi.get('/theorems/', { params });
   
-  // Gère les deux formats de réponse
+  // Handle different response formats
   if (Array.isArray(response.data)) {
     return response.data;
   }
   return response.data.results || [];
 };
 
-
-
-
-// Image Upload
-export const uploadImage = async (file: File) => {
-  const formData = new FormData();
-  formData.append('image', file);
-  const response = await api.post('/upload/image/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data.url;
-};
-
-
-/**
- * Mark exercise progress as 'success' or 'review'
- * @param exerciseId - Exercise ID
- * @param status - Status value ('success' or 'review')
- * @returns Progress object
- */
-export const markExerciseProgress = async (exerciseId: string, status: 'success' | 'review') => {
-  const response = await api.post(`/exercises/${exerciseId}/mark_progress/`, { status });
-  return response.data;
-};
-
-/**
- * Remove progress marking from an exercise
- * @param exerciseId - Exercise ID
- */
-export const removeExerciseProgress = async (exerciseId: string) => {
-  await api.delete(`/exercises/${exerciseId}/remove_progress/`);
-};
-
-/**
- * Save an exercise for later
- * @param exerciseId - Exercise ID
- * @returns Save record
- */
-export const saveExercise = async (exerciseId: string) => {
-  const response = await api.post(`/exercises/${exerciseId}/save_exercise/`);
-  return response.data;
-};
-
-/**
- * Remove exercise from saved list
- * @param exerciseId - Exercise ID
- */
-export const unsaveExercise = async (exerciseId: string) => {
-  await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
-};
-
-// src/lib/api.ts - Add or update functions for user profile data
-
+// User Profile API
 export const getUserProfile = async (username: string) => {
   try {
-    const response = await api.get(`/users/${username}/`);
+    // Public API for viewing profiles
+    const response = await publicApi.get(`/users/${username}/`);
     return response.data;
   } catch (error) {
     console.error("Error fetching user profile:", error);
@@ -470,7 +407,9 @@ export const getUserProfile = async (username: string) => {
 
 export const getUserStats = async (username: string) => {
   try {
-    const response = await api.get(`/users/${username}/stats/`);
+    // Public API for viewing stats
+    const response = await privateApi.get(`/users/${username}/stats/`);
+    console.log("User stats:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching user stats:", error);
@@ -480,7 +419,8 @@ export const getUserStats = async (username: string) => {
 
 export const getUserContributions = async (username: string) => {
   try {
-    const response = await api.get(`/users/${username}/contributions/`);
+    // Public API for viewing contributions
+    const response = await publicApi.get(`/users/${username}/contributions/`);
     return response.data;
   } catch (error) {
     console.error("Error fetching user contributions:", error);
@@ -488,40 +428,33 @@ export const getUserContributions = async (username: string) => {
   }
 };
 
-// In your API file
+// Private user data API
 export const getUserSavedExercises = async (username: string) => {
   try {
-    // Get IDs first
-    const response = await api.get(`/users/${username}/saved_exercises/`);
-    console.log("Saved exercises response:", response.data);
-    
-        // Return in the format your component expects
-    return  response.data;
+    // Private API for viewing saved exercises
+    const response = await privateApi.get(`/users/${username}/saved_exercises/`);
+    return response.data;
   } catch (error) {
     console.error("Error fetching saved exercises:", error);
     throw error;
   }
 };
 
-export const getUserProgressExercises = async (username: string, progress : string) => {
+export const getUserProgressExercises = async (username: string, progress: string) => {
   try {
-    // Get IDs first
-    const response = await api.get(`/users/${username}/${progress}_thing/`);
-    console.log("Saved exercises response:", response.data);
-    
-        // Return in the format your component expects
-    return  response.data;
+    // Private API for viewing progress
+    const response = await privateApi.get(`/users/${username}/${progress}_thing/`);
+    return response.data;
   } catch (error) {
-    console.error("Error fetching saved exercises:", error);
+    console.error("Error fetching progress exercises:", error);
     throw error;
   }
 };
-
 
 export const getUserHistory = async (username: string) => {
   try {
-    const response = await api.get(`/users/${username}/history/`);
-    console.log("User history response:", response.data);
+    // Private API for viewing history
+    const response = await privateApi.get(`/users/${username}/history/`);
     return response.data;
   } catch (error) {
     console.error("Error fetching user history:", error);
@@ -531,10 +464,14 @@ export const getUserHistory = async (username: string) => {
 
 export const updateUserProfile = async (userData: any) => {
   try {
-    const response = await api.patch(`/users/${encodeURIComponent(userData.username)}/`, userData);
+    // Private API for updating profile
+    const response = await privateApi.patch(`/users/${encodeURIComponent(userData.username)}/`, userData);
     return response.data;
   } catch (error) {
     console.error("Error updating user profile:", error);
     throw error;
   }
 };
+
+// Type definition to avoid errors
+type VoteValue = 1 | -1 | 0;
