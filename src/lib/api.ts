@@ -2,8 +2,6 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import { SortOption, ClassLevelModel, SubjectModel, ChapterModel, Solution, Difficulty, Theorem, Subfield } from '../types';
 
-const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 // Create an axios instance with default configuration
 const api = axios.create({
@@ -151,20 +149,32 @@ export const voteComment = async (id: string, value: VoteValue) => {
 
 export const login = async (identifier: string, password: string) => {
   try {
-    // Utilisez l'endpoint token de SimpleJWT
+    console.log(`Tentative de connexion avec: ${identifier}`);
+    
+    // Note: Assurez-vous que vous envoyez les bons paramètres selon votre API
+    // Certaines API attendent 'username' et d'autres 'email' ou 'identifier'
+    // Vérifiez la documentation de votre backend ou le code source
     const response = await api.post('/token/', { 
-      username: identifier, // ou email selon votre configuration 
+      username: identifier, // ou identifier ou email selon votre configuration backend
       password 
     });
     
     if (response.data.access) {
+      console.log('Connexion réussie, token obtenu');
       localStorage.setItem('token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+    } else {
+      console.warn('Réponse de connexion sans token d\'accès:', response.data);
     }
+    
     return response.data;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Erreur de connexion détaillée:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('Réponse d\'erreur:', error.response.data);
+      console.error('Status:', error.response.status);
+    }
     throw error;
   }
 };
@@ -174,12 +184,72 @@ export const logout = async () => {
   localStorage.removeItem('token');
   return response.data;
 };
+
+
 export const register = async (username: string, email: string, password: string) => {
-  const response = await api.post('/auth/register/', { username, email, password });
-  return response.data;
+  try {
+    console.log(`Tentative d'inscription avec: ${username}, ${email}`);
+    
+    const response = await api.post('/auth/register/', { 
+      username, 
+      email, 
+      password 
+    });
+    
+    console.log('Inscription réussie:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur d\'inscription détaillée:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('Réponse d\'erreur:', error.response.data);
+      console.error('Status:', error.response.status);
+    }
+    throw error;
+  }
 };
 
 
+export const updateUserProfile = async (userData: any) => {
+  try {
+    const response = await api.patch(`/users/${encodeURIComponent(userData.username)}/`, userData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
+};
+
+/**
+ * Enregistre les notes par matière d'un utilisateur
+ * @param userId - ID de l'utilisateur
+ * @param subjectGrades - Notes par matière
+ * @returns Résultat de l'opération
+ */
+export const saveUserSubjectGrades = async (userId: string, subjectGrades: any[]) => {
+  try {
+    const response = await api.post(`/users/${userId}/subject-grades/`, { subject_grades: subjectGrades });
+    return response.data;
+  } catch (error) {
+    console.error("Error saving subject grades:", error);
+    throw error;
+  }
+};
+
+/**
+ * Enregistre le type d'utilisateur (étudiant ou enseignant)
+ * @param userId - ID de l'utilisateur
+ * @param userType - Type d'utilisateur ('student' ou 'teacher')
+ * @returns Résultat de l'opération
+ */
+export const saveUserType = async (userId: string, userType: string) => {
+  try {
+    const response = await api.post(`/users/${userId}/user-type/`, { user_type: userType });
+    return response.data;
+  } catch (error) {
+    console.error("Error saving user type:", error);
+    throw error;
+  }
+};
 
 export const getCurrentUser = async () => {
   try {
@@ -359,7 +429,7 @@ export const getClassLevels = async (): Promise<ClassLevelModel[]> => {
   // Si la réponse est un objet avec une propriété results (pour la compatibilité)
   return response.data.results || [];
 };
-export const getSubjects = async (classLevelId?: string | string[]): Promise<SubjectModel[]> => {
+export const getSubjects = async (classLevelId?: string[]): Promise<SubjectModel[]> => {
   const params = classLevelId ? { class_level: classLevelId } : {};
   const response = await api.get('/subjects/', { params });
   
@@ -529,12 +599,3 @@ export const getUserHistory = async (username: string) => {
   }
 };
 
-export const updateUserProfile = async (userData: any) => {
-  try {
-    const response = await api.patch(`/users/${encodeURIComponent(userData.username)}/`, userData);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    throw error;
-  }
-};

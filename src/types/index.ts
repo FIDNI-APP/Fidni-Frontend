@@ -12,21 +12,21 @@ export interface ClassLevelModel {
 export interface SubjectModel {
   id: string;
   name: string;
-  class_level: number[];
+  class_level: ClassLevelModel;
 }
 
 
 export interface Subfield{
   id : string;
   name : string;
-  subject : string ;
+  subject : SubjectModel ;
   class_level : ClassLevelModel[];
 }
 
 export interface ChapterModel {
   id: string;
   name: string;
-  subject: number;
+  subject: SubjectModel;
   class_level: ClassLevelModel[];
   subfield : Subfield[];
   order: number;
@@ -34,7 +34,7 @@ export interface ChapterModel {
 export interface Theorem{
   id: string;
   name: string;
-  subject: number;
+  subject: SubjectModel;
   class_level: ClassLevelModel[];
   chapter : ChapterModel[];
   subfield : Subfield[];
@@ -42,7 +42,7 @@ export interface Theorem{
 
 export interface Solution {
   id: string;
-  content: string;
+  content: Content;
   author: User;
   created_at: string;
   updated_at: string;
@@ -146,18 +146,41 @@ export interface Comment {
 }
 
 export interface UserProfile {
-  user: User;
-  contributions: Content[];
-  favoriteSubjects: string[];
-  recentActivity: {
-    type: 'comment' | 'post' | 'vote';
-    content: Content;
-    timestamp: string;
-  }[];
-  stats: {
-    totalContributions: number;
-    totalUpvotes: number;
-    totalComments: number;
+  bio: string;
+  avatar: string;
+  favorite_subjects: string[];
+  location: string;
+  last_activity_at: string;
+  joined_at: string;
+  
+  // New fields
+  user_type: 'student' | 'teacher';
+  class_level_id: string; 
+  interested_subjects: string[];
+  subject_marks: Record<string, { highest: number; lowest: number }>;
+  
+  // Settings
+  display_email: boolean;
+  display_stats: boolean;
+  email_notifications: boolean;
+  comment_notifications: boolean;
+  solution_notifications: boolean;
+  
+  // Stats (may be conditionally available)
+  contribution_stats?: {
+    exercises: number;
+    solutions: number;
+    comments: number;
+    total_contributions: number;
+    upvotes_received: number;
+    view_count: number;
+  };
+  learning_stats?: {
+    exercises_completed: number;
+    exercises_in_review: number;
+    exercises_saved: number;
+    subjects_studied: string[];
+    total_viewed: number;
   };
 }
 

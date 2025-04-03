@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { register } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import axios from 'axios';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,23 +71,36 @@ export const AuthModal = ({ isOpen, onClose, returnUrl = '/' }: AuthModalProps) 
     }
   };
 
-  // Handle signup
   const handleSignup = async (e : any) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
+  
     try {
+      // 1. Enregistrer l'utilisateur
       await register(formData.username, formData.email, formData.password);
-      // After registration, log the user in
-      await login(formData.email, formData.password);
+      
+      // 2. Connexion après l'inscription - utilisez formData.username au lieu de formData.email
+      // C'est important car votre API JWT attend probablement "username" et non "email"
+      await login(formData.username, formData.password);
+      
       setShowSuccess(true);
+      
+      // Redirection vers la page d'onboarding
       setTimeout(() => {
         onClose();
-        navigate(returnUrl);
+        navigate('/complete-profile');
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      console.error('Registration/login error:', err);
+      
+      // Message d'erreur plus descriptif
+      if (axios.isAxiosError(err) && err.response) {
+        setError(err.response.data.error || 
+          `Erreur: ${err.response.status} - ${err.response.statusText}`);
+      } else {
+        setError('Échec de l\'inscription. Veuillez réessayer.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +160,7 @@ export const AuthModal = ({ isOpen, onClose, returnUrl = '/' }: AuthModalProps) 
 
           <div className="p-6">
             {/* Success message */}
-            {showSuccess ? (
+            {showSuccess && (
               <div className="text-center py-6">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <div className="w-8 h-8 text-green-600">✓</div>
@@ -156,10 +169,12 @@ export const AuthModal = ({ isOpen, onClose, returnUrl = '/' }: AuthModalProps) 
                   {activeTab === 'login' ? 'Signed in successfully!' : 'Account created!'}
                 </h3>
                 <p className="text-gray-600">
-                  Redirecting you now...
+                  {activeTab === 'login' ? 'Redirecting you now...' : 'Redirecting to complete your profile...'}
                 </p>
               </div>
-            ) : (
+            )}
+            
+            {!showSuccess && (
               <>
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6">

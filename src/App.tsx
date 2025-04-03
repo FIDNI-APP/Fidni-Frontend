@@ -1,7 +1,11 @@
-import { Routes, Route } from 'react-router-dom';
+// Modifions le fichier App.tsx pour rediriger la route "/signup" vers le modal
+
+// src/App.tsx - Modification de la route signup
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
-import { SignUp } from './pages/SignUp';
+// Supprimez l'import pour SignUp
+// import { SignUp } from './pages/SignUp'; 
 import { NewContent } from './pages/NewContent';
 import { EditExercise } from './pages/EditExercise';
 import { EditSolution } from './pages/EditSolution';
@@ -11,8 +15,21 @@ import { Navbar } from './components/Navbar';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthModalProvider } from '@/components/AuthController';
+import { AuthModalProvider, useAuthModal } from '@/components/AuthController';
 import {UserProfile} from '@/pages/Profile'
+import OnboardingProfile  from '@/pages/OnboardingProfile'; // Import du nouveau composant
+
+// Composant pour rediriger vers la home avec modal ouvert
+const SignUpRedirect = () => {
+  const { openModal } = useAuthModal();
+  
+  useEffect(() => {
+    // Ouvre automatiquement le modal d'inscription
+    openModal();
+  }, [openModal]);
+  
+  return <Navigate to="/" />;
+};
 
 function App() {
   useEffect(() => {
@@ -48,14 +65,16 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
+              {/* Remplacer la route /signup par le composant de redirection */}
+              <Route path="/signup" element={<SignUpRedirect />} />
               <Route path="/new" element={<NewContent />} />
               <Route path="/edit/:id" element={<EditExercise />} />
               <Route path="/solutions/:id/edit" element={<EditSolution />} />
-              {/* Replace the old profile route with our enhanced profile */}
               <Route path="/profile/:username" element={<UserProfile />} />
               <Route path="/exercises" element={<ExerciseList />} />
               <Route path="/exercises/:id" element={<ExerciseDetail />} />
+              {/* Ajouter une nouvelle route pour le processus d'onboarding */}
+              <Route path="/complete-profile" element={<OnboardingProfile />} />
             </Routes>
           </div>
           </AuthModalProvider>

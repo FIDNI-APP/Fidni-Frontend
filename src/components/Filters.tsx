@@ -197,6 +197,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     
     try {
       const data = await getSubjects(selectedFilters.classLevels);
+      console.log("Subjects data:", data);
       const uniqueSubjects = getUniqueById(data);
       setSubjects(uniqueSubjects);
     } catch (error) {

@@ -1,29 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import Confetti from 'react-confetti';
 import { Content, Comment, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { CommentSection } from '@/components/CommentSection';
-import { useInView } from 'react-intersection-observer';
-import Confetti from 'react-confetti';
 import { useAuthModal } from '@/components/AuthController';
+import { CommentSection } from '@/components/CommentSection';
 import { 
   getContentById, 
   voteExercise, 
   addComment, 
-  markContentViewed, 
-  deleteContent, 
-  voteComment, 
-  updateComment, 
-  deleteComment, 
+  markContentViewed,
   deleteSolution, 
   voteSolution, 
   addSolution,
   markExerciseProgress, 
   removeExerciseProgress, 
   saveExercise, 
-  unsaveExercise, 
+  unsaveExercise,
 } from '@/lib/api';
-import { motion, AnimatePresence } from 'framer-motion';
+
+// Import enhanced components
 import { ExerciseHeader } from '@/components/exercise/ExerciseHeader';
 import { TabNavigation } from '@/components/exercise/TabNavigation';
 import { FloatingToolbar } from '@/components/exercise/FloatingToolbar';
@@ -31,7 +28,26 @@ import { ExerciseContent } from '@/components/exercise/ExerciseContent';
 import { ExerciseSidebar } from '@/components/exercise/ExerciseSidebar';
 import { ProposalsEmptyState, ActivityEmptyState } from '@/components/exercise/EmptyStates';
 import { SolutionSection } from '@/components/exercise/SolutionSection';
+import { ExercisePrintView } from '@/components/exercise/ExercisePrintView';
+import { MobileSidebar } from '@/components/exercise/MobileSidebar';
+import { 
+  Bookmark, 
+  CheckCircle, 
+  XCircle, 
+  ArrowLeft, 
+  Lightbulb,
+  Share2, 
+  Printer, 
+  Clock,
+  BarChart3,
+  Eye,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import 'katex/dist/katex.min.css';
+
 export function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -57,16 +73,14 @@ export function ExerciseDetail() {
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isSticky, setIsSticky] = useState<boolean>(false);
+  const [showPrint, setShowPrint] = useState<boolean>(false);
   
   // Refs for scroll handling
   const headerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   
-  // Animation states
-  const [headerInViewRef, headerInView] = useInView({ threshold: 0.1, triggerOnce: true });
-  const [contentInViewRef, contentInView] = useInView({ threshold: 0.1, triggerOnce: true });
-  const [sidebarInViewRef, sidebarInView] = useInView({ threshold: 0.1, triggerOnce: true });
-
   useEffect(() => {
     if (id) {
       if (isAuthenticated) {
@@ -76,6 +90,12 @@ export function ExerciseDetail() {
       }
       markContentViewed(id).catch(console.error);
     }
+    
+    // Add page transition animation
+    document.body.classList.add('page-transition');
+    return () => {
+      document.body.classList.remove('page-transition');
+    };
   }, [id, isAuthenticated]);
 
   // Timer effect
@@ -98,11 +118,18 @@ export function ExerciseDetail() {
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
       setIsSticky(scrollPosition > 300);
+      
+      // Auto-hide toolbar when scrolling down
+      if (scrollPosition > 600 && showToolbar) {
+        setShowToolbar(false);
+      } else if (scrollPosition < 300 && !showToolbar) {
+        setShowToolbar(true);
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [showToolbar]);
 
   // Format date as time ago (e.g. "2 hours ago")
   const formatTimeAgo = (dateString: string): string => {
@@ -118,23 +145,28 @@ export function ExerciseDetail() {
     const diffMonths = Math.floor(diffDays / 30);
     const diffYears = Math.floor(diffDays / 365);
     
-    if (diffSecs < 60) return `Il y a ${diffSecs} seconde${diffSecs > 1 ? 's' : ''}`;
-    if (diffMins < 60) return `Il y a ${diffMins} minute${diffMins > 1 ? 's' : ''}`;
-    if (diffHours < 24) return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
-    if (diffDays < 7) return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
-    if (diffWeeks < 4) return `Il y a ${diffWeeks} semaine${diffWeeks > 1 ? 's' : ''}`;
-    if (diffMonths < 12) return `Il y a ${diffMonths} mois`;
-    return `Il y a ${diffYears} an${diffYears > 1 ? 's' : ''}`;
+    if (diffSecs < 60) return `${diffSecs} second${diffSecs !== 1 ? 's' : ''} ago`;
+    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
+    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+    return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
   };
 
   const loadExerciseWithUserStatus = async (exerciseId: string) => {
     try {
       setLoading(true);
-      
-      // Load exercise data
       const exerciseData = await getContentById(exerciseId);
       setExercise(exerciseData);
       
+      // Set user-specific states
+      if (exerciseData.user_complete) {
+        setCompleted(exerciseData.user_complete);
+      }
+      if (exerciseData.user_save) {
+        setSavedForLater(exerciseData.user_save);
+      }
     } catch (err) {
       console.error('Failed to load exercise:', err);
       setError('Failed to load exercise. Please try again.');
@@ -202,178 +234,6 @@ export function ExerciseDetail() {
     }
   };
   
-  const handleVoteComment = async (commentId: string, value: VoteValue) => {
-    if (!isAuthenticated || !exercise) {
-      openModal();
-      return;
-    }
-  
-    try {
-      const updatedComment = await voteComment(commentId, value);
-      
-      const updateCommentInTree = (comments: Comment[]): Comment[] => {
-        return comments.map(comment => {
-          if (comment.id === commentId) {
-            return updatedComment;
-          }
-          if (comment.replies) {
-            return {
-              ...comment,
-              replies: updateCommentInTree(comment.replies)
-            };
-          }
-          return comment;
-        });
-      };
-  
-      setExercise(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          comments: updateCommentInTree(prev.comments || [])
-        };
-      });
-    } catch (err) {
-      console.error('Failed to vote on comment:', err);
-    }
-  };
-  
-  const handleEditComment = async (commentId: string, content: string) => {
-    if (!exercise) return;
-  
-    try {
-      const updatedComment = await updateComment(commentId, content);
-      
-      const updateCommentInTree = (comments: Comment[]): Comment[] => {
-        return comments.map(comment => {
-          if (comment.id === commentId) {
-            return updatedComment;
-          }
-          if (comment.replies) {
-            return {
-              ...comment,
-              replies: updateCommentInTree(comment.replies)
-            };
-          }
-          return comment;
-        });
-      };
-  
-      setExercise(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          comments: updateCommentInTree(prev.comments || [])
-        };
-      });
-    } catch (err) {
-      console.error('Failed to edit comment:', err);
-    }
-  };
-  
-  const handleDeleteComment = async (commentId: string) => {
-    if (!exercise) return;
-  
-    try {
-      await deleteComment(commentId);
-      
-      const removeCommentFromTree = (comments: Comment[]): Comment[] => {
-        return comments.filter(comment => {
-          if (comment.id === commentId) {
-            return false;
-          }
-          if (comment.replies) {
-            comment.replies = removeCommentFromTree(comment.replies);
-          }
-          return true;
-        });
-      };
-  
-      setExercise(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          comments: removeCommentFromTree(prev.comments || [])
-        };
-      });
-    } catch (err) {
-      console.error('Failed to delete comment:', err);
-    }
-  };
-  
-  const handleDelete = async () => {
-    if (!exercise || !window.confirm('Are you sure you want to delete this content?')) {
-      return;
-    }
-  
-    try {
-      await deleteContent(exercise.id);
-      navigate('/exercises');
-    } catch (err) {
-      console.error('Failed to delete content:', err);
-    }
-  };
-  
-  const handleEdit = () => {
-    if (exercise) {
-      navigate(`/edit/${exercise.id}`);
-    }
-  };
-  
-  const toggleSolutionVisibility = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSolutionVisible(!solutionVisible);
-  };
-  
-  const handleSolutionToggle = () => {
-    setShowSolution(!showSolution);
-    if (!solutionVisible) {
-      setSolutionVisible(true);
-    }
-  };
-  
-  const handleAddSolution = async (solutionContent: string) => {
-    if (!isAuthenticated || !exercise || !solutionContent.trim()) {
-      return;
-    }
-  
-    try {
-      const newSolution = await addSolution(exercise.id, { content: solutionContent });
-      setExercise(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          solution: newSolution
-        };
-      });
-      
-      // Show confetti when solution is added
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-    } catch (err) {
-      console.error('Failed to add solution:', err);
-    }
-  };
-  
-  const handleEditSolution = () => {
-    if (exercise?.solution) {
-      navigate(`/solutions/${exercise.solution.id}/edit`);
-    }
-  };
-  
-  const handleDeleteSolution = async () => {
-    if (!exercise?.solution || !window.confirm('Are you sure you want to delete this solution?')) {
-      return;
-    }
-  
-    try {
-      await deleteSolution(exercise.solution.id);
-      loadExercise(exercise.id);
-    } catch (err) {
-      console.error('Failed to delete solution:', err);
-    }
-  };
-
   const handleVote = async (value: VoteValue, target: 'exercise' | 'solution' = 'exercise') => {
     if (!isAuthenticated || !id) {
       openModal();
@@ -399,13 +259,46 @@ export function ExerciseDetail() {
     }
   };
 
-  useEffect(() => {
-      if (exercise && exercise.user_complete !== undefined) {
-        setCompleted(exercise.user_complete);
-      }
-    }, [exercise]);
-
-  // Implement progress tracking (Réussi/À revoir)
+  const handleAddSolution = async (solutionContent: string) => {
+    if (!isAuthenticated || !exercise || !solutionContent.trim()) {
+      return;
+    }
+  
+    try {
+      const newSolution = await addSolution(exercise.id, { content: solutionContent });
+      setExercise(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          solution: newSolution
+        };
+      });
+      
+      // Show confetti when solution is added
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+      
+      // Auto-open the solution view
+      setSolutionVisible(true);
+    } catch (err) {
+      console.error('Failed to add solution:', err);
+    }
+  };
+  
+  const handleDeleteSolution = async () => {
+    if (!exercise?.solution || !window.confirm('Are you sure you want to delete this solution?')) {
+      return;
+    }
+  
+    try {
+      await deleteSolution(exercise.solution.id);
+      loadExercise(exercise.id);
+    } catch (err) {
+      console.error('Failed to delete solution:', err);
+    }
+  };
+  
+  // Implement progress tracking (Success/Review)
   const markAsCompleted = async (status: 'success' | 'review') => {
     if (!isAuthenticated || !id) {
       openModal();
@@ -435,13 +328,8 @@ export function ExerciseDetail() {
       setLoadingStates(prev => ({ ...prev, progress: false }));
     }
   };
-  useEffect(() => {
-      if (exercise && exercise.user_save !== undefined) {
-        setSavedForLater(exercise.user_save);
-      }
-    }, [exercise]);
   
-  // Toggle saved status (Enregistrer)
+  // Toggle saved status (Bookmark)
   const toggleSavedForLater = async () => {
     if (!isAuthenticated || !id) {
       openModal();
@@ -495,7 +383,31 @@ export function ExerciseDetail() {
   const toggleToolbar = () => {
     setShowToolbar(!showToolbar);
   };
-
+  
+  // Print function with enhanced preview
+  const handlePrint = () => {
+    setShowPrint(true);
+    setTimeout(() => {
+      window.print();
+      setShowPrint(false);
+    }, 300);
+  };
+  
+  // Share function
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: exercise?.title || 'Math Exercise',
+        text: `Check out this math exercise: ${exercise?.title}`,
+        url: window.location.href
+      }).catch(err => console.error('Error sharing:', err));
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => alert('Link copied to clipboard!'))
+        .catch(err => console.error('Error copying link:', err));
+    }
+  };
 
   if (loading) {
     return (
@@ -505,23 +417,18 @@ export function ExerciseDetail() {
             <div className="absolute inset-0 rounded-full border-4 border-indigo-100"></div>
             <div className="absolute inset-0 rounded-full border-4 border-t-indigo-600 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center text-indigo-600">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="w-8 h-8"
-              >
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 22H20C21.1 22 22 21.1 22 20V4C22 2.9 21.1 2 20 2H4C2.9 2 2 2.9 2 4V20C2 21.1 2.9 22 4 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18 6L9 18L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
           </div>
-          <p className="mt-6 text-lg font-medium text-indigo-900">Chargement de l'exercice...</p>
-          <p className="text-sm text-indigo-600">Préparation de votre contenu éducatif</p>
+          <p className="mt-6 text-lg font-medium text-indigo-900">Loading exercise...</p>
+          <div className="mt-2 flex items-center space-x-2">
+            <div className="h-2 w-2 bg-indigo-600 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="h-2 w-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          </div>
         </div>
       </div>
     );
@@ -539,214 +446,25 @@ export function ExerciseDetail() {
                 </svg>
               </div>
               <div className="ml-6">
-                <h3 className="text-lg font-semibold">Exercice indisponible</h3>
-                <p className="mt-2 text-base">{error || 'Exercice introuvable. Veuillez vérifier le lien ou réessayer plus tard.'}</p>
+                <h3 className="text-lg font-semibold">Exercise Unavailable</h3>
+                <p className="mt-2 text-base">{error || 'Exercise not found. Please check the link or try again later.'}</p>
               </div>
             </div>
           </div>
           <div className="mt-8 flex justify-center">
-            <button 
+            <Button 
               onClick={() => navigate('/exercises')}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-full shadow-md px-8 py-3 text-lg font-medium transition-all duration-300 hover:shadow-lg"
+              className="group bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-full shadow-md px-8 py-3 text-lg font-medium transition-all duration-300 hover:shadow-lg"
             >
-              <svg className="w-5 h-5 mr-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Retour aux exercices
-            </button>
+              <ArrowLeft className="w-5 h-5 mr-2 transition-transform duration-300 group-hover:-translate-x-1" />
+              Back to Exercises
+            </Button>
           </div>
         </div>
       </div>
     );
   }
-  const handlePrint = () => {
-    // Create a temporary iframe to handle the printing
-    // This approach isolates the print content and allows us to properly render LaTeX
-    const printFrame = document.createElement('iframe');
-    printFrame.style.position = 'absolute';
-    printFrame.style.top = '-9999px';
-    printFrame.style.left = '-9999px';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    document.body.appendChild(printFrame);
   
-    // Wait for the iframe to load before adding content
-    printFrame.onload = () => {
-      const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-      if (!frameDoc) return;
-  
-      // Add necessary styles to the iframe
-      const styleSheet = document.createElement('style');
-      styleSheet.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Latin+Modern+Roman&display=swap');
-        
-        /* Base document styles */
-        body {
-          font-family: 'Latin Modern Roman', 'Computer Modern', 'Times New Roman', Times, serif;
-          font-size: 12pt;
-          line-height: 1.5;
-          margin: 0;
-          padding: 0 2cm;
-          color: black;
-          background: white;
-        }
-        
-        /* Print settings */
-        @page {
-          size: A4;
-          margin: 2cm;
-        }
-        
-        /* Typography */
-        h1 {
-          font-size: 18pt;
-          text-align: center;
-          margin-bottom: 0.5cm;
-          font-weight: bold;
-        }
-        
-        /* Meta information */
-        .exercise-metadata {
-          text-align: center;
-          font-style: italic;
-          margin-bottom: 1cm;
-          font-size: 10pt;
-          color: #333;
-        }
-        
-        /* Content and solution */
-        .exercise-content {
-          text-align: justify;
-          margin-bottom: 1cm;
-        }
-        
-        .solution-section {
-          margin-top: 1cm;
-          padding-top: 0.5cm;
-          border-top: 1pt solid #999;
-        }
-        
-        .solution-title {
-          font-size: 14pt;
-          text-align: center;
-          margin-bottom: 0.5cm;
-          font-weight: bold;
-        }
-        
-        /* Footer */
-        .print-footer {
-          margin-top: 2cm;
-          padding-top: 0.5cm;
-          border-top: 1pt solid #999;
-          text-align: center;
-          font-size: 9pt;
-          font-style: italic;
-        }
-        
-        /* LaTeX math styling */
-        .katex-display {
-          margin: 1em 0;
-          text-align: center;
-        }
-        
-        .katex {
-          font-size: 1.1em;
-          text-indent: 0;
-        }
-      `;
-      
-      // Import KaTeX CSS
-      const katexLink = document.createElement('link');
-      katexLink.rel = 'stylesheet';
-      katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-      katexLink.integrity = 'sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntxDrP2e2xz2xzZ4wYYTIe1KvzGJ+KexmF';
-      katexLink.crossOrigin = 'anonymous';
-      
-      // Add styles to iframe head
-      frameDoc.head.appendChild(styleSheet);
-      frameDoc.head.appendChild(katexLink);
-      
-      // Set title
-      frameDoc.title = `${exercise.title} - ExercicesMaths.ma`;
-      
-      // Create HTML skeleton
-      frameDoc.body.innerHTML = `
-        <div class="exercise-print-container">
-          <h1>${exercise.title}</h1>
-          
-          <div class="exercise-metadata">
-            <div>Niveau: ${exercise.class_levels?.[0]?.name || 'Non spécifié'}</div>
-            <div>Matière: ${exercise.subject?.name || 'Non spécifiée'}</div>
-            <div>Difficulté: ${
-              exercise.difficulty === 'easy' ? 'Facile' : 
-              exercise.difficulty === 'medium' ? 'Moyen' : 'Difficile'
-            }</div>
-            <div>Date: ${new Date(exercise.created_at).toLocaleDateString()}</div>
-          </div>
-          
-          <div class="exercise-content" id="print-exercise-content"></div>
-          
-          ${exercise.solution && solutionVisible ? `
-            <div class="solution-section">
-              <h2 class="solution-title">Solution</h2>
-              <div class="solution-content" id="print-solution-content"></div>
-            </div>
-          ` : ''}
-          
-          <div class="print-footer">
-            <p>Exercice proposé par ${exercise.author.username} • Imprimé le ${new Date().toLocaleDateString()}</p>
-            <p>ExercicesMaths.ma</p>
-          </div>
-        </div>
-      `;
-      
-      // Clone the actual rendered content with LaTeX
-      // This is critical: we get the rendered DOM elements instead of just the HTML string
-      
-      // Find the actual rendered content in the page
-      const exerciseContentEl = document.querySelector('.exercise-content-body');
-      const solutionContentEl = solutionVisible && exercise.solution ? 
-        document.querySelector('.solution-content') : null;
-      
-      if (exerciseContentEl) {
-        // Clone the nodes to preserve the rendered LaTeX
-        const clonedContent = exerciseContentEl.cloneNode(true);
-        const printContentTarget = frameDoc.getElementById('print-exercise-content');
-        if (printContentTarget) {
-          printContentTarget.appendChild(clonedContent);
-        }
-      }
-      
-      if (solutionContentEl) {
-        // Clone the solution nodes to preserve the rendered LaTeX
-        const clonedSolution = solutionContentEl.cloneNode(true);
-        const printSolutionTarget = frameDoc.getElementById('print-solution-content');
-        if (printSolutionTarget) {
-          printSolutionTarget.appendChild(clonedSolution);
-        }
-      }
-      
-      // Give a moment for styles to apply, then print
-      setTimeout(() => {
-        try {
-          printFrame.contentWindow?.focus();
-          printFrame.contentWindow?.print();
-        } catch (err) {
-          console.error('Print error:', err);
-          // Fallback for browsers that don't support iframe printing
-          window.print();
-        }
-        
-        // Clean up after printing (with a delay to ensure print dialog completes)
-        setTimeout(() => {
-          document.body.removeChild(printFrame);
-        }, 1000);
-      }, 500);
-    };
-    
-    // Set src to trigger onload
-    printFrame.src = 'about:blank';
-  };
   const isAuthor = user?.id === exercise.author.id;
   const hasSolution = !!exercise.solution;
   const canEditSolution = exercise.solution && user?.id === exercise.solution.author.id;
@@ -755,98 +473,114 @@ export function ExerciseDetail() {
     <div className={`min-h-screen bg-gray-50 pt-20 pb-16 transition-all duration-300 ${fullscreenMode ? 'bg-white' : ''}`}>
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
       
-      {/* Floating toolbar */}
-      <FloatingToolbar
-        showToolbar={showToolbar}
-        toggleToolbar={toggleToolbar}
-        timerActive={timerActive}
-        toggleTimer={toggleTimer}
-        timer={timer}
-        fullscreenMode={fullscreenMode}
-        toggleFullscreen={toggleFullscreen}
-        savedForLater={savedForLater}
-        toggleSavedForLater={toggleSavedForLater}
-        formatTime={formatTime}
-      />
+      {/* Print-only view */}
+      {showPrint && (
+        <div className="hidden print:block">
+          <ExercisePrintView exercise={exercise} showSolution={solutionVisible} />
+        </div>
+      )}
       
-      {/* Sticky header (appears on scroll) */}
-      <div className={`fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 transform transition-transform duration-300 ${isSticky ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/exercises')}
-              className="rounded-full px-3 py-2 text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              aria-label="Retour aux exercices"
-              title="Retour aux exercices"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-            </button>
+      {/* Main content - hidden during print */}
+      <div className="print:hidden">
+        {/* Floating toolbar */}
+        <FloatingToolbar
+          showToolbar={showToolbar}
+          toggleToolbar={toggleToolbar}
+          timerActive={timerActive}
+          toggleTimer={toggleTimer}
+          timer={timer}
+          fullscreenMode={fullscreenMode}
+          toggleFullscreen={toggleFullscreen}
+          savedForLater={savedForLater}
+          toggleSavedForLater={toggleSavedForLater}
+          formatTime={formatTime}
+        />
+        
+        {/* Mobile sidebar */}
+        <MobileSidebar
+          timer={timer}
+          timerActive={timerActive}
+          toggleTimer={toggleTimer}
+          resetTimer={resetTimer}
+          difficultyRating={difficultyRating}
+          rateDifficulty={rateDifficulty}
+          formatTime={formatTime}
+          viewCount={exercise.view_count}
+          voteCount={exercise.vote_count}
+          commentsCount={exercise.comments?.length || 0}
+        />
+        
+        {/* Sticky header (appears on scroll) */}
+        <div className={`fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 transform transition-transform duration-300 ${isSticky ? 'translate-y-0' : '-translate-y-full'}`}>
+          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/exercises')}
+                className="rounded-full p-2 text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                aria-label="Back to exercises"
+                title="Back to exercises"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              
+              <h2 className="text-lg font-medium text-gray-900 line-clamp-1">
+                {exercise.title}
+              </h2>
+            </div>
             
-            <h2 className="text-lg font-medium text-gray-900 line-clamp-1">
-              {exercise.title}
-            </h2>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-${
-              exercise.difficulty === 'easy' ? 'emerald-500 to-green-500' : 
-              exercise.difficulty === 'medium' ? 'amber-500 to-yellow-500' : 
-              'rose-500 to-pink-500'
-            } text-white`}>
-              {exercise.difficulty === 'easy' ? 'Facile' : 
-               exercise.difficulty === 'medium' ? 'Moyen' : 
-               'Difficile'}
-            </span>
-            
-            <div className="flex items-center gap-1 text-gray-500 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span>{formatTime(timer)}</span>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${
+                exercise.difficulty === 'easy' ? 'from-emerald-500 to-green-500' : 
+                exercise.difficulty === 'medium' ? 'from-amber-500 to-yellow-500' : 
+                'from-rose-500 to-pink-500'
+              } text-white`}>
+                {exercise.difficulty === 'easy' ? 'Easy' : 
+                 exercise.difficulty === 'medium' ? 'Medium' : 
+                 'Hard'}
+              </span>
+              
+              <div className="flex items-center gap-1 text-gray-500 text-sm">
+                <Clock className="w-4 h-4" />
+                <span>{formatTime(timer)}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 lg:px-6 relative">
-        {/* Header component with tabs */}
-        <div ref={headerRef}>
-          <ExerciseHeader
-            exercise={exercise}
-            savedForLater={savedForLater}
-            loadingStates={loadingStates}
-            toggleSavedForLater={toggleSavedForLater}
-            formatTimeAgo={formatTimeAgo}
-            isAuthor={isAuthor}
-          />
-          <div className="bg-gradient-to-r from-blue-800 via-indigo-800 to-indigo-900 text-white px-6 pb-2">
-            <TabNavigation
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              commentsCount={exercise.comments?.length || 0}
+        <div className="container mx-auto px-4 lg:px-6 relative">
+          <div ref={headerRef}>
+            <ExerciseHeader
+              exercise={exercise}
+              savedForLater={savedForLater}
+              loadingStates={loadingStates}
+              toggleSavedForLater={toggleSavedForLater}
+              formatTimeAgo={formatTimeAgo}
+              isAuthor={isAuthor}
             />
+            <div className="bg-gradient-to-r from-blue-800 via-indigo-800 to-indigo-900 text-white px-6 pb-2">
+              <TabNavigation
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                commentsCount={exercise.comments?.length || 0}
+              />
+            </div>
           </div>
-        </div>
-        
-        {/* Main content grid */}
-        <div className="w-full relative">
-          <div className="flex flex-col lg:flex-row lg:gap-6">
-            {/* Main Content Area */}
-            <div className="flex-grow">
-              <AnimatePresence mode="wait">
-                {activeSection === 'exercise' && (
-                  <motion.div
-                    key="exercise-content"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    {/* Exercise Content */}
-                    <div ref={contentInViewRef}>
+          
+          {/* Main content grid */}
+          <div className="w-full relative">
+            <div className="flex flex-col lg:flex-row lg:gap-6">
+              {/* Main Content Area */}
+              <div className="flex-grow" ref={contentRef}>
+                <AnimatePresence mode="wait">
+                  {activeSection === 'exercise' && (
+                    <motion.div
+                      key="exercise-content"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                      {/* Exercise Content */}
                       <ExerciseContent
                         exercise={exercise}
                         completed={completed}
@@ -859,98 +593,184 @@ export function ExerciseDetail() {
                       {/* Solution Section */}
                       <SolutionSection
                         exercise={exercise}
-                        canEditSolution={canEditSolution}
+                        canEditSolution={canEditSolution? true : false}
                         isAuthor={isAuthor}
                         solutionVisible={solutionVisible}
                         showSolution={showSolution}
-                        handleSolutionToggle={handleSolutionToggle}
-                        toggleSolutionVisibility={toggleSolutionVisibility}
+                        handleSolutionToggle={() => setShowSolution(!showSolution)}
+                        toggleSolutionVisibility={(e) => {
+                          e.stopPropagation();
+                          setSolutionVisible(!solutionVisible);
+                        }}
                         handleVote={handleVote}
-                        handleEditSolution={handleEditSolution}
+                        handleEditSolution={() => navigate(`/solutions/${exercise.solution?.id}/edit`)}
                         handleDeleteSolution={handleDeleteSolution}
                         handleAddSolution={handleAddSolution}
                         setSolutionVisible={setSolutionVisible}
                       />
-                    </div>
-                  </motion.div>
-                )}
+                      
+                      {/* Additional actions */}
+                      <div className="grid grid-cols-2 gap-4 mt-6">
+                        <button
+                          onClick={handleShare}
+                          className="bg-white border border-gray-200 hover:border-indigo-300 text-gray-700 hover:text-indigo-600 flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-200"
+                        >
+                          <Share2 className="w-5 h-5" />
+                          <span>Share Exercise</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (hasSolution && !solutionVisible) {
+                              setSolutionVisible(true);
+                            } else if (!hasSolution && isAuthor) {
+                              // Scroll to solution form
+                              const solutionForm = document.getElementById('solution-form');
+                              if (solutionForm) {
+                                solutionForm.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }
+                          }}
+                          className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          <Lightbulb className="w-5 h-5" />
+                          <span>{hasSolution ? 'View Solution' : isAuthor ? 'Add Solution' : 'No Solution Yet'}</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* Discussions Section */}
-                {activeSection === 'discussions' && (
-                  <motion.div
-                    key="discussions-content"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.4 }}
-                    className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
-                  >
-                    <div className="p-6" id="comments">
-                      <CommentSection
-                        comments={exercise?.comments || []}
-                        onAddComment={handleAddComment}
-                        onVoteComment={handleVoteComment}
-                        onEditComment={handleEditComment}
-                        onDeleteComment={handleDeleteComment}
-                      />
-                    </div>
-                  </motion.div>
-                )}
+                  {/* Discussions Section */}
+                  {activeSection === 'discussions' && (
+                    <motion.div
+                      key="discussions-content"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                    >
+                      <div className="p-6" id="comments">
+                        <CommentSection
+                          comments={exercise?.comments || []}
+                          onAddComment={handleAddComment}
+                          onVoteComment={async (commentId: string, type: VoteValue) => {
+                            // TODO: Implement comment voting logic
+                            return Promise.resolve();
+                          }}
+                          onEditComment={async (commentId: string, content: string) => {
+                            // TODO: Implement comment editing logic
+                            return Promise.resolve();
+                          }}
+                          onDeleteComment={async (commentId: string) => Promise.resolve()} // TODO: Implement delete comment logic
+                        />
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* Proposals Section */}
-                {activeSection === 'proposals' && (
-                  <motion.div
-                    key="proposals-content"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <ProposalsEmptyState />
-                  </motion.div>
-                )}
-                
-                {/* Activity Section */}
-                {activeSection === 'activity' && (
-                  <motion.div
-                    key="activity-content"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <ActivityEmptyState />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            
-            {/* Right Sidebar - Only show on larger screens, move to appropriate location on mobile */}
-            {!fullscreenMode && (
-              <div className="lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
-                <div 
-                  ref={sidebarInViewRef}
-                  className="lg:sticky lg:top-28"
-                  style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
-                >
-                  <ExerciseSidebar
-                    timer={timer}
-                    timerActive={timerActive}
-                    toggleTimer={toggleTimer}
-                    resetTimer={resetTimer}
-                    difficultyRating={difficultyRating}
-                    rateDifficulty={rateDifficulty}
-                    formatTime={formatTime}
-                    viewCount={exercise.view_count}
-                    voteCount={exercise.vote_count}
-                    commentsCount={exercise.comments?.length || 0}
-                  />
-                </div>
+                  {/* Proposals Section */}
+                  {activeSection === 'proposals' && (
+                    <motion.div
+                      key="proposals-content"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                      <ProposalsEmptyState />
+                    </motion.div>
+                  )}
+                  
+                  {/* Activity Section */}
+                  {activeSection === 'activity' && (
+                    <motion.div
+                      key="activity-content"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                      <ActivityEmptyState />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
+              
+              {/* Right Sidebar - Only show on larger screens */}
+              {!fullscreenMode && (
+                <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
+                  <div 
+                    className="lg:sticky lg:top-28"
+                    style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
+                  >
+                    <ExerciseSidebar
+                      timer={timer}
+                      timerActive={timerActive}
+                      toggleTimer={toggleTimer}
+                      resetTimer={resetTimer}
+                      difficultyRating={difficultyRating}
+                      rateDifficulty={rateDifficulty}
+                      formatTime={formatTime}
+                      viewCount={exercise.view_count}
+                      voteCount={exercise.vote_count}
+                      commentsCount={exercise.comments?.length || 0}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
+      
+      {/* CSS for Enhanced UI */}
+      <style jsx>{`
+        /* Page transition animations */
+        .page-transition {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(249, 250, 251, 0.5);
+          border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(79, 70, 229, 0.2);
+          border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(79, 70, 229, 0.4);
+        }
+        
+        /* Print styles */
+        @media print {
+          .print\\:hidden {
+            display: none !important;
+          }
+          
+          .print\\:block {
+            display: block !important;
+          }
+        }
+        
+        /* Focus style for accessibility */
+        button:focus-visible, a:focus-visible {
+          outline: 2px solid #6366F1;
+          outline-offset: 2px;
+        }
+      `}</style>
     </div>
   );
 }
