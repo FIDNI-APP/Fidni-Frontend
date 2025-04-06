@@ -801,52 +801,12 @@
     overflow: visible !important;
   }
   
-  /* Fix font sizes and alignment in KaTeX */
-  .katex {
-    font-size: 1.1em !important;
-    line-height: 1.2 !important;
-    text-indent: 0 !important;
-    text-align: left !important;
-  }
   
   /* Keep consistent font */
   .katex .mathdefault {
     font-family: 'KaTeX_Math', 'Times New Roman', serif !important;
   }
   
-  /* Fix KaTeX scaling in displays */
-  .katex-display > .katex {
-    display: block !important;
-    text-align: center !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Ensure KaTeX overflow is handled */
-  .katex-display > .katex > .katex-html {
-    position: relative !important;
-    display: block !important;
-    width: 100% !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Matrices */
-  .katex .vmatrix, 
-  .katex .bmatrix, 
-  .katex .pmatrix, 
-  .katex .matrix {
-    width: auto !important;
-    text-align: center !important;
-  }
-  
-  /* Ensure other elements look proper */
-  p, h2, h3, h4 {
-    orphans: 3 !important;
-    widows: 3 !important;
-    page-break-inside: avoid !important;
-    margin-bottom: 0.5em !important;
-  }
   
   /* Avoid page breaks inside images and tables */
   img, figure, table {
@@ -895,3 +855,4 @@
     display: block !important;
   }
 }
+
