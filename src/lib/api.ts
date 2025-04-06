@@ -3,12 +3,12 @@ import Cookies from 'js-cookie';
 import { SortOption, ClassLevelModel, SubjectModel, ChapterModel, Solution, Difficulty, Theorem, Subfield } from '../types';
 
 
-// Create an axios instance with default configuration
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: 'http://127.0.0.1:8000/api',  // Make sure this matches exactly
   headers: {
     'Content-Type': 'application/json',
   },
+  // Try without withCredentials first
   withCredentials: true,
 });
 
@@ -26,85 +26,21 @@ api.interceptors.request.use(
   }
 );
 
-// A
-
-
-// Add response interceptor to handle token storage
-// Ajoutez une logique de rafraîchissement de token
+// Simplified response interceptor
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (error) => {
+    console.error("API Error:", error);
     
-    // Si 401 et qu'on n'a pas déjà essayé de rafraîchir le token
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const response = await api.post('/token/refresh/', { 
-            refresh: refreshToken 
-          });
-          
-          localStorage.setItem('token', response.data.access);
-          api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-          
-          // Refaire la requête originale avec le nouveau token
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        // Si le rafraîchissement échoue, déconnexion
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-        return Promise.reject(refreshError);
-      }
+    // Special handling for auth endpoints
+    if (error.config.url === '/auth/user/' && (error.response?.status === 401 || error.response?.status === 403)) {
+      console.log("User not authenticated, returning null");
+      return Promise.resolve({ data: null });
     }
     
     return Promise.reject(error);
   }
 );
-
-// Add these functions to your existing lib/api.ts file
-
-import { User, Content } from "@/types";
-
-
-
-// /**
-//  * Get user profile by ID or username
-//  * This works with your current backend but uses the current user endpoint
-//  * for now since there's no specific endpoint for getting other users
-//  * 
-//  * @param userId - User ID or username
-//  * @returns User object
-//  */
-// export async function getUserById(userId: string): Promise<User> {
-//   try {
-//     // Currently your backend doesn't have a specific endpoint to get user by ID
-//     // You should use your current user endpoint for the logged-in user
-//     // For other users, we'll need to add that endpoint
-//     const response = await fetch('/api/auth/user');
-
-//     if (!response.ok) {
-//       throw new Error(`Failed to fetch user: ${response.statusText}`);
-//     }
-
-//     return await response.json();
-//   } catch (error) {
-//     console.error("Error fetching user:", error);
-
-//     // Fallback for development - remove when backend is updated
-//     return {
-//       id: userId,
-//       username: "user_" + userId.substring(0, 5),
-//       email: `user${userId.substring(0, 5)}@example.com`,
-//       isAuthenticated: false,
-//       joinedAt: new Date().toISOString(),
-//       profile:
-//     };
-//   }
-// }
 
 
 
@@ -599,3 +535,68 @@ export const getUserHistory = async (username: string) => {
   }
 };
 
+export const checkOnboardingStatus = async (username: string) => {
+  try {
+    const response = await api.get(`/users/${username}/onboarding-status/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error checking onboarding status:", error);
+    throw error;
+  }
+};
+
+/**
+ * Récupère les données d'onboarding d'un utilisateur
+ * @returns Données d'onboarding
+ */
+export const getOnboardingData = async () => {
+  try {
+    const response = await api.get('/onboarding/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching onboarding data:", error);
+    throw error;
+  }
+};
+
+export const saveOnboardingProfile = async (data: {
+  class_level: string;
+  user_type: string;
+  bio: string;
+  favorite_subjects: string[];
+  subject_grades: {
+    subject: string;
+    min_grade: number;
+    max_grade: number;
+  }[];
+}) => {
+  try {
+    // Get the current user first
+    const currentUser = await getCurrentUser();
+    
+    if (!currentUser) {
+      throw new Error('User not logged in');
+    }
+    
+    // Format the data to match what the backend expects
+    const profileData = {
+      username: currentUser.username,
+      profile: {
+        bio: data.bio,
+        class_level: data.class_level,
+        user_type: data.user_type,
+        favorite_subjects: data.favorite_subjects,
+        onboarding_completed: true,
+        // Include subject grades directly in the request
+        subject_grades: data.subject_grades
+      }
+    };
+    
+    // Make a single request to update the profile
+    const response = await api.post('/onboarding/', profileData);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving onboarding profile:', error);
+    throw error;
+  }
+}

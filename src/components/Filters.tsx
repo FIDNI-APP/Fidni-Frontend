@@ -176,6 +176,37 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
     };
   }, [selectedFilters, onFilterChange]);
 
+  // Auto-expand sections when parent selections change
+  useEffect(() => {
+    // If user selects a subject, automatically expand the subfields section
+    if (selectedFilters.subjects.length > 0 && shouldShowSubfieldOptions()) {
+      setExpandedSections(prev => ({
+        ...prev,
+        subfields: true
+      }));
+    }
+  }, [selectedFilters.subjects]);
+
+  useEffect(() => {
+    // If user selects a subfield, automatically expand the chapters section
+    if (selectedFilters.subfields.length > 0 && shouldShowChapterOptions()) {
+      setExpandedSections(prev => ({
+        ...prev,
+        chapters: true
+      }));
+    }
+  }, [selectedFilters.subfields]);
+
+  useEffect(() => {
+    // If user selects a chapter, automatically expand the theorems section
+    if (selectedFilters.chapters.length > 0 && shouldShowTheoremOptions()) {
+      setExpandedSections(prev => ({
+        ...prev,
+        theorems: true
+      }));
+    }
+  }, [selectedFilters.chapters]);
+
   const loadClassLevels = async () => {
     try {
       const data = await getClassLevels();
@@ -468,7 +499,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       <div className="mb-2 border-b border-gray-100 pb-4" key={`section-${category}`}>
         <button 
           onClick={() => toggleSection(category)}
-          className="flex items-center justify-between w-full text-left mb-3"
+          className={`flex items-center justify-between w-full text-left mb-3 ${isDisabled ? 'opacity-70' : ''}`}
         >
           <div className="flex items-center space-x-2">
             {icon}

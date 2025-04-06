@@ -92,6 +92,14 @@ export interface User {
 }
 
 // Create or update the UserProfile interface
+export interface SubjectGrade {
+  id: string;
+  subject: string;
+  min_grade: number;
+  max_grade: number;
+}
+
+// Updated UserProfile interface with subject_grades
 export interface UserProfile {
   bio: string;
   avatar: string;
@@ -99,6 +107,15 @@ export interface UserProfile {
   location: string;
   last_activity_date: string;
   joined_at: string;
+  class_level: {
+    id: string;
+    name: string;
+  } | null;
+  user_type: 'student' | 'teacher';
+  onboarding_completed: boolean;
+  
+  // Subject grades for tracking academic performance
+  subject_grades: SubjectGrade[];
   
   // Settings
   display_email: boolean;
@@ -123,6 +140,17 @@ export interface UserProfile {
     subjects_studied: string[];
     total_viewed: number;
   };
+}
+
+// Define GradePrediction type for future ML implementations
+export interface GradePrediction {
+  subjectId: string;
+  subjectName: string;
+  currentAverage: number;
+  predictedGrade: number;
+  confidence: number;
+  trend: 'up' | 'down' | 'stable';
+  recommendedExercises?: string[];
 }
 
 // Add types for user history
