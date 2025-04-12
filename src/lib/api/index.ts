@@ -36,6 +36,18 @@ export {
   uploadImage
 } from './contentApi';
 
+// Lessons exports
+export {
+  getLessons,
+  createLesson,
+  getLessonById,
+  updateLesson,
+  deleteLesson,
+  voteLesson,
+  addLessonComment,
+  markLessonViewed
+} from './contentApi';
+
 // Hierarchy exports
 export {
   getClassLevels,

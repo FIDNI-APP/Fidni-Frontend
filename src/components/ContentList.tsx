@@ -17,17 +17,27 @@ export const ContentList: React.FC<ContentListProps> = ({
   onDelete,
   onEdit,
 }) => {
+  // Make sure contents is an array and has items before rendering
+  if (!contents || !Array.isArray(contents) || contents.length === 0) {
+    return null;
+  }
+  
   return (
     <>
-      {contents.map((content) => (
-        <ContentCard 
-          key={content.id} 
-          content={content} 
-          onVote={onVote}
-          onDelete={onDelete}
-          onEdit={onEdit}
-        />
-      ))}
+      {contents.map((content) => {
+        // Make sure content is not undefined before rendering
+        if (!content) return null;
+        
+        return (
+          <ContentCard 
+            key={content.id} 
+            content={content} 
+            onVote={onVote}
+            onDelete={onDelete}
+            onEdit={onEdit}
+          />
+        );
+      })}
     </>
   );
 }

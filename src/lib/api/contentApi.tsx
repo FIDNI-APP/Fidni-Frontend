@@ -108,3 +108,100 @@ export const uploadImage = async (file: File) => {
   });
   return response.data.url;
 };
+
+// Get all lessons with optional filtering
+export const getLessons = async (params: {
+  classLevels?: string[];
+  subjects?: string[];
+  chapters?: string[];
+  subfields?: string[];
+  theorems?: string[];
+  sort?: SortOption;
+  page?: number;
+  per_page?: number;
+}) => {
+  const response = await api.get('/lessons/', { 
+    params: {
+      class_levels: params.classLevels,
+      subjects: params.subjects,
+      chapters: params.chapters,
+      subfields: params.subfields,
+      theorems: params.theorems,
+      sort: params.sort,
+      page: params.page,
+      per_page: params.per_page
+    } 
+  });
+  
+  return {
+    results: response.data.results || [],
+    count: response.data.count || 0,
+    next: response.data.next,
+    previous: response.data.previous,
+  };
+};
+
+// Create a new lesson
+export const createLesson = async (data: {
+  title: string;
+  content: string;
+  class_levels: string[];
+  subject: string;
+  chapters: string[];
+  subfields: string[];
+  theorems?: string[];
+}) => {
+  const response = await api.post('/lessons/', data);
+  return response.data;
+};
+
+// Get a specific lesson by ID
+export const getLessonById = async (id: string) => {
+  const response = await api.get(`/lessons/${id}/`);
+  return response.data;
+};
+
+// Update an existing lesson
+export const updateLesson = async (id: string, data: {
+  title: string;
+  content: string;
+  class_levels: string[];
+  subject: string;
+  chapters: string[];
+  subfields: string[];
+  theorems?: string[];
+}) => {
+  const response = await api.put(`/lessons/${id}/`, data);
+  return response.data;
+};
+
+// Delete a lesson
+export const deleteLesson = async (id: string) => {
+  await api.delete(`/lessons/${id}/`);
+};
+
+// Vote on a lesson
+export const voteLesson = async (id: string, value: 1 | -1) => {
+  try {
+    const response = await api.post(`/lessons/${id}/vote/`, { value });
+    return response.data.item; // Return the updated lesson
+  } catch (error) {
+    console.error('Vote error:', error);
+    throw error;
+  }
+};
+
+// Comment on a lesson
+export const addLessonComment = async (lessonId: string, content: string, parentId?: string) => {
+  const response = await api.post(`/lessons/${lessonId}/comment/`, { 
+    content,
+    parent: parentId
+  });
+  return response.data;
+};
+
+// Track lesson view
+export const markLessonViewed = async (lessonId: string) => {
+  const response = await api.post(`/content/${lessonId}/view/`);
+  return response.data;
+};

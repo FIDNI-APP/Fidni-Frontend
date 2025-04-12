@@ -12,7 +12,8 @@ import {
   EyeIcon,
   Check,
   Rocket,
-  BookOpenCheck 
+  BookOpenCheck,
+  Sparkles
 } from 'lucide-react';
 import parse from 'html-react-parser';
 
@@ -23,9 +24,10 @@ interface ContentPreviewProps {
   selectedSubfields: Subfield[];
   selectedChapters: ChapterModel[];
   selectedTheorems: Theorem[];
-  difficulty: Difficulty;
+  difficulty?: Difficulty; // Make difficulty optional for lessons
   content: string;
-  solution: string;
+  solution?: string; // Make solution optional for lessons
+  isLesson?: boolean;
 }
 
 const ContentPreview: React.FC<ContentPreviewProps> = ({
@@ -37,7 +39,8 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
   selectedTheorems,
   difficulty,
   content,
-  solution
+  solution,
+  isLesson = false
 }) => {
   const [activeTabs, setActiveTabs] = useState({
     content: true,
@@ -54,11 +57,11 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
   const getDifficultyLabel = (level: string): string => {
     switch (level) {
       case 'easy':
-        return 'Facile';
+        return 'Easy';
       case 'medium':
-        return 'Moyen';
+        return 'Medium';
       case 'hard':
-        return 'Difficile';
+        return 'Difficult';
       default:
         return level;
     }
@@ -83,10 +86,20 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
       <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 p-6 text-white">
         <div className="flex justify-between items-start">
           <h2 className="text-2xl font-bold text-white">{title}</h2>
-          <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(difficulty)}`}>
-            <BarChart3 className="w-4 h-4 mr-1" />
-            {getDifficultyLabel(difficulty)}
-          </div>
+          {/* Only show difficulty for exercises */}
+          {!isLesson && difficulty && (
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(difficulty)}`}>
+              <BarChart3 className="w-4 h-4 mr-1" />
+              {getDifficultyLabel(difficulty)}
+            </div>
+          )}
+          {/* Show lesson badge for lessons */}
+          {isLesson && (
+            <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-yellow-500 to-amber-500 text-white">
+              <Sparkles className="w-4 h-4 mr-1" />
+              Lesson
+            </div>
+          )}
         </div>
         
         <div className="absolute top-0 right-0 h-full w-1/3 opacity-10">
@@ -104,10 +117,12 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
             </div>
           ))}
           
-          <div className="flex items-center text-xs bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full">
-            <BookOpen className="w-3 h-3 mr-1" />
-            {selectedSubject.name}
-          </div>
+          {selectedSubject && selectedSubject.name && (
+            <div className="flex items-center text-xs bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full">
+              <BookOpen className="w-3 h-3 mr-1" />
+              {selectedSubject.name}
+            </div>
+          )}
 
           {selectedSubfields.map(subfield => (
             <div key={subfield.id} className="flex items-center text-xs bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full">
@@ -142,7 +157,9 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
               <EyeIcon className="w-4 h-4 text-indigo-600" />
             </div>
-            <h3 className="text-lg font-medium text-gray-800">Énoncé de l'exercice</h3>
+            <h3 className="text-lg font-medium text-gray-800">
+              {isLesson ? 'Lesson Content' : 'Exercise Content'}
+            </h3>
           </div>
           {activeTabs.content ? 
             <ChevronUp className="w-5 h-5 text-gray-500" /> : 
@@ -159,8 +176,8 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
         )}
       </div>
 
-      {/* Solution section with collapsible panel */}
-      {solution && (
+      {/* Solution section with collapsible panel - only for exercises */}
+      {solution && !isLesson && (
         <div className="border-b border-gray-200">
           <button 
             className="w-full px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -193,7 +210,7 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
         <div className="flex justify-end">
           <button className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
             <Check className="w-4 h-4 mr-1" />
-            Prêt à publier
+            Ready to publish
           </button>
         </div>
       </div>

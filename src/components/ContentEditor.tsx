@@ -25,6 +25,7 @@ import {
 
 interface ContentEditorProps {
   onSubmit: (data: any) => void;
+  isLesson?: boolean; // New prop to indicate if this is for a lesson
   initialValues?: {
     title: string;
     content: string;
@@ -38,17 +39,21 @@ interface ContentEditorProps {
   };
 }
 
-const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues = {
-  title: '',
-  content: '',
-  class_level: [],
-  subject: '',
-  subfields: [],
-  difficulty: 'easy',
-  chapters: [],
-  theorems: [],
-  solution_content: ''
-} }) => {
+const ContentEditor: React.FC<ContentEditorProps> = ({ 
+  onSubmit, 
+  isLesson = false, // Default to false for backward compatibility
+  initialValues = {
+    title: '',
+    content: '',
+    class_level: [],
+    subject: '',
+    subfields: [],
+    difficulty: 'easy',
+    chapters: [],
+    theorems: [],
+    solution_content: ''
+  }
+}) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState(initialValues.title);
   const [content, setContent] = useState(initialValues.content);
@@ -90,6 +95,20 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
     // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Define steps based on content type (exercise or lesson)
+  const steps = isLesson 
+    ? [
+        { id: 1, title: "Information", description: "Basic details", icon: <Info className="w-5 h-5" /> },
+        { id: 2, title: "Content", description: "Lesson content", icon: <FileEdit className="w-5 h-5" /> },
+        { id: 3, title: "Publication", description: "Final review", icon: <CheckCircle className="w-5 h-5" /> }
+      ]
+    : [
+        { id: 1, title: "Information", description: "Basic details", icon: <Info className="w-5 h-5" /> },
+        { id: 2, title: "Content", description: "Exercise", icon: <FileEdit className="w-5 h-5" /> },
+        { id: 3, title: "Solution", description: "Detailed solution", icon: <Lightbulb className="w-5 h-5" /> },
+        { id: 4, title: "Publication", description: "Final review", icon: <CheckCircle className="w-5 h-5" /> }
+      ];
 
   // Load class levels, subjects, subfields, chapters, and theorems
   useEffect(() => {
@@ -147,6 +166,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
     
     try {
       const data = await getSubjects(selectedClassLevels);
+      console.log("Subjects data:", data);
       const uniqueSubjects = getUniqueById(data);
       setSubjects(uniqueSubjects);
     } catch (error) {
@@ -155,6 +175,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
   };
 
   const loadSubfields = async () => {
+    // Skip if necessary conditions aren't met
     if (!selectedSubject || selectedClassLevels.length === 0) {
       setSubfields([]);
       return;
@@ -220,13 +241,20 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
 
   const handleSubmit = async () => {
     if (!selectedClassLevels.length || !selectedSubject || !selectedSubfields.length || !selectedChapters.length) {
-      setError('Veuillez sélectionner des niveaux de classe, une matière, au moins un domaine et au moins un chapitre.');
+      setError('Please select class levels, a subject, at least one subfield, and at least one chapter.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (!title.trim() || !content.trim()) {
-      setError('Le titre et le contenu sont obligatoires.');
+      setError('Title and content are required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // For exercises, ensure solution is filled unless we're creating a lesson
+    if (!isLesson && currentStep >= 3 && !solution.trim()) {
+      setError('Solution is required for exercises.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -235,21 +263,27 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
     setError(null);
 
     try {
-      await onSubmit({
+      // Create the submission data based on whether this is a lesson or exercise
+      const submissionData = {
         title,
         content,
         class_levels: selectedClassLevels,
         subject: selectedSubject,
         subfields: selectedSubfields,
-        difficulty,
         chapters: selectedChapters,
         theorems: selectedTheorems,
-        solution_content: solution,
-      });
+        // Only include these fields for exercises
+        ...(isLesson ? {} : {
+          difficulty,
+          solution_content: solution,
+        })
+      };
+      
+      await onSubmit(submissionData);
       console.log('Content submitted successfully');
     } catch (error) {
       console.error('Failed to create content:', error);
-      setError('Échec de la création du contenu. Veuillez réessayer.');
+      setError('Failed to create content. Please try again.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsLoading(false);
@@ -262,12 +296,12 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
 
   const nextStep = () => {
     if (currentStep === 1 && (!title || !selectedClassLevels.length || !selectedSubject || !selectedSubfields.length || !selectedChapters.length)) {
-      setError('Veuillez remplir tous les champs obligatoires avant de continuer.');
+      setError('Please fill in all required fields before continuing.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (currentStep === 2 && !content.trim()) {
-      setError('Le contenu est requis avant de continuer.');
+      setError('Content is required before continuing.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -307,11 +341,11 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
   const getDifficultyLabel = (level: string): string => {
     switch (level) {
       case 'easy':
-        return 'Facile';
+        return 'Easy';
       case 'medium':
-        return 'Moyen';
+        return 'Medium';
       case 'hard':
-        return 'Difficile';
+        return 'Difficult';
       default:
         return level;
     }
@@ -338,13 +372,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
     }
   };
 
-  const steps = [
-    { id: 1, title: "Informations", description: "Détails de base", icon: <Info className="w-5 h-5" /> },
-    { id: 2, title: "Contenu", description: "Exercice", icon: <FileEdit className="w-5 h-5" /> },
-    { id: 3, title: "Solution", description: "Correction détaillée", icon: <Lightbulb className="w-5 h-5" /> },
-    { id: 4, title: "Publication", description: "Révision finale", icon: <CheckCircle className="w-5 h-5" /> }
-  ];
-
   // Render a selection button with consistent styling
   const renderSelectionButton = (item: { id: string, name: string }, isSelected: boolean, onClick: () => void) => (
     <div key={item.id} className="min-w-fit">
@@ -365,7 +392,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
   // Render loading or empty state message
   const renderEmptyStateMessage = (message: string, isLoading: boolean = false) => (
     <p className="text-xs sm:text-sm text-gray-500 italic">
-      {isLoading ? "Chargement..." : message}
+      {isLoading ? "Loading..." : message}
     </p>
   );
 
@@ -374,8 +401,10 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-4 sm:px-6 py-3 sm:py-4 text-white">
-          <h1 className="text-xl sm:text-2xl font-bold">Créer un exercice</h1>
-          <p className="text-indigo-100 text-sm">Partagez votre savoir avec la communauté</p>
+          <h1 className="text-xl sm:text-2xl font-bold">
+            {isLesson ? 'Create a Lesson' : 'Create an Exercise'}
+          </h1>
+          <p className="text-indigo-100 text-sm">Share your knowledge with the community</p>
         </div>
 
         {/* Mobile Step Indicator */}
@@ -398,8 +427,8 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
             <button 
               onClick={() => setShowStepMenu(!showStepMenu)}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-              aria-label="Menu des étapes"
-              title="Menu des étapes"
+              aria-label="Steps menu"
+              title="Steps menu"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -493,12 +522,12 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
               <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                 <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                   <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  Titre de l'exercice
+                  {isLesson ? 'Lesson Title' : 'Exercise Title'}
                 </label>
                 <input
                   type="text"
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 text-gray-800 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  placeholder="Entrez le titre de l'exercice"
+                  placeholder={isLesson ? "Enter the lesson title" : "Enter the exercise title"}
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                 />
@@ -510,7 +539,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                   <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                     <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Niveaux de classe
+                    Class Levels
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {classLevels.map((level) => 
@@ -527,7 +556,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                   <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                     <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Matière
+                    Subject
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {subjects.map((subject) => 
@@ -538,7 +567,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                       )
                     )}
                     {subjects.length === 0 && 
-                      renderEmptyStateMessage("Veuillez d'abord sélectionner un niveau de classe")
+                      renderEmptyStateMessage("Please select a class level first")
                     }
                   </div>
                 </div>
@@ -550,7 +579,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                   <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                     <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Domaines
+                    Subfields
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {subfields.map((subfield) => 
@@ -560,9 +589,9 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                         () => toggleSelection(subfield.id, selectedSubfields, setSelectedSubfields)
                       )
                     )}
-                    {isLoadingSubfields && renderEmptyStateMessage("Chargement des domaines...", true)}
+                    {isLoadingSubfields && renderEmptyStateMessage("Loading subfields...", true)}
                     {!isLoadingSubfields && subfields.length === 0 && 
-                      renderEmptyStateMessage("Veuillez d'abord sélectionner une matière et un niveau")
+                      renderEmptyStateMessage("Please select a subject and class level first")
                     }
                   </div>
                 </div>
@@ -571,7 +600,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                   <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                     <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Chapitres
+                    Chapters
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {chapters.map((chapter) => 
@@ -581,21 +610,21 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                         () => toggleSelection(chapter.id, selectedChapters, setSelectedChapters)
                       )
                     )}
-                    {isLoadingChapters && renderEmptyStateMessage("Chargement des chapitres...", true)}
+                    {isLoadingChapters && renderEmptyStateMessage("Loading chapters...", true)}
                     {!isLoadingChapters && chapters.length === 0 && 
-                      renderEmptyStateMessage("Veuillez d'abord sélectionner un domaine")
+                      renderEmptyStateMessage("Please select a subfield first")
                     }
                   </div>
                 </div>
               </div>
 
-              {/* Theorems and Difficulty */}
+              {/* Theorems */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Theorems Section */}
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                   <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                     <BookMarked className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Théorèmes (Optionnel)
+                    Theorems (Optional)
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {theorems.map((theorem) => 
@@ -605,43 +634,45 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                         () => toggleSelection(theorem.id, selectedTheorems, setSelectedTheorems)
                       )
                     )}
-                    {isLoadingTheorems && renderEmptyStateMessage("Chargement des théorèmes...", true)}
+                    {isLoadingTheorems && renderEmptyStateMessage("Loading theorems...", true)}
                     {!isLoadingTheorems && theorems.length === 0 && chapters.length > 0 && 
-                      renderEmptyStateMessage("Aucun théorème disponible pour cette sélection")
+                      renderEmptyStateMessage("No theorems available for this selection")
                     }
                     {!isLoadingTheorems && chapters.length === 0 && 
-                      renderEmptyStateMessage("Veuillez d'abord sélectionner un chapitre")
+                      renderEmptyStateMessage("Please select a chapter first")
                     }
                   </div>
                 </div>
 
-                {/* Difficulty Section */}
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Difficulté
-                  </label>
-                  <div className="space-y-2">
-                    {['easy', 'medium', 'hard'].map((level) => (
-                      <button
-                        key={level}
-                        type="button"
-                        className={`w-full py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg flex items-center justify-between transition-all ${
-                          difficulty === level
-                            ? `bg-gradient-to-r ${getDifficultyColor(level)} text-white`
-                            : `bg-white text-gray-700 border border-gray-300 hover:bg-gray-100`
-                        }`}
-                        onClick={() => setDifficulty(level as Difficulty)}
-                      >
-                        <div className="flex items-center">
-                          {getDifficultyIcon(level)}
-                          <span className="ml-2 text-sm sm:text-base">{getDifficultyLabel(level)}</span>
-                        </div>
-                        {difficulty === level && <Check className="w-4 h-4" />}
-                      </button>
-                    ))}
+                {/* Difficulty Section - Only show for exercises */}
+                {!isLesson && (
+                  <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                    <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
+                      <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
+                      Difficulty
+                    </label>
+                    <div className="space-y-2">
+                      {['easy', 'medium', 'hard'].map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          className={`w-full py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg flex items-center justify-between transition-all ${
+                            difficulty === level
+                              ? `bg-gradient-to-r ${getDifficultyColor(level)} text-white`
+                              : `bg-white text-gray-700 border border-gray-300 hover:bg-gray-100`
+                          }`}
+                          onClick={() => setDifficulty(level as Difficulty)}
+                        >
+                          <div className="flex items-center">
+                            {getDifficultyIcon(level)}
+                            <span className="ml-2 text-sm sm:text-base">{getDifficultyLabel(level)}</span>
+                          </div>
+                          {difficulty === level && <Check className="w-4 h-4" />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -653,39 +684,39 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
               <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
                 <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                   <FileEdit className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  Contenu de l'exercice (LaTeX supporté)
+                  {isLesson ? 'Lesson Content (LaTeX supported)' : 'Exercise Content (LaTeX supported)'}
                 </label>
                 <p className="text-xs sm:text-sm text-gray-500 mb-2">
-                  Utilisez $...$ pour les équations en ligne et $$...$$ pour les formules mathématiques.
+                  Use $...$ for inline equations and $...$ for mathematical formulas.
                 </p>
                 <DualPaneEditor content={content} setContent={setContent} />
               </div>
             </div>
           )}
 
-          {/* Step 3: Solution Writing */}
-          {currentStep === 3 && (
+          {/* Step 3: Solution Writing - Only for exercises */}
+          {currentStep === 3 && !isLesson && (
             <div className="space-y-4 sm:space-y-6">
               <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
                 <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
                   <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  Solution de l'exercice (LaTeX supporté)
+                  Solution (LaTeX supported)
                 </label>
                 <p className="text-xs sm:text-sm text-gray-500 mb-2">
-                  La solution est optionnelle mais fortement recommandée. Elle aide les étudiants à vérifier leur travail.
+                  The solution is optional but highly recommended. It helps students verify their work.
                 </p>
                 <DualPaneEditor content={solution} setContent={setSolution} />
               </div>
             </div>
           )}
 
-          {/* Step 4: Preview and Submit */}
-          {currentStep === 4 && (
+          {/* Step 4 for Exercises / Step 3 for Lessons: Preview and Submit */}
+          {((isLesson && currentStep === 3) || (!isLesson && currentStep === 4)) && (
             <div className="space-y-4 sm:space-y-6">
               <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center">
                   <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  Aperçu final
+                  Final Preview
                 </h2>
                 <ContentPreview
                   title={title}
@@ -694,9 +725,9 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                   selectedSubfields={subfields.filter(subfield => selectedSubfields.includes(subfield.id))}
                   selectedChapters={chapters.filter(chapter => selectedChapters.includes(chapter.id))}
                   selectedTheorems={theorems.filter(theorem => selectedTheorems.includes(theorem.id))}
-                  difficulty={difficulty}
+                  difficulty={isLesson ? undefined : difficulty}
                   content={content}
-                  solution={solution}
+                  solution={isLesson ? undefined : solution}
                 />
               </div>
             </div>
@@ -711,7 +742,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-200 text-gray-700 text-sm sm:text-base rounded-lg hover:bg-gray-300 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1" /> 
-                Précédent
+                Previous
               </button>
             ) : (
               <button
@@ -720,17 +751,17 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-200 text-gray-700 text-sm sm:text-base rounded-lg hover:bg-gray-300 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1" /> 
-                Annuler
+                Cancel
               </button>
             )}
 
-            {currentStep < 4 ? (
+            {((isLesson && currentStep < 3) || (!isLesson && currentStep < 4)) ? (
               <button
                 type="button"
                 onClick={nextStep}
                 className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm sm:text-base rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors"
               >
-                Suivant 
+                Next 
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1" />
               </button>
             ) : (
@@ -740,7 +771,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ onSubmit, initialValues =
                 disabled={isLoading}
                 className={`flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm sm:text-base rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {isLoading ? 'Publication...' : 'Publier l\'exercice'}
+                {isLoading ? 'Publishing...' : `Publish ${isLesson ? 'Lesson' : 'Exercise'}`}
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 ml-1" />
               </button>
             )}

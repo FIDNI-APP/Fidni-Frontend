@@ -8,17 +8,13 @@ import {
   Eye, 
   GraduationCap, 
   BookOpen, 
-  User,
-  Clock,
   Bookmark,
   Lightbulb,
   Loader2,
-  CheckCircle,
   Layers,
   BookMarked,
   ChevronRight,
   Share2,
-  ThumbsUp
 } from 'lucide-react';
 import { Content, Difficulty, VoteValue } from '@/types';
 import { Button } from './ui/button';

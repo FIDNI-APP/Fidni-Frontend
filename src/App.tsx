@@ -18,6 +18,10 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/AuthController';
 import {UserProfile} from '@/pages/Profile'
 import OnboardingProfile  from '@/pages/OnboardingProfile'; // Import du nouveau composant
+import { LessonList } from './pages/LessonList';
+import { LessonDetail } from './pages/LessonDetail';
+import { CreateLesson } from './components/lesson/CreateLesson';
+import { EditLesson } from './components/lesson/EditLesson';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -75,6 +79,10 @@ function App() {
               <Route path="/exercises/:id" element={<ExerciseDetail />} />
               {/* Ajouter une nouvelle route pour le processus d'onboarding */}
               <Route path="/complete-profile" element={<OnboardingProfile />} />
+              <Route path="/lessons" element={<LessonList />} />
+              <Route path="/lessons/:id" element={<LessonDetail />} />
+              <Route path="/new-lesson" element={<CreateLesson />} />
+              <Route path="/edit-lesson/:id" element={<EditLesson />} />
             </Routes>
           </div>
           </AuthModalProvider>
