@@ -513,8 +513,8 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
             )}
           </div>
           {isExpanded ? 
-            <ChevronUp className="w-4 h-4 text-gray-500" /> : 
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <ChevronDown className="w-4 h-4 text-gray-500" /> : 
+            <ChevronUp className="w-4 h-4 text-gray-500" />
           }
         </button>
         

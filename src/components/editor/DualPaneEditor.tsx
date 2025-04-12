@@ -5,12 +5,14 @@ import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Image from '@tiptap/extension-image';
 import Mathematics from '@tiptap-pro/extension-mathematics';
+import TextAlign from '@tiptap/extension-text-align';
+import Heading from '@tiptap/extension-heading'
+
 
 import 'katex/dist/katex.min.css';
 import { 
   Bold, 
   Italic, 
-  Underline,
   Palette, 
   ImageIcon,
   Camera,
@@ -152,6 +154,12 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       StarterKit,
       TextStyle,
       Color,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
+      Heading.configure({
+        levels: [1, 2],
+      }),
       Image.configure({
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
@@ -196,12 +204,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     editor?.chain().focus().toggleItalic().run();
   };
   
-  const toggleUnderline = () => {
-    editor?.chain().focus().toggleUnderline().run();
-  };
 
   const toggleHeading = (level: 1 | 2) => {
-    editor?.chain().focus().toggleHeading({ level }).run();
+    editor?.chain().focus().setHeading({ level : level }).run();
   };
 
   const toggleBulletList = () => {
@@ -258,6 +263,22 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     // Close the formulas panel
     setActiveCategoryIndex(null);
   };
+  const insertCenteredMathFormula = () => {
+    if (!editor) return;
+    
+    // Assurer que l'éditeur est focus
+    editor.commands.focus();
+    
+    // Créer un nouveau paragraphe centré
+    editor.commands.setTextAlign('center');
+    
+    // Insérer une formule mathématique en bloc
+    const blockFormula = { name: "Formule quadratique", latex: "\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}" };
+    editor.commands.insertContent(`$$${blockFormula.latex}$$`);
+    
+    // Ajouter la formule aux récemment utilisées
+    addToRecentFormulas(blockFormula);
+  };
 
   // Insert math inline example
   const insertMathInline = () => {
@@ -266,12 +287,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     addToRecentFormulas(inlineFormula);
   };
 
-  // Insert math block example
-  const insertMathBlock = () => {
-    const blockFormula = { name: "Formule quadratique", latex: "\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}" };
-    editor?.chain().focus().insertContent(`$$${blockFormula.latex}$$`).run();
-    addToRecentFormulas(blockFormula);
-  };
+
 
   // Open image modal
   const openImageModal = () => {
@@ -530,12 +546,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                 onClick={toggleItalic} 
                 isActive={editor?.isActive('italic')}
               />
-              <ToolbarButton 
-                icon={<Underline className="w-4 h-4" />} 
-                label="Souligné" 
-                onClick={toggleUnderline} 
-                isActive={editor?.isActive('underline')}
-              />
+              
               
               <div className="h-5 border-l border-gray-300 mx-1"></div>
               
@@ -625,9 +636,14 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                 color="text-indigo-700"
               />
               <ToolbarButton 
-                icon={<span className="text-xs font-medium">∑</span>} 
-                label="Équation centrée" 
-                onClick={insertMathBlock}
+                icon={
+                  <div className="flex items-center text-xs">
+                    <span className="font-medium mr-1">∑</span>
+                    <AlignCenter className="w-3 h-3" />
+                  </div>
+                } 
+                label="Formule centrée" 
+                onClick={insertCenteredMathFormula}
                 color="text-indigo-700"
               />
               

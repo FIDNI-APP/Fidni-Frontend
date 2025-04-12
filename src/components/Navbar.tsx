@@ -70,7 +70,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'py-2 shadow-lg' : 'py-4'} bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900`}>
+    <nav className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${isScrolled ? 'py-2 shadow-lg' : 'py-4'} bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900`}>
       <div className="max-w-7xl mx-auto px-4 lg:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           {/* Logo and desktop navigation */}

@@ -856,3 +856,39 @@
   }
 }
 
+/* Ensure block math is centered */
+.katex-display {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin: 1.5em 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+/* For better visual separation of block math */
+.math-block {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin: 1.5em 0;
+  overflow-x: auto;
+}
+
+/* For inline math */
+.math-inline {
+  display: inline-block;
+}
+
+/* Force proper alignment for block formulas */
+.ProseMirror .katex-display {
+  text-align: center !important;
+}
+
+/* Ensure proper rendering width */
+.katex {
+  max-width: 100%;
+  display: inline-block;
+}
+
+

@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -16,7 +16,9 @@ import {
   CheckCircle,
   Layers,
   BookMarked,
-  ChevronRight
+  ChevronRight,
+  Share2,
+  ThumbsUp
 } from 'lucide-react';
 import { Content, Difficulty, VoteValue } from '@/types';
 import { Button } from './ui/button';
@@ -52,8 +54,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal(); 
   
-
-  
   // Check if solution exists
   const hasSolution = !!content.solution;
 
@@ -75,13 +75,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     // Navigate to the exercise page
     navigate(`/exercises/${content.id}`);
   };
+
   useEffect(() => {
     if (content && content.user_save !== undefined) {
       setIsSaved(content.user_save);
     }
   }, [content]);
   
-
   const handleSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -124,36 +124,44 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     } finally {
         setIsSaving(false);
     }
-};
+  };
   
   const getDifficultyInfo = (difficulty: Difficulty) => {
     switch (difficulty) {
       case 'easy':
         return {
           label: 'Facile',
-          color: 'from-emerald-500 to-green-500 border-emerald-400',
-          className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+          color: 'from-emerald-500 to-green-500',
+          bgColor: 'bg-emerald-50',
+          textColor: 'text-emerald-700',
+          borderColor: 'border-emerald-100',
           icon: <BarChart className="w-3 h-3" />
         };
       case 'medium':
         return {
           label: 'Moyen',
-          color: 'from-amber-500 to-yellow-500 border-amber-400',
-          className: 'bg-amber-50 text-amber-700 border-amber-100',
+          color: 'from-amber-500 to-yellow-500',
+          bgColor: 'bg-amber-50',
+          textColor: 'text-amber-700',
+          borderColor: 'border-amber-100',
           icon: <BarChart className="w-3 h-3" />
         };
       case 'hard':
         return {
           label: 'Difficile',
-          color: 'from-rose-500 to-pink-500 border-rose-400',
-          className: 'bg-rose-50 text-rose-700 border-rose-100',
+          color: 'from-rose-500 to-pink-500',
+          bgColor: 'bg-rose-50',
+          textColor: 'text-rose-700',
+          borderColor: 'border-rose-100',
           icon: <BarChart className="w-3 h-3" />
         };
       default:
         return {
           label: difficulty,
-          color: 'from-gray-500 to-gray-400 border-gray-400',
-          className: 'bg-gray-50 text-gray-700 border-gray-100',
+          color: 'from-gray-500 to-gray-400',
+          bgColor: 'bg-gray-50',
+          textColor: 'text-gray-700',
+          borderColor: 'border-gray-100',
           icon: <BarChart className="w-3 h-3" />
         };
     }
@@ -212,6 +220,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     return title.substring(0, maxLength) + '...';
   };
 
+  // Calculate total tags for the "+X" indicator
+  const totalMoreTags = (
+    (hasChapters ? Math.max(0, content.chapters.length - 1) : 0) + 
+    (hasSubfields ? Math.max(0, content.subfields.length - 1) : 0) + 
+    (hasTheorems ? Math.max(0, content.theorems.length - 1) : 0)
+  );
+
   return (
     <div
       className="group h-full transition-all duration-300"
@@ -219,17 +234,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div 
-        className="flex flex-col h-full bg-white cursor-pointer rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-300 transform hover:-translate-y-1"
+        className="flex flex-col h-full bg-white cursor-pointer rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-300 transform hover:-translate-y-1"
         onClick={handleCardClick}
       >
-        {/* Card Header with Advanced Styling */}
-        <div className="bg-gradient-to-r from-indigo-700 to-purple-700 p-5 relative overflow-hidden">
-          {/* Background Pattern */}
+        {/* Card Header with Improved Styling */}
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-4 relative overflow-hidden">
+          {/* Background Pattern - Subtle Grid Texture */}
           <div className="absolute inset-0 opacity-10">
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
+                <pattern id="smallGrid" width="12" height="12" patternUnits="userSpaceOnUse">
+                  <path d="M 12 0 L 0 0 0 12" fill="none" stroke="white" strokeWidth="0.5" />
                 </pattern>
               </defs>
               <rect width="100%" height="100%" fill="url(#smallGrid)" />
@@ -237,36 +252,37 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
           
           <div className="relative">
-            {/* Save Button in top right corner */}
-            <div className="flex justify-between mb-3">
-              <div className="flex items-start gap-2 mb-2">
-              {hasSolution && (
-                <div className="bg-emerald-400 p-1 rounded-full mr-1 flex-shrink-0 mt-1">
-                  <Lightbulb className="w-3 h-3 text-white" />
-                </div>
-              )}
-              <h2 className="text-xl font-bold text-white leading-tight group-hover:underline">
-                {truncateTitle(content.title)}
-              </h2>
-            </div>
-            
-              <button 
-                onClick={handleSaveClick}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex-shrink-0"
-                aria-label={isSaved ? "Retirer des favoris" : "Ajouter aux favoris"}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="w-5 h-5 text-white animate-spin" />
-                ) : (
-                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-yellow-300 text-yellow-300' : 'text-white/80'}`} />
+            {/* Title and Bookmark Section */}
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-start gap-2">
+                {hasSolution && (
+                  <div className="bg-emerald-400 p-1 rounded-full flex-shrink-0 mt-1 transition-transform duration-300 transform group-hover:scale-110">
+                    <Lightbulb className="w-3 h-3 text-white" />
+                  </div>
                 )}
-              </button>
+                <h2 className="text-xl font-bold text-white leading-tight group-hover:underline decoration-2 decoration-white/60">
+                  {truncateTitle(content.title)}
+                </h2>
+              </div>
+              
+              {/* Save Button with improved hover effect */}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={handleSaveClick}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all hover:scale-110 flex-shrink-0"
+                  aria-label={isSaved ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  ) : (
+                    <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-yellow-300 text-yellow-300' : 'text-white/80'}`} />
+                  )}
+                </button>
+              </div>
             </div>
             
-            {/* Title and Solution Indicator */}
-            
-            {/* Difficulty and Tags */}
+            {/* Tags Section - Made More Compact & Consistent */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Subject Tag */}
               {content.subject && (
@@ -293,38 +309,38 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         </div>
         
-        {/* Content Preview */}
+        {/* Content Preview - Added slight padding & improved typography */}
         <div className="px-5 py-4 flex-grow">
-          <div className="prose prose-sm max-w-none text-gray-600 line-clamp-3 overflow-hidden">
+          <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
             <TipTapRenderer content={content.content} />
           </div>
         </div>
         
-        {/* No Tags Section Here - Moved to Footer */}
-        
-        {/* Footer Section with Tags Integrated */}
-        <div className="mt-auto px-5 py-3 border-t border-gray-100 bg-white flex items-center justify-between">
+        {/* Footer Section with Integration - More Dynamic on Hover */}
+        <div className="mt-auto px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between transition-colors duration-300 group-hover:bg-white">
           {/* Left side - votes and tags */}
           <div className="flex items-center gap-3 overflow-hidden">
-            {/* Vote Buttons */}
-            <VoteButtons
-              initialVotes={content.vote_count}
-              onVote={(value) => {
-                onVote(content.id, value);
-                event?.stopPropagation();
-              }}
-              vertical={false}
-              userVote={content.user_vote}
-              size="sm"
-            />
+            {/* Vote Buttons - Improved visibility on hover */}
+            <div className="transition-transform duration-300 group-hover:scale-105">
+              <VoteButtons
+                initialVotes={content.vote_count}
+                onVote={(value) => {
+                  onVote(content.id, value);
+                  event?.stopPropagation();
+                }}
+                vertical={false}
+                userVote={content.user_vote}
+                size="sm"
+              />
+            </div>
             
-            {/* Tags moved from the section above */}
-            <div className="flex items-center flex-wrap gap-1.5 overflow-hidden max-w-[200px]">
+            {/* Tags - More consistent styling between tag types */}
+            <div className="flex items-center flex-wrap gap-1.5 overflow-hidden max-w-xs">
               {/* Chapter Tags */}
               {hasChapters && content.chapters.slice(0, 1).map(chapter => (
                 <span
                   key={chapter.id}
-                  className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-purple-100"
+                  className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-purple-100 transition-transform duration-300 group-hover:scale-105"
                 >
                   <Tag className="w-3 h-3 mr-1 text-purple-500" />
                   <span className="truncate max-w-[80px]">{chapter.name}</span>
@@ -335,7 +351,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               {hasSubfields && content.subfields.slice(0, 1).map(subfield => (
                 <span
                   key={subfield.id}
-                  className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-blue-100"
+                  className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-blue-100 transition-transform duration-300 group-hover:scale-105"
                 >
                   <Layers className="w-3 h-3 mr-1 text-blue-500" />
                   <span className="truncate max-w-[80px]">{subfield.name}</span>
@@ -346,53 +362,58 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               {hasTheorems && content.theorems.slice(0, 1).map(theorem => (
                 <span
                   key={theorem.id}
-                  className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-amber-100"
+                  className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-amber-100 transition-transform duration-300 group-hover:scale-105"
                 >
                   <BookMarked className="w-3 h-3 mr-1 text-amber-500" />
                   <span className="truncate max-w-[80px]">{theorem.name}</span>
                 </span>
               ))}
               
-              {/* More Tag if needed */}
-              {(
-                (hasChapters ? Math.max(0, content.chapters.length - 1) : 0) + 
-                (hasSubfields ? Math.max(0, content.subfields.length - 1) : 0) + 
-                (hasTheorems ? Math.max(0, content.theorems.length - 1) : 0)
-              ) > 0 && (
-                <span className="bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md text-xs flex-shrink-0 border border-gray-200 flex items-center">
-                  <span>+{
-                    (hasChapters ? Math.max(0, content.chapters.length - 1) : 0) + 
-                    (hasSubfields ? Math.max(0, content.subfields.length - 1) : 0) + 
-                    (hasTheorems ? Math.max(0, content.theorems.length - 1) : 0)
-                  }</span>
+              {/* More Tag with nicer styling */}
+              {totalMoreTags > 0 && (
+                <span className="bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md text-xs flex-shrink-0 border border-gray-200 flex items-center group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors duration-300">
+                  <span>+{totalMoreTags}</span>
                 </span>
               )}
             </div>
           </div>
           
-          {/* Right side - stats and actions */}
+          {/* Right side - stats and actions with improved interaction */}
           <div className="flex items-center gap-3">
             {/* Views */}
-            <div className="flex items-center text-xs text-gray-500">
-              <Eye className="w-4 h-4 mr-1 text-gray-400" />
+            <div className="flex items-center text-xs text-gray-500 group-hover:text-indigo-600 transition-colors duration-300">
+              <Eye className="w-4 h-4 mr-1 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
               <span>{content.view_count}</span>
             </div>
             
-            {/* Comments */}
+            {/* Comments Button - Improved hover effect */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 navigate(`/exercises/${content.id}#comments`);
               }}
-              className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-colors"
+              className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
             >
-              <MessageSquare className="w-4 h-4 mr-1 text-gray-400" />
+              <MessageSquare className="w-4 h-4 mr-1 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
               <span>{(content.comments || []).length}</span>
             </button>
             
-            {/* Author actions visible on hover */}
-            {isAuthor && isHovered && (
-              <div className="flex items-center gap-2 ml-2 animate-fade-in">
+            {/* Share Button - New Feature */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(window.location.origin + `/exercises/${content.id}`);
+                // Add a toast notification here in a real implementation
+              }}
+              className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
+              title="Copier le lien"
+            >
+              <Share2 className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
+            </button>
+            
+            {/* Author actions - Always visible on hover with higher z-index */}
+            {isAuthor && (
+              <div className={`flex items-center gap-2 ml-2 transition-all duration-300 z-20 ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -400,7 +421,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     e.stopPropagation();
                     onEdit?.(content.id);
                   }}
-                  className="h-8 px-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100"
+                  className="h-8 px-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 transition-all duration-300 hover:shadow-md"
                   title="Modifier"
                 >
                   <Edit className="w-3.5 h-3.5 mr-1" />
@@ -414,7 +435,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     e.stopPropagation();
                     onDelete?.(content.id);
                   }}
-                  className="h-8 px-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-100"
+                  className="h-8 px-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-all duration-300 hover:shadow-md"
                   title="Supprimer"
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1" />
@@ -425,28 +446,23 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         </div>
         
-        {/* Call to action hover overlay */}
+        {/* Action Button - Positioned to not interfere with edit/delete buttons */}
         <div 
-          onClick={handleCardClick}
-          className={`absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-30 transition-opacity duration-300 ${isHovered ? 'backdrop-blur-sm' : ''}`}
-          style={{ 
-            pointerEvents: 'none',  // Make the entire overlay non-interactive by default
-          }}
-        >
-          <div 
-            className="text-white text-center px-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 bg-indigo-900/80 p-6 rounded-xl"
-            style={{ pointerEvents: 'none' }}  // Only the modal itself receives clicks
-            onClick={(e) => {
-              e.stopPropagation();  // Prevent propagation to parent handlers
-              handleCardClick(e);
-            }}
-          >
-            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-white/90" />
-            <p className="font-medium text-lg mb-3">Voir l'exercice</p>
-            <div className="flex items-center justify-center">
-              <ChevronRight className="w-5 h-5 animate-bounce-horizontal" />
-            </div>
-          </div>
+        className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none ${isHovered ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'}`}
+      >
+        
+         <button
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     handleCardClick(e);
+                   }}
+                   className={`bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
+                   aria-label="Voir l'exercice"
+                 >
+                   <ChevronRight className="w-8 h-8" />
+          <p className="font-medium text-lg mb-1 text-white">Voir l'exercice</p>
+
+                 </button>
         </div>
       </div>
       
@@ -458,7 +474,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         
         @keyframes bounceHorizontal {
           0%, 100% { transform: translateX(0); }
-          50% { transform: translateX(5px); }
+          50% { transform: translateX(8px); }
         }
         
         .animate-fade-in {
@@ -467,10 +483,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         
         .animate-bounce-horizontal {
           animation: bounceHorizontal 1s infinite;
-        }
-        
-        .BarChart {
-          display: inline-block;
         }
       `}</style>
     </div>
