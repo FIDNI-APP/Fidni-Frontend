@@ -339,7 +339,7 @@ export function LessonDetail() {
       <div className="print:hidden">
         <div className="container mx-auto px-4 lg:px-6 relative">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
+          <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl shadow-lg mb-6 relative">
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -379,9 +379,13 @@ export function LessonDetail() {
                     )}
                     {savedForLater ? 'Enregistré' : 'Enregistrer'}
                   </Button>
-                    
                   
-
+                  {/* Add to Notebook Button - AJOUTÉ ICI */}
+                  {id && (
+                    <AddToNotebookButton 
+                      lessonId={id} 
+                    />
+                  )}
                   
                   {/* Share button */}
                   <Button 
@@ -474,7 +478,7 @@ export function LessonDetail() {
                       transition={{ duration: 0.4, ease: "easeOut" }}
                     >
                       {/* Lesson Content */}
-                      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
+                      <div className="bg-white rounded-xl shadow-md border border-gray-200  mb-6">
                         <div className="p-6">
                           {/* Tags section */}
                           {(hasChapters || hasTheorems ||hasSubfields) && (
@@ -600,12 +604,7 @@ export function LessonDetail() {
                                 À revoir
                               </Button>
 
-                              {/* Add to Notebook Button */}
-                            {id && (
-                              <AddToNotebookButton 
-                                lessonId={id} 
-                              />
-                            )}
+                              
                               
                               {/* Print button */}
                               <Button

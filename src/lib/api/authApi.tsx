@@ -36,9 +36,11 @@ export const logout = async () => {
   return response.data;
 };
 
+// In src/lib/api/authApi.tsx
 export const register = async (username: string, email: string, password: string) => {
   try {
-    console.log(`Tentative d'inscription avec: ${username}, ${email}`);
+    // Remove any existing Authorization header for registration
+    delete api.defaults.headers.common['Authorization'];
     
     const response = await api.post('/auth/register/', { 
       username, 
@@ -46,14 +48,9 @@ export const register = async (username: string, email: string, password: string
       password 
     });
     
-    console.log('Inscription réussie:', response.data);
     return response.data;
   } catch (error) {
     console.error('Erreur d\'inscription détaillée:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('Réponse d\'erreur:', error.response.data);
-      console.error('Status:', error.response.status);
-    }
     throw error;
   }
 };

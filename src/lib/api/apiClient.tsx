@@ -1,3 +1,5 @@
+// src/lib/api/apiClient.tsx - Update your interceptor
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -8,32 +10,21 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Add a request interceptor to handle authentication
+// Update the request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Clear any existing Authorization headers first
+    delete config.headers['Authorization'];
+    
+    // Only add token if it exists
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
     return config;
   },
   (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Simplified response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error("API Error:", error);
-    
-    // Special handling for auth endpoints
-    if (error.config.url === '/auth/user/' && (error.response?.status === 401 || error.response?.status === 403)) {
-      console.log("User not authenticated, returning null");
-      return Promise.resolve({ data: null });
-    }
-    
     return Promise.reject(error);
   }
 );

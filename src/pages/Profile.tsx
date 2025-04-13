@@ -475,13 +475,7 @@ export function UserProfile() {
               </div>
             )}
             
-            {/* Student Notebook Tab */}
-            {activeTab === 'notebook' && isOwner && (
-              <div className="h-full fade-in animate-delay-2">
-                {/* The StudentNotebook component takes over the entire space */}
-                <StudentNotebook username={username!} />
-              </div>
-            )}
+            
             
             {/* Contributions Tab */}
             {activeTab === 'contributions' && (

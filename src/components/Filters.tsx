@@ -385,6 +385,7 @@ export const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
           newFilters.difficulties = [...newFilters.difficulties, value as Difficulty];
         }
       } else {
+        
         if (newFilters[category].includes(value as string)) {
           newFilters[category] = newFilters[category].filter(v => v !== value);
           

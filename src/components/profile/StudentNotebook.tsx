@@ -1,100 +1,123 @@
 import React, { useState, useEffect } from 'react';
-import { Book, BookOpen, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight, FolderPlus, FileText } from 'lucide-react';
+import { Book, BookOpen, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight, FolderPlus, FileText, Loader2, School } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import axios from 'axios';
+import api, { getClassLevels, getSubjects,deleteNotebook } from '@/lib/api';
+import { ToastContainer, toast } from 'react-toastify';
 
-// Typages pour les données du cahier
-interface NotebookEntry {
-  id: string;
-  lesson: {
-    id: string;
-    title: string;
-    content: string;
-  };
-  chapter?: {
-    id: string;
-    name: string;
-  };
-  user_notes: string;
-  order: number;
-  added_at: string;
-}
-
-interface NotebookSection {
+interface Notebook {
   id: string;
   title: string;
   subject: {
     id: string;
     name: string;
   };
-  order: number;
-  entries: NotebookEntry[];
+  class_level: {
+    id: string;
+    name: string;
+  };
+  sections: Section[];
 }
 
-interface Notebook {
+interface Section {
   id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  sections: NotebookSection[];
+  chapter: {
+    id: string;
+    name: string;
+  };
+  lesson: {
+    id: string;
+    title: string;
+    content: string;
+  } | null;
+  user_notes: string;
+  order: number;
 }
 
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
+interface ClassLevel {
+  id: string;
+  name: string;
+}
 
-// Ajout de l'intercepteur pour les tokens d'authentification
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+interface Subject {
+  id: string;
+  name: string;
+}
 
 const StudentNotebook: React.FC = () => {
-  const [notebook, setNotebook] = useState<Notebook | null>(null);
+  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
+  const [activeNotebook, setActiveNotebook] = useState<string | null>(null);
+  const [activeChapter, setActiveChapter] = useState<string | null>(null); // Track active chapter
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'sections' | 'search'>('sections');
-  const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({});
+  const [isCreating, setIsCreating] = useState(false);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedClassLevel, setSelectedClassLevel] = useState<string>('');
 
-  // Récupération du cahier de l'utilisateur
+  // Fetch notebooks and class levels on component mount
   useEffect(() => {
-    fetchNotebook();
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [notebooksResponse, classLevelsData] = await Promise.all([
+          api.get('/notebooks/get_notebooks/'),
+          getClassLevels()
+        ]);
+        
+        setNotebooks(notebooksResponse.data);
+        setClassLevels(classLevelsData);
+        
+        if (notebooksResponse.data.length > 0) {
+          setActiveNotebook(notebooksResponse.data[0].id);
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Erreur lors du chargement:', err);
+        setError('Impossible de charger vos données');
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
-  const fetchNotebook = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/notebooks/my_notebook/');
-      setNotebook(response.data);
-      if (response.data.sections.length > 0) {
-        setActiveSection(response.data.sections[0].id);
+  // Load subjects based on selected class level
+  useEffect(() => {
+    const loadSubjects = async () => {
+      if (!selectedClassLevel) {
+        setSubjects([]);
+        setSelectedSubject('');
+        return;
       }
-      setLoading(false);
-    } catch (err) {
-      console.error('Erreur lors du chargement du cahier:', err);
-      setError('Impossible de charger votre cahier de cours');
-      setLoading(false);
-    }
-  };
+      
+      try {
+        const data = await getSubjects([selectedClassLevel]);
+        const uniqueSubjects = data.filter((subject, index, self) =>
+          self.findIndex(s => s.id === subject.id) === index
+        ).sort((a, b) => a.name.localeCompare(b.name));
+        setSubjects(uniqueSubjects);
+        
+        if (uniqueSubjects.length === 1) {
+          setSelectedSubject(uniqueSubjects[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load subjects:', error);
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de charger les matières',
+          variant: 'destructive'
+        });
+      }
+    };
 
-  // Gestion des chapitres dépliés/repliés
+    loadSubjects();
+  }, [selectedClassLevel]);
+
   const toggleChapter = (chapterId: string) => {
     setExpandedChapters(prev => ({
       ...prev,
@@ -102,114 +125,177 @@ const StudentNotebook: React.FC = () => {
     }));
   };
 
-  // Gestion des entrées dépliées/repliées
-  const toggleEntry = (entryId: string) => {
-    setExpandedEntries(prev => ({
-      ...prev,
-      [entryId]: !prev[entryId]
-    }));
-  };
-
-  // Commencer l'édition des notes
-  const startEditingNotes = (entryId: string, content: string) => {
-    setEditingNotes(entryId);
+  const startEditingNotes = (sectionId: string, content: string) => {
+    setEditingNotes(sectionId);
     setNoteContent(content);
   };
 
-  // Annuler l'édition des notes
   const cancelEditingNotes = () => {
     setEditingNotes(null);
     setNoteContent('');
   };
 
-  // Sauvegarder les notes
-  const saveNotes = async (entryId: string) => {
+  const saveNotes = async (sectionId: string) => {
     try {
-      await api.patch(`/entries/${entryId}/`, {
+      const notebook = notebooks.find(n => n.id === activeNotebook);
+      if (!notebook) return;
+      
+      await api.post(`/notebooks/${notebook.id}/update_section_notes/`, {
+        section_id: sectionId,
         user_notes: noteContent
       });
       
-      // Mettre à jour l'état local
-      if (notebook) {
-        const updatedNotebook = {
-          ...notebook,
-          sections: notebook.sections.map(section => ({
-            ...section,
-            entries: section.entries.map(entry => 
-              entry.id === entryId 
-                ? { ...entry, user_notes: noteContent } 
-                : entry
+      setNotebooks(prevNotebooks => prevNotebooks.map(notebook => {
+        if (notebook.id === activeNotebook) {
+          return {
+            ...notebook,
+            sections: notebook.sections.map(section => 
+              section.id === sectionId 
+                ? { ...section, user_notes: noteContent } 
+                : section
             )
-          }))
-        };
-        setNotebook(updatedNotebook);
-      }
+          };
+        }
+        return notebook;
+      }));
       
-      // Réinitialiser l'état d'édition
       setEditingNotes(null);
       setNoteContent('');
+      toast({
+        title: 'Succès',
+        description: 'Vos notes ont été enregistrées',
+      });
     } catch (err) {
       console.error('Erreur lors de la sauvegarde des notes:', err);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de sauvegarder les notes',
+        variant: 'destructive'
+      });
     }
   };
 
-  // Supprimer une entrée du cahier
-  const deleteEntry = async (entryId: string) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette leçon de votre cahier ?')) {
+  const removeLesson = async (sectionId: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette leçon de ce chapitre ?')) {
       return;
     }
     
     try {
-      await api.delete(`/entries/${entryId}/`);
+      await api.post(`/sections/${sectionId}/remove_lesson/`);
       
-      // Mettre à jour l'état local
-      if (notebook) {
-        const updatedNotebook = {
-          ...notebook,
-          sections: notebook.sections.map(section => ({
-            ...section,
-            entries: section.entries.filter(entry => entry.id !== entryId)
-          }))
-        };
-        setNotebook(updatedNotebook);
-      }
+      setNotebooks(prevNotebooks => prevNotebooks.map(notebook => {
+        if (notebook.id === activeNotebook) {
+          return {
+            ...notebook,
+            sections: notebook.sections.map(section => 
+              section.id === sectionId 
+                ? { ...section, lesson: null } 
+                : section
+            )
+          };
+        }
+        return notebook;
+      }));
+      
+      toast({
+        title: 'Succès',
+        description: 'La leçon a été supprimée',
+      });
     } catch (err) {
-      console.error('Erreur lors de la suppression de l\'entrée:', err);
+      console.error('Erreur lors de la suppression de la leçon:', err);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer la leçon',
+        variant: 'destructive'
+      });
     }
   };
 
-  // Grouper les entrées par chapitre
-  const getEntriesByChapter = (entries: NotebookEntry[]) => {
-    const grouped: Record<string, NotebookEntry[]> = {};
+  const createNotebook = async () => {
+    if (!selectedSubject || !selectedClassLevel) {
+      toast({
+        title: 'Information',
+        description: 'Veuillez sélectionner une matière et un niveau',
+        variant: 'default'
+      });
+      return;
+    }
     
-    entries.forEach(entry => {
-      const chapterId = entry.chapter?.id || 'uncategorized';
-      if (!grouped[chapterId]) {
-        grouped[chapterId] = [];
-      }
-      grouped[chapterId].push(entry);
-    });
+    const existingNotebook = notebooks.find(
+      n => n.subject.id === selectedSubject && n.class_level.id === selectedClassLevel
+    );
     
-    return grouped;
+    if (existingNotebook) {
+      toast({
+        title: 'Information',
+        description: 'Vous avez déjà un cahier pour cette matière et ce niveau',
+      });
+      setActiveNotebook(existingNotebook.id);
+      setIsCreating(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await api.post('/notebooks/create_notebook/', {
+        subject_id: selectedSubject,
+        class_level_id: selectedClassLevel
+      });
+      
+      setNotebooks(prev => {
+        const alreadyExists = prev.some(
+          n => n.id === response.data.id || 
+               (n.subject.id === response.data.subject.id && 
+                n.class_level.id === response.data.class_level.id)
+        );
+        return alreadyExists ? prev : [...prev, response.data];
+      });
+      
+      setActiveNotebook(response.data.id);
+      setIsCreating(false);
+      setSelectedSubject('');
+      setSelectedClassLevel('');
+      setLoading(false);
+      
+      toast({
+        title: 'Succès',
+        description: 'Cahier créé avec succès!',
+      });
+    } catch (err) {
+      console.error('Erreur lors de la création du cahier:', err);
+      setLoading(false);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de créer le cahier',
+        variant: 'destructive'
+      });
+    }
   };
 
-  // Si chargement
-  if (loading) {
+
+
+  if (loading && notebooks.length === 0) {
     return (
       <div className="flex justify-center items-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <Loader2 className="animate-spin h-12 w-12 text-indigo-600" />
       </div>
     );
   }
 
-  // Si erreur
-  if (error) {
+  if (error && notebooks.length === 0) {
     return (
       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
         <p className="text-red-700">{error}</p>
         <Button 
           className="mt-4 bg-red-600 hover:bg-red-700 text-white"
-          onClick={fetchNotebook}
+          onClick={() => {
+            setError(null);
+            setLoading(true);
+            api.get('/notebooks/get_notebooks/').then(response => {
+              setNotebooks(response.data);
+              setLoading(false);
+            }).catch(() => setLoading(false));
+          }}
         >
           Réessayer
         </Button>
@@ -217,246 +303,289 @@ const StudentNotebook: React.FC = () => {
     );
   }
 
-  // Si pas de cahier
-  if (!notebook) {
-    return (
-      <div className="text-center p-8">
-        <Book className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900">Pas de cahier trouvé</h3>
-        <p className="mt-2 text-gray-500">Votre cahier de cours n'a pas encore été créé.</p>
-        <Button 
-          className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white"
-          onClick={fetchNotebook}
-        >
-          Créer mon cahier
-        </Button>
-      </div>
-    );
-  }
-
-  // Trouver la section active
-  const currentSection = notebook.sections.find(s => s.id === activeSection);
+  const currentNotebook = notebooks.find(n => n.id === activeNotebook);
+  const currentChapter = currentNotebook?.sections.find(s => s.id === activeChapter);
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      {/* Header */}
       <div className="border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold flex items-center">
             <Book className="w-5 h-5 mr-2" />
-            {notebook.title}
+            Mes cahiers de cours
           </h2>
-          <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20"
-              onClick={() => setActiveTab('sections')}
-            >
-              Mes matières
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20"
-              onClick={() => setActiveTab('search')}
-            >
-              Rechercher
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/20"
+            onClick={() => setIsCreating(!isCreating)}
+          >
+            {isCreating ? (
+              <>
+                <X className="w-4 h-4 mr-2" />
+                Annuler
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                {notebooks.length === 0 ? "Commencer" : "Nouveau cahier"}
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row">
-        {/* Sidebar pour les sections/matières */}
-        <div className="w-full md:w-64 bg-gray-50 p-4 border-r border-gray-200">
-          <h3 className="font-medium text-gray-900 mb-4">Mes matières</h3>
+      {isCreating && (
+        <div className="p-6 bg-white border-b border-gray-200 shadow-sm">
+          <h3 className="font-medium text-indigo-900 text-lg mb-4 flex items-center">
+            <Plus className="w-5 h-5 mr-2 text-indigo-600" />
+            Créer un nouveau cahier
+          </h3>
           
-          <div className="space-y-2">
-            {notebook.sections.map(section => (
-              <div 
-                key={section.id}
-                className={`p-2 rounded-md cursor-pointer transition-colors ${
-                  activeSection === section.id 
-                    ? 'bg-indigo-100 text-indigo-800' 
-                    : 'hover:bg-gray-100'
-                }`}
-                onClick={() => setActiveSection(section.id)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                <Book className="w-4 h-4 mr-2 text-indigo-500" />
+                Matière
+              </label>
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                disabled={!selectedClassLevel}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <BookOpen className="w-4 h-4 mr-2 text-indigo-600" />
-                    <span>{section.title}</span>
-                  </div>
-                  <span className="text-xs bg-gray-200 text-gray-700 rounded-full px-2 py-0.5">
-                    {section.entries.length}
-                  </span>
+                <option value="">{selectedClassLevel ? "Choisissez une matière" : "Sélectionnez d'abord un niveau"}</option>
+                {subjects.map(subject => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                <School className="w-4 h-4 mr-2 text-indigo-500" />
+                Niveau
+              </label>
+              <select
+                value={selectedClassLevel}
+                onChange={(e) => {
+                  setSelectedClassLevel(e.target.value);
+                  setSelectedSubject('');
+                }}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Choisissez un niveau</option>
+                {classLevels.map(level => (
+                  <option key={level.id} value={level.id}>
+                    {level.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsCreating(false)}
+              className="border-gray-300 hover:bg-gray-50"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={createNotebook}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              disabled={!selectedSubject || !selectedClassLevel || loading}
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                  Création...
                 </div>
-              </div>
-            ))}
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer mon cahier
+                </>
+              )}
+            </Button>
           </div>
         </div>
+      )}
 
-        {/* Contenu principal */}
-        <div className="flex-1 p-6 overflow-auto max-h-[calc(100vh-250px)]">
-          {activeTab === 'sections' ? (
-            currentSection ? (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 pb-2 border-b border-gray-200">
-                  {currentSection.title}
-                </h2>
-                
-                {currentSection.entries.length === 0 ? (
-                  <div className="text-center p-8 bg-gray-50 rounded-lg">
-                    <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900">Aucune leçon</h3>
-                    <p className="mt-2 text-gray-500">Vous n'avez pas encore ajouté de leçons à cette matière.</p>
+<div className="flex flex-col md:flex-row">
+        {/* Left Sidebar for Notebooks */}
+        <div className="w-full md:w-64 bg-gray-50 p-4 border-r border-gray-200">
+          <h3 className="font-medium text-gray-900 mb-4">Mes cahiers</h3>
+          {notebooks.length === 0 ? (
+            <div className="text-center p-4 bg-gray-100 rounded-lg">
+              <BookOpen className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+              <p className="text-gray-500">Vous n'avez pas encore de cahiers</p>
+              <Button
+                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white w-full"
+                onClick={() => setIsCreating(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Créer mon premier cahier
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {notebooks.map(notebook => (
+                <div
+                  key={notebook.id}
+                  className={`p-3 rounded-md cursor-pointer transition-colors ${
+                    activeNotebook === notebook.id
+                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                      : 'hover:bg-gray-100 border border-transparent'
+                  }`}
+                  onClick={() => {
+                    setActiveNotebook(notebook.id);
+                    setActiveChapter(null); // Reset active chapter
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center truncate">
+                      <BookOpen className="w-4 h-4 mr-2 text-indigo-600 flex-shrink-0" />
+                      <span className="truncate">{notebook.title}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 flex-shrink-0">
+                        {notebook.sections.filter(s => s.lesson).length}/{notebook.sections.length}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotebook(notebook.id);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+                  <div className="mt-1 text-xs text-gray-500 truncate">
+                    {notebook.subject.name} • {notebook.class_level.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 p-6 overflow-auto max-h-[calc(100vh-250px)]">
+          {currentNotebook ? (
+            <div className="flex h-full">
+              {/* Chapters Sidebar */}
+              <div className="w-64 bg-gray-50 p-4 border-r border-gray-200">
+                <h3 className="font-medium text-gray-900 mb-4">Chapitres</h3>
+                {currentNotebook.sections.length === 0 ? (
+                  <p className="text-gray-500">Aucun chapitre disponible.</p>
                 ) : (
-                  <div className="space-y-6">
-                    {/* Groupe les entrées par chapitre */}
-                    {Object.entries(getEntriesByChapter(currentSection.entries)).map(([chapterId, entries]) => {
-                      const chapterName = entries[0]?.chapter?.name || "Sans chapitre";
-                      const isExpanded = expandedChapters[chapterId] !== false; // Par défaut, afficher les chapitres
-                      
-                      return (
-                        <div key={chapterId} className="border border-gray-200 rounded-lg overflow-hidden">
-                          <div 
-                            className="bg-gray-50 p-3 flex justify-between items-center cursor-pointer"
-                            onClick={() => toggleChapter(chapterId)}
-                          >
-                            <h3 className="font-medium text-gray-900 flex items-center">
-                              <FolderPlus className="w-5 h-5 mr-2 text-indigo-600" />
-                              {chapterName}
-                            </h3>
-                            {isExpanded ? 
-                              <ChevronDown className="w-5 h-5 text-gray-500" /> : 
-                              <ChevronRight className="w-5 h-5 text-gray-500" />
-                            }
-                          </div>
-                          
-                          {isExpanded && (
-                            <div className="divide-y divide-gray-100">
-                              {entries.map(entry => {
-                                const isEntryExpanded = expandedEntries[entry.id] || false;
-                                
-                                return (
-                                  <div key={entry.id} className="p-4">
-                                    <div 
-                                      className="flex justify-between items-center cursor-pointer"
-                                      onClick={() => toggleEntry(entry.id)}
-                                    >
-                                      <h4 className="font-medium text-gray-800">{entry.lesson.title}</h4>
-                                      {isEntryExpanded ? 
-                                        <ChevronDown className="w-5 h-5 text-gray-500" /> : 
-                                        <ChevronRight className="w-5 h-5 text-gray-500" />
-                                      }
-                                    </div>
-                                    
-                                    {isEntryExpanded && (
-                                      <div className="mt-4 pt-4 border-t border-gray-100">
-                                        {/* Contenu de la leçon */}
-                                        <div className="prose max-w-none mb-6 bg-white p-4 rounded-md border border-gray-200">
-                                          <TipTapRenderer content={entry.lesson.content} />
-                                        </div>
-                                        
-                                        {/* Notes personnelles */}
-                                        <div className="bg-yellow-50 p-4 rounded-md border-l-4 border-yellow-300">
-                                          <div className="flex justify-between items-center mb-2">
-                                            <h5 className="font-medium text-gray-800">Mes notes</h5>
-                                            
-                                            {editingNotes === entry.id ? (
-                                              <div className="flex space-x-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={() => saveNotes(entry.id)}
-                                                  className="text-green-600 hover:text-green-700"
-                                                >
-                                                  <Save className="w-4 h-4 mr-1" />
-                                                  Enregistrer
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={cancelEditingNotes}
-                                                  className="text-gray-600 hover:text-gray-700"
-                                                >
-                                                  <X className="w-4 h-4 mr-1" />
-                                                  Annuler
-                                                </Button>
-                                              </div>
-                                            ) : (
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => startEditingNotes(entry.id, entry.user_notes)}
-                                                className="text-indigo-600 hover:text-indigo-700"
-                                              >
-                                                <Edit className="w-4 h-4 mr-1" />
-                                                Modifier
-                                              </Button>
-                                            )}
-                                          </div>
-                                          
-                                          {editingNotes === entry.id ? (
-                                            <textarea
-                                              value={noteContent}
-                                              onChange={(e) => setNoteContent(e.target.value)}
-                                              className="w-full p-2 border border-gray-300 rounded-md"
-                                              rows={4}
-                                              placeholder="Ajoutez vos notes personnelles ici..."
-                                            />
-                                          ) : (
-                                            <div className="prose prose-sm max-w-none text-gray-700">
-                                              {entry.user_notes ? (
-                                                <div dangerouslySetInnerHTML={{ __html: entry.user_notes }} />
-                                              ) : (
-                                                <p className="text-gray-500 italic">Pas encore de notes.</p>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                        
-                                        {/* Actions */}
-                                        <div className="mt-4 flex justify-end">
-                                          <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() => deleteEntry(entry.id)}
-                                            className="text-red-600 hover:text-red-700"
-                                          >
-                                            <Trash2 className="w-4 h-4 mr-1" />
-                                            Supprimer du cahier
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="space-y-2">
+                    {currentNotebook.sections.map(section => (
+                      <button
+                        key={section.id}
+                        className={`w-full p-2 rounded-md text-left ${
+                          activeChapter === section.id
+                            ? 'bg-indigo-100 text-indigo-800'
+                            : 'hover:bg-gray-100'
+                        }`}
+                        onClick={() => setActiveChapter(section.id)}
+                      >
+                        {section.chapter.name}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="text-center p-8">
-                <p>Veuillez sélectionner une matière</p>
+
+              {/* Chapter Content */}
+              <div className="flex-1 p-4 bg-white">
+                {currentChapter ? (
+                  <div className="space-y-4">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">{currentChapter.chapter.name}</h3>
+                    {currentChapter.lesson ? (
+                      <>
+                        <div className="prose max-w-none mb-6">
+                          <TipTapRenderer content={currentChapter.lesson.content} />
+                        </div>
+                        <div className="bg-yellow-50 p-4 rounded-md border-l-4 border-yellow-300">
+                          {/* Notes Section */}
+                          <div className="flex justify-between items-center mb-3">
+                            <h5 className="font-medium text-gray-800 flex items-center">
+                              <Edit className="w-4 h-4 mr-2 text-yellow-600" />
+                              Mes notes
+                            </h5>
+                            {editingNotes === currentChapter.id ? (
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => saveNotes(currentChapter.id)}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  <Save className="w-4 h-4 mr-1" />
+                                  Enregistrer
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={cancelEditingNotes}
+                                  className="text-gray-600 hover:text-gray-700"
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Annuler
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditingNotes(currentChapter.id, currentChapter.user_notes)}
+                                className="text-indigo-600 hover:text-indigo-700"
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Modifier
+                              </Button>
+                            )}
+                          </div>
+                          {editingNotes === currentChapter.id ? (
+                            <textarea
+                              value={noteContent}
+                              onChange={(e) => setNoteContent(e.target.value)}
+                              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              rows={4}
+                              placeholder="Ajoutez vos notes personnelles ici..."
+                            />
+                          ) : (
+                            <div className="prose prose-sm max-w-none text-gray-700">
+                              {currentChapter.user_notes ? (
+                                <div dangerouslySetInnerHTML={{ __html: currentChapter.user_notes }} />
+                              ) : (
+                                <p className="text-gray-500 italic">Pas encore de notes.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-500">Aucune leçon n'a été ajoutée à ce chapitre.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Sélectionnez un chapitre pour afficher son contenu.</p>
+                )}
               </div>
-            )
+            </div>
           ) : (
-            // Interface de recherche
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Rechercher des leçons</h2>
-              
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                <p className="text-center text-gray-500">
-                  Fonctionnalité de recherche à implémenter...
-                </p>
-              </div>
+            <div className="text-center p-8">
+              <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-gray-500">Veuillez sélectionner un cahier ou en créer un nouveau.</p>
             </div>
           )}
         </div>
