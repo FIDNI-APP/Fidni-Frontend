@@ -28,6 +28,8 @@ import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
 import { LessonTabNavigation } from '@/components/lesson/LessonTabNavigation';
 import { ActivityEmptyState } from '@/components/exercise/EmptyStates';
+import AddToNotebookButton from '@/components/lesson/AddToNotebookButton';
+
 import { formatDate } from '@/lib/utils';
 import '@/lib/styles.css';
 
@@ -377,6 +379,9 @@ export function LessonDetail() {
                     )}
                     {savedForLater ? 'Enregistré' : 'Enregistrer'}
                   </Button>
+                    
+                  
+
                   
                   {/* Share button */}
                   <Button 
@@ -594,6 +599,13 @@ export function LessonDetail() {
                                 )}
                                 À revoir
                               </Button>
+
+                              {/* Add to Notebook Button */}
+                            {id && (
+                              <AddToNotebookButton 
+                                lessonId={id} 
+                              />
+                            )}
                               
                               {/* Print button */}
                               <Button

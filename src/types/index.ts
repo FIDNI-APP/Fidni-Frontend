@@ -230,3 +230,42 @@ export interface Lesson {
   theorems : Theorem[];
   subfields : Subfield[];
 }
+
+
+
+// Single lesson entry in a notebook chapter
+export interface NotebookLessonEntry {
+  id: string;
+  lesson: Lesson;
+  added_at: string;
+  notes?: string;
+  highlighted: boolean;
+}
+
+// Chapter in a notebook
+export interface NotebookChapter {
+  id: string;
+  chapter: ChapterModel;
+  lessons: NotebookLessonEntry[];
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Notebook (per subject)
+export interface Notebook {
+  id: string;
+  user: User;
+  subject: SubjectModel;
+  chapters: NotebookChapter[];
+  created_at: string;
+  updated_at: string;
+  title?: string;
+  cover_color?: string;
+}
+
+// Response type for getting all notebooks
+export interface NotebookResponse {
+  notebooks: Notebook[];
+  count: number;
+}

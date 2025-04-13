@@ -28,7 +28,6 @@ export {
   updateContent,
   deleteContent,
   markContentViewed,
-  markContentCompleted,
   markExerciseProgress,
   removeExerciseProgress,
   saveExercise,
@@ -70,6 +69,20 @@ export {
   updateComment,
   deleteComment
 } from './interactionApi';
+
+// Notebooks exports
+export {
+  getUserNotebooks,
+  getNotebookById,
+  createNotebook,
+  updateNotebook,
+  deleteNotebook,
+  addChapterToNotebook,
+  addLessonToNotebook,
+  removeFromNotebook,
+  updateLessonNotes,
+  getNotebookActivity
+} from './notebookApi';
 
 // Export the API client itself
 export default api;

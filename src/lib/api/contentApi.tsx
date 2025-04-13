@@ -70,14 +70,10 @@ export const deleteContent = async (id: string) => {
 
 // Content Tracking
 export const markContentViewed = async (contentId: string) => {
-  const response = await api.post(`/content/${contentId}/view/`);
+  const response = await api.post(`/exercises/${contentId}/view/`);
   return response.data;
 };
 
-export const markContentCompleted = async (contentId: string) => {
-  const response = await api.post(`/content/${contentId}/complete/`);
-  return response.data;
-};
 
 export const markExerciseProgress = async (exerciseId: string, status: 'success' | 'review') => {
   const response = await api.post(`/exercises/${exerciseId}/mark_progress/`, { status });
@@ -202,6 +198,6 @@ export const addLessonComment = async (lessonId: string, content: string, parent
 
 // Track lesson view
 export const markLessonViewed = async (lessonId: string) => {
-  const response = await api.post(`/content/${lessonId}/view/`);
+  const response = await api.post(`/lessons/${lessonId}/view/`);
   return response.data;
 };

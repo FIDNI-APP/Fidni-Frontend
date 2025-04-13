@@ -1,12 +1,32 @@
 // src/pages/Profile.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile, getUserStats, getUserContributions, getUserSavedExercises, getUserHistory, updateUserProfile, getUserProgressExercises } from '@/lib/api';
+import { 
+  getUserProfile, 
+  getUserStats, 
+  getUserContributions, 
+  getUserSavedExercises, 
+  getUserProgressExercises, 
+  getUserHistory,
+  updateUserProfile 
+} from '@/lib/api';
 import { Content, User, ViewHistoryItem } from '@/types';
-import { Loader2, LayoutDashboard, Book, FileText, History, Edit, Calendar, MapPin, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  Loader2, 
+  LayoutDashboard, 
+  Book, 
+  FileText, 
+  History, 
+  Edit, 
+  Calendar, 
+  MapPin, 
+  Mail,
+  NotebookPen,
+  BookOpen 
+} from 'lucide-react';
 
-// Import the enhanced components
+// Import components
 import { ProfileHeaderEnhanced } from '@/components/profile/ProfileHeaderEnhanced';
 import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard';
 import { SavedExercisesSection } from '@/components/profile/SavedExercisesSection';
@@ -15,6 +35,7 @@ import { ProgressSection } from '@/components/profile/ProgressSection';
 import { ContributionsSection } from '@/components/profile/ContributionsSection';
 import { EditProfileForm } from '@/components/profile/EditProfileForm';
 import { ProgressCharts } from '@/components/profile/ProgressCharts';
+import StudentNotebook  from '@/components/profile/StudentNotebook';
 import { Button } from '@/components/ui/button';
 
 export function UserProfile() {
@@ -177,12 +198,12 @@ export function UserProfile() {
             <p>{error || 'User profile not found'}</p>
           </div>
           <div className="mt-4 flex justify-center">
-            <button 
+            <Button 
               onClick={() => navigate('/')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md"
             >
               Back to Home
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -191,7 +212,7 @@ export function UserProfile() {
   
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-16">
-      {/* Beautiful, larger header with cover image */}
+      {/* Profile Editing Mode */}
       {isEditing ? (
         <div className="max-w-7xl mx-auto px-4 mt-6">
           <EditProfileForm 
@@ -203,13 +224,13 @@ export function UserProfile() {
       ) : (
         <>
           {/* Enhanced hero section with profile header */}
-            <div className="max-w-full mx-auto">
-              <ProfileHeaderEnhanced 
-                user={userProfile} 
-                isOwner={isOwner}
-                onEditProfile={handleEditProfile}
-              />
-            </div>
+          <div className="max-w-full mx-auto">
+            <ProfileHeaderEnhanced 
+              user={userProfile} 
+              isOwner={isOwner}
+              onEditProfile={handleEditProfile}
+            />
+          </div>
           
           {/* Tab navigation */}
           <div className="bg-white border-b shadow-sm sticky top-16 z-10">
@@ -266,6 +287,20 @@ export function UserProfile() {
                     Activity
                   </button>
                 )}
+
+                {isOwner && (
+                  <button
+                    onClick={() => handleTabChange('notebook')}
+                    className={`px-6 py-4 font-medium text-base flex items-center border-b-2 transition-colors ${
+                      activeTab === 'notebook' 
+                        ? 'border-indigo-600 text-indigo-600' 
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Book className="w-5 h-5 mr-2" />
+                    Cahier de cours
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -285,8 +320,8 @@ export function UserProfile() {
                 {isOwner && stats && (
                   <ProgressCharts 
                     stats={stats}
-                    successExercises={[]}
-                    reviewExercises={[]}
+                    successExercises={successExercises}
+                    reviewExercises={reviewExercises}
                   />
                 )}
                 
@@ -440,6 +475,14 @@ export function UserProfile() {
               </div>
             )}
             
+            {/* Student Notebook Tab */}
+            {activeTab === 'notebook' && isOwner && (
+              <div className="h-full fade-in animate-delay-2">
+                {/* The StudentNotebook component takes over the entire space */}
+                <StudentNotebook username={username!} />
+              </div>
+            )}
+            
             {/* Contributions Tab */}
             {activeTab === 'contributions' && (
               <div className="space-y-8 fade-in animate-delay-2">
@@ -465,6 +508,12 @@ export function UserProfile() {
                     isLoading={false}
                   />
                 )}
+              </div>
+            )}
+            {/* Notebook Tab */}
+            {activeTab === 'notebook' && isOwner && (
+              <div className="fade-in animate-delay-2">
+                <StudentNotebook />
               </div>
             )}
           </div>
