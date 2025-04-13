@@ -45,7 +45,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal(); 
-  
+
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Check if any text is selected
@@ -255,6 +255,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
                     e.stopPropagation();
                     onDelete?.(lesson.id);
                   }}
+
                   className="h-8 px-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-all duration-300 hover:shadow-md"
                   title="Delete"
                 >
@@ -275,7 +276,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
               e.stopPropagation();
               handleCardClick(e);
             }}
-            className={`bg-purple-600/80 hover:bg-purple-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
+            className={`bg-purple-600/80 hover:bg-purple-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-90'}`}
             aria-label="View lesson"
           >
             <ChevronRight className="w-8 h-8" />

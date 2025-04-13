@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown } from 'lucide-react';
+import { Loader2, Plus, Filter, BookOpen, ArrowUpDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { getLessons, voteLesson, deleteContent } from '../lib/api';
-import { Content, Lesson, SortOption, VoteValue } from '../types';
+import { getLessons, voteLesson, deleteLesson } from '../lib/api';
+import { Lesson, SortOption, VoteValue } from '../types';
 import { Filters } from '../components/Filters';
 import { SortDropdown } from '../components/SortDropdown';
-import { ContentList } from '../components/ContentList';
 import { ContentListItem } from '../components/ContentListItem';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -244,7 +243,7 @@ export const LessonList = () => {
         setTotalCount(prev => prev - 1);
         
         // Make API call in background
-        await deleteContent(id);
+        await deleteLesson(id);
         
         // Invalidate cache after deletion
         invalidateCache();

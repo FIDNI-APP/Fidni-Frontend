@@ -228,4 +228,5 @@ export interface Lesson {
   comments: Comment[];
   view_count: number;
   theorems : Theorem[];
+  subfields : Subfield[];
 }

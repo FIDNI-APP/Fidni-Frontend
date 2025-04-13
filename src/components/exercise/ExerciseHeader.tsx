@@ -38,6 +38,19 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
         return 'from-gray-500 to-gray-400 text-white';
     }
   };
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: exercise?.title || 'Exercise',
+        text: `Check out this interesting exercise !: ${exercise?.title}`,
+        url: window.location.href
+      }).catch(err => console.error('Error sharing:', err));
+    } else {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => alert('Link copied to clipboard!'))
+        .catch(err => console.error('Error copying link:', err));
+    }
+  };
 
   return (
     <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
@@ -57,7 +70,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
         {/* Navigation row */}
         <div className="flex justify-between items-center mb-6">
           <Button 
-            onClick={() => navigate('/exercises')}
+            onClick={() => navigate(-1)}
             variant="ghost"
             className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
           >
@@ -83,12 +96,13 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
             
             {/* Share button */}
             <Button 
-              variant="ghost"
-              className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-            >
-              <Share2 className="w-5 h-5 mr-1.5" />
-              Partager
-            </Button>
+            onClick={handleShare}
+            variant="ghost"
+            className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+          >
+            <Share2 className="w-5 h-5 mr-1.5" />
+            Partager
+          </Button>
             
             {/* More options dropdown for author */}
             {isAuthor && (
