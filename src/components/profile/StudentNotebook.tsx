@@ -1,592 +1,935 @@
-import React, { useState, useEffect } from 'react';
-import { Book, BookOpen, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight, FolderPlus, FileText, Loader2, School } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Book, BookOpen, Plus, Trash2, Edit, Save, X, 
+  ChevronLeft, Loader2, PenLine, Bookmark
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import api, { getClassLevels, getSubjects,deleteNotebook } from '@/lib/api';
-import { ToastContainer, toast } from 'react-toastify';
+import api from '@/lib/api';
+import { getClassLevels, getSubjects } from '@/lib/api';
+import { toast } from 'react-toastify';
+import { SubjectModel, ClassLevelModel, Notebook, Section } from '@/types';
 
-interface Notebook {
-  id: string;
-  title: string;
-  subject: {
-    id: string;
-    name: string;
-  };
-  class_level: {
-    id: string;
-    name: string;
-  };
-  sections: Section[];
-}
-
-interface Section {
-  id: string;
-  chapter: {
-    id: string;
-    name: string;
-  };
-  lesson: {
-    id: string;
-    title: string;
-    content: string;
-  } | null;
-  user_notes: string;
-  order: number;
-}
-
-interface ClassLevel {
-  id: string;
-  name: string;
-}
-
-interface Subject {
-  id: string;
-  name: string;
-}
-
-const StudentNotebook: React.FC = () => {
+const StudentNotebook = () => {
+  // State
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeNotebook, setActiveNotebook] = useState<string | null>(null);
-  const [activeChapter, setActiveChapter] = useState<string | null>(null); // Track active chapter
-  const [editingNotes, setEditingNotes] = useState<string | null>(null);
-  const [noteContent, setNoteContent] = useState<string>('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedClassLevel, setSelectedClassLevel] = useState<string>('');
+  const [currentNotebookId, setCurrentNotebookId] = useState<string | null>(null);
+  const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [noteContent, setNoteContent] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showNotebooksList, setShowNotebooksList] = useState(true);
+  const [currentNotebook, setCurrentNotebook] = useState<Notebook | null>(null);
+  
+  // Create notebook form state
+  const [subjects, setSubjects] = useState<SubjectModel[]>([]);
+  const [classLevels, setClassLevels] = useState<ClassLevelModel[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedClassLevel, setSelectedClassLevel] = useState("");
+  const [notebookTitle, setNotebookTitle] = useState("");
+  const [notebookColor, setNotebookColor] = useState("blue");
 
-  // Fetch notebooks and class levels on component mount
+  // References
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Available notebook colors
+  const notebookColors = [
+    { name: "blue", bg: "bg-blue-50", accent: "bg-blue-600", text: "text-blue-800" },
+    { name: "green", bg: "bg-green-50", accent: "bg-green-600", text: "text-green-800" },
+    { name: "purple", bg: "bg-purple-50", accent: "bg-purple-600", text: "text-purple-800" },
+    { name: "red", bg: "bg-red-50", accent: "bg-red-600", text: "text-red-800" },
+    { name: "yellow", bg: "bg-yellow-50", accent: "bg-yellow-600", text: "text-yellow-800" },
+  ];
+  
+  
+  // Load notebooks on component mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [notebooksResponse, classLevelsData] = await Promise.all([
-          api.get('/notebooks/get_notebooks/'),
-          getClassLevels()
-        ]);
-        
-        setNotebooks(notebooksResponse.data);
-        setClassLevels(classLevelsData);
-        
-        if (notebooksResponse.data.length > 0) {
-          setActiveNotebook(notebooksResponse.data[0].id);
-        }
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Erreur lors du chargement:', err);
-        setError('Impossible de charger vos données');
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
+    loadNotebooks();
   }, []);
 
-  // Load subjects based on selected class level
+  // Load class levels for create form
   useEffect(() => {
-    const loadSubjects = async () => {
-      if (!selectedClassLevel) {
-        setSubjects([]);
-        setSelectedSubject('');
-        return;
-      }
-      
-      try {
-        const data = await getSubjects([selectedClassLevel]);
-        const uniqueSubjects = data.filter((subject, index, self) =>
-          self.findIndex(s => s.id === subject.id) === index
-        ).sort((a, b) => a.name.localeCompare(b.name));
-        setSubjects(uniqueSubjects);
-        
-        if (uniqueSubjects.length === 1) {
-          setSelectedSubject(uniqueSubjects[0].id);
-        }
-      } catch (error) {
-        console.error('Failed to load subjects:', error);
-        toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les matières',
-          variant: 'destructive'
-        });
-      }
-    };
+    if (showCreateForm) {
+      loadClassLevels();
+    }
+  }, [showCreateForm]);
 
-    loadSubjects();
+  // Load subjects when class level is selected
+  useEffect(() => {
+    if (selectedClassLevel) {
+      loadSubjects();
+    }
   }, [selectedClassLevel]);
 
-  const toggleChapter = (chapterId: string) => {
-    setExpandedChapters(prev => ({
-      ...prev,
-      [chapterId]: !prev[chapterId]
-    }));
-  };
+  // Scroll to top of content when changing sections
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [currentSectionId]);
 
-  const startEditingNotes = (sectionId: string, content: string) => {
-    setEditingNotes(sectionId);
-    setNoteContent(content);
-  };
+  // Load detailed notebook data when selecting a notebook
+  useEffect(() => {
+    if (currentNotebookId) {
+      loadNotebookDetails(currentNotebookId);
+    }
+  }, [currentNotebookId]);
 
-  const cancelEditingNotes = () => {
-    setEditingNotes(null);
-    setNoteContent('');
-  };
-
-  const saveNotes = async (sectionId: string) => {
-    try {
-      const notebook = notebooks.find(n => n.id === activeNotebook);
-      if (!notebook) return;
+  // Auto-generate notebook title when subject and class level are selected
+  useEffect(() => {
+    if (selectedSubject && selectedClassLevel && !notebookTitle) {
+      const subjectName = subjects.find(s => s.id === selectedSubject)?.name || '';
+      const levelName = classLevels.find(c => c.id === selectedClassLevel)?.name || '';
       
-      await api.post(`/notebooks/${notebook.id}/update_section_notes/`, {
-        section_id: sectionId,
+      if (subjectName && levelName) {
+        setNotebookTitle(`${subjectName} - ${levelName}`);
+      }
+    }
+  }, [selectedSubject, selectedClassLevel, subjects, classLevels, notebookTitle]);
+
+  // Main data loading functions
+  const loadNotebooks = async () => {
+    try {
+      setLoading(true);
+      // Log to debug
+      console.log('Loading notebooks...');
+      const response = await api.get('/notebooks/get_notebooks/');
+      console.log('Notebooks response:', response.data);
+      setNotebooks(response.data);
+    } catch (err) {
+      console.error('Failed to load notebooks:', err);
+      setError('Failed to load notebooks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadNotebookDetails = async (notebookId: string) => {
+    try {
+      setSectionsLoading(true);
+      console.log(`Loading detailed data for notebook ${notebookId}`);
+      
+      // Get detailed notebook data including sections
+      const response = await api.get(`/notebooks/${notebookId}/`);
+      console.log('Notebook details response:', response.data);
+      
+      // Update the current notebook with full details
+      setCurrentNotebook(response.data);
+      
+      // Also update the notebook in the notebooks array
+      setNotebooks(prev => 
+        prev.map(notebook => 
+          notebook.id === notebookId ? response.data : notebook
+        )
+      );
+    } catch (err) {
+      console.error('Error loading notebook details:', err);
+      toast.error('Failed to load notebook details');
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
+
+  const loadClassLevels = async () => {
+    try {
+      const data = await getClassLevels();
+      console.log('Class levels:', data);
+      setClassLevels(data);
+    } catch (err) {
+      console.error('Error loading class levels:', err);
+      toast.error('Failed to load class levels');
+    }
+  };
+
+  const loadSubjects = async () => {
+    try {
+      const data = await getSubjects([selectedClassLevel]);
+      console.log('Subjects:', data);
+      setSubjects(data);
+    } catch (err) {
+      console.error('Error loading subjects:', err);
+      toast.error('Failed to load subjects');
+    }
+  };
+
+  // Event handlers
+  const handleNotebookSelect = (notebookId: string) => {
+    console.log('Selecting notebook:', notebookId);
+    setCurrentNotebookId(notebookId);
+    setCurrentSectionId(null); // Reset section when changing notebooks
+    setShowNotebooksList(false);
+  };
+
+  const handleSectionSelect = async (sectionId: string) => {
+    console.log('Selecting section:', sectionId);
+    
+    if (!currentNotebook) {
+      console.error('No current notebook selected');
+      return;
+    }
+    
+    const section = currentNotebook.sections.find(s => s.id === sectionId);
+    
+    // Check if section has a lesson
+    if (!section?.lesson) {
+      console.log('Section has no lesson');
+      return;
+    }
+  
+    try {
+      // Set current section immediately for UI feedback
+      setCurrentSectionId(sectionId);
+      
+      // Optional: Fetch fresh section data
+      console.log(`Fetching section data for section ${sectionId}`);
+      const response = await api.get(`/sections/${sectionId}/`);
+      console.log('Section data response:', response.data);
+      
+      if (response.data && response.data.lesson) {
+        // Update the currentNotebook state with fresh section data
+        setCurrentNotebook(prev => {
+          if (!prev) return null;
+          
+          return {
+            ...prev,
+            sections: prev.sections.map(s => 
+              s.id === sectionId 
+                ? { ...s, lesson: response.data.lesson }
+                : s
+            )
+          };
+        });
+        
+        // Also update in the notebooks array
+        setNotebooks(prev => prev.map(notebook => {
+          if (notebook.id === currentNotebookId) {
+            return {
+              ...notebook,
+              sections: notebook.sections.map(s => 
+                s.id === sectionId 
+                  ? { ...s, lesson: response.data.lesson }
+                  : s
+              )
+            };
+          }
+          return notebook;
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching section data:', error);
+      toast.error('Failed to load section content');
+    }
+  };
+
+  const handleGoBackToNotebooks = () => {
+    setShowNotebooksList(true);
+    setCurrentNotebookId(null);
+    setCurrentSectionId(null);
+    setCurrentNotebook(null);
+  };
+
+  const handleStartEditNotes = (notes: string) => {
+    setNoteContent(notes);
+    setEditingNotes(true);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!currentNotebookId || !currentSectionId) return;
+    
+    try {
+      await api.post(`/notebooks/${currentNotebookId}/update_section_notes/`, {
+        section_id: currentSectionId,
         user_notes: noteContent
       });
       
-      setNotebooks(prevNotebooks => prevNotebooks.map(notebook => {
-        if (notebook.id === activeNotebook) {
-          return {
-            ...notebook,
-            sections: notebook.sections.map(section => 
-              section.id === sectionId 
-                ? { ...section, user_notes: noteContent } 
-                : section
-            )
-          };
-        }
-        return notebook;
-      }));
+      // Update local state in both places
+      setCurrentNotebook(prev => {
+        if (!prev) return null;
+        
+        return {
+          ...prev,
+          sections: prev.sections.map(section => 
+            section.id === currentSectionId 
+              ? { ...section, user_notes: noteContent } 
+              : section
+          )
+        };
+      });
       
-      setEditingNotes(null);
-      setNoteContent('');
-      toast({
-        title: 'Succès',
-        description: 'Vos notes ont été enregistrées',
-      });
+      setNotebooks(prev => 
+        prev.map(notebook => {
+          if (notebook.id === currentNotebookId) {
+            return {
+              ...notebook,
+              sections: notebook.sections.map(section => 
+                section.id === currentSectionId 
+                  ? { ...section, user_notes: noteContent } 
+                  : section
+              )
+            };
+          }
+          return notebook;
+        })
+      );
+      
+      setEditingNotes(false);
+      toast.success('Notes saved successfully');
     } catch (err) {
-      console.error('Erreur lors de la sauvegarde des notes:', err);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de sauvegarder les notes',
-        variant: 'destructive'
-      });
+      console.error('Error saving notes:', err);
+      toast.error('Failed to save notes');
     }
   };
 
-  const removeLesson = async (sectionId: string) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette leçon de ce chapitre ?')) {
-      return;
-    }
-    
-    try {
-      await api.post(`/sections/${sectionId}/remove_lesson/`);
-      
-      setNotebooks(prevNotebooks => prevNotebooks.map(notebook => {
-        if (notebook.id === activeNotebook) {
-          return {
-            ...notebook,
-            sections: notebook.sections.map(section => 
-              section.id === sectionId 
-                ? { ...section, lesson: null } 
-                : section
-            )
-          };
-        }
-        return notebook;
-      }));
-      
-      toast({
-        title: 'Succès',
-        description: 'La leçon a été supprimée',
-      });
-    } catch (err) {
-      console.error('Erreur lors de la suppression de la leçon:', err);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de supprimer la leçon',
-        variant: 'destructive'
-      });
-    }
+  const handleCancelEditNotes = () => {
+    setEditingNotes(false);
+    setNoteContent("");
   };
 
-  const createNotebook = async () => {
+  const handleCreateNotebook = async () => {
     if (!selectedSubject || !selectedClassLevel) {
-      toast({
-        title: 'Information',
-        description: 'Veuillez sélectionner une matière et un niveau',
-        variant: 'default'
-      });
+      toast.info('Please select a subject and class level');
       return;
     }
     
-    const existingNotebook = notebooks.find(
-      n => n.subject.id === selectedSubject && n.class_level.id === selectedClassLevel
-    );
-    
-    if (existingNotebook) {
-      toast({
-        title: 'Information',
-        description: 'Vous avez déjà un cahier pour cette matière et ce niveau',
-      });
-      setActiveNotebook(existingNotebook.id);
-      setIsCreating(false);
+    if (!notebookTitle) {
+      toast.info('Please enter a title for your notebook');
       return;
     }
     
     try {
       setLoading(true);
+      
+      console.log('Creating notebook with:', {
+        subject_id: selectedSubject,
+        class_level_id: selectedClassLevel,
+        title: notebookTitle
+      });
+      
       const response = await api.post('/notebooks/create_notebook/', {
         subject_id: selectedSubject,
-        class_level_id: selectedClassLevel
+        class_level_id: selectedClassLevel,
+        title: notebookTitle
       });
       
-      setNotebooks(prev => {
-        const alreadyExists = prev.some(
-          n => n.id === response.data.id || 
-               (n.subject.id === response.data.subject.id && 
-                n.class_level.id === response.data.class_level.id)
-        );
-        return alreadyExists ? prev : [...prev, response.data];
-      });
+      console.log('Notebook created:', response.data);
       
-      setActiveNotebook(response.data.id);
-      setIsCreating(false);
-      setSelectedSubject('');
-      setSelectedClassLevel('');
-      setLoading(false);
+      setNotebooks(prev => [...prev, response.data]);
+      setCurrentNotebookId(response.data.id);
+      setCurrentNotebook(response.data);
+      setShowNotebooksList(false);
+      setShowCreateForm(false);
       
-      toast({
-        title: 'Succès',
-        description: 'Cahier créé avec succès!',
-      });
+      // Reset form
+      setSelectedSubject("");
+      setSelectedClassLevel("");
+      setNotebookTitle("");
+      
+      toast.success('Notebook created successfully');
     } catch (err) {
-      console.error('Erreur lors de la création du cahier:', err);
+      console.error('Error creating notebook:', err);
+      toast.error('Failed to create notebook');
+    } finally {
       setLoading(false);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de créer le cahier',
-        variant: 'destructive'
-      });
     }
   };
 
+  const handleRemoveLesson = async (sectionId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation(); // Prevent triggering section selection
+    }
+    
+    if (!window.confirm('Are you sure you want to remove this lesson?')) return;
+    
+    try {
+      await api.post(`/sections/${sectionId}/remove_lesson/`);
+      
+      // Update local state in both places
+      setCurrentNotebook(prev => {
+        if (!prev) return null;
+        
+        return {
+          ...prev,
+          sections: prev.sections.map(section => 
+            section.id === sectionId 
+              ? { ...section, lesson: null } 
+              : section
+          )
+        };
+      });
+      
+      setNotebooks(prev => 
+        prev.map(notebook => {
+          if (notebook.id === currentNotebookId) {
+            return {
+              ...notebook,
+              sections: notebook.sections.map(section => 
+                section.id === sectionId 
+                  ? { ...section, lesson: null } 
+                  : section
+              )
+            };
+          }
+          return notebook;
+        })
+      );
+      
+      // If we just removed the active section, clear the selection
+      if (currentSectionId === sectionId) {
+        setCurrentSectionId(null);
+      }
+      
+      toast.success('Lesson removed successfully');
+    } catch (err) {
+      console.error('Error removing lesson:', err);
+      toast.error('Failed to remove lesson');
+    }
+  };
 
+  const handleDeleteNotebook = async (notebookId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation(); // Prevent triggering notebook selection
+    }
+    
+    if (!window.confirm('Are you sure you want to delete this notebook?')) return;
+    
+    try {
+      await api.delete(`/notebooks/${notebookId}/`);
+      
+      // Update local state
+      setNotebooks(prev => prev.filter(notebook => notebook.id !== notebookId));
+      
+      // If we just deleted the current notebook, go back to notebooks list
+      if (currentNotebookId === notebookId) {
+        setShowNotebooksList(true);
+        setCurrentNotebookId(null);
+        setCurrentNotebook(null);
+      }
+      
+      toast.success('Notebook deleted successfully');
+    } catch (err) {
+      console.error('Error deleting notebook:', err);
+      toast.error('Failed to delete notebook');
+    }
+  };
 
-  if (loading && notebooks.length === 0) {
+  // Helper functions
+  const getCurrentNotebook = () => {
+    return currentNotebook || notebooks.find(notebook => notebook.id === currentNotebookId);
+  };
+
+  const getCurrentSection = () => {
+    const notebook = getCurrentNotebook();
+    if (!notebook) return null;
+    
+    return notebook.sections.find(section => section.id === currentSectionId);
+  };
+
+  const getProgressPercentage = (notebook: Notebook) => {
+    if (notebook.sections.length === 0) return 0;
+    const lessonsCount = notebook.sections.filter(s => s.lesson).length;
+    return Math.round((lessonsCount / notebook.sections.length) * 100);
+  };
+
+  // Render functions for different views
+  const renderNotebooksList = () => {
+    if (notebooks.length === 0) {
+      return (
+        <div className="text-center p-8">
+          <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No notebooks yet</h3>
+          <p className="text-gray-500 mb-6">Create your first notebook to get started</p>
+          <Button 
+            onClick={() => setShowCreateForm(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create First Notebook
+          </Button>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="animate-spin h-12 w-12 text-indigo-600" />
+      <div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">My Notebooks</h2>
+          <Button 
+            onClick={() => setShowCreateForm(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Notebook
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {notebooks.map((notebook) => (
+            <div 
+              key={notebook.id}
+              className="cursor-pointer group transform transition-all duration-300 hover:-translate-y-1"
+              onClick={() => handleNotebookSelect(notebook.id)}
+            >
+              {/* Notebook cover design */}
+              <div className="relative bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg rounded-lg overflow-hidden h-64 flex flex-col">
+                {/* Spiral binding */}
+                <div className="absolute left-0 top-0 bottom-0 w-6 flex flex-col justify-between py-4 items-center pointer-events-none">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="w-4 h-2 bg-white rounded-full opacity-80"></div>
+                  ))}
+                </div>
+                
+                {/* Cover content */}
+                <div className="flex-1 p-6 pl-10">
+                  <div className="flex justify-between">
+                    <h3 className="font-bold text-white text-xl mb-2">{notebook.title}</h3>
+                    <button
+                      onClick={(e) => handleDeleteNotebook(notebook.id, e)}
+                      className="text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete notebook"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-blue-100 text-sm">{notebook.subject.name}</p>
+                  <p className="text-blue-100 text-sm">{notebook.class_level.name}</p>
+                  
+                  <div className="mt-6 bg-blue-800/30 rounded-full h-2.5">
+                    <div 
+                      className="bg-yellow-300 h-2.5 rounded-full" 
+                      style={{ width: `${getProgressPercentage(notebook)}%` }}
+                    ></div>
+                  </div>
+                  
+                  <div className="mt-2 flex justify-between text-xs text-blue-100">
+                    <span>Progress</span>
+                    <span>
+                      {notebook.sections?.filter(s => s.lesson).length || 0} / {notebook.sections?.length || 0} lessons
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Label on the cover */}
+                <div className="bg-white/90 p-3 text-center shadow-inner">
+                  <p className="font-medium text-blue-800">{notebook.subject.name}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {/* New notebook button card */}
+          <div
+            className="cursor-pointer transform transition-all duration-300 hover:-translate-y-1"
+            onClick={() => setShowCreateForm(true)}
+          >
+            <div className="border-2 border-dashed border-gray-300 rounded-lg h-64 flex flex-col items-center justify-center hover:border-indigo-500 transition-colors">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8 text-indigo-600" />
+              </div>
+              <h3 className="font-medium text-gray-800 mb-1">Create New Notebook</h3>
+              <p className="text-sm text-gray-500">Add a new subject notebook</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
-  }
+  };
 
-  if (error && notebooks.length === 0) {
+  const renderCreateNotebookForm = () => {
     return (
-      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-        <p className="text-red-700">{error}</p>
-        <Button 
-          className="mt-4 bg-red-600 hover:bg-red-700 text-white"
-          onClick={() => {
-            setError(null);
-            setLoading(true);
-            api.get('/notebooks/get_notebooks/').then(response => {
-              setNotebooks(response.data);
-              setLoading(false);
-            }).catch(() => setLoading(false));
-          }}
-        >
-          Réessayer
-        </Button>
-      </div>
-    );
-  }
-
-  const currentNotebook = notebooks.find(n => n.id === activeNotebook);
-  const currentChapter = currentNotebook?.sections.find(s => s.id === activeChapter);
-
-  return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold flex items-center">
-            <Book className="w-5 h-5 mr-2" />
-            Mes cahiers de cours
-          </h2>
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Create New Notebook</h2>
           <Button
             variant="ghost"
             size="sm"
-            className="text-white hover:bg-white/20"
-            onClick={() => setIsCreating(!isCreating)}
+            onClick={() => setShowCreateForm(false)}
+            className="text-gray-500 hover:text-gray-700"
           >
-            {isCreating ? (
-              <>
-                <X className="w-4 h-4 mr-2" />
-                Annuler
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                {notebooks.length === 0 ? "Commencer" : "Nouveau cahier"}
-              </>
-            )}
+            <X className="w-5 h-5" />
           </Button>
         </div>
-      </div>
 
-      {isCreating && (
-        <div className="p-6 bg-white border-b border-gray-200 shadow-sm">
-          <h3 className="font-medium text-indigo-900 text-lg mb-4 flex items-center">
-            <Plus className="w-5 h-5 mr-2 text-indigo-600" />
-            Créer un nouveau cahier
-          </h3>
+        <div className="space-y-6">
+          <div>
+            <label htmlFor="notebookTitle" className="block text-sm font-medium text-gray-700 mb-1">
+              Notebook Title
+            </label>
+            <input
+              type="text"
+              id="notebookTitle"
+              value={notebookTitle}
+              onChange={(e) => setNotebookTitle(e.target.value)}
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Enter a title for your notebook"
+            />
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                <Book className="w-4 h-4 mr-2 text-indigo-500" />
-                Matière
-              </label>
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                disabled={!selectedClassLevel}
-              >
-                <option value="">{selectedClassLevel ? "Choisissez une matière" : "Sélectionnez d'abord un niveau"}</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                <School className="w-4 h-4 mr-2 text-indigo-500" />
-                Niveau
-              </label>
-              <select
-                value={selectedClassLevel}
-                onChange={(e) => {
-                  setSelectedClassLevel(e.target.value);
-                  setSelectedSubject('');
-                }}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">Choisissez un niveau</option>
-                {classLevels.map(level => (
-                  <option key={level.id} value={level.id}>
-                    {level.name}
-                  </option>
-                ))}
-              </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notebook Color</label>
+            <div className="flex gap-2">
+              {notebookColors.map(color => (
+                <button 
+                  key={color.name}
+                  type="button"
+                  className={`w-8 h-8 rounded-full ${color.accent} ${notebookColor === color.name ? 'ring-2 ring-offset-2 ring-gray-500' : ''}`}
+                  onClick={() => setNotebookColor(color.name)}
+                  title={color.name}
+                />
+              ))}
             </div>
           </div>
           
-          <div className="mt-6 flex justify-end space-x-3">
+          <div>
+            <label htmlFor="classLevel" className="block text-sm font-medium text-gray-700 mb-1">Class Level</label>
+            <select
+              id="classLevel"
+              value={selectedClassLevel}
+              onChange={(e) => setSelectedClassLevel(e.target.value)}
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Select a class level</option>
+              {classLevels.map(level => (
+                <option key={level.id} value={level.id}>{level.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+            <select
+              id="subject"
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              disabled={!selectedClassLevel || subjects.length === 0}
+            >
+              <option value="">
+                {!selectedClassLevel 
+                  ? "Select a class level first" 
+                  : subjects.length === 0 
+                    ? "No subjects available for this level" 
+                    : "Select a subject"}
+              </option>
+              {subjects.map(subject => (
+                <option key={subject.id} value={subject.id}>{subject.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end space-x-3 mt-4">
             <Button
               variant="outline"
-              onClick={() => setIsCreating(false)}
-              className="border-gray-300 hover:bg-gray-50"
+              onClick={() => setShowCreateForm(false)}
+              className="border-gray-300"
             >
-              Annuler
+              Cancel
             </Button>
             <Button
-              onClick={createNotebook}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-              disabled={!selectedSubject || !selectedClassLevel || loading}
+              onClick={handleCreateNotebook}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={!selectedSubject || !selectedClassLevel || !notebookTitle || loading}
             >
               {loading ? (
-                <div className="flex items-center">
-                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                  Création...
-                </div>
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-2" />
-                  Créer mon cahier
+                  Create Notebook
                 </>
               )}
             </Button>
           </div>
         </div>
-      )}
+      </div>
+    );
+  };
 
-<div className="flex flex-col md:flex-row">
-        {/* Left Sidebar for Notebooks */}
-        <div className="w-full md:w-64 bg-gray-50 p-4 border-r border-gray-200">
-          <h3 className="font-medium text-gray-900 mb-4">Mes cahiers</h3>
-          {notebooks.length === 0 ? (
-            <div className="text-center p-4 bg-gray-100 rounded-lg">
-              <BookOpen className="mx-auto h-8 w-8 text-gray-400 mb-3" />
-              <p className="text-gray-500">Vous n'avez pas encore de cahiers</p>
-              <Button
-                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white w-full"
-                onClick={() => setIsCreating(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Créer mon premier cahier
-              </Button>
+  const renderNotebookContent = () => {
+    const notebook = getCurrentNotebook();
+    if (!notebook) {
+      console.log('No current notebook found');
+      return (
+        <div className="flex justify-center items-center h-full">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <Loader2 className="w-8 h-8 mx-auto text-blue-600 animate-spin mb-4" />
+            <p className="text-gray-600 text-center">Loading notebook content...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    console.log('Rendering notebook content for:', notebook);
+    console.log('Current section ID:', currentSectionId);
+    console.log('Available sections:', notebook.sections);
+    
+    return (
+      <div className="h-full flex flex-col">
+        {/* Notebook Header */}
+        <div className="bg-blue-600 text-white p-3 flex justify-between items-center border-b border-blue-800">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoBackToNotebooks}
+              className="mr-2 text-white hover:bg-white/20"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+            <h2 className="font-bold">{notebook.title}</h2>
+          </div>
+          <div className="text-sm">
+            {notebook.subject.name} • {notebook.class_level.name}
+          </div>
+        </div>
+
+        {/* Notebook Body with Loading State */}
+        {sectionsLoading ? (
+          <div className="flex-1 flex items-center justify-center bg-blue-50">
+            <div className="text-center">
+              <Loader2 className="w-10 h-10 mx-auto text-blue-600 animate-spin mb-4" />
+              <p className="text-blue-700">Loading notebook sections...</p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {notebooks.map(notebook => (
-                <div
-                  key={notebook.id}
-                  className={`p-3 rounded-md cursor-pointer transition-colors ${
-                    activeNotebook === notebook.id
-                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                      : 'hover:bg-gray-100 border border-transparent'
-                  }`}
-                  onClick={() => {
-                    setActiveNotebook(notebook.id);
-                    setActiveChapter(null); // Reset active chapter
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center truncate">
-                      <BookOpen className="w-4 h-4 mr-2 text-indigo-600 flex-shrink-0" />
-                      <span className="truncate">{notebook.title}</span>
+          </div>
+        ) : (
+          <div className="flex flex-1 overflow-hidden bg-indigo-50">
+            {/* Side Tabs */}
+            <div className={'sidebarContainer'}>
+            <div className={`sidebarContent absolute inset-0 overflow-y-auto py-6 px-2 }`}>
+    {!notebook.sections || notebook.sections.length === 0 ? (
+      <div className="p-4 text-center">
+        <p className="text-gray-500">No chapters available</p>
+      </div>
+    ) : (
+      <div className="space-y-1">
+        {notebook.sections.map((section) => {
+          // Determine if this section has a lesson
+          const hasLesson = !!section.lesson;
+          
+          return (
+            <div 
+              key={section.id}
+              className={`relative ${hasLesson ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+              onClick={() => hasLesson && handleSectionSelect(section.id)}
+            >
+              {/* Index tab */}
+              <div 
+                className={`relative rounded-r-lg mb-1 py-2 pl-3 pr-4 
+                  ${currentSectionId === section.id 
+                    ? 'bg-white shadow-md border-l-4 border-blue-600' 
+                    : hasLesson 
+                      ? 'bg-white/80 hover:bg-white border-l-4 border-transparent' 
+                      : 'bg-gray-100 border-l-4 border-transparent'}
+                `}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className={`font-medium ${currentSectionId === section.id ? 'text-blue-800' : 'text-gray-800'}`}>
+                      {section.chapter.name}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 flex-shrink-0">
-                        {notebook.sections.filter(s => s.lesson).length}/{notebook.sections.length}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotebook(notebook.id);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {section.lesson && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {section.lesson.title}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 text-xs text-gray-500 truncate">
-                    {notebook.subject.name} • {notebook.class_level.name}
-                  </div>
+                  {hasLesson && (
+                    <button
+                      onClick={(e) => handleRemoveLesson(section.id, e)}
+                      className="text-red-500 hover:text-red-700 opacity-0 hover:opacity-100 transition-opacity"
+                      title="Remove lesson"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-              ))}
+                
+                {/* Tab divider */}
+                <div 
+                  className={`absolute -right-4 top-0 bottom-0 w-4 
+                    ${currentSectionId === section.id 
+                      ? 'bg-white' 
+                      : hasLesson 
+                        ? 'bg-transparent' 
+                        : 'bg-transparent'}`
+                  }
+                ></div>
+              </div>
+              
+              {/* Tab bookmark design */}
+              <div 
+                className={`absolute -left-2 top-1 w-2 h-8 rounded-l-sm
+                  ${hasLesson ? 'bg-blue-600' : 'bg-gray-400'}`}
+              ></div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</div>
+            
+            {/* Notebook pages with lined paper */}
+            <div 
+              ref={contentRef}
+              className="flex-1 relative"
+            >
+              <div className="notebook-paperabsolute inset-0 overflow-y-auto p-6 bg-white shadow-md">
+                {currentSectionId ? (
+                  renderSectionContent()
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="bg-blue-50 p-6 rounded-lg max-w-md text-center">
+                      <Bookmark className="w-16 h-16 mx-auto text-blue-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-800 mb-2">Select a chapter</h3>
+                      <p className="text-gray-600">
+                        Choose a chapter from the tabs on the left to view its content.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSectionContent = () => {
+    const section = getCurrentSection();
+    
+    if (!section || !section.lesson) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="bg-yellow-50 p-6 rounded-lg max-w-md text-center">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              No lesson content available
+            </h3>
+            <p className="text-gray-600">
+              This chapter doesn't have any lesson content yet.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  
+    return (
+      <div className="relative z-10 bg-transparent">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900 bg-white inline-block px-1">
+            {section.lesson.title}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1 bg-white inline-block px-1">
+            Chapter: {section.chapter.name}
+          </p>
+        </div>
+  
+        {section.lesson.content && (
+          <div className="prose max-w-none mb-8">
+            <div className="bg-white/80 p-4 rounded">
+              <TipTapRenderer content={section.lesson.content} />
+            </div>
+          </div>
+        )}
+  
+        {/* Notes section */}
+        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-md p-4 mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="font-medium flex items-center text-amber-800 bg-white px-1">
+              <PenLine className="w-4 h-4 mr-2" />
+              My Notes
+            </h4>
+            
+            {editingNotes ? (
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  onClick={handleSaveNotes}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelEditNotes}
+                  className="text-gray-600"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleStartEditNotes(section.user_notes)}
+                className="text-amber-700 border-amber-300 hover:bg-amber-100"
+              >
+               <Edit className="w-4 h-4 mr-1" />
+              Edit Notes
+            </Button>
+            )}
+          </div>
+
+          {editingNotes ? (
+            <textarea
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              rows={6}
+              placeholder="Write your personal notes here..."
+            />
+          ) : (
+            <div className="prose prose-sm max-w-none text-gray-700 bg-white p-3 rounded-md">
+              {section.user_notes ? (
+                <div dangerouslySetInnerHTML={{ __html: section.user_notes }} />
+              ) : (
+                <p className="text-gray-500 italic">No notes added yet.</p>
+              )}
             </div>
           )}
         </div>
+      </div>
+    );
+  };
 
-        {/* Main Content Area */}
-        <div className="flex-1 p-6 overflow-auto max-h-[calc(100vh-250px)]">
-          {currentNotebook ? (
-            <div className="flex h-full">
-              {/* Chapters Sidebar */}
-              <div className="w-64 bg-gray-50 p-4 border-r border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-4">Chapitres</h3>
-                {currentNotebook.sections.length === 0 ? (
-                  <p className="text-gray-500">Aucun chapitre disponible.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {currentNotebook.sections.map(section => (
-                      <button
-                        key={section.id}
-                        className={`w-full p-2 rounded-md text-left ${
-                          activeChapter === section.id
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : 'hover:bg-gray-100'
-                        }`}
-                        onClick={() => setActiveChapter(section.id)}
-                      >
-                        {section.chapter.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+  // Main render
+  return (
+    <div className="h-full flex flex-col bg-gray-100">
+      {/* App Header */}
+      <div className="bg-white shadow-sm p-4 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-semibold text-gray-900 flex items-center">
+            <Book className="w-5 h-5 mr-2" />
+            My Student Notebook
+          </h1>
+        </div>
+      </div>
 
-              {/* Chapter Content */}
-              <div className="flex-1 p-4 bg-white">
-                {currentChapter ? (
-                  <div className="space-y-4">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">{currentChapter.chapter.name}</h3>
-                    {currentChapter.lesson ? (
-                      <>
-                        <div className="prose max-w-none mb-6">
-                          <TipTapRenderer content={currentChapter.lesson.content} />
-                        </div>
-                        <div className="bg-yellow-50 p-4 rounded-md border-l-4 border-yellow-300">
-                          {/* Notes Section */}
-                          <div className="flex justify-between items-center mb-3">
-                            <h5 className="font-medium text-gray-800 flex items-center">
-                              <Edit className="w-4 h-4 mr-2 text-yellow-600" />
-                              Mes notes
-                            </h5>
-                            {editingNotes === currentChapter.id ? (
-                              <div className="flex space-x-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => saveNotes(currentChapter.id)}
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  <Save className="w-4 h-4 mr-1" />
-                                  Enregistrer
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={cancelEditingNotes}
-                                  className="text-gray-600 hover:text-gray-700"
-                                >
-                                  <X className="w-4 h-4 mr-1" />
-                                  Annuler
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => startEditingNotes(currentChapter.id, currentChapter.user_notes)}
-                                className="text-indigo-600 hover:text-indigo-700"
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Modifier
-                              </Button>
-                            )}
-                          </div>
-                          {editingNotes === currentChapter.id ? (
-                            <textarea
-                              value={noteContent}
-                              onChange={(e) => setNoteContent(e.target.value)}
-                              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              rows={4}
-                              placeholder="Ajoutez vos notes personnelles ici..."
-                            />
-                          ) : (
-                            <div className="prose prose-sm max-w-none text-gray-700">
-                              {currentChapter.user_notes ? (
-                                <div dangerouslySetInnerHTML={{ __html: currentChapter.user_notes }} />
-                              ) : (
-                                <p className="text-gray-500 italic">Pas encore de notes.</p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-gray-500">Aucune leçon n'a été ajoutée à ce chapitre.</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">Sélectionnez un chapitre pour afficher son contenu.</p>
-                )}
-              </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto p-6">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
+          ) : error ? (
+            <div className="text-center text-red-600 p-4">{error}</div>
+          ) : showCreateForm ? (
+            renderCreateNotebookForm()
+          ) : showNotebooksList ? (
+            renderNotebooksList()
           ) : (
-            <div className="text-center p-8">
-              <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">Veuillez sélectionner un cahier ou en créer un nouveau.</p>
-            </div>
+            renderNotebookContent()
           )}
         </div>
       </div>

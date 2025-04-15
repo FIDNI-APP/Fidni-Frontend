@@ -231,6 +231,35 @@ export interface Lesson {
   subfields : Subfield[];
 }
 
+// Types
+export interface Notebook {
+  id: string;
+  title: string;
+  subject: {
+    id: string;
+    name: string;
+  };
+  class_level: {
+    id: string;
+    name: string;
+  };
+  sections: Section[];
+}
+
+export interface Section {
+  id: string;
+  chapter: {
+    id: string;
+    name: string;
+  };
+  lesson: {
+    id: string;
+    title: string;
+    content: string;
+  } | null;
+  user_notes: string;
+  order: number;
+}
 
 
 // Single lesson entry in a notebook chapter
@@ -250,18 +279,6 @@ export interface NotebookChapter {
   notes?: string;
   created_at: string;
   updated_at: string;
-}
-
-// Notebook (per subject)
-export interface Notebook {
-  id: string;
-  user: User;
-  subject: SubjectModel;
-  chapters: NotebookChapter[];
-  created_at: string;
-  updated_at: string;
-  title?: string;
-  cover_color?: string;
 }
 
 // Response type for getting all notebooks
