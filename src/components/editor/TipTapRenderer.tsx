@@ -7,7 +7,7 @@ import Image from '@tiptap/extension-image';
 import Mathematics from '@tiptap-pro/extension-mathematics';
 import 'katex/dist/katex.min.css';
 import TextAlign from '@tiptap/extension-text-align';
-import Heading from '@tiptap/extension-heading';
+// Suppression de l'import Heading car il est déjà inclus dans StarterKit
 
 interface TipTapRendererProps {
   content: string;
@@ -25,11 +25,13 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   // Initialize read-only TipTap editor for content rendering
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      TextStyle,
-      Heading.configure({
-        levels: [1, 2, 3],
+      // Configurer StarterKit pour personnaliser l'extension heading
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
       }),
+      TextStyle,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -37,15 +39,14 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       // Configure Image extension with proper options
       Image.configure({
         HTMLAttributes: {
-          class: 'content-image',
+          class: 'content-image rounded-lg max-w-full',
           loading: 'lazy',
-
         },
         allowBase64: true,
       }),
       
       Mathematics.configure({
-        // Use standard LaTeX syntax ($ for inline, $ for block)
+        // Use standard LaTeX syntax ($ for inline, $$ for block)
         regex: /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi,
         // Configure KaTeX options if needed
         katexOptions: {
@@ -63,13 +64,23 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     editable: false, // Make it read-only
   });
 
+  // Effet pour mettre à jour le contenu lorsqu'il change
+  useEffect(() => {
+    if (editor && content) {
+      // Seulement mettre à jour si le contenu est différent pour éviter les boucles infinies
+      if (editor.getHTML() !== content) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [editor, content]);
+
   // Style based on props
   const containerStyle: React.CSSProperties = {
-    ...(maxHeight ? { maxHeight, overflow: 'wrap' } : {}),
+    ...(maxHeight ? { maxHeight, overflow: 'auto' } : {}),
   };
 
   // Add class based on compact mode
-  const containerClass = `tiptap-readonly-editor latex-style text-xl ${compact ? 'tiptap-compact' : ''} ${className}`;
+  const containerClass = `tiptap-readonly-editor latex-style text-lg ${compact ? 'tiptap-compact' : ''} ${className}`;
 
   return (
     <div style={containerStyle} className={containerClass}>

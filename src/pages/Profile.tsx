@@ -506,10 +506,13 @@ export function UserProfile() {
             )}
             {/* Notebook Tab */}
             {activeTab === 'notebook' && isOwner && (
-              <div className="fade-in animate-delay-2">
+            <div className="fade-in animate-delay-2">
+              <div className="bg-white rounded-lg shadow-md p-0 overflow-hidden h-[calc(100vh-220px)]">
                 <StudentNotebook />
               </div>
-            )}
+            </div>
+          )}
+
           </div>
         </>
       )}
