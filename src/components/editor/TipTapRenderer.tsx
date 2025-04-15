@@ -7,25 +7,25 @@ import Image from '@tiptap/extension-image';
 import Mathematics from '@tiptap-pro/extension-mathematics';
 import 'katex/dist/katex.min.css';
 import TextAlign from '@tiptap/extension-text-align';
-// Suppression de l'import Heading car il est déjà inclus dans StarterKit
 
 interface TipTapRendererProps {
   content: string;
   className?: string;
   maxHeight?: string;
   compact?: boolean;
+  onReady?: () => void;
 }
 
 const TipTapRenderer: React.FC<TipTapRendererProps> = ({ 
   content, 
   className = '',
   maxHeight,
-  compact = true
+  compact = true,
+  onReady 
 }) => {
   // Initialize read-only TipTap editor for content rendering
   const editor = useEditor({
     extensions: [
-      // Configurer StarterKit pour personnaliser l'extension heading
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
@@ -36,7 +36,6 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         types: ['heading', 'paragraph'],
       }),
       Color,
-      // Configure Image extension with proper options
       Image.configure({
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
@@ -44,16 +43,12 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         },
         allowBase64: true,
       }),
-      
       Mathematics.configure({
-        // Use standard LaTeX syntax ($ for inline, $$ for block)
         regex: /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi,
-        // Configure KaTeX options if needed
         katexOptions: {
           throwOnError: false,
           strict: false
         },
-        // Only render in non-code blocks
         shouldRender: (state, pos, node) => {
           const $pos = state.doc.resolve(pos);
           return node.type.name === 'text' && $pos.parent.type.name !== 'codeBlock';
@@ -61,18 +56,27 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       })
     ],
     content: content,
-    editable: false, // Make it read-only
+    editable: false,
   });
 
-  // Effet pour mettre à jour le contenu lorsqu'il change
+  // Simple effect to update content when it changes
   useEffect(() => {
     if (editor && content) {
-      // Seulement mettre à jour si le contenu est différent pour éviter les boucles infinies
       if (editor.getHTML() !== content) {
         editor.commands.setContent(content);
       }
     }
   }, [editor, content]);
+
+  // Simple effect to notify when editor is ready
+  useEffect(() => {
+    if (editor && onReady) {
+      // Simple timeout to ensure content has been processed
+      setTimeout(() => {
+        onReady();
+      }, 300);
+    }
+  }, [editor, onReady]);
 
   // Style based on props
   const containerStyle: React.CSSProperties = {

@@ -999,3 +999,207 @@
   background-image: linear-gradient(to right, rgba(219, 234, 254, 0.3), rgba(219, 234, 254, 0.7));
   box-shadow: inset -10px 40 10px 10px rgba(0, 0, 0, 0.1);
 }
+
+/* TipTap content transition styles */
+.tiptap-content-fade {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Skeleton animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-loader {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%, 
+    #f8f8f8 50%, 
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Math content styles */
+.katex {
+  font-size: 1.1em !important; /* Adjust size as needed */
+}
+
+.katex-display {
+  margin: 1.5em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Fix for long katex equations */
+.katex-display > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Add padding for scrollbar to prevent equation cutoff */
+.katex-display > .katex::-webkit-scrollbar {
+  height: 5px;
+}
+
+.katex-display > .katex::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+.katex-display > .katex::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Custom prose overrides for better math spacing */
+.prose .math-inline {
+  display: inline-flex;
+  align-items: center;
+}
+
+.prose .math-block {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}/* TipTap content transition styles */
+.tiptap-content-fade {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Skeleton animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-loader {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%, 
+    #f8f8f8 50%, 
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Math content styles */
+.katex {
+  font-size: 1.1em !important; /* Adjust size as needed */
+}
+
+.katex-display {
+  margin: 1.5em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Fix for long katex equations */
+.katex-display > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Add padding for scrollbar to prevent equation cutoff */
+.katex-display > .katex::-webkit-scrollbar {
+  height: 5px;
+}
+
+.katex-display > .katex::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+.katex-display > .katex::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Custom prose overrides for better math spacing */
+.prose .math-inline {
+  display: inline-flex;
+  align-items: center;
+}
+
+.prose .math-block {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Add these styles to ensure LaTeX content is hidden until properly rendered */
+
+/* Hide LaTeX content before it's rendered */
+.tiptap-renderer-hidden {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Smooth transition for rendered content */
+.tiptap-renderer-visible {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transition: opacity 0.3s ease-in-out !important;
+}
+
+/* More vivid loading animation for the skeleton */
+@keyframes skeletonPulse {
+  0% {
+    background-color: rgba(226, 232, 240, 0.6);
+  }
+  50% {
+    background-color: rgba(226, 232, 240, 0.8);
+  }
+  100% {
+    background-color: rgba(226, 232, 240, 0.6);
+  }
+}
+
+.skeleton-pulse {
+  animation: skeletonPulse 1.5s infinite ease-in-out;
+}
+
+/* Ensure LaTeX math is properly formatted */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+  margin: 1em 0 !important;
+}
+
+/* Fix any scrollbars on LaTeX math */
+.katex-display > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Prevent LaTeX content from breaking layout */
+.katex-display, .katex, .katex-html {
+  max-width: 100% !important;
+}
+
+/* Add scrollbar styling for LaTeX overflow */
+.katex-display::-webkit-scrollbar {
+  height: 4px;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  background-color: rgba(79, 70, 229, 0.3);
+  border-radius: 2px;
+}
+
+.katex-display::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.05);
+}

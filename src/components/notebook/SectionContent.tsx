@@ -64,11 +64,11 @@ const SectionContent: React.FC<SectionContentProps> = ({
   // Use section ID as dependency to update renderKey when section changes
   useEffect(() => {
     if (section?.id) {
+      // Reset states
+      setContentLoading(true);
+      
       // Force TipTapRenderer to re-render with new content by changing its key
       setRenderKey(prev => prev + 1);
-      
-      // Indiquer que le contenu est en chargement
-      setContentLoading(true);
       
       // Charger les notes modulaires pour cette section
       loadModularNotes(section.id);
@@ -192,6 +192,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
 
   // Fonction appelée quand TipTapRenderer a fini de charger
   const handleContentReady = () => {
+    // Content is ready, stop showing the loading skeleton
     setContentLoading(false);
   };
 
@@ -208,16 +209,6 @@ const SectionContent: React.FC<SectionContentProps> = ({
       </div>
     );
   }
-
-  // Important debugging to see if content is coming through correctly
-  console.log("Rendering section content", {
-    sectionId: section.id,
-    lessonTitle: section.lesson.title,
-    contentLength: section.lesson.content?.length || 0,
-    contentPreview: section.lesson.content?.substring(0, 50) || "No content",
-    renderKey,
-    contentLoading
-  });
 
   return (
     <div className="p-8 overflow-y-auto flex-1 relative">
@@ -258,7 +249,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
         >
           {/* Loading state - skeleton loader */}
           {contentLoading && (
-            <div className="absolute inset-0 bg-white z-10 flex flex-col space-y-4 p-4">
+            <div className="absolute inset-0 bg-white z-20 flex flex-col space-y-4 p-4">
               <div className="h-6 bg-gray-200 rounded w-3/4 animate-pulse"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
               <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
@@ -274,14 +265,14 @@ const SectionContent: React.FC<SectionContentProps> = ({
           {modularNotes.map(note => (
             <div
               key={note.id}
-              className="absolute z-20"
+              className="absolute z-30"
               style={{
                 top: `${note.position.topPercent}%`,
                 left: `${note.position.leftPercent}%`,
               }}
             >
               <div 
-                className="flex flex-col items-start"
+                className="flex flex-col items-start group"
                 draggable
                 onDragEnd={(e) => {
                   if (!contentContainerRef.current) return;
@@ -367,13 +358,19 @@ const SectionContent: React.FC<SectionContentProps> = ({
             </div>
           ))}
           
-          {/* Contenu avec transition fluide */}
-          <div className={`transition-opacity duration-300 ${contentLoading ? 'opacity-0' : 'opacity-100'}`}>
-            {/* Key prop forcing re-render when content changes */}
+          {/* Content wrapper with hidden visibility until rendered */}
+          <div 
+            className="relative"
+            style={{ 
+              visibility: contentLoading ? 'hidden' : 'visible',
+              opacity: contentLoading ? 0 : 1,
+              transition: 'opacity 0.3s ease-in-out'
+            }}
+          >
             <TipTapRenderer 
               key={`section-${section.id}-renderer-${renderKey}`} 
               content={section.lesson.content}
-              onReady={handleContentReady} // Cette prop n'existe pas encore, nous l'ajouterons
+              onReady={handleContentReady}
             />
           </div>
         </div>
@@ -390,8 +387,18 @@ const SectionContent: React.FC<SectionContentProps> = ({
             </Button>
           </div>
         )}
-    
       </div>
+
+      {/* Add a style tag for CSS animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 };
