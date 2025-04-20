@@ -1,4 +1,4 @@
-import api from './apiClient';
+import {api} from './apiClient';
 import { getCurrentUser } from './authApi';
 
 export const updateUserProfile = async (userData: any) => {

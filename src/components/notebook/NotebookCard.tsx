@@ -1,3 +1,4 @@
+// src/components/notebook/NotebookCard.tsx (improved)
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Notebook } from '@/types';

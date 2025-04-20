@@ -1,16 +1,15 @@
-// src/lib/api/apiClient.tsx - Update your interceptor
-
+// src/lib/api/apiClient.tsx
 import axios from 'axios';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: false, // This might be causing issues
 });
 
-// Update the request interceptor
+// src/lib/api/apiClient.tsx
 api.interceptors.request.use(
   (config) => {
     // Clear any existing Authorization headers first
@@ -20,6 +19,9 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      // Add a custom header to identify anonymous requests
+      config.headers['X-Anonymous-Request'] = 'true';
     }
     
     return config;
@@ -28,5 +30,3 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
-export default api;

@@ -1,5 +1,5 @@
 // src/lib/api/notebookApi.ts
-import api from './apiClient';
+import {api} from './apiClient';
 import { Notebook, NotebookResponse, NotebookChapter, NotebookLessonEntry } from '@/types/index'
 
 // Get all notebooks for a user

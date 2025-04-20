@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -26,6 +26,14 @@ import { saveExercise, unsaveExercise } from '@/lib/api';
 import axios from 'axios';
 import '@/lib/styles.css';
 
+// Memoize TipTapRenderer to improve performance but keep the onReady callback capability
+const MemoizedTipTapRenderer = memo(
+  ({ content, onReady }: { content: string; onReady?: () => void }) => (
+    <TipTapRenderer content={content} onReady={onReady} />
+  ),
+  (prevProps, nextProps) => prevProps.content === nextProps.content
+);
+
 interface ContentCardProps {
   content: Content;
   onVote: (id: string, value: VoteValue) => void;
@@ -49,6 +57,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal(); 
+  
+  // Add a loading state for content rendering - default to false to hide content initially
+  const [contentLoaded, setContentLoaded] = useState<boolean>(false);
+  
+  // Handler for when TipTap is ready
+  const handleTipTapReady = () => {
+    setContentLoaded(true);
+  };
   
   // Check if solution exists
   const hasSolution = !!content.solution;
@@ -305,11 +321,21 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         </div>
         
-        {/* Content Preview - Added slight padding & improved typography */}
+        {/* Content Preview with Loading State */}
         <div className="px-5 py-4 flex-grow">
-          <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
-            <TipTapRenderer content={content.content} />
+          <div className={`transition-opacity duration-150 ${!contentLoaded ? 'opacity-0 absolute' : 'opacity-100'}`}>
+            <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
+              <MemoizedTipTapRenderer content={content.content} onReady={handleTipTapReady} />
+            </div>
           </div>
+          
+          {!contentLoaded && (
+            <div className="prose prose-sm max-w-none">
+              <div className="h-4 w-full bg-gray-100 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-5/6 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+          )}
         </div>
         
         {/* Footer Section with Integration - More Dynamic on Hover */}
@@ -444,25 +470,23 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         
         {/* Action Button - Positioned to not interfere with edit/delete buttons */}
         <div 
-        className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none ${isHovered ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'}`}
-      >
-        
-         <button
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handleCardClick(e);
-                   }}
-                   className={`bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
-                   aria-label="Voir l'exercice"
-                 >
-                   <ChevronRight className="w-8 h-8" />
-          <p className="font-medium text-lg mb-1 text-white">Voir l'exercice</p>
-
-                 </button>
+          className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none ${isHovered ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'}`}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCardClick(e);
+            }}
+            className={`bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
+            aria-label="Voir l'exercice"
+          >
+            <ChevronRight className="w-8 h-8" />
+            <p className="font-medium text-lg mb-1 text-white">Voir l'exercice</p>
+          </button>
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }

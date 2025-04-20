@@ -1,4 +1,4 @@
-import api from './apiClient';
+import {api} from './apiClient';
 import { SortOption, Difficulty } from '@/types/index';
 
 export const getContents = async (params: {

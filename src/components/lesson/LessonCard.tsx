@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -24,6 +24,9 @@ import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { useAuthModal } from '@/components/AuthController';
 import '@/lib/styles.css';
 
+// Memoize TipTapRenderer to improve performance
+const MemoizedTipTapRenderer = memo(TipTapRenderer);
+
 interface LessonCardProps {
   lesson: Lesson;
   onVote: (id: string, value: VoteValue) => void;
@@ -45,7 +48,19 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal(); 
+  
+  // Add a loading state for content rendering
+  const [contentLoaded, setContentLoaded] = useState<boolean>(false);
 
+  // Set content as loaded after component mount to prevent raw text flash
+  useEffect(() => {
+    if (!contentLoaded) {
+      // Use requestAnimationFrame to ensure this happens during the next paint cycle
+      requestAnimationFrame(() => {
+        setContentLoaded(true);
+      });
+    }
+  }, []);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Check if any text is selected
@@ -142,9 +157,18 @@ export const LessonCard: React.FC<LessonCardProps> = ({
         
         {/* Content Preview */}
         <div className="px-5 py-4 flex-grow">
-          <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
-            <TipTapRenderer content={lesson.content} />
-          </div>
+          {/* Hide content until loaded, showing a lightweight placeholder */}
+          {!contentLoaded ? (
+            <div className="prose prose-sm max-w-none text-gray-100 line-clamp-3 overflow-hidden">
+              <div className="h-4 w-full bg-gray-100 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-5/6 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+          ) : (
+            <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
+              <MemoizedTipTapRenderer content={lesson.content} />
+            </div>
+          )}
         </div>
         
         {/* Footer Section */}
@@ -255,7 +279,6 @@ export const LessonCard: React.FC<LessonCardProps> = ({
                     e.stopPropagation();
                     onDelete?.(lesson.id);
                   }}
-
                   className="h-8 px-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-all duration-300 hover:shadow-md"
                   title="Delete"
                 >

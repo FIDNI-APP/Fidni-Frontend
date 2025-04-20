@@ -714,7 +714,8 @@ export function LessonDetail() {
       </div>
       
       {/* CSS for Enhanced UI */}
-      <style jsx>{`
+      <style>
+        {`
         /* Page transition animations */
         .page-transition {
           animation: fadeIn 0.5s ease-out forwards;
@@ -760,7 +761,8 @@ export function LessonDetail() {
           outline: 2px solid #6366F1;
           outline-offset: 2px;
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }

@@ -34,6 +34,7 @@
     "react-confetti": "^6.3.0",
     "react-dom": "^18.3.1",
     "react-helmet": "^6.1.0",
+    "react-hook-form": "^7.55.0",
     "react-hot-toast": "^2.5.2",
     "react-intersection-observer": "^9.15.1",
     "react-katex": "^3.0.1",
@@ -44,7 +45,7 @@
     "react-svg": "^16.3.0",
     "react-syntax-highlighter": "^15.5.0",
     "react-toastify": "^11.0.5",
-    "recharts": "^2.15.1",
+    "recharts": "^2.15.3",
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {

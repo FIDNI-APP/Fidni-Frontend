@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 // Import components
-import { ProfileHeaderEnhanced } from '@/components/profile/ProfileHeaderEnhanced';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard';
 import { SavedExercisesSection } from '@/components/profile/SavedExercisesSection';
 import { ViewHistorySection } from '@/components/profile/ViewHistorySection';
@@ -53,7 +53,7 @@ export function UserProfile() {
   const [history, setHistory] = useState<ViewHistoryItem[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Additional states for the enhanced progress tracking
+  // Additional states for the  progress tracking
   const [successExercises, setSuccessExercises] = useState<Content[]>([]);
   const [reviewExercises, setReviewExercises] = useState<Content[]>([]);
   
@@ -223,9 +223,9 @@ export function UserProfile() {
         </div>
       ) : (
         <>
-          {/* Enhanced hero section with profile header */}
+          {/*  hero section with profile header */}
           <div className="max-w-full mx-auto">
-            <ProfileHeaderEnhanced 
+            <ProfileHeader 
               user={userProfile} 
               isOwner={isOwner}
               onEditProfile={handleEditProfile}

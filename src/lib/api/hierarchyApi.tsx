@@ -1,4 +1,4 @@
-import api from './apiClient';
+import {api} from './apiClient';
 import { ClassLevelModel, SubjectModel, ChapterModel, Subfield, Theorem } from '@/types/index';
 
 export const getClassLevels = async (): Promise<ClassLevelModel[]> => {

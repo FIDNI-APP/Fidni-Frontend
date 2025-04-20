@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
@@ -15,6 +15,43 @@ interface TipTapRendererProps {
   compact?: boolean;
   onReady?: () => void;
 }
+
+// Create a wrapper component that handles visibility
+const TipTapRendererWithLoadingState: React.FC<TipTapRendererProps> = (props) => {
+  const [isReady, setIsReady] = useState(false);
+  
+  // Handler to set ready state
+  const handleReady = () => {
+    setIsReady(true);
+    // Also call the original onReady if provided
+    if (props.onReady) {
+      props.onReady();
+    }
+  };
+  
+  return (
+    <div style={{ 
+      visibility: isReady ? 'visible' : 'hidden',
+      position: 'relative',
+      minHeight: '1rem'
+    }}>
+      {/* Hide the real content until it's ready */}
+      <div style={{ 
+        opacity: isReady ? 1 : 0,
+        transition: 'opacity 150ms ease-in-out'
+      }}>
+        <TipTapRenderer {...props} onReady={handleReady} />
+      </div>
+      
+      {/* Show nothing while loading (no placeholder) */}
+      {!isReady && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%' }}>
+          {/* Intentionally empty */}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const TipTapRenderer: React.FC<TipTapRendererProps> = ({ 
   content, 
@@ -59,7 +96,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     editable: false,
   });
 
-  // Simple effect to update content when it changes
+  // Update content when it changes
   useEffect(() => {
     if (editor && content) {
       if (editor.getHTML() !== content) {
@@ -68,10 +105,10 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     }
   }, [editor, content]);
 
-  // Simple effect to notify when editor is ready
+  // Notify when editor is ready
   useEffect(() => {
     if (editor && onReady) {
-      // Simple timeout to ensure content has been processed
+      // Wait a bit to ensure content has been processed
       setTimeout(() => {
         onReady();
       }, 300);
@@ -93,4 +130,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   );
 };
 
-export default TipTapRenderer;
+// Create a memoized version for better performance
+const MemoizedTipTapRenderer = memo(TipTapRendererWithLoadingState);
+
+export default MemoizedTipTapRenderer;

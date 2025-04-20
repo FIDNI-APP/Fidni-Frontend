@@ -1,5 +1,5 @@
 // Re-export everything from each module
-import api from './apiClient';
+import {api} from './apiClient';
 
 // Auth exports
 export { login, logout, register, getCurrentUser } from './authApi';

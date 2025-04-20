@@ -41,6 +41,8 @@ const SectionContent: React.FC<SectionContentProps> = ({
   
   // État pour gérer l'affichage fluide du contenu
   const [contentLoading, setContentLoading] = useState<boolean>(true);
+  // État pour contrôler complètement la visibilité du contenu
+  const [showContent, setShowContent] = useState<boolean>(false);
   
   // State pour les notes modulaires
   const [modularNotes, setModularNotes] = useState<ModularNote[]>([]);
@@ -51,6 +53,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
   
   // Référence pour le conteneur de contenu
   const contentContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   
   // Couleurs disponibles pour les notes
   const noteColors = [
@@ -66,6 +69,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
     if (section?.id) {
       // Reset states
       setContentLoading(true);
+      setShowContent(false);
       
       // Force TipTapRenderer to re-render with new content by changing its key
       setRenderKey(prev => prev + 1);
@@ -192,8 +196,15 @@ const SectionContent: React.FC<SectionContentProps> = ({
 
   // Fonction appelée quand TipTapRenderer a fini de charger
   const handleContentReady = () => {
-    // Content is ready, stop showing the loading skeleton
-    setContentLoading(false);
+    // Content is ready, stop showing the loading skeleton with a slight delay
+    setTimeout(() => {
+      setContentLoading(false);
+      // Afficher le contenu seulement après que le loading soit terminé
+      // pour éviter tout flash du contenu brut
+      setTimeout(() => {
+        setShowContent(true);
+      }, 50);
+    }, 100);
   };
 
   if (!section || !section.lesson) {
@@ -201,9 +212,9 @@ const SectionContent: React.FC<SectionContentProps> = ({
       <div className="flex flex-col items-center justify-center h-full p-8">
         <div className="bg-indigo-50 p-6 rounded-lg max-w-md text-center">
           <BookMarked className="w-16 h-16 mx-auto text-indigo-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No lesson content</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Aucun contenu de leçon</h3>
           <p className="text-gray-600">
-            This chapter doesn't have any lesson content yet.
+            Ce chapitre n'a pas encore de contenu de leçon.
           </p>
         </div>
       </div>
@@ -218,7 +229,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
             {section.lesson.title}
           </h2>
           <p className="text-sm text-gray-500 mt-1 bg-white inline-block px-1">
-            Chapter: {section.chapter.name}
+            Chapitre: {section.chapter.name}
           </p>
         </div>
         
@@ -247,9 +258,9 @@ const SectionContent: React.FC<SectionContentProps> = ({
           className={`prose max-w-none mb-8 bg-white/80 p-6 rounded-lg shadow-sm relative ${addingNote ? 'cursor-crosshair' : ''}`}
           onClick={addingNote ? addModularNote : undefined}
         >
-          {/* Loading state - skeleton loader */}
+          {/* Loading state - skeleton loader - Toujours visible jusqu'à ce que le contenu soit prêt */}
           {contentLoading && (
-            <div className="absolute inset-0 bg-white z-20 flex flex-col space-y-4 p-4">
+            <div className="absolute inset-0 bg-white z-30 flex flex-col space-y-4 p-4">
               <div className="h-6 bg-gray-200 rounded w-3/4 animate-pulse"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
               <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
@@ -300,7 +311,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
                 
                 {/* Expanded Note Content - only shown when editing */}
                 {editingNoteId === note.id && (
-                  <div className="mt-2 absolute top-10 z-20 bg-white rounded-lg shadow-lg p-3 border-l-4 min-w-64" style={{ borderColor: note.color }}>
+                  <div className="mt-2 absolute top-10 z-40 bg-white rounded-lg shadow-lg p-3 border-l-4 min-w-64" style={{ borderColor: note.color }}>
                     <div className="flex justify-between mb-2">
                       <div className="flex space-x-1">
                         {noteColors.map(color => (
@@ -350,7 +361,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
                 
                 {/* Tooltip to show note content on hover */}
                 {editingNoteId !== note.id && (
-                  <div className="absolute top-10 left-0 hidden group-hover:block bg-white p-2 rounded shadow-md border-l-2 min-w-40 max-w-60 text-sm z-10" style={{ borderColor: note.color }}>
+                  <div className="absolute top-10 left-0 hidden group-hover:block bg-white p-2 rounded shadow-md border-l-2 min-w-40 max-w-60 text-sm z-40" style={{ borderColor: note.color }}>
                     {note.content}
                   </div>
                 )}
@@ -358,14 +369,10 @@ const SectionContent: React.FC<SectionContentProps> = ({
             </div>
           ))}
           
-          {/* Content wrapper with hidden visibility until rendered */}
+          {/* Content wrapper with hidden visibility until completely ready */}
           <div 
-            className="relative"
-            style={{ 
-              visibility: contentLoading ? 'hidden' : 'visible',
-              opacity: contentLoading ? 0 : 1,
-              transition: 'opacity 0.3s ease-in-out'
-            }}
+            ref={contentRef}
+            className={`relative transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
           >
             <TipTapRenderer 
               key={`section-${section.id}-renderer-${renderKey}`} 

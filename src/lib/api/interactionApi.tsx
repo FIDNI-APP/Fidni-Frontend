@@ -1,4 +1,4 @@
-import api from './apiClient';
+import {api} from './apiClient';
 import { Solution } from '@/types/index';
 
 // Vote types and functions

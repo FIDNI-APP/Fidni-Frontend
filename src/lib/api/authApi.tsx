@@ -1,34 +1,27 @@
-import api from './apiClient';
+import {api} from './apiClient';
 
-export const login = async (identifier: string, password: string) => {
+export const login = async (identifier : string, password : string) => {
   try {
-    console.log(`Tentative de connexion avec: ${identifier}`);
-    
     const response = await api.post('/token/', { 
       username: identifier,
       password 
     });
     
     if (response.data.access) {
-      console.log('Connexion réussie, token obtenu');
+      // Store tokens
       localStorage.setItem('token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
+      
+      // Ensure proper format with space after "Bearer"
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-    } else {
-      console.warn('Réponse de connexion sans token d\'accès:', response.data);
     }
     
     return response.data;
   } catch (error) {
-    console.error('Erreur de connexion détaillée:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('Réponse d\'erreur:', error.response.data);
-      console.error('Status:', error.response.status);
-    }
+    console.error('Login error:', error);
     throw error;
   }
 };
-
 export const logout = async () => {
   const response = await api.post('/auth/logout/');
   localStorage.removeItem('token');
