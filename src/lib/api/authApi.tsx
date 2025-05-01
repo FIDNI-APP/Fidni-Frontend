@@ -49,46 +49,26 @@ export const register = async (username: string, email: string, password: string
 };
 
 export const getCurrentUser = async () => {
+  // First check if we have a token at all
+  const token = localStorage.getItem('token');
+  
+  // If no token exists, return null or a "not authenticated" response
+  if (!token) {
+    return null; // Or { authenticated: false } or whatever makes sense for your app
+  }
+  
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      return null; // Return null without making API call if no token exists
-    }
-    
-    // Make sure the Authorization header is set correctly before making the request
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
     const response = await api.get('/auth/user/');
     return response.data;
-  } catch (error) {
-    console.error('Error getting current user:', error);
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      // Token is invalid or expired, try to refresh
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const refreshResponse = await api.post('/token/refresh/', { 
-            refresh: refreshToken 
-          });
-          
-          if (refreshResponse.data.access) {
-            localStorage.setItem('token', refreshResponse.data.access);
-            api.defaults.headers.common['Authorization'] = `Bearer ${refreshResponse.data.access}`;
-            
-            // Retry the original request with new token
-            const retryResponse = await api.get('/auth/user/');
-            return retryResponse.data;
-          }
-        }
-      } catch (refreshError) {
-        // If refresh fails, clean up tokens
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-      }
+  } catch (error: any) {
+    // If token is invalid, clear it
+    if (error.response?.status === 403 && 
+        error.response?.data?.code === 'token_not_valid') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
     }
-    return null;
+    console.error("Error getting current user:", error);
+    return null; // Indicate not authenticated
   }
 };
 
-// Fix missing axios import
-import axios from 'axios';
