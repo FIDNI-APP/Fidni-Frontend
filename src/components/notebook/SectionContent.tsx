@@ -382,18 +382,6 @@ const SectionContent: React.FC<SectionContentProps> = ({
           </div>
         </div>
         
-        {/* Save Modular Notes Button */}
-        {modularNotes.length > 0 && (
-          <div className="mb-8 flex justify-end">
-            <Button
-              onClick={saveModularNotes}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Enregistrer toutes les notes
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Add a style tag for CSS animations */}

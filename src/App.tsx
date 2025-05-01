@@ -62,6 +62,7 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
+      <AuthProvider>
         <AuthModalProvider>
           <div className="min-h-screen bg-gray-100">
             <Navbar />
@@ -85,6 +86,7 @@ function App() {
             </Routes>
           </div>
           </AuthModalProvider>
+      </AuthProvider>
     </BrowserRouter>
     </div>
   );

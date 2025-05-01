@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
@@ -19,6 +19,7 @@ interface TipTapRendererProps {
 // Create a wrapper component that handles visibility
 const TipTapRendererWithLoadingState: React.FC<TipTapRendererProps> = (props) => {
   const [isReady, setIsReady] = useState(false);
+  const renderTimeout = useRef<number | null>(null);
   
   // Handler to set ready state
   const handleReady = () => {
@@ -28,6 +29,15 @@ const TipTapRendererWithLoadingState: React.FC<TipTapRendererProps> = (props) =>
       props.onReady();
     }
   };
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (renderTimeout.current) {
+        window.clearTimeout(renderTimeout.current);
+      }
+    };
+  }, []);
   
   return (
     <div style={{ 
@@ -77,6 +87,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
           loading: 'lazy',
+          decoding: 'async' // Add async decoding
         },
         allowBase64: true,
       }),
@@ -96,22 +107,37 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     editable: false,
   });
 
-  // Update content when it changes
+  // Update content when it changes, with debounce to avoid excessive updates
   useEffect(() => {
     if (editor && content) {
-      if (editor.getHTML() !== content) {
-        editor.commands.setContent(content);
-      }
+      // Use requestAnimationFrame to schedule the update for next paint
+      const rafId = requestAnimationFrame(() => {
+        if (editor.getHTML() !== content) {
+          editor.commands.setContent(content);
+        }
+      });
+      
+      return () => cancelAnimationFrame(rafId);
     }
   }, [editor, content]);
 
   // Notify when editor is ready
   useEffect(() => {
     if (editor && onReady) {
-      // Wait a bit to ensure content has been processed
-      setTimeout(() => {
-        onReady();
-      }, 300);
+      // Use requestIdleCallback if available, otherwise setTimeout
+      if ('requestIdleCallback' in window) {
+        const idleCallbackId = requestIdleCallback(() => {
+          onReady();
+        });
+        
+        return () => cancelIdleCallback(idleCallbackId);
+      } else {
+        const timeoutId = setTimeout(() => {
+          onReady();
+        }, 100); // Reduced from 300ms to 100ms
+        
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [editor, onReady]);
 

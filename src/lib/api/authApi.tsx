@@ -52,9 +52,9 @@ export const getCurrentUser = async () => {
   // First check if we have a token at all
   const token = localStorage.getItem('token');
   
-  // If no token exists, return null or a "not authenticated" response
+  // If no token exists, return null immediately
   if (!token) {
-    return null; // Or { authenticated: false } or whatever makes sense for your app
+    return null;
   }
   
   try {
@@ -65,10 +65,11 @@ export const getCurrentUser = async () => {
     if (error.response?.status === 403 && 
         error.response?.data?.code === 'token_not_valid') {
       localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('refresh_token');
+      // Also remove the Authorization header
+      delete api.defaults.headers.common['Authorization'];
     }
     console.error("Error getting current user:", error);
-    return null; // Indicate not authenticated
+    return null;
   }
 };
-

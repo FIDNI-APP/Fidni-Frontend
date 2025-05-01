@@ -1,8 +1,9 @@
-import React, { useState, useEffect,  } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, LogIn, UserPlus, ChevronLeft, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { register, login } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
+import { register } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 interface AuthModalProps {
@@ -23,6 +24,7 @@ export const AuthModal = ({ isOpen, onClose, returnUrl = '/' }: AuthModalProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   // Reset state when modal opens
   useEffect(() => {
