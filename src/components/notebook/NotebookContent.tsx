@@ -1,37 +1,36 @@
-// Modified version of your TipTapRenderer.tsx
+// NotebookContent.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TextStyle from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import Image from '@tiptap/extension-image';
-import Mathematics from '@tiptap-pro/extension-mathematics';
-import TextAlign from '@tiptap/extension-text-align';
 import { useNavigate } from 'react-router-dom';
-import 'katex/dist/katex.min.css';
-import { Highlighter, Pen, Type, Eraser, Trash2, X } from 'lucide-react';
+import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { Highlighter, Pen, Type, Eraser, Trash2, X, Loader2 } from 'lucide-react';
 
-interface TipTapRendererProps {
-  content: string;
-  className?: string;
-  maxHeight?: string;
-  // New props
-  notebookStyle?: boolean;
-  notebookTheme?: {
-    bgColor: string;
-    lineColor: string;
-    isGrid: boolean;
-    lineSpacing: number;
-  };
-  enableAnnotations?: boolean;
-  compact?: boolean;
-  onReady?: () => void;
-  // For redirection
-  lessonId?: string;
+interface NotebookTheme {
+  bgColor: string;
+  lineColor: string;
+  isGrid: boolean;
+  lineSpacing: number;
 }
 
-// Define notebook themes within the component
-const defaultNotebookThemes = {
+interface NotebookContentProps {
+  content: string;
+  lessonId?: string;
+  className?: string;
+  notebookTheme?: NotebookTheme;
+  onReady?: () => void;
+  onSaveAnnotations?: (annotations: Annotation[]) => Promise<void>;
+  initialAnnotations?: Annotation[];
+}
+
+type Annotation = {
+  id: string;
+  type: 'highlight' | 'note' | 'pen';
+  position: { x: number; y: number; width?: number; height?: number };
+  color: string;
+  content?: string;
+  path?: string;
+};
+
+const notebookThemes = {
   ruled: {
     bgColor: '#ffffff',
     lineColor: '#e5e7eb',
@@ -58,132 +57,66 @@ const defaultNotebookThemes = {
   }
 };
 
-// Annotation type
-type Annotation = {
-  id: string;
-  type: 'highlight' | 'note' | 'pen';
-  position: { x: number; y: number; width?: number; height?: number };
-  color: string;
-  content?: string;
-  path?: string;
-};
-
-const TipTapRenderer: React.FC<TipTapRendererProps> = ({ 
-  content, 
+const NotebookContent: React.FC<NotebookContentProps> = ({
+  content,
+  lessonId,
   className = '',
-  maxHeight,
-  notebookStyle = false,
-  notebookTheme = defaultNotebookThemes.ruled,
-  enableAnnotations = false,
-  compact = true,
+  notebookTheme = notebookThemes.ruled,
   onReady,
-  lessonId
+  onSaveAnnotations,
+  initialAnnotations = []
 }) => {
-  // For navigation
   const navigate = useNavigate();
-  
-  // State for content loading
   const [contentLoaded, setContentLoaded] = useState(false);
-  
-  // States for annotation functionality
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [activeTool, setActiveTool] = useState<'highlight' | 'note' | 'pen' | 'eraser' | null>(null);
-  const [activeColor, setActiveColor] = useState('#ffeb3b'); // Default yellow for highlighting
+  const [activeColor, setActiveColor] = useState('#ffeb3b');
+  const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
+  const [startPoint, setStartPoint] = useState<{x: number, y: number} | null>(null);
+  const [highlightSize, setHighlightSize] = useState<{width: number, height: number} | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
-  // Refs for annotation layer
-  const annotationLayerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const annotationLayerRef = useRef<HTMLDivElement>(null);
   
-  // Color palette for annotations
   const colorPalette = ['#ffeb3b', '#4caf50', '#2196f3', '#f44336', '#9c27b0'];
   
-  // Initialize TipTap editor for content rendering
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
-      TextStyle,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      Color,
-      Image.configure({
-        HTMLAttributes: {
-          class: 'content-image rounded-lg max-w-full',
-          loading: 'lazy',
-          decoding: 'async'
-        },
-        allowBase64: true,
-      }),
-      Mathematics.configure({
-        regex: /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi,
-        katexOptions: {
-          throwOnError: false,
-          strict: false
-        },
-        shouldRender: (state, pos, node) => {
-          const $pos = state.doc.resolve(pos);
-          return node.type.name === 'text' && $pos.parent.type.name !== 'codeBlock';
-        }
-      })
-    ],
-    content: content,
-    editable: false,
-  });
-
-  // Update content when it changes
+  // Save annotations whenever they change
   useEffect(() => {
-    if (editor && content) {
-      // Use requestAnimationFrame to schedule the update for next paint
-      const rafId = requestAnimationFrame(() => {
-        if (editor.getHTML() !== content) {
-          editor.commands.setContent(content);
+    const save = async () => {
+      if (onSaveAnnotations && annotations !== initialAnnotations) {
+        setIsSaving(true);
+        try {
+          await onSaveAnnotations(annotations);
+        } catch (error) {
+          console.error('Failed to save annotations:', error);
+        } finally {
+          setIsSaving(false);
         }
-      });
-      
-      return () => cancelAnimationFrame(rafId);
-    }
-  }, [editor, content]);
+      }
+    };
+    
+    const timer = setTimeout(save, 1000); // Debounce saves
+    return () => clearTimeout(timer);
+  }, [annotations, onSaveAnnotations, initialAnnotations]);
 
-  // Notify when editor is ready and setup clickable headings
-  useEffect(() => {
-    if (editor) {
-      // Small delay to ensure LaTeX rendering is complete
-      const timeout = setTimeout(() => {
-        setContentLoaded(true);
-        
-        // Setup clickable titles after content is loaded
-        if (lessonId) {
-          setupClickableHeadings();
-        }
-        
-        if (onReady) onReady();
-      }, 100);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [editor, onReady, lessonId]);
+  const handleContentReady = () => {
+    setContentLoaded(true);
+    setupClickableHeadings();
+    if (onReady) onReady();
+  };
   
-  // Setup clickable headings for navigation to lesson detail
   const setupClickableHeadings = () => {
-    if (!editor || !lessonId) return;
+    if (!contentRef.current || !lessonId) return;
     
-    // Find all h1, h2, h3 elements in the editor
-    const editorElement = editor.view.dom;
-    const headings = editorElement.querySelectorAll('h1, h2, h3');
+    const headings = contentRef.current.querySelectorAll('h1, h2, h3');
     
-    // Add click handlers to each heading
     headings.forEach(heading => {
-      (heading as HTMLElement).style.cursor = 'pointer';
+      heading.style.cursor = 'pointer';
       heading.classList.add('hover:text-indigo-600', 'transition-colors');
       
-      // Add hover effect for better UX
       heading.addEventListener('mouseover', () => {
         heading.classList.add('text-indigo-500');
       });
@@ -192,7 +125,6 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         heading.classList.remove('text-indigo-500');
       });
       
-      // Add click handler
       heading.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -200,21 +132,17 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       });
     });
   };
-
-  // Toggle active tool (improved to allow cancelling the active tool)
+  
   const toggleTool = (tool: 'highlight' | 'note' | 'pen' | 'eraser') => {
     if (activeTool === tool) {
-      // If clicking the active tool, deactivate it
       setActiveTool(null);
     } else {
-      // Otherwise, activate the clicked tool
       setActiveTool(tool);
     }
   };
-
-  // Annotation event handlers
+  
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!enableAnnotations || !activeTool) return;
+    if (!activeTool) return;
     
     const annotationLayer = annotationLayerRef.current;
     if (!annotationLayer) return;
@@ -225,20 +153,22 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
+    setStartPoint({x, y});
+    
     if (activeTool === 'pen') {
       setCurrentPath(`M ${x} ${y}`);
-    } else if (activeTool === 'highlight' || activeTool === 'note') {
+    } else if (activeTool === 'note') {
       const newAnnotation: Annotation = {
         id: `annotation-${Date.now()}`,
-        type: activeTool,
+        type: 'note',
         color: activeColor,
         position: {
           x,
           y,
-          width: activeTool === 'highlight' ? 100 : 150,
-          height: activeTool === 'highlight' ? 20 : 100,
+          width: 150,
+          height: 100,
         },
-        content: activeTool === 'note' ? '' : undefined,
+        content: '',
       };
       
       setAnnotations(prev => [...prev, newAnnotation]);
@@ -246,7 +176,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !activeTool || activeTool !== 'pen') return;
+    if (!isDrawing || !activeTool) return;
     
     const annotationLayer = annotationLayerRef.current;
     if (!annotationLayer) return;
@@ -255,11 +185,57 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    setCurrentPath(prev => `${prev} L ${x} ${y}`);
+    if (activeTool === 'pen') {
+      setCurrentPath(prev => `${prev} L ${x} ${y}`);
+    } else if (activeTool === 'highlight' && startPoint) {
+      const width = Math.abs(x - startPoint.x);
+      const height = Math.abs(y - startPoint.y);
+      setHighlightSize({width, height});
+    } else if (activeTool === 'eraser') {
+      // Check for pen annotations to erase
+      if (currentPath) {
+        // Find pen annotations near the current position
+        const annotationsToDelete = annotations.filter(ann => {
+          if (ann.type === 'pen' && ann.path) {
+            // Simple distance check - could be improved
+            return ann.path.split('L').some(point => {
+              const [px, py] = point.trim().split(' ').map(Number);
+              return Math.abs(px - x) < 10 && Math.abs(py - y) < 10;
+            });
+          }
+          return false;
+        });
+        
+        if (annotationsToDelete.length > 0) {
+          setAnnotations(prev => 
+            prev.filter(ann => !annotationsToDelete.some(a => a.id === ann.id))
+          );
+        }
+      } else {
+        // Erase other annotations
+        const annotationsToDelete = annotations.filter(ann => {
+          if (ann.type === 'pen') return false;
+          
+          const { position } = ann;
+          return (
+            x >= position.x && 
+            x <= position.x + (position.width || 0) && 
+            y >= position.y && 
+            y <= position.y + (position.height || 0)
+          );
+        });
+        
+        if (annotationsToDelete.length > 0) {
+          setAnnotations(prev => 
+            prev.filter(ann => !annotationsToDelete.some(a => a.id === ann.id))
+          );
+        }
+      }
+    }
   };
 
   const handleMouseUp = () => {
-    if (!isDrawing) return;
+    if (!isDrawing || !activeTool) return;
     
     if (activeTool === 'pen' && currentPath) {
       const newAnnotation: Annotation = {
@@ -272,9 +248,25 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       
       setAnnotations(prev => [...prev, newAnnotation]);
       setCurrentPath('');
+    } else if (activeTool === 'highlight' && startPoint && highlightSize) {
+      const newAnnotation: Annotation = {
+        id: `highlight-${Date.now()}`,
+        type: 'highlight',
+        color: activeColor,
+        position: {
+          x: startPoint.x,
+          y: startPoint.y,
+          width: highlightSize.width,
+          height: highlightSize.height,
+        },
+      };
+      
+      setAnnotations(prev => [...prev, newAnnotation]);
+      setHighlightSize(null);
     }
     
     setIsDrawing(false);
+    setStartPoint(null);
   };
 
   const handleDeleteAnnotation = (id: string) => {
@@ -294,8 +286,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       )
     );
   };
-
-  // Generate notebook background style
+  
   const getNotebookStyle = (): React.CSSProperties => {
     if (notebookTheme.isGrid) {
       return {
@@ -315,17 +306,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       };
     }
   };
-
-  // Style based on props
-  const containerStyle: React.CSSProperties = {
-    ...(maxHeight ? { maxHeight, overflow: 'auto' } : {}),
-    ...(notebookStyle ? getNotebookStyle() : {}),
-  };
-
-  // Add class based on compact mode
-  const containerClass = `tiptap-readonly-editor latex-style text-lg ${compact ? 'tiptap-compact' : ''} ${className}`;
-
-  // Get cursor class based on active tool
+  
   const getCursorClass = () => {
     if (!activeTool) return '';
     
@@ -339,10 +320,9 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
-      {/* Annotation Tools (only show if annotations are enabled) */}
-      {enableAnnotations && (
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 flex items-center space-x-2 shadow-sm">
+    <div className="notebook-content-wrapper" ref={containerRef}>
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-3 py-2 shadow-sm">
+        <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
               onClick={() => toggleTool('highlight')}
@@ -384,7 +364,6 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
             )}
           </div>
           
-          {/* Color Palette - only show when a color-based tool is active */}
           {(activeTool === 'highlight' || activeTool === 'pen' || activeTool === 'note') && (
             <div className="flex space-x-1 ml-3 items-center">
               <span className="text-xs text-gray-500 mr-1">Color:</span>
@@ -400,15 +379,16 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
             </div>
           )}
           
-          {/* Show active tool status */}
           {activeTool && (
             <div className="ml-3 px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
               {activeTool.charAt(0).toUpperCase() + activeTool.slice(1)} tool active
             </div>
           )}
           
-          {/* Clear button */}
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center">
+            {isSaving && (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin text-gray-500" />
+            )}
             <button
               onClick={handleClearAllAnnotations}
               className={`p-1.5 rounded ${annotations.length > 0 ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-400 cursor-not-allowed'}`}
@@ -419,117 +399,126 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
             </button>
           </div>
         </div>
-      )}
-      
-      {/* Content Container */}
-      <div style={containerStyle} className={containerClass}>
-        {/* The actual content */}
-        <div 
-          className={`relative ${contentLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-          ref={contentRef}
-        >
-          <EditorContent editor={editor} />
-        </div>
-        
-        {/* Annotation Layer */}
-        {enableAnnotations && (
-          <div 
-            ref={annotationLayerRef}
-            className={`absolute inset-0 z-10 pointer-events-none ${getCursorClass()}`}
-            style={{ pointerEvents: activeTool ? 'auto' : 'none' }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          >
-            {/* Render existing annotations */}
-            {annotations.map(annotation => {
-              if (annotation.type === 'highlight') {
-                return (
-                  <div
-                    key={annotation.id}
-                    className="absolute"
-                    style={{
-                      left: `${annotation.position.x}px`,
-                      top: `${annotation.position.y}px`,
-                      width: `${annotation.position.width}px`,
-                      height: `${annotation.position.height}px`,
-                      backgroundColor: annotation.color,
-                      opacity: 0.5,
-                      pointerEvents: 'auto',
-                      cursor: activeTool === 'eraser' ? 'pointer' : 'move',
-                    }}
-                    onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
-                  />
-                );
-              } else if (annotation.type === 'note') {
-                return (
-                  <div
-                    key={annotation.id}
-                    className="absolute"
-                    style={{
-                      left: `${annotation.position.x}px`,
-                      top: `${annotation.position.y}px`,
-                      minWidth: `${annotation.position.width}px`,
-                      minHeight: `${annotation.position.height}px`,
-                      pointerEvents: 'auto',
-                    }}
-                    onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
-                  >
-                    <textarea
-                      value={annotation.content || ''}
-                      onChange={(e) => handleTextAnnotationChange(annotation.id, e.target.value)}
-                      className="w-full h-full p-2 border border-gray-300 rounded resize-both"
-                      style={{ 
-                        backgroundColor: `${annotation.color}20`,
-                        color: annotation.color,
-                        fontFamily: 'Comic Sans MS, cursive, sans-serif',
-                      }}
-                      placeholder="Add your note here..."
-                    />
-                  </div>
-                );
-              } else if (annotation.type === 'pen') {
-                return (
-                  <svg
-                    key={annotation.id}
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ pointerEvents: activeTool === 'eraser' ? 'auto' : 'none' }}
-                  >
-                    <path
-                      d={annotation.path || ''}
-                      stroke={annotation.color}
-                      strokeWidth="2"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
-                      style={{ cursor: activeTool === 'eraser' ? 'pointer' : 'default' }}
-                    />
-                  </svg>
-                );
-              }
-              return null;
-            })}
-            
-            {/* Current drawing path */}
-            {isDrawing && currentPath && (
-              <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                <path
-                  d={currentPath}
-                  stroke={activeColor}
-                  strokeWidth="2"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            )}
-          </div>
-        )}
       </div>
       
-      {/* CSS for custom cursors */}
+      <div 
+        className="relative min-h-[calc(100vh-150px)]"
+        style={getNotebookStyle()}
+      >
+        <div className={`${className} h-full`} ref={contentRef}>
+          <TipTapRenderer
+            content={content}
+            onReady={handleContentReady}
+          />
+        </div>
+        
+        <div 
+          ref={annotationLayerRef}
+          className={`absolute inset-0 z-10 pointer-events-none ${getCursorClass()}`}
+          style={{ pointerEvents: activeTool ? 'auto' : 'none' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          {annotations.map(annotation => {
+            if (annotation.type === 'highlight') {
+              return (
+                <div
+                  key={annotation.id}
+                  className="absolute"
+                  style={{
+                    left: `${annotation.position.x}px`,
+                    top: `${annotation.position.y}px`,
+                    width: `${annotation.position.width}px`,
+                    height: `${annotation.position.height}px`,
+                    backgroundColor: annotation.color,
+                    opacity: 0.5,
+                    pointerEvents: 'auto',
+                    cursor: activeTool === 'eraser' ? 'pointer' : 'move',
+                  }}
+                  onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
+                />
+              );
+            } else if (annotation.type === 'note') {
+              return (
+                <div
+                  key={annotation.id}
+                  className="absolute"
+                  style={{
+                    left: `${annotation.position.x}px`,
+                    top: `${annotation.position.y}px`,
+                    minWidth: `${annotation.position.width}px`,
+                    minHeight: `${annotation.position.height}px`,
+                    pointerEvents: 'auto',
+                  }}
+                  onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
+                >
+                  <textarea
+                    value={annotation.content || ''}
+                    onChange={(e) => handleTextAnnotationChange(annotation.id, e.target.value)}
+                    className="w-full h-full p-2 border border-gray-300 rounded resize-both"
+                    style={{ 
+                      backgroundColor: `${annotation.color}20`,
+                      color: annotation.color,
+                      fontFamily: 'Comic Sans MS, cursive, sans-serif',
+                    }}
+                    placeholder="Add your note here..."
+                  />
+                </div>
+              );
+            } else if (annotation.type === 'pen') {
+              return (
+                <svg
+                  key={annotation.id}
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  style={{ pointerEvents: activeTool === 'eraser' ? 'auto' : 'none' }}
+                >
+                  <path
+                    d={annotation.path || ''}
+                    stroke={annotation.color}
+                    strokeWidth="2"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
+                    style={{ cursor: activeTool === 'eraser' ? 'pointer' : 'default' }}
+                  />
+                </svg>
+              );
+            }
+            return null;
+          })}
+          
+          {isDrawing && currentPath && (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <path
+                d={currentPath}
+                stroke={activeColor}
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+          
+          {isDrawing && activeTool === 'highlight' && startPoint && highlightSize && (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${startPoint.x}px`,
+                top: `${startPoint.y}px`,
+                width: `${highlightSize.width}px`,
+                height: `${highlightSize.height}px`,
+                backgroundColor: activeColor,
+                opacity: 0.5,
+              }}
+            />
+          )}
+        </div>
+      </div>
+      
       <style jsx global>{`
         .cursor-pen {
           cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19l7-7 3 3-7 7-3-3z'%3E%3C/path%3E%3Cpath d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'%3E%3C/path%3E%3Cpath d='M2 2l7.586 7.586'%3E%3C/path%3E%3Cpath d='M11 11l2 2'%3E%3C/path%3E%3C/svg%3E") 0 24, auto;
@@ -551,4 +540,4 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   );
 };
 
-export default TipTapRenderer;
+export default NotebookContent;

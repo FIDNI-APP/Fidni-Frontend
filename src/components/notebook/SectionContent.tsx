@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PenLine, Edit, Save, X, BookMarked, Plus, Trash, MessageSquare } from 'lucide-react';
+import { Save, X, BookMarked, Plus, Trash, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import NotebookContent from './NotebookContent';
 import { Section } from '@/types';
 
-// Structure pour les notes modulaires
+
 interface ModularNote {
   id: string;
   content: string;
@@ -25,6 +25,8 @@ interface SectionContentProps {
   setNoteContent: (content: string) => void;
   onSaveModularNotes?: (sectionId: string, notes: ModularNote[]) => Promise<void>;
 }
+
+
 
 const SectionContent: React.FC<SectionContentProps> = ({
   section,
@@ -100,27 +102,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
     setModularNotes(demoNotes);
   };
 
-  // Fonction pour sauvegarder les notes modulaires
-  const saveModularNotes = async () => {
-    if (!section) return;
-    
-    try {
-      // Dans un scénario réel, vous appelleriez votre API backend
-      // Si nous avons une fonction de rappel, utilisons-la
-      if (onSaveModularNotes) {
-        await onSaveModularNotes(section.id, modularNotes);
-      }
-      
-      // Pour le développement, sauvegardons dans localStorage
-      localStorage.setItem(`modular_notes_${section.id}`, JSON.stringify(modularNotes));
-      
-      // Feedback visuel
-      alert('Notes sauvegardées avec succès!');
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des notes:', error);
-      alert('Erreur lors de la sauvegarde des notes');
-    }
-  };
+  
 
   // Fonction pour ajouter une nouvelle note
   const addModularNote = (e: React.MouseEvent) => {
@@ -193,7 +175,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
         : note
     ));
   };
-
+  
   // Fonction appelée quand TipTapRenderer a fini de charger
   const handleContentReady = () => {
     // Content is ready, stop showing the loading skeleton with a slight delay
@@ -372,16 +354,27 @@ const SectionContent: React.FC<SectionContentProps> = ({
           {/* Content wrapper with hidden visibility until completely ready */}
           <div 
             ref={contentRef}
-            className={`relative transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
+            className={`h-full w-full transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
           >
-            <TipTapRenderer 
-              key={`section-${section.id}-renderer-${renderKey}`} 
-              content={section.lesson.content}
-              onReady={handleContentReady}
-            />
+            
+      <NotebookContent
+                content={section.lesson.content}
+                lessonId={section.lesson.id}
+                className="p-6 w-full h-full" // Add any classes you need
+                notebookTheme={{
+                  bgColor: '#ffffff',
+                  lineColor: '#e5e7eb',
+                  isGrid: false,
+                  lineSpacing: 2
+                }}
+                onReady={handleContentReady}
+                key={renderKey} // Force re-render when section changes
+              />
+           
           </div>
         </div>
         
+       
       </div>
 
       {/* Add a style tag for CSS animations */}
