@@ -398,7 +398,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
   return (
     <div className="w-full max-w-6xl mx-auto pt-4 sm:pt-8 lg:pt-16 pb-6 sm:pb-10 px-3 sm:px-4">
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+      <div className="bg-white rounded-xl shadow-md mb-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-4 sm:px-6 py-3 sm:py-4 text-white">
           <h1 className="text-xl sm:text-2xl font-bold">

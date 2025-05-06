@@ -1,0 +1,115 @@
+name: Docker Build and Deploy to EC2
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      # Setup .npmrc for private registry access
+      - name: Set up .npmrc
+        run: |
+          echo "@tiptap-pro:registry=https://registry.tiptap.dev/" > .npmrc
+          echo "@tiptap-cloud:registry=https://registry.tiptap.dev/" >> .npmrc
+          echo "//registry.tiptap.dev/:_authToken=${{ secrets.TIPTAP_AUTH_TOKEN || 'tGfd2UZcfGYMS3Du6+sMZaYfBuXJ8WMCzIaQ71tVybQR/kDU8mVla/akmobCPob6' }}" >> .npmrc
+      
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+      
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      
+      # Build and push to Amazon ECR (using only latest tag to avoid multiple images)
+      - name: Build and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: 322609219907.dkr.ecr.eu-west-3.amazonaws.com
+          ECR_REPOSITORY: fidni
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      
+      # Préparation de la clé SSH
+      - name: Préparer la clé SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+
+      # Déploiement sur EC2 avec SSH explicite
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USER }}
+          ECR_REGISTRY: 322609219907.dkr.ecr.eu-west-3.amazonaws.com
+          ECR_REPOSITORY: fidni
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: eu-west-3
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USERNAME}@${EC2_HOST} "
+            # Configurer AWS CLI
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID &&
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY &&
+            aws configure set region $AWS_REGION
+            
+            # Vérifier les permissions Docker
+            if ! docker info &> /dev/null; then
+              sudo usermod -aG docker \$USER
+              sudo -E aws ecr get-login-password --region eu-west-3 | sudo -E docker login --username AWS --password-stdin ${ECR_REGISTRY}
+              
+              # Pull the latest image
+              sudo -E docker pull ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+              
+              # Stop and remove the existing container if it exists
+              sudo -E docker stop fidni-app || true
+              sudo -E docker rm fidni-app || true
+              
+              # Run the new container
+              sudo -E docker run -d \
+                --name fidni-app \
+                -p 80:80 \
+                -e NODE_ENV=production \
+                ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+              
+              # Clean up all unused images
+              sudo -E docker image prune -a --force
+              sudo -E docker system prune -f
+            else
+              # Login to ECR sans sudo
+              aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+              
+              # Pull the latest image
+              docker pull ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+              
+              # Stop and remove the existing container if it exists
+              docker stop fidni-app || true
+              docker rm fidni-app || true
+              
+              # Run the new container
+              docker run -d \
+                --name fidni-app \
+                -p 80:80 \
+                -e NODE_ENV=production \
+                ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+              
+              # Clean up all unused images
+              docker image prune -a --force
+              docker system prune -f
+            fi "

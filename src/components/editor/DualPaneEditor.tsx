@@ -6,8 +6,8 @@ import Color from '@tiptap/extension-color';
 import Image from '@tiptap/extension-image';
 import Mathematics from '@tiptap-pro/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
-import Heading from '@tiptap/extension-heading'
-
+import Heading from '@tiptap/extension-heading';
+import TipTapRenderer from './TipTapRenderer';
 
 import 'katex/dist/katex.min.css';
 import { 
@@ -33,7 +33,10 @@ import {
   Quote,
   Link,
   Sparkles,
-  Settings
+  Settings,
+  Check,
+  Info,
+  Search
 } from "lucide-react";
 
 interface DualPaneEditorProps {
@@ -58,51 +61,51 @@ const mathFormulaCategories: FormulaCategory[] = [
     name: "Algèbre",
     formulas: [
       { name: "Équation quadratique", latex: "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", description: "Solution de ax² + bx + c = 0" },
-      { name: "Binôme de Newton", latex: "(x+y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k" },
-      { name: "Factorielle", latex: "n! = n \\cdot (n-1) \\cdot (n-2) \\cdot \\ldots \\cdot 2 \\cdot 1" },
-      { name: "Fraction", latex: "\\frac{a}{b}" },
-      { name: "Racine carrée", latex: "\\sqrt{x}" },
-      { name: "Racine n-ième", latex: "\\sqrt[n]{x}" },
+      { name: "Binôme de Newton", latex: "(x+y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k", description: "Développement du binôme" },
+      { name: "Factorielle", latex: "n! = n \\cdot (n-1) \\cdot (n-2) \\cdot \\ldots \\cdot 2 \\cdot 1", description: "Produit des entiers de 1 à n" },
+      { name: "Fraction", latex: "\\frac{a}{b}", description: "Division de a par b" },
+      { name: "Racine carrée", latex: "\\sqrt{x}", description: "Racine carrée de x" },
+      { name: "Racine n-ième", latex: "\\sqrt[n]{x}", description: "Racine n-ième de x" },
     ]
   },
   {
     name: "Calcul",
     formulas: [
-      { name: "Dérivée", latex: "\\frac{d}{dx}f(x)" },
-      { name: "Intégrale définie", latex: "\\int_{a}^{b} f(x) \\, dx" },
-      { name: "Intégrale indéfinie", latex: "\\int f(x) \\, dx" },
-      { name: "Limite", latex: "\\lim_{x \\to a} f(x)" },
-      { name: "Somme", latex: "\\sum_{i=1}^{n} a_i" },
-      { name: "Produit", latex: "\\prod_{i=1}^{n} a_i" },
+      { name: "Dérivée", latex: "\\frac{d}{dx}f(x)", description: "Dérivée de f(x) par rapport à x" },
+      { name: "Intégrale définie", latex: "\\int_{a}^{b} f(x) \\, dx", description: "Intégrale de f(x) de a à b" },
+      { name: "Intégrale indéfinie", latex: "\\int f(x) \\, dx", description: "Intégrale indéfinie de f(x)" },
+      { name: "Limite", latex: "\\lim_{x \\to a} f(x)", description: "Limite de f(x) quand x tend vers a" },
+      { name: "Somme", latex: "\\sum_{i=1}^{n} a_i", description: "Somme des termes a_i de i=1 à n" },
+      { name: "Produit", latex: "\\prod_{i=1}^{n} a_i", description: "Produit des termes a_i de i=1 à n" },
     ]
   },
   {
     name: "Trigonométrie",
     formulas: [
-      { name: "Sinus", latex: "\\sin(\\theta)" },
-      { name: "Cosinus", latex: "\\cos(\\theta)" },
-      { name: "Tangente", latex: "\\tan(\\theta)" },
-      { name: "Identité fondamentale", latex: "\\sin^2(\\theta) + \\cos^2(\\theta) = 1" },
-      { name: "Loi des sinus", latex: "\\frac{a}{\\sin(A)} = \\frac{b}{\\sin(B)} = \\frac{c}{\\sin(C)}" },
-      { name: "Loi des cosinus", latex: "c^2 = a^2 + b^2 - 2ab\\cos(C)" },
+      { name: "Sinus", latex: "\\sin(\\theta)", description: "Sinus de l'angle θ" },
+      { name: "Cosinus", latex: "\\cos(\\theta)", description: "Cosinus de l'angle θ" },
+      { name: "Tangente", latex: "\\tan(\\theta)", description: "Tangente de l'angle θ" },
+      { name: "Identité fondamentale", latex: "\\sin^2(\\theta) + \\cos^2(\\theta) = 1", description: "Relation entre sin² et cos²" },
+      { name: "Loi des sinus", latex: "\\frac{a}{\\sin(A)} = \\frac{b}{\\sin(B)} = \\frac{c}{\\sin(C)}", description: "Pour un triangle quelconque" },
+      { name: "Loi des cosinus", latex: "c^2 = a^2 + b^2 - 2ab\\cos(C)", description: "Généralisation du théorème de Pythagore" },
     ]
   },
   {
     name: "Matrices",
     formulas: [
-      { name: "Matrice 2×2", latex: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}" },
-      { name: "Déterminant", latex: "\\det(A) = |A|" },
-      { name: "Matrice inverse", latex: "A^{-1}" },
-      { name: "Système d'équations", latex: "\\begin{cases} a_1x + b_1y = c_1 \\\\ a_2x + b_2y = c_2 \\end{cases}" },
+      { name: "Matrice 2×2", latex: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}", description: "Matrice carrée d'ordre 2" },
+      { name: "Déterminant", latex: "\\det(A) = |A|", description: "Déterminant de la matrice A" },
+      { name: "Matrice inverse", latex: "A^{-1}", description: "Inverse de la matrice A" },
+      { name: "Système d'équations", latex: "\\begin{cases} a_1x + b_1y = c_1 \\\\ a_2x + b_2y = c_2 \\end{cases}", description: "Système de deux équations à deux inconnues" },
     ]
   },
   {
     name: "Statistiques",
     formulas: [
-      { name: "Espérance", latex: "E(X) = \\sum_{i} x_i p_i" },
-      { name: "Variance", latex: "\\operatorname{Var}(X) = E[(X - \\mu)^2]" },
-      { name: "Loi normale", latex: "f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{1}{2}(\\frac{x-\\mu}{\\sigma})^2}" },
-      { name: "Binomiale", latex: "P(X = k) = \\binom{n}{k} p^k (1-p)^{n-k}" },
+      { name: "Espérance", latex: "E(X) = \\sum_{i} x_i p_i", description: "Espérance de la variable aléatoire X" },
+      { name: "Variance", latex: "\\operatorname{Var}(X) = E[(X - \\mu)^2]", description: "Variance de la variable aléatoire X" },
+      { name: "Loi normale", latex: "f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{1}{2}(\\frac{x-\\mu}{\\sigma})^2}", description: "Densité de probabilité de la loi normale" },
+      { name: "Binomiale", latex: "P(X = k) = \\binom{n}{k} p^k (1-p)^{n-k}", description: "Probabilité d'obtenir k succès parmi n essais" },
     ]
   }
 ];
@@ -133,6 +136,13 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const [tooltipText, setTooltipText] = useState("");
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [lastUsedFormulas, setLastUsedFormulas] = useState<MathFormula[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // New formula editor modal state
+  const [showFormulaModal, setShowFormulaModal] = useState(false);
+  const [currentFormula, setCurrentFormula] = useState<MathFormula | null>(null);
+  const [editedLatex, setEditedLatex] = useState("");
+  const [formulaInsertMode, setFormulaInsertMode] = useState<'inline' | 'block' | 'centered'>('inline');
   
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,6 +195,16 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     },
   });
 
+  // Filter formulas based on search term
+  const getFilteredFormulas = (category: FormulaCategory) => {
+    if (!searchTerm) return category.formulas;
+    
+    return category.formulas.filter(formula => 
+      formula.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      formula.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
   // Add a formula to recently used
   const addToRecentFormulas = (formula: MathFormula) => {
     // Check if formula already exists in recent list
@@ -195,7 +215,46 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     }
   };
 
-  // Handle text formatting
+  // Handle opening formula editor modal
+  const openFormulaEditor = (formula: MathFormula, defaultMode: 'inline' | 'block' | 'centered' = 'inline') => {
+    setCurrentFormula(formula);
+    setEditedLatex(formula.latex);
+    setFormulaInsertMode(defaultMode);
+    setShowFormulaModal(true);
+  };
+  
+  // Handle inserting the edited formula
+  const insertEditedFormula = () => {
+    if (!editor || !editedLatex.trim()) return;
+    
+    editor.chain().focus();
+    
+    if (formulaInsertMode === 'inline') {
+      // Insert inline formula
+      editor.commands.insertContent(`$${editedLatex}$`);
+    } else if (formulaInsertMode === 'centered') {
+      // Insert centered block formula
+      editor.commands.setTextAlign('center')
+        .insertContent(`$$${editedLatex}$$`)
+        .run();
+    } else {
+      // Insert block formula without centering
+      editor.commands.insertContent(`$$${editedLatex}$$`);
+    }
+    
+    // Add to recently used formulas if there was a current formula
+    if (currentFormula) {
+      addToRecentFormulas({
+        ...currentFormula,
+        latex: editedLatex
+      });
+    }
+    
+    // Close the modal
+    setShowFormulaModal(false);
+  };
+
+  // Text formatting functions
   const toggleBold = () => {
     editor?.chain().focus().toggleBold().run();
   };
@@ -203,10 +262,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const toggleItalic = () => {
     editor?.chain().focus().toggleItalic().run();
   };
-  
 
   const toggleHeading = (level: 1 | 2) => {
-    editor?.chain().focus().setHeading({ level : level }).run();
+    editor?.chain().focus().setHeading({ level }).run();
   };
 
   const toggleBulletList = () => {
@@ -244,52 +302,26 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const toggleCategory = (index: number) => {
     if (activeCategoryIndex === index) {
       setActiveCategoryIndex(null);
+      setSearchTerm(""); // Clear search when closing category
     } else {
       setActiveCategoryIndex(index);
+      setSearchTerm(""); // Clear search when changing category
     }
   };
 
-  // Insert math formula
-  const insertMathFormula = (formula: MathFormula, isBlock = false) => {
-    if (isBlock) {
-      editor?.chain().focus().insertContent(`$$${formula.latex}$$`).run();
-    } else {
-      editor?.chain().focus().insertContent(`$${formula.latex}$`).run();
-    }
-    
-    // Add to recently used formulas
-    addToRecentFormulas(formula);
-    
-    // Close the formulas panel
-    setActiveCategoryIndex(null);
-  };
-  const insertCenteredMathFormula = () => {
-    if (!editor) return;
-    
-    // Assurer que l'éditeur est focus
-    editor.commands.focus();
-    
-    // Créer un nouveau paragraphe centré
-    editor.commands.setTextAlign('center');
-    
-    // Insérer une formule mathématique en bloc
-    const blockFormula = { name: "Formule quadratique", latex: "\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}" };
-    editor.commands.insertContent(`$$${blockFormula.latex}$$`);
-    
-    // Ajouter la formule aux récemment utilisées
-    addToRecentFormulas(blockFormula);
-  };
-
-  // Insert math inline example
+  // Insert math inline example (now uses modal)
   const insertMathInline = () => {
     const inlineFormula = { name: "Équation inline", latex: "x^2 + y^2 = r^2" };
-    editor?.chain().focus().insertContent(`$${inlineFormula.latex}$`).run();
-    addToRecentFormulas(inlineFormula);
+    openFormulaEditor(inlineFormula, 'inline');
   };
 
+  // Insert centered math formula (now uses modal)
+  const insertCenteredMathFormula = () => {
+    const blockFormula = { name: "Formule quadratique", latex: "\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}" };
+    openFormulaEditor(blockFormula, 'centered');
+  };
 
-
-  // Open image modal
+  // Image handling functions
   const openImageModal = () => {
     setImageUrl("");
     setImageCaption("");
@@ -297,7 +329,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowImageModal(true);
   };
 
-  // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -320,7 +351,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     reader.readAsDataURL(file);
   };
 
-  // Handle camera capture
   const captureImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -343,7 +373,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     reader.readAsDataURL(file);
   };
 
-  // Insert image into editor
   const insertImage = () => {
     if (!imageUrl) return;
     
@@ -440,6 +469,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         // Close formula categories if clicking outside
         if (activeCategoryIndex !== null && !target.closest('.formula-category-container')) {
           setActiveCategoryIndex(null);
+          setSearchTerm("");
         }
         
         // Close settings if clicking outside
@@ -455,8 +485,26 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     };
   }, [showColorPicker, activeCategoryIndex, showSettings]);
 
+  // Render formula card for the gallery view
+  const FormulaCard = ({ formula, onClick }: { formula: MathFormula, onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:-translate-y-1 flex flex-col"
+    >
+      <div className="p-3 bg-gray-50 flex items-center justify-center h-16">
+        <TipTapRenderer content={`<p style="text-align: center">$${formula.latex}$</p>`} />
+      </div>
+      <div className="p-2 border-t border-gray-100">
+        <h3 className="text-xs font-medium text-gray-800 truncate">{formula.name}</h3>
+        {formula.description && (
+          <p className="text-xs text-gray-500 truncate">{formula.description}</p>
+        )}
+      </div>
+    </button>
+  );
+
   return (
-    <div className={`w-full border border-gray-200 rounded-lg shadow-lg overflow-hidden ${currentTheme.bgColor} transition-colors duration-300`}>
+    <div className={`w-full border border-gray-200 rounded-lg shadow-lg ${currentTheme.bgColor} transition-colors duration-300`}>
       {/* Header */}
       <div className={`flex items-center justify-between gap-2 px-4 py-2 bg-gradient-to-r ${currentTheme.accentColor} text-white rounded-t-lg shadow-sm`}>
         <div className="flex items-center">
@@ -546,7 +594,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                 onClick={toggleItalic} 
                 isActive={editor?.isActive('italic')}
               />
-              
               
               <div className="h-5 border-l border-gray-300 mx-1"></div>
               
@@ -656,7 +703,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                   {lastUsedFormulas.map((formula, idx) => (
                     <button
                       key={idx}
-                      onClick={() => insertMathFormula(formula, formula.latex.includes('\\begin') || formula.latex.length > 20)}
+                      onClick={() => openFormulaEditor(formula)}
                       className="px-1.5 py-1 text-xs bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 transition-colors"
                       title={formula.name}
                     >
@@ -690,20 +737,47 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                   </button>
                   
                   {activeCategoryIndex === index && (
-                    <div className="absolute z-30 mt-1 p-2 bg-white rounded-lg shadow-lg border border-gray-200 w-60 max-h-64 overflow-y-auto">
-                      <div className="text-sm font-medium mb-2 text-gray-700 pb-1 border-b">{category.name}</div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {category.formulas.map((formula) => (
-                          <button
-                            key={formula.name}
-                            onClick={() => insertMathFormula(formula, formula.latex.includes('\\begin') || formula.latex.length > 20)}
-                            className="w-full text-left px-2 py-1.5 text-sm hover:bg-indigo-50 rounded-md flex items-center justify-between group"
-                            title={formula.description}
-                          >
-                            <span>{formula.name}</span>
-                            <span className="text-xs text-gray-400 group-hover:text-indigo-500">$</span>
-                          </button>
-                        ))}
+                    <div className="absolute z-30 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 w-[650px] max-h-[450px]">
+                      <div className="p-3 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                        <div className="text-sm font-medium text-gray-700 flex items-center">
+                          <FunctionIcon className="w-4 h-4 mr-2 text-indigo-500" />
+                          Formules de {category.name}
+                        </div>
+                        
+                        {/* Search input */}
+                        <div className="relative w-60">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Rechercher une formule..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-3 py-1.5 border border-gray-300 rounded-md text-sm w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="p-3 overflow-y-auto" style={{ maxHeight: "380px" }}>
+                        {/* Render filtered formulas as visual cards in a grid */}
+                        {getFilteredFormulas(category).length > 0 ? (
+                          <div className="grid grid-cols-3 gap-3">
+                            {getFilteredFormulas(category).map((formula) => (
+                              <FormulaCard 
+                                key={formula.name} 
+                                formula={formula} 
+                                onClick={() => openFormulaEditor(formula)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center py-6 text-gray-500">
+                            <Info className="w-8 h-8 mb-2 text-gray-400" />
+                            <p>Aucune formule trouvée pour "{searchTerm}"</p>
+                            <p className="text-sm">Essayez avec un autre terme</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -897,6 +971,138 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
           </div>
         </div>
       )}
+      
+      {/* Formula Editor Modal */}
+      {showFormulaModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
+              <h3 className="text-lg font-medium flex items-center">
+                <FunctionIcon className="w-5 h-5 mr-2" />
+                {currentFormula ? `Éditer la formule: ${currentFormula.name}` : 'Éditer la formule'}
+              </h3>
+              <button 
+                onClick={() => setShowFormulaModal(false)}
+                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                title="Fermer la fenêtre"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* LaTeX Editor */}
+                <div>
+                  <label htmlFor="latexEditor" className="block text-sm font-medium text-gray-700 mb-2">
+                    Code LaTeX
+                  </label>
+                  <textarea
+                    id="latexEditor"
+                    value={editedLatex}
+                    onChange={(e) => setEditedLatex(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm font-mono text-sm focus:ring-indigo-500 focus:border-indigo-500 h-64 resize-none"
+                    placeholder="Entrez votre code LaTeX ici..."
+                    spellCheck="false"
+                  />
+                  <div className="text-xs text-gray-500 mt-2">
+                    <p>Modifiez le code LaTeX ci-dessus. Vous pouvez modifier les variables, les indices, les valeurs, etc.</p>
+                  </div>
+                </div>
+                
+                {/* Preview */}
+                <div>
+                  <div className="block text-sm font-medium text-gray-700 mb-2">
+                    Aperçu
+                  </div>
+                  <div className="border border-gray-300 rounded-lg h-64 p-4 bg-gray-50 flex items-center justify-center overflow-auto">
+                    <div className="max-w-full max-h-full">
+                      <TipTapRenderer 
+                        content={
+                          formulaInsertMode === 'inline' 
+                            ? `<p>$${editedLatex}$</p>` 
+                            : formulaInsertMode === 'centered'
+                              ? `<p style="text-align: center">$$${editedLatex}$$</p>`
+                              : `<p>$$${editedLatex}$$</p>`
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">
+                    <p>Visualisez le rendu de votre formule en temps réel.</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Mode d'insertion options */}
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Mode d'insertion:
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormulaInsertMode('inline')}
+                    className={`px-4 py-2 rounded-lg flex items-center text-sm ${
+                      formulaInsertMode === 'inline'
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="font-mono mr-2">$x^2$</span>
+                    Formule en ligne
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setFormulaInsertMode('block')}
+                    className={`px-4 py-2 rounded-lg flex items-center text-sm ${
+                      formulaInsertMode === 'block'
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="font-mono mr-2">$$f(x)$$</span>
+                    Formule en bloc
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setFormulaInsertMode('centered')}
+                    className={`px-4 py-2 rounded-lg flex items-center text-sm ${
+                      formulaInsertMode === 'centered'
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <AlignCenter className="w-4 h-4 mr-2" />
+                    Formule centrée
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 sm:flex sm:flex-row-reverse border-t border-gray-200 rounded-b-lg">
+              <button
+                type="button"
+                onClick={insertEditedFormula}
+                className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+                disabled={!editedLatex.trim()}
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Insérer
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFormulaModal(false)}
+                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hints Panel */}
       <div className="mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-indigo-700 shadow-inner">
@@ -917,8 +1123,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
             <div className="font-medium text-xs uppercase tracking-wider mb-1.5 text-indigo-800">Mathématiques</div>
             <ul className="space-y-1 text-xs list-disc list-inside">
               <li>$x^2$ : Formule en ligne avec $...$</li>
-              <li>Équation centrée avec $...$</li>
-              <li>Utilisez les catégories pour des formules courantes</li>
+              <li>Équation centrée avec $$...$$</li>
+              <li>Modifiez les formules avant de les insérer</li>
             </ul>
           </div>
           <div>
