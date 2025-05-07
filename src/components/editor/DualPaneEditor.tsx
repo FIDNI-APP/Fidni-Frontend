@@ -7,8 +7,11 @@ import Image from '@tiptap/extension-image';
 import Mathematics from '@tiptap-pro/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
 import Heading from '@tiptap/extension-heading';
+import { Link as LinkTiptap } from '@tiptap/extension-link';
 import TipTapRenderer from './TipTapRenderer';
-
+import ListItem from '@tiptap/extension-list-item';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
 import 'katex/dist/katex.min.css';
 import { 
   Bold, 
@@ -119,6 +122,36 @@ const editorThemes = [
   { name: "Minimaliste", bgColor: "bg-gray-50", textColor: "text-gray-800", accentColor: "from-gray-500 to-gray-600" }
 ];
 
+// Définir les sous-formules disponibles
+const subFormulas = [
+  { category: "Fractions", items: [
+    { latex: "\\frac{a}{b}", description: "Fraction simple" },
+    { latex: "\\frac{\\partial f}{\\partial x}", description: "Dérivée partielle" }
+  ]},
+  { category: "Exposants", items: [
+    { latex: "x^{n}", description: "Exposant" },
+    { latex: "x_{i}", description: "Indice" },
+    { latex: "x_{i}^{j}", description: "Exposant et indice" }
+  ]},
+  { category: "Racines", items: [
+    { latex: "\\sqrt{x}", description: "Racine carrée" },
+    { latex: "\\sqrt[n]{x}", description: "Racine n-ième" }
+  ]},
+  { category: "Symboles", items: [
+    { latex: "\\infty", description: "Infini" },
+    { latex: "\\approx", description: "Approximativement égal" },
+    { latex: "\\neq", description: "Différent" },
+    { latex: "\\leq", description: "Inférieur ou égal" },
+    { latex: "\\geq", description: "Supérieur ou égal" }
+  ]},
+  { category: "Fonctions", items: [
+    { latex: "\\sin(x)", description: "Sinus" },
+    { latex: "\\cos(x)", description: "Cosinus" },
+    { latex: "\\lim_{x \\to a}", description: "Limite" },
+    { latex: "\\int_{a}^{b}", description: "Intégrale" }
+  ]}
+];
+
 const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) => {
   // UI state
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -143,6 +176,10 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const [currentFormula, setCurrentFormula] = useState<MathFormula | null>(null);
   const [editedLatex, setEditedLatex] = useState("");
   const [formulaInsertMode, setFormulaInsertMode] = useState<'inline' | 'block' | 'centered'>('inline');
+  
+  // État pour le sélecteur de sous-formules
+  const [showSubFormulaSelector, setShowSubFormulaSelector] = useState(false);
+  const [hoveredFormula, setHoveredFormula] = useState<string | null>(null);
   
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -170,10 +207,28 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       Heading.configure({
         levels: [1, 2],
       }),
+      
+      BulletList.configure({
+        HTMLAttributes: {
+          class: 'list-disc pl-5',
+        },
+      }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          class: 'list-decimal pl-5',
+        },
+      }),
+      ListItem,
       Image.configure({
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
           loading: 'lazy',
+        },
+      }),
+      LinkTiptap.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-indigo-600 hover:text-indigo-800 underline',
         },
       }),
       Mathematics.configure({
@@ -233,10 +288,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       // Insert inline formula
       editor.commands.insertContent(`$${editedLatex}$`);
     } else if (formulaInsertMode === 'centered') {
-      // Insert centered block formula
-      editor.commands.setTextAlign('center')
-        .insertContent(`$$${editedLatex}$$`)
-        .run();
+      // Insert centered block formula - CORRIGÉ
+      editor.commands.setTextAlign('center');
+      editor.commands.insertContent(`$$${editedLatex}$$`);
     } else {
       // Insert block formula without centering
       editor.commands.insertContent(`$$${editedLatex}$$`);
@@ -254,34 +308,49 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowFormulaModal(false);
   };
 
-  // Text formatting functions
-  const toggleBold = () => {
-    editor?.chain().focus().toggleBold().run();
-  };
+  // Assurez-vous que toutes les fonctions de formatage utilisent .chain() et .run()
+const toggleBold = () => {
+  editor?.chain().focus().toggleBold().run();
+};
 
-  const toggleItalic = () => {
-    editor?.chain().focus().toggleItalic().run();
-  };
+const toggleItalic = () => {
+  editor?.chain().focus().toggleItalic().run();
+};
 
-  const toggleHeading = (level: 1 | 2) => {
-    editor?.chain().focus().setHeading({ level }).run();
-  };
+const toggleHeading = (level: 1 | 2) => {
+  if (!editor) return;
+  
+  console.log('Toggle heading', level); // Pour debug
+  
+  // Utiliser setHeading au lieu de toggleHeading pour plus de fiabilité
+  if (editor.isActive('heading', { level })) {
+    editor.chain().focus().setParagraph().run();
+  } else {
+    editor.chain().focus().setHeading({ level }).run();
+  }
+};
 
-  const toggleBulletList = () => {
-    editor?.chain().focus().toggleBulletList().run();
-  };
+const toggleBulletList = () => {
+  if (!editor) return;
+  
+  console.log('Toggle bullet list'); // Pour debug
+  editor.chain().focus().toggleBulletList().run();
+};
 
-  const toggleOrderedList = () => {
-    editor?.chain().focus().toggleOrderedList().run();
-  };
+const toggleOrderedList = () => {
+  if (!editor) return;
+  
+  console.log('Toggle ordered list'); // Pour debug
+  editor.chain().focus().toggleOrderedList().run();
+};
 
-  const toggleBlockquote = () => {
-    editor?.chain().focus().toggleBlockquote().run();
-  };
+const toggleBlockquote = () => {
+  editor?.chain().focus().toggleBlockquote().run();
+};
 
-  const setTextAlign = (align: 'left' | 'center' | 'right') => {
-    editor?.chain().focus().setTextAlign(align).run();
-  };
+const setTextAlign = (align: 'left' | 'center' | 'right') => {
+  editor?.chain().focus().setTextAlign(align).run();
+};
 
   const handleUndo = () => {
     editor?.chain().focus().undo().run();
@@ -423,7 +492,13 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowTooltip(false);
   };
 
-  // Helper function to create buttons with consistent styling
+  const ensureFocus = () => {
+    if (!editor?.isFocused) {
+      editor?.chain().focus().run();
+    }
+  };
+  
+  // Puis modifiez la définition du composant ToolbarButton
   const ToolbarButton = ({ 
     icon, 
     label, 
@@ -438,7 +513,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     color?: string;
   }) => (
     <button
+      type="button" 
       onClick={(e) => {
+        ensureFocus(); // Assurez-vous que l'éditeur est focalisé
         onClick(e);
         showButtonTooltip(label, e);
       }}
@@ -489,7 +566,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const FormulaCard = ({ formula, onClick }: { formula: MathFormula, onClick: () => void }) => (
     <button
       onClick={onClick}
-      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:-translate-y-1 flex flex-col"
+      className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:-translate-y-1 flex flex-col"
     >
       <div className="p-3 bg-gray-50 flex items-center justify-center h-16">
         <TipTapRenderer content={`<p style="text-align: center">$${formula.latex}$</p>`} />
@@ -598,17 +675,28 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
               <div className="h-5 border-l border-gray-300 mx-1"></div>
               
               <ToolbarButton 
-                icon={<Heading1 className="w-4 h-4" />} 
-                label="Titre 1" 
-                onClick={() => toggleHeading(1)} 
-                isActive={editor?.isActive('heading', { level: 1 })}
-              />
-              <ToolbarButton 
-                icon={<Heading2 className="w-4 h-4" />} 
-                label="Titre 2" 
-                onClick={() => toggleHeading(2)} 
-                isActive={editor?.isActive('heading', { level: 2 })}
-              />
+              icon={<Heading1 className="w-4 h-4" />} 
+              label="Titre 1" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('H1 button clicked'); // Pour debug
+                toggleHeading(1);
+              }} 
+              isActive={editor?.isActive('heading', { level: 1 }) || false}
+            />
+
+            <ToolbarButton 
+              icon={<List className="w-4 h-4" />} 
+              label="Liste à puces" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Bullet list button clicked'); // Pour debug
+                toggleBulletList();
+              }} 
+              isActive={editor?.isActive('bulletList') || false}
+            />
               <ToolbarButton 
                 icon={<Quote className="w-4 h-4" />} 
                 label="Citation" 
@@ -630,9 +718,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                 onClick={toggleOrderedList} 
                 isActive={editor?.isActive('orderedList')}
               />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
               <div className="color-picker-container relative">
                 <ToolbarButton 
                   icon={<Palette className="w-4 h-4" style={{ color: selectedColor }} />} 
@@ -1005,12 +1090,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                     placeholder="Entrez votre code LaTeX ici..."
                     spellCheck="false"
                   />
-                  <div className="text-xs text-gray-500 mt-2">
-                    <p>Modifiez le code LaTeX ci-dessus. Vous pouvez modifier les variables, les indices, les valeurs, etc.</p>
                   </div>
-                </div>
-                
-                {/* Preview */}
+                  {/* Preview */}
                 <div>
                   <div className="block text-sm font-medium text-gray-700 mb-2">
                     Aperçu
@@ -1033,6 +1114,54 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                   </div>
                 </div>
               </div>
+                  </div>
+                  
+                    
+                  <div className="border border-gray-200 rounded-lg py-4 bg-gray-50 mt-4 w-full">
+                  
+                  {/* Conteneur défilant horizontal sur toute la largeur */}
+                  <div className="overflow-x-auto w-full">
+                    <div className="flex flex-row space-x-8 pb-0 px-4 min-w-max">
+                      {subFormulas.map((category, catIdx) => (
+                        <div key={catIdx} id={`formula-category-${catIdx}`} className="flex-shrink-0">
+                          <h4 className="font-medium text-sm mb-2 text-gray-700">{category.category}</h4>
+                          <div className="grid grid-cols-3 gap-0 w-full">
+                            {category.items.map((formula, idx) => (
+                              <button
+                                key={idx}
+                                className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded hover:border-indigo-300 hover:shadow-sm transition-all"
+                                onClick={() => {
+                                  // Code d'insertion inchangé
+                                  const textArea = document.getElementById('latexEditor') as HTMLTextAreaElement;
+                                  const cursorPosition = textArea.selectionStart;
+                                  
+                                  const newValue = 
+                                    editedLatex.substring(0, cursorPosition) + 
+                                    formula.latex + 
+                                    editedLatex.substring(cursorPosition);
+                                  
+                                  setEditedLatex(newValue);
+                                  
+                                  setTimeout(() => {
+                                    textArea.focus();
+                                    textArea.selectionStart = cursorPosition + formula.latex.length;
+                                    textArea.selectionEnd = cursorPosition + formula.latex.length;
+                                  }, 0);
+                                }}
+                              >
+                                <div className="h-12 w-full flex items-center justify-center">
+                                  <TipTapRenderer content={`<p>$${formula.latex}$</p>`} />
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1 truncate w-full text-center">
+                                  {formula.description}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                </div>
               
               {/* Mode d'insertion options */}
               <div className="mt-6 border-t border-gray-200 pt-4">
@@ -1051,19 +1180,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
                   >
                     <span className="font-mono mr-2">$x^2$</span>
                     Formule en ligne
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => setFormulaInsertMode('block')}
-                    className={`px-4 py-2 rounded-lg flex items-center text-sm ${
-                      formulaInsertMode === 'block'
-                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="font-mono mr-2">$$f(x)$$</span>
-                    Formule en bloc
                   </button>
                   
                   <button

@@ -7,6 +7,11 @@ import Color from '@tiptap/extension-color';
 import Image from '@tiptap/extension-image';
 import Mathematics from '@tiptap-pro/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
+import ListItem from '@tiptap/extension-list-item';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
+import Heading from '@tiptap/extension-heading';
+
 import { useNavigate } from 'react-router-dom';
 import 'katex/dist/katex.min.css';
 import { Highlighter, Pen, Type, Eraser, Trash2, X } from 'lucide-react';
@@ -113,6 +118,20 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         types: ['heading', 'paragraph'],
       }),
       Color,
+      Heading.configure({
+              levels: [1, 2],
+            }),
+      BulletList.configure({
+        HTMLAttributes: {
+          class: 'list-disc pl-5',
+        },
+      }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          class: 'list-decimal pl-5',
+        },
+      }),
+      ListItem,
       Image.configure({
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
