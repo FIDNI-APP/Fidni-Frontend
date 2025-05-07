@@ -25,9 +25,9 @@ COPY . .
 
 # Configure environment for production build
 ENV NODE_ENV=production
-
-# Install framer-motion and other problematic dependencies explicitly
-RUN npm install framer-motion recharts @chakra-ui/react react-router-dom
+RUN npm install -g typescript
+RUN npm install -g vite
+RUN npm install -g pnpm
 
 # Build the app with more verbose logging
 RUN npm run build
