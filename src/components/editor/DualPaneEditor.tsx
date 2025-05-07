@@ -12,7 +12,14 @@ import TipTapRenderer from './TipTapRenderer';
 import ListItem from '@tiptap/extension-list-item';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
+import Document from '@tiptap/extension-document';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
 import 'katex/dist/katex.min.css';
+import ImageResize from 'tiptap-extension-resize-image';
+import { FileHandler } from '@tiptap-pro/extension-file-handler';
+
+
 import { 
   Bold, 
   Italic, 
@@ -201,6 +208,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       StarterKit,
       TextStyle,
       Color,
+      Document,
+      Paragraph,
+      Text,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -219,16 +229,51 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         },
       }),
       ListItem,
-      Image.configure({
+      ImageResize.configure({
+        allowBase64: true, // For development
+        inline: false,
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
-          loading: 'lazy',
         },
       }),
       LinkTiptap.configure({
         openOnClick: false,
         HTMLAttributes: {
           class: 'text-indigo-600 hover:text-indigo-800 underline',
+        },
+      }),
+      FileHandler.configure({
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        onDrop: (editor, files, pos) => {
+          Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              if (e.target?.result) {
+                editor.chain().focus().setNodeSelection(pos).insertContentAt(pos, {
+                  type: 'image',
+                  attrs: {
+                    src: e.target.result,
+                    alt: file.name,
+                  }
+                }).run();
+              }
+            };
+            reader.readAsDataURL(file);
+          });
+        },
+        onPaste: (editor, files) => {
+          Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              if (e.target?.result) {
+                editor.chain().focus().setImage({
+                  src: e.target.result as string,
+                  alt: file.name,
+                }).run();
+              }
+            };
+            reader.readAsDataURL(file);
+          });
         },
       }),
       Mathematics.configure({
@@ -308,49 +353,59 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowFormulaModal(false);
   };
 
-  // Assurez-vous que toutes les fonctions de formatage utilisent .chain() et .run()
-const toggleBold = () => {
-  editor?.chain().focus().toggleBold().run();
-};
+  const toggleBold = (e: React.MouseEvent) => {
+    editor?.chain().focus().toggleBold().run();
+    e.preventDefault(); // Empêche la propagation de l'événement
 
-const toggleItalic = () => {
-  editor?.chain().focus().toggleItalic().run();
-};
-
-const toggleHeading = (level: 1 | 2) => {
-  if (!editor) return;
+  };
   
-  console.log('Toggle heading', level); // Pour debug
+  // 2. Faire la même chose pour toutes les autres fonctions toggle:
+  const toggleItalic = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (editor) {
+      editor.chain().focus().toggleItalic().run();
+    }
+  };
   
-  // Utiliser setHeading au lieu de toggleHeading pour plus de fiabilité
-  if (editor.isActive('heading', { level })) {
-    editor.chain().focus().setParagraph().run();
-  } else {
-    editor.chain().focus().setHeading({ level }).run();
-  }
-};
-
-const toggleBulletList = () => {
-  if (!editor) return;
+  const toggleBulletList = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (editor) {
+      editor.chain().focus().toggleBulletList().run();
+    }
+  };
   
-  console.log('Toggle bullet list'); // Pour debug
-  editor.chain().focus().toggleBulletList().run();
-};
-
-const toggleOrderedList = () => {
-  if (!editor) return;
+  const toggleOrderedList = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (editor) {
+      editor.chain().focus().toggleOrderedList().run();
+    }
+  };
   
-  console.log('Toggle ordered list'); // Pour debug
-  editor.chain().focus().toggleOrderedList().run();
-};
-
-const toggleBlockquote = () => {
-  editor?.chain().focus().toggleBlockquote().run();
-};
-
-const setTextAlign = (align: 'left' | 'center' | 'right') => {
-  editor?.chain().focus().setTextAlign(align).run();
-};
+  const toggleBlockquote = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (editor) {
+      editor.chain().focus().toggleBlockquote().run();
+    }
+  };
+  
+  // 3. Pour les fonctions setHeading et setTextAlign, faire de même:
+  const setHeading = (level: 1 | 2, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (editor) {
+      if (editor.isActive('heading', { level })) {
+        editor.chain().focus().setParagraph().run();
+      } else {
+        editor.chain().focus().setHeading({ level }).run();
+      }
+    }
+  };
+  
+  const setTextAlign = (align: 'left' | 'center' | 'right', e: React.MouseEvent) => {
+    e.preventDefault();
+    if (editor) {
+      editor.chain().focus().setTextAlign(align).run();
+    }
+  };
 
   const handleUndo = () => {
     editor?.chain().focus().undo().run();
@@ -445,17 +500,24 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
   const insertImage = () => {
     if (!imageUrl) return;
     
+    // With the resize extension, you don't need to set width directly
+    // as the user can resize after insertion
     editor?.chain().focus().setImage({ 
       src: imageUrl,
       alt: imageCaption || 'Image',
+      title: imageCaption,
     }).run();
     
     setShowImageModal(false);
   };
   
   // Attach click handler to editor to ensure it's focused
-  const focusEditor = () => {
-    editor?.chain().focus().run();
+  const focusEditor = (e: React.MouseEvent) => {
+    // Ne pas mettre automatiquement le focus sur l'éditeur lorsqu'on clique sur les boutons
+    const target = e.target as HTMLElement;
+    if (!target.closest('button')) {
+      editor?.chain().focus().run();
+    }
   };
 
   // Tooltip handling
@@ -492,13 +554,7 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
     setShowTooltip(false);
   };
 
-  const ensureFocus = () => {
-    if (!editor?.isFocused) {
-      editor?.chain().focus().run();
-    }
-  };
   
-  // Puis modifiez la définition du composant ToolbarButton
   const ToolbarButton = ({ 
     icon, 
     label, 
@@ -513,14 +569,12 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
     color?: string;
   }) => (
     <button
-      type="button" 
-      onClick={(e) => {
-        ensureFocus(); // Assurez-vous que l'éditeur est focalisé
+      type="button"
+      onMouseDown={(e) => {
+        // Use onMouseDown instead of onClick
+        e.preventDefault(); // Prevent the button from taking focus
         onClick(e);
-        showButtonTooltip(label, e);
       }}
-      onMouseEnter={(e) => showButtonTooltip(label, e)}
-      onMouseLeave={hideTooltip}
       className={`p-1.5 rounded-full transition-all duration-200 flex items-center justify-center ${
         isActive 
           ? 'bg-indigo-100 text-indigo-700 shadow-sm' 
@@ -531,7 +585,7 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
       {icon}
     </button>
   );
-
+  
   // Effect to handle document clicks to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -640,14 +694,6 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
         >
           Mathématiques
         </button>
-        <button 
-          className={`px-3 py-1.5 text-sm font-medium rounded-t-lg ${
-            activeToolbar === 'layout' ? 'bg-white border-t border-l border-r border-gray-200 border-b-white -mb-px text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
-          }`}
-          onClick={() => setActiveToolbar('layout')}
-        >
-          Mise en page
-        </button>
       </div>
 
       {/* Main Toolbar */}
@@ -662,45 +708,35 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
               <ToolbarButton 
                 icon={<Bold className="w-4 h-4" />} 
                 label="Gras" 
-                onClick={toggleBold} 
+                onClick={(e) => toggleBold(e)} 
                 isActive={editor?.isActive('bold')}
               />
               <ToolbarButton 
                 icon={<Italic className="w-4 h-4" />} 
                 label="Italique" 
-                onClick={toggleItalic} 
+                onClick={(e) => toggleItalic(e)} 
                 isActive={editor?.isActive('italic')}
               />
               
               <div className="h-5 border-l border-gray-300 mx-1"></div>
               
               <ToolbarButton 
-              icon={<Heading1 className="w-4 h-4" />} 
-              label="Titre 1" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('H1 button clicked'); // Pour debug
-                toggleHeading(1);
-              }} 
-              isActive={editor?.isActive('heading', { level: 1 }) || false}
-            />
+                icon={<Heading1 className="w-4 h-4" />} 
+                label="Titre 1" 
+                onClick={(e) => setHeading(1, e)}
+                isActive={editor?.isActive('heading', { level: 1 }) || false}
+              />
 
-            <ToolbarButton 
-              icon={<List className="w-4 h-4" />} 
-              label="Liste à puces" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Bullet list button clicked'); // Pour debug
-                toggleBulletList();
-              }} 
-              isActive={editor?.isActive('bulletList') || false}
-            />
+              <ToolbarButton 
+                icon={<Heading2 className="w-4 h-4" />} 
+                label="Titre 2" 
+                onClick={(e) => setHeading(2, e)}
+                isActive={editor?.isActive('heading', { level: 2 }) || false}
+              />
               <ToolbarButton 
                 icon={<Quote className="w-4 h-4" />} 
                 label="Citation" 
-                onClick={toggleBlockquote} 
+                onClick={(e) => toggleBlockquote(e)} 
                 isActive={editor?.isActive('blockquote')}
               />
               
@@ -709,15 +745,58 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
               <ToolbarButton 
                 icon={<List className="w-4 h-4" />} 
                 label="Liste à puces" 
-                onClick={toggleBulletList} 
+                onClick={(e) => toggleBulletList(e)} 
                 isActive={editor?.isActive('bulletList')}
               />
               <ToolbarButton 
                 icon={<ListOrdered className="w-4 h-4" />} 
                 label="Liste numérotée" 
-                onClick={toggleOrderedList} 
+                onClick={(e) => toggleOrderedList(e)} 
                 isActive={editor?.isActive('orderedList')}
               />
+              
+              <div className="h-5 border-l border-gray-300 mx-1"></div>
+              
+              <ToolbarButton 
+                icon={<AlignLeft className="w-4 h-4" />} 
+                label="Aligner à gauche" 
+                onClick={(e) => setTextAlign('left',e)} 
+                isActive={editor?.isActive({ textAlign: 'left' })}
+              />
+              <ToolbarButton 
+                icon={<AlignCenter className="w-4 h-4" />} 
+                label="Centrer" 
+                onClick={(e) => setTextAlign('center',e)} 
+                isActive={editor?.isActive({ textAlign: 'center' })}
+              />
+              <ToolbarButton 
+                icon={<AlignRight className="w-4 h-4" />} 
+                label="Aligner à droite" 
+                onClick={(e) => setTextAlign('right',e)} 
+                isActive={editor?.isActive({ textAlign: 'right' })}
+              />
+              
+              <div className="h-5 border-l border-gray-300 mx-1"></div>
+              
+              <ToolbarButton 
+                icon={<ImageIcon className="w-4 h-4" />} 
+                label="Insérer une image" 
+                onClick={openImageModal}
+                color="text-green-600"
+              />
+              
+              <ToolbarButton 
+                icon={<Link className="w-4 h-4" />} 
+                label="Ajouter un lien" 
+                onClick={() => {
+                  const url = window.prompt('URL:');
+                  if (url) {
+                    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+                  }
+                }}
+                isActive={editor?.isActive('link')}
+              />
+              
               <div className="color-picker-container relative">
                 <ToolbarButton 
                   icon={<Palette className="w-4 h-4" style={{ color: selectedColor }} />} 
@@ -871,52 +950,6 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
             </div>
           </>
         )}
-
-        {/* Layout Formatting Toolbar */}
-        {activeToolbar === 'layout' && (
-          <>
-            <div className="flex gap-1 flex-wrap items-center">
-              <ToolbarButton 
-                icon={<AlignLeft className="w-4 h-4" />} 
-                label="Aligner à gauche" 
-                onClick={() => setTextAlign('left')} 
-                isActive={editor?.isActive({ textAlign: 'left' })}
-              />
-              <ToolbarButton 
-                icon={<AlignCenter className="w-4 h-4" />} 
-                label="Centrer" 
-                onClick={() => setTextAlign('center')} 
-                isActive={editor?.isActive({ textAlign: 'center' })}
-              />
-              <ToolbarButton 
-                icon={<AlignRight className="w-4 h-4" />} 
-                label="Aligner à droite" 
-                onClick={() => setTextAlign('right')} 
-                isActive={editor?.isActive({ textAlign: 'right' })}
-              />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              <ToolbarButton 
-                icon={<ImageIcon className="w-4 h-4" />} 
-                label="Insérer une image" 
-                onClick={openImageModal}
-                color="text-green-600"
-              />
-              <ToolbarButton 
-                icon={<Link className="w-4 h-4" />} 
-                label="Ajouter un lien" 
-                onClick={() => {
-                  const url = window.prompt('URL:');
-                  if (url) {
-                    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-                  }
-                }}
-                isActive={editor?.isActive('link')}
-              />
-            </div>
-          </>
-        )}
         
         {/* Tooltip */}
         {showTooltip && (
@@ -944,17 +977,6 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
         />
       </div>
 
-      {/* Status Bar */}
-      <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-        <div className="flex items-center gap-2">
-          <span>Mode: {activeToolbar === 'text' ? 'Texte' : activeToolbar === 'math' ? 'Mathématiques' : 'Mise en page'}</span>
-          <span>•</span>
-          <span>Thème: {currentTheme.name}</span>
-        </div>
-        <div>
-          Éditeur de formules mathématiques
-        </div>
-      </div>
 
       {/* Image Modal */}
       {showImageModal && (
@@ -1016,13 +1038,14 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
                 />
                 
                 <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                  disabled={isUploading}
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Photo
-                </button>
+                                onClick={() => cameraInputRef.current?.click()}
+                                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                                disabled={isUploading}
+                                title="Prendre une photo avec la caméra"
+                              >
+                                <Camera className="w-4 h-4 mr-2" />
+                                Photo
+                              </button>
                 <label htmlFor="camera-input" className="hidden">Prendre une photo</label>
                 <input 
                   type="file" 
@@ -1090,8 +1113,8 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
                     placeholder="Entrez votre code LaTeX ici..."
                     spellCheck="false"
                   />
-                  </div>
-                  {/* Preview */}
+                </div>
+                {/* Preview */}
                 <div>
                   <div className="block text-sm font-medium text-gray-700 mb-2">
                     Aperçu
@@ -1114,57 +1137,55 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
                   </div>
                 </div>
               </div>
-                  </div>
+            </div>
                   
-                    
-                  <div className="border border-gray-200 rounded-lg py-4 bg-gray-50 mt-4 w-full">
-                  
-                  {/* Conteneur défilant horizontal sur toute la largeur */}
-                  <div className="overflow-x-auto w-full">
-                    <div className="flex flex-row space-x-8 pb-0 px-4 min-w-max">
-                      {subFormulas.map((category, catIdx) => (
-                        <div key={catIdx} id={`formula-category-${catIdx}`} className="flex-shrink-0">
-                          <h4 className="font-medium text-sm mb-2 text-gray-700">{category.category}</h4>
-                          <div className="grid grid-cols-3 gap-0 w-full">
-                            {category.items.map((formula, idx) => (
-                              <button
-                                key={idx}
-                                className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded hover:border-indigo-300 hover:shadow-sm transition-all"
-                                onClick={() => {
-                                  // Code d'insertion inchangé
-                                  const textArea = document.getElementById('latexEditor') as HTMLTextAreaElement;
-                                  const cursorPosition = textArea.selectionStart;
-                                  
-                                  const newValue = 
-                                    editedLatex.substring(0, cursorPosition) + 
-                                    formula.latex + 
-                                    editedLatex.substring(cursorPosition);
-                                  
-                                  setEditedLatex(newValue);
-                                  
-                                  setTimeout(() => {
-                                    textArea.focus();
-                                    textArea.selectionStart = cursorPosition + formula.latex.length;
-                                    textArea.selectionEnd = cursorPosition + formula.latex.length;
-                                  }, 0);
-                                }}
-                              >
-                                <div className="h-12 w-full flex items-center justify-center">
-                                  <TipTapRenderer content={`<p>$${formula.latex}$</p>`} />
-                                </div>
-                                <div className="text-xs text-gray-600 mt-1 truncate w-full text-center">
-                                  {formula.description}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+            <div className="border border-gray-200 rounded-lg py-4 bg-gray-50 mt-4 w-full">
+              {/* Conteneur défilant horizontal sur toute la largeur */}
+              <div className="overflow-x-auto w-full">
+                <div className="flex flex-row space-x-8 pb-0 px-4 min-w-max">
+                  {subFormulas.map((category, catIdx) => (
+                    <div key={catIdx} id={`formula-category-${catIdx}`} className="flex-shrink-0">
+                      <h4 className="font-medium text-sm mb-2 text-gray-700">{category.category}</h4>
+                      <div className="grid grid-cols-3 gap-0 w-full">
+                        {category.items.map((formula, idx) => (
+                          <button
+                            key={idx}
+                            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded hover:border-indigo-300 hover:shadow-sm transition-all"
+                            onClick={() => {
+                              // Code d'insertion inchangé
+                              const textArea = document.getElementById('latexEditor') as HTMLTextAreaElement;
+                              const cursorPosition = textArea.selectionStart;
+                              
+                              const newValue = 
+                                editedLatex.substring(0, cursorPosition) + 
+                                formula.latex + 
+                                editedLatex.substring(cursorPosition);
+                              
+                              setEditedLatex(newValue);
+                              
+                              setTimeout(() => {
+                                textArea.focus();
+                                textArea.selectionStart = cursorPosition + formula.latex.length;
+                                textArea.selectionEnd = cursorPosition + formula.latex.length;
+                              }, 0);
+                            }}
+                          >
+                            <div className="h-12 w-full flex items-center justify-center">
+                              <TipTapRenderer content={`<p>$${formula.latex}$</p>`} />
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1 truncate w-full text-center">
+                              {formula.description}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                  ))}
                 </div>
+              </div>
               
               {/* Mode d'insertion options */}
-              <div className="mt-6 border-t border-gray-200 pt-4">
+              <div className="mt-6 border-t border-gray-200 pt-4 px-4">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Mode d'insertion:
                 </label>
@@ -1239,7 +1260,6 @@ const setTextAlign = (align: 'left' | 'center' | 'right') => {
             <div className="font-medium text-xs uppercase tracking-wider mb-1.5 text-indigo-800">Mathématiques</div>
             <ul className="space-y-1 text-xs list-disc list-inside">
               <li>$x^2$ : Formule en ligne avec $...$</li>
-              <li>Équation centrée avec $$...$$</li>
               <li>Modifiez les formules avant de les insérer</li>
             </ul>
           </div>

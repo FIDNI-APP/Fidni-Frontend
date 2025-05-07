@@ -16,7 +16,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import parse from 'html-react-parser';
-
+import TipTapRenderer from '@/components/editor/TipTapRenderer';
 interface ContentPreviewProps {
   title: string;
   selectedClassLevels: ClassLevelModel[];
@@ -170,7 +170,7 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
         {activeTabs.content && (
           <div className="px-6 py-4 bg-white">
             <div className="prose prose-indigo max-w-none text-gray-700 pb-4">
-              {parse(content)}
+            <TipTapRenderer content={content} />
             </div>
           </div>
         )}
@@ -198,7 +198,8 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({
           {activeTabs.solution && (
             <div className="px-6 py-4 bg-white">
               <div className="prose prose-indigo max-w-none text-gray-700 pb-4">
-                {parse(solution)}
+              <TipTapRenderer content={solution} />
+
               </div>
             </div>
           )}
