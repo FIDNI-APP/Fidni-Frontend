@@ -30,7 +30,7 @@ ENV NODE_ENV=production
 RUN npm install framer-motion recharts @chakra-ui/react react-router-dom
 
 # Build the app with more verbose logging
-RUN npm run build || (echo "Build failed, checking node_modules" && ls -la node_modules && exit 1)
+RUN npm run build
 
 # Production stage
 FROM nginx:alpine
