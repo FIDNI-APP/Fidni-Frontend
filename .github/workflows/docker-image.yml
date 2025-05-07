@@ -16,13 +16,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
-      # Setup .npmrc for private registry access
-      - name: Set up .npmrc
-        run: |
-          echo "@tiptap-pro:registry=https://registry.tiptap.dev/" > .npmrc
-          echo "@tiptap-cloud:registry=https://registry.tiptap.dev/" >> .npmrc
-          echo "//registry.tiptap.dev/:_authToken=${{ secrets.TIPTAP_AUTH_TOKEN || 'tGfd2UZcfGYMS3Du6+sMZaYfBuXJ8WMCzIaQ71tVybQR/kDU8mVla/akmobCPob6' }}" >> .npmrc
-      
       # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -42,6 +35,7 @@ jobs:
           ECR_REGISTRY: 322609219907.dkr.ecr.eu-west-3.amazonaws.com
           ECR_REPOSITORY: fidni
         run: |
+          aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin 322609219907.dkr.ecr.eu-west-3.amazonaws.com
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
       
@@ -51,65 +45,69 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
           chmod 600 ~/.ssh/ec2_key.pem
-
-      # Déploiement sur EC2 avec SSH explicite
+          
+      # Déploiement sur EC2 avec SSH explicite - simplification avec un script plus court
       - name: Deploy to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USERNAME: ${{ secrets.EC2_USER }}
           ECR_REGISTRY: 322609219907.dkr.ecr.eu-west-3.amazonaws.com
           ECR_REPOSITORY: fidni
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: eu-west-3
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USERNAME}@${EC2_HOST} "
-            # Configurer AWS CLI
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID &&
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY &&
-            aws configure set region $AWS_REGION
-            
-            # Vérifier les permissions Docker
-            if ! docker info &> /dev/null; then
-              sudo usermod -aG docker \$USER
-              sudo -E aws ecr get-login-password --region eu-west-3 | sudo -E docker login --username AWS --password-stdin ${ECR_REGISTRY}
-              
-              # Pull the latest image
-              sudo -E docker pull ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-              
-              # Stop and remove the existing container if it exists
-              sudo -E docker stop fidni-app || true
-              sudo -E docker rm fidni-app || true
-              
-              # Run the new container
-              sudo -E docker run -d \
-                --name fidni-app \
-                -p 80:80 \
-                -e NODE_ENV=production \
-                ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-              
-              # Clean up all unused images
-              sudo -E docker image prune -a --force
-              sudo -E docker system prune -f
-            else
-              # Login to ECR sans sudo
-              aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-              
-              # Pull the latest image
-              docker pull ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-              
-              # Stop and remove the existing container if it exists
-              docker stop fidni-app || true
-              docker rm fidni-app || true
-              
-              # Run the new container
-              docker run -d \
-                --name fidni-app \
-                -p 80:80 \
-                -e NODE_ENV=production \
-                ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-              
-              # Clean up all unused images
-              docker image prune -a --force
-              docker system prune -f
-            fi "
+          # Création d'un script temporaire pour l'exécution sur le serveur
+          cat > deploy.sh << 'EOF'
+          #!/bin/bash
+          # Configuration AWS
+          aws configure set aws_access_key_id $1
+          aws configure set aws_secret_access_key $2
+          aws configure set region eu-west-3
+          
+          # Connexion à ECR
+          echo "Logging in to ECR..."
+          aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin 322609219907.dkr.ecr.eu-west-3.amazonaws.com
+          
+          # Arrêt de tous les conteneurs sur le port 80
+          echo "Checking for containers on port 80..."
+          PORT_80_CONTAINERS=$(docker ps -q --filter publish=80)
+          if [ ! -z "$PORT_80_CONTAINERS" ]; then
+            echo "Found containers on port 80: $PORT_80_CONTAINERS"
+            for container in $PORT_80_CONTAINERS; do
+              echo "Stopping container $container..."
+              docker stop $container
+              docker rm $container
+            done
+          fi
+          
+          # Pull de la dernière image
+          echo "Pulling latest image..."
+          docker pull 322609219907.dkr.ecr.eu-west-3.amazonaws.com/fidni:latest
+          
+          # Arrêt et suppression du conteneur fidni-app s'il existe
+          echo "Stopping existing fidni-app container..."
+          docker stop fidni-app || true
+          docker rm fidni-app || true
+          
+          # Démarrage du nouveau conteneur
+          echo "Starting new container..."
+          docker run -d \
+            --name fidni-app \
+            -p 80:80 \
+            -e NODE_ENV=production \
+            --restart unless-stopped \
+            322609219907.dkr.ecr.eu-west-3.amazonaws.com/fidni:latest
+          
+          # Vérification que le conteneur est en cours d'exécution
+          echo "Verifying container is running..."
+          docker ps | grep fidni-app
+          
+          # Nettoyage des images inutilisées
+          echo "Cleaning up unused images..."
+          docker image prune -a --force
+          docker system prune -f
+          EOF
+          
+          # Copie du script vers le serveur distant
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem deploy.sh ${EC2_USERNAME}@${EC2_HOST}:~/deploy.sh
+          
+          # Exécution du script sur le serveur distant avec sudo
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USERNAME}@${EC2_HOST} "chmod +x ~/deploy.sh && sudo ~/deploy.sh '${{ secrets.AWS_ACCESS_KEY_ID }}' '${{ secrets.AWS_SECRET_ACCESS_KEY }}' && rm ~/deploy.sh"
