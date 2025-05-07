@@ -26,6 +26,7 @@
     "axios": "^1.6.7",
     "clsx": "^2.1.0",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.9.4",
     "html-react-parser": "^5.2.2",
     "js-cookie": "^3.0.5",
     "katex": "^0.16.22",
