@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Layers, BookOpen, GraduationCap } from 'lucide-react';
 import { getClassLevels, getSubjects } from '@/lib/api';
+import { useFilters } from './FilterContext';
 
 interface NavDropdownProps {
   type: 'exercises' | 'lessons';
@@ -15,6 +16,9 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   const [loadingClassLevels, setLoadingClassLevels] = useState(true);
   const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
   const [expandedClassLevel, setExpandedClassLevel] = useState<string | null>(null);
+  const { setSelectedClassLevel, setSelectedSubject } = useFilters();
+  
+
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -78,12 +82,21 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   };
 
   const handleSubjectClick = (classLevelId: string, subjectId: string) => {
-    navigate(`/${type}?classLevels=${classLevelId}&subjects=${subjectId}`);
+    // Convert to numbers if that's what your IDs should be
+    const classLevel = Number(classLevelId); // Convert to number
+    const subject = Number(subjectId); // Convert to number
+    
+    // Navigate with the number IDs
+    navigate(`/${type}?classLevels=${classLevel}&subjects=${subject}`);
     onClose();
   };
-
+  
   const handleViewAll = (classLevelId: string) => {
-    navigate(`/${type}?classLevels=${classLevelId}`);
+    // Convert to number if that's what your IDs should be
+    const classLevel = Number(classLevelId); // Convert to number
+    
+    // Navigate with the number ID
+    navigate(`/${type}?classLevels=${classLevel}`);
     onClose();
   };
 

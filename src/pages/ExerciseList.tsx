@@ -10,7 +10,6 @@ import { ContentList } from '../components/ContentList';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
-import { VirtualScroll } from '../components/VirtualScroll'; // You'll need to create this component
 
 // Custom hook for debouncing values
 function useDebounce<T>(value: T, delay: number): T {
@@ -94,29 +93,44 @@ export const ExerciseList = () => {
   const debouncedFilters = useDebounce(filters, 500);
   const debouncedSortBy = useDebounce(sortBy, 500);
   
-  // Parse the URL parameters to apply initial filters on component mount
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const classLevelsParam = searchParams.get('classLevels');
-    const subjectsParam = searchParams.get('subjects');
+  const searchParams = new URLSearchParams(location.search);
+  const classLevelsParam = searchParams.get('classLevels');
+  const subjectsParam = searchParams.get('subjects');
+  
+  if (classLevelsParam || subjectsParam) {
+    const newFilters = { ...filters };
+    let hasChanges = false;
     
-    // Only update if we have parameters
-    if (classLevelsParam || subjectsParam) {
-      const newFilters = { ...filters };
-      
-      if (classLevelsParam) {
-        newFilters.classLevels = classLevelsParam.split(',');
+    if (classLevelsParam) {
+      // Convert to numbers and ensure they're unique
+      const classLevels = classLevelsParam.split(',').map(id => Number(id));
+      if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
+        newFilters.classLevels = classLevels;
+        hasChanges = true;
       }
-      
-      if (subjectsParam) {
-        newFilters.subjects = subjectsParam.split(',');
+    }
+    
+    if (subjectsParam) {
+      // Convert to numbers and ensure they're unique
+      const subjects = subjectsParam.split(',').map(id => Number(id));
+      if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
+        newFilters.subjects = subjects;
+        hasChanges = true;
       }
+    }
+    
+    if (hasChanges) {
+      // Reset dependent filters
+      newFilters.subfields = [];
+      newFilters.chapters = [];
+      newFilters.theorems = [];
       
-      // Set the filters directly - this will be reflected in the sidebar
+      // Update filters
       setFilters(newFilters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }
+}, [location.search]);
   
   // Use memoization for creating API query parameters
   const queryParams = useMemo(() => {
@@ -364,7 +378,6 @@ export const ExerciseList = () => {
   ), [isFilterOpen, sortBy, totalCount, handleSortChange]);
 
   // Memoize filter component to prevent unnecessary re-renders
-  // In ExerciseList.tsx, update the FilterComponent in useMemo
   const FilterComponent = useMemo(() => (
     <div 
       className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-90 lg:w-72 flex-shrink-10 custom-scrollbar bg-white rounded-xl shadow-sm`}
@@ -425,60 +438,6 @@ export const ExerciseList = () => {
               <p className="text-indigo-200 text-lg">
                 Discover and practice with our collection of {totalCount} quality exercises
               </p>
-              
-              {/* Display active filters as badges if any */}
-              {(filters.classLevels.length > 0 || filters.subjects.length > 0) && (
-                <div className="flex flex-wrap gap-1 mt-4">
-                  <span className="text-indigo-200">Active filters:</span>
-                  {filters.classLevels.map(cl => (
-                    <button
-                      key={`cl-${cl}`}
-                      onClick={() => {
-                        setFilters(prev => ({
-                          ...prev,
-                          classLevels: prev.classLevels.filter(id => id !== cl)
-                        }));
-                      }}
-                      className="bg-white/20 text-white px-3 py-1 rounded-full text-sm flex items-center hover:bg-white/30 transition-colors"
-                    >
-                      Class: {cl}
-                      <X className="w-3 h-3 ml-1.5" />
-                    </button>
-                  ))}
-                  {filters.subjects.map(sub => (
-                    <button
-                      key={`sub-${sub}`}
-                      onClick={() => {
-                        setFilters(prev => ({
-                          ...prev,
-                          subjects: prev.subjects.filter(id => id !== sub)
-                        }));
-                      }}
-                      className="bg-white/20 text-white px-3 py-1 rounded-full text-sm flex items-center hover:bg-white/30 transition-colors"
-                    >
-                      Subject: {sub}
-                      <X className="w-3 h-3 ml-1.5" />
-                    </button>
-                  ))}
-                  
-                  <button
-                    onClick={() => {
-                      setFilters({
-                        classLevels: [],
-                        subjects: [],
-                        subfields: [],
-                        chapters: [],
-                        theorems: [],
-                        difficulties: [],
-                      });
-                      window.history.replaceState(null, '', '/exercises');
-                    }}
-                    className="bg-white/10 text-white hover:bg-white/20 px-3 py-1 rounded-full text-sm"
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
             </div>
             <button 
               onClick={handleNewExerciseClick}

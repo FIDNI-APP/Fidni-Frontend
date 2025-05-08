@@ -22,7 +22,7 @@ import { LessonList } from './pages/LessonList';
 import { LessonDetail } from './pages/LessonDetail';
 import { CreateLesson } from './components/lesson/CreateLesson';
 import { EditLesson } from './components/lesson/EditLesson';
-
+import { FilterProvider } from './components/navbar/FilterContext';
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
   const { openModal } = useAuthModal();
@@ -64,6 +64,7 @@ function App() {
       <BrowserRouter>
       <AuthProvider>
         <AuthModalProvider>
+          <FilterProvider>
           <div className="min-h-screen bg-gray-100">
             <Navbar />
             <Routes>
@@ -85,6 +86,7 @@ function App() {
               <Route path="/edit-lesson/:id" element={<EditLesson />} />
             </Routes>
           </div>
+          </FilterProvider>
           </AuthModalProvider>
       </AuthProvider>
     </BrowserRouter>

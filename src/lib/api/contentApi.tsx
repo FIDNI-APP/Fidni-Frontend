@@ -23,7 +23,6 @@ export const getContents = async (params: {
       theorems: params.theorems
     } 
   });
-  console.log(response.data.results);
   return {
     results: response.data.results || [],
     count: response.data.count || 0,

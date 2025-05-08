@@ -82,6 +82,10 @@ export const LessonList = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   
+  // Add states to track URL parameters
+  const [classLevelsFromUrl, setClassLevelsFromUrl] = useState<string[]>([]);
+  const [subjectsFromUrl, setSubjectsFromUrl] = useState<string[]>([]);
+  
   // Add refs for tracking scroll position
   const listRef = useRef<HTMLDivElement>(null);
   const previousScrollPosition = useRef(0);
@@ -93,30 +97,60 @@ export const LessonList = () => {
   const debouncedFilters = useDebounce(filters, 500);
   const debouncedSortBy = useDebounce(sortBy, 500);
   
-  // Parse the URL parameters to apply initial filters
+  // Read URL parameters when component mounts or URL changes
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
     
-    if (classLevelsParam || subjectsParam) {
-      const newFilters = { ...filters };
-      
-      if (classLevelsParam) {
-        newFilters.classLevels = classLevelsParam.split(',');
-      }
-      
-      if (subjectsParam) {
-        newFilters.subjects = subjectsParam.split(',');
-      }
-      
-      setFilters(newFilters);
-      
-      // Update the URL without the parameters after applying filters
-      // This prevents the parameters from persisting after the user modifies filters
-      window.history.replaceState(null, '', '/lessons');
+    if (classLevelsParam) {
+      setClassLevelsFromUrl(classLevelsParam.split(','));
+    } else {
+      setClassLevelsFromUrl([]);
+    }
+    
+    if (subjectsParam) {
+      setSubjectsFromUrl(subjectsParam.split(','));
+    } else {
+      setSubjectsFromUrl([]);
     }
   }, [location.search]);
+  
+  // Update filters when URL parameters change
+  useEffect(() => {
+    // Only update filters if URL params are non-empty
+    if (classLevelsFromUrl.length > 0 || subjectsFromUrl.length > 0) {
+      const newFilters = { ...filters };
+      let hasChanges = false;
+      
+      if (classLevelsFromUrl.length > 0 && 
+          JSON.stringify(classLevelsFromUrl) !== JSON.stringify(filters.classLevels)) {
+        newFilters.classLevels = classLevelsFromUrl;
+        hasChanges = true;
+      }
+      
+      if (subjectsFromUrl.length > 0 && 
+          JSON.stringify(subjectsFromUrl) !== JSON.stringify(filters.subjects)) {
+        newFilters.subjects = subjectsFromUrl;
+        hasChanges = true;
+      }
+      
+      if (hasChanges) {
+        // Reset dependent filters
+        newFilters.subfields = [];
+        newFilters.chapters = [];
+        newFilters.theorems = [];
+        
+        // Reset scroll position
+        if (listRef.current) {
+          listRef.current.scrollTop = 0;
+        }
+        
+        // Update filters
+        setFilters(newFilters);
+      }
+    }
+  }, [classLevelsFromUrl, subjectsFromUrl]);
   
   // Use memoization for creating API query parameters
   const queryParams = useMemo(() => {
@@ -382,26 +416,25 @@ export const LessonList = () => {
   ), [isFilterOpen, sortBy, totalCount, handleSortChange]);
 
   // Memoize filter component to prevent unnecessary re-renders
-  // In LessonList.tsx, update the FilterComponent in useMemo
-const FilterComponent = useMemo(() => (
-  <div 
-    className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
-    style={{ 
-      position: "sticky",
-      top: "100px",
-      height: "fit-content",
-      maxHeight: "calc(100vh - 140px)",
-      overflowY: "auto",
-      padding: "4px"
-    }}
-  >
-    <Filters 
-      onFilterChange={handleFilterChange} 
-      initialClassLevels={filters.classLevels}
-      initialSubjects={filters.subjects}
-    />
-  </div>
-), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
+  const FilterComponent = useMemo(() => (
+    <div 
+      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
+      style={{ 
+        position: "sticky",
+        top: "100px",
+        height: "fit-content",
+        maxHeight: "calc(100vh - 140px)",
+        overflowY: "auto",
+        padding: "4px"
+      }}
+    >
+      <Filters 
+        onFilterChange={handleFilterChange}
+        initialClassLevels={classLevelsFromUrl}
+        initialSubjects={subjectsFromUrl}
+      />
+    </div>
+  ), [isFilterOpen, handleFilterChange, classLevelsFromUrl, subjectsFromUrl]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
@@ -583,3 +616,4 @@ const FilterComponent = useMemo(() => (
     </div>
   );
 };
+        
