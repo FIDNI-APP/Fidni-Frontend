@@ -82,10 +82,6 @@ export const LessonList = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   
-  // Add states to track URL parameters
-  const [classLevelsFromUrl, setClassLevelsFromUrl] = useState<string[]>([]);
-  const [subjectsFromUrl, setSubjectsFromUrl] = useState<string[]>([]);
-  
   // Add refs for tracking scroll position
   const listRef = useRef<HTMLDivElement>(null);
   const previousScrollPosition = useRef(0);
@@ -97,42 +93,32 @@ export const LessonList = () => {
   const debouncedFilters = useDebounce(filters, 500);
   const debouncedSortBy = useDebounce(sortBy, 500);
   
-  // Read URL parameters when component mounts or URL changes
+  // Parse URL parameters when the component mounts or the URL changes
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
     
-    if (classLevelsParam) {
-      setClassLevelsFromUrl(classLevelsParam.split(','));
-    } else {
-      setClassLevelsFromUrl([]);
-    }
-    
-    if (subjectsParam) {
-      setSubjectsFromUrl(subjectsParam.split(','));
-    } else {
-      setSubjectsFromUrl([]);
-    }
-  }, [location.search]);
-  
-  // Update filters when URL parameters change
-  useEffect(() => {
-    // Only update filters if URL params are non-empty
-    if (classLevelsFromUrl.length > 0 || subjectsFromUrl.length > 0) {
+    if (classLevelsParam || subjectsParam) {
       const newFilters = { ...filters };
       let hasChanges = false;
       
-      if (classLevelsFromUrl.length > 0 && 
-          JSON.stringify(classLevelsFromUrl) !== JSON.stringify(filters.classLevels)) {
-        newFilters.classLevels = classLevelsFromUrl;
-        hasChanges = true;
+      if (classLevelsParam) {
+        // Convert to numbers and ensure they're unique
+        const classLevels = classLevelsParam.split(',').map(id => Number(id));
+        if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
+          newFilters.classLevels = classLevels;
+          hasChanges = true;
+        }
       }
       
-      if (subjectsFromUrl.length > 0 && 
-          JSON.stringify(subjectsFromUrl) !== JSON.stringify(filters.subjects)) {
-        newFilters.subjects = subjectsFromUrl;
-        hasChanges = true;
+      if (subjectsParam) {
+        // Convert to numbers and ensure they're unique
+        const subjects = subjectsParam.split(',').map(id => Number(id));
+        if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
+          newFilters.subjects = subjects;
+          hasChanges = true;
+        }
       }
       
       if (hasChanges) {
@@ -141,16 +127,11 @@ export const LessonList = () => {
         newFilters.chapters = [];
         newFilters.theorems = [];
         
-        // Reset scroll position
-        if (listRef.current) {
-          listRef.current.scrollTop = 0;
-        }
-        
         // Update filters
         setFilters(newFilters);
       }
     }
-  }, [classLevelsFromUrl, subjectsFromUrl]);
+  }, [location.search]);
   
   // Use memoization for creating API query parameters
   const queryParams = useMemo(() => {
@@ -430,11 +411,11 @@ export const LessonList = () => {
     >
       <Filters 
         onFilterChange={handleFilterChange}
-        initialClassLevels={classLevelsFromUrl}
-        initialSubjects={subjectsFromUrl}
+        initialClassLevels={filters.classLevels}
+        initialSubjects={filters.subjects}
       />
     </div>
-  ), [isFilterOpen, handleFilterChange, classLevelsFromUrl, subjectsFromUrl]);
+  ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
@@ -477,60 +458,6 @@ export const LessonList = () => {
               <p className="text-indigo-200 text-lg">
                 Explore our comprehensive collection of {totalCount} learning resources
               </p>
-              
-              {/* Display active filters as badges if any */}
-              {(filters.classLevels.length > 0 || filters.subjects.length > 0) && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <span className="text-indigo-200">Active filters:</span>
-                  {filters.classLevels.map(cl => (
-                    <button
-                      key={`cl-${cl}`}
-                      onClick={() => {
-                        setFilters(prev => ({
-                          ...prev,
-                          classLevels: prev.classLevels.filter(id => id !== cl)
-                        }));
-                      }}
-                      className="bg-white/20 text-white px-3 py-1 rounded-full text-sm flex items-center hover:bg-white/30 transition-colors"
-                    >
-                      Class: {cl}
-                      <X className="w-3 h-3 ml-1.5" />
-                    </button>
-                  ))}
-                  {filters.subjects.map(sub => (
-                    <button
-                      key={`sub-${sub}`}
-                      onClick={() => {
-                        setFilters(prev => ({
-                          ...prev,
-                          subjects: prev.subjects.filter(id => id !== sub)
-                        }));
-                      }}
-                      className="bg-white/20 text-white px-3 py-1 rounded-full text-sm flex items-center hover:bg-white/30 transition-colors"
-                    >
-                      Subject: {sub}
-                      <X className="w-3 h-3 ml-1.5" />
-                    </button>
-                  ))}
-                  
-                  <button
-                    onClick={() => {
-                      setFilters({
-                        classLevels: [],
-                        subjects: [],
-                        subfields: [],
-                        chapters: [],
-                        theorems: [],
-                        difficulties: [],
-                      });
-                      window.history.replaceState(null, '', '/lessons');
-                    }}
-                    className="bg-white/10 text-white hover:bg-white/20 px-3 py-1 rounded-full text-sm"
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
             </div>
             <button 
               onClick={handleNewLessonClick}
@@ -616,4 +543,3 @@ export const LessonList = () => {
     </div>
   );
 };
-        
