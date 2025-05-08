@@ -11,6 +11,7 @@ import ListItem from '@tiptap/extension-list-item';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
 import Heading from '@tiptap/extension-heading';
+import ImageResize from 'tiptap-extension-resize-image';
 
 import { useNavigate } from 'react-router-dom';
 import 'katex/dist/katex.min.css';
@@ -109,10 +110,11 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
+        heading: false,      // Disable heading from StarterKit
+        bulletList: false,   // Disable bulletList from StarterKit
+        orderedList: false,  // Disable orderedList from StarterKit
+        listItem: false,     // Disable listItem from StarterKit
+        }),
       TextStyle,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
@@ -132,13 +134,13 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         },
       }),
       ListItem,
-      Image.configure({
+      
+      ImageResize.configure({
+        allowBase64: true, // For development
+        inline: false,
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
-          loading: 'lazy',
-          decoding: 'async'
         },
-        allowBase64: true,
       }),
       Mathematics.configure({
         regex: /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi,

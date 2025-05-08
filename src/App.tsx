@@ -11,7 +11,7 @@ import { EditExercise } from './pages/EditExercise';
 import { EditSolution } from './pages/EditSolution';
 import { ExerciseList } from './pages/ExerciseList';
 import { ExerciseDetail } from './pages/ExerciseDetail';
-import { Navbar } from './components/Navbar';
+import { Navbar } from './components/navbar/Navbar';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';

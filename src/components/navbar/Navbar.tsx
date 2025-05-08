@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, LogIn, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { useAuth } from '../contexts/AuthContext';
-import { AuthButton } from '@/components/ui/AuthButton'; // Import the AuthButton component
+import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthButton } from '@/components/ui/AuthButton';
+import { NavDropdown } from './NavbarDropdown';
+import { getClassLevels} from '@/lib/api';
 import '@/lib/styles.css';
-import Logo from '@/assets/logo.svg';
 import Logo2 from "@/assets/logo2.svg";
 import Logo3 from "@/assets/logo3.svg";
 
 // Separate CSS classes
-const dropdownItemClass = "flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left transition-colors";
 const mobileNavItemClass = "flex items-center w-full px-3 py-2 text-white rounded-lg hover:bg-white/10 transition-colors";
 
 export const Navbar = () => {
@@ -21,6 +20,8 @@ export const Navbar = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Add new state for dropdowns
+  const [activeDropdown, setActiveDropdown] = useState<'exercises' | 'lessons' | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,6 +35,11 @@ export const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close dropdowns when location changes
+  useEffect(() => {
+    setActiveDropdown(null);
+  }, [location.pathname]);
 
   interface SearchFormEvent extends React.FormEvent<HTMLFormElement> {
     preventDefault: () => void;
@@ -64,9 +70,156 @@ export const Navbar = () => {
     return location.pathname === path;
   };
   
+  // Add this helper function
+  const toggleDropdown = (dropdown: 'exercises' | 'lessons') => {
+    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  };
+
+  const closeDropdowns = () => {
+    setActiveDropdown(null);
+  };
+  
   // Handler for when auth modal is used from mobile menu
   const handleMobileMenuClose = () => {
     setMobileMenuOpen(false); // Close mobile menu if open
+    setActiveDropdown(null); // Also close any active dropdowns
+  };
+
+  // Desktop Nav Link Component
+  interface NavLinkProps {
+    to: string;
+    isActive: boolean;
+    children: React.ReactNode;
+    hasDropdown?: boolean;
+    dropdown?: 'exercises' | 'lessons';
+  }
+
+  const NavLink = ({ to, isActive, children, hasDropdown, dropdown }: NavLinkProps) => (
+    <div className="relative">
+      {hasDropdown ? (
+        <button 
+          onClick={() => toggleDropdown(dropdown!)}
+          className={`flex items-center text-base font-medium transition-colors duration-200 ${
+            isActive || activeDropdown === dropdown
+              ? 'text-white' 
+              : 'text-gray-300 hover:text-white'
+          }`}
+        >
+          <div className="flex items-center">
+            {children}
+          </div>
+          <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === dropdown ? 'rotate-180' : ''}`} />
+        </button>
+      ) : (
+        <Link 
+          to={to} 
+          className={`flex items-center text-base font-medium transition-colors duration-200 ${
+            isActive 
+              ? 'text-white' 
+              : 'text-gray-300 hover:text-white'
+          }`}
+          onClick={closeDropdowns}
+        >
+          <div className="flex items-center">
+            {children}
+          </div>
+        </Link>
+      )}
+      
+      {hasDropdown && activeDropdown === dropdown && (
+        <NavDropdown type={dropdown!} onClose={closeDropdowns} />
+      )}
+    </div>
+  );
+
+  // Mobile Nav Link Component with Dropdown Support
+  const NavLinkMobile = ({ to, isActive, children, hasDropdown, dropdown }: NavLinkProps) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [mobileSubItems, setMobileSubItems] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    
+    useEffect(() => {
+      // If dropdown is expanded, fetch class levels
+      if (hasDropdown && isExpanded && mobileSubItems.length === 0) {
+        const fetchClassLevels = async () => {
+          try {
+            setIsLoading(true);
+            const data = await getClassLevels();
+            setMobileSubItems(data);
+          } catch (error) {
+            console.error('Failed to load class levels:', error);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        
+        fetchClassLevels();
+      }
+    }, [isExpanded, hasDropdown, mobileSubItems.length]);
+    
+    if (hasDropdown) {
+      return (
+        <div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors duration-200 ${
+              isActive 
+                ? 'bg-white/10 text-white' 
+                : 'text-gray-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            {children}
+            <ChevronDown className={`w-4 h-4 ml-auto transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {isExpanded && (
+            <div className="ml-6 mt-1 space-y-1 border-l-2 border-white/10 pl-2">
+              {isLoading ? (
+                <div className="py-2 px-3 text-white/60">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div> 
+                  Loading...
+                </div>
+              ) : (
+                <>
+                  <Link
+                    to={`/${dropdown}`}
+                    className="block w-full px-3 py-2 text-sm text-white/80 hover:text-white rounded-lg hover:bg-white/5"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    All {dropdown}
+                  </Link>
+                  
+                  {mobileSubItems.map((item) => (
+                    <Link
+                      key={item.id}
+                      to={`/${dropdown}?classLevels=${item.id}`}
+                      className="block w-full px-3 py-2 text-sm text-white/80 hover:text-white rounded-lg hover:bg-white/5"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    return (
+      <Link 
+        to={to} 
+        className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors duration-200 ${
+          isActive 
+            ? 'bg-white/10 text-white' 
+            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        {children}
+      </Link>
+    );
   };
 
   return (
@@ -101,12 +254,22 @@ export const Navbar = () => {
                 Home
               </NavLink>
               
-              <NavLink to="/exercises" isActive={isActive('/exercises')}>
+              <NavLink 
+                to="/exercises" 
+                isActive={isActive('/exercises')} 
+                hasDropdown={true} 
+                dropdown="exercises"
+              >
                 <BookOpen className="w-4 h-4 mr-2" />
                 Exercises
               </NavLink>
               
-              <NavLink to="/lessons" isActive={isActive('/lessons')}>
+              <NavLink 
+                to="/lessons" 
+                isActive={isActive('/lessons')} 
+                hasDropdown={true} 
+                dropdown="lessons"
+              >
                 <GraduationCap className="w-4 h-4 mr-2" />
                 Lessons
               </NavLink>
@@ -183,12 +346,22 @@ export const Navbar = () => {
               Home
             </NavLinkMobile>
             
-            <NavLinkMobile to="/exercises" isActive={isActive('/exercises')}>
+            <NavLinkMobile 
+              to="/exercises" 
+              isActive={isActive('/exercises')} 
+              hasDropdown={true} 
+              dropdown="exercises"
+            >
               <BookOpen className="w-5 h-5 mr-3" />
               Exercises
             </NavLinkMobile>
             
-            <NavLinkMobile to="/lessons" isActive={isActive('/lessons')}>
+            <NavLinkMobile 
+              to="/lessons" 
+              isActive={isActive('/lessons')} 
+              hasDropdown={true} 
+              dropdown="lessons"
+            >
               <GraduationCap className="w-5 h-5 mr-3" />
               Lessons
             </NavLinkMobile>
@@ -246,40 +419,3 @@ export const Navbar = () => {
     </nav>
   );
 };
-
-// Desktop Nav Link Component
-interface NavLinkProps {
-  to: string;
-  isActive: boolean;
-  children: React.ReactNode;
-}
-
-const NavLink = ({ to, isActive, children }: NavLinkProps) => (
-  <Link 
-    to={to} 
-    className={`flex items-center text-base font-medium transition-colors duration-200 ${
-      isActive 
-        ? 'text-white' 
-        : 'text-gray-300 hover:text-white'
-    }`}
-  >
-    <div className="flex items-center">
-      {children}
-    </div>
-    
-  </Link>
-);
-
-// Mobile Nav Link Component
-const NavLinkMobile = ({ to, isActive, children }: NavLinkProps) => (
-  <Link 
-    to={to} 
-    className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors duration-200 ${
-      isActive 
-        ? 'bg-white/10 text-white' 
-        : 'text-gray-300 hover:bg-white/5 hover:text-white'
-    }`}
-  >
-    {children}
-  </Link>
-);

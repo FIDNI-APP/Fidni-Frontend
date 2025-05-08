@@ -1,12 +1,13 @@
+// src/pages/ExerciseList.tsx
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown } from 'lucide-react';
+import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { getContents, voteExercise, deleteContent } from '../lib/api';
 import { Content, SortOption, Difficulty, VoteValue } from '../types';
 import { Filters } from '../components/Filters';
 import { SortDropdown } from '../components/SortDropdown';
 import { ContentList } from '../components/ContentList';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
 import { VirtualScroll } from '../components/VirtualScroll'; // You'll need to create this component
@@ -61,6 +62,7 @@ const ITEMS_PER_PAGE = 20;
 
 export const ExerciseList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal();
   const [contents, setContents] = useState<Content[]>([]);
@@ -91,6 +93,30 @@ export const ExerciseList = () => {
   // Debounce filter changes to reduce API calls
   const debouncedFilters = useDebounce(filters, 500);
   const debouncedSortBy = useDebounce(sortBy, 500);
+  
+  // Parse the URL parameters to apply initial filters on component mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const classLevelsParam = searchParams.get('classLevels');
+    const subjectsParam = searchParams.get('subjects');
+    
+    // Only update if we have parameters
+    if (classLevelsParam || subjectsParam) {
+      const newFilters = { ...filters };
+      
+      if (classLevelsParam) {
+        newFilters.classLevels = classLevelsParam.split(',');
+      }
+      
+      if (subjectsParam) {
+        newFilters.subjects = subjectsParam.split(',');
+      }
+      
+      // Set the filters directly - this will be reflected in the sidebar
+      setFilters(newFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
   
   // Use memoization for creating API query parameters
   const queryParams = useMemo(() => {
@@ -162,17 +188,22 @@ export const ExerciseList = () => {
     } else {
       fetchContents(false);
     }
-  }, [debouncedFilters, debouncedSortBy]);
+  }, [debouncedFilters, debouncedSortBy, fetchContents]);
   
   // Handle pagination separately
   useEffect(() => {
     if (page > 1) {
       fetchContents(true);
     }
-  }, [page]);
+  }, [page, fetchContents]);
 
   // Optimized vote handler with local state updates
   const handleVote = useCallback(async (id: string, type: VoteValue) => {
+    if (!isAuthenticated) {
+      openModal();
+      return;
+    }
+    
     try {
       // Optimistically update UI
       setContents(prevContents => 
@@ -215,7 +246,7 @@ export const ExerciseList = () => {
       // Revert to original state on error
       fetchContents(false);
     }
-  }, []);
+  }, [isAuthenticated, openModal, fetchContents]);
 
   // Optimized delete handler
   const handleDelete = useCallback(async (id: string) => {
@@ -236,7 +267,7 @@ export const ExerciseList = () => {
         fetchContents(false);
       }
     }
-  }, [invalidateCache]);
+  }, [invalidateCache, fetchContents]);
 
   // Load more content with scroll position preservation
   const handleLoadMore = useCallback(() => {
@@ -249,7 +280,7 @@ export const ExerciseList = () => {
     }
   }, [loadingMore, hasMore]);
 
-  // Optimized filter change handler
+  // Optimized filter change handler with URL update
   const handleFilterChange = useCallback((newFilters: typeof filters) => {
     // Reset scroll position when filters change
     if (listRef.current) {
@@ -257,6 +288,20 @@ export const ExerciseList = () => {
     }
     
     setFilters(newFilters);
+    
+    // Update URL with the new filters
+    const params = new URLSearchParams();
+    
+    if (newFilters.classLevels.length > 0) {
+      params.set('classLevels', newFilters.classLevels.join(','));
+    }
+    
+    if (newFilters.subjects.length > 0) {
+      params.set('subjects', newFilters.subjects.join(','));
+    }
+    
+    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState(null, '', newUrl);
   }, []);
 
   // Restore scroll position after loading more content
@@ -319,21 +364,25 @@ export const ExerciseList = () => {
   ), [isFilterOpen, sortBy, totalCount, handleSortChange]);
 
   // Memoize filter component to prevent unnecessary re-renders
+  // In ExerciseList.tsx, update the FilterComponent in useMemo
   const FilterComponent = useMemo(() => (
     <div 
-      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
+      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-90 lg:w-72 flex-shrink-10 custom-scrollbar bg-white rounded-xl shadow-sm`}
       style={{ 
-        position: "sticky",
         top: "100px",
         height: "fit-content",
         maxHeight: "calc(100vh - 140px)",
         overflowY: "auto",
-        padding: "4px"
-      }}
+        position: "sticky",
+        }}
     >
-      <Filters onFilterChange={handleFilterChange} />
+      <Filters 
+        onFilterChange={handleFilterChange} 
+        initialClassLevels={filters.classLevels}
+        initialSubjects={filters.subjects}
+      />
     </div>
-  ), [isFilterOpen, handleFilterChange]);
+  ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
@@ -376,6 +425,60 @@ export const ExerciseList = () => {
               <p className="text-indigo-200 text-lg">
                 Discover and practice with our collection of {totalCount} quality exercises
               </p>
+              
+              {/* Display active filters as badges if any */}
+              {(filters.classLevels.length > 0 || filters.subjects.length > 0) && (
+                <div className="flex flex-wrap gap-1 mt-4">
+                  <span className="text-indigo-200">Active filters:</span>
+                  {filters.classLevels.map(cl => (
+                    <button
+                      key={`cl-${cl}`}
+                      onClick={() => {
+                        setFilters(prev => ({
+                          ...prev,
+                          classLevels: prev.classLevels.filter(id => id !== cl)
+                        }));
+                      }}
+                      className="bg-white/20 text-white px-3 py-1 rounded-full text-sm flex items-center hover:bg-white/30 transition-colors"
+                    >
+                      Class: {cl}
+                      <X className="w-3 h-3 ml-1.5" />
+                    </button>
+                  ))}
+                  {filters.subjects.map(sub => (
+                    <button
+                      key={`sub-${sub}`}
+                      onClick={() => {
+                        setFilters(prev => ({
+                          ...prev,
+                          subjects: prev.subjects.filter(id => id !== sub)
+                        }));
+                      }}
+                      className="bg-white/20 text-white px-3 py-1 rounded-full text-sm flex items-center hover:bg-white/30 transition-colors"
+                    >
+                      Subject: {sub}
+                      <X className="w-3 h-3 ml-1.5" />
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => {
+                      setFilters({
+                        classLevels: [],
+                        subjects: [],
+                        subfields: [],
+                        chapters: [],
+                        theorems: [],
+                        difficulties: [],
+                      });
+                      window.history.replaceState(null, '', '/exercises');
+                    }}
+                    className="bg-white/10 text-white hover:bg-white/20 px-3 py-1 rounded-full text-sm"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
             </div>
             <button 
               onClick={handleNewExerciseClick}
