@@ -1,16 +1,19 @@
-import React, { createContext, useContext, useState } from 'react';
+// src/components/AuthController.tsx
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { AuthModal } from './AuthModal';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Define the context type
-type AuthModalContextType = {
-  openModal: (returnPath?: string) => void;
+interface AuthModalContextType {
+  isOpen: boolean;
+  openModal: () => void;
   closeModal: () => void;
-};
+  initialTab?: 'login' | 'signup';
+  setInitialTab: (tab: 'login' | 'signup') => void;
+}
 
-// Create context for auth modal state
-const AuthModalContext = createContext<AuthModalContextType | null>(null);
+const AuthModalContext = createContext<AuthModalContextType | undefined>(undefined);
 
-// Hook to use auth modal
 export const useAuthModal = () => {
   const context = useContext(AuthModalContext);
   if (!context) {
@@ -19,28 +22,44 @@ export const useAuthModal = () => {
   return context;
 };
 
-// Provider component
-export const AuthModalProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [returnUrl, setReturnUrl] = useState('/');
+  const [initialTab, setInitialTab] = useState<'login' | 'signup'>('login');
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const openModal = (returnPath = '/') => {
-    setReturnUrl(returnPath);
+  // Effet pour gérer la redirection après l'inscription réussie
+  useEffect(() => {
+    // Si l'utilisateur est connecté et que la modal est ouverte avec l'onglet signup
+    if (user && isOpen && initialTab === 'signup') {
+      // Fermer la modal
+      setIsOpen(false);
+      
+      // Si l'utilisateur n'a pas encore complété l'onboarding, le rediriger
+      if (user.profile && !user.profile.onboarding_completed) {
+        // Utiliser setTimeout pour éviter les problèmes de rendu React
+        setTimeout(() => {
+          navigate('/complete-profile');
+        }, 50);
+      }
+    }
+  }, [user, isOpen, initialTab, navigate]);
+
+  const openModal = () => {
     setIsOpen(true);
   };
 
   const closeModal = () => {
     setIsOpen(false);
+    // Reset to default tab when closing
+    setInitialTab('login');
   };
 
   return (
-    <AuthModalContext.Provider value={{ openModal, closeModal }}>
+    <AuthModalContext.Provider value={{ isOpen, openModal, closeModal, initialTab, setInitialTab }}>
       {children}
-      <AuthModal 
-        isOpen={isOpen} 
-        onClose={closeModal} 
-        returnUrl={returnUrl}
-      />
+      {/* Render modal conditionally to avoid DOM manipulation issues */}
+      {isOpen && <AuthModal isOpen={isOpen} onClose={closeModal} initialTab={initialTab} />}
     </AuthModalContext.Provider>
   );
 };

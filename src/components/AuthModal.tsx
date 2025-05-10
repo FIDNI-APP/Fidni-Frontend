@@ -1,380 +1,438 @@
+// src/components/AuthModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, LogIn, UserPlus, ChevronLeft, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { useAuth } from '../contexts/AuthContext';
-import { register } from '../lib/api';
+import { X, LogIn, UserPlus, Loader2, Mail, Lock, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  returnUrl?: string;
+  initialTab?: 'login' | 'signup';
 }
 
-export const AuthModal = ({ isOpen, onClose, returnUrl = '/' }: AuthModalProps) => {
-  const [activeTab, setActiveTab] = useState('login');
-  const [formData, setFormData] = useState({
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 'login' }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const { user, login, register } = useAuth();
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [formValues, setFormValues] = useState({
+    identifier: '',
+    password: '',
     username: '',
     email: '',
-    password: '',
-    identifier: ''
+    confirmPassword: ''
   });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const navigate = useNavigate();
-  const { login } = useAuth();
-
-  // Reset state when modal opens
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Effet pour réinitialiser l'état lorsque la modal s'ouvre/se ferme
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('login');
-      setFormData({
-        username: '',
-        email: '',
-        password: '',
-        identifier: ''
-      });
+      setActiveTab(initialTab);
       setError('');
-      setShowSuccess(false);
+      setSuccessMessage('');
+      setIsSubmitting(false);
     }
-  }, [isOpen]);
-
-  // Handle input changes
-  const handleChange = (e : any) => {
+  }, [isOpen, initialTab]);
+  
+  // Effet pour rediriger après l'inscription réussie
+  useEffect(() => {
+    if (user && activeTab === 'signup') {
+      setSuccessMessage('Account created successfully! Redirecting...');
+      
+      // Utiliser setTimeout pour éviter les problèmes de rendu React
+      const timer = setTimeout(() => {
+        onClose();
+        
+        // Si l'utilisateur n'a pas encore complété l'onboarding, le rediriger
+        if (user.profile && !user.profile.onboarding_completed) {
+          navigate('/complete-profile');
+        }
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, activeTab, onClose, navigate]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (error) setError('');
+    setFormValues(prev => ({ ...prev, [name]: value }));
   };
-
-  // Handle login
-  const handleLogin = async (e : any) => {
+  
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitting(true);
     setError('');
-    setIsLoading(true);
     
     try {
-      await login(formData.identifier, formData.password);
-      setShowSuccess(true);
+      await login(formValues.identifier, formValues.password);
+      setSuccessMessage('Login successful!');
+      
       setTimeout(() => {
         onClose();
-        navigate(returnUrl);
-      }, 1000);
-    } catch (err : any) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignup = async (e : any) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-  
-    try {
-      // 1. Enregistrer l'utilisateur
-      await register(formData.username, formData.email, formData.password);
-      
-      // 2. Connexion après l'inscription - utilisez formData.username au lieu de formData.email
-      // C'est important car votre API JWT attend probablement "username" et non "email"
-      await login(formData.username, formData.password);
-      
-      setShowSuccess(true);
-      
-      // Redirection vers la page d'onboarding
-      setTimeout(() => {
-        onClose();
-        navigate('/complete-profile');
       }, 1000);
     } catch (err: any) {
-      console.error('Registration/login error:', err);
-      
-      // Message d'erreur plus descriptif
-      if (axios.isAxiosError(err) && err.response) {
-        setError(err.response.data.error || 
-          `Erreur: ${err.response.status} - ${err.response.statusText}`);
-      } else {
-        setError('Échec de l\'inscription. Veuillez réessayer.');
-      }
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
-
-  // If modal is closed, don't render anything
+  
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    
+    // Validation côté client
+    if (formValues.password !== formValues.confirmPassword) {
+      setError('Passwords do not match');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    try {
+      await register(formValues.username, formValues.email, formValues.password);
+      // La redirection est gérée par l'effet useEffect ci-dessus
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Si la modal n'est pas ouverte, ne rien afficher
   if (!isOpen) return null;
-
-  // Animation variants for the modal
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
-    exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2, ease: "easeIn" } }
-  };
-
-  // Animation variants for the form tabs
-  const tabVariants = {
-    hidden: { x: 20, opacity: 0 },
-    visible: { x: 0, opacity: 1, transition: { duration: 0.3 } },
-    exit: { x: -20, opacity: 0, transition: { duration: 0.3 } }
-  };
-
+  
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center p-4">
-      <AnimatePresence mode="wait">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+      <AnimatePresence>
         <motion.div 
-          className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
-          variants={modalVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-200 dark:border-gray-700"
         >
-          {/* Header with close button */}
-          <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
-            <button 
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 text-white relative">
+            <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
-              title="Close modal"
-              aria-label="Close modal"
+              className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+              aria-label="Close"
             >
-              <X size={20} />
+              <X className="w-5 h-5" />
             </button>
             
-            <div className="text-center">
-              <h2 className="text-2xl font-bold">
-                {showSuccess ? "Success!" : activeTab === 'login' ? "Welcome Back" : "Join Fidni"}
-              </h2>
-              <p className="mt-1 text-indigo-100">
-                {showSuccess 
-                  ? "You're now signed in" 
-                  : activeTab === 'login' 
-                    ? "Sign in to access all features" 
-                    : "Create an account to get started"}
-              </p>
-            </div>
+            <h2 className="text-2xl font-bold">
+              {activeTab === 'login' ? 'Welcome Back!' : 'Join Fidni'}
+            </h2>
+            <p className="mt-1 text-indigo-100">
+              {activeTab === 'login' 
+                ? 'Log in to continue your learning journey' 
+                : 'Create an account to start learning'
+              }
+            </p>
           </div>
-
+          
+          {/* Tab Navigation */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('login')}
+              className={`relative flex-1 py-4 text-center font-medium transition-colors ${
+                activeTab === 'login' 
+                  ? 'text-indigo-600 dark:text-indigo-400' 
+                  : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <span className="flex items-center justify-center">
+                <LogIn className="w-4 h-4 mr-2" />
+                Log In
+              </span>
+              {activeTab === 'login' && (
+                <motion.div 
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" 
+                />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('signup')}
+              className={`relative flex-1 py-4 text-center font-medium transition-colors ${
+                activeTab === 'signup' 
+                  ? 'text-indigo-600 dark:text-indigo-400' 
+                  : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <span className="flex items-center justify-center">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Sign Up
+              </span>
+              {activeTab === 'signup' && (
+                <motion.div 
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" 
+                />
+              )}
+            </button>
+          </div>
+          
           <div className="p-6">
-            {/* Success message */}
-            {showSuccess && (
-              <div className="text-center py-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="w-8 h-8 text-green-600">✓</div>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  {activeTab === 'login' ? 'Signed in successfully!' : 'Account created!'}
-                </h3>
-                <p className="text-gray-600">
-                  {activeTab === 'login' ? 'Redirecting you now...' : 'Redirecting to complete your profile...'}
-                </p>
-              </div>
-            )}
+            {/* Feedback Messages */}
+            <AnimatePresence>
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg flex items-start"
+                >
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+              
+              {successMessage && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg flex items-start"
+                >
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <span>{successMessage}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
-            {!showSuccess && (
-              <>
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200 mb-6">
-                  <button
-                    className={`flex-1 py-3 font-medium ${activeTab === 'login' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => {
-                      setActiveTab('login');
-                      setError('');
-                    }}
-                  >
-                    <span className="flex items-center justify-center">
-                      <LogIn size={18} className="mr-2" />
-                      Sign In
-                    </span>
-                  </button>
-                  <button
-                    className={`flex-1 py-3 font-medium ${activeTab === 'signup' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => {
-                      setActiveTab('signup');
-                      setError('');
-                    }}
-                  >
-                    <span className="flex items-center justify-center">
-                      <UserPlus size={18} className="mr-2" />
-                      Sign Up
-                    </span>
-                  </button>
-                </div>
-
-                {/* Error message */}
-                {error && (
-                  <div className="mb-6 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md">
-                    <p className="text-sm">{error}</p>
+            {/* Forms */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'login' ? (
+                <motion.form
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ type: "tween", duration: 0.3 }}
+                  onSubmit={handleLogin}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Email or Username
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        id="identifier"
+                        name="identifier"
+                        value={formValues.identifier}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        autoComplete="username"
+                        placeholder="your.email@example.com"
+                      />
+                    </div>
                   </div>
-                )}
-
-                {/* Login/Signup Forms */}
-                <AnimatePresence mode="wait">
-                  {activeTab === 'login' ? (
-                    <motion.form 
-                      key="login-form"
-                      onSubmit={handleLogin}
-                      className="space-y-4"
-                      variants={tabVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Password
+                      </label>
+                      <a href="#" className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">
+                        Forgot password?
+                      </a>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        value={formValues.password}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Logging in...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Log In
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                    Don't have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('signup')}
+                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
                     >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email or Username</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Mail size={18} className="text-gray-400" />
-                          </div>
-                          <input
-                            type="text"
-                            name="identifier"
-                            value={formData.identifier}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Your email or username"
-                          />
-                        </div>
+                      Sign up
+                    </button>
+                  </div>
+                </motion.form>
+              ) : (
+                <motion.form
+                  key="signup"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ type: "tween", duration: 0.3 }}
+                  onSubmit={handleSignup}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Lock size={18} className="text-gray-400" />
-                          </div>
-                          <input
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Your password"
-                          />
-                        </div>
+                      <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value={formValues.username}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        autoComplete="username"
+                        placeholder="johndoe"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Email
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
                       </div>
-
-                      <div className="mt-2 text-right">
-                        <a href="#" className="text-sm text-indigo-600 hover:underline">
-                          Forgot password?
-                        </a>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formValues.email}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        autoComplete="email"
+                        placeholder="john.doe@example.com"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="signupPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
                       </div>
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center justify-center"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 size={20} className="mr-2 animate-spin" />
-                            Signing in...
-                          </>
-                        ) : (
-                          <>
-                            Sign In
-                            <ArrowRight size={18} className="ml-2" />
-                          </>
-                        )}
-                      </Button>
-                    </motion.form>
-                  ) : (
-                    <motion.form 
-                      key="signup-form"
-                      onSubmit={handleSignup}
-                      className="space-y-4"
-                      variants={tabVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
+                      <input
+                        type="password"
+                        id="signupPassword"
+                        name="password"
+                        value={formValues.password}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        autoComplete="new-password"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="password"
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        value={formValues.confirmPassword}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        autoComplete="new-password"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Account...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('login')}
+                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
                     >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <User size={18} className="text-gray-400" />
-                          </div>
-                          <input
-                            type="text"
-                            name="username"
-                            value={formData.username}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Choose a username"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Mail size={18} className="text-gray-400" />
-                          </div>
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Your email address"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Lock size={18} className="text-gray-400" />
-                          </div>
-                          <input
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Create a password"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-1">
-                        <p className="text-xs text-gray-500">
-                          By signing up, you agree to our <a href="#" className="text-indigo-600 hover:underline">Terms of Service</a> and <a href="#" className="text-indigo-600 hover:underline">Privacy Policy</a>.
-                        </p>
-                      </div>
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center justify-center"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 size={20} className="mr-2 animate-spin" />
-                            Creating account...
-                          </>
-                        ) : (
-                          <>
-                            Create Account
-                            <ArrowRight size={18} className="ml-2" />
-                          </>
-                        )}
-                      </Button>
-                    </motion.form>
-                  )}
-                </AnimatePresence>
-              </>
-            )}
+                      Log in
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
+            
+            <div className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                En continuant, vous acceptez les 
+                <Link to="/terms-of-service" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"> Conditions d'Utilisation </Link>
+                et la
+                <Link to="/privacy-policy" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"> Politique de Confidentialité</Link> de Fidni.
+              </div>
           </div>
         </motion.div>
       </AnimatePresence>

@@ -22,6 +22,7 @@ export const login = async (identifier : string, password : string) => {
     throw error;
   }
 };
+
 export const logout = async () => {
   const response = await api.post('/auth/logout/');
   localStorage.removeItem('token');
@@ -40,6 +41,13 @@ export const register = async (username: string, email: string, password: string
       email, 
       password 
     });
+    
+    // Si la connexion automatique est incluse dans la réponse d'inscription
+    if (response.data.access) {
+      localStorage.setItem('token', response.data.access);
+      localStorage.setItem('refresh_token', response.data.refresh);
+      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+    }
     
     return response.data;
   } catch (error) {
@@ -71,5 +79,26 @@ export const getCurrentUser = async () => {
     }
     console.error("Error getting current user:", error);
     return null;
+  }
+};
+
+// Nouvelle fonction pour vérifier si l'utilisateur doit compléter son profil
+export const shouldCompleteProfile = async () => {
+  // D'abord vérifier si nous avons un token
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return false; // Pas de token, donc pas besoin de compléter le profil
+  }
+  
+  try {
+    // Obtenir les informations de l'utilisateur actuel
+    const userData = await getCurrentUser();
+    
+    // Vérifier si l'utilisateur doit compléter son profil
+    // Retourner true si l'utilisateur existe mais n'a pas encore complété son onboarding
+    return userData && userData.profile && !userData.profile.onboarding_completed;
+  } catch (error) {
+    console.error('Erreur lors de la vérification du statut du profil:', error);
+    return false;
   }
 };

@@ -2,7 +2,7 @@
 import {api} from './apiClient';
 
 // Auth exports
-export { login, logout, register, getCurrentUser } from './authApi';
+export { login, logout, register, getCurrentUser, shouldCompleteProfile } from './authApi';
 
 // User profile exports
 export {

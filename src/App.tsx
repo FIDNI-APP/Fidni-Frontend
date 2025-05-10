@@ -1,11 +1,7 @@
-// Modifions le fichier App.tsx pour rediriger la route "/signup" vers le modal
-
-// src/App.tsx - Modification de la route signup
+// src/App.tsx - Ajout des nouvelles routes
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
-// Supprimez l'import pour SignUp
-// import { SignUp } from './pages/SignUp'; 
 import { NewContent } from './pages/NewContent';
 import { EditExercise } from './pages/EditExercise';
 import { EditSolution } from './pages/EditSolution';
@@ -16,23 +12,46 @@ import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/AuthController';
-import {UserProfile} from '@/pages/Profile'
-import OnboardingProfile  from '@/pages/OnboardingProfile'; // Import du nouveau composant
+import { UserProfile } from '@/pages/Profile';
+import OnboardingProfile from '@/pages/OnboardingProfile';
 import { LessonList } from './pages/LessonList';
 import { LessonDetail } from './pages/LessonDetail';
 import { CreateLesson } from './components/lesson/CreateLesson';
 import { EditLesson } from './components/lesson/EditLesson';
 import { FilterProvider } from './components/navbar/FilterContext';
+import TermsOfService from './pages/TermsOfService'; // Import des nouvelles pages
+import PrivacyPolicy from './pages/PrivacyPolicy'; // Import des nouvelles pages
+import LegalRedirector from './components/LegalRedirector'; // Import du composant de redirection légale
+import Footer from './components/Footer'; // Import du footer
+
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
-  const { openModal } = useAuthModal();
+  const { openModal, setInitialTab } = useAuthModal();
   
   useEffect(() => {
-    // Ouvre automatiquement le modal d'inscription
-    openModal();
-  }, [openModal]);
+    // Utiliser un délai minimal pour éviter les problèmes de rendu React
+    const timer = setTimeout(() => {
+      setInitialTab('signup');
+      openModal();
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [openModal, setInitialTab]);
   
-  return <Navigate to="/" />;
+  return <Navigate to="/" replace />;
+};
+
+// Composant pour afficher la navbar conditionnellement
+const NavbarWrapper = ({ children, showNavbar = true, showFooter = true }: { children: React.ReactNode, showNavbar?: boolean, showFooter?: boolean }) => {
+  return (
+    <div className="flex flex-col min-h-screen">
+      {showNavbar && <Navbar />}
+      <main className="flex-grow">
+        {children}
+      </main>
+      {showFooter && <Footer />}
+    </div>
+  );
 };
 
 function App() {
@@ -42,13 +61,12 @@ function App() {
     }
 
     const preventDefault = (e: WheelEventExtended): void => {
-      // Vérifie si c'est un pavé tactile en regardant les propriétés spécifiques
       const isTouchpad = e.wheelDeltaY ? 
       e.wheelDeltaY === -3 * e.deltaY : 
       e.deltaMode === 0;
 
       if (e.ctrlKey && isTouchpad) {
-      e.preventDefault();
+        e.preventDefault();
       }
     };
 
@@ -62,35 +80,103 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-      <AuthProvider>
-        <AuthModalProvider>
-          <FilterProvider>
-          <div className="min-h-screen bg-gray-100">
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              {/* Remplacer la route /signup par le composant de redirection */}
-              <Route path="/signup" element={<SignUpRedirect />} />
-              <Route path="/new" element={<NewContent />} />
-              <Route path="/edit/:id" element={<EditExercise />} />
-              <Route path="/solutions/:id/edit" element={<EditSolution />} />
-              <Route path="/profile/:username" element={<UserProfile />} />
-              <Route path="/exercises" element={<ExerciseList />} />
-              <Route path="/exercises/:id" element={<ExerciseDetail />} />
-              {/* Ajouter une nouvelle route pour le processus d'onboarding */}
-              <Route path="/complete-profile" element={<OnboardingProfile />} />
-              <Route path="/lessons" element={<LessonList />} />
-              <Route path="/lessons/:id" element={<LessonDetail />} />
-              <Route path="/new-lesson" element={<CreateLesson />} />
-              <Route path="/edit-lesson/:id" element={<EditLesson />} />
-            </Routes>
-          </div>
-          </FilterProvider>
+      <LegalRedirector />
+        <AuthProvider>
+          <AuthModalProvider>
+            <FilterProvider>
+              <div className="min-h-screen bg-gray-100">
+                <Routes>
+                  {/* Routes pour les pages légales sans navbar */}
+                  <Route path="/terms-of-service" element={
+                    <NavbarWrapper showNavbar={false}>
+                      <TermsOfService />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/privacy-policy" element={
+                    <NavbarWrapper showNavbar={false}>
+                      <PrivacyPolicy />
+                    </NavbarWrapper>
+                  } />
+                  
+                  {/* Routes standards avec navbar */}
+                  <Route path="/" element={
+                    <NavbarWrapper>
+                      <Home />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/login" element={
+                    <NavbarWrapper>
+                      <Login />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/signup" element={
+                    <NavbarWrapper>
+                      <SignUpRedirect />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/new" element={
+                    <NavbarWrapper>
+                      <NewContent />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/edit/:id" element={
+                    <NavbarWrapper>
+                      <EditExercise />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/solutions/:id/edit" element={
+                    <NavbarWrapper>
+                      <EditSolution />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/profile/:username" element={
+                    <NavbarWrapper>
+                      <UserProfile />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/exercises" element={
+                    <NavbarWrapper>
+                      <ExerciseList />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/exercises/:id" element={
+                    <NavbarWrapper>
+                      <ExerciseDetail />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/complete-profile" element={
+                    <NavbarWrapper>
+                      <OnboardingProfile />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/lessons" element={
+                    <NavbarWrapper>
+                      <LessonList />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/lessons/:id" element={
+                    <NavbarWrapper>
+                      <LessonDetail />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/new-lesson" element={
+                    <NavbarWrapper>
+                      <CreateLesson />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/edit-lesson/:id" element={
+                    <NavbarWrapper>
+                      <EditLesson />
+                    </NavbarWrapper>
+                  } />
+                </Routes>
+              </div>
+            </FilterProvider>
           </AuthModalProvider>
-      </AuthProvider>
-    </BrowserRouter>
+        </AuthProvider>
+      </BrowserRouter>
     </div>
   );
 }
+
 export default App;

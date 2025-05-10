@@ -335,76 +335,7 @@ export function Home() {
         </div>
       </section>
 
-      {/* Footer - Enhanced with better styling */}
-      <footer className="bg-gradient-to-br from-slate-900 to-indigo-900 text-white py-16 border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-white text-xl font-bold mb-6">Nt3almou...!</h3>
-            <p className="text-gray-300 text-sm">
-              Votre plateforme d'apprentissage des mathématiques, conçue pour vous aider à progresser à votre rythme
-            </p>
-            <div className="flex space-x-4 mt-6">
-              <a href="#" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-indigo-600 transition-colors duration-300">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-indigo-600 transition-colors duration-300">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-indigo-600 transition-colors duration-300">
-                <Instagram className="w-5 h-5" />
-              </a>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-white font-semibold mb-6">Navigation</h4>
-            <ul className="space-y-3">
-              <li><Link to="/" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> Accueil</Link></li>
-              <li><Link to="/exercises" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> Exercices</Link></li>
-              <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> À propos</Link></li>
-              <li><Link to="/contact" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> Contact</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="text-white font-semibold mb-6">Ressources</h4>
-            <ul className="space-y-3">
-              <li><Link to="/blog" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> Blog</Link></li>
-              <li><Link to="/faq" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> FAQ</Link></li>
-              <li><Link to="/support" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> Support</Link></li>
-              <li><Link to="/privacy" className="text-gray-300 hover:text-white transition-colors flex items-center"><ChevronRight className="w-4 h-4 mr-2" /> Confidentialité</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="text-white font-semibold mb-6">Newsletter</h4>
-            <p className="text-gray-300 text-sm mb-4">
-              Inscrivez-vous pour recevoir des conseils et des exercices exclusifs
-            </p>
-            <div className="flex">
-              <input
-                type="email"
-                placeholder="Votre email"
-                className="flex-1 px-4 py-3 bg-white/10 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 border border-white/10"
-              />
-              <button className="px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-r-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300" title="Envoyer">
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/10 text-center text-sm text-gray-400 px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p>© 2025 ExercicesMaths.ma. Tous droits réservés</p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link to="/terms" className="hover:text-white transition-colors">Conditions d'utilisation</Link>
-              <Link to="/privacy" className="hover:text-white transition-colors">Politique de confidentialité</Link>
-              <Link to="/cookies" className="hover:text-white transition-colors">Cookies</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+     
 
       <style>
         {`
