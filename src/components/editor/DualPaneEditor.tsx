@@ -8,7 +8,6 @@ import Mathematics from '@tiptap-pro/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
 import Heading from '@tiptap/extension-heading';
 import { Link as LinkTiptap } from '@tiptap/extension-link';
-import TipTapRenderer from './TipTapRenderer';
 import ListItem from '@tiptap/extension-list-item';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
@@ -18,146 +17,28 @@ import Text from '@tiptap/extension-text';
 import 'katex/dist/katex.min.css';
 import ImageResize from 'tiptap-extension-resize-image';
 import { FileHandler } from '@tiptap-pro/extension-file-handler';
+import { Sparkles, Settings } from "lucide-react";
 
-
+// Import new components
+import { EditorToolbar } from './EditorToolbar';
+import { MathToolbar } from './MathToolbar';
+import { ImageModal } from './ImageModal';
+import { FormulaEditorModal } from './FormulaEditorModal';
+import { EditorSettings } from './EditorSettings';
+import { EditorHints } from './EditorHints';
 import { 
-  Bold, 
-  Italic, 
-  Palette, 
-  ImageIcon,
-  Camera,
-  X,
-  Upload,
-  ChevronDown,
-  ChevronRight,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  List,
-  ListOrdered,
-  Undo,
-  Redo,
-  FunctionSquare as FunctionIcon,
-  Heading1,
-  Heading2,
-  Quote,
-  Link,
-  Sparkles,
-  Settings,
-  Check,
-  Info,
-  Search
-} from "lucide-react";
+  MathFormula, 
+  FormulaCategory,
+  editorThemes, 
+  mathFormulaCategories, 
+  colorOptions, 
+  subFormulas 
+} from './editorConstants';
 
 interface DualPaneEditorProps {
   content: string;
   setContent: React.Dispatch<React.SetStateAction<string>>;
 }
-
-// Define common math formulas with categories
-interface MathFormula {
-  name: string;
-  latex: string;
-  description?: string;
-}
-
-interface FormulaCategory {
-  name: string;
-  formulas: MathFormula[];
-}
-
-const mathFormulaCategories: FormulaCategory[] = [
-  {
-    name: "Algèbre",
-    formulas: [
-      { name: "Équation quadratique", latex: "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", description: "Solution de ax² + bx + c = 0" },
-      { name: "Binôme de Newton", latex: "(x+y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k", description: "Développement du binôme" },
-      { name: "Factorielle", latex: "n! = n \\cdot (n-1) \\cdot (n-2) \\cdot \\ldots \\cdot 2 \\cdot 1", description: "Produit des entiers de 1 à n" },
-      { name: "Fraction", latex: "\\frac{a}{b}", description: "Division de a par b" },
-      { name: "Racine carrée", latex: "\\sqrt{x}", description: "Racine carrée de x" },
-      { name: "Racine n-ième", latex: "\\sqrt[n]{x}", description: "Racine n-ième de x" },
-    ]
-  },
-  {
-    name: "Calcul",
-    formulas: [
-      { name: "Dérivée", latex: "\\frac{d}{dx}f(x)", description: "Dérivée de f(x) par rapport à x" },
-      { name: "Intégrale définie", latex: "\\int_{a}^{b} f(x) \\, dx", description: "Intégrale de f(x) de a à b" },
-      { name: "Intégrale indéfinie", latex: "\\int f(x) \\, dx", description: "Intégrale indéfinie de f(x)" },
-      { name: "Limite", latex: "\\lim_{x \\to a} f(x)", description: "Limite de f(x) quand x tend vers a" },
-      { name: "Somme", latex: "\\sum_{i=1}^{n} a_i", description: "Somme des termes a_i de i=1 à n" },
-      { name: "Produit", latex: "\\prod_{i=1}^{n} a_i", description: "Produit des termes a_i de i=1 à n" },
-    ]
-  },
-  {
-    name: "Trigonométrie",
-    formulas: [
-      { name: "Sinus", latex: "\\sin(\\theta)", description: "Sinus de l'angle θ" },
-      { name: "Cosinus", latex: "\\cos(\\theta)", description: "Cosinus de l'angle θ" },
-      { name: "Tangente", latex: "\\tan(\\theta)", description: "Tangente de l'angle θ" },
-      { name: "Identité fondamentale", latex: "\\sin^2(\\theta) + \\cos^2(\\theta) = 1", description: "Relation entre sin² et cos²" },
-      { name: "Loi des sinus", latex: "\\frac{a}{\\sin(A)} = \\frac{b}{\\sin(B)} = \\frac{c}{\\sin(C)}", description: "Pour un triangle quelconque" },
-      { name: "Loi des cosinus", latex: "c^2 = a^2 + b^2 - 2ab\\cos(C)", description: "Généralisation du théorème de Pythagore" },
-    ]
-  },
-  {
-    name: "Matrices",
-    formulas: [
-      { name: "Matrice 2×2", latex: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}", description: "Matrice carrée d'ordre 2" },
-      { name: "Déterminant", latex: "\\det(A) = |A|", description: "Déterminant de la matrice A" },
-      { name: "Matrice inverse", latex: "A^{-1}", description: "Inverse de la matrice A" },
-      { name: "Système d'équations", latex: "\\begin{cases} a_1x + b_1y = c_1 \\\\ a_2x + b_2y = c_2 \\end{cases}", description: "Système de deux équations à deux inconnues" },
-    ]
-  },
-  {
-    name: "Statistiques",
-    formulas: [
-      { name: "Espérance", latex: "E(X) = \\sum_{i} x_i p_i", description: "Espérance de la variable aléatoire X" },
-      { name: "Variance", latex: "\\operatorname{Var}(X) = E[(X - \\mu)^2]", description: "Variance de la variable aléatoire X" },
-      { name: "Loi normale", latex: "f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{1}{2}(\\frac{x-\\mu}{\\sigma})^2}", description: "Densité de probabilité de la loi normale" },
-      { name: "Binomiale", latex: "P(X = k) = \\binom{n}{k} p^k (1-p)^{n-k}", description: "Probabilité d'obtenir k succès parmi n essais" },
-    ]
-  }
-];
-
-// Predefined themes for quick styling
-const editorThemes = [
-  { name: "Classique", bgColor: "bg-white", textColor: "text-gray-800", accentColor: "from-indigo-500 to-purple-600" },
-  { name: "Sombre", bgColor: "bg-gray-900", textColor: "text-gray-100", accentColor: "from-purple-500 to-indigo-600" },
-  { name: "Pastel", bgColor: "bg-blue-50", textColor: "text-gray-800", accentColor: "from-blue-400 to-indigo-500" },
-  { name: "Académique", bgColor: "bg-amber-50", textColor: "text-gray-800", accentColor: "from-amber-500 to-orange-500" },
-  { name: "Minimaliste", bgColor: "bg-gray-50", textColor: "text-gray-800", accentColor: "from-gray-500 to-gray-600" }
-];
-
-// Définir les sous-formules disponibles
-const subFormulas = [
-  { category: "Fractions", items: [
-    { latex: "\\frac{a}{b}", description: "Fraction simple" },
-    { latex: "\\frac{\\partial f}{\\partial x}", description: "Dérivée partielle" }
-  ]},
-  { category: "Exposants", items: [
-    { latex: "x^{n}", description: "Exposant" },
-    { latex: "x_{i}", description: "Indice" },
-    { latex: "x_{i}^{j}", description: "Exposant et indice" }
-  ]},
-  { category: "Racines", items: [
-    { latex: "\\sqrt{x}", description: "Racine carrée" },
-    { latex: "\\sqrt[n]{x}", description: "Racine n-ième" }
-  ]},
-  { category: "Symboles", items: [
-    { latex: "\\infty", description: "Infini" },
-    { latex: "\\approx", description: "Approximativement égal" },
-    { latex: "\\neq", description: "Différent" },
-    { latex: "\\leq", description: "Inférieur ou égal" },
-    { latex: "\\geq", description: "Supérieur ou égal" }
-  ]},
-  { category: "Fonctions", items: [
-    { latex: "\\sin(x)", description: "Sinus" },
-    { latex: "\\cos(x)", description: "Cosinus" },
-    { latex: "\\lim_{x \\to a}", description: "Limite" },
-    { latex: "\\int_{a}^{b}", description: "Intégrale" }
-  ]}
-];
 
 const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) => {
   // UI state
@@ -169,7 +50,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
-  const [activeToolbar, setActiveToolbar] = useState<string>("text"); // text, math, layout
+  const [activeToolbar, setActiveToolbar] = useState<string>("text");
   const [showSettings, setShowSettings] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(editorThemes[0]);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -178,29 +59,15 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const [lastUsedFormulas, setLastUsedFormulas] = useState<MathFormula[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // New formula editor modal state
+  // Formula editor modal state
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [currentFormula, setCurrentFormula] = useState<MathFormula | null>(null);
   const [editedLatex, setEditedLatex] = useState("");
   const [formulaInsertMode, setFormulaInsertMode] = useState<'inline' | 'block' | 'centered'>('inline');
   
-  // État pour le sélecteur de sous-formules
-  const [showSubFormulaSelector, setShowSubFormulaSelector] = useState(false);
-  const [hoveredFormula, setHoveredFormula] = useState<string | null>(null);
-  
   // Refs
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const tooltipTimeoutRef = useRef<number | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
-  
-  // Predefined colors for the color picker
-  const colorOptions = [
-    "#000000", "#e60000", "#ff9900", "#ffff00", 
-    "#008a00", "#0066cc", "#9933ff", "#ff0066", 
-    "#555555", "#ff6600", "#99cc00", "#00ccff", 
-    "#993366", "#c0c0c0", "#ff99cc", "#ffcc00"
-  ];
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -217,7 +84,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       Heading.configure({
         levels: [1, 2],
       }),
-      
       BulletList.configure({
         HTMLAttributes: {
           class: 'list-disc pl-5',
@@ -230,7 +96,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       }),
       ListItem,
       ImageResize.configure({
-        allowBase64: true, // For development
+        allowBase64: true,
         inline: false,
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
@@ -307,10 +173,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
 
   // Add a formula to recently used
   const addToRecentFormulas = (formula: MathFormula) => {
-    // Check if formula already exists in recent list
     const exists = lastUsedFormulas.some(f => f.latex === formula.latex);
     if (!exists) {
-      // Add to beginning and keep only last 5 items
       setLastUsedFormulas(prev => [formula, ...prev].slice(0, 5));
     }
   };
@@ -330,18 +194,14 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     editor.chain().focus();
     
     if (formulaInsertMode === 'inline') {
-      // Insert inline formula
       editor.commands.insertContent(`$${editedLatex}$`);
     } else if (formulaInsertMode === 'centered') {
-      // Insert centered block formula - CORRIGÉ
       editor.commands.setTextAlign('center');
       editor.commands.insertContent(`$$${editedLatex}$$`);
     } else {
-      // Insert block formula without centering
       editor.commands.insertContent(`$$${editedLatex}$$`);
     }
     
-    // Add to recently used formulas if there was a current formula
     if (currentFormula) {
       addToRecentFormulas({
         ...currentFormula,
@@ -349,70 +209,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       });
     }
     
-    // Close the modal
     setShowFormulaModal(false);
-  };
-
-  const toggleBold = (e: React.MouseEvent) => {
-    editor?.chain().focus().toggleBold().run();
-    e.preventDefault(); // Empêche la propagation de l'événement
-
-  };
-  
-  // 2. Faire la même chose pour toutes les autres fonctions toggle:
-  const toggleItalic = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (editor) {
-      editor.chain().focus().toggleItalic().run();
-    }
-  };
-  
-  const toggleBulletList = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (editor) {
-      editor.chain().focus().toggleBulletList().run();
-    }
-  };
-  
-  const toggleOrderedList = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (editor) {
-      editor.chain().focus().toggleOrderedList().run();
-    }
-  };
-  
-  const toggleBlockquote = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (editor) {
-      editor.chain().focus().toggleBlockquote().run();
-    }
-  };
-  
-  // 3. Pour les fonctions setHeading et setTextAlign, faire de même:
-  const setHeading = (level: 1 | 2, e: React.MouseEvent) => {
-    e.preventDefault();
-    if (editor) {
-      if (editor.isActive('heading', { level })) {
-        editor.chain().focus().setParagraph().run();
-      } else {
-        editor.chain().focus().setHeading({ level }).run();
-      }
-    }
-  };
-  
-  const setTextAlign = (align: 'left' | 'center' | 'right', e: React.MouseEvent) => {
-    e.preventDefault();
-    if (editor) {
-      editor.chain().focus().setTextAlign(align).run();
-    }
-  };
-
-  const handleUndo = () => {
-    editor?.chain().focus().undo().run();
-  };
-
-  const handleRedo = () => {
-    editor?.chain().focus().redo().run();
   };
 
   // Apply text color
@@ -426,20 +223,20 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const toggleCategory = (index: number) => {
     if (activeCategoryIndex === index) {
       setActiveCategoryIndex(null);
-      setSearchTerm(""); // Clear search when closing category
+      setSearchTerm("");
     } else {
       setActiveCategoryIndex(index);
-      setSearchTerm(""); // Clear search when changing category
+      setSearchTerm("");
     }
   };
 
-  // Insert math inline example (now uses modal)
+  // Insert math inline example
   const insertMathInline = () => {
     const inlineFormula = { name: "Équation inline", latex: "x^2 + y^2 = r^2" };
     openFormulaEditor(inlineFormula, 'inline');
   };
 
-  // Insert centered math formula (now uses modal)
+  // Insert centered math formula
   const insertCenteredMathFormula = () => {
     const blockFormula = { name: "Formule quadratique", latex: "\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}" };
     openFormulaEditor(blockFormula, 'centered');
@@ -453,55 +250,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowImageModal(true);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-
-    // Create a preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setImagePreview(e.target.result as string);
-        setImageUrl(e.target.result as string);
-        setIsUploading(false);
-      }
-    };
-    reader.onerror = () => {
-      setIsUploading(false);
-      alert("Erreur lors du chargement de l'image");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const captureImage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-
-    // Create a preview for the captured photo
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setImagePreview(e.target.result as string);
-        setImageUrl(e.target.result as string);
-        setIsUploading(false);
-      }
-    };
-    reader.onerror = () => {
-      setIsUploading(false);
-      alert("Erreur lors de la capture de l'image");
-    };
-    reader.readAsDataURL(file);
-  };
-
   const insertImage = () => {
     if (!imageUrl) return;
     
-    // With the resize extension, you don't need to set width directly
-    // as the user can resize after insertion
     editor?.chain().focus().setImage({ 
       src: imageUrl,
       alt: imageCaption || 'Image',
@@ -511,9 +262,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowImageModal(false);
   };
   
-  // Attach click handler to editor to ensure it's focused
+  // Focus editor handler
   const focusEditor = (e: React.MouseEvent) => {
-    // Ne pas mettre automatiquement le focus sur l'éditeur lorsqu'on clique sur les boutons
     const target = e.target as HTMLElement;
     if (!target.closest('button')) {
       editor?.chain().focus().run();
@@ -522,12 +272,10 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
 
   // Tooltip handling
   const showButtonTooltip = (text: string, event: React.MouseEvent) => {
-    // Clear any existing timeout
     if (tooltipTimeoutRef.current) {
       window.clearTimeout(tooltipTimeoutRef.current);
     }
     
-    // Get position
     const rect = (event.target as HTMLElement).getBoundingClientRect();
     const toolbarRect = toolbarRef.current?.getBoundingClientRect();
     
@@ -541,7 +289,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setTooltipText(text);
     setShowTooltip(true);
     
-    // Hide after 1.5 seconds
     tooltipTimeoutRef.current = window.setTimeout(() => {
       setShowTooltip(false);
     }, 1500);
@@ -554,56 +301,21 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setShowTooltip(false);
   };
 
-  
-  const ToolbarButton = ({ 
-    icon, 
-    label, 
-    onClick, 
-    isActive = false,
-    color = "text-indigo-600"
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    onClick: (e: React.MouseEvent) => void;
-    isActive?: boolean;
-    color?: string;
-  }) => (
-    <button
-      type="button"
-      onMouseDown={(e) => {
-        // Use onMouseDown instead of onClick
-        e.preventDefault(); // Prevent the button from taking focus
-        onClick(e);
-      }}
-      className={`p-1.5 rounded-full transition-all duration-200 flex items-center justify-center ${
-        isActive 
-          ? 'bg-indigo-100 text-indigo-700 shadow-sm' 
-          : `bg-white ${color} hover:bg-indigo-50`
-      }`}
-      title={label}
-    >
-      {icon}
-    </button>
-  );
-  
   // Effect to handle document clicks to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showColorPicker || activeCategoryIndex !== null || showSettings) {
         const target = event.target as HTMLElement;
         
-        // Close color picker if clicking outside
         if (showColorPicker && !target.closest('.color-picker-container')) {
           setShowColorPicker(false);
         }
         
-        // Close formula categories if clicking outside
         if (activeCategoryIndex !== null && !target.closest('.formula-category-container')) {
           setActiveCategoryIndex(null);
           setSearchTerm("");
         }
         
-        // Close settings if clicking outside
         if (showSettings && !target.closest('.settings-container')) {
           setShowSettings(false);
         }
@@ -615,24 +327,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showColorPicker, activeCategoryIndex, showSettings]);
-
-  // Render formula card for the gallery view
-  const FormulaCard = ({ formula, onClick }: { formula: MathFormula, onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:-translate-y-1 flex flex-col"
-    >
-      <div className="p-3 bg-gray-50 flex items-center justify-center h-16">
-        <TipTapRenderer content={`<p style="text-align: center">$${formula.latex}$</p>`} />
-      </div>
-      <div className="p-2 border-t border-gray-100">
-        <h3 className="text-xs font-medium text-gray-800 truncate">{formula.name}</h3>
-        {formula.description && (
-          <p className="text-xs text-gray-500 truncate">{formula.description}</p>
-        )}
-      </div>
-    </button>
-  );
 
   return (
     <div className={`w-full border border-gray-200 rounded-lg shadow-lg ${currentTheme.bgColor} transition-colors duration-300`}>
@@ -656,299 +350,47 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       </div>
 
       {/* Settings panel */}
-      {showSettings && (
-        <div className="settings-container absolute right-0 mt-1 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-40 w-64">
-          <div className="text-sm font-medium mb-2 text-gray-700 pb-1 border-b">Thèmes</div>
-          <div className="space-y-1.5 mt-2">
-            {editorThemes.map((theme, index) => (
-              <button
-                key={theme.name}
-                onClick={() => setCurrentTheme(theme)}
-                className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded-md flex items-center ${
-                  currentTheme.name === theme.name ? 'bg-indigo-50 text-indigo-700' : ''
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full mr-2 bg-gradient-to-r ${theme.accentColor}`}></div>
-                {theme.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <EditorSettings
+        showSettings={showSettings}
+        editorThemes={editorThemes}
+        currentTheme={currentTheme}
+        setCurrentTheme={setCurrentTheme}
+      />
 
-      {/* Toolbar Tabs */}
-      <div className="flex border-b border-gray-200 bg-gray-50 px-3 pt-1">
-        <button 
-          className={`px-3 py-1.5 text-sm font-medium rounded-t-lg ${
-            activeToolbar === 'text' ? 'bg-white border-t border-l border-r border-gray-200 border-b-white -mb-px text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
-          }`}
-          onClick={() => setActiveToolbar('text')}
-        >
-          Texte
-        </button>
-        <button 
-          className={`px-3 py-1.5 text-sm font-medium rounded-t-lg ${
-            activeToolbar === 'math' ? 'bg-white border-t border-l border-r border-gray-200 border-b-white -mb-px text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
-          }`}
-          onClick={() => setActiveToolbar('math')}
-        >
-          Mathématiques
-        </button>
-      </div>
-
-      {/* Main Toolbar */}
-      <div 
-        ref={toolbarRef} 
-        className="flex flex-wrap items-center gap-1.5 px-3 py-2 bg-white border-b border-gray-200 relative"
-      >
-        {/* Text Formatting Toolbar */}
-        {activeToolbar === 'text' && (
-          <>
-            <div className="flex gap-1 items-center">
-              <ToolbarButton 
-                icon={<Bold className="w-4 h-4" />} 
-                label="Gras" 
-                onClick={(e) => toggleBold(e)} 
-                isActive={editor?.isActive('bold')}
-              />
-              <ToolbarButton 
-                icon={<Italic className="w-4 h-4" />} 
-                label="Italique" 
-                onClick={(e) => toggleItalic(e)} 
-                isActive={editor?.isActive('italic')}
-              />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              <ToolbarButton 
-                icon={<Heading1 className="w-4 h-4" />} 
-                label="Titre 1" 
-                onClick={(e) => setHeading(1, e)}
-                isActive={editor?.isActive('heading', { level: 1 }) || false}
-              />
-
-              <ToolbarButton 
-                icon={<Heading2 className="w-4 h-4" />} 
-                label="Titre 2" 
-                onClick={(e) => setHeading(2, e)}
-                isActive={editor?.isActive('heading', { level: 2 }) || false}
-              />
-              <ToolbarButton 
-                icon={<Quote className="w-4 h-4" />} 
-                label="Citation" 
-                onClick={(e) => toggleBlockquote(e)} 
-                isActive={editor?.isActive('blockquote')}
-              />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              <ToolbarButton 
-                icon={<List className="w-4 h-4" />} 
-                label="Liste à puces" 
-                onClick={(e) => toggleBulletList(e)} 
-                isActive={editor?.isActive('bulletList')}
-              />
-              <ToolbarButton 
-                icon={<ListOrdered className="w-4 h-4" />} 
-                label="Liste numérotée" 
-                onClick={(e) => toggleOrderedList(e)} 
-                isActive={editor?.isActive('orderedList')}
-              />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              <ToolbarButton 
-                icon={<AlignLeft className="w-4 h-4" />} 
-                label="Aligner à gauche" 
-                onClick={(e) => setTextAlign('left',e)} 
-                isActive={editor?.isActive({ textAlign: 'left' })}
-              />
-              <ToolbarButton 
-                icon={<AlignCenter className="w-4 h-4" />} 
-                label="Centrer" 
-                onClick={(e) => setTextAlign('center',e)} 
-                isActive={editor?.isActive({ textAlign: 'center' })}
-              />
-              <ToolbarButton 
-                icon={<AlignRight className="w-4 h-4" />} 
-                label="Aligner à droite" 
-                onClick={(e) => setTextAlign('right',e)} 
-                isActive={editor?.isActive({ textAlign: 'right' })}
-              />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              <ToolbarButton 
-                icon={<ImageIcon className="w-4 h-4" />} 
-                label="Insérer une image" 
-                onClick={openImageModal}
-                color="text-green-600"
-              />
-              
-              <ToolbarButton 
-                icon={<Link className="w-4 h-4" />} 
-                label="Ajouter un lien" 
-                onClick={() => {
-                  const url = window.prompt('URL:');
-                  if (url) {
-                    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-                  }
-                }}
-                isActive={editor?.isActive('link')}
-              />
-              
-              <div className="color-picker-container relative">
-                <ToolbarButton 
-                  icon={<Palette className="w-4 h-4" style={{ color: selectedColor }} />} 
-                  label="Couleur du texte" 
-                  onClick={() => setShowColorPicker(!showColorPicker)}
-                  isActive={showColorPicker}
-                />
-                
-                {showColorPicker && (
-                  <div className="absolute z-30 mt-1 p-2 bg-white rounded-lg shadow-lg border border-gray-200 grid grid-cols-4 gap-1 w-36">
-                    {colorOptions.map((color) => (
-                      <button
-                        key={color}
-                        className="w-7 h-7 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-transform hover:scale-110"
-                        style={{ backgroundColor: color }}
-                        onClick={() => applyTextColor(color)}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              <ToolbarButton 
-                icon={<Undo className="w-4 h-4" />} 
-                label="Annuler" 
-                onClick={handleUndo}
-              />
-              <ToolbarButton 
-                icon={<Redo className="w-4 h-4" />} 
-                label="Rétablir" 
-                onClick={handleRedo}
-              />
-            </div>
-          </>
-        )}
-
-        {/* Math Formatting Toolbar */}
+      {/* Toolbar */}
+      <div ref={toolbarRef}>
+        <EditorToolbar
+          editor={editor}
+          activeToolbar={activeToolbar}
+          setActiveToolbar={setActiveToolbar}
+          showColorPicker={showColorPicker}
+          setShowColorPicker={setShowColorPicker}
+          selectedColor={selectedColor}
+          colorOptions={colorOptions}
+          applyTextColor={applyTextColor}
+          openImageModal={openImageModal}
+          showSettings={showSettings}
+          setShowSettings={setShowSettings}
+          showButtonTooltip={showButtonTooltip}
+          hideTooltip={hideTooltip}
+        />
+        
+        {/* Math Toolbar */}
         {activeToolbar === 'math' && (
-          <>
-            <div className="flex gap-1 flex-wrap items-center">
-              <ToolbarButton 
-                icon={<span className="text-xs font-medium">x²</span>} 
-                label="Formule en ligne" 
-                onClick={insertMathInline}
-                color="text-indigo-700"
-              />
-              <ToolbarButton 
-                icon={
-                  <div className="flex items-center text-xs">
-                    <span className="font-medium mr-1">∑</span>
-                    <AlignCenter className="w-3 h-3" />
-                  </div>
-                } 
-                label="Formule centrée" 
-                onClick={insertCenteredMathFormula}
-                color="text-indigo-700"
-              />
-              
-              <div className="h-5 border-l border-gray-300 mx-1"></div>
-              
-              {/* Recently used formulas */}
-              {lastUsedFormulas.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500">Récent:</span>
-                  {lastUsedFormulas.map((formula, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => openFormulaEditor(formula)}
-                      className="px-1.5 py-1 text-xs bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 transition-colors"
-                      title={formula.name}
-                    >
-                      {formula.name.length > 10 ? formula.name.substring(0, 10) + '...' : formula.name}
-                    </button>
-                  ))}
-                  
-                  <div className="h-5 border-l border-gray-300 mx-1"></div>
-                </div>
-              )}
-              
-              {/* Formula Categories */}
-              {mathFormulaCategories.map((category, index) => (
-                <div key={category.name} className="formula-category-container relative">
-                  <button
-                    onClick={() => toggleCategory(index)}
-                    className={`px-2 py-1 rounded-md transition-colors text-sm flex items-center ${
-                      activeCategoryIndex === index 
-                        ? 'bg-indigo-100 text-indigo-700 shadow-sm' 
-                        : 'bg-white text-indigo-600 hover:bg-indigo-50'
-                    }`}
-                    title={`Formules de ${category.name}`}
-                  >
-                    <FunctionIcon className="w-3.5 h-3.5 mr-1" />
-                    {category.name}
-                    {activeCategoryIndex === index ? (
-                      <ChevronDown className="w-3.5 h-3.5 ml-1" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                    )}
-                  </button>
-                  
-                  {activeCategoryIndex === index && (
-                    <div className="absolute z-30 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 w-[650px] max-h-[450px]">
-                      <div className="p-3 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                        <div className="text-sm font-medium text-gray-700 flex items-center">
-                          <FunctionIcon className="w-4 h-4 mr-2 text-indigo-500" />
-                          Formules de {category.name}
-                        </div>
-                        
-                        {/* Search input */}
-                        <div className="relative w-60">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400" />
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="Rechercher une formule..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-3 py-1.5 border border-gray-300 rounded-md text-sm w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="p-3 overflow-y-auto" style={{ maxHeight: "380px" }}>
-                        {/* Render filtered formulas as visual cards in a grid */}
-                        {getFilteredFormulas(category).length > 0 ? (
-                          <div className="grid grid-cols-3 gap-3">
-                            {getFilteredFormulas(category).map((formula) => (
-                              <FormulaCard 
-                                key={formula.name} 
-                                formula={formula} 
-                                onClick={() => openFormulaEditor(formula)}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center py-6 text-gray-500">
-                            <Info className="w-8 h-8 mb-2 text-gray-400" />
-                            <p>Aucune formule trouvée pour "{searchTerm}"</p>
-                            <p className="text-sm">Essayez avec un autre terme</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
+          <div className="px-3 py-2 bg-white border-b border-gray-200">
+            <MathToolbar
+              insertMathInline={insertMathInline}
+              insertCenteredMathFormula={insertCenteredMathFormula}
+              lastUsedFormulas={lastUsedFormulas}
+              mathFormulaCategories={mathFormulaCategories}
+              openFormulaEditor={openFormulaEditor}
+              activeCategoryIndex={activeCategoryIndex}
+              toggleCategory={toggleCategory}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              getFilteredFormulas={getFilteredFormulas}
+            />
+          </div>
         )}
         
         {/* Tooltip */}
@@ -977,302 +419,35 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         />
       </div>
 
-
-      {/* Image Modal */}
-      {showImageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Insérer une image</h3>
-              <button 
-                onClick={() => setShowImageModal(false)}
-                className="text-gray-400 hover:text-gray-500 transition-colors"
-                title="Fermer la fenêtre"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-4 space-y-4">
-              {imagePreview && (
-                <div className="border rounded-lg p-2 bg-gray-50 flex items-center justify-center">
-                  <img 
-                    src={imagePreview} 
-                    alt="Aperçu" 
-                    className="max-w-full h-auto max-h-64 rounded shadow-sm"
-                  />
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-700">
-                  Légende de l'image
-                </label>
-                <input
-                  type="text"
-                  id="imageCaption"
-                  value={imageCaption}
-                  onChange={(e) => setImageCaption(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
-                  placeholder="Décrivez votre image (optionnel)"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                  disabled={isUploading}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Télécharger
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={handleFileUpload}
-                  title="Télécharger une image"
-                  aria-label="Télécharger une image"
-                />
-                
-                <button
-                                onClick={() => cameraInputRef.current?.click()}
-                                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                                disabled={isUploading}
-                                title="Prendre une photo avec la caméra"
-                              >
-                                <Camera className="w-4 h-4 mr-2" />
-                                Photo
-                              </button>
-                <label htmlFor="camera-input" className="hidden">Prendre une photo</label>
-                <input 
-                  type="file" 
-                  id="camera-input"
-                  ref={cameraInputRef}
-                  className="hidden" 
-                  accept="image/*" 
-                  title="Prendre une photo"
-                  onChange={captureImage}
-                />
-              </div>
-            </div>
-            
-            <div className="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 rounded-b-lg">
-              <button
-                type="button"
-                onClick={insertImage}
-                className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-                disabled={!imageUrl || isUploading}
-              >
-                Insérer
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowImageModal(false)}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <ImageModal
+        showImageModal={showImageModal}
+        setShowImageModal={setShowImageModal}
+        imageUrl={imageUrl}
+        setImageUrl={setImageUrl}
+        imageCaption={imageCaption}
+        setImageCaption={setImageCaption}
+        imagePreview={imagePreview}
+        setImagePreview={setImagePreview}
+        isUploading={isUploading}
+        setIsUploading={setIsUploading}
+        insertImage={insertImage}
+      />
       
-      {/* Formula Editor Modal */}
-      {showFormulaModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
-              <h3 className="text-lg font-medium flex items-center">
-                <FunctionIcon className="w-5 h-5 mr-2" />
-                {currentFormula ? `Éditer la formule: ${currentFormula.name}` : 'Éditer la formule'}
-              </h3>
-              <button 
-                onClick={() => setShowFormulaModal(false)}
-                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-                title="Fermer la fenêtre"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* LaTeX Editor */}
-                <div>
-                  <label htmlFor="latexEditor" className="block text-sm font-medium text-gray-700 mb-2">
-                    Code LaTeX
-                  </label>
-                  <textarea
-                    id="latexEditor"
-                    value={editedLatex}
-                    onChange={(e) => setEditedLatex(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm font-mono text-sm focus:ring-indigo-500 focus:border-indigo-500 h-64 resize-none"
-                    placeholder="Entrez votre code LaTeX ici..."
-                    spellCheck="false"
-                  />
-                </div>
-                {/* Preview */}
-                <div>
-                  <div className="block text-sm font-medium text-gray-700 mb-2">
-                    Aperçu
-                  </div>
-                  <div className="border border-gray-300 rounded-lg h-64 p-4 bg-gray-50 flex items-center justify-center overflow-auto">
-                    <div className="max-w-full max-h-full">
-                      <TipTapRenderer 
-                        content={
-                          formulaInsertMode === 'inline' 
-                            ? `<p>$${editedLatex}$</p>` 
-                            : formulaInsertMode === 'centered'
-                              ? `<p style="text-align: center">$$${editedLatex}$$</p>`
-                              : `<p>$$${editedLatex}$$</p>`
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    <p>Visualisez le rendu de votre formule en temps réel.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-                  
-            <div className="border border-gray-200 rounded-lg py-4 bg-gray-50 mt-4 w-full">
-              {/* Conteneur défilant horizontal sur toute la largeur */}
-              <div className="overflow-x-auto w-full">
-                <div className="flex flex-row space-x-8 pb-0 px-4 min-w-max">
-                  {subFormulas.map((category, catIdx) => (
-                    <div key={catIdx} id={`formula-category-${catIdx}`} className="flex-shrink-0">
-                      <h4 className="font-medium text-sm mb-2 text-gray-700">{category.category}</h4>
-                      <div className="grid grid-cols-3 gap-0 w-full">
-                        {category.items.map((formula, idx) => (
-                          <button
-                            key={idx}
-                            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded hover:border-indigo-300 hover:shadow-sm transition-all"
-                            onClick={() => {
-                              // Code d'insertion inchangé
-                              const textArea = document.getElementById('latexEditor') as HTMLTextAreaElement;
-                              const cursorPosition = textArea.selectionStart;
-                              
-                              const newValue = 
-                                editedLatex.substring(0, cursorPosition) + 
-                                formula.latex + 
-                                editedLatex.substring(cursorPosition);
-                              
-                              setEditedLatex(newValue);
-                              
-                              setTimeout(() => {
-                                textArea.focus();
-                                textArea.selectionStart = cursorPosition + formula.latex.length;
-                                textArea.selectionEnd = cursorPosition + formula.latex.length;
-                              }, 0);
-                            }}
-                          >
-                            <div className="h-12 w-full flex items-center justify-center">
-                              <TipTapRenderer content={`<p>$${formula.latex}$</p>`} />
-                            </div>
-                            <div className="text-xs text-gray-600 mt-1 truncate w-full text-center">
-                              {formula.description}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Mode d'insertion options */}
-              <div className="mt-6 border-t border-gray-200 pt-4 px-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Mode d'insertion:
-                </label>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setFormulaInsertMode('inline')}
-                    className={`px-4 py-2 rounded-lg flex items-center text-sm ${
-                      formulaInsertMode === 'inline'
-                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="font-mono mr-2">$x^2$</span>
-                    Formule en ligne
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => setFormulaInsertMode('centered')}
-                    className={`px-4 py-2 rounded-lg flex items-center text-sm ${
-                      formulaInsertMode === 'centered'
-                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <AlignCenter className="w-4 h-4 mr-2" />
-                    Formule centrée
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="px-6 py-4 bg-gray-50 sm:flex sm:flex-row-reverse border-t border-gray-200 rounded-b-lg">
-              <button
-                type="button"
-                onClick={insertEditedFormula}
-                className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-                disabled={!editedLatex.trim()}
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Insérer
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowFormulaModal(false)}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FormulaEditorModal
+        showFormulaModal={showFormulaModal}
+        setShowFormulaModal={setShowFormulaModal}
+        currentFormula={currentFormula}
+        editedLatex={editedLatex}
+        setEditedLatex={setEditedLatex}
+        formulaInsertMode={formulaInsertMode}
+        setFormulaInsertMode={setFormulaInsertMode}
+        insertEditedFormula={insertEditedFormula}
+        subFormulas={subFormulas}
+      />
 
       {/* Hints Panel */}
-      <div className="mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-indigo-700 shadow-inner">
-        <div className="font-medium mb-2 flex items-center">
-          <Sparkles className="w-4 h-4 mr-1.5 opacity-80" />
-          Astuces d'utilisation
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <div className="font-medium text-xs uppercase tracking-wider mb-1.5 text-indigo-800">Texte</div>
-            <ul className="space-y-1 text-xs list-disc list-inside">
-              <li>Sélectionnez le texte pour le mettre en forme</li>
-              <li>Utilisez les options de couleur pour personnaliser</li>
-              <li>Structurez votre document avec des titres</li>
-            </ul>
-          </div>
-          <div>
-            <div className="font-medium text-xs uppercase tracking-wider mb-1.5 text-indigo-800">Mathématiques</div>
-            <ul className="space-y-1 text-xs list-disc list-inside">
-              <li>$x^2$ : Formule en ligne avec $...$</li>
-              <li>Modifiez les formules avant de les insérer</li>
-            </ul>
-          </div>
-          <div>
-            <div className="font-medium text-xs uppercase tracking-wider mb-1.5 text-indigo-800">Mise en page</div>
-            <ul className="space-y-1 text-xs list-disc list-inside">
-              <li>Ajoutez des images depuis votre appareil</li>
-              <li>Alignez votre texte à gauche, au centre ou à droite</li>
-              <li>Personnalisez l'apparence avec les thèmes</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      <EditorHints />
 
       {/* Custom CSS for LaTeX styling */}
       <style jsx>{`
