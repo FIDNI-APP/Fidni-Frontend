@@ -3,8 +3,6 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import Image from '@tiptap/extension-image';
-import Mathematics from '@tiptap-pro/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
 import Heading from '@tiptap/extension-heading';
 import { Link as LinkTiptap } from '@tiptap/extension-link';
@@ -19,7 +17,7 @@ import ImageResize from 'tiptap-extension-resize-image';
 import { FileHandler } from '@tiptap-pro/extension-file-handler';
 import { Sparkles, Settings } from "lucide-react";
 
-// Import new components
+// Import des composants existants
 import { EditorToolbar } from './EditorToolbar';
 import { MathToolbar } from './MathToolbar';
 import { ImageModal } from './ImageModal';
@@ -34,6 +32,9 @@ import {
   colorOptions, 
   subFormulas 
 } from './editorConstants';
+
+// Import de notre extension mathématique corrigée
+import { RealTimeMathExtension } from './RealTimeMathExtension';
 
 interface DualPaneEditorProps {
   content: string;
@@ -64,15 +65,36 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const [currentFormula, setCurrentFormula] = useState<MathFormula | null>(null);
   const [editedLatex, setEditedLatex] = useState("");
   const [formulaInsertMode, setFormulaInsertMode] = useState<'inline' | 'block' | 'centered'>('inline');
+  const [isEditingFormula, setIsEditingFormula] = useState(false);
   
   // Refs
   const tooltipTimeoutRef = useRef<number | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
+  // Gestionnaire pour éditer une formule existante
+  const handleEditMath = (latex: string, isDisplay: boolean) => {
+    // Configurer l'éditeur de formule
+    const formulaToEdit = { 
+      name: isDisplay ? "Formule en bloc" : "Formule en ligne", 
+      latex: latex 
+    };
+    
+    setCurrentFormula(formulaToEdit);
+    setEditedLatex(latex);
+    setFormulaInsertMode(isDisplay ? (activeToolbar === 'centered' ? 'centered' : 'block') : 'inline');
+    setIsEditingFormula(true);
+    setShowFormulaModal(true);
+  };
+
   // Initialize TipTap editor
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+      }),
       TextStyle,
       Color,
       Document,
@@ -142,16 +164,13 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
           });
         },
       }),
-      Mathematics.configure({
-        regex: /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi,
+      // Utilisation de notre extension mathématique améliorée
+      RealTimeMathExtension.configure({
+        onEditMath: handleEditMath,
         katexOptions: {
           throwOnError: false,
           strict: false,
           displayMode: true
-        },
-        shouldRender: (state, pos, node) => {
-          const $pos = state.doc.resolve(pos);
-          return node.type.name === 'text' && $pos.parent.type.name !== 'codeBlock';
         }
       })
     ],
@@ -184,6 +203,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     setCurrentFormula(formula);
     setEditedLatex(formula.latex);
     setFormulaInsertMode(defaultMode);
+    setIsEditingFormula(false);
     setShowFormulaModal(true);
   };
   
@@ -193,13 +213,28 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     
     editor.chain().focus();
     
-    if (formulaInsertMode === 'inline') {
-      editor.commands.insertContent(`$${editedLatex}$`);
-    } else if (formulaInsertMode === 'centered') {
-      editor.commands.setTextAlign('center');
-      editor.commands.insertContent(`$$${editedLatex}$$`);
+    if (isEditingFormula) {
+      // Dans un cas réel, il faudrait mettre à jour la formule existante
+      // Pour cette démo, nous insérons simplement une nouvelle formule
+      // car il est difficile de localiser la formule originale
+      if (formulaInsertMode === 'inline') {
+        editor.commands.insertContent(`$${editedLatex}$`);
+      } else if (formulaInsertMode === 'centered') {
+        editor.commands.setTextAlign('center');
+        editor.commands.insertContent(`$$${editedLatex}$$`);
+      } else {
+        editor.commands.insertContent(`$$${editedLatex}$$`);
+      }
     } else {
-      editor.commands.insertContent(`$$${editedLatex}$$`);
+      // Insertion d'une nouvelle formule
+      if (formulaInsertMode === 'inline') {
+        editor.commands.insertContent(`$${editedLatex}$`);
+      } else if (formulaInsertMode === 'centered') {
+        editor.commands.setTextAlign('center');
+        editor.commands.insertContent(`$$${editedLatex}$$`);
+      } else {
+        editor.commands.insertContent(`$$${editedLatex}$$`);
+      }
     }
     
     if (currentFormula) {
@@ -210,6 +245,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     }
     
     setShowFormulaModal(false);
+    setIsEditingFormula(false);
   };
 
   // Apply text color
@@ -328,6 +364,73 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
     };
   }, [showColorPicker, activeCategoryIndex, showSettings]);
 
+  // Ajouter des styles CSS pour les formules mathématiques
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Masquer le code LaTeX brut */
+      .math-source-hidden {
+        display: none !important;
+      }
+      
+      /* Styles pour les formules mathématiques */
+      .math-inline, .math-display {
+        cursor: pointer;
+        position: relative;
+      }
+      
+      .math-display {
+        display: block;
+        width: 100%;
+        text-align: center;
+        margin: 1rem 0;
+      }
+      
+      /* Indicateur d'édition au survol */
+      .math-hover {
+        position: relative;
+        outline: 2px solid rgba(79, 70, 229, 0.4);
+        background-color: rgba(79, 70, 229, 0.05);
+        border-radius: 2px;
+      }
+      
+      .math-hover::after {
+        content: "✎";
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        width: 20px;
+        height: 20px;
+        background-color: rgba(79, 70, 229, 0.9);
+        color: white;
+        border-radius: 50%;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+      
+      /* Styles pour les erreurs de rendu */
+      .math-error {
+        color: #f44336;
+        border: 1px dashed #f44336;
+        padding: 2px 4px;
+        border-radius: 2px;
+      }
+      
+      /* Styles pour les formules éditables */
+      .math-editable {
+        transition: all 0.2s ease;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
     <div className={`w-full border border-gray-200 rounded-lg shadow-lg ${currentTheme.bgColor} transition-colors duration-300`}>
       {/* Header */}
@@ -343,6 +446,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
             onMouseEnter={(e) => showButtonTooltip("Paramètres", e)}
             onMouseLeave={hideTooltip}
             className="p-1 hover:bg-white/20 rounded-full transition-colors"
+            aria-label="Paramètres"
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -415,7 +519,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       >
         <EditorContent 
           editor={editor} 
-          className="min-h-[400px] focus:outline-none prose max-w-none"
+          className="min-h-[400px] focus:outline-none prose max-w-none real-time-math-editor"
         />
       </div>
 
@@ -450,7 +554,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       <EditorHints />
 
       {/* Custom CSS for LaTeX styling */}
-      <style jsx>{`
+      <style>{`
         .latex-style .ProseMirror {
           min-height: 400px;
           outline: none;

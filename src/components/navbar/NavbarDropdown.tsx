@@ -1,4 +1,4 @@
-// src/components/NavDropdown.tsx
+// src/components/navbar/NavbarDropdown.tsx - Version corrigée
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Layers, BookOpen, GraduationCap } from 'lucide-react';
@@ -18,7 +18,6 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   const [expandedClassLevel, setExpandedClassLevel] = useState<string | null>(null);
   const { setSelectedClassLevel, setSelectedSubject } = useFilters();
   
-
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -82,22 +81,31 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   };
 
   const handleSubjectClick = (classLevelId: string, subjectId: string) => {
-    // Convert to numbers if that's what your IDs should be
-    const classLevel = Number(classLevelId); // Convert to number
-    const subject = Number(subjectId); // Convert to number
+    // Keep IDs as strings for consistency
     
-    // Navigate with the number IDs
-    navigate(`/${type}?classLevels=${classLevel}&subjects=${subject}`);
-    onClose();
+    // SOLUTION: Set filters in context BEFORE navigation
+    // This ensures the filters are already applied when the page loads
+    setSelectedClassLevel(classLevelId);
+    setSelectedSubject(subjectId);
+    
+    // Small delay to ensure state is updated before navigation
+    setTimeout(() => {
+      navigate(`/${type}?classLevels=${classLevelId}&subjects=${subjectId}`);
+      onClose();
+    }, 0);
   };
   
   const handleViewAll = (classLevelId: string) => {
-    // Convert to number if that's what your IDs should be
-    const classLevel = Number(classLevelId); // Convert to number
+    // Keep ID as string for consistency
     
-    // Navigate with the number ID
-    navigate(`/${type}?classLevels=${classLevel}`);
-    onClose();
+    // Set filter in context before navigation
+    setSelectedClassLevel(classLevelId);
+    setSelectedSubject(null); // Clear subject filter
+    
+    setTimeout(() => {
+      navigate(`/${type}?classLevels=${classLevelId}`);
+      onClose();
+    }, 0);
   };
 
   return (

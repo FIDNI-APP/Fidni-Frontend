@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Filters.tsx - Version corrigée sans boucle infinie
+
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Filter, BookOpen, GraduationCap, ChevronUp, ChevronDown, Tag, BarChart3, FileText, Award } from 'lucide-react';
 import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems } from '@/lib/api';
 import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty, Subfield, Theorem } from '@/types';
@@ -12,7 +14,6 @@ interface FiltersProps {
     theorems: string[];
     difficulties: Difficulty[];
   }) => void;
-  // Add these two new props
   initialClassLevels?: string[];
   initialSubjects?: string[];
 }
@@ -55,22 +56,28 @@ export const Filters: React.FC<FiltersProps> = ({
   const [subfields, setSubfields] = useState<Subfield[]>([]);
   const [chapters, setChapters] = useState<ChapterModel[]>([]);
   const [theorems, setTheorems] = useState<Theorem[]>([]);
+  
+  // IMPORTANT: Use useRef to track if initial values have been set
+  const initialValuesSet = useRef(false);
+  
   const [selectedFilters, setSelectedFilters] = useState<FilterCategories>({
-    classLevels: initialClassLevels,
-    subjects: initialSubjects,
+    classLevels: initialClassLevels.map(String),
+    subjects: initialSubjects.map(String),
     subfields: [],
     chapters: [],
     theorems: [],
     difficulties: [],
   });
+  
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     classLevels: true,
     subjects: true,
-    subfields: false,  // Start collapsed to reduce initial API calls
-    chapters: false,   // Start collapsed to reduce initial API calls 
-    theorems: false,   // Start collapsed to reduce initial API calls
+    subfields: false,
+    chapters: false,
+    theorems: false,
     difficulties: true,
   });
+  
   const [isLoadingSubfields, setIsLoadingSubfields] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [isLoadingTheorems, setIsLoadingTheorems] = useState(false);
@@ -81,7 +88,6 @@ export const Filters: React.FC<FiltersProps> = ({
     chapters: '',
     theorems: ''
   });
-  console.log('filters', selectedFilters);
 
   // Conditions to check if we should load data for hierarchical filters
   const shouldShowSubfieldOptions = () => {
@@ -109,6 +115,24 @@ export const Filters: React.FC<FiltersProps> = ({
   useEffect(() => {
     loadClassLevels();
   }, []);
+  
+  // FIXED: Only set initial values once to avoid infinite loop
+  useEffect(() => {
+    if (!initialValuesSet.current && (initialClassLevels?.length > 0 || initialSubjects?.length > 0)) {
+      initialValuesSet.current = true;
+      
+      const newFilters = {
+        classLevels: initialClassLevels.map(String),
+        subjects: initialSubjects.map(String),
+        subfields: [],
+        chapters: [],
+        theorems: [],
+        difficulties: [],
+      };
+      
+      setSelectedFilters(newFilters);
+    }
+  }, [initialClassLevels, initialSubjects]);
   
   // Load subjects when class levels change
   useEffect(() => {
@@ -169,24 +193,20 @@ export const Filters: React.FC<FiltersProps> = ({
     selectedFilters.classLevels
   ]);
   
+  // FIXED: Create debounced version of onFilterChange
+  const debouncedOnFilterChange = useRef(
+    debounce((filters: FilterCategories) => {
+      onFilterChange(filters);
+    }, 300)
+  ).current;
+  
   // Effect to update parent component with selected filters
   useEffect(() => {
-    // Use debounce to prevent too many filter updates in rapid succession
-    const debouncedFilterChange = debounce(() => {
-      onFilterChange(selectedFilters);
-    }, 300);
-    
-    debouncedFilterChange();
-    
-    // Cleanup function
-    return () => {
-      // Any cleanup needed
-    };
-  }, [selectedFilters, onFilterChange]);
+    debouncedOnFilterChange(selectedFilters);
+  }, [selectedFilters]);
 
   // Auto-expand sections when parent selections change
   useEffect(() => {
-    // If user selects a subject, automatically expand the subfields section
     if (selectedFilters.subjects.length > 0 && shouldShowSubfieldOptions()) {
       setExpandedSections(prev => ({
         ...prev,
@@ -196,7 +216,6 @@ export const Filters: React.FC<FiltersProps> = ({
   }, [selectedFilters.subjects]);
 
   useEffect(() => {
-    // If user selects a subfield, automatically expand the chapters section
     if (selectedFilters.subfields.length > 0 && shouldShowChapterOptions()) {
       setExpandedSections(prev => ({
         ...prev,
@@ -206,7 +225,6 @@ export const Filters: React.FC<FiltersProps> = ({
   }, [selectedFilters.subfields]);
 
   useEffect(() => {
-    // If user selects a chapter, automatically expand the theorems section
     if (selectedFilters.chapters.length > 0 && shouldShowTheoremOptions()) {
       setExpandedSections(prev => ({
         ...prev,
@@ -214,32 +232,6 @@ export const Filters: React.FC<FiltersProps> = ({
       }));
     }
   }, [selectedFilters.chapters]);
-
-
-  useEffect(() => {
-    if (initialClassLevels?.length > 0 || initialSubjects?.length > 0) {
-      // Create a new filters object based on current state
-      const newFilters = {...selectedFilters};
-      let changed = false;
-      
-      // Set class levels if they exist in props
-      if (initialClassLevels?.length > 0) {
-        newFilters.classLevels = initialClassLevels;
-        changed = true;
-      }
-      
-      // Set subjects if they exist in props
-      if (initialSubjects?.length > 0) {
-        newFilters.subjects = initialSubjects;
-        changed = true;
-      }
-      
-      // Update state if changes were made
-      if (changed) {
-        setSelectedFilters(newFilters);
-      }
-    }
-  }, [initialClassLevels, initialSubjects]);
 
   const loadClassLevels = async () => {
     try {
@@ -270,32 +262,27 @@ export const Filters: React.FC<FiltersProps> = ({
   };
 
   const loadSubfields = async () => {
-    // Skip if necessary conditions aren't met
     if (selectedFilters.subjects.length === 0 || selectedFilters.classLevels.length === 0) {
       setSubfields([]);
       return;
     }
     
-    // Create a request signature to prevent duplicate calls
     const requestSignature = JSON.stringify({
       subjects: [...selectedFilters.subjects].sort(),
       classLevels: [...selectedFilters.classLevels].sort()
     });
     
-    // Skip if this is a duplicate of the last request
     if (requestSignature === lastRequests.subfields) {
       return;
     }
     
     setIsLoadingSubfields(true);
     try {
-      // Update last request signature
       setLastRequests(prev => ({
         ...prev,
         subfields: requestSignature
       }));
       
-      // Load data for each selected subject
       const promises = selectedFilters.subjects.map(subject => 
         getSubfields(subject, selectedFilters.classLevels)
       );
@@ -313,7 +300,6 @@ export const Filters: React.FC<FiltersProps> = ({
   };
 
   const loadChapters = async () => {
-    // Skip if necessary conditions aren't met
     if (selectedFilters.subfields.length === 0 || 
         selectedFilters.subjects.length === 0 || 
         selectedFilters.classLevels.length === 0) {
@@ -321,27 +307,23 @@ export const Filters: React.FC<FiltersProps> = ({
       return;
     }
     
-    // Create a request signature to prevent duplicate calls
     const requestSignature = JSON.stringify({
       subjects: [...selectedFilters.subjects].sort(),
       classLevels: [...selectedFilters.classLevels].sort(),
       subfields: [...selectedFilters.subfields].sort()
     });
     
-    // Skip if this is a duplicate of the last request
     if (requestSignature === lastRequests.chapters) {
       return;
     }
     
     setIsLoadingChapters(true);
     try {
-      // Update last request signature
       setLastRequests(prev => ({
         ...prev,
         chapters: requestSignature
       }));
       
-      // For simplicity, use the first subject in the list
       const data = await getChapters(
         selectedFilters.subjects[0],
         selectedFilters.classLevels,
@@ -358,7 +340,6 @@ export const Filters: React.FC<FiltersProps> = ({
   };
 
   const loadTheorems = async () => {
-    // Skip if necessary conditions aren't met
     if (selectedFilters.chapters.length === 0 ||
         selectedFilters.subfields.length === 0 || 
         selectedFilters.subjects.length === 0 || 
@@ -367,7 +348,6 @@ export const Filters: React.FC<FiltersProps> = ({
       return;
     }
     
-    // Create a request signature to prevent duplicate calls
     const requestSignature = JSON.stringify({
       subjects: [...selectedFilters.subjects].sort(),
       classLevels: [...selectedFilters.classLevels].sort(),
@@ -375,20 +355,17 @@ export const Filters: React.FC<FiltersProps> = ({
       chapters: [...selectedFilters.chapters].sort()
     });
     
-    // Skip if this is a duplicate of the last request
     if (requestSignature === lastRequests.theorems) {
       return;
     }
     
     setIsLoadingTheorems(true);
     try {
-      // Update last request signature
       setLastRequests(prev => ({
         ...prev,
         theorems: requestSignature
       }));
       
-      // For simplicity, use the first subject in the list
       const data = await getTheorems(
         selectedFilters.subjects[0],
         selectedFilters.classLevels,
@@ -416,13 +393,12 @@ export const Filters: React.FC<FiltersProps> = ({
           newFilters.difficulties = [...newFilters.difficulties, value as Difficulty];
         }
       } else {
-        // This is where the logic for toggling filters exists
         if (newFilters[category].includes(value as string)) {
           newFilters[category] = newFilters[category].filter(v => v !== value);
           
           // Clear dependent fields when parent is deselected
           if (category === 'classLevels') {
-            // No need for additional clearing here as it's handled in the useEffect
+            // Handled in useEffect
           } else if (category === 'subjects') {
             newFilters.subfields = [];
             newFilters.chapters = [];
@@ -453,17 +429,16 @@ export const Filters: React.FC<FiltersProps> = ({
     
     if (category in source) {
       const items = source[category];
-      const found = items.find(item => item.id === id);
+      const found = items.find(item => String(item.id) === String(id));
       if (found) {
         return found.name;
-      } 
-      return id;
+      }
+      return "Chargement...";
     }
     if (category === 'difficulties') {
       return getDifficultyLabel(id);
     }
     
-    // Default fallback
     return id.charAt(0).toUpperCase() + id.slice(1);
   };
 
@@ -507,11 +482,9 @@ export const Filters: React.FC<FiltersProps> = ({
     const { title, category, icon } = section;
     const isExpanded = expandedSections[category];
 
-    // For sections with many items, add a height max and scrolling
     const needsScroll = ['chapters', 'theorems', 'subfields'].includes(category);
     const scrollableClass = needsScroll ? "max-h-[300px] overflow-y-auto pr-2" : "";
 
-    // Determine if this section is disabled based on hierarchy
     let isDisabled = false;
     let disabledMessage = "";
     
@@ -526,7 +499,6 @@ export const Filters: React.FC<FiltersProps> = ({
       disabledMessage = "Veuillez sélectionner un chapitre d'abord";
     }
 
-    // Determine if section is loading
     let isLoading = false;
     if (category === 'subfields' && isLoadingSubfields) {
       isLoading = true;
@@ -546,7 +518,6 @@ export const Filters: React.FC<FiltersProps> = ({
             {icon}
             <h3 className="text-lg font-medium text-gray-800">{title}</h3>
             
-            {/* Display count of available items */}
             {!isDisabled && items.length > 0 && (
               <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
                 {items.length}
@@ -573,7 +544,7 @@ export const Filters: React.FC<FiltersProps> = ({
               ) : (
                 <>
                   {items.map((item, index) => {
-                    const itemId = typeof item === 'string' ? item : item.id;
+                    const itemId = typeof item === 'string' ? item : String(item.id);
                     const itemName = typeof item === 'string' ? 
                       getDifficultyLabel(item) : 
                       item.name;
@@ -584,7 +555,6 @@ export const Filters: React.FC<FiltersProps> = ({
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200';
                     
-                    // Override for difficulty filters
                     if (category === 'difficulties' && !isSelected) {
                       buttonClass = getDifficultyColor(itemId);
                     }
@@ -669,38 +639,37 @@ export const Filters: React.FC<FiltersProps> = ({
           )
         )}
 
-          {getActiveFiltersCount() > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-medium text-gray-800">
-                  Filtres actifs
-                </h3>
-                <span className="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
-                  {getActiveFiltersCount()}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {Object.entries(selectedFilters).map(([category, values]) =>
-                  values.map((value, index) => {
-                    // Skip empty values
-                    if (!value) return null;
-                    
-                    return (
-                      <button
-                        key={`active-${category}-${value}-${index}`}
-                        onClick={() => toggleFilter(category as keyof FilterCategories, value)}
-                        className="px-3 py-1.5 rounded-full text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center space-x-2 transition-colors"
-                      >
-                        <span>{getFilterName(category as keyof FilterCategories, value as string)}</span>
-                        <X className="w-4 h-4 ml-1" />
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+        {getActiveFiltersCount() > 0 && (
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium text-gray-800">
+                Filtres actifs
+              </h3>
+              <span className="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
+                {getActiveFiltersCount()}
+              </span>
             </div>
-          )}
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(selectedFilters).map(([category, values]) =>
+                values.map((value, index) => {
+                  if (!value) return null;
+                  
+                  return (
+                    <button
+                      key={`active-${category}-${value}-${index}`}
+                      onClick={() => toggleFilter(category as keyof FilterCategories, value)}
+                      className="px-3 py-1.5 rounded-full text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center space-x-2 transition-colors"
+                    >
+                      <span>{getFilterName(category as keyof FilterCategories, value as string)}</span>
+                      <X className="w-4 h-4 ml-1" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};

@@ -10,18 +10,17 @@ import { ContentList } from '../components/ContentList';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
+import { useFilters } from '../components/navbar/FilterContext'; // AJOUT IMPORTANT
 
 // Custom hook for debouncing values
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
-    // Set debouncedValue to value after the specified delay
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
 
-    // Cancel the timeout if value changes or unmounts
     return () => {
       clearTimeout(handler);
     };
@@ -64,23 +63,65 @@ export const ExerciseList = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal();
+  const { selectedClassLevel, selectedSubject, fullFilters } = useFilters(); // UTILISATION DU CONTEXTE
+  
+  // NOUVELLE FONCTION pour initialiser les filtres depuis l'URL ou le contexte
+  const getInitialFilters = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const classLevelsParam = searchParams.get('classLevels');
+    const subjectsParam = searchParams.get('subjects');
+    
+    // Priorité 1: Paramètres URL (garder comme strings)
+    if (classLevelsParam || subjectsParam) {
+      return {
+        classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
+        subjects: subjectsParam ? subjectsParam.split(',') : [],
+        subfields: [] as string[],
+        chapters: [] as string[],
+        theorems: [] as string[],
+        difficulties: [] as Difficulty[],
+      };
+    }
+    
+    // Priorité 2: Filtres complets du contexte
+    if (fullFilters) {
+      return fullFilters;
+    }
+    
+    // Priorité 3: Filtres simples du contexte
+    if (selectedClassLevel || selectedSubject) {
+      return {
+        classLevels: selectedClassLevel ? [selectedClassLevel] : [],
+        subjects: selectedSubject ? [selectedSubject] : [],
+        subfields: [] as string[],
+        chapters: [] as string[],
+        theorems: [] as string[],
+        difficulties: [] as Difficulty[],
+      };
+    }
+    
+    // Par défaut: filtres vides
+    return {
+      classLevels: [] as string[],
+      subjects: [] as string[],
+      subfields: [] as string[],
+      chapters: [] as string[],
+      theorems: [] as string[],
+      difficulties: [] as Difficulty[],
+    };
+  };
+  
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [filters, setFilters] = useState({
-    classLevels: [] as string[],
-    subjects: [] as string[],
-    subfields: [] as string[],
-    chapters: [] as string[],
-    theorems: [] as string[],
-    difficulties: [] as Difficulty[],
-  });
+  const [filters, setFilters] = useState(getInitialFilters()); // UTILISATION DE LA FONCTION D'INITIALISATION
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false); // NOUVEAU FLAG
   
   // Add refs for tracking scroll position
   const listRef = useRef<HTMLDivElement>(null);
@@ -93,44 +134,51 @@ export const ExerciseList = () => {
   const debouncedFilters = useDebounce(filters, 500);
   const debouncedSortBy = useDebounce(sortBy, 500);
   
+  // MODIFICATION: Gérer les changements d'URL seulement après le chargement initial
   useEffect(() => {
-  const searchParams = new URLSearchParams(location.search);
-  const classLevelsParam = searchParams.get('classLevels');
-  const subjectsParam = searchParams.get('subjects');
-  
-  if (classLevelsParam || subjectsParam) {
-    const newFilters = { ...filters };
-    let hasChanges = false;
+    // Ne traiter les changements d'URL qu'après le premier chargement
+    if (!initialLoadComplete) return;
     
-    if (classLevelsParam) {
-      // Convert to numbers and ensure they're unique
-      const classLevels = classLevelsParam.split(',').map(id => Number(id));
-      if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
-        newFilters.classLevels = classLevels;
-        hasChanges = true;
-      }
-    }
+    const searchParams = new URLSearchParams(location.search);
+    const classLevelsParam = searchParams.get('classLevels');
+    const subjectsParam = searchParams.get('subjects');
     
-    if (subjectsParam) {
-      // Convert to numbers and ensure they're unique
-      const subjects = subjectsParam.split(',').map(id => Number(id));
-      if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
-        newFilters.subjects = subjects;
-        hasChanges = true;
-      }
-    }
-    
-    if (hasChanges) {
-      // Reset dependent filters
-      newFilters.subfields = [];
-      newFilters.chapters = [];
-      newFilters.theorems = [];
+    if (classLevelsParam || subjectsParam) {
+      const newFilters = { ...filters };
+      let hasChanges = false;
       
-      // Update filters
-      setFilters(newFilters);
+      if (classLevelsParam) {
+        const classLevels = classLevelsParam.split(',');
+        if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
+          newFilters.classLevels = classLevels;
+          hasChanges = true;
+        }
+      }
+      
+      if (subjectsParam) {
+        const subjects = subjectsParam.split(',');
+        if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
+          newFilters.subjects = subjects;
+          hasChanges = true;
+        }
+      }
+      
+      if (hasChanges) {
+        // Reset dependent filters
+        newFilters.subfields = [];
+        newFilters.chapters = [];
+        newFilters.theorems = [];
+        
+        // Update filters
+        setFilters(newFilters);
+      }
     }
-  }
-}, [location.search]);
+  }, [location.search, initialLoadComplete]); // Dépendance sur initialLoadComplete
+  
+  // NOUVEAU: Marquer le chargement initial comme terminé
+  useEffect(() => {
+    setInitialLoadComplete(true);
+  }, []);
   
   // Use memoization for creating API query parameters
   const queryParams = useMemo(() => {
@@ -202,7 +250,7 @@ export const ExerciseList = () => {
     } else {
       fetchContents(false);
     }
-  }, [debouncedFilters, debouncedSortBy, fetchContents]);
+  }, [debouncedFilters, debouncedSortBy]);
   
   // Handle pagination separately
   useEffect(() => {
