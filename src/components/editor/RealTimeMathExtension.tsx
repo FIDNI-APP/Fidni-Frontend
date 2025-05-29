@@ -1,9 +1,8 @@
-import { Extension } from '@tiptap/core';
+import { Extension, Command } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import katex from 'katex';
 
-// Type pour les options de l'extension
 interface MathRenderOptions {
   delimiters: Array<{
     left: string;
@@ -11,25 +10,26 @@ interface MathRenderOptions {
     display: boolean;
   }>;
   katexOptions: katex.KatexOptions;
-  onEditMath?: (latex: string, isDisplay: boolean) => void;
+  onEditMath?: (latex: string, isDisplay: boolean, nodePos: number) => void;
 }
 
-// Classe pour gérer les décorations des formules mathématiques
 class MathView {
   dom: HTMLElement;
   contentDOM: HTMLElement | null = null;
+  private nodePos: number;
   
   constructor(
     public readonly latex: string, 
     public readonly isDisplay: boolean,
-    public readonly onEditMath?: (latex: string, isDisplay: boolean) => void
+    nodePos: number,
+    public readonly onEditMath?: (latex: string, isDisplay: boolean, nodePos: number) => void
   ) {
-    // Créer l'élément DOM pour le rendu
+    this.nodePos = nodePos;
     this.dom = document.createElement(isDisplay ? 'div' : 'span');
     this.dom.classList.add(isDisplay ? 'math-display' : 'math-inline');
+    this.dom.setAttribute('data-formula-pos', String(nodePos));
     
     try {
-      // Rendre la formule LaTeX
       katex.render(latex, this.dom, {
         displayMode: isDisplay,
         throwOnError: false,
@@ -41,17 +41,15 @@ class MathView {
       this.dom.classList.add('math-error');
     }
 
-    // Ajouter un gestionnaire de clic pour l'édition
     if (this.onEditMath) {
       this.dom.classList.add('math-editable');
       this.dom.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.onEditMath?.(this.latex, this.isDisplay);
+        this.onEditMath?.(this.latex, this.isDisplay, this.nodePos);
       });
     }
     
-    // Ajouter des styles de survol
     this.dom.addEventListener('mouseenter', () => {
       if (this.onEditMath) {
         this.dom.classList.add('math-hover');
@@ -63,29 +61,29 @@ class MathView {
     });
   }
 
-  // Méthode pour détruire la vue
   destroy() {
-    // Nettoyer les événements si nécessaire
+    // Cleanup if needed
+  }
+  
+  update(nodePos: number) {
+    this.nodePos = nodePos;
+    this.dom.setAttribute('data-formula-pos', String(nodePos));
   }
 }
 
-// Extension principale pour le rendu des formules mathématiques
 export const RealTimeMathExtension = Extension.create<MathRenderOptions>({
   name: 'realTimeMath',
 
   addOptions() {
     return {
-      // Délimiteurs par défaut pour les formules en ligne et en bloc
       delimiters: [
         { left: '$', right: '$', display: false },
         { left: '$$', right: '$$', display: true },
       ],
-      // Options KaTeX par défaut
       katexOptions: {
         throwOnError: false,
         strict: false,
       },
-      // Fonction d'édition optionnelle
       onEditMath: undefined,
     };
   },
@@ -98,23 +96,19 @@ export const RealTimeMathExtension = Extension.create<MathRenderOptions>({
         key: new PluginKey('realTimeMath'),
         
         props: {
-          // Définir des attributs pour le conteneur
           attributes: {
             class: 'real-time-math-editor',
           },
           
-          // Décorer le texte avec les formules rendues
           decorations(state) {
             const { doc } = state;
             const decorations: Decoration[] = [];
             
-            // Vérifier chaque nœud de texte dans le document
             doc.descendants((node, pos) => {
               if (!node.isText) return;
               
               const nodeText = node.text || '';
               
-              // Traiter chaque type de délimiteur
               for (const delimiter of delimiters) {
                 const { left, right, display } = delimiter;
                 
@@ -122,40 +116,38 @@ export const RealTimeMathExtension = Extension.create<MathRenderOptions>({
                 let searchText = nodeText;
                 
                 while (startPos < searchText.length) {
-                  // Trouver le délimiteur de début
                   const startDelimPos = searchText.indexOf(left, startPos);
                   if (startDelimPos === -1) break;
                   
-                  // Trouver le délimiteur de fin
                   const endDelimPos = searchText.indexOf(right, startDelimPos + left.length);
                   if (endDelimPos === -1) break;
                   
-                  // Extraire la formule LaTeX
                   const formula = searchText.slice(
                     startDelimPos + left.length, 
                     endDelimPos
                   );
                   
-                  // Calculer les positions dans le document
                   const startRealPos = pos + startDelimPos;
                   const endRealPos = pos + endDelimPos + right.length;
                   
-                  // Créer une décoration pour remplacer la formule brute par son rendu
+                  // Widget decoration with node position
                   decorations.push(
                     Decoration.widget(startRealPos, () => {
-                      const view = new MathView(formula, display, onEditMath);
+                      const view = new MathView(formula, display, startRealPos, onEditMath);
                       return view.dom;
+                    }, {
+                      side: -1,
+                      key: `math-${startRealPos}`
                     })
                   );
                   
-                  // Masquer le texte original
+                  // Hide original text
                   decorations.push(
                     Decoration.inline(startRealPos, endRealPos, {
                       class: 'math-source-hidden',
                     })
                   );
                   
-                  // Continuer à chercher après cette formule
                   startPos = endDelimPos + right.length;
                 }
               }
@@ -166,5 +158,54 @@ export const RealTimeMathExtension = Extension.create<MathRenderOptions>({
         },
       }),
     ];
+  },
+  
+  // Add command to replace formula at position
+  addCommands() {
+    return {
+      replaceFormulaAtPosition: (position: number, newLatex: string, isDisplay: boolean): Command => ({ state, dispatch }) => {
+        if (!dispatch) return false;
+        
+        const { doc, tr } = state;
+        let found = false;
+        
+        doc.descendants((node, pos) => {
+          if (!node.isText || found) return;
+          
+          const nodeText = node.text || '';
+          const delimiters = isDisplay ? ['$$', '$$'] : ['$', '$'];
+          
+          // Find formula at or near position
+          let index = 0;
+          while (index < nodeText.length) {
+            const startIdx = nodeText.indexOf(delimiters[0], index);
+            if (startIdx === -1) break;
+            
+            const endIdx = nodeText.indexOf(delimiters[1], startIdx + delimiters[0].length);
+            if (endIdx === -1) break;
+            
+            const formulaStart = pos + startIdx;
+            const formulaEnd = pos + endIdx + delimiters[1].length;
+            
+            // Check if position is within this formula
+            if (position >= formulaStart && position <= formulaEnd) {
+              const newFormula = `${delimiters[0]}${newLatex}${delimiters[1]}`;
+              tr.replaceRangeWith(formulaStart, formulaEnd, state.schema.text(newFormula));
+              found = true;
+              break;
+            }
+            
+            index = endIdx + delimiters[1].length;
+          }
+        });
+        
+        if (found) {
+          dispatch(tr);
+          return true;
+        }
+        
+        return false;
+      },
+    };
   },
 });
