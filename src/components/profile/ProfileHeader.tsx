@@ -1,17 +1,24 @@
-// src/components/profile/ProfileHeader.tsx
+// src/components/profile/ProfileHeader.tsx - Version améliorée
 import React, { useState } from 'react';
 import { User } from '@/types';
 import { 
-  Edit, 
   Mail, 
   Calendar, 
   MapPin, 
-  ExternalLink,
   Shield,
-  GraduationCap
+  GraduationCap,
+  Award,
+  Sparkles,
+  Users,
+  Zap,
+  Target,
+  TrendingUp,
+  Star,
+  BarChart3,
+  PenTool
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { AnimatePresence, motion } from 'framer-motion';
 
 interface ProfileHeaderProps {
   user: User;
@@ -26,293 +33,270 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   isOwner,
   onEditProfile 
 }) => {
-  const [activeSection, setActiveSection] = useState<'about' | 'achievements'>('about');
-
-  // Calculate user level based on contributions
+  const [hoveredStat, setHoveredStat] = useState<string | null>(null);
+  
+  // Calcul du niveau utilisateur basé sur les contributions
   const getUserLevel = () => {
     const total = stats?.contribution_stats?.total_contributions || 0;
     
-    if (total > 50) return { level: "Expert", color: "bg-gradient-to-r from-amber-400 to-orange-500" };
-    if (total > 20) return { level: "Advanced", color: "bg-gradient-to-r from-purple-400 to-indigo-500" };
-    if (total > 5) return { level: "Intermediate", color: "bg-gradient-to-r from-emerald-400 to-teal-500" };
-    return { level: "Beginner", color: "bg-gradient-to-r from-blue-400 to-cyan-500" };
+    if (total >= 100) return { 
+      level: "Expert", 
+      icon: "🏆", 
+      color: "from-amber-400 to-orange-500",
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-200",
+      progress: 100
+    };
+    if (total >= 50) return { 
+      level: "Confirmé", 
+      icon: "⭐", 
+      color: "from-purple-400 to-indigo-500",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-200",
+      progress: (total / 100) * 100
+    };
+    if (total >= 20) return { 
+      level: "Intermédiaire", 
+      icon: "🌟", 
+      color: "from-emerald-400 to-teal-500",
+      bgColor: "bg-emerald-50",
+      borderColor: "border-emerald-200",
+      progress: (total / 50) * 100
+    };
+    return { 
+      level: "Débutant", 
+      icon: "🌱", 
+      color: "from-blue-400 to-cyan-500",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
+      progress: (total / 20) * 100
+    };
   };
 
   const userLevel = getUserLevel();
   
-  // Get badges and achievements
-  const getAchievements = () => {
-    const achievements = [];
-    
-    if ((stats?.contribution_stats?.exercises || 0) >= 5) {
-      achievements.push({ 
-        name: "Content Creator", 
-        icon: "🏆", 
-        description: "Created 5+ exercises" 
-      });
+  // Statistiques principales
+  const mainStats = [
+    {
+      id: 'contributions',
+      label: 'Contributions',
+      value: stats?.contribution_stats?.total_contributions || 0,
+      icon: PenTool,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100/50',
+      description: "Total des exercices, solutions et commentaires"
+    },
+    {
+      id: 'completed',
+      label: 'Complétés',
+      value: stats?.learning_stats?.exercises_completed || 0,
+      icon: Target,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-100/50',
+      description: "Exercices réussis avec succès"
+    },
+    {
+      id: 'reputation',
+      label: 'Réputation',
+      value: stats?.contribution_stats?.upvotes_received || 0,
+      icon: TrendingUp,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100/50',
+      description: "Points gagnés grâce aux votes positifs"
+    },
+    {
+      id: 'impact',
+      label: 'Impact',
+      value: stats?.contribution_stats?.view_count || 0,
+      icon: Users,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100/50',
+      description: "Nombre total de vues sur vos contributions"
     }
-    
-    if ((stats?.learning_stats?.exercises_completed || 0) >= 10) {
-      achievements.push({ 
-        name: "Fast Learner", 
-        icon: "🚀", 
-        description: "Completed 10+ exercises" 
-      });
-    }
-    
-    if ((stats?.contribution_stats?.upvotes_received || 0) >= 20) {
-      achievements.push({ 
-        name: "Community Favorite", 
-        icon: "⭐", 
-        description: "Received 20+ upvotes" 
-      });
-    }
-    
-    return achievements;
-  };
-  
-  const achievements = getAchievements();
+  ];
 
   return (
-    <div className="relative overflow-hidden">
-      {/* Background with animated particles */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-800 via-violet-800 to-purple-900">
-        {/* Animated gradient spots */}
-        <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-purple-400 mix-blend-soft-light filter blur-3xl opacity-30 animate-blob"></div>
-        <div className="absolute top-10 right-40 w-72 h-72 rounded-full bg-indigo-400 mix-blend-soft-light filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-10 left-1/3 w-72 h-72 rounded-full bg-blue-400 mix-blend-soft-light filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-        
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-      </div>
-      
-      <div className="max-w-7xl mx-auto px-4 py-12 lg:py-16 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8">
-          {/* Avatar with interactive elements */}
+    <div className="relative">
+      {/* Conteneur principal */}
+      <div className="flex flex-col lg:flex-row items-center lg:items-end gap-8 text-white">
+        {/* Section Avatar et Infos principales */}
+        <div className="flex flex-col sm:flex-row items-center gap-6 flex-1">
+          {/* Avatar avec effets visuels */}
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full opacity-75 group-hover:opacity-100 blur-lg transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-            <div className="relative w-32 h-32 sm:w-40 sm:h-40 bg-white p-1 rounded-full shadow-2xl">
-              {user.profile.avatar ? (
-                <img 
-                  src={user.profile.avatar} 
-                  alt={`${user.username}'s avatar`} 
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-5xl font-bold">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-              )}
+            {/* Cercles animés en arrière-plan */}
+            <div className="absolute -inset-4 opacity-75">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full blur-lg group-hover:blur-xl transition-all duration-700 animate-pulse"></div>
+            </div>
+            
+            {/* Conteneur de l'avatar */}
+            <div className="relative">
+              {/* Badge de niveau */}
+              <div className={`absolute -top-2 -right-2 z-10 ${userLevel.bgColor} ${userLevel.borderColor} border-2 rounded-full p-2 shadow-lg`}>
+                <span className="text-2xl">{userLevel.icon}</span>
+              </div>
               
-              {/* Badge indicator for user level */}
-              <div className="absolute -bottom-2 -right-2 rounded-full p-1 bg-white">
-                <div className={`px-3 py-1 rounded-full text-xs font-medium text-white ${userLevel.color}`}>
+              {/* Avatar */}
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full p-1 bg-white/90 backdrop-blur-sm shadow-xl">
+                {user.profile.avatar ? (
+                  <img 
+                    src={user.profile.avatar} 
+                    alt={`${user.username}'s avatar`} 
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full rounded-full bg-gradient-to-br ${userLevel.color} flex items-center justify-center text-white text-5xl font-bold shadow-inner`}>
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                
+                {/* Indicateur d'activité */}
+                <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-md"></div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Informations utilisateur */}
+          <div className="text-center sm:text-left space-y-3">
+            {/* Nom et badges */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight flex items-center gap-2">
+                {user.username}
+                {stats?.contribution_stats?.total_contributions >= 50 && (
+                  <Sparkles className="w-6 h-6 text-yellow-300" />
+                )}
+              </h1>
+              
+              <div className="flex items-center gap-2">
+                {/* Badge de type d'utilisateur */}
+                <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm border border-white/30">
+                  {user.profile.user_type === 'teacher' ? (
+                    <>
+                      <Shield className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
+                      Enseignant
+                    </>
+                  ) : (
+                    <>
+                      <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
+                      Étudiant
+                    </>
+                  )}
+                </div>
+                
+                {/* Badge de niveau */}
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${userLevel.color} text-white shadow-md`}>
+                  <Zap className="w-3.5 h-3.5 mr-1.5" />
                   {userLevel.level}
                 </div>
               </div>
             </div>
-          </div>
-          
-          {/* User info */}
-          <div className="text-center lg:text-left text-white flex-grow">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{user.username}</h1>
-              
-              {user.profile.user_type && (
-                <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/10 backdrop-blur-sm border border-white/20">
-                  {user.profile.user_type === 'teacher' ? (
-                    <>
-                      <Shield className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
-                      Teacher
-                    </>
-                  ) : (
-                    <>
-                      <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-blue-300" />
-                      Student
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
             
-            <p className="mt-3 text-indigo-100 max-w-lg font-light">
-              {user.profile.bio || "No bio provided yet."}
+            {/* Bio */}
+            <p className="text-white/90 max-w-2xl leading-relaxed">
+              {user.profile.bio || "Passionné(e) d'apprentissage et de partage de connaissances 📚"}
             </p>
             
-            <div className="mt-4 flex flex-wrap justify-center lg:justify-start gap-3 text-sm">
+            {/* Métadonnées */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-white/80">
               {user.profile.display_email && (
-                <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 border border-white/20 hover:bg-white/20 transition-colors">
-                  <Mail className="w-4 h-4 mr-2 text-indigo-300" />
-                  {user.email}
+                <div className="flex items-center gap-1.5">
+                  <Mail className="w-4 h-4" />
+                  <span>{user.email}</span>
                 </div>
               )}
               
-              <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 border border-white/20 hover:bg-white/20 transition-colors">
-                <Calendar className="w-4 h-4 mr-2 text-indigo-300" />
-                Joined {new Date(user.profile.joined_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
+                <span>Membre depuis {new Date(user.profile.joined_at).toLocaleDateString('fr-FR', {
                   month: 'long',
-                  day: 'numeric'
-                })}
+                  year: 'numeric'
+                })}</span>
               </div>
               
               {user.profile.location && (
-                <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 border border-white/20 hover:bg-white/20 transition-colors">
-                  <MapPin className="w-4 h-4 mr-2 text-indigo-300" />
-                  {user.profile.location}
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <span>{user.profile.location}</span>
                 </div>
               )}
             </div>
             
-            {/* Stats Summary */}
-            <div className="mt-6 grid grid-cols-3 md:grid-cols-4 gap-3 max-w-2xl mx-auto lg:mx-0">
-              <StatItem 
-                label="Exercises"
-                value={stats?.contribution_stats?.exercises || 0}
-                color="bg-indigo-400/20"
-                textColor="text-indigo-200"
-              />
-              <StatItem 
-                label="Solutions"
-                value={stats?.contribution_stats?.solutions || 0}
-                color="bg-purple-400/20"
-                textColor="text-purple-200"
-              />
-              <StatItem 
-                label="Upvotes"
-                value={stats?.contribution_stats?.upvotes_received || 0}
-                color="bg-pink-400/20"
-                textColor="text-pink-200"
-              />
-              <StatItem 
-                label="Views"
-                value={stats?.contribution_stats?.view_count || 0}
-                color="bg-blue-400/20"
-                textColor="text-blue-200"
-              />
+            {/* Barre de progression vers le niveau suivant */}
+            <div className="max-w-md">
+              <div className="flex items-center justify-between text-xs text-white/70 mb-1">
+                <span>Progression vers {userLevel.level === "Expert" ? "la légende" : "le niveau suivant"}</span>
+                <span>{Math.round(userLevel.progress)}%</span>
+              </div>
+              <div className="h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${userLevel.progress}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className={`h-full bg-gradient-to-r ${userLevel.color} shadow-sm`}
+                />
+              </div>
             </div>
-            
-            {/* Sections for About/Achievements */}
-            <div className="mt-6 max-w-2xl mx-auto lg:mx-0">
-              <div className="flex border-b border-white/20">
-                <button
-                  onClick={() => setActiveSection('about')}
-                  className={`px-4 py-2 font-medium text-sm ${
-                    activeSection === 'about' 
-                      ? 'border-b-2 border-white text-white' 
-                      : 'text-white/70 hover:text-white/90'
-                  }`}
-                >
-                  About
-                </button>
-                <button
-                  onClick={() => setActiveSection('achievements')}
-                  className={`px-4 py-2 font-medium text-sm ${
-                    activeSection === 'achievements' 
-                      ? 'border-b-2 border-white text-white' 
-                      : 'text-white/70 hover:text-white/90'
-                  }`}
-                >
-                  Achievements
-                </button>
+          </div>
+        </div>
+        
+        {/* Statistiques principales */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3 w-full lg:w-auto">
+          {mainStats.map((stat, index) => (
+            <motion.div
+              key={stat.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 + index * 0.05 }}
+              onMouseEnter={() => setHoveredStat(stat.id)}
+              onMouseLeave={() => setHoveredStat(null)}
+              className="relative"
+            >
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300 cursor-pointer group">
+                <div className="flex items-center justify-between mb-2">
+                  <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {stat.value.toLocaleString()}
+                </div>
+                <div className="text-xs text-white/70 font-medium">
+                  {stat.label}
+                </div>
               </div>
               
-              <AnimatePresence mode="wait">
-                {activeSection === 'about' ? (
+              {/* Tooltip au survol */}
+              <AnimatePresence>
+                {hoveredStat === stat.id && (
                   <motion.div
-                    key="about"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="pt-4"
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute z-10 top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg"
                   >
-                    {/* About content */}
-                    <div className="text-white/80 text-sm">
-                      {user.profile.class_level && (
-                        <div className="mb-2">
-                          <span className="text-white/60">Class Level:</span>{' '}
-                          <span className="font-medium text-white">{user.profile.class_level.name}</span>
-                        </div>
-                      )}
-                      
-                      {user.profile.favorite_subjects && user.profile.favorite_subjects.length > 0 && (
-                        <div className="mb-2">
-                          <span className="text-white/60">Favorite Subjects:</span>{' '}
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {user.profile.favorite_subjects.map((subject, idx) => (
-                              <span 
-                                key={idx}
-                                className="px-3 py-1 rounded-full text-xs bg-white/10 border border-white/10 text-white"
-                              >
-                                {subject}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="achievements"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="pt-4"
-                  >
-                    {/* Achievements content */}
-                    {achievements.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        {achievements.map((achievement, idx) => (
-                          <div 
-                            key={idx}
-                            className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/10"
-                          >
-                            <div className="flex items-center">
-                              <div className="text-2xl mr-2">{achievement.icon}</div>
-                              <div>
-                                <div className="font-medium text-white">{achievement.name}</div>
-                                <div className="text-xs text-white/70">{achievement.description}</div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-white/70 text-center py-4">
-                        No achievements yet. Keep learning and contributing!
-                      </div>
-                    )}
+                    {stat.description}
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-          </div>
-          
-          {/* Edit profile button - only shown to owner */}
-          {isOwner && (
-            <div className="mt-4 lg:mt-0">
-              <Button 
-                onClick={onEditProfile}
-                className="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 rounded-full px-6 py-2.5 font-medium"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Button>
-            </div>
-          )}
+            </motion.div>
+          ))}
         </div>
       </div>
+      
+      {/* Sujets favoris */}
+      {user.profile.favorite_subjects && user.profile.favorite_subjects.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <span className="text-white/70 text-sm">Sujets favoris:</span>
+          {user.profile.favorite_subjects.map((subject, idx) => (
+            <span 
+              key={idx}
+              className="px-3 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/30 transition-colors cursor-pointer"
+            >
+              {subject}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
-
-// Helper component for stats
-const StatItem = ({ label, value, color, textColor }: { label: string, value: number, color: string, textColor: string }) => (
-  <div className={`${color} rounded-lg p-3 flex flex-col items-center shadow-sm border border-white/10`}>
-    <div className={`text-xl font-bold ${textColor}`}>{value}</div>
-    <div className="text-xs text-white/70">{label}</div>
-  </div>
-);

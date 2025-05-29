@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems } from '@/lib/api';
 import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty, Subfield, Theorem } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +7,6 @@ import ContentPreview from './ContentPreview';
 import { 
   BookOpen, 
   GraduationCap, 
-  BarChart3, 
   FileText, 
   Lightbulb, 
   ChevronRight, 
@@ -15,17 +14,22 @@ import {
   Info,
   FileEdit,
   Tag,
-  CheckCircle,
-  Layout,
   Check,
-  Menu,
   BookMarked,
-  Layers
+  Layers,
+  AlertCircle,
+  Search,
+  X,
+  Sparkles,
+  Target,
+  Wand2,
+  Save,
+  Eye
 } from 'lucide-react';
 
 interface ContentEditorProps {
   onSubmit: (data: any) => void;
-  isLesson?: boolean; // New prop to indicate if this is for a lesson
+  isLesson?: boolean;
   initialValues?: {
     title: string;
     content: string;
@@ -41,7 +45,7 @@ interface ContentEditorProps {
 
 const ContentEditor: React.FC<ContentEditorProps> = ({ 
   onSubmit, 
-  isLesson = false, // Default to false for backward compatibility
+  isLesson = false,
   initialValues = {
     title: '',
     content: '',
@@ -71,53 +75,107 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   const [solution, setSolution] = useState(initialValues.solution_content || '');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // Step management
-  const [showStepDetails, setShowStepDetails] = useState(true);
-  const [showStepMenu, setShowStepMenu] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showPreview, setShowPreview] = useState(false);
+  const [searchTerms, setSearchTerms] = useState({
+    subfields: '',
+    chapters: '',
+    theorems: ''
+  });
 
   // Loading states
   const [isLoadingSubfields, setIsLoadingSubfields] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [isLoadingTheorems, setIsLoadingTheorems] = useState(false);
 
-  // Responsive handling - hide step details on small screens
-  useEffect(() => {
-    const handleResize = () => {
-      setShowStepDetails(window.innerWidth >= 640);
-    };
-    
-    // Set initial value
-    handleResize();
-    
-    // Add event listener
-    window.addEventListener('resize', handleResize);
-    
-    // Clean up
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Progress calculation
+  const calculateProgress = () => {
+    let filled = 0;
+    let total = isLesson ? 6 : 7;
 
-  // Define steps based on content type (exercise or lesson)
+    if (title.trim()) filled++;
+    if (selectedClassLevels.length > 0) filled++;
+    if (selectedSubject) filled++;
+    if (selectedSubfields.length > 0) filled++;
+    if (selectedChapters.length > 0) filled++;
+    if (content.trim()) filled++;
+    if (!isLesson && solution.trim()) filled++;
+
+    return Math.round((filled / total) * 100);
+  };
+interface SectionFrameProps {
+  title: string;
+  icon: React.ReactNode;
+  required?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const searchInputRefs = {
+  subfields: useRef<HTMLInputElement>(null),
+  chapters: useRef<HTMLInputElement>(null),
+  theorems: useRef<HTMLInputElement>(null)
+};
+
+const handleSearchChange = (type: keyof typeof searchTerms, value: string) => {
+  setSearchTerms(prev => ({
+    ...prev,
+    [type]: value
+  }));
+  
+  // Maintenir le focus après le rendu
+  setTimeout(() => {
+    const ref = searchInputRefs[type];
+    if (ref.current) {
+      ref.current.focus();
+      // Positionner le curseur à la fin du texte
+      const length = value.length;
+      ref.current.setSelectionRange(length, length);
+    }
+  }, 0);
+};
+
+const SectionFrame: React.FC<SectionFrameProps> = ({ 
+  title, 
+  icon, 
+  required = false, 
+  children, 
+  className = '' 
+}) => (
+  <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}>
+    <div className="bg-indigo-100 px-5 py-3 border-b border-gray-200 flex items-center">
+      <span className="text-indigo-600 mr-2">{icon}</span>
+      <h3 className="font-semibold text-gray-900">
+        {title}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </h3>
+    </div>
+    <div className="p-5">
+      {children}
+    </div>
+  </div>
+);
+  // Define steps
   const steps = isLesson 
     ? [
-        { id: 1, title: "Information", description: "Basic details", icon: <Info className="w-5 h-5" /> },
-        { id: 2, title: "Content", description: "Lesson content", icon: <FileEdit className="w-5 h-5" /> },
-        { id: 3, title: "Publication", description: "Final review", icon: <CheckCircle className="w-5 h-5" /> }
+        { id: 1, title: "Details", icon: <Info className="w-4 h-4" /> },
+        { id: 2, title: "Content", icon: <FileEdit className="w-4 h-4" /> },
+        { id: 3, title: "Review", icon: <Eye className="w-4 h-4" /> }
       ]
     : [
-        { id: 1, title: "Information", description: "Basic details", icon: <Info className="w-5 h-5" /> },
-        { id: 2, title: "Content", description: "Exercise", icon: <FileEdit className="w-5 h-5" /> },
-        { id: 3, title: "Solution", description: "Detailed solution", icon: <Lightbulb className="w-5 h-5" /> },
-        { id: 4, title: "Publication", description: "Final review", icon: <CheckCircle className="w-5 h-5" /> }
+        { id: 1, title: "Details", icon: <Info className="w-4 h-4" /> },
+        { id: 2, title: "Exercise", icon: <FileEdit className="w-4 h-4" /> },
+        { id: 3, title: "Solution", icon: <Lightbulb className="w-4 h-4" /> },
+        { id: 4, title: "Review", icon: <Eye className="w-4 h-4" /> }
       ];
 
-  // Load class levels, subjects, subfields, chapters, and theorems
+  // Load data hooks (same as before)
   useEffect(() => {
     loadClassLevels();
   }, []);
 
   useEffect(() => {
     loadSubjects();
-    // Clear subject and dependencies when class level changes
     setSelectedSubject('');
     setSelectedSubfields([]);
     setSelectedChapters([]);
@@ -126,7 +184,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
   useEffect(() => {
     loadSubfields();
-    // Clear subfields and dependencies when subject changes
     setSelectedSubfields([]);
     setSelectedChapters([]);
     setSelectedTheorems([]);
@@ -134,17 +191,16 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
   useEffect(() => {
     loadChapters();
-    // Clear chapters and theorems when subfields change
     setSelectedChapters([]);
     setSelectedTheorems([]);
   }, [selectedSubfields]);
 
   useEffect(() => {
     loadTheorems();
-    // Clear theorems when chapters change
     setSelectedTheorems([]);
   }, [selectedChapters]);
 
+  // Load functions (same as before)
   const loadClassLevels = async () => {
     try {
       const data = await getClassLevels();
@@ -166,7 +222,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     
     try {
       const data = await getSubjects(selectedClassLevels);
-      console.log("Subjects data:", data);
       const uniqueSubjects = getUniqueById(data);
       setSubjects(uniqueSubjects);
     } catch (error) {
@@ -175,7 +230,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   };
 
   const loadSubfields = async () => {
-    // Skip if necessary conditions aren't met
     if (!selectedSubject || selectedClassLevels.length === 0) {
       setSubfields([]);
       return;
@@ -241,7 +295,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
   const handleSubmit = async () => {
     if (!selectedClassLevels.length || !selectedSubject || !selectedSubfields.length || !selectedChapters.length) {
-      setError('Please select class levels, a subject, at least one subfield, and at least one chapter.');
+      setError('Please complete all required fields.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -252,7 +306,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       return;
     }
 
-    // For exercises, ensure solution is filled unless we're creating a lesson
     if (!isLesson && currentStep >= 3 && !solution.trim()) {
       setError('Solution is required for exercises.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -263,7 +316,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     setError(null);
 
     try {
-      // Create the submission data based on whether this is a lesson or exercise
       const submissionData = {
         title,
         content,
@@ -272,7 +324,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         subfields: selectedSubfields,
         chapters: selectedChapters,
         theorems: selectedTheorems,
-        // Only include these fields for exercises
         ...(isLesson ? {} : {
           difficulty,
           solution_content: solution,
@@ -280,7 +331,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       };
       
       await onSubmit(submissionData);
-      console.log('Content submitted successfully');
     } catch (error) {
       console.error('Failed to create content:', error);
       setError('Failed to create content. Please try again.');
@@ -295,486 +345,693 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   };
 
   const nextStep = () => {
-    if (currentStep === 1 && (!title || !selectedClassLevels.length || !selectedSubject || !selectedSubfields.length || !selectedChapters.length)) {
-      setError('Please fill in all required fields before continuing.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+    setError(null);
+    if (currentStep === 1) {
+      if (!title || !selectedClassLevels.length || !selectedSubject || !selectedSubfields.length || !selectedChapters.length) {
+        setError('Please complete all required fields before continuing.');
+        return;
+      }
     }
     if (currentStep === 2 && !content.trim()) {
       setError('Content is required before continuing.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    setError(null);
+    
     setCurrentStep(prev => prev + 1);
-    setShowStepMenu(false);
-    // Scroll to top when changing steps
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
     setCurrentStep(prev => prev - 1);
-    setShowStepMenu(false);
-    // Scroll to top when changing steps
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const jumpToStep = (step: number) => {
-    setCurrentStep(step);
-    setShowStepMenu(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Filter functions for search
+  const filterItems = (items: any[], searchTerm: string) => {
+    if (!searchTerm) return items;
+    return items.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   };
 
-  const getDifficultyColor = (level: string): string => {
+  const getDifficultyInfo = (level: string) => {
     switch (level) {
       case 'easy':
-        return 'from-emerald-600 to-green-600';
+        return {
+          label: 'Easy',
+          color: 'from-emerald-500 to-green-500',
+          bgColor: 'bg-emerald-50',
+          borderColor: 'border-emerald-200',
+        };
       case 'medium':
-        return 'from-amber-600 to-yellow-600';
+        return {
+          label: 'Medium',
+          color: 'from-amber-500 to-yellow-500',
+          bgColor: 'bg-amber-50',
+          borderColor: 'border-amber-200',
+        };
       case 'hard':
-        return 'from-red-600 to-pink-600';
+        return {
+          label: 'Hard',
+          color: 'from-red-500 to-pink-500',
+          bgColor: 'bg-red-50',
+          borderColor: 'border-red-200',
+        };
       default:
-        return 'from-gray-600 to-gray-500';
+        return {
+          label: level,
+          color: 'from-gray-500 to-gray-400',
+          bgColor: 'bg-gray-50',
+          borderColor: 'border-gray-200',
+          icon: '📝',
+          description: ''
+        };
     }
   };
 
-  const getDifficultyLabel = (level: string): string => {
-    switch (level) {
-      case 'easy':
-        return 'Easy';
-      case 'medium':
-        return 'Medium';
-      case 'hard':
-        return 'Difficult';
-      default:
-        return level;
-    }
-  };
-
-  const getDifficultyIcon = (level: string) => {
-    switch (level) {
-      case 'easy':
-        return <BarChart3 className="w-4 h-4" />;
-      case 'medium':
-        return (
-          <div className="flex">
-            <BarChart3 className="w-4 h-4" />
-          </div>
-        );
-      case 'hard':
-        return (
-          <div className="flex">
-            <BarChart3 className="w-4 h-4" />
-          </div>
-        );
-      default:
-        return <BarChart3 className="w-4 h-4" />;
-    }
-  };
-
-  // Render a selection button with consistent styling
-  const renderSelectionButton = (item: { id: string, name: string }, isSelected: boolean, onClick: () => void) => (
-    <div key={item.id} className="min-w-fit">
-      <button
-        type="button"
-        className={`min-h-[34px] px-3 py-1.5 text-sm rounded-full transition-all ${
-          isSelected
-            ? "bg-indigo-600 text-white"
-            : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
-        }`}
-        onClick={onClick}
-      >
-        {item.name}
-      </button>
-    </div>
-  );
-
-  // Render loading or empty state message
-  const renderEmptyStateMessage = (message: string, isLoading: boolean = false) => (
-    <p className="text-xs sm:text-sm text-gray-500 italic">
-      {isLoading ? "Loading..." : message}
-    </p>
+  // Enhanced selection card component
+  const SelectionCard = ({ 
+    item, 
+    isSelected, 
+    onClick, 
+    icon,
+    color = 'indigo'
+  }: { 
+    item: { id: string; name: string };
+    isSelected: boolean;
+    onClick: () => void;
+    icon?: React.ReactNode;
+    color?: string;
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        relative p-3 rounded-xl border-2 transition-all duration-200 transform text-3xl font-medium
+        ${isSelected 
+          ? `border-${color}-500 bg-${color}-50 scale-[0.98] shadow-md` 
+          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+        }
+      `}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          {icon && (
+            <span className={`${isSelected ? `text-${color}-600` : 'text-gray-400'}`}>
+              {icon}
+            </span>
+          )}
+          <span className={`text-base font-medium ${isSelected ? `text-${color}-900` : 'text-gray-700'}`}>
+            {item.name}
+          </span>
+        </div>
+        {isSelected && (
+          <Check className={`w-4 h-4 text-${color}-600`} />
+        )}
+      </div>
+    </button>
   );
 
   return (
-    <div className="w-full max-w-6xl mx-auto pt-4 sm:pt-8 lg:pt-16 pb-6 sm:pb-10 px-3 sm:px-4">
-      <div className="bg-white rounded-xl shadow-md mb-6">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-4 sm:px-6 py-3 sm:py-4 text-white">
-          <h1 className="text-xl sm:text-2xl font-bold">
-            {isLesson ? 'Create a Lesson' : 'Create an Exercise'}
-          </h1>
-          <p className="text-indigo-100 text-sm">Share your knowledge with the community</p>
-        </div>
-
-        {/* Mobile Step Indicator */}
-        <div className="sm:hidden p-3 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep === 1 ? 'bg-indigo-600 text-white' : 
-                currentStep > 1 ? 'bg-indigo-500 text-white' : 
-                'bg-gray-200 text-gray-500'
-              }`}>
-                {steps[currentStep - 1].icon}
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Enhanced Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4 bg-gradient-to-r from-indigo-700 to-purple-700 text-white p-4 rounded-2xl shadow-lg">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleCancel}
+                className="p-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              </button>
               <div>
-                <p className="font-medium text-sm">{steps[currentStep - 1].title}</p>
-                <p className="text-xs text-gray-500">{steps[currentStep - 1].description}</p>
+                <h1 className="text-3xl font-bold flex items-center">
+                  <Sparkles className="w-8 h-8 text-indigo-300 mr-3" />
+                  Create {isLesson ? 'Lesson' : 'Exercise'}
+                </h1>
+                <p className="mt-1">Share your knowledge with the community</p>
               </div>
             </div>
             
-            <button 
-              onClick={() => setShowStepMenu(!showStepMenu)}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-              aria-label="Steps menu"
-              title="Steps menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          </div>
-          
-          {/* Mobile Step Menu */}
-          {showStepMenu && (
-            <div className="mt-3 bg-white rounded-lg shadow-lg border border-gray-200">
-              {steps.map((step) => (
-                <button
-                  key={step.id}
-                  className={`w-full flex items-center space-x-3 p-3 text-left ${
-                    currentStep === step.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
-                  } ${currentStep > step.id ? 'opacity-100' : (step.id > (currentStep + 1) ? 'opacity-50' : 'opacity-100')}`}
-                  onClick={() => step.id <= (currentStep + 1) ? jumpToStep(step.id) : null}
-                  disabled={step.id > (currentStep + 1)}
-                >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    currentStep === step.id ? 'bg-indigo-600 text-white' : 
-                    currentStep > step.id ? 'bg-indigo-500 text-white' : 
-                    'bg-gray-200 text-gray-500'
-                  }`}>
-                    {currentStep > step.id ? <Check className="w-4 h-4" /> : step.icon}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{step.title}</p>
-                    <p className="text-xs text-gray-500">{step.description}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Desktop Progress Steps */}
-        <div className="hidden sm:block px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 overflow-x-auto">
-          <div className="flex justify-between min-w-max sm:min-w-0">
-            {steps.map((step, index) => (
-              <div key={step.id} className="relative flex-1 px-1 sm:px-0">
-                {/* Connector line */}
-                {index > 0 && (
-                  <div 
-                    className={`absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 ${
-                      currentStep > index ? 'bg-indigo-500' : 'bg-gray-200'
-                    }`} 
-                    style={{ left: '-50%', right: '50%' }}
-                  ></div>
-                )}
-                {/* Step circle */}
-                <div className="flex flex-col items-center">
-                  <button 
-                    onClick={() => step.id <= (currentStep + 1) ? jumpToStep(step.id) : null}
-                    disabled={step.id > (currentStep + 1)}
-                    className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full mb-1 sm:mb-2 transition-colors ${
-                      currentStep === step.id 
-                        ? 'bg-indigo-600 text-white' 
-                        : currentStep > step.id 
-                        ? 'bg-indigo-500 text-white' 
-                        : 'bg-gray-200 text-gray-500'
-                    } ${step.id > (currentStep + 1) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    {currentStep > step.id ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : step.icon}
-                  </button>
-                  {showStepDetails && (
-                    <div className="text-center">
-                      <p className={`font-medium text-xs sm:text-sm ${currentStep === step.id ? 'text-indigo-700' : 'text-gray-700'}`}>
-                        {step.title}
-                      </p>
-                      <p className="text-xs text-gray-500">{step.description}</p>
-                    </div>
-                  )}
-                </div>
+            {/* Progress indicator */}
+            <div className="hidden sm:flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-sm">Progress</p>
+                <p className="text-2xl font-bold text-indigo-300">{calculateProgress()}%</p>
               </div>
+              <div className="w-32 h-32">
+                <svg className="transform -rotate-90 w-32 h-32">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="currentColor"
+                    strokeWidth="12"
+                    fill="none"
+                    className="text-gray-200"
+                  />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="currentColor"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 56}`}
+                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - calculateProgress() / 100)}`}
+                    className="text-indigo-600 transition-all duration-500"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Modern Step Indicator */}
+          <div className="bg-white rounded-2xl shadow-sm p-1 flex space-x-1">
+            {steps.map((step, index) => (
+              <button
+                key={step.id}
+                onClick={() => step.id <= currentStep ? setCurrentStep(step.id) : null}
+                disabled={step.id > currentStep}
+                className={`
+                  flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl transition-all duration-200
+                  ${currentStep === step.id 
+                    ? 'bg-indigo-600 text-white shadow-md' 
+                    : currentStep > step.id
+                    ? 'bg-indigo-100 text-indigo-700 cursor-pointer hover:bg-indigo-200'
+                    : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                  }
+                `}
+              >
+                <div className="flex items-center">
+                  {currentStep > step.id ? <Check className="w-5 h-5" /> : step.icon}
+                  <span className="ml-2 font-medium">{step.title}</span>
+                </div>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error Alert */}
         {error && (
-          <div className="mx-3 sm:mx-6 my-3 sm:my-4 bg-red-50 border-l-4 border-red-500 p-3 sm:p-4 text-red-700 text-sm">
-            <p>{error}</p>
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start animate-shake">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <p className="text-red-800 font-medium">Error</p>
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+            </div>
           </div>
         )}
 
-        {/* Form Content */}
-        <div className="p-3 sm:p-6">
-          {/* Step 1: Basic Information */}
-          {currentStep === 1 && (
-            <div className="space-y-4 sm:space-y-6">
-              {/* Title Input */}
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  {isLesson ? 'Lesson Title' : 'Exercise Title'}
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-gray-800 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  placeholder={isLesson ? "Enter the lesson title" : "Enter the exercise title"}
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                />
-              </div>
+        {/* Main Content */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="p-6 sm:p-8">
+            {/* Step 1: Basic Information */}
+            {currentStep === 1 && (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* Title Section */}
+                  <SectionFrame 
+                    title={isLesson ? 'Lesson Title' : 'Exercise Title'} 
+                    icon={<FileText className="w-5 h-5" />} 
+                    required
+                  >
+                    <div className="relative">
+                      <input
+                        autoFocus
+                        type="text"
+                        className="w-full px-4 py-3 text-lg bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                        placeholder={isLesson ? "e.g., Introduction to Algebra" : "e.g., Solve the quadratic equation"}
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <span className={`text-sm ${title.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                          {title.length}/100
+                        </span>
+                      </div>
+                    </div>
+                  </SectionFrame>
 
-              {/* Class Levels and Subjects */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                {/* Class Levels Section */}
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Class Levels
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {classLevels.map((level) => 
-                      renderSelectionButton(
-                        level, 
-                        selectedClassLevels.includes(level.id), 
-                        () => toggleSelection(level.id, selectedClassLevels, setSelectedClassLevels)
-                      )
-                    )}
+                  {/* Class Levels and Subject in two columns */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <SectionFrame 
+                      title="Class Levels" 
+                      icon={<GraduationCap className="w-5 h-5" />} 
+                      required
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        {classLevels.map((level) => (
+                          <SelectionCard
+                            key={level.id}
+                            item={level}
+                            isSelected={selectedClassLevels.includes(level.id)}
+                            onClick={() => toggleSelection(level.id, selectedClassLevels, setSelectedClassLevels)}
+                            icon={<GraduationCap className="w-4 h-4" />}
+                          />
+                        ))}
+                      </div>
+                    </SectionFrame>
+
+                    <SectionFrame 
+                      title="Subject" 
+                      icon={<BookOpen className="w-5 h-5" />} 
+                      required
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        {subjects.length > 0 ? (
+                          subjects.map((subject) => (
+                            <SelectionCard
+                              key={subject.id}
+                              item={subject}
+                              isSelected={selectedSubject === subject.id}
+                              onClick={() => handleSubjectSelection(subject.id)}
+                              icon={<BookOpen className="w-4 h-4" />}
+                              color="purple"
+                            />
+                          ))
+                        ) : (
+                          <p className="col-span-2 text-center py-8 text-gray-500">
+                            Select a class level first
+                          </p>
+                        )}
+                      </div>
+                    </SectionFrame>
                   </div>
-                </div>
 
-                {/* Subjects Section */}
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Subject
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {subjects.map((subject) => 
-                      renderSelectionButton(
-                        subject, 
-                        selectedSubject === subject.id, 
-                        () => handleSubjectSelection(subject.id)
-                      )
-                    )}
-                    {subjects.length === 0 && 
-                      renderEmptyStateMessage("Please select a class level first")
-                    }
-                  </div>
-                </div>
-              </div>
+                  {/* Subfields Section */}
+                  <SectionFrame 
+                    title="Subfields" 
+                    icon={<Layers className="w-5 h-5" />} 
+                    required
+                  >
+                    <div className="mb-3">
+                      {subfields.length > 5 && (
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            autoFocus
+                            autoComplete='on'
+                            type="text"
+                            placeholder="Search subfields..."
+                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={searchTerms.subfields}
+                            onChange={(e) => setSearchTerms(prev => ({ ...prev, subfields: e.target.value }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-2">
+                      {isLoadingSubfields ? (
+                        <div className="col-span-full flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        </div>
+                      ) : filterItems(subfields, searchTerms.subfields).length > 0 ? (
+                        filterItems(subfields, searchTerms.subfields).map((subfield) => (
+                          <SelectionCard
+                            key={subfield.id}
+                            item={subfield}
+                            isSelected={selectedSubfields.includes(subfield.id)}
+                            onClick={() => toggleSelection(subfield.id, selectedSubfields, setSelectedSubfields)}
+                            icon={<Layers className="w-4 h-4" />}
+                            color="blue"
+                          />
+                        ))
+                      ) : (
+                        <p className="col-span-full text-center py-8 text-gray-500">
+                          {searchTerms.subfields ? 'No subfields found' : 'Select a subject first'}
+                        </p>
+                      )}
+                    </div>
+                  </SectionFrame>
 
-              {/* Subfields and Chapters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                {/* Subfields Section */}
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                    <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Subfields
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {subfields.map((subfield) => 
-                      renderSelectionButton(
-                        subfield, 
-                        selectedSubfields.includes(subfield.id), 
-                        () => toggleSelection(subfield.id, selectedSubfields, setSelectedSubfields)
-                      )
-                    )}
-                    {isLoadingSubfields && renderEmptyStateMessage("Loading subfields...", true)}
-                    {!isLoadingSubfields && subfields.length === 0 && 
-                      renderEmptyStateMessage("Please select a subject and class level first")
-                    }
-                  </div>
-                </div>
+                  {/* Chapters Section */}
+                  <SectionFrame 
+                    title="Chapters" 
+                    icon={<Tag className="w-5 h-5" />} 
+                    required
+                  >
+                    <div className="mb-3">
+                      {chapters.length > 5 && (
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search chapters..."
+                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={searchTerms.chapters}
+                            onChange={(e) => setSearchTerms(prev => ({ ...prev, chapters: e.target.value }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-2">
+                      {isLoadingChapters ? (
+                        <div className="col-span-full flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        </div>
+                      ) : filterItems(chapters, searchTerms.chapters).length > 0 ? (
+                        filterItems(chapters, searchTerms.chapters).map((chapter) => (
+                          <SelectionCard
+                            key={chapter.id}
+                            item={chapter}
+                            isSelected={selectedChapters.includes(chapter.id)}
+                            onClick={() => toggleSelection(chapter.id, selectedChapters, setSelectedChapters)}
+                            icon={<Tag className="w-4 h-4" />}
+                            color="green"
+                          />
+                        ))
+                      ) : (
+                        <p className="col-span-full text-center py-8 text-gray-500">
+                          {searchTerms.chapters ? 'No chapters found' : 'Select subfields first'}
+                        </p>
+                      )}
+                    </div>
+                  </SectionFrame>
 
-                {/* Chapters Section */}
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                    <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Chapters
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {chapters.map((chapter) => 
-                      renderSelectionButton(
-                        chapter, 
-                        selectedChapters.includes(chapter.id), 
-                        () => toggleSelection(chapter.id, selectedChapters, setSelectedChapters)
-                      )
-                    )}
-                    {isLoadingChapters && renderEmptyStateMessage("Loading chapters...", true)}
-                    {!isLoadingChapters && chapters.length === 0 && 
-                      renderEmptyStateMessage("Please select a subfield first")
-                    }
-                  </div>
-                </div>
-              </div>
-
-              {/* Theorems */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                {/* Theorems Section */}
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                    <BookMarked className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                    Theorems (Optional)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {theorems.map((theorem) => 
-                      renderSelectionButton(
-                        theorem, 
-                        selectedTheorems.includes(theorem.id), 
-                        () => toggleSelection(theorem.id, selectedTheorems, setSelectedTheorems)
-                      )
-                    )}
-                    {isLoadingTheorems && renderEmptyStateMessage("Loading theorems...", true)}
-                    {!isLoadingTheorems && theorems.length === 0 && chapters.length > 0 && 
-                      renderEmptyStateMessage("No theorems available for this selection")
-                    }
-                    {!isLoadingTheorems && chapters.length === 0 && 
-                      renderEmptyStateMessage("Please select a chapter first")
-                    }
-                  </div>
-                </div>
-
-                {/* Difficulty Section - Only show for exercises */}
-                {!isLesson && (
-                  <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                    <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                      <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                      Difficulty
-                    </label>
-                    <div className="space-y-2">
-                      {['easy', 'medium', 'hard'].map((level) => (
-                        <button
-                          key={level}
-                          type="button"
-                          className={`w-full py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg flex items-center justify-between transition-all ${
-                            difficulty === level
-                              ? `bg-gradient-to-r ${getDifficultyColor(level)} text-white`
-                              : `bg-white text-gray-700 border border-gray-300 hover:bg-gray-100`
-                          }`}
-                          onClick={() => setDifficulty(level as Difficulty)}
-                        >
-                          <div className="flex items-center">
-                            {getDifficultyIcon(level)}
-                            <span className="ml-2 text-sm sm:text-base">{getDifficultyLabel(level)}</span>
+                  {/* Theorems and Difficulty */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Theorems Section */}
+                    <SectionFrame 
+                      title="Theorems" 
+                      icon={<BookMarked className="w-5 h-5" />}
+                    >
+                      <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto pr-2">
+                        {isLoadingTheorems ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                           </div>
-                          {difficulty === level && <Check className="w-4 h-4" />}
-                        </button>
-                      ))}
+                        ) : theorems.length > 0 ? (
+                          theorems.map((theorem) => (
+                            <SelectionCard
+                              key={theorem.id}
+                              item={theorem}
+                              isSelected={selectedTheorems.includes(theorem.id)}
+                              onClick={() => toggleSelection(theorem.id, selectedTheorems, setSelectedTheorems)}
+                              icon={<BookMarked className="w-4 h-4" />}
+                              color="amber"
+                            />
+                          ))
+                        ) : (
+                          <p className="text-center py-8 text-gray-500">
+                            {chapters.length > 0 ? 'No theorems available' : 'Select chapters first'}
+                          </p>
+                        )}
+                      </div>
+                    </SectionFrame>
+
+                    {/* Difficulty Section (only for exercises) */}
+                    {!isLesson && (
+                      <SectionFrame 
+                        title="Difficulty Level" 
+                        icon={<Target className="w-5 h-5" />} 
+                        required
+                      >
+                        <div className="space-y-3">
+                          {['easy', 'medium', 'hard'].map((level) => {
+                            const info = getDifficultyInfo(level);
+                            return (
+                              <button
+                                key={level}
+                                type="button"
+                                onClick={() => setDifficulty(level as Difficulty)}
+                                className={`
+                                  w-full p-4 rounded-xl border-2 transition-all duration-200
+                                  ${difficulty === level
+                                    ? `border-transparent bg-gradient-to-r ${info.color} text-white shadow-lg scale-[0.98]`
+                                    : `border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm`
+                                  }
+                                `}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="text-2xl">{info.icon}</span>
+                                    <div className="text-left">
+                                      <p className={`font-semibold ${difficulty === level ? 'text-white' : 'text-gray-900'}`}>
+                                        {info.label}
+                                      </p>
+                                      <p className={`text-sm ${difficulty === level ? 'text-white/80' : 'text-gray-500'}`}>
+                                        {info.description}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {difficulty === level && (
+                                    <Check className="w-5 h-5 text-white" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </SectionFrame>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            {/* Step 2: Content Writing */}
+            {currentStep === 2 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-lg font-semibold text-gray-900 flex items-center">
+                      <FileEdit className="w-5 h-5 text-indigo-600 mr-2" />
+                      {isLesson ? 'Lesson Content' : 'Exercise Statement'}
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <Wand2 className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm text-gray-600">LaTeX supported</span>
                     </div>
                   </div>
+                  <div className="bg-gray-50 rounded-xl p-1">
+                    <DualPaneEditor content={content} setContent={setContent} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Solution Writing - Only for exercises */}
+            {currentStep === 3 && !isLesson && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-lg font-semibold text-gray-900 flex items-center">
+                      <Lightbulb className="w-5 h-5 text-indigo-600 mr-2" />
+                      Solution
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <Wand2 className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm text-gray-600">LaTeX supported</span>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+                    <p className="text-sm text-yellow-800">
+                      💡 <strong>Tip:</strong> A detailed solution helps students verify their work and understand the problem-solving process.
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-1">
+                    <DualPaneEditor content={solution} setContent={setSolution} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4/3: Preview and Submit */}
+            {((isLesson && currentStep === 3) || (!isLesson && currentStep === 4)) && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Almost there! 🎉</h2>
+                  <p className="text-gray-600">Review your {isLesson ? 'lesson' : 'exercise'} before publishing</p>
+                </div>
+
+                {/* Preview Toggle */}
+                <div className="flex justify-center mb-6">
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="flex items-center space-x-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition-colors duration-200"
+                  >
+                    <Eye className="w-5 h-5" />
+                    <span>{showPreview ? 'Hide' : 'Show'} Preview</span>
+                  </button>
+                </div>
+
+                {/* Content Preview */}
+                {showPreview && (
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <ContentPreview
+                      title={title}
+                      selectedClassLevels={classLevels.filter(level => selectedClassLevels.includes(level.id))}
+                      selectedSubject={subjects.find(subject => subject.id === selectedSubject) || {} as SubjectModel}
+                      selectedSubfields={subfields.filter(subfield => selectedSubfields.includes(subfield.id))}
+                      selectedChapters={chapters.filter(chapter => selectedChapters.includes(chapter.id))}
+                      selectedTheorems={theorems.filter(theorem => selectedTheorems.includes(theorem.id))}
+                      difficulty={isLesson ? undefined : difficulty}
+                      content={content}
+                      solution={isLesson ? undefined : solution}
+                    />
+                  </div>
+                )}
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <FileText className="w-5 h-5 text-indigo-600" />
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Title</h3>
+                    <p className="text-sm text-gray-600 mt-1 truncate">{title}</p>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <BookOpen className="w-5 h-5 text-purple-600" />
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Subject</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {subjects.find(s => s.id === selectedSubject)?.name || 'Not selected'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Tag className="w-5 h-5 text-green-600" />
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Chapters</h3>
+                    <p className="text-sm text-gray-600 mt-1">{selectedChapters.length} selected</p>
+                  </div>
+
+                  {!isLesson && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Target className="w-5 h-5 text-amber-600" />
+                        <Check className="w-4 h-4 text-green-600" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Difficulty</h3>
+                      <p className="text-sm text-gray-600 mt-1 flex items-center">
+                        <span className="mr-2">{getDifficultyInfo(difficulty).icon}</span>
+                        {getDifficultyInfo(difficulty).label}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <FileEdit className="w-5 h-5 text-blue-600" />
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Content</h3>
+                    <p className="text-sm text-gray-600 mt-1">{content.length} characters</p>
+                  </div>
+
+                  {!isLesson && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Lightbulb className="w-5 h-5 text-yellow-600" />
+                        {solution ? (
+                          <Check className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <X className="w-4 h-4 text-red-600" />
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Solution</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {solution ? `${solution.length} characters` : 'Not provided'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Enhanced Navigation Footer */}
+          <div className="bg-gray-50 px-6 py-4 sm:px-8 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              {/* Left side - Back button */}
+              <div>
+                {currentStep > 1 ? (
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="flex items-center space-x-2 px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                    <span>Previous</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="flex items-center space-x-2 px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5" />
+                    <span>Cancel</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Center - Step indicator for mobile */}
+              <div className="flex sm:hidden items-center space-x-2">
+                {steps.map((step, index) => (
+                  <div
+                    key={step.id}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      currentStep === step.id
+                        ? 'w-8 bg-indigo-600'
+                        : currentStep > step.id
+                        ? 'bg-indigo-400'
+                        : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Right side - Next/Submit button */}
+              <div>
+                {((isLesson && currentStep < 3) || (!isLesson && currentStep < 4)) ? (
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    className={`
+                      flex items-center space-x-2 px-6 py-2.5 rounded-xl transition-all duration-200 shadow-md
+                      ${isLoading
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 hover:shadow-lg'
+                      }
+                    `}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Publishing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        <span>Publish {isLesson ? 'Lesson' : 'Exercise'}</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
-          )}
-
-         
-          {/* Step 2: Content Writing */}
-          {currentStep === 2 && (
-            <div className="space-y-4 sm:space-y-6">
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
-                <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                  <FileEdit className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  {isLesson ? 'Lesson Content (LaTeX supported)' : 'Exercise Content (LaTeX supported)'}
-                </label>
-                <p className="text-xs sm:text-sm text-gray-500 mb-2">
-                  Use $...$ for inline equations and $...$ for mathematical formulas.
-                </p>
-                <DualPaneEditor content={content} setContent={setContent} />
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Solution Writing - Only for exercises */}
-          {currentStep === 3 && !isLesson && (
-            <div className="space-y-4 sm:space-y-6">
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
-                <label className="block text-gray-800 text-base sm:text-lg font-medium mb-2 flex items-center">
-                  <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  Solution (LaTeX supported)
-                </label>
-                <p className="text-xs sm:text-sm text-gray-500 mb-2">
-                  The solution is optional but highly recommended. It helps students verify their work.
-                </p>
-                <DualPaneEditor content={solution} setContent={setSolution} />
-              </div>
-            </div>
-          )}
-
-          {/* Step 4 for Exercises / Step 3 for Lessons: Preview and Submit */}
-          {((isLesson && currentStep === 3) || (!isLesson && currentStep === 4)) && (
-            <div className="space-y-4 sm:space-y-6">
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center">
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mr-2" />
-                  Final Preview
-                </h2>
-                <ContentPreview
-                  title={title}
-                  selectedClassLevels={classLevels.filter(level => selectedClassLevels.includes(level.id))}
-                  selectedSubject={subjects.find(subject => subject.id === selectedSubject) || {} as SubjectModel}
-                  selectedSubfields={subfields.filter(subfield => selectedSubfields.includes(subfield.id))}
-                  selectedChapters={chapters.filter(chapter => selectedChapters.includes(chapter.id))}
-                  selectedTheorems={theorems.filter(theorem => selectedTheorems.includes(theorem.id))}
-                  difficulty={isLesson ? undefined : difficulty}
-                  content={content}
-                  solution={isLesson ? undefined : solution}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-6 sm:mt-8">
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                onClick={prevStep}
-                className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-200 text-gray-700 text-sm sm:text-base rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1" /> 
-                Previous
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-200 text-gray-700 text-sm sm:text-base rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1" /> 
-                Cancel
-              </button>
-            )}
-
-            {((isLesson && currentStep < 3) || (!isLesson && currentStep < 4)) ? (
-              <button
-                type="button"
-                onClick={nextStep}
-                className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm sm:text-base rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors"
-              >
-                Next 
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className={`flex items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm sm:text-base rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isLoading ? 'Publishing...' : `Publish ${isLesson ? 'Lesson' : 'Exercise'}`}
-                <Check className="w-4 h-4 sm:w-5 sm:h-5 ml-1" />
-              </button>
-            )}
           </div>
         </div>
       </div>

@@ -112,10 +112,6 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({
     <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all hover:shadow-lg">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center">
-            <BarChart2 className="w-5 h-5 mr-2 text-indigo-600" />
-            Progress Analytics
-          </h2>
           
           {/* Chart selector - Redesigned with tab-like appearance */}
           <div className="bg-gray-100 rounded-lg p-1 flex">

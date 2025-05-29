@@ -70,7 +70,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
         {/* Navigation row */}
         <div className="flex justify-between items-center mb-6">
           <Button 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/exercises")}
             variant="ghost"
             className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
           >

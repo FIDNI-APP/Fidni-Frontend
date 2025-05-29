@@ -418,7 +418,8 @@ export const LessonList = () => {
   ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-16">
+    <div className="min-h-screen bg-gray-50 pb-16">
+
       {/* Add the styles for the scrollbar */}
       <style>{`
         .custom-scrollbar {

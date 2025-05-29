@@ -36,6 +36,36 @@ export const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+  const updateBodyPadding = () => {
+    const navbar = document.querySelector('nav');
+    if (navbar) {
+      document.body.style.paddingTop = `${navbar.offsetHeight}px`;
+    }
+  };
+
+  // Initial update
+  updateBodyPadding();
+  
+  // Mettre à jour quand la navbar change (menu mobile, scroll, etc.)
+  const observer = new MutationObserver(updateBodyPadding);
+  const navbar = document.querySelector('nav');
+  if (navbar) {
+    observer.observe(navbar, { 
+      attributes: true, 
+      attributeFilter: ['class'],
+      childList: true,
+      subtree: true 
+    });
+  }
+
+  // Nettoyage
+  return () => {
+    observer.disconnect();
+    document.body.style.paddingTop = '';
+  };
+}, []);
+
   // Close dropdowns when location changes
   useEffect(() => {
     setActiveDropdown(null);
@@ -237,7 +267,7 @@ export const Navbar = () => {
                 <div className="w-12 h-13 flex items-center justify-center overflow-hidden">
                   <img
                     src={isHovered ? Logo2 : Logo3}
-                    alt="Nt3almou Logo"
+                    alt="Fidni Logo"
                     className="w-full h-full object-contain"
                   />
                 </div>
@@ -373,7 +403,7 @@ export const Navbar = () => {
               <div className="flex flex-col space-y-3">
                 <div className="flex items-center space-x-3 px-3 py-2">
                   <img
-                    src={user?.avatar || '/avatar-placeholder.jpg'}
+                    src={user?.username.charAt(0).toUpperCase() || '/avatar-placeholder.jpg'}
                     alt="Profile"
                     className="w-10 h-10 rounded-full border-2 border-purple-300"
                   />
