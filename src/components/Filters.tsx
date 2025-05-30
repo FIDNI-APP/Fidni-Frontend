@@ -1,4 +1,4 @@
-// src/components/Filters.tsx - Version corrigée sans boucle infinie
+// src/components/Filters.tsx - Version corrigée
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Filter, BookOpen, GraduationCap, ChevronUp, ChevronDown, Tag, BarChart3, FileText, Award } from 'lucide-react';
@@ -57,7 +57,6 @@ export const Filters: React.FC<FiltersProps> = ({
   const [chapters, setChapters] = useState<ChapterModel[]>([]);
   const [theorems, setTheorems] = useState<Theorem[]>([]);
   
-  // IMPORTANT: Use useRef to track if initial values have been set
   const initialValuesSet = useRef(false);
   
   const [selectedFilters, setSelectedFilters] = useState<FilterCategories>({
@@ -82,14 +81,12 @@ export const Filters: React.FC<FiltersProps> = ({
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [isLoadingTheorems, setIsLoadingTheorems] = useState(false);
   
-  // Track last request signatures to prevent duplicate calls
   const [lastRequests, setLastRequests] = useState({
     subfields: '',
     chapters: '',
     theorems: ''
   });
 
-  // Conditions to check if we should load data for hierarchical filters
   const shouldShowSubfieldOptions = () => {
     return selectedFilters.classLevels.length > 0 && selectedFilters.subjects.length > 0;
   };
@@ -111,16 +108,13 @@ export const Filters: React.FC<FiltersProps> = ({
     { title: 'Difficulté', category: 'difficulties', icon: <BarChart3 className="w-4 h-4 text-purple-600" /> },
   ];
   
-  // Load initial data on component mount
   useEffect(() => {
     loadClassLevels();
   }, []);
   
-  // FIXED: Only set initial values once to avoid infinite loop
   useEffect(() => {
     if (!initialValuesSet.current && (initialClassLevels?.length > 0 || initialSubjects?.length > 0)) {
       initialValuesSet.current = true;
-      
       const newFilters = {
         classLevels: initialClassLevels.map(String),
         subjects: initialSubjects.map(String),
@@ -129,18 +123,15 @@ export const Filters: React.FC<FiltersProps> = ({
         theorems: [],
         difficulties: [],
       };
-      
       setSelectedFilters(newFilters);
     }
   }, [initialClassLevels, initialSubjects]);
   
-  // Load subjects when class levels change
   useEffect(() => {
     if (selectedFilters.classLevels.length > 0) {
       loadSubjects();
     } else {
       setSubjects([]);
-      // Clear dependent fields when class level changes
       setSelectedFilters(prev => ({
         ...prev,
         subjects: [],
@@ -151,12 +142,13 @@ export const Filters: React.FC<FiltersProps> = ({
     }
   }, [selectedFilters.classLevels]);
   
-  // Only load subfields when section is expanded and prerequisites are selected
   useEffect(() => {
     if (expandedSections.subfields && shouldShowSubfieldOptions()) {
       loadSubfields();
     } else if (!shouldShowSubfieldOptions()) {
       setSubfields([]);
+      // CORRECTION : Invalider la dernière requête pour les sous-domaines
+      setLastRequests(prev => ({ ...prev, subfields: '' }));
     }
   }, [
     expandedSections.subfields, 
@@ -164,12 +156,13 @@ export const Filters: React.FC<FiltersProps> = ({
     selectedFilters.classLevels
   ]);
   
-  // Only load chapters when section is expanded and prerequisites are selected
   useEffect(() => {
     if (expandedSections.chapters && shouldShowChapterOptions()) {
       loadChapters();
     } else if (!shouldShowChapterOptions()) {
       setChapters([]);
+      // CORRECTION : Invalider la dernière requête pour les chapitres
+      setLastRequests(prev => ({ ...prev, chapters: '' }));
     }
   }, [
     expandedSections.chapters,
@@ -178,12 +171,13 @@ export const Filters: React.FC<FiltersProps> = ({
     selectedFilters.classLevels
   ]);
   
-  // Only load theorems when section is expanded and prerequisites are selected
   useEffect(() => {
     if (expandedSections.theorems && shouldShowTheoremOptions()) {
       loadTheorems();
     } else if (!shouldShowTheoremOptions()) {
       setTheorems([]);
+      // CORRECTION : Invalider la dernière requête pour les théorèmes
+      setLastRequests(prev => ({ ...prev, theorems: '' }));
     }
   }, [
     expandedSections.theorems,
@@ -193,43 +187,31 @@ export const Filters: React.FC<FiltersProps> = ({
     selectedFilters.classLevels
   ]);
   
-  // FIXED: Create debounced version of onFilterChange
   const debouncedOnFilterChange = useRef(
     debounce((filters: FilterCategories) => {
       onFilterChange(filters);
     }, 300)
   ).current;
   
-  // Effect to update parent component with selected filters
   useEffect(() => {
     debouncedOnFilterChange(selectedFilters);
-  }, [selectedFilters]);
+  }, [selectedFilters, debouncedOnFilterChange]); // Ajout de debouncedOnFilterChange aux dépendances
 
-  // Auto-expand sections when parent selections change
   useEffect(() => {
     if (selectedFilters.subjects.length > 0 && shouldShowSubfieldOptions()) {
-      setExpandedSections(prev => ({
-        ...prev,
-        subfields: true
-      }));
+      setExpandedSections(prev => ({ ...prev, subfields: true }));
     }
   }, [selectedFilters.subjects]);
 
   useEffect(() => {
     if (selectedFilters.subfields.length > 0 && shouldShowChapterOptions()) {
-      setExpandedSections(prev => ({
-        ...prev,
-        chapters: true
-      }));
+      setExpandedSections(prev => ({ ...prev, chapters: true }));
     }
   }, [selectedFilters.subfields]);
 
   useEffect(() => {
     if (selectedFilters.chapters.length > 0 && shouldShowTheoremOptions()) {
-      setExpandedSections(prev => ({
-        ...prev,
-        theorems: true
-      }));
+      setExpandedSections(prev => ({ ...prev, theorems: true }));
     }
   }, [selectedFilters.chapters]);
 
@@ -251,7 +233,6 @@ export const Filters: React.FC<FiltersProps> = ({
       setSubjects([]);
       return;
     }
-    
     try {
       const data = await getSubjects(selectedFilters.classLevels);
       const uniqueSubjects = getUniqueById(data);
@@ -262,121 +243,96 @@ export const Filters: React.FC<FiltersProps> = ({
   };
 
   const loadSubfields = async () => {
-    if (selectedFilters.subjects.length === 0 || selectedFilters.classLevels.length === 0) {
+    if (!shouldShowSubfieldOptions()) { // Simplification de la condition
       setSubfields([]);
       return;
     }
-    
     const requestSignature = JSON.stringify({
       subjects: [...selectedFilters.subjects].sort(),
       classLevels: [...selectedFilters.classLevels].sort()
     });
-    
-    if (requestSignature === lastRequests.subfields) {
+    if (requestSignature === lastRequests.subfields && subfields.length > 0) { // Ajout de subfields.length > 0 pour permettre le rechargement si vide
       return;
     }
-    
     setIsLoadingSubfields(true);
     try {
-      setLastRequests(prev => ({
-        ...prev,
-        subfields: requestSignature
-      }));
-      
+      setLastRequests(prev => ({ ...prev, subfields: requestSignature }));
       const promises = selectedFilters.subjects.map(subject => 
         getSubfields(subject, selectedFilters.classLevels)
       );
-      
       const results = await Promise.all(promises);
       const allSubfields = results.flat();
       const uniqueSubfields = getUniqueById(allSubfields);
-      
       setSubfields(uniqueSubfields);
     } catch (error) {
       console.error('Failed to load subfields:', error);
+      setLastRequests(prev => ({ ...prev, subfields: '' })); // Réinitialiser en cas d'erreur
     } finally {
       setIsLoadingSubfields(false);
     }
   };
 
   const loadChapters = async () => {
-    if (selectedFilters.subfields.length === 0 || 
-        selectedFilters.subjects.length === 0 || 
-        selectedFilters.classLevels.length === 0) {
+    if (!shouldShowChapterOptions()) { // Simplification
       setChapters([]);
       return;
     }
-    
     const requestSignature = JSON.stringify({
       subjects: [...selectedFilters.subjects].sort(),
       classLevels: [...selectedFilters.classLevels].sort(),
       subfields: [...selectedFilters.subfields].sort()
     });
-    
-    if (requestSignature === lastRequests.chapters) {
+    if (requestSignature === lastRequests.chapters && chapters.length > 0) { // Ajout de chapters.length > 0
       return;
     }
-    
     setIsLoadingChapters(true);
     try {
-      setLastRequests(prev => ({
-        ...prev,
-        chapters: requestSignature
-      }));
-      
+      setLastRequests(prev => ({ ...prev, chapters: requestSignature }));
+      // Supposant que getChapters peut gérer plusieurs sous-domaines ou que vous prenez le premier sujet comme référence
       const data = await getChapters(
-        selectedFilters.subjects[0],
+        selectedFilters.subjects[0], // Use first selected subject
         selectedFilters.classLevels,
         selectedFilters.subfields
       );
-      
       const uniqueChapters = getUniqueById(data);
       setChapters(uniqueChapters);
     } catch (error) {
       console.error('Failed to load chapters:', error);
+      setLastRequests(prev => ({ ...prev, chapters: '' })); // Réinitialiser en cas d'erreur
     } finally {
       setIsLoadingChapters(false);
     }
   };
 
   const loadTheorems = async () => {
-    if (selectedFilters.chapters.length === 0 ||
-        selectedFilters.subfields.length === 0 || 
-        selectedFilters.subjects.length === 0 || 
-        selectedFilters.classLevels.length === 0) {
+    if (!shouldShowTheoremOptions()) { // Simplification
       setTheorems([]);
       return;
     }
-    
     const requestSignature = JSON.stringify({
       subjects: [...selectedFilters.subjects].sort(),
       classLevels: [...selectedFilters.classLevels].sort(),
       subfields: [...selectedFilters.subfields].sort(),
       chapters: [...selectedFilters.chapters].sort()
     });
-    
-    if (requestSignature === lastRequests.theorems) {
+    if (requestSignature === lastRequests.theorems && theorems.length > 0) { // Ajout de theorems.length > 0
       return;
     }
-    
     setIsLoadingTheorems(true);
     try {
-      setLastRequests(prev => ({
-        ...prev,
-        theorems: requestSignature
-      }));
-      
+      setLastRequests(prev => ({ ...prev, theorems: requestSignature }));
+       // Supposant que getTheorems peut gérer plusieurs chapitres ou que vous prenez le premier sujet comme référence
       const data = await getTheorems(
-        selectedFilters.subjects[0],
+        selectedFilters.subjects[0], // Use first selected subject
         selectedFilters.classLevels,
         selectedFilters.subfields,
         selectedFilters.chapters
       );
-      
       const uniqueTheorems = getUniqueById(data);
       setTheorems(uniqueTheorems);
     } catch (error) {
       console.error('Failed to load theorems:', error);
+      setLastRequests(prev => ({ ...prev, theorems: '' })); // Réinitialiser en cas d'erreur
     } finally {
       setIsLoadingTheorems(false);
     }
@@ -393,12 +349,12 @@ export const Filters: React.FC<FiltersProps> = ({
           newFilters.difficulties = [...newFilters.difficulties, value as Difficulty];
         }
       } else {
-        if (newFilters[category].includes(value as string)) {
-          newFilters[category] = newFilters[category].filter(v => v !== value);
+        const currentCategoryFilters = newFilters[category] as string[]; // Cast pour type string[]
+        if (currentCategoryFilters.includes(value as string)) {
+          newFilters[category] = currentCategoryFilters.filter(v => v !== value);
           
-          // Clear dependent fields when parent is deselected
           if (category === 'classLevels') {
-            // Handled in useEffect
+            // Géré dans useEffect pour selectedFilters.classLevels
           } else if (category === 'subjects') {
             newFilters.subfields = [];
             newFilters.chapters = [];
@@ -410,13 +366,15 @@ export const Filters: React.FC<FiltersProps> = ({
             newFilters.theorems = [];
           }
         } else {
-          newFilters[category] = [...newFilters[category], value as string];
+          newFilters[category] = [...currentCategoryFilters, value as string];
         }
       }
       
       return newFilters;
     });
   };
+  
+  // ... (le reste du code reste inchangé)
 
   const getFilterName = (category: keyof FilterCategories, id: string) => {
     const source: Record<string, any[]> = { 
@@ -433,7 +391,15 @@ export const Filters: React.FC<FiltersProps> = ({
       if (found) {
         return found.name;
       }
-      return "Chargement...";
+      // Si l'élément n'est pas encore chargé, essayez de le trouver dans les filtres initiaux (si pertinent)
+      // ou retourner l'ID en attendant.
+      if(category === 'classLevels' && initialClassLevels.includes(id) ) {
+        // Potentiellement chercher dans une liste initiale de noms si disponible
+      }
+      if(category === 'subjects' && initialSubjects.includes(id) ) {
+        // Potentiellement chercher dans une liste initiale de noms si disponible
+      }
+      return `ID: ${id}`; // Fallback plus informatif
     }
     if (category === 'difficulties') {
       return getDifficultyLabel(id);
@@ -512,7 +478,8 @@ export const Filters: React.FC<FiltersProps> = ({
       <div className="mb-2 border-b border-gray-100 pb-4" key={`section-${category}`}>
         <button 
           onClick={() => toggleSection(category)}
-          className={`flex items-center justify-between w-full text-left mb-3 ${isDisabled ? 'opacity-70' : ''}`}
+          className={`flex items-center justify-between w-full text-left mb-3 ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`} // Ajout de cursor-not-allowed
+          disabled={isDisabled && !['classLevels', 'subjects', 'difficulties'].includes(category)} // Désactiver le bouton si la section dépendante est vide de prérequis
         >
           <div className="flex items-center space-x-2">
             {icon}
@@ -571,8 +538,14 @@ export const Filters: React.FC<FiltersProps> = ({
                   })}
                   {items.length === 0 && (
                     <p className="text-sm text-gray-500 italic w-full">
-                      {category === 'subjects' ? 
+                      {category === 'subjects' && selectedFilters.classLevels.length === 0 ? 
                         'Veuillez sélectionner un niveau d\'abord' : 
+                         category === 'subfields' && (selectedFilters.classLevels.length === 0 || selectedFilters.subjects.length === 0) ?
+                        'Veuillez sélectionner un niveau et une matière' :
+                         category === 'chapters' && (selectedFilters.classLevels.length === 0 || selectedFilters.subjects.length === 0 || selectedFilters.subfields.length === 0) ?
+                        'Veuillez sélectionner un niveau, une matière et un sous-domaine' :
+                         category === 'theorems' && (selectedFilters.classLevels.length === 0 || selectedFilters.subjects.length === 0 || selectedFilters.subfields.length === 0 || selectedFilters.chapters.length === 0) ?
+                        'Veuillez sélectionner un niveau, une matière, un sous-domaine et un chapitre' :
                         'Aucun élément disponible pour cette sélection'}
                     </p>
                   )}
@@ -598,6 +571,16 @@ export const Filters: React.FC<FiltersProps> = ({
       theorems: [],
       difficulties: [],
     });
+    // Aussi réinitialiser les sections ouvertes si désiré, et les lastRequests
+    setExpandedSections({
+        classLevels: true,
+        subjects: true,
+        subfields: false,
+        chapters: false,
+        theorems: false,
+        difficulties: true,
+    });
+    setLastRequests({ subfields: '', chapters: '', theorems: ''});
   };
 
   return (
@@ -635,7 +618,7 @@ export const Filters: React.FC<FiltersProps> = ({
                     ? subfields
                     : section.category === 'theorems'
                       ? theorems
-                      : chapters
+                      : chapters // Fallback à chapters pour la catégorie 'chapters' si non listé avant
           )
         )}
 

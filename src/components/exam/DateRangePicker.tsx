@@ -9,41 +9,34 @@ interface DateRangePickerProps {
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, value }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [startDate, setStartDate] = useState<string | null>(value?.start || null);
-  const [endDate, setEndDate] = useState<string | null>(value?.end || null);
+  const [startYear, setStartYear] = useState<string | null>(value?.start || null);
+  const [endYear, setEndYear] = useState<string | null>(value?.end || null);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Format display date
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    }).format(date);
-  };
+  // Generate years array (from 2008 to current year)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2008 + 1 }, (_, i) => 2008 + i);
 
   // Get display text
   const getDisplayText = (): string => {
-    if (!startDate && !endDate) return 'Sélectionner une période';
+    if (!startYear && !endYear) return 'Select year range';
     
-    if (startDate && !endDate) return `À partir du ${formatDate(startDate)}`;
-    if (!startDate && endDate) return `Jusqu'au ${formatDate(endDate)}`;
+    if (startYear && !endYear) return `From ${startYear}`;
+    if (!startYear && endYear) return `Until ${endYear}`;
     
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    return `${startYear} - ${endYear}`;
   };
 
-  // Apply date range filter
+  // Apply year range filter
   const applyFilter = () => {
-    onChange({ start: startDate, end: endDate });
+    onChange({ start: startYear, end: endYear });
     setIsOpen(false);
   };
 
-  // Clear date range filter
+  // Clear year range filter
   const clearFilter = () => {
-    setStartDate(null);
-    setEndDate(null);
+    setStartYear(null);
+    setEndYear(null);
     onChange(null);
     setIsOpen(false);
   };
@@ -64,8 +57,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, valu
 
   // Update internal state when props change
   useEffect(() => {
-    setStartDate(value?.start || null);
-    setEndDate(value?.end || null);
+    setStartYear(value?.start || null);
+    setEndYear(value?.end || null);
   }, [value]);
 
   return (
@@ -94,23 +87,35 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, valu
       {isOpen && (
         <div className="absolute z-30 mt-2 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-[300px]">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
-            <input
-              type="date"
-              value={startDate || ''}
-              onChange={(e) => setStartDate(e.target.value || null)}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start year</label>
+            <select
+              value={startYear || ''}
+              onChange={(e) => setStartYear(e.target.value || null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+            >
+              <option value="">Select year</option>
+              {years.map((year) => (
+                <option key={`start-${year}`} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
           
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
-            <input
-              type="date"
-              value={endDate || ''}
-              onChange={(e) => setEndDate(e.target.value || null)}
+            <label className="block text-sm font-medium text-gray-700 mb-1">End year</label>
+            <select
+              value={endYear || ''}
+              onChange={(e) => setEndYear(e.target.value || null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+            >
+              <option value="">Select year</option>
+              {years.map((year) => (
+                <option key={`end-${year}`} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
           
           <div className="flex justify-between">
@@ -120,7 +125,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, valu
               size="sm"
               className="text-gray-700"
             >
-              Effacer
+              Clear
             </Button>
             
             <Button
@@ -128,7 +133,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, valu
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              Appliquer
+              Apply
             </Button>
           </div>
         </div>

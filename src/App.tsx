@@ -1,4 +1,4 @@
-// src/App.tsx - Ajout des nouvelles routes
+// src/App.tsx - Ajout des routes d'examens
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
@@ -19,10 +19,16 @@ import { LessonDetail } from './pages/LessonDetail';
 import { CreateLesson } from './components/lesson/CreateLesson';
 import { EditLesson } from './components/lesson/EditLesson';
 import { FilterProvider } from './components/navbar/FilterContext';
-import TermsOfService from './pages/TermsOfService'; // Import des nouvelles pages
-import PrivacyPolicy from './pages/PrivacyPolicy'; // Import des nouvelles pages
-import LegalRedirector from './components/LegalRedirector'; // Import du composant de redirection légale
-import Footer from './components/Footer'; // Import du footer
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import LegalRedirector from './components/LegalRedirector';
+import Footer from './components/Footer';
+
+// Import des pages d'examens
+import { ExamList } from './pages/ExamList';
+import { ExamDetail } from './pages/ExamDetail';
+import { CreateExam } from './components/exam/CreateExam';
+import { EditExam } from './components/exam/EditExam';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -167,6 +173,28 @@ function App() {
                   <Route path="/edit-lesson/:id" element={
                     <NavbarWrapper>
                       <EditLesson />
+                    </NavbarWrapper>
+                  } />
+                  
+                  {/* Nouvelles routes pour les examens */}
+                  <Route path="/exams" element={
+                    <NavbarWrapper>
+                      <ExamList />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/exams/:id" element={
+                    <NavbarWrapper>
+                      <ExamDetail />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/new-exam" element={
+                    <NavbarWrapper>
+                      <CreateExam />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/edit-exam/:id" element={
+                    <NavbarWrapper>
+                      <EditExam />
                     </NavbarWrapper>
                   } />
                 </Routes>

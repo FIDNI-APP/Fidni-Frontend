@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X } from 'lucide-react';
+import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X, Award } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthButton } from '@/components/ui/AuthButton';
 import { NavDropdown } from './NavbarDropdown';
@@ -21,7 +21,7 @@ export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Add new state for dropdowns
-  const [activeDropdown, setActiveDropdown] = useState<'exercises' | 'lessons' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'exercises' | 'lessons' | 'exams' | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -101,7 +101,7 @@ export const Navbar = () => {
   };
   
   // Add this helper function
-  const toggleDropdown = (dropdown: 'exercises' | 'lessons') => {
+  const toggleDropdown = (dropdown: 'exercises' | 'lessons' | 'exams') => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
 
@@ -121,7 +121,7 @@ export const Navbar = () => {
     isActive: boolean;
     children: React.ReactNode;
     hasDropdown?: boolean;
-    dropdown?: 'exercises' | 'lessons';
+    dropdown?: 'exercises' | 'lessons' | 'exams';
   }
 
   const NavLink = ({ to, isActive, children, hasDropdown, dropdown }: NavLinkProps) => (
@@ -303,6 +303,16 @@ export const Navbar = () => {
                 <GraduationCap className="w-4 h-4 mr-2" />
                 Lessons
               </NavLink>
+              
+              <NavLink 
+                to="/exams" 
+                isActive={isActive('/exams')} 
+                hasDropdown={true} 
+                dropdown="exams"
+              >
+                <Award className="w-4 h-4 mr-2" />
+                Examens
+              </NavLink>
             </div>
           </div>
 
@@ -311,7 +321,7 @@ export const Navbar = () => {
             <form onSubmit={handleSearch} className="relative group">
               <input
                 type="text"
-                placeholder="Search for exercises, lessons..."
+                placeholder="Search for exercises, lessons, exams..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 bg-white/10 text-white border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder-gray-300 transition-all duration-300"
@@ -355,7 +365,7 @@ export const Navbar = () => {
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
-              placeholder="Search for exercises, lessons..."
+              placeholder="Search for exercises, lessons, exams..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 bg-white/10 text-white border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder-gray-300"
@@ -394,6 +404,16 @@ export const Navbar = () => {
             >
               <GraduationCap className="w-5 h-5 mr-3" />
               Lessons
+            </NavLinkMobile>
+            
+            <NavLinkMobile 
+              to="/exams" 
+              isActive={isActive('/exams')} 
+              hasDropdown={true} 
+              dropdown="exams"
+            >
+              <Award className="w-5 h-5 mr-3" />
+              Examens
             </NavLinkMobile>
           </div>
 
