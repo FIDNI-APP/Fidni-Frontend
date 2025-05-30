@@ -1,3 +1,5 @@
+import { C } from "node_modules/framer-motion/dist/types.d-DSjX-LJB";
+
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type SortOption = 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
 export type VoteValue = 1 | -1 | 0;
@@ -285,4 +287,46 @@ export interface NotebookChapter {
 export interface NotebookResponse {
   notebooks: Notebook[];
   count: number;
+}
+
+
+// src/types/exam.ts
+export interface Exam {
+  id: string;
+  title: string;
+  content: string;
+  difficulty: Difficulty;
+  chapters: ChapterModel[];
+  class_levels: ClassLevelModel[];
+  author: User;
+  created_at: string;
+  updated_at: string;
+  view_count: number;
+  subject: SubjectModel;
+  theorems: Theorem[];
+  subfields: Subfield[];
+  comments: Comment[];
+  vote_count: number;
+  user_vote: VoteValue;
+  user_save?: boolean;
+  user_complete?: 'success' | 'review' | null;
+  user_timespent?: number;
+  
+  // Champs spécifiques aux examens
+  is_national_exam: boolean;
+  national_date: string | null;
+}
+
+export interface ExamFilters {
+  classLevels: string[];
+  subjects: string[];
+  subfields: string[];
+  chapters: string[];
+  theorems: string[];
+  difficulties: Difficulty[];
+  isNationalExam?: boolean | null;
+  dateRange?: {
+    start: string | null;
+    end: string | null;
+  } | null;
 }

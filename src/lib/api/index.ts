@@ -20,6 +20,18 @@ export {
   saveOnboardingProfile
 } from './userApi';
 
+// Exam exports
+export {
+  getExams,
+  getExamById,
+  createExam,
+  updateExam,
+  deleteExam,
+  voteExam,
+  addExamComment,
+  markExamViewed
+} from './examApi';
+
 // Content exports
 export {
   getContents,

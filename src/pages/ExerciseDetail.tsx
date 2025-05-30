@@ -411,9 +411,9 @@ export function ExerciseDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white pt-24 pb-16 flex justify-center items-center">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex justify-center items-center">
         <div className="flex flex-col items-center">
-          <div className="relative w-20 h-20">
+          <div className="relative">
             <div className="absolute inset-0 rounded-full border-4 border-indigo-100"></div>
             <div className="absolute inset-0 rounded-full border-4 border-t-indigo-600 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center text-indigo-600">
@@ -436,7 +436,7 @@ export function ExerciseDetail() {
 
   if (error || !exercise) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white pt-24 pb-16">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white pt-10 pb-10">
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-white border-l-4 border-red-500 text-red-700 p-6 rounded-xl shadow-lg">
             <div className="flex items-center">
@@ -470,7 +470,8 @@ export function ExerciseDetail() {
   const canEditSolution = exercise.solution && user?.id === exercise.solution.author.id;
 
   return (
-    <div className={`min-h-screen bg-gray-50 pt-20 pb-16 transition-all duration-300 ${fullscreenMode ? 'bg-white' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 pb-16 transition-all duration-300 ${fullscreenMode ? 'bg-white' : ''}`}>
+
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
       
       {/* Print-only view */}

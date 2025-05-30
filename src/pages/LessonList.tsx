@@ -10,18 +10,17 @@ import { ContentListItem } from '../components/ContentListItem';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
+import { useFilters } from '../components/navbar/FilterContext'; // AJOUT IMPORTANT
 
 // Custom hook for debouncing values
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
-    // Set debouncedValue to value after the specified delay
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
 
-    // Cancel the timeout if value changes or unmounts
     return () => {
       clearTimeout(handler);
     };
@@ -64,23 +63,65 @@ export const LessonList = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal();
+  const { selectedClassLevel, selectedSubject, fullFilters } = useFilters(); // UTILISATION DU CONTEXTE
+  
+  // NOUVELLE FONCTION pour initialiser les filtres depuis l'URL ou le contexte
+  const getInitialFilters = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const classLevelsParam = searchParams.get('classLevels');
+    const subjectsParam = searchParams.get('subjects');
+    
+    // Priorité 1: Paramètres URL
+    if (classLevelsParam || subjectsParam) {
+      return {
+        classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
+        subjects: subjectsParam ? subjectsParam.split(',') : [],
+        subfields: [] as string[],
+        chapters: [] as string[],
+        theorems: [] as string[],
+        difficulties: [] as string[],
+      };
+    }
+    
+    // Priorité 2: Filtres complets du contexte
+    if (fullFilters) {
+      return fullFilters;
+    }
+    
+    // Priorité 3: Filtres simples du contexte
+    if (selectedClassLevel || selectedSubject) {
+      return {
+        classLevels: selectedClassLevel ? [selectedClassLevel] : [],
+        subjects: selectedSubject ? [selectedSubject] : [],
+        subfields: [] as string[],
+        chapters: [] as string[],
+        theorems: [] as string[],
+        difficulties: [] as string[],
+      };
+    }
+    
+    // Par défaut: filtres vides
+    return {
+      classLevels: [] as string[],
+      subjects: [] as string[],
+      subfields: [] as string[],
+      chapters: [] as string[],
+      theorems: [] as string[],
+      difficulties: [] as string[],
+    };
+  };
+  
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [filters, setFilters] = useState({
-    classLevels: [] as string[],
-    subjects: [] as string[],
-    subfields: [] as string[],
-    chapters: [] as string[],
-    theorems: [] as string[],
-    difficulties: [] as string[], // Keep this for filter compatibility, even though lessons don't have difficulty
-  });
+  const [filters, setFilters] = useState(getInitialFilters()); // UTILISATION DE LA FONCTION D'INITIALISATION
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false); // NOUVEAU FLAG
   
   // Add refs for tracking scroll position
   const listRef = useRef<HTMLDivElement>(null);
@@ -93,8 +134,11 @@ export const LessonList = () => {
   const debouncedFilters = useDebounce(filters, 500);
   const debouncedSortBy = useDebounce(sortBy, 500);
   
-  // Parse URL parameters when the component mounts or the URL changes
+  // MODIFICATION: Gérer les changements d'URL seulement après le chargement initial
   useEffect(() => {
+    // Ne traiter les changements d'URL qu'après le premier chargement
+    if (!initialLoadComplete) return;
+    
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
@@ -104,8 +148,7 @@ export const LessonList = () => {
       let hasChanges = false;
       
       if (classLevelsParam) {
-        // Convert to numbers and ensure they're unique
-        const classLevels = classLevelsParam.split(',').map(id => Number(id));
+        const classLevels = classLevelsParam.split(',');
         if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
           newFilters.classLevels = classLevels;
           hasChanges = true;
@@ -113,8 +156,7 @@ export const LessonList = () => {
       }
       
       if (subjectsParam) {
-        // Convert to numbers and ensure they're unique
-        const subjects = subjectsParam.split(',').map(id => Number(id));
+        const subjects = subjectsParam.split(',');
         if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
           newFilters.subjects = subjects;
           hasChanges = true;
@@ -131,7 +173,12 @@ export const LessonList = () => {
         setFilters(newFilters);
       }
     }
-  }, [location.search]);
+  }, [location.search, initialLoadComplete]); // Dépendance sur initialLoadComplete
+  
+  // NOUVEAU: Marquer le chargement initial comme terminé
+  useEffect(() => {
+    setInitialLoadComplete(true);
+  }, []);
   
   // Use memoization for creating API query parameters
   const queryParams = useMemo(() => {
@@ -208,7 +255,7 @@ export const LessonList = () => {
     }
   }, [queryParams, getCacheKey, getCachedData, setCachedData]);
 
-  // Load data when debounced filters/sort change or page changes
+  // Load data when debounced filters/sort change
   useEffect(() => {
     const shouldReset = page > 1;
     if (shouldReset) {
@@ -216,7 +263,7 @@ export const LessonList = () => {
     } else {
       fetchLessons(false);
     }
-  }, [debouncedFilters, debouncedSortBy, fetchLessons]);
+  }, [debouncedFilters, debouncedSortBy]);
   
   // Handle pagination separately
   useEffect(() => {
@@ -348,7 +395,8 @@ export const LessonList = () => {
     if (isAuthenticated) {
       navigate('/new-lesson');
     } else {
-      openModal('/new-lesson');
+      openModal();
+      // The redirection will be handled by the auth context after successful login
     }
   }, [isAuthenticated, navigate, openModal]);
 
@@ -448,7 +496,8 @@ export const LessonList = () => {
       `}</style>
       
       {/* Header Section */}
-      <div className="bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white py-8 mb-8">
+      <div className="bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white pt-4 pb-8">
+
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-6 md:mb-0">

@@ -1676,3 +1676,14 @@
     font-size: 1rem; 
   }
 }
+
+
+body {
+  padding-top: 80px; /* Ajustez selon la hauteur réelle de votre navbar */
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-top: 60px; /* Version mobile si la navbar change de hauteur */
+  }
+}

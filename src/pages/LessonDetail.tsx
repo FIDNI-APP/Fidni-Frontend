@@ -9,13 +9,10 @@ import {
   Printer, 
   Share2, 
   Eye, 
-  MessageSquare, 
   BookMarked,
-  Sparkles,
   Calendar,
   User,
   ArrowLeft,
-  BarChart3,
   CheckCircle,
   XCircle
 } from 'lucide-react';
@@ -77,10 +74,10 @@ export function LessonDetail() {
   };
 
   const handleVote = async (value: VoteValue) => {
-    if (!lesson || !id) return;
+    if (!lesson || !id || value === 0) return;
 
     try {
-      const updatedLesson = await voteLesson(id, value);
+      const updatedLesson = await voteLesson(id, value as 1 | -1);
       setLesson(updatedLesson);
     } catch (err) {
       console.error('Failed to vote:', err);
@@ -311,7 +308,7 @@ export function LessonDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 pb-16">
+    <div className="min-h-screen bg-gray-50 pb-16">
       {/* Print-only view */}
       {showPrint && (
         <div className="hidden print:block">
