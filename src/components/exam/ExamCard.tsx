@@ -9,7 +9,6 @@ import {
   GraduationCap, 
   BookOpen, 
   Bookmark,
-  Lightbulb,
   Loader2,
   Layers,
   BookMarked,
@@ -79,7 +78,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
     // If user is not authenticated, prompt login instead of navigating
     if (!isAuthenticated) {
       e.preventDefault();
-      openModal(`/exams/${exam.id}`);
+      openModal();
       return;
     }
     

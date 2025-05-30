@@ -31,19 +31,10 @@ import { SolutionSection } from '@/components/exercise/SolutionSection';
 import { ExercisePrintView } from '@/components/exercise/ExercisePrintView';
 import { MobileSidebar } from '@/components/exercise/MobileSidebar';
 import { 
-  Bookmark, 
-  CheckCircle, 
-  XCircle, 
   ArrowLeft, 
   Lightbulb,
   Share2, 
-  Printer, 
   Clock,
-  BarChart3,
-  Eye,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import 'katex/dist/katex.min.css';
@@ -73,7 +64,6 @@ export function ExerciseDetail() {
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isSticky, setIsSticky] = useState<boolean>(false);
   const [showPrint, setShowPrint] = useState<boolean>(false);
   
