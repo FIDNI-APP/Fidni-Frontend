@@ -13,7 +13,6 @@ import {
 import { Content, User, ViewHistoryItem } from '@/types'; // Vos types
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Loader2,
   LayoutDashboard,
   Book,
   FileText,
@@ -25,14 +24,10 @@ import {
   TrendingUp,
   Star,
   Award,
-  ChevronRight,
-  Grid as GridIcon, // Renamed to avoid conflict with component name
-  List as ListIcon,  // Renamed
   MoreVertical,
   Share2,
   Flag,
   UserPlus,
-  Settings // Kept for potential future use
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -153,7 +148,6 @@ export function UserProfile() {
   const [successExercises, setSuccessExercises] = useState<Content[]>([]);
   const [reviewExercises, setReviewExercises] = useState<Content[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // For ProgressCharts section mainly
 
   // More granular data loading states
   const [dataLoaded, setDataLoaded] = useState({

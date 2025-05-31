@@ -1,9 +1,24 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import obfuscator from 'rollup-plugin-obfuscator';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(),
+    obfuscator({
+      options: {
+        compact: true,
+        controlFlowFlattening: true,
+        controlFlowFlatteningThreshold: 0.75,
+        numbersToExpressions: true,
+        simplify: true,
+        stringArrayShuffle: true,
+        splitStrings: true,
+        stringArrayThreshold: 0.75,
+        identifierNamesGenerator: 'hexadecimal',
+      }
+    })
+  ],
   optimizeDeps: {
     include: [
       'framer-motion',
@@ -27,10 +42,15 @@ export default defineConfig({
     host: true
   },
   build: {
+     minify: 'terser', // Enable minification
+    
     outDir: 'dist',
     assetsDir: 'assets',
     // Amélioration de la gestion des erreurs de build
     rollupOptions: {
+      plugins: [
+        obfuscator() // Apply obfuscation during build
+      ],
       onwarn(warning, warn) {
         // Ignorer certains avertissements spécifiques si nécessaire
         if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
@@ -46,6 +66,7 @@ export default defineConfig({
           charts: ['recharts'],
         }
       }
+      
     }
   },
 });

@@ -46,12 +46,20 @@ export const getExams = async (params: ExamQueryParams): Promise<ExamResponse> =
     queryParams.is_national_exam = params.isNationalExam;
   }
 
-  // Add date range filter if provided
+  // Add year range filter if provided
   if (params.dateRange?.start) {
-    queryParams.date_from = params.dateRange.start;
+    // Ensure we're sending year format
+    const startYear = params.dateRange.start.length === 4 ? 
+      params.dateRange.start : 
+      new Date(params.dateRange.start).getFullYear().toString();
+    queryParams.year_from = startYear;
   }
   if (params.dateRange?.end) {
-    queryParams.date_to = params.dateRange.end;
+    // Ensure we're sending year format  
+    const endYear = params.dateRange.end.length === 4 ? 
+      params.dateRange.end : 
+      new Date(params.dateRange.end).getFullYear().toString();
+    queryParams.year_to = endYear;
   }
 
   const response = await api.get('/exams/', { params: queryParams });
@@ -83,7 +91,10 @@ export const createExam = async (data: {
   is_national_exam: boolean;
   national_date?: string | null;
 }): Promise<Exam> => {
-  const response = await api.post('/exams/', data);
+  // Send national_date as-is (should be in YYYY format from frontend)
+  const examData = { ...data };
+  
+  const response = await api.post('/exams/', examData);
   return response.data;
 };
 
@@ -100,7 +111,10 @@ export const updateExam = async (id: string, data: {
   is_national_exam?: boolean;
   national_date?: string | null;
 }): Promise<Exam> => {
-  const response = await api.put(`/exams/${id}/`, data);
+  // Send national_date as-is (should be in YYYY format from frontend)
+  const examData = { ...data };
+  
+  const response = await api.put(`/exams/${id}/`, examData);
   return response.data;
 };
 

@@ -1,12 +1,12 @@
-// src/components/navbar/NavbarDropdown.tsx - Version corrigée
+// src/components/navbar/NavbarDropdown.tsx - Version complète avec support des examens
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Layers, BookOpen, GraduationCap } from 'lucide-react';
+import { ChevronDown, ChevronRight, Layers, BookOpen, GraduationCap, Award } from 'lucide-react';
 import { getClassLevels, getSubjects } from '@/lib/api';
 import { useFilters } from './FilterContext';
 
 interface NavDropdownProps {
-  type: 'exercises' | 'lessons';
+  type: 'exercises' | 'lessons' | 'exams';
   onClose: () => void;
 }
 
@@ -81,10 +81,7 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   };
 
   const handleSubjectClick = (classLevelId: string, subjectId: string) => {
-    // Keep IDs as strings for consistency
-    
-    // SOLUTION: Set filters in context BEFORE navigation
-    // This ensures the filters are already applied when the page loads
+    // Set filters in context BEFORE navigation
     setSelectedClassLevel(classLevelId);
     setSelectedSubject(subjectId);
     
@@ -96,8 +93,6 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   };
   
   const handleViewAll = (classLevelId: string) => {
-    // Keep ID as string for consistency
-    
     // Set filter in context before navigation
     setSelectedClassLevel(classLevelId);
     setSelectedSubject(null); // Clear subject filter
@@ -106,6 +101,47 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
       navigate(`/${type}?classLevels=${classLevelId}`);
       onClose();
     }, 0);
+  };
+
+  // Get icon based on type
+  const getTypeIcon = () => {
+    switch (type) {
+      case 'exercises':
+        return <BookOpen className="h-4 w-4 mr-2 text-indigo-300" />;
+      case 'lessons':
+        return <GraduationCap className="h-4 w-4 mr-2 text-indigo-300" />;
+      case 'exams':
+        return <Award className="h-4 w-4 mr-2 text-indigo-300" />;
+      default:
+        return null;
+    }
+  };
+
+  // Get special options for exams
+  const renderExamSpecialOptions = () => {
+    if (type !== 'exams') return null;
+
+    return (
+      <>
+        <div className="px-4 py-2 border-b border-indigo-700/30">
+          <button
+            onClick={() => {
+              navigate('/exams?isNational=true');
+              onClose();
+            }}
+            className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-white/10 transition-colors flex items-center text-gray-200"
+          >
+            <Award className="h-4 w-4 mr-2 text-yellow-400" />
+            Examens Nationaux
+          </button>
+        </div>
+        <div className="px-2 py-1">
+          <div className="text-xs text-indigo-300 uppercase tracking-wide px-4 py-1">
+            Par niveau
+          </div>
+        </div>
+      </>
+    );
   };
 
   return (
@@ -120,7 +156,8 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
       </div>
 
       <div className="relative max-h-[450px] overflow-y-auto hide-scrollbar">
-        
+        {/* Special options for exams */}
+        {renderExamSpecialOptions()}
         
         {loadingClassLevels ? (
           <div className="flex items-center justify-center py-6">
@@ -178,13 +215,13 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
                             onClick={() => handleViewAll(classLevel.id)}
                             className="w-full text-left px-3 py-1.5 rounded-md text-xs font-medium hover:bg-white/5  transition-colors text-indigo-300"
                           >
-                            View all subjects →
+                            Voir tous les {type === 'exercises' ? 'exercices' : type === 'lessons' ? 'cours' : 'examens'} →
                           </button>
                         </div>
                       </>
                     ) : (
                       <p className="px-3 py-2 text-xs italic text-gray-400">
-                        No subjects available
+                        Aucune matière disponible
                       </p>
                     )}
                   </div>
@@ -194,6 +231,20 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
           </div>
         )}
         
+        {/* View all option at the bottom */}
+        {type === 'exams' && (
+          <div className="border-t border-indigo-700/30 px-4 py-3">
+            <button
+              onClick={() => {
+                navigate('/exams');
+                onClose();
+              }}
+              className="w-full text-center px-3 py-2 rounded-md text-sm font-medium bg-indigo-800/50 hover:bg-indigo-800/70 transition-colors text-gray-200"
+            >
+              Voir tous les examens
+            </button>
+          </div>
+        )}
       </div>
       
       <style jsx>{`
