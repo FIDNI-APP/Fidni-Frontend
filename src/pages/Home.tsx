@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, CheckCircle, TrendingUp, Users, Send, Facebook, Twitter, Instagram, ArrowRight, Sparkles, ChevronRight, Star, BookOpen, GraduationCap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search, CheckCircle, TrendingUp, Users, ArrowRight, Sparkles, ChevronRight, BookOpen, GraduationCap } from 'lucide-react';
 import { HomeContentCard } from '@/components/HomeContentCard';
 import { getContents, voteExercise, getClassLevels } from '@/lib/api';
 import { Content, VoteValue } from '@/types';
@@ -14,7 +13,7 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [apiStatus, setApiStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [classLevels, setClassLevels] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');

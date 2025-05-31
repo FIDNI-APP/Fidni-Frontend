@@ -200,3 +200,5 @@ export const markLessonViewed = async (lessonId: string) => {
   const response = await api.post(`/lessons/${lessonId}/view/`);
   return response.data;
 };
+
+

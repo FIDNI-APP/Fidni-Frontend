@@ -12,10 +12,8 @@ import {
   EyeIcon,
   Check,
   Rocket,
-  BookOpenCheck,
   Sparkles
 } from 'lucide-react';
-import parse from 'html-react-parser';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 interface ContentPreviewProps {
   title: string;

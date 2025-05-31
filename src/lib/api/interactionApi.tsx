@@ -72,12 +72,52 @@ export const deleteComment = async (commentId: string) => {
   await api.delete(`/comments/${commentId}/`);
 };
 
-// Time spent API
-export const addTimeSpent = async (exerciseId: string, time: number) => {
-  const response = await api.post(`/exercises/${exerciseId}/time_spent/`, { time });
-  return response.data;
+
+// Time spent API functions
+export const saveTimeSpent = async (contentType: 'exercise' | 'exam', contentId: string, timeSeconds: number) => {
+  try {
+    const endpoint = contentType === 'exercise' 
+      ? `/exercises/${contentId}/save_time_spent/`
+      : `/exams/${contentId}/save_time_spent/`;
+      
+    const response = await api.post(endpoint, { 
+      time_spent: timeSeconds 
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error saving time spent:', error);
+    throw error;
+  }
 };
 
-export const deleteTimeSpent = async (exerciseId: string) => {
-  await api.delete(`/exercises/${exerciseId}/time_spent/`);
-}
+export const getTimeSpent = async (contentType: 'exercise' | 'exam', contentId: string) => {
+  try {
+    const endpoint = contentType === 'exercise' 
+      ? `/exercises/${contentId}/get_time_spent/`
+      : `/exams/${contentId}/get_time_spent/`;
+      
+    const response = await api.get(endpoint);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting time spent:', error);
+    throw error;
+  }
+};
+
+// Fonction utilitaire pour sauvegarder automatiquement le temps
+export const autoSaveTimeSpent = async (
+  contentType: 'exercise' | 'exam', 
+  contentId: string, 
+  timeSeconds: number,
+  minTimeThreshold: number = 10 // Sauvegarder seulement si plus de 10 secondes
+) => {
+  if (timeSeconds >= minTimeThreshold) {
+    try {
+      await saveTimeSpent(contentType, contentId, timeSeconds);
+      console.log(`Auto-saved ${timeSeconds}s for ${contentType} ${contentId}`);
+    } catch (error) {
+      console.warn('Failed to auto-save time spent:', error);
+    }
+  }
+};

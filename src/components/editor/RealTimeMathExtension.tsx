@@ -1,7 +1,20 @@
-import { Extension, Command } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import katex from 'katex';
+
+// Type augmentation for the new command
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    setFormulaAtPosition: {
+      setFormulaAtPosition: (
+        position: number, 
+        newLatex: string, 
+        isDisplay: boolean
+      ) => ReturnType;
+    };
+  }
+}
 
 interface MathRenderOptions {
   delimiters: Array<{
@@ -163,49 +176,50 @@ export const RealTimeMathExtension = Extension.create<MathRenderOptions>({
   // Add command to replace formula at position
   addCommands() {
     return {
-      replaceFormulaAtPosition: (position: number, newLatex: string, isDisplay: boolean): Command => ({ state, dispatch }) => {
-        if (!dispatch) return false;
-        
-        const { doc, tr } = state;
-        let found = false;
-        
-        doc.descendants((node, pos) => {
-          if (!node.isText || found) return;
+      setFormulaAtPosition: (position: number, newLatex: string, isDisplay: boolean) => 
+        ({ state, dispatch }) => {
+          if (!dispatch) return false;
           
-          const nodeText = node.text || '';
-          const delimiters = isDisplay ? ['$$', '$$'] : ['$', '$'];
+          const { doc, tr } = state;
+          let found = false;
           
-          // Find formula at or near position
-          let index = 0;
-          while (index < nodeText.length) {
-            const startIdx = nodeText.indexOf(delimiters[0], index);
-            if (startIdx === -1) break;
+          doc.descendants((node, pos) => {
+            if (!node.isText || found) return;
             
-            const endIdx = nodeText.indexOf(delimiters[1], startIdx + delimiters[0].length);
-            if (endIdx === -1) break;
+            const nodeText = node.text || '';
+            const delimiters = isDisplay ? ['$$', '$$'] : ['$', '$'];
             
-            const formulaStart = pos + startIdx;
-            const formulaEnd = pos + endIdx + delimiters[1].length;
-            
-            // Check if position is within this formula
-            if (position >= formulaStart && position <= formulaEnd) {
-              const newFormula = `${delimiters[0]}${newLatex}${delimiters[1]}`;
-              tr.replaceRangeWith(formulaStart, formulaEnd, state.schema.text(newFormula));
-              found = true;
-              break;
+            // Find formula at or near position
+            let index = 0;
+            while (index < nodeText.length) {
+              const startIdx = nodeText.indexOf(delimiters[0], index);
+              if (startIdx === -1) break;
+              
+              const endIdx = nodeText.indexOf(delimiters[1], startIdx + delimiters[0].length);
+              if (endIdx === -1) break;
+              
+              const formulaStart = pos + startIdx;
+              const formulaEnd = pos + endIdx + delimiters[1].length;
+              
+              // Check if position is within this formula
+              if (position >= formulaStart && position <= formulaEnd) {
+                const newFormula = `${delimiters[0]}${newLatex}${delimiters[1]}`;
+                tr.replaceRangeWith(formulaStart, formulaEnd, state.schema.text(newFormula));
+                found = true;
+                break;
+              }
+              
+              index = endIdx + delimiters[1].length;
             }
-            
-            index = endIdx + delimiters[1].length;
+          });
+          
+          if (found) {
+            dispatch(tr);
+            return true;
           }
-        });
-        
-        if (found) {
-          dispatch(tr);
-          return true;
+          
+          return false;
         }
-        
-        return false;
-      },
     };
   },
 });

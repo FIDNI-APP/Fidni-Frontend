@@ -6,6 +6,7 @@ import { Content, Comment, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
 import { CommentSection } from '@/components/CommentSection';
+import { useAdvancedTimeTracker } from '@/hooks/useAdvancedTimeTracker';
 import { 
   getContentById, 
   voteExercise, 
@@ -25,7 +26,6 @@ import { ExerciseHeader } from '@/components/exercise/ExerciseHeader';
 import { TabNavigation } from '@/components/exercise/TabNavigation';
 import { FloatingToolbar } from '@/components/exercise/FloatingToolbar';
 import { ExerciseContent } from '@/components/exercise/ExerciseContent';
-import { ExerciseSidebar } from '@/components/exercise/ExerciseSidebar';
 import { ProposalsEmptyState, ActivityEmptyState } from '@/components/exercise/EmptyStates';
 import { SolutionSection } from '@/components/exercise/SolutionSection';
 import { ExercisePrintView } from '@/components/exercise/ExercisePrintView';
@@ -35,6 +35,7 @@ import {
   Lightbulb,
   Share2, 
   Clock,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import 'katex/dist/katex.min.css';
@@ -59,13 +60,35 @@ export function ExerciseDetail() {
   });
   
   // User interaction states
-  const [timer, setTimer] = useState<number>(0);
-  const [timerActive, setTimerActive] = useState<boolean>(false);
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
   const [isSticky, setIsSticky] = useState<boolean>(false);
   const [showPrint, setShowPrint] = useState<boolean>(false);
+  
+  // Time tracking avec le nouveau hook
+  const {
+    timeStatus,
+    currentSessionTime,
+    isActive: timerActive,
+    loading: timeLoading,
+    showResumeDialog,
+    startTracking,
+    stopTracking,
+    saveSession,
+    setResumePreference,
+    getSessionsHistory,
+    handleResumeDialog,
+    loadTimeStatus,
+    formatTime,
+    formatCurrentTime,
+    formatTotalTime
+  } = useAdvancedTimeTracker({
+    contentType: 'exercise', // Changed from 'exam' to 'exercise'
+    contentId: id || '',
+    autoSaveInterval: 30,
+    enabled: !!id && !!exercise && isAuthenticated
+  });
   
   // Refs for scroll handling
   const headerRef = useRef<HTMLDivElement>(null);
@@ -87,21 +110,6 @@ export function ExerciseDetail() {
       document.body.classList.remove('page-transition');
     };
   }, [id, isAuthenticated]);
-
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (timerActive) {
-      interval = setInterval(() => {
-        setTimer(prev => prev + 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timerActive]);
 
   // Scroll effect to track sticky header
   useEffect(() => {
@@ -343,20 +351,25 @@ export function ExerciseDetail() {
     }
   };
 
-  // Timer functions
+  // Timer functions - adapted to new hook
   const toggleTimer = () => {
-    setTimerActive(!timerActive);
+    if (timerActive) {
+      stopTracking();
+    } else {
+      startTracking();
+    }
   };
 
   const resetTimer = () => {
-    setTimer(0);
-    setTimerActive(false);
+    startTracking(false); // Start new session (reset)
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const saveTimeManually = async () => {
+    try {
+      await saveSession('study', 'Manual save');
+    } catch (err) {
+      console.error('Failed to save session manually:', err);
+    }
   };
 
   // Difficulty rating
@@ -464,6 +477,30 @@ export function ExerciseDetail() {
 
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
       
+      {/* Resume Dialog */}
+      {showResumeDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Session en cours détectée</h3>
+            <p className="text-gray-600 mb-4">
+              Vous avez une session de {formatTime(timeStatus?.currentSessionSeconds || 0)} en cours. 
+              Que souhaitez-vous faire ?
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => handleResumeDialog('continue')} className="w-full">
+                Continuer la session
+              </Button>
+              <Button onClick={() => handleResumeDialog('save_and_restart')} variant="outline" className="w-full">
+                Sauvegarder et recommencer
+              </Button>
+              <Button onClick={() => handleResumeDialog('restart')} variant="outline" className="w-full">
+                Recommencer sans sauvegarder
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Print-only view */}
       {showPrint && (
         <div className="hidden print:block">
@@ -479,7 +516,7 @@ export function ExerciseDetail() {
           toggleToolbar={toggleToolbar}
           timerActive={timerActive}
           toggleTimer={toggleTimer}
-          timer={timer}
+          timer={currentSessionTime}
           fullscreenMode={fullscreenMode}
           toggleFullscreen={toggleFullscreen}
           savedForLater={savedForLater}
@@ -489,7 +526,7 @@ export function ExerciseDetail() {
         
         {/* Mobile sidebar */}
         <MobileSidebar
-          timer={timer}
+          timer={currentSessionTime}
           timerActive={timerActive}
           toggleTimer={toggleTimer}
           resetTimer={resetTimer}
@@ -532,7 +569,7 @@ export function ExerciseDetail() {
               
               <div className="flex items-center gap-1 text-gray-500 text-sm">
                 <Clock className="w-4 h-4" />
-                <span>{formatTime(timer)}</span>
+                <span>{formatCurrentTime()}</span>
               </div>
             </div>
           </div>
@@ -689,79 +726,190 @@ export function ExerciseDetail() {
               
               {/* Right Sidebar - Only show on larger screens */}
               {!fullscreenMode && (
-                <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
-                  <div 
-                    className="lg:sticky lg:top-28"
-                    style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
-                  >
-                    <ExerciseSidebar
-                      timer={timer}
-                      timerActive={timerActive}
-                      toggleTimer={toggleTimer}
-                      resetTimer={resetTimer}
-                      difficultyRating={difficultyRating}
-                      rateDifficulty={rateDifficulty}
-                      formatTime={formatTime}
-                      viewCount={exercise.view_count}
-                      voteCount={exercise.vote_count}
-                      commentsCount={exercise.comments?.length || 0}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* CSS for Enhanced UI */}
-      <style jsx>{`
-        /* Page transition animations */
-        .page-transition {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(249, 250, 251, 0.5);
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(79, 70, 229, 0.2);
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(79, 70, 229, 0.4);
-        }
-        
-        /* Print styles */
-        @media print {
-          .print\\:hidden {
-            display: none !important;
-          }
-          
-          .print\\:block {
-            display: block !important;
-          }
-        }
-        
-        /* Focus style for accessibility */
-        button:focus-visible, a:focus-visible {
-          outline: 2px solid #6366F1;
-          outline-offset: 2px;
-        }
-      `}</style>
-    </div>
-  );
+               <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
+                 <div 
+                   className="lg:sticky lg:top-28"
+                   style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
+                 >
+                   <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100">
+                     {/* Timer Section avec nouvelles informations */}
+                     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
+                       <div className="flex items-center justify-between mb-3">
+                         <h3 className="font-medium flex items-center text-sm">
+                           <Clock className="w-4 h-4 mr-1.5" />
+                           Chronomètre
+                         </h3>
+                         <div className="text-right">
+                           <div className="font-mono text-xl font-bold">{formatCurrentTime()}</div>
+                           <div className="text-xs text-white/70">Session</div>
+                         </div>
+                       </div>
+                       
+                       {/* Temps total */}
+                       <div className="mb-3 text-center">
+                         <div className="text-sm text-white/80">Temps total</div>
+                         <div className="font-mono text-lg font-semibold">{formatTotalTime()}</div>
+                       </div>
+                       
+                       <div className="flex gap-2 mb-2">
+                         <Button 
+                           onClick={toggleTimer} 
+                           className={`flex-1 h-9 text-sm ${
+                             timerActive 
+                               ? 'bg-red-500 hover:bg-red-600 border-red-400' 
+                               : 'bg-white text-indigo-700 hover:bg-indigo-50'
+                           }`}
+                         >
+                           {timerActive ? 'Pause' : 'Démarrer'}
+                         </Button>
+                         <Button 
+                           onClick={resetTimer} 
+                           variant="outline" 
+                           className="flex-1 h-9 text-sm bg-indigo-500/20 border-indigo-300/30 text-white hover:bg-indigo-500/30"
+                         >
+                           Reset
+                         </Button>
+                       </div>
+                       
+                       {/* Bouton de sauvegarde manuelle */}
+                       <Button
+                         onClick={saveTimeManually}
+                         variant="outline"
+                         size="sm"
+                         className="w-full h-8 text-xs bg-white/10 border-white/30 text-white hover:bg-white/20 flex items-center justify-center gap-1"
+                       >
+                         <Save className="w-3 h-3" />
+                         Sauvegarder le temps
+                       </Button>
+                       
+                       {/* Indicateur de dernière sauvegarde */}
+                       {timeStatus?.lastSessionStart && (
+                         <div className="mt-2 text-xs text-white/60 text-center">
+                           Dernière sauvegarde: {new Date(timeStatus.lastSessionStart).toLocaleTimeString()}
+                         </div>
+                       )}
+                       
+                       {/* Statut de chargement du temps */}
+                       {timeLoading && (
+                         <div className="mt-2 text-xs text-white/60 text-center">
+                           Synchronisation...
+                         </div>
+                       )}
+                       
+                       {/* Préférence de reprise */}
+                       {timeStatus && (
+                         <div className="mt-2">
+                           <div className="text-xs text-white/70 mb-1">Préférence de reprise:</div>
+                           <select
+                             value={timeStatus.resumePreference}
+                             onChange={(e) => setResumePreference(e.target.value as 'continue' | 'restart' | 'ask')}
+                             className="w-full text-xs bg-white/10 border-white/30 text-white rounded px-2 py-1"
+                           >
+                             <option value="ask" className="text-gray-900">Demander</option>
+                             <option value="continue" className="text-gray-900">Continuer</option>
+                             <option value="restart" className="text-gray-900">Recommencer</option>
+                           </select>
+                         </div>
+                       )}
+                     </div>
+                     
+                     {/* Historique des sessions */}
+                     {timeStatus && timeStatus.sessionsCount > 0 && (
+                       <div className="p-4">
+                         <h3 className="font-medium text-gray-800 text-sm mb-2 flex items-center">
+                           <Clock className="w-4 h-4 mr-1" />
+                           Historique des sessions
+                         </h3>
+                         <div className="space-y-2">
+                           {timeStatus.recentSessions.slice(0, 3).map((session) => (
+                             <div key={session.id} className="flex justify-between text-xs text-gray-600">
+                               <span>{formatTime(session.durationSeconds)}</span>
+                               <span>{new Date(session.endedAt).toLocaleDateString()}</span>
+                             </div>
+                           ))}
+                         </div>
+                         <button
+                           onClick={async () => {
+                             try {
+                               const history = await getSessionsHistory(1, 10);
+                               console.log('Session history:', history);
+                               // TODO: Show modal with full history
+                             } catch (err) {
+                               console.error('Failed to get session history:', err);
+                             }
+                           }}
+                           className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800"
+                         >
+                           Voir tout l'historique ({timeStatus.sessionsCount})
+                         </button>
+                       </div>
+                     )}
+                     
+                     {/* Difficulty Rating */}
+                     <div className="p-4">
+                       <div className="flex items-center gap-2 mb-2">
+                         <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                         </svg>
+                         <span className="font-medium text-gray-800 text-sm">Évaluer la difficulté</span>
+                       </div>
+                       <div className="flex gap-1">
+                         {[1, 2, 3, 4, 5].map(rating => (
+                           <button 
+                             key={rating}
+                             onClick={() => rateDifficulty(rating)}
+                             className={`flex-1 p-1.5 rounded text-sm transition-all ${
+                               difficultyRating === rating 
+                                 ? 'bg-indigo-600 text-white shadow-sm' 
+                                 : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                             }`}
+                           >
+                             {rating}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                     
+                     {/* Exercise Statistics */}
+                     <div className="p-4">
+                       <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
+                       <div className="space-y-1.5">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Vues</span>
+                           <span className="font-medium">{exercise.view_count}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Votes</span>
+                           <span className="font-medium">{exercise.vote_count}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Commentaires</span>
+                           <span className="font-medium">{exercise.comments?.length || 0}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Session actuelle</span>
+                           <span className="font-medium">{formatCurrentTime()}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Temps total</span>
+                           <span className="font-medium">{formatTotalTime()}</span>
+                         </div>
+                         {timeStatus && (
+                           <div className="flex justify-between text-sm">
+                             <span className="text-gray-600">Sessions</span>
+                             <span className="font-medium">{timeStatus.sessionsCount}</span>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ );
 }

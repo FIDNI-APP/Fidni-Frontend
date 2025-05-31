@@ -6,6 +6,7 @@ import { Exam, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
 import { CommentSection } from '@/components/CommentSection';
+import { useAdvancedTimeTracker } from '@/hooks/useAdvancedTimeTracker';
 import { 
   getExamById, 
   voteExam, 
@@ -34,6 +35,7 @@ import {
   Calendar,
   GraduationCap,
   BookOpen,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
@@ -57,13 +59,56 @@ export function ExamDetail() {
   });
   
   // User interaction states
-  const [timer, setTimer] = useState<number>(0);
-  const [timerActive, setTimerActive] = useState<boolean>(false);
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
   const [isSticky, setIsSticky] = useState<boolean>(false);
   const [showPrint, setShowPrint] = useState<boolean>(false);
+  
+  // Time tracking avec le nouveau hook
+  const {
+    timeStatus,
+    currentSessionTime,
+    isActive: timerActive,
+    loading: timeLoading,
+    showResumeDialog,
+    startTracking,
+    stopTracking,
+    saveSession,
+    setResumePreference,
+    getSessionsHistory,
+    handleResumeDialog,
+    loadTimeStatus,
+    formatTime,
+    formatCurrentTime,
+    formatTotalTime
+  } = useAdvancedTimeTracker({
+    contentType: 'exam',
+    contentId: id || '',
+    autoSaveInterval: 30,
+    enabled: !!id && !!exam && isAuthenticated
+  });
+
+  // Timer functions - adapted to new hook
+  const toggleTimer = () => {
+    if (timerActive) {
+      stopTracking();
+    } else {
+      startTracking();
+    }
+  };
+
+  const resetTimer = () => {
+    startTracking(false); // Start new session (reset)
+  };
+
+  const saveTimeManually = async () => {
+    try {
+      await saveSession('study', 'Manual save');
+    } catch (err) {
+      console.error('Failed to save session manually:', err);
+    }
+  };
   
   // Refs for scroll handling
   const headerRef = useRef<HTMLDivElement>(null);
@@ -85,21 +130,6 @@ export function ExamDetail() {
       document.body.classList.remove('page-transition');
     };
   }, [id, isAuthenticated]);
-
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (timerActive) {
-      interval = setInterval(() => {
-        setTimer(prev => prev + 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timerActive]);
 
   // Scroll effect to track sticky header
   useEffect(() => {
@@ -302,22 +332,6 @@ export function ExamDetail() {
     }
   };
 
-  // Timer functions
-  const toggleTimer = () => {
-    setTimerActive(!timerActive);
-  };
-
-  const resetTimer = () => {
-    setTimer(0);
-    setTimerActive(false);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   // Difficulty rating
   const rateDifficulty = (rating: number) => {
     setDifficultyRating(rating);
@@ -459,6 +473,30 @@ export function ExamDetail() {
     <div className={`min-h-screen bg-gray-50 pt-20 pb-16 transition-all duration-300 ${fullscreenMode ? 'bg-white' : ''}`}>
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
       
+      {/* Resume Dialog */}
+      {showResumeDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Session en cours détectée</h3>
+            <p className="text-gray-600 mb-4">
+              Vous avez une session de {formatTime(timeStatus?.currentSessionSeconds || 0)} en cours. 
+              Que souhaitez-vous faire ?
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => handleResumeDialog('continue')} className="w-full">
+                Continuer la session
+              </Button>
+              <Button onClick={() => handleResumeDialog('save_and_restart')} variant="outline" className="w-full">
+                Sauvegarder et recommencer
+              </Button>
+              <Button onClick={() => handleResumeDialog('restart')} variant="outline" className="w-full">
+                Recommencer sans sauvegarder
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Print-only view */}
       {showPrint && (
         <div className="hidden print:block">
@@ -533,7 +571,7 @@ export function ExamDetail() {
               
               <div className="flex items-center gap-1 text-gray-500 text-sm">
                 <Clock className="w-4 h-4" />
-                <span>{formatTime(timer)}</span>
+                <span>{formatCurrentTime()}</span>
               </div>
             </div>
           </div>
@@ -654,348 +692,397 @@ export function ExamDetail() {
                     
                     <span className={`bg-gradient-to-r ${difficultyInfo.color} px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5`}>
                       <BarChart3 className="w-4 h-4" />
-                      <span>{difficultyInfo.label}</span>
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Tab Navigation */}
-                <div className="flex overflow-x-auto border-b border-white/20 mt-2">
-                  <button
-                    onClick={() => setActiveSection('exam')}
-                    className={`px-4 py-3 flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
-                      activeSection === 'exam' 
-                        ? 'border-white text-white font-medium' 
-                        : 'border-transparent text-white/70 hover:text-white hover:border-white/50'
-                    }`}
-                  >
-                    <Award className="w-4 h-4" />
-                    <span>Examen</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setActiveSection('discussions')}
-                    className={`px-4 py-3 flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
-                      activeSection === 'discussions' 
-                        ? 'border-white text-white font-medium' 
-                        : 'border-transparent text-white/70 hover:text-white hover:border-white/50'
-                    }`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Discussions</span>
-                    {exam.comments?.length > 0 && (
-                      <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
-                        activeSection === 'discussions' ? 'bg-white text-indigo-700' : 'bg-white/20 text-white'
-                      }`}>
-                        {exam.comments.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Main content grid */}
-          <div className="w-full relative">
-            <div className="flex flex-col lg:flex-row lg:gap-6">
-              {/* Main Content Area */}
-              <div className="flex-grow" ref={contentRef}>
-                <AnimatePresence mode="wait">
-                  {activeSection === 'exam' && (
-                    <motion.div
-                      key="exam-content"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
-                    >
-                      {/* Exam Content */}
-                      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-                        <div className="p-6">
-                          {/* Content */}
-                          <div className="prose max-w-none text-gray-800 mb-6">
-                            <TipTapRenderer content={exam.content} />
-                          </div>
-                          
-                          {/* Footer with votes, progress tracking, etc */}
-                          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-100">
-                            <div className="flex items-center gap-4">
-                              {/* Vote Buttons */}
-                              <div className="flex items-center gap-1 text-gray-500">
-                                <button
-                                  onClick={() => handleVote(1)}
-                                  className={`p-1 rounded-md transition-colors ${exam.user_vote === 1 ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100'}`}
-                                  aria-label="Upvote"
-                                >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                  </svg>
-                                </button>
-                                <span className="font-medium">{exam.vote_count}</span>
-                                <button
-                                  onClick={() => handleVote(-1)}
-                                  className={`p-1 rounded-md transition-colors ${exam.user_vote === -1 ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100'}`}
-                                  aria-label="Downvote"
-                                >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </button>
-                              </div>
-                              
-                              {/* Views count */}
-                              <span className="flex items-center gap-1 text-sm text-gray-500">
-                                <Eye className="w-4 h-4 text-gray-400" />
-                                <span>{exam.view_count} vues</span>
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              {/* Completion status buttons */}
-                              <Button
-                                onClick={() => markAsCompleted('success')}
-                                variant={completed === 'success' ? "default" : "outline"}
-                                size="sm"
-                                className={`rounded-lg ${
-                                  completed === 'success' 
-                                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                                    : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
-                                }`}
-                                disabled={loadingStates.progress}
-                              >
-                                {loadingStates.progress ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                ) : (
-                                  <CheckCircle className="w-4 h-4 mr-1.5" />
-                                )}
-                                Réussi
-                              </Button>
-                              
-                              <Button
-                                onClick={() => markAsCompleted("review")}
-                                variant={completed === "review" ? "default" : "outline"}
-                                size="sm"
-                                className={`rounded-lg ${
-                                  completed === "review" 
-                                    ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                                    : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
-                                }`}
-                                disabled={loadingStates.progress}
-                              >
-                                {loadingStates.progress ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                ) : (
-                                  <XCircle className="w-4 h-4 mr-1.5" />
-                                )}
-                                À revoir
-                              </Button>
-                              
-                              {/* Print button */}
-                              <Button
-                                variant="outline"
-                                onClick={handlePrint}
-                                className="rounded-lg text-sm"
-                                size="sm"
-                              >
-                                <Printer className="w-4 h-4 mr-1.5" />
-                                Imprimer
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Additional actions */}
-                      <div className="grid grid-cols-2 gap-4 mt-6">
-                        <button
-                          onClick={handleShare}
-                          className="bg-white border border-gray-200 hover:border-indigo-300 text-gray-700 hover:text-indigo-600 flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-200"
-                        >
-                          <Share2 className="w-5 h-5" />
-                          <span>Partager l'examen</span>
-                        </button>
-                        
-                        <button
-                          onClick={toggleSavedForLater}
-                          className={`${savedForLater 
-                            ? 'bg-yellow-100 border-yellow-300 text-yellow-700' 
-                            : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white'
-                          } flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200`}
-                        >
-                          <Bookmark className={`w-5 h-5 ${savedForLater ? 'fill-yellow-500' : ''}`} />
-                          <span>{savedForLater ? 'Enregistré' : 'Enregistrer pour plus tard'}</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
+                     <span>{difficultyInfo.label}</span>
+                   </span>
+                 </div>
+               </div>
+               
+               {/* Tab Navigation */}
+               <div className="flex overflow-x-auto border-b border-white/20 mt-2">
+                 <button
+                   onClick={() => setActiveSection('exam')}
+                   className={`px-4 py-3 flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
+                     activeSection === 'exam' 
+                       ? 'border-white text-white font-medium' 
+                       : 'border-transparent text-white/70 hover:text-white hover:border-white/50'
+                   }`}
+                 >
+                   <Award className="w-4 h-4" />
+                   <span>Examen</span>
+                 </button>
+                 
+                 <button
+                   onClick={() => setActiveSection('discussions')}
+                   className={`px-4 py-3 flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
+                     activeSection === 'discussions' 
+                       ? 'border-white text-white font-medium' 
+                       : 'border-transparent text-white/70 hover:text-white hover:border-white/50'
+                   }`}
+                 >
+                   <MessageSquare className="w-4 h-4" />
+                   <span>Discussions</span>
+                   {exam.comments?.length > 0 && (
+                     <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
+                       activeSection === 'discussions' ? 'bg-white text-indigo-700' : 'bg-white/20 text-white'
+                     }`}>
+                       {exam.comments.length}
+                     </span>
+                   )}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+         
+         {/* Main content grid */}
+         <div className="w-full relative">
+           <div className="flex flex-col lg:flex-row lg:gap-6">
+             {/* Main Content Area */}
+             <div className="flex-grow" ref={contentRef}>
+               <AnimatePresence mode="wait">
+                 {activeSection === 'exam' && (
+                   <motion.div
+                     key="exam-content"
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -20 }}
+                     transition={{ duration: 0.4, ease: "easeOut" }}
+                   >
+                     {/* Exam Content */}
+                     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
+                       <div className="p-6">
+                         {/* Content */}
+                         <div className="prose max-w-none text-gray-800 mb-6">
+                           <TipTapRenderer content={exam.content} />
+                         </div>
+                         
+                         {/* Footer with votes, progress tracking, etc */}
+                         <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-100">
+                           <div className="flex items-center gap-4">
+                             {/* Vote Buttons */}
+                             <div className="flex items-center gap-1 text-gray-500">
+                               <button
+                                 onClick={() => handleVote(1)}
+                                 className={`p-1 rounded-md transition-colors ${exam.user_vote === 1 ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100'}`}
+                                 aria-label="Upvote"
+                               >
+                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                 </svg>
+                               </button>
+                               <span className="font-medium">{exam.vote_count}</span>
+                               <button
+                                 onClick={() => handleVote(-1)}
+                                 className={`p-1 rounded-md transition-colors ${exam.user_vote === -1 ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100'}`}
+                                 aria-label="Downvote"
+                               >
+                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                 </svg>
+                               </button>
+                             </div>
+                             
+                             {/* Views count */}
+                             <span className="flex items-center gap-1 text-sm text-gray-500">
+                               <Eye className="w-4 h-4 text-gray-400" />
+                               <span>{exam.view_count} vues</span>
+                             </span>
+                           </div>
+                           
+                           <div className="flex items-center gap-2">
+                             {/* Completion status buttons */}
+                             <Button
+                               onClick={() => markAsCompleted('success')}
+                               variant={completed === 'success' ? "default" : "outline"}
+                               size="sm"
+                               className={`rounded-lg ${
+                                 completed === 'success' 
+                                   ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                                   : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
+                               }`}
+                               disabled={loadingStates.progress}
+                             >
+                               {loadingStates.progress ? (
+                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                               ) : (
+                                 <CheckCircle className="w-4 h-4 mr-1.5" />
+                               )}
+                               Réussi
+                             </Button>
+                             
+                             <Button
+                               onClick={() => markAsCompleted("review")}
+                               variant={completed === "review" ? "default" : "outline"}
+                               size="sm"
+                               className={`rounded-lg ${
+                                 completed === "review" 
+                                   ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                                   : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
+                               }`}
+                               disabled={loadingStates.progress}
+                             >
+                               {loadingStates.progress ? (
+                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                               ) : (
+                                 <XCircle className="w-4 h-4 mr-1.5" />
+                               )}
+                               À revoir
+                             </Button>
+                             
+                             {/* Print button */}
+                             <Button
+                               variant="outline"
+                               onClick={handlePrint}
+                               className="rounded-lg text-sm"
+                               size="sm"
+                             >
+                               <Printer className="w-4 h-4 mr-1.5" />
+                               Imprimer
+                             </Button>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                     
+                     {/* Additional actions */}
+                     <div className="grid grid-cols-2 gap-4 mt-6">
+                       <button
+                         onClick={handleShare}
+                         className="bg-white border border-gray-200 hover:border-indigo-300 text-gray-700 hover:text-indigo-600 flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-200"
+                       >
+                         <Share2 className="w-5 h-5" />
+                         <span>Partager l'examen</span>
+                       </button>
+                       
+                       <button
+                         onClick={toggleSavedForLater}
+                         className={`${savedForLater 
+                           ? 'bg-yellow-100 border-yellow-300 text-yellow-700' 
+                           : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white'
+                         } flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200`}
+                       >
+                         <Bookmark className={`w-5 h-5 ${savedForLater ? 'fill-yellow-500' : ''}`} />
+                         <span>{savedForLater ? 'Enregistré' : 'Enregistrer pour plus tard'}</span>
+                       </button>
+                     </div>
+                   </motion.div>
+                 )}
 
-                  {/* Discussions Section */}
-                  {activeSection === 'discussions' && (
-                    <motion.div
-                      key="discussions-content"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
-                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
-                    >
-                      <div className="p-6" id="comments">
-                        <CommentSection
-                          comments={exam?.comments || []}
-                          onAddComment={handleAddComment}
-                          onVoteComment={async (commentId: string, type: VoteValue) => {
-                            // TODO: Implement comment voting logic
-                            return Promise.resolve();
-                          }}
-                          onEditComment={async (commentId: string, content: string) => {
-                            // TODO: Implement comment editing logic
-                            return Promise.resolve();
-                          }}
-                          onDeleteComment={async (commentId: string) => Promise.resolve()} // TODO: Implement delete comment logic
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              
-              {/* Right Sidebar - Only show on larger screens */}
-              {!fullscreenMode && (
-                <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
-                  <div 
-                    className="lg:sticky lg:top-28"
-                    style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
-                  >
-                    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100">
-                      {/* Timer Section */}
-                      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-medium flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1.5" />
-                            Chronomètre
-                          </h3>
-                          <div className="font-mono text-xl font-bold">{formatTime(timer)}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            onClick={toggleTimer} 
-                            className={`flex-1 h-9 text-sm ${
-                              timerActive 
-                                ? 'bg-red-500 hover:bg-red-600 border-red-400' 
-                                : 'bg-white text-indigo-700 hover:bg-indigo-50'
-                            }`}
-                          >
-                            {timerActive ? 'Pause' : 'Démarrer'}
-                          </Button>
-                          <Button 
-                            onClick={resetTimer} 
-                            variant="outline" 
-                            className="flex-1 h-9 text-sm bg-indigo-500/20 border-indigo-300/30 text-white hover:bg-indigo-500/30"
-                          >
-                            Réinitialiser
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Difficulty Rating */}
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <BarChart3 className="w-4 h-4 text-indigo-600" />
-                          <span className="font-medium text-gray-800 text-sm">Évaluer la difficulté</span>
-                        </div>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map(rating => (
-                            <button 
-                              key={rating}
-                              onClick={() => rateDifficulty(rating)}
-                              className={`flex-1 p-1.5 rounded text-sm transition-all ${
-                                difficultyRating === rating 
-                                  ? 'bg-indigo-600 text-white shadow-sm' 
-                                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              {rating}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Exam Statistics */}
-                      <div className="p-4">
-                        <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Vues</span>
-                            <span className="font-medium">{exam.view_count}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Votes</span>
-                            <span className="font-medium">{exam.vote_count}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Commentaires</span>
-                            <span className="font-medium">{exam.comments?.length || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* CSS for Enhanced UI */}
-      <style jsx>{`
-        /* Page transition animations */
-        .page-transition {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(249, 250, 251, 0.5);
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(79, 70, 229, 0.2);
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(79, 70, 229, 0.4);
-        }
-        
-        /* Print styles */
-        @media print {
-          .print\\:hidden {
-            display: none !important;
-          }
-          
-          .print\\:block {
-            display: block !important;
-          }
-        }
-        
-        /* Focus style for accessibility */
-        button:focus-visible, a:focus-visible {
-          outline: 2px solid #6366F1;
-          outline-offset: 2px;
-        }
-      `}</style>
-    </div>
-  );
+                 {/* Discussions Section */}
+                 {activeSection === 'discussions' && (
+                   <motion.div
+                     key="discussions-content"
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -20 }}
+                     transition={{ duration: 0.4, ease: "easeOut" }}
+                     className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                   >
+                     <div className="p-6" id="comments">
+                       <CommentSection
+                         comments={exam?.comments || []}
+                         onAddComment={handleAddComment}
+                         onVoteComment={async (commentId: string, type: VoteValue) => {
+                           // TODO: Implement comment voting logic
+                           return Promise.resolve();
+                         }}
+                         onEditComment={async (commentId: string, content: string) => {
+                           // TODO: Implement comment editing logic
+                           return Promise.resolve();
+                         }}
+                         onDeleteComment={async (commentId: string) => Promise.resolve()} // TODO: Implement delete comment logic
+                       />
+                     </div>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+             </div>
+             
+             {/* Right Sidebar - Only show on larger screens */}
+             {!fullscreenMode && (
+               <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
+                 <div 
+                   className="lg:sticky lg:top-28"
+                   style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
+                 >
+                   <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100">
+                     {/* Timer Section avec nouvelles informations */}
+                     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
+                       <div className="flex items-center justify-between mb-3">
+                         <h3 className="font-medium flex items-center text-sm">
+                           <Clock className="w-4 h-4 mr-1.5" />
+                           Chronomètre
+                         </h3>
+                         <div className="text-right">
+                           <div className="font-mono text-xl font-bold">{formatCurrentTime()}</div>
+                           <div className="text-xs text-white/70">Session</div>
+                         </div>
+                       </div>
+                       
+                       {/* Temps total */}
+                       <div className="mb-3 text-center">
+                         <div className="text-sm text-white/80">Temps total</div>
+                         <div className="font-mono text-lg font-semibold">{formatTotalTime()}</div>
+                       </div>
+                       
+                       <div className="flex gap-2 mb-2">
+                         <Button 
+                           onClick={toggleTimer} 
+                           className={`flex-1 h-9 text-sm ${
+                             timerActive 
+                               ? 'bg-red-500 hover:bg-red-600 border-red-400' 
+                               : 'bg-white text-indigo-700 hover:bg-indigo-50'
+                           }`}
+                         >
+                           {timerActive ? 'Pause' : 'Démarrer'}
+                         </Button>
+                         <Button 
+                           onClick={resetTimer} 
+                           variant="outline" 
+                           className="flex-1 h-9 text-sm bg-indigo-500/20 border-indigo-300/30 text-white hover:bg-indigo-500/30"
+                         >
+                           Reset
+                         </Button>
+                       </div>
+                       
+                       {/* Bouton de sauvegarde manuelle */}
+                       <Button
+                         onClick={saveTimeManually}
+                         variant="outline"
+                         size="sm"
+                         className="w-full h-8 text-xs bg-white/10 border-white/30 text-white hover:bg-white/20 flex items-center justify-center gap-1"
+                       >
+                         <Save className="w-3 h-3" />
+                         Sauvegarder le temps
+                       </Button>
+                       
+                       {/* Indicateur de dernière sauvegarde */}
+                       {timeStatus?.lastSessionStart && (
+                         <div className="mt-2 text-xs text-white/60 text-center">
+                           Dernière sauvegarde: {new Date(timeStatus.lastSessionStart).toLocaleTimeString()}
+                         </div>
+                       )}
+                       
+                       {/* Statut de chargement du temps */}
+                       {timeLoading && (
+                         <div className="mt-2 text-xs text-white/60 text-center">
+                           Synchronisation...
+                         </div>
+                       )}
+                       
+                       {/* Préférence de reprise */}
+                       {timeStatus && (
+                         <div className="mt-2">
+                           <div className="text-xs text-white/70 mb-1">Préférence de reprise:</div>
+                           <select
+                             value={timeStatus.resumePreference}
+                             onChange={(e) => setResumePreference(e.target.value as 'continue' | 'restart' | 'ask')}
+                             className="w-full text-xs bg-white/10 border-white/30 text-white rounded px-2 py-1"
+                           >
+                             <option value="ask" className="text-gray-900">Demander</option>
+                             <option value="continue" className="text-gray-900">Continuer</option>
+                             <option value="restart" className="text-gray-900">Recommencer</option>
+                           </select>
+                         </div>
+                       )}
+                     </div>
+                     
+                     {/* Historique des sessions */}
+                     {timeStatus && timeStatus.sessionsCount > 0 && (
+                       <div className="p-4">
+                         <h3 className="font-medium text-gray-800 text-sm mb-2 flex items-center">
+                           <Clock className="w-4 h-4 mr-1" />
+                           Historique des sessions
+                         </h3>
+                         <div className="space-y-2">
+                           {timeStatus.recentSessions.slice(0, 3).map((session) => (
+                             <div key={session.id} className="flex justify-between text-xs text-gray-600">
+                               <span>{formatTime(session.durationSeconds)}</span>
+                               <span>{new Date(session.endedAt).toLocaleDateString()}</span>
+                             </div>
+                           ))}
+                         </div>
+                         <button
+                           onClick={async () => {
+                             try {
+                               const history = await getSessionsHistory(1, 10);
+                               console.log('Session history:', history);
+                               // TODO: Show modal with full history
+                             } catch (err) {
+                               console.error('Failed to get session history:', err);
+                             }
+                           }}
+                           className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800"
+                         >
+                           Voir tout l'historique ({timeStatus.sessionsCount})
+                         </button>
+                       </div>
+                     )}
+                     
+                     {/* Difficulty Rating */}
+                     <div className="p-4">
+                       <div className="flex items-center gap-2 mb-2">
+                         <BarChart3 className="w-4 h-4 text-indigo-600" />
+                         <span className="font-medium text-gray-800 text-sm">Évaluer la difficulté</span>
+                       </div>
+                       <div className="flex gap-1">
+                         {[1, 2, 3, 4, 5].map(rating => (
+                           <button 
+                             key={rating}
+                             onClick={() => rateDifficulty(rating)}
+                             className={`flex-1 p-1.5 rounded text-sm transition-all ${
+                               difficultyRating === rating 
+                                 ? 'bg-indigo-600 text-white shadow-sm' 
+                                 : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                             }`}
+                           >
+                             {rating}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                     
+                     {/* Exam Statistics */}
+                     <div className="p-4">
+                       <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
+                       <div className="space-y-1.5">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Vues</span>
+                           <span className="font-medium">{exam.view_count}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Votes</span>
+                           <span className="font-medium">{exam.vote_count}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Commentaires</span>
+                           <span className="font-medium">{exam.comments?.length || 0}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Session actuelle</span>
+                           <span className="font-medium">{formatCurrentTime()}</span>
+                         </div>
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-600">Temps total</span>
+                           <span className="font-medium">{formatTotalTime()}</span>
+                         </div>
+                         {timeStatus && (
+                           <div className="flex justify-between text-sm">
+                             <span className="text-gray-600">Sessions</span>
+                             <span className="font-medium">{timeStatus.sessionsCount}</span>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                     
+                   </div>
+                 </div>
+               </div>
+             )}
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ );
 }

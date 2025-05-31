@@ -513,6 +513,7 @@
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
   -webkit-hyphens: auto !important;
+  -webkit-hyphens: auto !important;
   hyphens: auto !important;
 }
 
@@ -767,7 +768,6 @@
   .exercise-content {
     text-align: justify !important;
     margin-bottom: 1cm !important;
-    hyphens: auto !important;
   }
   
   /* Solution section */
@@ -1686,4 +1686,39 @@ body {
   body {
     padding-top: 60px; /* Version mobile si la navbar change de hauteur */
   }
+}
+
+/* In your CSS file */
+.filter-sidebar {
+  top: 100px;
+  height: fit-content;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  position: sticky;
+}
+
+/* Page transition animations */
+.page-transition {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sticky-sidebar-scrollable {
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+
+.mentionsList {
+  position: fixed;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  max-height: 12rem;
+  overflow-y: auto;
+  z-index: 50;
 }

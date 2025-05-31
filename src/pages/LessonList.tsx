@@ -1,6 +1,6 @@
 // src/pages/LessonList.tsx
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Loader2, Plus, Filter, BookOpen, ArrowUpDown, X } from 'lucide-react';
+import { Loader2, Plus, Filter, BookOpen, ArrowUpDown} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { getLessons, voteLesson, deleteLesson } from '../lib/api';
 import { Lesson, SortOption, VoteValue } from '../types';
@@ -446,17 +446,9 @@ export const LessonList = () => {
 
   // Memoize filter component to prevent unnecessary re-renders
   const FilterComponent = useMemo(() => (
-    <div 
-      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
-      style={{ 
-        position: "sticky",
-        top: "100px",
-        height: "fit-content",
-        maxHeight: "calc(100vh - 140px)",
-        overflowY: "auto",
-        padding: "4px"
-      }}
-    >
+     <div 
+  className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
+>
       <Filters 
         onFilterChange={handleFilterChange}
         initialClassLevels={filters.classLevels}

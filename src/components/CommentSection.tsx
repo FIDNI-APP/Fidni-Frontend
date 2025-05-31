@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { 
   MessageSquare, 
@@ -7,7 +7,6 @@ import {
   Trash2, 
   AtSign, 
   ChevronDown, 
-
   Send,
   AlertCircle,
   CornerDownRight
@@ -46,6 +45,11 @@ export function CommentSection({
   const [showButtons, setShowButtons] = useState(false);
   const [showReplyButtons, setShowReplyButtons] = useState(false);
 
+  // Refs for textareas
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   // Sorting state
   const [sortOption, setSortOption] = useState<'mostUpvoted' | 'recent' | 'oldest'>(() => {
     const savedSortOption = localStorage.getItem('sortOption');
@@ -79,9 +83,16 @@ export function CommentSection({
     setShowReplyButtons(true);
   };
 
-  const handleMention = (username: string, textareaRef: HTMLTextAreaElement) => {
-    const currentContent = textareaRef.value;
-    const cursorPos = textareaRef.selectionStart;
+  const handleMention = (username: string) => {
+    const textarea = 
+      commentTextareaRef.current || 
+      replyTextareaRef.current || 
+      editTextareaRef.current;
+    
+    if (!textarea) return;
+
+    const currentContent = textarea.value;
+    const cursorPos = textarea.selectionStart;
     const textBeforeCursor = currentContent.substring(0, cursorPos);
     const textAfterCursor = currentContent.substring(cursorPos);
 
@@ -99,7 +110,7 @@ export function CommentSection({
     }
 
     setShowMentions(false);
-    textareaRef.focus();
+    textarea.focus();
   };
 
   const handleTextareaChange = (
@@ -113,12 +124,15 @@ export function CommentSection({
     const matches = textBeforeCursor.match(/@(\w*)$/);
 
     if (matches) {
-      const rect = e.target.getBoundingClientRect();
       const position = getCaretCoordinates(e.target, selectionStart);
+      
+      // Calculate position relative to textarea
+      const top = position.top;
+      const left = position.left;
 
       setCursorPosition({
-        top: rect.top + position.top - e.target.scrollTop,
-        left: rect.left + position.left - e.target.scrollLeft,
+        top,
+        left
       });
 
       setMentionFilter(matches[1]);
@@ -153,6 +167,16 @@ export function CommentSection({
 
     setUsers(extractUsers(comments));
   }, [comments]);
+
+  // Close mentions on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowMentions(false);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,9 +254,8 @@ export function CommentSection({
       <div
         className="absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
         style={{
-          position: 'fixed',
-          top: cursorPosition.top + window.scrollY + 20,
-          left: cursorPosition.left + window.scrollX,
+          top: `${cursorPosition.top + 20}px`,
+          left: `${cursorPosition.left}px`,
         }}
       >
         {filteredUsers.length > 0 ? (
@@ -243,10 +266,7 @@ export function CommentSection({
               className="w-full px-4 py-2 text-left hover:bg-indigo-50 flex items-center gap-2"
               onMouseDown={(e) => {
                 e.preventDefault();
-                const textarea = document.querySelector('textarea:focus');
-                if (textarea) {
-                  handleMention(user.username, textarea as HTMLTextAreaElement);
-                }
+                handleMention(user.username);
               }}
             >
               <AtSign className="w-4 h-4 text-indigo-500" />
@@ -307,8 +327,9 @@ export function CommentSection({
       </div>
 
       {editingComment === comment.id ? (
-        <div className="mt-3">
+        <div className="mt-3 relative">
           <textarea
+            ref={editTextareaRef}
             value={editContent}
             onChange={(e) => handleTextareaChange(e, setEditContent)}
             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -384,13 +405,16 @@ export function CommentSection({
           <X className="w-4 h-4" />
         </button>
       </div>
-      <textarea
-        value={replyContent}
-        onChange={(e) => handleTextareaChange(e, setReplyContent)}
-        placeholder="Write your reply..."
-        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        rows={3}
-      />
+      <div className="relative">
+        <textarea
+          ref={replyTextareaRef}
+          value={replyContent}
+          onChange={(e) => handleTextareaChange(e, setReplyContent)}
+          placeholder="Write your reply..."
+          className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          rows={3}
+        />
+      </div>
       {showReplyButtons && (
         <div className="mt-2 flex justify-end gap-2">
           <Button
@@ -419,7 +443,7 @@ export function CommentSection({
   );
 
   const renderComment = (comment: Comment, depth = 0) => {
-    const maxDepth = 3;
+    const maxDepth = 10;
     const currentDepth = Math.min(depth, maxDepth);
     const paddingLeft = currentDepth * 16;
 
@@ -501,6 +525,7 @@ export function CommentSection({
         <form onSubmit={handleSubmitComment} className="mb-8">
           <div className="relative">
             <textarea
+              ref={commentTextareaRef}
               value={newComment}
               onChange={(e) => handleTextareaChange(e, setNewComment)}
               placeholder="Write a comment..."
@@ -599,7 +624,7 @@ export function CommentSection({
       </div>
 
       {/* Mentions List */}
-      {renderMentionsList()}
+      {showMentions && renderMentionsList()}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // src/pages/ExerciseList.tsx
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown, X } from 'lucide-react';
+import { Loader2, Plus, Filter, BookOpen, ArrowUpDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { getContents, voteExercise, deleteContent } from '../lib/api';
 import { Content, SortOption, Difficulty, VoteValue } from '../types';
@@ -186,7 +186,7 @@ export const ExerciseList = () => {
       classLevels: debouncedFilters.classLevels,
       subjects: debouncedFilters.subjects,
       chapters: debouncedFilters.chapters,
-      difficulties: debouncedFilters.difficulties,
+      difficulties: debouncedFilters.difficulties as Difficulty[],
       subfields: debouncedFilters.subfields,
       theorems: debouncedFilters.theorems,
       sort: debouncedSortBy,
@@ -377,7 +377,8 @@ export const ExerciseList = () => {
     if (isAuthenticated) {
       navigate('/new');
     } else {
-      openModal('/new');
+      openModal();
+      navigate('/new');
     }
   }, [isAuthenticated, navigate, openModal]);
 
@@ -428,15 +429,8 @@ export const ExerciseList = () => {
   // Memoize filter component to prevent unnecessary re-renders
   const FilterComponent = useMemo(() => (
     <div 
-      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-90 lg:w-72 flex-shrink-10 custom-scrollbar bg-white rounded-xl shadow-sm`}
-      style={{ 
-        top: "100px",
-        height: "fit-content",
-        maxHeight: "calc(100vh - 140px)",
-        overflowY: "auto",
-        position: "sticky",
-        }}
-    >
+  className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
+>
       <Filters 
         onFilterChange={handleFilterChange} 
         initialClassLevels={filters.classLevels}

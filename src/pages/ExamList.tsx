@@ -212,6 +212,14 @@ export const ExamList = () => {
     };
   }, [debouncedFilters, debouncedSortBy, page]);
   
+
+    const sortDropdownOptions = useMemo(() => [
+    { value: 'newest' as SortOption, label: 'Plus récents' },
+    { value: 'oldest' as SortOption, label: 'Plus anciens' },
+    { value: 'most_upvoted' as SortOption, label: 'Plus de votes' },
+    // { value: 'most_commented', label: 'Most commented' },
+    // { value: 'most_viewed', label: 'Most viewed' }
+  ], []);
   const getCacheKey = useCallback((params: any) => {
     return JSON.stringify(params);
   }, []);
@@ -365,13 +373,7 @@ export const ExamList = () => {
             <SortDropdown 
               value={sortBy} 
               onChange={handleSortChange}
-              options={[
-                { value: 'newest', label: 'Plus récents' },
-                { value: 'oldest', label: 'Plus anciens' },
-                { value: 'most_upvoted', label: 'Plus de votes' },
-                // { value: 'most_commented', label: 'Most commented' }, // Décommenter si API supporte
-                // { value: 'most_viewed', label: 'Most viewed' } // Décommenter si API supporte
-              ]}
+              options={sortDropdownOptions}
             />
           </div>
           <div className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full font-medium text-sm sm:text-base">
@@ -384,25 +386,12 @@ export const ExamList = () => {
   ), [isFilterOpen, sortBy, totalCount, handleSortChange]);
 
   const FilterComponent = useMemo(() => (
-    <div 
-      className={`${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar`} // Adjusted width
-      style={{ 
-        top: "100px", // Adjust if you have a sticky navbar
-        height: "fit-content",
-        maxHeight: "calc(100vh - 120px)", // Adjust based on navbar height and padding
-        overflowY: "auto",
-        position: "sticky",
-      }}
-    >
+        <div 
+  className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
+>
       <ExamFiltersPanel 
         onFilterChange={handleFilterChange} 
-        initialClassLevels={filters.classLevels}
-        initialSubjects={filters.subjects}
-        initialIsNationalExam={filters.isNationalExam} // Pass initial values
-        initialDateRange={filters.dateRange}          // Pass initial values
-        // Vous pourriez aussi passer l'objet 'filters' entier si ExamFiltersPanel est conçu pour le prendre
-        // et si cela simplifie la gestion des props initiales.
-        // Par exemple: initialFilters={filters}
+        initialFilters={filters}
       />
     </div>
   ), [isFilterOpen, handleFilterChange, filters]); // filters is now the main dependency
