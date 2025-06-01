@@ -67,40 +67,41 @@ export function ExamDetail() {
   
   // Time tracking avec le nouveau hook
   const {
-    timeStatus,
-    currentSessionTime,
-    isActive: timerActive,
+    currentTime,
+    isRunning,
+    sessions,
+    sessionStats,
     loading: timeLoading,
-    showResumeDialog,
-    startTracking,
-    stopTracking,
+    saving,
+    startTimer,
+    stopTimer,
+    resetTimer,
     saveSession,
-    setResumePreference,
-    getSessionsHistory,
-    handleResumeDialog,
-    loadTimeStatus,
+    deleteSession,
+    loadSessionHistory,
     formatTime,
+    calculateImprovement,
     formatCurrentTime,
-    formatTotalTime
+    getBestTime,
+    getLastTime,
+    getAverageTime,
+    getSessionCount,
+    getTimeComparison
   } = useAdvancedTimeTracker({
-    contentType: 'exam',
+    contentType: 'exercise',
     contentId: id || '',
-    autoSaveInterval: 30,
     enabled: !!id && !!exam && isAuthenticated
   });
 
   // Timer functions - adapted to new hook
   const toggleTimer = () => {
-    if (timerActive) {
+    if (isRunning) {
       stopTracking();
     } else {
       startTracking();
     }
   };
 
-  const resetTimer = () => {
-    startTracking(false); // Start new session (reset)
-  };
 
   const saveTimeManually = async () => {
     try {

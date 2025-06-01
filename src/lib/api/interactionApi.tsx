@@ -105,6 +105,54 @@ export const getTimeSpent = async (contentType: 'exercise' | 'exam', contentId: 
   }
 };
 
+// Session API functions
+export interface TimeSession {
+  id: string;
+  session_duration: number; // in seconds
+  started_at: string;
+  ended_at: string;
+  created_at: string;
+  session_type: string;
+  notes: string;
+}
+
+export const saveSession = async (
+  contentType: 'exercise' | 'exam', 
+  contentId: string, 
+  sessionType: string = 'study',
+  notes: string = ''
+) => {
+  try {
+    const endpoint = contentType === 'exercise' 
+      ? `/exercises/${contentId}/save_session/`
+      : `/exams/${contentId}/save_session/`;
+      
+    const response = await api.post(endpoint, { 
+      session_type: sessionType,
+      notes: notes
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error saving session:', error);
+    throw error;
+  }
+};
+
+export const getSessionHistory = async (contentType: 'exercise' | 'exam', contentId: string): Promise<TimeSession[]> => {
+  try {
+    const endpoint = contentType === 'exercise' 
+      ? `/exercises/${contentId}/session_history/`
+      : `/exams/${contentId}/session_history/`;
+      
+    const response = await api.get(endpoint);
+    return response.data.sessions;
+  } catch (error) {
+    console.error('Error getting session history:', error);
+    throw error;
+  }
+};
+
 // Fonction utilitaire pour sauvegarder automatiquement le temps
 export const autoSaveTimeSpent = async (
   contentType: 'exercise' | 'exam', 
