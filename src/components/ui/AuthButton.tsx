@@ -70,7 +70,7 @@ export const AuthButton = ({ isMobile = false }) => {
         </button>
         
         <Button 
-          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full py-3 shadow-md"
+          className=" flex px-30 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full py-10 shadow-md whitespace-nowrap"
           onClick={() => openModal()}
         >
           <User className="w-5 h-5 mr-2" />
@@ -89,15 +89,15 @@ export const AuthButton = ({ isMobile = false }) => {
         onClick={() => openModal()}
       >
         <LogIn className="w-4 h-4 mr-2" />
-        <span>Login</span>
+        <span>Se connecter</span>
       </Button>
       
       <button 
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full px-5 py-2 shadow-md hover:shadow-lg transition-all duration-200"
+        className=" flex px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full py-3 shadow-md whitespace-nowrap"
         onClick={() => openModal()}
       >
         <User className="w-4 h-4 mr-2 inline-block" />
-        <span>Sign Up</span>
+        <span>S'inscrire</span>
       </button>
     </>
   );
