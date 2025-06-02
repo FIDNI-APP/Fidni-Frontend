@@ -145,3 +145,35 @@ export const getNotebookActivity = async (username: string): Promise<any> => {
     throw error;
   }
 };
+
+// Annotations API
+export const saveLessonAnnotations = async (
+  notebookId: string,
+  lessonId: string,
+  annotations: any[]
+): Promise<void> => {
+  try {
+    await api.post(`/notebooks/${notebookId}/save_lesson_annotations/`, {
+      lesson_id: lessonId,
+      annotations
+    });
+  } catch (error) {
+    console.error('Error saving lesson annotations:', error);
+    throw error;
+  }
+};
+
+export const getLessonAnnotations = async (
+  notebookId: string,
+  lessonId: string
+): Promise<any[]> => {
+  try {
+    const response = await api.get(`/notebooks/${notebookId}/get_lesson_annotations/`, {
+      params: { lesson_id: lessonId }
+    });
+    return response.data.annotations || [];
+  } catch (error) {
+    console.error('Error fetching lesson annotations:', error);
+    throw error;
+  }
+};

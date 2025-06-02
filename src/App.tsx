@@ -30,6 +30,9 @@ import { ExamDetail } from './pages/ExamDetail';
 import { CreateExam } from './components/exam/CreateExam';
 import { EditExam } from './components/exam/EditExam';
 
+// Import de la page Learning Path
+import LearningPath from './pages/LearningPath';
+
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
   const { openModal, setInitialTab } = useAuthModal();
@@ -195,6 +198,13 @@ function App() {
                   <Route path="/edit-exam/:id" element={
                     <NavbarWrapper>
                       <EditExam />
+                    </NavbarWrapper>
+                  } />
+                  
+                  {/* Route pour le Learning Path */}
+                  <Route path="/learning-path" element={
+                    <NavbarWrapper>
+                      <LearningPath />
                     </NavbarWrapper>
                   } />
                 </Routes>

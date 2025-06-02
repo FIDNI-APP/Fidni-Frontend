@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X, Award } from 'lucide-react';
+import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X, Award, Route } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthButton } from '@/components/ui/AuthButton';
 import { NavDropdown } from './NavbarDropdown';
@@ -313,6 +313,11 @@ export const Navbar = () => {
                 <Award className="w-4 h-4 mr-2" />
                 Examens
               </NavLink>
+              
+              <NavLink to="/learning-path" isActive={isActive('/learning-path')}>
+                <Route className="w-4 h-4 mr-2" />
+                Learning Path
+              </NavLink>
             </div>
           </div>
 
@@ -414,6 +419,11 @@ export const Navbar = () => {
             >
               <Award className="w-5 h-5 mr-3" />
               Examens
+            </NavLinkMobile>
+            
+            <NavLinkMobile to="/learning-path" isActive={isActive('/learning-path')}>
+              <Route className="w-5 h-5 mr-3" />
+              Learning Path
             </NavLinkMobile>
           </div>
 

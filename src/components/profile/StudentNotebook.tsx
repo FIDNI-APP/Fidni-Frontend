@@ -410,25 +410,25 @@ const StudentNotebook: React.FC = () => {
             onCreateNotebook={() => setShowCreateForm(true)}
           />
         ) : (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col h-[calc(100vh-200px)]">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200/50 flex flex-col min-h-[calc(100vh-200px)]">
             {/* Notebook Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-4 py-3 flex justify-between items-center text-white rounded-t-xl">
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl shadow-lg">
               <div className="flex items-center">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleGoBackToNotebooks}
-                  className="mr-2 text-white hover:bg-white/20"
+                  className="mr-3 text-white hover:bg-white/20 rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Back
+                  <ChevronLeft className="w-5 h-5 mr-2" />
+                  Retour
                 </Button>
-                <h2 className="font-bold">
-                  {currentNotebook?.title || "Loading..."}
+                <h2 className="text-xl font-bold">
+                  {currentNotebook?.title || "Chargement..."}
                 </h2>
               </div>
               {currentNotebook && (
-                <div className="text-sm">
+                <div className="text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-lg">
                   {currentNotebook.subject.name} • {currentNotebook.class_level.name}
                 </div>
               )}
@@ -436,14 +436,14 @@ const StudentNotebook: React.FC = () => {
             
             {/* Notebook Content */}
             {sectionsLoading ? (
-              <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <Loader2 className="w-10 h-10 mx-auto text-indigo-600 animate-spin mb-4" />
-                  <p className="text-indigo-700">Loading notebook content...</p>
+              <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50">
+                <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl">
+                  <Loader2 className="w-12 h-12 mx-auto text-indigo-600 animate-spin mb-4" />
+                  <p className="text-indigo-700 font-medium text-lg">Chargement du contenu...</p>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-1">
                 {/* Sections sidebar */}
                 {currentNotebook && (
                   <NotebookSections 
@@ -457,7 +457,7 @@ const StudentNotebook: React.FC = () => {
                 {/* Main content area */}
                 <div 
                   ref={contentRef}
-                  className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 to-indigo-50 notebook-paper"
+                  className="flex-1 bg-gradient-to-br from-gray-50 to-indigo-50 notebook-paper"
                 >
                   {currentSectionId ? (
                     <SectionContent 
@@ -469,6 +469,7 @@ const StudentNotebook: React.FC = () => {
                       noteContent={noteContent}
                       setNoteContent={setNoteContent}
                       onSaveModularNotes={handleSaveModularNotes}
+                      notebookId={currentNotebookId || undefined}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full p-8">

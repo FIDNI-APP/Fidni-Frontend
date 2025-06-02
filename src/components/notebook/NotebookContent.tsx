@@ -321,88 +321,98 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
 
   return (
     <div className="notebook-content-wrapper" ref={containerRef}>
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-3 py-2 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
+        <div className="absolute -top-6 -right-2 flex items-center gap-2 bg-gradient-to-r from-white/95 to-gray-50/95 backdrop-blur-md rounded-lg p-2 shadow-lg border border-white/50 z-50 hover:shadow-xl transition-all duration-300">
+          {/* Color palette */}
+          <div className="flex gap-1">
+            {colorPalette.map(color => (
+              <button
+                key={color}
+                onClick={() => setActiveColor(color)}
+                className={`w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110 hover:shadow-md ${
+                  activeColor === color ? 'border-gray-800 scale-110 shadow-sm ring-1 ring-gray-300' : 'border-white shadow-sm'
+                }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+          
+          <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+          
+          {/* Tools */}
+          <div className="flex gap-1">
             <button
-              onClick={() => toggleTool('highlight')}
-              className={`p-1.5 rounded mr-1 ${activeTool === 'highlight' ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-gray-700 hover:bg-gray-100'}`}
-              title="Highlighter (Click again to cancel)"
+              onClick={() => setActiveTool(activeTool === 'highlight' ? null : 'highlight')}
+              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                activeTool === 'highlight' 
+                  ? 'bg-gradient-to-br from-yellow-200 to-yellow-300 text-yellow-800 shadow-sm ring-1 ring-yellow-400/50' 
+                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm'
+              }`}
+              title="Surligner"
             >
               <Highlighter className="w-4 h-4" />
             </button>
             <button
-              onClick={() => toggleTool('pen')}
-              className={`p-1.5 rounded mr-1 ${activeTool === 'pen' ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-gray-700 hover:bg-gray-100'}`}
-              title="Pen (Click again to cancel)"
+              onClick={() => setActiveTool(activeTool === 'pen' ? null : 'pen')}
+              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                activeTool === 'pen' 
+                  ? 'bg-gradient-to-br from-green-200 to-green-300 text-green-800 shadow-sm ring-1 ring-green-400/50' 
+                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm'
+              }`}
+              title="Dessiner"
             >
               <Pen className="w-4 h-4" />
             </button>
+            
             <button
-              onClick={() => toggleTool('note')}
-              className={`p-1.5 rounded mr-1 ${activeTool === 'note' ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-gray-700 hover:bg-gray-100'}`}
-              title="Add Note (Click again to cancel)"
-            >
-              <Type className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => toggleTool('eraser')}
-              className={`p-1.5 rounded mr-1 ${activeTool === 'eraser' ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-gray-700 hover:bg-gray-100'}`}
-              title="Eraser (Click again to cancel)"
+              onClick={() => setActiveTool(activeTool === 'eraser' ? null : 'eraser')}
+              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                activeTool === 'eraser' 
+                  ? 'bg-gradient-to-br from-red-200 to-red-300 text-red-800 shadow-sm ring-1 ring-red-400/50' 
+                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm'
+              }`}
+              title="Effacer"
             >
               <Eraser className="w-4 h-4" />
             </button>
-            
-            {activeTool && (
-              <button
-                onClick={() => setActiveTool(null)}
-                className="p-1.5 rounded text-gray-700 hover:bg-gray-100 ml-1"
-                title="Cancel Tool"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
           </div>
           
-          {(activeTool === 'highlight' || activeTool === 'pen' || activeTool === 'note') && (
-            <div className="flex space-x-1 ml-3 items-center">
-              <span className="text-xs text-gray-500 mr-1">Color:</span>
-              {colorPalette.map(color => (
-                <button
-                  key={color}
-                  onClick={() => setActiveColor(color)}
-                  className={`w-5 h-5 rounded-full border ${activeColor === color ? 'ring-2 ring-gray-400 scale-110' : 'hover:scale-110'} transition-transform`}
-                  style={{ backgroundColor: color }}
-                  title={`Use ${color} color`}
-                />
-              ))}
-            </div>
+          {annotations.length > 0 && (
+            <>
+              <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+              <button
+                onClick={() => setAnnotations([])}
+                className="p-2 rounded-lg hover:bg-gradient-to-br hover:from-red-50 hover:to-red-100 text-red-600 hover:text-red-700 transition-all duration-200 hover:scale-105 hover:shadow-sm"
+                title="Effacer toutes les annotations"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
           )}
           
-          {activeTool && (
-            <div className="ml-3 px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
-              {activeTool.charAt(0).toUpperCase() + activeTool.slice(1)} tool active
-            </div>
-          )}
-          
-          <div className="ml-auto flex items-center">
-            {isSaving && (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin text-gray-500" />
+          {/* Status indicator */}
+          <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+          <div className="flex items-center gap-1">
+            {isSaving ? (
+              <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span className="font-medium">Sauvegarde...</span>
+              </div>
+            ) : annotations.length > 0 ? (
+              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="font-medium">Sauvegardé</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                <div className="w-2 h-2 bg-gray-300 rounded-full" />
+                <span>Aucune annotation</span>
+              </div>
             )}
-            <button
-              onClick={handleClearAllAnnotations}
-              className={`p-1.5 rounded ${annotations.length > 0 ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-400 cursor-not-allowed'}`}
-              title="Clear All Annotations"
-              disabled={annotations.length === 0}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
         </div>
-      </div>
       
       <div 
-        className="relative min-h-[calc(100vh-150px)]"
+        className="relative min-h-[calc(100vh-80px)]"
         style={getNotebookStyle()}
       >
         <div className={`${className} h-full`} ref={contentRef}>

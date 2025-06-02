@@ -3,6 +3,8 @@ import { Save, X, BookMarked, Plus, Trash, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotebookContent from './NotebookContent';
 import { Section } from '@/types';
+import { saveLessonAnnotations, getLessonAnnotations } from '@/lib/api/notebookApi';
+import toast from 'react-hot-toast';
 
 
 interface ModularNote {
@@ -24,6 +26,7 @@ interface SectionContentProps {
   noteContent: string;
   setNoteContent: (content: string) => void;
   onSaveModularNotes?: (sectionId: string, notes: ModularNote[]) => Promise<void>;
+  notebookId?: string;
 }
 
 
@@ -36,7 +39,8 @@ const SectionContent: React.FC<SectionContentProps> = ({
   editingNotes,
   noteContent,
   setNoteContent,
-  onSaveModularNotes
+  onSaveModularNotes,
+  notebookId
 }) => {
   // State to force re-rendering of TipTapRenderer
   const [renderKey, setRenderKey] = useState<number>(0);
@@ -48,6 +52,10 @@ const SectionContent: React.FC<SectionContentProps> = ({
   
   // State pour les notes modulaires
   const [modularNotes, setModularNotes] = useState<ModularNote[]>([]);
+  
+  // State pour les annotations
+  const [annotations, setAnnotations] = useState<any[]>([]);
+  const [loadingAnnotations, setLoadingAnnotations] = useState(false);
   const [addingNote, setAddingNote] = useState<boolean>(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [newNoteContent, setNewNoteContent] = useState<string>('');
@@ -78,8 +86,11 @@ const SectionContent: React.FC<SectionContentProps> = ({
       
       // Charger les notes modulaires pour cette section
       loadModularNotes(section.id);
+      
+      // Charger les annotations
+      loadAnnotations();
     }
-  }, [section?.id]);
+  }, [section?.id, notebookId]);
 
   // Fonction pour charger les notes modulaires
   const loadModularNotes = (sectionId: string) => {
@@ -155,6 +166,37 @@ const SectionContent: React.FC<SectionContentProps> = ({
     setEditingNoteId(null);
     setNewNoteContent('');
   };
+  
+  // Fonctions pour gérer les annotations
+  const handleSaveAnnotations = async (annotationsData: any[]) => {
+    if (!section?.lesson?.id || !notebookId) {
+      console.warn('Missing lesson ID or notebook ID for saving annotations');
+      return;
+    }
+    
+    try {
+      await saveLessonAnnotations(notebookId, section.lesson.id, annotationsData);
+      setAnnotations(annotationsData);
+    } catch (error) {
+      console.error('Failed to save annotations:', error);
+      toast.error('Erreur lors de la sauvegarde des annotations');
+      throw error;
+    }
+  };
+  
+  const loadAnnotations = async () => {
+    if (!section?.lesson?.id || !notebookId) return;
+    
+    try {
+      setLoadingAnnotations(true);
+      const savedAnnotations = await getLessonAnnotations(notebookId, section.lesson.id);
+      setAnnotations(savedAnnotations);
+    } catch (error) {
+      console.error('Failed to load annotations:', error);
+    } finally {
+      setLoadingAnnotations(false);
+    }
+  };
 
   // Fonction pour supprimer une note
   const deleteNote = (noteId: string) => {
@@ -204,40 +246,22 @@ const SectionContent: React.FC<SectionContentProps> = ({
   }
 
   return (
-    <div className="p-8 overflow-y-auto flex-1 relative">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 bg-white inline-block px-1">
-            {section.lesson.title}
-          </h2>
-          <p className="text-sm text-gray-500 mt-1 bg-white inline-block px-1">
-            Chapitre: {section.chapter.name}
-          </p>
-        </div>
-        
-        {/* Floating Add Note Button */}
-        <div className="sticky top-4 z-50 flex justify-end mb-4">
-          <div className="flex items-center bg-white rounded-full shadow-md">
-            {addingNote && (
-              <span className="text-sm bg-yellow-50 text-yellow-800 px-3 py-1 rounded-l-full border-r border-gray-200">
-                Cliquez sur le contenu pour placer votre note
-              </span>
-            )}
-            <Button
-              size="sm"
-              onClick={() => setAddingNote(!addingNote)}
-              className={`rounded-full ${addingNote ? 'bg-amber-500' : 'bg-indigo-600'}`}
-            >
-              {addingNote ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4 mr-1" />}
-              {!addingNote && "Ajouter une note"}
-            </Button>
+    <div className="p-8 flex-1 relative bg-gradient-to-br from-gray-50 to-white">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-2xl shadow-xl mb-6">
+            <h2 className="text-3xl font-bold mb-2">
+              {section.lesson.title}
+            </h2>
+            <p className="text-indigo-100 text-lg">
+              Chapitre: {section.chapter.name}
+            </p>
           </div>
         </div>
-    
         {/* Lesson Content - Clickable for adding notes */}
         <div
           ref={contentContainerRef}
-          className={`prose max-w-none mb-8 bg-white/80 p-6 rounded-lg shadow-sm relative ${addingNote ? 'cursor-crosshair' : ''}`}
+          className={`prose max-w-none mb-8 bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/50 relative transition-all duration-300 hover:shadow-2xl ${addingNote ? 'cursor-crosshair ring-2 ring-indigo-300' : ''}`}
           onClick={addingNote ? addModularNote : undefined}
         >
           {/* Loading state - skeleton loader - Toujours visible jusqu'à ce que le contenu soit prêt */}
@@ -265,7 +289,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
               }}
             >
               <div 
-                className="flex flex-col items-start group"
+                className="flex flex-col items-start group transform transition-all duration-200 hover:scale-105"
                 draggable
                 onDragEnd={(e) => {
                   if (!contentContainerRef.current) return;
@@ -277,7 +301,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
               >
                 {/* Note Icon */}
                 <button
-                  className="w-8 h-8 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform duration-200"
+                  className="w-10 h-10 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all duration-200 ring-2 ring-white hover:shadow-xl"
                   style={{ backgroundColor: note.color }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -288,41 +312,42 @@ const SectionContent: React.FC<SectionContentProps> = ({
                     }
                   }}
                 >
-                  <MessageSquare className="w-4 h-4 text-white" />
+                  <MessageSquare className="w-5 h-5 text-white" />
                 </button>
                 
                 {/* Expanded Note Content - only shown when editing */}
                 {editingNoteId === note.id && (
-                  <div className="mt-2 absolute top-10 z-40 bg-white rounded-lg shadow-lg p-3 border-l-4 min-w-64" style={{ borderColor: note.color }}>
-                    <div className="flex justify-between mb-2">
-                      <div className="flex space-x-1">
-                        {noteColors.map(color => (
-                          <button
-                            key={color}
-                            className={`w-5 h-5 rounded-full ${newNoteColor === color ? 'ring-2 ring-offset-1 ring-gray-400' : ''}`}
-                            style={{ backgroundColor: color }}
-                            onClick={(e) => {
-                              e.stopPropagation(); 
-                              setNewNoteColor(color);
-                            }}
-                          />
-                        ))}
-                      </div>
+                  <div className="mt-2 absolute top-12 z-40 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl p-4 border-l-4 min-w-72 border border-gray-200/50" style={{ borderLeftColor: note.color }}>
+                    <div className="flex justify-between mb-3">
+                        <div className="flex space-x-2">
+                          {noteColors.map(color => (
+                            <button
+                              key={color}
+                              className={`w-6 h-6 rounded-full transition-all duration-200 hover:scale-110 ${newNoteColor === color ? 'ring-2 ring-offset-2 ring-gray-400 shadow-md' : 'hover:shadow-md'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={(e) => {
+                                e.stopPropagation(); 
+                                setNewNoteColor(color);
+                              }}
+                            />
+                          ))}
+                        </div>
                       <button
-                        className="text-red-500 hover:text-red-700"
+                        className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteNote(note.id);
                         }}
                       >
-                        <Trash className="w-4 h-4" />
+                        <Trash className="w-5 h-5" />
                       </button>
                     </div>
                     <textarea
                       value={newNoteContent}
                       onChange={(e) => setNewNoteContent(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded text-sm"
-                      rows={3}
+                      className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent transition-all duration-200 bg-gray-50/50"
+                      rows={4}
+                      placeholder="Tapez votre note ici..."
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div className="flex justify-end mt-2">
@@ -368,6 +393,8 @@ const SectionContent: React.FC<SectionContentProps> = ({
                   lineSpacing: 2
                 }}
                 onReady={handleContentReady}
+                onSaveAnnotations={handleSaveAnnotations}
+                initialAnnotations={annotations}
                 key={renderKey} // Force re-render when section changes
               />
            
