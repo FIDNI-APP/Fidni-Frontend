@@ -83,22 +83,22 @@ export const AuthButton = ({ isMobile = false }) => {
   // Desktop auth buttons
   return (
     <>
+      <button 
+        onClick={() => openModal()}
+        className="text-white hover:text-purple-200 hover:bg-white/10 rounded-full px-5"
+      >
+        <User className="w-4 h-4 mr-2 inline-block" />
+        <span>S'inscrire</span>
+      </button>
+
       <Button 
         variant="ghost" 
-        className="text-white hover:text-purple-200 hover:bg-white/10 rounded-full px-5"
+        className=" flex px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full py-3 shadow-md whitespace-nowrap"
         onClick={() => openModal()}
       >
         <LogIn className="w-4 h-4 mr-2" />
         <span>Se connecter</span>
       </Button>
-      
-      <button 
-        className=" flex px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full py-3 shadow-md whitespace-nowrap"
-        onClick={() => openModal()}
-      >
-        <User className="w-4 h-4 mr-2 inline-block" />
-        <span>S'inscrire</span>
-      </button>
     </>
   );
 };

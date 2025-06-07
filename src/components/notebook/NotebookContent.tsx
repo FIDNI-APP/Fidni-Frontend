@@ -1,14 +1,28 @@
-// NotebookContent.tsx
+// NotebookContent.tsx - Fixed spacing and better annotation toolbar
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import { Highlighter, Pen, Type, Eraser, Trash2, X, Loader2 } from 'lucide-react';
+import { 
+  Highlighter, 
+  Pen, 
+  Type, 
+  Eraser, 
+  Trash2, 
+  Settings,
+  Palette,
+  MousePointer,
+  Undo2,
+  Redo2,
+  Save
+} from 'lucide-react';
 
 interface NotebookTheme {
   bgColor: string;
   lineColor: string;
+  marginLineColor: string;
   isGrid: boolean;
   lineSpacing: number;
+  marginLeft: number;
 }
 
 interface NotebookContentProps {
@@ -28,32 +42,25 @@ type Annotation = {
   color: string;
   content?: string;
   path?: string;
+  strokeWidth?: number;
 };
 
 const notebookThemes = {
   ruled: {
-    bgColor: '#ffffff',
-    lineColor: '#e5e7eb',
+    bgColor: '#fefefe',
+    lineColor: '#e8e9f3',
+    marginLineColor: '#fca5a5',
     isGrid: false,
-    lineSpacing: 2
+    lineSpacing: 1.5,
+    marginLeft: 2.5
   },
-  grid: {
-    bgColor: '#ffffff',
-    lineColor: '#e5e7eb',
-    isGrid: true,
-    lineSpacing: 2
-  },
-  vintage: {
-    bgColor: '#fffbeb',
-    lineColor: '#e9e4d3',
+  college: {
+    bgColor: '#fffef7',
+    lineColor: '#c7d2fe',
+    marginLineColor: '#fca5a5',
     isGrid: false,
-    lineSpacing: 2
-  },
-  dark: {
-    bgColor: '#1f2937',
-    lineColor: '#374151',
-    isGrid: false,
-    lineSpacing: 2
+    lineSpacing: 1.8,
+    marginLeft: 3
   }
 };
 
@@ -68,21 +75,52 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
 }) => {
   const navigate = useNavigate();
   const [contentLoaded, setContentLoaded] = useState(false);
-  const [activeTool, setActiveTool] = useState<'highlight' | 'note' | 'pen' | 'eraser' | null>(null);
+  const [activeTool, setActiveTool] = useState<'select' | 'highlight' | 'note' | 'pen' | 'eraser' | null>('select');
   const [activeColor, setActiveColor] = useState('#ffeb3b');
+  const [strokeWidth, setStrokeWidth] = useState(2);
   const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const [startPoint, setStartPoint] = useState<{x: number, y: number} | null>(null);
   const [highlightSize, setHighlightSize] = useState<{width: number, height: number} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [history, setHistory] = useState<Annotation[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const annotationLayerRef = useRef<HTMLDivElement>(null);
   
-  const colorPalette = ['#ffeb3b', '#4caf50', '#2196f3', '#f44336', '#9c27b0'];
+  const colorPalette = [
+    { name: 'Yellow', value: '#ffeb3b' },
+    { name: 'Green', value: '#4caf50' },
+    { name: 'Blue', value: '#2196f3' },
+    { name: 'Red', value: '#f44336' },
+    { name: 'Purple', value: '#9c27b0' },
+    { name: 'Orange', value: '#ff9800' },
+    { name: 'Pink', value: '#e91e63' },
+    { name: 'Cyan', value: '#00bcd4' }
+  ];
+
+  const tools = [
+    { name: 'select', icon: MousePointer, label: 'Sélectionner' },
+    { name: 'highlight', icon: Highlighter, label: 'Surligner' },
+    { name: 'pen', icon: Pen, label: 'Dessiner' },
+    { name: 'note', icon: Type, label: 'Note' },
+    { name: 'eraser', icon: Eraser, label: 'Effacer' }
+  ];
   
+  // Save to history when annotations change
+  useEffect(() => {
+    if (annotations.length > 0 || historyIndex >= 0) {
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push([...annotations]);
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    }
+  }, [annotations]);
+
   // Save annotations whenever they change
   useEffect(() => {
     const save = async () => {
@@ -98,7 +136,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
       }
     };
     
-    const timer = setTimeout(save, 1000); // Debounce saves
+    const timer = setTimeout(save, 1000);
     return () => clearTimeout(timer);
   }, [annotations, onSaveAnnotations, initialAnnotations]);
 
@@ -117,14 +155,6 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
       heading.style.cursor = 'pointer';
       heading.classList.add('hover:text-indigo-600', 'transition-colors');
       
-      heading.addEventListener('mouseover', () => {
-        heading.classList.add('text-indigo-500');
-      });
-      
-      heading.addEventListener('mouseout', () => {
-        heading.classList.remove('text-indigo-500');
-      });
-      
       heading.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -133,16 +163,27 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     });
   };
   
-  const toggleTool = (tool: 'highlight' | 'note' | 'pen' | 'eraser') => {
-    if (activeTool === tool) {
-      setActiveTool(null);
-    } else {
-      setActiveTool(tool);
+  const selectTool = (tool: typeof activeTool) => {
+    setActiveTool(tool);
+    setShowColorPicker(false);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setAnnotations(history[historyIndex - 1] || []);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setAnnotations(history[historyIndex + 1]);
     }
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!activeTool) return;
+    if (activeTool === 'select' || !activeTool) return;
     
     const annotationLayer = annotationLayerRef.current;
     if (!annotationLayer) return;
@@ -162,21 +203,15 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
         id: `annotation-${Date.now()}`,
         type: 'note',
         color: activeColor,
-        position: {
-          x,
-          y,
-          width: 150,
-          height: 100,
-        },
+        position: { x, y, width: 200, height: 120 },
         content: '',
       };
-      
       setAnnotations(prev => [...prev, newAnnotation]);
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !activeTool) return;
+    if (!isDrawing || activeTool === 'select' || !activeTool) return;
     
     const annotationLayer = annotationLayerRef.current;
     if (!annotationLayer) return;
@@ -191,51 +226,11 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
       const width = Math.abs(x - startPoint.x);
       const height = Math.abs(y - startPoint.y);
       setHighlightSize({width, height});
-    } else if (activeTool === 'eraser') {
-      // Check for pen annotations to erase
-      if (currentPath) {
-        // Find pen annotations near the current position
-        const annotationsToDelete = annotations.filter(ann => {
-          if (ann.type === 'pen' && ann.path) {
-            // Simple distance check - could be improved
-            return ann.path.split('L').some(point => {
-              const [px, py] = point.trim().split(' ').map(Number);
-              return Math.abs(px - x) < 10 && Math.abs(py - y) < 10;
-            });
-          }
-          return false;
-        });
-        
-        if (annotationsToDelete.length > 0) {
-          setAnnotations(prev => 
-            prev.filter(ann => !annotationsToDelete.some(a => a.id === ann.id))
-          );
-        }
-      } else {
-        // Erase other annotations
-        const annotationsToDelete = annotations.filter(ann => {
-          if (ann.type === 'pen') return false;
-          
-          const { position } = ann;
-          return (
-            x >= position.x && 
-            x <= position.x + (position.width || 0) && 
-            y >= position.y && 
-            y <= position.y + (position.height || 0)
-          );
-        });
-        
-        if (annotationsToDelete.length > 0) {
-          setAnnotations(prev => 
-            prev.filter(ann => !annotationsToDelete.some(a => a.id === ann.id))
-          );
-        }
-      }
     }
   };
 
   const handleMouseUp = () => {
-    if (!isDrawing || !activeTool) return;
+    if (!isDrawing || activeTool === 'select') return;
     
     if (activeTool === 'pen' && currentPath) {
       const newAnnotation: Annotation = {
@@ -244,8 +239,8 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
         color: activeColor,
         position: { x: 0, y: 0 },
         path: currentPath,
+        strokeWidth: strokeWidth,
       };
-      
       setAnnotations(prev => [...prev, newAnnotation]);
       setCurrentPath('');
     } else if (activeTool === 'highlight' && startPoint && highlightSize) {
@@ -260,7 +255,6 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
           height: highlightSize.height,
         },
       };
-      
       setAnnotations(prev => [...prev, newAnnotation]);
       setHighlightSize(null);
     }
@@ -273,12 +267,6 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     setAnnotations(prev => prev.filter(ann => ann.id !== id));
   };
 
-  const handleClearAllAnnotations = () => {
-    if (window.confirm('Are you sure you want to clear all annotations?')) {
-      setAnnotations([]);
-    }
-  };
-
   const handleTextAnnotationChange = (id: string, content: string) => {
     setAnnotations(prev => 
       prev.map(ann => 
@@ -288,144 +276,234 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   };
   
   const getNotebookStyle = (): React.CSSProperties => {
-    if (notebookTheme.isGrid) {
-      return {
-        backgroundColor: notebookTheme.bgColor,
-        backgroundImage: `
-          linear-gradient(${notebookTheme.lineColor} 1px, transparent 1px),
-          linear-gradient(90deg, ${notebookTheme.lineColor} 1px, transparent 1px)
-        `,
-        backgroundSize: `${notebookTheme.lineSpacing}rem ${notebookTheme.lineSpacing}rem`,
-      };
-    } else {
-      return {
-        backgroundColor: notebookTheme.bgColor,
-        backgroundImage: `linear-gradient(${notebookTheme.lineColor} 1px, transparent 1px)`,
-        backgroundSize: `100% ${notebookTheme.lineSpacing}rem`,
-        backgroundPosition: '0 1rem',
-      };
-    }
+    return {
+      backgroundColor: notebookTheme.bgColor,
+      backgroundImage: `
+        repeating-linear-gradient(
+          transparent,
+          transparent ${notebookTheme.lineSpacing - 0.05}rem,
+          ${notebookTheme.lineColor} ${notebookTheme.lineSpacing - 0.05}rem,
+          ${notebookTheme.lineColor} ${notebookTheme.lineSpacing}rem
+        ),
+        linear-gradient(90deg, ${notebookTheme.marginLineColor} 1px, transparent 1px)
+      `,
+      backgroundSize: `100% ${notebookTheme.lineSpacing}rem, 100% 100%`,
+      backgroundPosition: `0 0.5rem, ${notebookTheme.marginLeft}rem 0`,
+      position: 'relative' as const,
+    };
   };
   
   const getCursorClass = () => {
-    if (!activeTool) return '';
+    if (!activeTool || activeTool === 'select') return '';
     
     switch(activeTool) {
-      case 'highlight': return 'cursor-highlighter';
-      case 'pen': return 'cursor-pen';
-      case 'note': return 'cursor-text-note';
-      case 'eraser': return 'cursor-eraser';
+      case 'highlight': return 'cursor-crosshair';
+      case 'pen': return 'cursor-crosshair';
+      case 'note': return 'cursor-text';
+      case 'eraser': return 'cursor-pointer';
       default: return '';
     }
   };
 
   return (
-    <div className="notebook-content-wrapper" ref={containerRef}>
-        <div className="absolute -top-6 -right-2 flex items-center gap-2 bg-gradient-to-r from-white/95 to-gray-50/95 backdrop-blur-md rounded-lg p-2 shadow-lg border border-white/50 z-50 hover:shadow-xl transition-all duration-300">
-          {/* Color palette */}
-          <div className="flex gap-1">
-            {colorPalette.map(color => (
+    <div className="notebook-content-wrapper relative bg-gray-50" ref={containerRef}>
+      {/* Professional Annotation Toolbar */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-2">
+          {/* Left: Tools */}
+          <div className="flex items-center space-x-1">
+            {tools.map((tool) => {
+              const Icon = tool.icon;
+              const isActive = activeTool === tool.name;
+              return (
+                <button
+                  key={tool.name}
+                  onClick={() => selectTool(tool.name as typeof activeTool)}
+                  className={`
+                    relative p-2 rounded-md transition-all duration-200 group
+                    ${isActive 
+                      ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }
+                  `}
+                  title={tool.label}
+                >
+                  <Icon className="w-4 h-4" />
+                  {isActive && (
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+            
+            <div className="h-4 w-px bg-gray-300 mx-2" />
+            
+            {/* Color Picker */}
+            <div className="relative">
               <button
-                key={color}
-                onClick={() => setActiveColor(color)}
-                className={`w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110 hover:shadow-md ${
-                  activeColor === color ? 'border-gray-800 scale-110 shadow-sm ring-1 ring-gray-300' : 'border-white shadow-sm'
-                }`}
-                style={{ backgroundColor: color }}
-              />
-            ))}
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+                title="Couleurs"
+              >
+                <div className="flex items-center space-x-1">
+                  <Palette className="w-4 h-4 text-gray-600" />
+                  <div 
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: activeColor }}
+                  />
+                </div>
+              </button>
+              
+              {showColorPicker && (
+                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-10">
+                  <div className="grid grid-cols-4 gap-2">
+                    {colorPalette.map((color) => (
+                      <button
+                        key={color.value}
+                        onClick={() => {
+                          setActiveColor(color.value);
+                          setShowColorPicker(false);
+                        }}
+                        className={`
+                          w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110
+                          ${activeColor === color.value ? 'border-gray-400 ring-2 ring-gray-200' : 'border-gray-200'}
+                        `}
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                  {activeTool === 'pen' && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <label className="block text-xs text-gray-600 mb-1">Épaisseur</label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="8"
+                        value={strokeWidth}
+                        onChange={(e) => setStrokeWidth(Number(e.target.value))}
+                        className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>1</span>
+                        <span>8</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           
-          <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-          
-          {/* Tools */}
-          <div className="flex gap-1">
+          {/* Center: Actions */}
+          <div className="flex items-center space-x-1">
             <button
-              onClick={() => setActiveTool(activeTool === 'highlight' ? null : 'highlight')}
-              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-                activeTool === 'highlight' 
-                  ? 'bg-gradient-to-br from-yellow-200 to-yellow-300 text-yellow-800 shadow-sm ring-1 ring-yellow-400/50' 
-                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm'
-              }`}
-              title="Surligner"
+              onClick={undo}
+              disabled={historyIndex <= 0}
+              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Annuler"
             >
-              <Highlighter className="w-4 h-4" />
+              <Undo2 className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setActiveTool(activeTool === 'pen' ? null : 'pen')}
-              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-                activeTool === 'pen' 
-                  ? 'bg-gradient-to-br from-green-200 to-green-300 text-green-800 shadow-sm ring-1 ring-green-400/50' 
-                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm'
-              }`}
-              title="Dessiner"
+              onClick={redo}
+              disabled={historyIndex >= history.length - 1}
+              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Refaire"
             >
-              <Pen className="w-4 h-4" />
+              <Redo2 className="w-4 h-4" />
             </button>
             
-            <button
-              onClick={() => setActiveTool(activeTool === 'eraser' ? null : 'eraser')}
-              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-                activeTool === 'eraser' 
-                  ? 'bg-gradient-to-br from-red-200 to-red-300 text-red-800 shadow-sm ring-1 ring-red-400/50' 
-                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm'
-              }`}
-              title="Effacer"
-            >
-              <Eraser className="w-4 h-4" />
-            </button>
+            {annotations.length > 0 && (
+              <>
+                <div className="h-4 w-px bg-gray-300 mx-2" />
+                <button
+                  onClick={() => setAnnotations([])}
+                  className="p-2 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                  title="Effacer tout"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
           
-          {annotations.length > 0 && (
-            <>
-              <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-              <button
-                onClick={() => setAnnotations([])}
-                className="p-2 rounded-lg hover:bg-gradient-to-br hover:from-red-50 hover:to-red-100 text-red-600 hover:text-red-700 transition-all duration-200 hover:scale-105 hover:shadow-sm"
-                title="Effacer toutes les annotations"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </>
-          )}
-          
-          {/* Status indicator */}
-          <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-          <div className="flex items-center gap-1">
+          {/* Right: Status */}
+          <div className="flex items-center space-x-2">
             {isSaving ? (
-              <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span className="font-medium">Sauvegarde...</span>
+              <div className="flex items-center space-x-2 text-sm text-blue-600">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                <span>Sauvegarde...</span>
               </div>
             ) : annotations.length > 0 ? (
-              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="font-medium">Sauvegardé</span>
+              <div className="flex items-center space-x-2 text-sm text-green-600">
+                <div className="w-2 h-2 bg-green-600 rounded-full" />
+                <span>Sauvegardé</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
-                <div className="w-2 h-2 bg-gray-300 rounded-full" />
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <div className="w-2 h-2 bg-gray-400 rounded-full" />
                 <span>Aucune annotation</span>
               </div>
             )}
+            
+            <button
+              onClick={() => onSaveAnnotations?.(annotations)}
+              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Sauvegarder"
+            >
+              <Save className="w-4 h-4" />
+            </button>
           </div>
         </div>
+      </div>
       
+      {/* Paper with enhanced notebook styling */}
       <div 
-        className="relative min-h-[calc(100vh-80px)]"
+        className="relative min-h-[calc(100vh-120px)]"
         style={getNotebookStyle()}
       >
-        <div className={`${className} h-full`} ref={contentRef}>
-          <TipTapRenderer
-            content={content}
-            onReady={handleContentReady}
-          />
+        {/* Paper texture overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.02] pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='53' cy='53' r='1'/%3E%3Ccircle cx='23' cy='45' r='1'/%3E%3Ccircle cx='37' cy='15' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        
+        {/* Holes for spiral binding */}
+        <div className="absolute left-3 top-0 bottom-0 flex flex-col justify-start pt-6 gap-8 pointer-events-none">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div 
+              key={i}
+              className="w-2 h-2 bg-white border border-gray-300 rounded-full shadow-inner"
+              style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)' }}
+            />
+          ))}
+        </div>
+
+        <div className={`${className} h-full relative z-10`} ref={contentRef}>
+          {/* Content with proper margins - FIXED SPACING */}
+          <div 
+            className="py-8 pr-8 min-h-full"
+            style={{ 
+              marginLeft: `${notebookTheme.marginLeft + 0.5}rem`, // Fixed: reduced gap
+              paddingLeft: '1rem', // Fixed: reduced padding
+              lineHeight: `${notebookTheme.lineSpacing}rem`
+            }}
+          >
+            <TipTapRenderer
+              content={content}
+              onReady={handleContentReady}
+            />
+          </div>
         </div>
         
+        {/* Annotation layer */}
         <div 
           ref={annotationLayerRef}
-          className={`absolute inset-0 z-10 pointer-events-none ${getCursorClass()}`}
-          style={{ pointerEvents: activeTool ? 'auto' : 'none' }}
+          className={`absolute inset-0 z-20 pointer-events-none ${getCursorClass()}`}
+          style={{ pointerEvents: activeTool && activeTool !== 'select' ? 'auto' : 'none' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -436,14 +514,13 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
               return (
                 <div
                   key={annotation.id}
-                  className="absolute"
+                  className="absolute opacity-60 hover:opacity-80 transition-opacity rounded-sm"
                   style={{
                     left: `${annotation.position.x}px`,
                     top: `${annotation.position.y}px`,
                     width: `${annotation.position.width}px`,
                     height: `${annotation.position.height}px`,
                     backgroundColor: annotation.color,
-                    opacity: 0.5,
                     pointerEvents: 'auto',
                     cursor: activeTool === 'eraser' ? 'pointer' : 'move',
                   }}
@@ -464,17 +541,18 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
                   }}
                   onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
                 >
-                  <textarea
-                    value={annotation.content || ''}
-                    onChange={(e) => handleTextAnnotationChange(annotation.id, e.target.value)}
-                    className="w-full h-full p-2 border border-gray-300 rounded resize-both"
-                    style={{ 
-                      backgroundColor: `${annotation.color}20`,
-                      color: annotation.color,
-                      fontFamily: 'Comic Sans MS, cursive, sans-serif',
-                    }}
-                    placeholder="Add your note here..."
-                  />
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 shadow-lg rounded-r-md">
+                    <textarea
+                      value={annotation.content || ''}
+                      onChange={(e) => handleTextAnnotationChange(annotation.id, e.target.value)}
+                      className="w-full h-full p-3 bg-transparent resize-both border-none outline-none text-sm"
+                      style={{ 
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        lineHeight: '1.4',
+                      }}
+                      placeholder="Tapez votre note ici..."
+                    />
+                  </div>
                 </div>
               );
             } else if (annotation.type === 'pen') {
@@ -487,7 +565,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
                   <path
                     d={annotation.path || ''}
                     stroke={annotation.color}
-                    strokeWidth="2"
+                    strokeWidth={annotation.strokeWidth || 2}
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -500,12 +578,13 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             return null;
           })}
           
+          {/* Live drawing preview */}
           {isDrawing && currentPath && (
             <svg className="absolute inset-0 w-full h-full pointer-events-none">
               <path
                 d={currentPath}
                 stroke={activeColor}
-                strokeWidth="2"
+                strokeWidth={strokeWidth}
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -513,39 +592,21 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             </svg>
           )}
           
+          {/* Live highlight preview */}
           {isDrawing && activeTool === 'highlight' && startPoint && highlightSize && (
             <div
-              className="absolute pointer-events-none"
+              className="absolute pointer-events-none opacity-50 rounded-sm"
               style={{
                 left: `${startPoint.x}px`,
                 top: `${startPoint.y}px`,
                 width: `${highlightSize.width}px`,
                 height: `${highlightSize.height}px`,
                 backgroundColor: activeColor,
-                opacity: 0.5,
               }}
             />
           )}
         </div>
       </div>
-      
-      <style jsx global>{`
-        .cursor-pen {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19l7-7 3 3-7 7-3-3z'%3E%3C/path%3E%3Cpath d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'%3E%3C/path%3E%3Cpath d='M2 2l7.586 7.586'%3E%3C/path%3E%3Cpath d='M11 11l2 2'%3E%3C/path%3E%3C/svg%3E") 0 24, auto;
-        }
-        
-        .cursor-highlighter {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23facc15' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l-6 6v3h9l3-3'%3E%3C/path%3E%3Cpath d='M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4'%3E%3C/path%3E%3C/svg%3E") 0 24, auto;
-        }
-        
-        .cursor-text-note {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='17' y1='10' x2='3' y2='10'%3E%3C/line%3E%3Cline x1='21' y1='6' x2='3' y2='6'%3E%3C/line%3E%3Cline x1='21' y1='14' x2='3' y2='14'%3E%3C/line%3E%3Cline x1='17' y1='18' x2='3' y2='18'%3E%3C/line%3E%3C/svg%3E") 0 24, auto;
-        }
-        
-        .cursor-eraser {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f43f5e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpath d='M15.5 2H18a2 2 0 0 1 2 2v2.5'%3E%3C/path%3E%3Cpath d='M22 13H18V9'%3E%3C/path%3E%3Cpath d='M22 2 11 13'%3E%3C/path%3E%3C/svg%3E") 0 24, auto;
-        }
-      `}</style>
     </div>
   );
 };

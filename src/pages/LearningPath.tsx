@@ -11,6 +11,17 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getClassLevels, getSubjects } from '@/lib/api';
+import { 
+  getUserLearningPaths, 
+  getMyLearningPaths, 
+  getLearningPath, 
+  startLearningPath, 
+  getLearningPathStats, 
+  startChapter, 
+  updateVideoProgress, 
+  startQuizAttempt, 
+  submitQuizAttempt 
+} from '@/lib/api/learningPathApi';
 import { ClassLevelModel, SubjectModel } from '@/types';
 import { LearningPathMap } from '@/components/learningPath/LearningPathMap';
 import { ChapterDetail } from '@/components/learningPath/ChapterDetail';
@@ -83,15 +94,53 @@ export default function LearningPath() {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const levels = await getClassLevels();
-      setClassLevels(levels);
       
-      // Auto-select user's class level if available
-      if (user?.profile?.class_level) {
-        const userLevel = levels.find(l => l.id === user?.profile?.class_level?.id);
-        if (userLevel) {
-          setSelectedLevel(userLevel);
-          await loadSubjectsForLevel(userLevel.id);
+      // Get user's active learning paths
+      const myPaths = await getMyLearningPaths();
+      
+      if (myPaths.length > 0) {
+        // User has active paths, show them
+        const pathsWithProgress = myPaths.map(p => ({
+          ...p.learning_path,
+          progress: p.progress_percentage,
+          totalChapters: p.learning_path.total_chapters,
+          completedChapters: p.completed_chapters_count,
+          chapters: p.learning_path.path_chapters.map((ch: any) => ({
+            id: ch.id,
+            number: ch.order.toString(),
+            title: ch.title,
+            description: ch.description,
+            videos: ch.videos.map((v: any) => ({
+              id: v.id,
+              title: v.title,
+              url: v.url,
+              duration: v.duration,
+              type: v.video_type,
+              completed: v.user_progress?.is_completed || false,
+              order: v.order
+            })),
+            quiz: ch.quiz ? ch.quiz.questions : [],
+            completed: ch.user_progress?.is_completed || false,
+            locked: ch.is_locked,
+            progress: ch.user_progress?.progress_percentage || 0,
+            estimatedTime: ch.estimated_time
+          })),
+          estimatedTime: `${p.learning_path.estimated_hours}h`
+        }));
+        
+        setSubjects(pathsWithProgress);
+        setActiveView('overview');
+      } else {
+        // No active paths, show available ones
+        const levels = await getClassLevels();
+        setClassLevels(levels);
+        
+        if (user?.profile?.class_level) {
+          const userLevel = levels.find(l => l.id === user?.profile?.class_level?.id);
+          if (userLevel) {
+            setSelectedLevel(userLevel);
+            await loadSubjectsForLevel(userLevel.id);
+          }
         }
       }
     } catch (error) {
@@ -103,16 +152,17 @@ export default function LearningPath() {
 
   const loadSubjectsForLevel = async (levelId: string) => {
     try {
-      const subjectsData = await getSubjects([levelId]);
+      // Get available learning paths for this level
+      const paths = await getUserLearningPaths(levelId);
       
-      // Transform subjects with mock progress data
-      const subjectsWithProgress: SubjectWithProgress[] = subjectsData.map(subject => ({
-        ...subject,
-        progress: Math.floor(Math.random() * 100),
-        totalChapters: 8,
-        completedChapters: Math.floor(Math.random() * 8),
-        chapters: generateMockChapters(subject.id),
-        estimatedTime: '12h 30m'
+      const subjectsWithProgress = paths.map((path: any) => ({
+        id: path.id,
+        name: path.subject.name,
+        progress: path.user_progress?.progress_percentage || 0,
+        totalChapters: path.total_chapters,
+        completedChapters: path.user_progress?.completed_chapters || 0,
+        chapters: [], // Will be loaded when path is selected
+        estimatedTime: `${path.estimated_hours}h`
       }));
       
       setSubjects(subjectsWithProgress);
@@ -239,28 +289,73 @@ export default function LearningPath() {
     setActiveView('overview');
   };
 
-  const handleSelectSubject = (subject: SubjectWithProgress) => {
-    setSelectedSubject(subject);
-    setActiveView('map');
-  };
-
-  const handleSelectChapter = (chapter: ChapterWithProgress) => {
-    if (!chapter.locked) {
-      setSelectedChapter(chapter);
-      setActiveView('chapter');
+  const handleSelectSubject = async (subject: SubjectWithProgress) => {
+    try {
+      // Start the learning path
+      await startLearningPath(subject.id);
+      
+      // Get full path details
+      const pathDetails = await getLearningPath(subject.id);
+      
+      const updatedSubject = {
+        ...subject,
+        chapters: pathDetails.path_chapters.map((ch: any) => ({
+          id: ch.id,
+          number: ch.order.toString(),
+          title: ch.title,
+          description: ch.description,
+          videos: ch.videos,
+          quiz: ch.quiz ? ch.quiz.questions : [],
+          completed: ch.user_progress?.is_completed || false,
+          locked: ch.is_locked,
+          progress: ch.user_progress?.progress_percentage || 0,
+          estimatedTime: ch.estimated_time
+        }))
+      };
+      
+      setSelectedSubject(updatedSubject);
+      setActiveView('map');
+    } catch (error) {
+      console.error('Failed to start learning path:', error);
     }
   };
 
-  const handleVideoComplete = (videoId: string) => {
-    // Update video completion status
-    // This would normally make an API call
-    console.log('Video completed:', videoId);
+  const handleSelectChapter = async (chapter: ChapterWithProgress) => {
+    if (!chapter.locked) {
+      try {
+        await startChapter(chapter.id);
+        setSelectedChapter(chapter);
+        setActiveView('chapter');
+      } catch (error) {
+        console.error('Failed to start chapter:', error);
+      }
+    }
   };
 
-  const handleQuizComplete = (score: number) => {
-    // Update chapter completion status
-    console.log('Quiz completed with score:', score);
+  const handleVideoComplete = async (videoId: string) => {
+    try {
+      await updateVideoProgress(videoId, 0, true);
+      // Refresh chapter data
+      if (selectedChapter) {
+        const updatedVideos = selectedChapter.videos.map(v =>
+          v.id === videoId ? { ...v, completed: true } : v
+        );
+        setSelectedChapter({ ...selectedChapter, videos: updatedVideos });
+      }
+    } catch (error) {
+      console.error('Failed to update video progress:', error);
+    }
+  };
+
+  const handleQuizComplete = async (score: number) => {
+    // Quiz completion is handled in QuizSection component
     setActiveView('map');
+    // Refresh learning path data
+    if (selectedSubject) {
+      const updatedPath = await getLearningPath(selectedSubject.id);
+      // Update the subject with new progress data
+      loadInitialData();
+    }
   };
 
   if (loading) {

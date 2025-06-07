@@ -1,5 +1,5 @@
 // src/components/learningPath/QuizSection.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle, 
@@ -11,25 +11,46 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Confetti from 'react-confetti';
+import { startQuizAttempt, submitQuizAttempt } from '@/lib/api/learningPathApi';
 
 interface QuizSectionProps {
   chapter: any;
-  quiz: any[];
   onComplete: (score: number) => void;
   onBack: () => void;
 }
 
 export const QuizSection: React.FC<QuizSectionProps> = ({
-  quiz,
+  chapter,
   onComplete,
   onBack
 }) => {
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [score, setScore] = useState(0);
-  const [answers, setAnswers] = useState<(number | null)[]>(new Array(quiz.length).fill(null));
+  const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    startQuiz();
+  }, []);
+
+  const startQuiz = async () => {
+    try {
+      setLoading(true);
+      const quizData = await startQuizAttempt(chapter.quiz.id);
+      setAttemptId(quizData.attempt_id);
+      setQuestions(quizData.questions);
+      setAnswers(new Array(quizData.questions.length).fill(null));
+    } catch (error) {
+      console.error('Failed to start quiz:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectAnswer = (answerIndex: number) => {
     if (!showFeedback) {
@@ -44,7 +65,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
     newAnswers[currentQuestion] = selectedAnswer;
     setAnswers(newAnswers);
 
-    if (selectedAnswer === quiz[currentQuestion].correctAnswer) {
+    if (selectedAnswer === questions[currentQuestion].correctAnswer) {
       setScore(score + 1);
     }
 
@@ -52,7 +73,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestion < quiz.length - 1) {
+    if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setSelectedAnswer(null);
       setShowFeedback(false);
@@ -69,16 +90,47 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
     }
   };
 
-  const handleCompleteQuiz = () => {
-    const finalScore = Math.round((score / quiz.length) * 100);
-    onComplete(finalScore);
+  const handleCompleteQuiz = async () => {
+    if (!attemptId) return;
+    
+    try {
+      const answersData = answers.map((answer, index) => ({
+        question_id: questions[index].id,
+        answer_index: answer || 0
+      }));
+      
+      const result = await submitQuizAttempt(
+        chapter.quiz.id,
+        attemptId,
+        answersData
+      );
+      
+      setScore(result.correct_answers);
+      setShowResults(true);
+      
+      const percentage = result.score;
+      onComplete(percentage);
+    } catch (error) {
+      console.error('Failed to submit quiz:', error);
+    }
   };
 
-  const isCorrect = selectedAnswer === quiz[currentQuestion].correctAnswer;
-  const progress = ((currentQuestion + 1) / quiz.length) * 100;
+  const isCorrect = selectedAnswer === questions[currentQuestion]?.correctAnswer;
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement du quiz...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showResults) {
-    const percentage = Math.round((score / quiz.length) * 100);
+    const percentage = Math.round((score / questions.length) * 100);
     const isPassed = percentage >= 70;
 
     return (
@@ -107,7 +159,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
           </h2>
           
           <p className="text-xl text-gray-600 mb-6">
-            Vous avez obtenu {score} sur {quiz.length} ({percentage}%)
+            Vous avez obtenu {score} sur {questions.length} ({percentage}%)
           </p>
 
           {isPassed ? (
@@ -126,7 +178,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
             <h3 className="font-semibold text-gray-900 mb-4">Récapitulatif des réponses</h3>
             <div className="grid grid-cols-5 gap-2">
               {answers.map((answer, index) => {
-                const isCorrect = answer === quiz[index].correctAnswer;
+                const isCorrect = answer === questions[index].correctAnswer;
                 return (
                   <div
                     key={index}
@@ -154,7 +206,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
                   setSelectedAnswer(null);
                   setShowFeedback(false);
                   setScore(0);
-                  setAnswers(new Array(quiz.length).fill(null));
+                  setAnswers(new Array(questions.length).fill(null));
                   setShowResults(false);
                 }}
               >
@@ -189,7 +241,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
           </Button>
           
           <div className="text-sm font-medium text-gray-600">
-            Question {currentQuestion + 1} sur {quiz.length}
+            Question {currentQuestion + 1} sur {questions.length}
           </div>
         </div>
 
@@ -213,14 +265,14 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
           className="bg-white rounded-xl shadow-lg p-8"
         >
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            {quiz[currentQuestion].question}
+            {questions[currentQuestion].question}
           </h2>
 
           {/* Options */}
           <div className="space-y-3 mb-8">
-            {quiz[currentQuestion].options.map((option: string, index: number) => {
+            {questions[currentQuestion].options.map((option: string, index: number) => {
               const isSelected = selectedAnswer === index;
-              const isCorrectOption = index === quiz[currentQuestion].correctAnswer;
+              const isCorrectOption = index === questions[currentQuestion].correctAnswer;
               const showCorrect = showFeedback && isCorrectOption;
               const showIncorrect = showFeedback && isSelected && !isCorrectOption;
 
@@ -278,7 +330,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
                       {isCorrect ? 'Bonne réponse !' : 'Pas tout à fait...'}
                     </p>
                     <p className="text-gray-700 mt-1">
-                      {quiz[currentQuestion].explanation}
+                      {questions[currentQuestion].explanation}
                     </p>
                   </div>
                 </div>
@@ -311,7 +363,7 @@ export const QuizSection: React.FC<QuizSectionProps> = ({
                 onClick={handleNextQuestion}
                 className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-500"
               >
-                {currentQuestion === quiz.length - 1 ? 'Voir les résultats' : 'Question suivante'}
+                {currentQuestion === questions.length - 1 ? 'Voir les résultats' : 'Question suivante'}
                 <ChevronRight className="w-4 h-4" />
               </Button>
             )}

@@ -41,6 +41,7 @@ import { ProgressSection } from '@/components/profile/ProgressSection';
 import { ContributionsSection } from '@/components/profile/ContributionsSection';
 import { EditProfileForm } from '@/components/profile/EditProfileForm';
 import { ProgressCharts } from '@/components/profile/ProgressCharts';
+import { TimeTrackingStats } from '@/components/profile/TimeTrackingStats';
 import StudentNotebook from '@/components/profile/StudentNotebook'; // Renommé pour correspondre au nom de fichier
 
 // QuickStatsBar: Style affiné pour une meilleure intégration
@@ -85,6 +86,7 @@ const TabNavigation: React.FC<{
     { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard, available: true },
     { id: 'progress', label: 'Progression', icon: Target, available: isOwner },
     { id: 'contributions', label: 'Contributions', icon: FileText, available: true },
+    { id: 'timetracking', label: 'Temps d\'étude', icon: TrendingUp, available: isOwner },
     { id: 'activity', label: 'Activité', icon: Activity, available: isOwner },
     { id: 'notebook', label: 'Cahier Digital', icon: BookOpen, available: isOwner }
   ].filter(tab => tab.available);
@@ -429,6 +431,13 @@ export function UserProfile() {
              </motion.div>
           )}
 
+          {activeTab === 'timetracking' && isOwner && (
+            <motion.div key="timetracking-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}}>
+              {/* Time Tracking Statistics - Dedicated Tab */}
+              <TimeTrackingStats username={username || ''} />
+            </motion.div>
+          )}
+
           {activeTab === 'activity' && isOwner && (
             <motion.div key="activity-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}}>
               {/* ViewHistorySection is assumed to be styled from previous turn */}
@@ -474,4 +483,5 @@ export function UserProfile() {
       `}</style>
     </div>
   );
+  
 }

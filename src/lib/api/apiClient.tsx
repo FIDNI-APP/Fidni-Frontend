@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create the API instance without setting the Authorization header initially
 export const api = axios.create({
-  baseURL: 'http://ec2-15-236-137-196.eu-west-3.compute.amazonaws.com/api',
+  baseURL: 'http://127.0.0.1:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },

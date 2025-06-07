@@ -382,21 +382,24 @@ const SectionContent: React.FC<SectionContentProps> = ({
             className={`h-full w-full transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
           >
             
-      <NotebookContent
-                content={section.lesson.content}
-                lessonId={section.lesson.id}
-                className="p-6 w-full h-full" // Add any classes you need
-                notebookTheme={{
-                  bgColor: '#ffffff',
-                  lineColor: '#e5e7eb',
-                  isGrid: false,
-                  lineSpacing: 2
-                }}
-                onReady={handleContentReady}
-                onSaveAnnotations={handleSaveAnnotations}
-                initialAnnotations={annotations}
-                key={renderKey} // Force re-render when section changes
-              />
+
+            <NotebookContent
+              content={section.lesson.content}
+              lessonId={section.lesson.id}
+              className="p-6 w-full h-full"
+              notebookTheme={{
+                bgColor: '#fefefe',
+                lineColor: '#e8e9f3',
+                marginLineColor: '#fca5a5',
+                isGrid: false,
+                lineSpacing: 1.5,
+                marginLeft: 3
+              }}
+              onReady={handleContentReady}
+              onSaveAnnotations={handleSaveAnnotations}
+              initialAnnotations={annotations}
+              key={renderKey}
+            />
            
           </div>
         </div>

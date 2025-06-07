@@ -7,6 +7,7 @@ import { EditExercise } from './pages/EditExercise';
 import { EditSolution } from './pages/EditSolution';
 import { ExerciseList } from './pages/ExerciseList';
 import { ExerciseDetail } from './pages/ExerciseDetail';
+import AdminPanel from './pages/AdminPanel';
 import { Navbar } from './components/navbar/Navbar';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
@@ -205,6 +206,13 @@ function App() {
                   <Route path="/learning-path" element={
                     <NavbarWrapper>
                       <LearningPath />
+                    </NavbarWrapper>
+                  } />
+                  
+                  {/* Route pour l'Admin Panel */}
+                  <Route path="/admin" element={
+                    <NavbarWrapper>
+                      <AdminPanel />
                     </NavbarWrapper>
                   } />
                 </Routes>

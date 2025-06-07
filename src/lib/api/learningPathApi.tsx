@@ -1,87 +1,92 @@
-// src/lib/api/learningPathApi.tsx
 import { api } from './apiClient';
 import { 
-  SubjectProgress, 
-  ChapterProgress, 
-  VideoContent,
-  LearningPathStats 
+  LearningPathStats,
 } from '@/types/learningPath';
 
-// Get user's learning path for a specific class level
-export const getUserLearningPath = async (
-  userId: string, 
-  classLevelId: string
-): Promise<SubjectProgress[]> => {
-  const response = await api.get(`/learning-paths/user/${userId}/class/${classLevelId}`);
+// Get user's learning paths for a specific class level
+export const getUserLearningPaths = async (classLevelId?: string): Promise<any[]> => {
+  const params = classLevelId ? { class_level: classLevelId } : {};
+  const response = await api.get('/learning-paths/', { params });
   return response.data;
 };
 
-// Get detailed chapter content
-export const getChapterContent = async (chapterId: string): Promise<ChapterProgress> => {
-  const response = await api.get(`/learning-paths/chapters/${chapterId}`);
+// Get specific learning path with chapters
+export const getLearningPath = async (pathId: string): Promise<any> => {
+  const response = await api.get(`/learning-paths/${pathId}/`);
   return response.data;
 };
 
-// Mark video as completed
-export const markVideoCompleted = async (
-  userId: string,
-  videoId: string
-): Promise<void> => {
-  await api.post(`/learning-paths/videos/${videoId}/complete`, { userId });
+// Start a learning path
+export const startLearningPath = async (pathId: string): Promise<any> => {
+  const response = await api.post(`/learning-paths/${pathId}/start_path/`);
+  return response.data;
 };
 
-// Submit quiz answer
-export const submitQuizAnswer = async (
-  userId: string,
-  quizId: string,
-  questionId: string,
-  answer: number
-): Promise<{
-  correct: boolean;
-  explanation: string;
-}> => {
-  const response = await api.post(`/learning-paths/quiz/${quizId}/answer`, {
-    userId,
-    questionId,
-    answer
+// Get user's active learning paths
+export const getMyLearningPaths = async (): Promise<any[]> => {
+  const response = await api.get('/learning-paths/my_paths/');
+  return response.data;
+};
+
+// Get learning path statistics
+export const getLearningPathStats = async (pathId: string): Promise<LearningPathStats> => {
+  const response = await api.get(`/learning-paths/${pathId}/stats/`);
+  return response.data;
+};
+
+// Start a chapter
+export const startChapter = async (chapterId: string): Promise<any> => {
+  const response = await api.post(`/path-chapters/${chapterId}/start/`);
+  return response.data;
+};
+
+// Complete a chapter
+export const completeChapter = async (chapterId: string): Promise<any> => {
+  const response = await api.post(`/path-chapters/${chapterId}/complete/`);
+  return response.data;
+};
+
+// Update video progress
+export const updateVideoProgress = async (
+  videoId: string,
+  watchedSeconds: number,
+  isCompleted?: boolean,
+  notes?: string
+): Promise<any> => {
+  const response = await api.post(`/videos/${videoId}/update_progress/`, {
+    watched_seconds: watchedSeconds,
+    is_completed: isCompleted,
+    notes
   });
   return response.data;
 };
 
-// Complete quiz and get results
-export const completeQuiz = async (
-  userId: string,
+// Start quiz attempt
+export const startQuizAttempt = async (quizId: string): Promise<{
+  attempt_id: string;
+  questions: any[];
+  time_limit_minutes: number | null;
+}> => {
+  const response = await api.post(`/chapter-quizzes/${quizId}/start_attempt/`);
+  return response.data;
+};
+
+// Submit quiz answers
+export const submitQuizAttempt = async (
   quizId: string,
-  answers: { questionId: string; answer: number }[]
+  attemptId: string,
+  answers: { question_id: string; answer_index: number }[]
 ): Promise<{
   score: number;
   passed: boolean;
-  correctAnswers: number;
-  totalQuestions: number;
+  correct_answers: number;
+  total_questions: number;
+  results?: any[];
+  xp_earned: number;
 }> => {
-  const response = await api.post(`/learning-paths/quiz/${quizId}/complete`, {
-    userId,
+  const response = await api.post(`/chapter-quizzes/${quizId}/submit_attempt/`, {
+    attempt_id: attemptId,
     answers
-  });
-  return response.data;
-};
-
-// Get user's learning path statistics
-export const getLearningPathStats = async (userId: string): Promise<LearningPathStats> => {
-  const response = await api.get(`/learning-paths/user/${userId}/stats`);
-  return response.data;
-};
-
-// Get recommended next content
-export const getRecommendedContent = async (
-  userId: string,
-  currentChapterId: string
-): Promise<{
-  nextChapter: ChapterProgress | null;
-  recommendedVideos: VideoContent[];
-}> => {
-  const response = await api.get(`/learning-paths/recommendations/${userId}`, {
-    params: { currentChapterId }
   });
   return response.data;
 };
