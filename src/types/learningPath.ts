@@ -1,29 +1,21 @@
-export interface Video {
+// src/types/learningPath.ts (mis à jour)
+export interface VideoContent {
   id: string;
   title: string;
-  duration: string; // "15m", "1h 30m"
-  completed: boolean;
-  type: 'lesson' | 'lab' | 'exam';
-}
-
-export interface Chapter {
-  id: string;
-  number: string; // "1.1", "2.3"
-  title: string;
+  url: string;
   duration: string;
-  videos: Video[];
+  type: 'lesson' | 'summary';
   completed: boolean;
-  locked?: boolean;
+  order: number;
+  notes?: string;
+  resources?: Resource[];
 }
 
-export interface Subject {
+export interface Resource {
   id: string;
   title: string;
-  description: string;
-  chapters: Chapter[];
-  progress: number; // 0-100
-  totalDuration: string;
-  nextUp?: Chapter;
+  type: 'pdf' | 'link' | 'exercise';
+  url: string;
 }
 
 export interface Quiz {
@@ -32,5 +24,55 @@ export interface Quiz {
   options: string[];
   correctAnswer: number;
   explanation: string;
-  userAnswer?: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  points: number;
+}
+
+export interface ChapterProgress {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  videos: VideoContent[];
+  quiz: Quiz[];
+  completed: boolean;
+  locked: boolean;
+  progress: number;
+  estimatedTime: string;
+  prerequisites?: string[];
+  achievements?: Achievement[];
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt?: string;
+}
+
+export interface SubjectProgress {
+  id: string;
+  name: string;
+  progress: number;
+  totalChapters: number;
+  completedChapters: number;
+  chapters: ChapterProgress[];
+  estimatedTime: string;
+  nextChapter?: ChapterProgress;
+  achievements: Achievement[];
+}
+
+export interface LearningPathStats {
+  totalProgress: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalTimeSpent: number;
+  completedChapters: number;
+  totalChapters: number;
+  quizAverage: number;
+  level: number;
+  experience: number;
+  nextLevelExperience: number;
 }

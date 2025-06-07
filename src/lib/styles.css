@@ -1792,3 +1792,141 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+
+/* Ajoutez ces styles dans src/lib/styles.css */
+
+/* Learning Path specific styles */
+.learning-path-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+/* Animated path drawing */
+@keyframes drawPath {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.learning-path-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawPath 2s ease-in-out forwards;
+}
+
+/* Node pulse animation */
+@keyframes nodePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.learning-node-active {
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+/* Progress ring animation */
+.progress-ring {
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.progress-ring-circle {
+  transition: stroke-dasharray 0.3s ease;
+}
+
+/* Video player controls */
+.video-controls {
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+}
+
+/* Quiz option hover effect */
+.quiz-option {
+  transition: all 0.2s ease;
+}
+
+.quiz-option:hover:not(:disabled) {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Achievement unlock animation */
+@keyframes achievementUnlock {
+  0% {
+    transform: scale(0) rotate(180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(360deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.achievement-unlock {
+  animation: achievementUnlock 0.5s ease-out forwards;
+}
+
+/* Confetti animation for quiz success */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  animation: confettiFall 3s ease-in-out forwards;
+}
+
+/* Milestone badge glow */
+@keyframes milestoneGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(251, 191, 36, 0.8);
+  }
+}
+
+.milestone-badge {
+  animation: milestoneGlow 2s ease-in-out infinite;
+}
+
+/* Chapter card hover effect */
+.chapter-card {
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.chapter-card:hover {
+  transform: translateY(-4px) rotateX(5deg);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .learning-path-map svg {
+    min-width: 600px;
+  }
+  
+  .quiz-section {
+    padding: 1rem;
+  }
+  
+  .video-player-container {
+    border-radius: 0;
+  }
+}

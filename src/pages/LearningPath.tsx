@@ -1,349 +1,551 @@
 // src/pages/LearningPath.tsx
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, Play, Clock, Users, Award, BookOpen, TrendingUp, 
-  Star, Zap, Target, Flame, Trophy, Lock, CheckCircle2,
-  BarChart3, Calendar, ChevronRight, Sparkles, Brain
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SubjectDashboard } from '@/components/learning/SubjectDashboard';
-import { CourseOutline } from '@/components/learning/CourseOutline';
-import { VideoPlayer } from '@/components/learning/VideoPlayer';
-import { QuizInterface } from '@/components/learning/QuizInterface';
-import { mockSubjects } from '@/data/learningData';
-import type { Subject, Video, Quiz } from '@/types/learningPath';
+import { 
+  BookOpen, 
+  Clock,
+  ChevronRight,
+  Award,
+  Map,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { getClassLevels, getSubjects } from '@/lib/api';
+import { ClassLevelModel, SubjectModel } from '@/types';
+import { LearningPathMap } from '@/components/learningPath/LearningPathMap';
+import { ChapterDetail } from '@/components/learningPath/ChapterDetail';
+import { VideoPlayer } from '@/components/learningPath/VideoPlayer';
+import { QuizSection } from '@/components/learningPath/QuizSection';
+import { ProgressTracker } from '@/components/learningPath/ProgressTracker';
 
-const LearningPath: React.FC = () => {
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
 
-  // Vue principale - liste des matières
-  if (!selectedSubject) {
+
+interface SubjectWithProgress extends SubjectModel {
+  progress: number;
+  totalChapters: number;
+  completedChapters: number;
+  chapters: ChapterWithProgress[];
+  estimatedTime: string;
+}
+
+interface ChapterWithProgress {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  videos: VideoContent[];
+  quiz: Quiz[];
+  completed: boolean;
+  locked: boolean;
+  progress: number;
+  estimatedTime: string;
+}
+
+interface VideoContent {
+  id: string;
+  title: string;
+  url: string;
+  duration: string;
+  type: 'lesson' | 'summary';
+  completed: boolean;
+  order: number;
+}
+
+interface Quiz {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+}
+
+export default function LearningPath() {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
+  const [selectedLevel, setSelectedLevel] = useState<ClassLevelModel | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<SubjectWithProgress | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<ChapterWithProgress | null>(null);
+  const [activeView, setActiveView] = useState<'overview' | 'map' | 'chapter' | 'video' | 'quiz'>('overview');
+  const [activeVideo, setActiveVideo] = useState<VideoContent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [classLevels, setClassLevels] = useState<ClassLevelModel[]>([]);
+  const [subjects, setSubjects] = useState<SubjectWithProgress[]>([]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    loadInitialData();
+  }, [isAuthenticated]);
+
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      const levels = await getClassLevels();
+      setClassLevels(levels);
+      
+      // Auto-select user's class level if available
+      if (user?.profile?.class_level) {
+        const userLevel = levels.find(l => l.id === user?.profile?.class_level?.id);
+        if (userLevel) {
+          setSelectedLevel(userLevel);
+          await loadSubjectsForLevel(userLevel.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load learning path data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSubjectsForLevel = async (levelId: string) => {
+    try {
+      const subjectsData = await getSubjects([levelId]);
+      
+      // Transform subjects with mock progress data
+      const subjectsWithProgress: SubjectWithProgress[] = subjectsData.map(subject => ({
+        ...subject,
+        progress: Math.floor(Math.random() * 100),
+        totalChapters: 8,
+        completedChapters: Math.floor(Math.random() * 8),
+        chapters: generateMockChapters(subject.id),
+        estimatedTime: '12h 30m'
+      }));
+      
+      setSubjects(subjectsWithProgress);
+    } catch (error) {
+      console.error('Failed to load subjects:', error);
+    }
+  };
+
+  const generateMockChapters = (subjectId: string): ChapterWithProgress[] => {
+    return Array.from({ length: 8 }, (_, index) => {
+      const chapterNumber = index + 1;
+      const isCompleted = index < 3;
+      const isLocked = index > 4;
+      
+      return {
+        id: `chapter-${subjectId}-${chapterNumber}`,
+        number: `${chapterNumber}`,
+        title: `Chapitre ${chapterNumber}: ${getChapterTitle(chapterNumber)}`,
+        description: `Découvrez les concepts fondamentaux du chapitre ${chapterNumber}`,
+        videos: generateMockVideos(chapterNumber),
+        quiz: generateMockQuiz(chapterNumber),
+        completed: isCompleted,
+        locked: isLocked,
+        progress: isCompleted ? 100 : index === 3 ? 60 : 0,
+        estimatedTime: '2h 15m'
+      };
+    });
+  };
+
+  const getChapterTitle = (chapter: number): string => {
+    const titles = [
+      'Introduction aux concepts de base',
+      'Théorèmes fondamentaux',
+      'Applications pratiques',
+      'Résolution de problèmes',
+      'Méthodes avancées',
+      'Cas particuliers',
+      'Exercices de synthèse',
+      'Révision générale'
+    ];
+    return titles[chapter - 1] || 'Concepts avancés';
+  };
+
+  const generateMockVideos = (chapterNumber: number): VideoContent[] => {
+    const videos: VideoContent[] = [];
+    
+    // 5 lesson videos
+    for (let i = 1; i <= 5; i++) {
+      videos.push({
+        id: `video-${chapterNumber}-${i}`,
+        title: `Leçon ${i}: ${getVideoTitle(i)}`,
+        url: 'https://example.com/video.mp4',
+        duration: `${10 + Math.floor(Math.random() * 10)}m`,
+        type: 'lesson',
+        completed: chapterNumber < 3 || (chapterNumber === 3 && i <= 3),
+        order: i
+      });
+    }
+    
+    // Summary video
+    videos.push({
+      id: `video-${chapterNumber}-summary`,
+      title: 'Résumé du chapitre',
+      url: 'https://example.com/summary.mp4',
+      duration: '8m',
+      type: 'summary',
+      completed: chapterNumber < 3,
+      order: 6
+    });
+    
+    return videos;
+  };
+
+  const getVideoTitle = (videoNumber: number): string => {
+    const titles = [
+      'Définitions et notations',
+      'Propriétés essentielles',
+      'Démonstrations',
+      'Exemples d application',
+      'Exercices guidés'
+    ];
+    return titles[videoNumber - 1] || 'Contenu supplémentaire';
+  };
+
+  const generateMockQuiz = (chapterNumber: number): Quiz[] => {
+    return [
+      {
+        id: `quiz-${chapterNumber}-1`,
+        question: `Quelle est la définition correcte du concept principal du chapitre ${chapterNumber}?`,
+        options: [
+          'Définition A: Lorem ipsum dolor sit amet',
+          'Définition B: Consectetur adipiscing elit',
+          'Définition C: Sed do eiusmod tempor incididunt',
+          'Définition D: Ut labore et dolore magna aliqua'
+        ],
+        correctAnswer: 2,
+        explanation: 'La définition C est correcte car elle inclut tous les éléments essentiels du concept, notamment la condition nécessaire et suffisante.'
+      },
+      {
+        id: `quiz-${chapterNumber}-2`,
+        question: 'Parmi les propriétés suivantes, laquelle est toujours vraie?',
+        options: [
+          'Propriété 1: Pour tout x > 0',
+          'Propriété 2: Il existe un x tel que',
+          'Propriété 3: Pour au moins un x',
+          'Propriété 4: Aucune des propositions'
+        ],
+        correctAnswer: 0,
+        explanation: 'La propriété 1 est universellement vraie car elle s\'applique à tous les éléments positifs de l\'ensemble.'
+      },
+      {
+        id: `quiz-${chapterNumber}-3`,
+        question: 'Calculez le résultat de l\'opération suivante: 2x + 3y où x=5 et y=2',
+        options: ['10', '13', '16', '19'],
+        correctAnswer: 2,
+        explanation: '2(5) + 3(2) = 10 + 6 = 16. Il faut bien respecter l\'ordre des opérations.'
+      }
+    ];
+  };
+
+  const handleSelectLevel = async (level: ClassLevelModel) => {
+    setSelectedLevel(level);
+    await loadSubjectsForLevel(level.id);
+    setActiveView('overview');
+  };
+
+  const handleSelectSubject = (subject: SubjectWithProgress) => {
+    setSelectedSubject(subject);
+    setActiveView('map');
+  };
+
+  const handleSelectChapter = (chapter: ChapterWithProgress) => {
+    if (!chapter.locked) {
+      setSelectedChapter(chapter);
+      setActiveView('chapter');
+    }
+  };
+
+  const handleVideoComplete = (videoId: string) => {
+    // Update video completion status
+    // This would normally make an API call
+    console.log('Video completed:', videoId);
+  };
+
+  const handleQuizComplete = (score: number) => {
+    // Update chapter completion status
+    console.log('Quiz completed with score:', score);
+    setActiveView('map');
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900">
-        {/* Animated Background */}
-        <div className="fixed inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement de votre parcours...</p>
         </div>
+      </div>
+    );
+  }
 
-        {/* Hero Section Enhanced */}
-        <div className="relative">
-          <div className="max-w-7xl mx-auto px-6 py-20">
-            <motion.div 
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-3">
+                <Map className="w-8 h-8" />
+                Parcours d'Apprentissage
+              </h1>
+              <p className="mt-2 text-indigo-200">
+                Progressez étape par étape vers la maîtrise
+              </p>
+            </div>
+            <ProgressTracker 
+              totalProgress={selectedSubject?.progress || 0}
+              streak={7}
+              level={user?.profile?.class_level?.name || ''}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Breadcrumb */}
+      {(selectedLevel || selectedSubject || selectedChapter) && (
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center gap-2 text-sm">
+              <button
+                onClick={() => {
+                  setSelectedLevel(null);
+                  setSelectedSubject(null);
+                  setSelectedChapter(null);
+                  setActiveView('overview');
+                }}
+                className="text-gray-600 hover:text-indigo-600"
+              >
+                Accueil
+              </button>
+              
+              {selectedLevel && (
+                <>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <button
+                    onClick={() => {
+                      setSelectedSubject(null);
+                      setSelectedChapter(null);
+                      setActiveView('overview');
+                    }}
+                    className="text-gray-600 hover:text-indigo-600"
+                  >
+                    {selectedLevel.name}
+                  </button>
+                </>
+              )}
+              
+              {selectedSubject && (
+                <>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <button
+                    onClick={() => {
+                      setSelectedChapter(null);
+                      setActiveView('map');
+                    }}
+                    className="text-gray-600 hover:text-indigo-600"
+                  >
+                    {selectedSubject.name}
+                  </button>
+                </>
+              )}
+              
+              {selectedChapter && (
+                <>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-900 font-medium">
+                    {selectedChapter.title}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <AnimatePresence mode="wait">
+          {/* Level Selection View */}
+          {activeView === 'overview' && !selectedLevel && (
+            <motion.div
+              key="level-selection"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-center"
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
             >
-              {/* Animated Badge */}
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-full border border-white/20 mb-8"
-              >
-                <Sparkles className="w-5 h-5 text-yellow-400 mr-2 animate-pulse" />
-                <span className="text-white font-medium">Nouveau parcours adaptatif disponible</span>
-              </motion.div>
-              
-              <h1 className="text-6xl md:text-7xl font-bold text-white mb-6 leading-tight">
-                Apprenez à votre
-                <span className="block mt-2">
-                  <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient-x">
-                    rythme
-                  </span>
-                </span>
-              </h1>
-              
-              <p className="text-xl text-slate-200 max-w-3xl mx-auto mb-12 leading-relaxed">
-                Des parcours personnalisés qui s'adaptent à votre niveau et vos objectifs. 
-                Progressez avec confiance grâce à notre approche pédagogique innovante.
-              </p>
+              <div className="text-center mb-12">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Choisissez votre niveau
+                </h2>
+                <p className="text-gray-600 max-w-2xl mx-auto">
+                  Sélectionnez votre niveau scolaire pour accéder à un parcours d'apprentissage
+                  personnalisé et adapté à vos besoins.
+                </p>
+              </div>
 
-              {/* User Stats Bar */}
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 }}
-                className="flex flex-wrap justify-center gap-6 mb-16"
-              >
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full">
-                  <Flame className="w-5 h-5 text-orange-400" />
-                  <span className="text-white font-medium">12 jours de suite</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                  <span className="text-white font-medium">Niveau 8</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full">
-                  <Target className="w-5 h-5 text-green-400" />
-                  <span className="text-white font-medium">85% d'objectifs atteints</span>
-                </div>
-              </motion.div>
-
-              {/* Interactive Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                {[
-                  { icon: Brain, value: "AI", label: "Apprentissage adaptatif", color: "from-purple-400 to-pink-400" },
-                  { icon: Clock, value: "24/7", label: "Disponible", color: "from-blue-400 to-cyan-400" },
-                  { icon: Users, value: "50k+", label: "Étudiants actifs", color: "from-green-400 to-emerald-400" },
-                  { icon: Star, value: "4.9", label: "Note moyenne", color: "from-yellow-400 to-orange-400" }
-                ].map((stat, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    whileHover={{ scale: 1.05, y: -5 }}
-                    className="relative group"
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {classLevels.map((level) => (
+                  <motion.button
+                    key={level.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleSelectLevel(level)}
+                    className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all border-2 border-transparent hover:border-indigo-200"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
-                    <div className="relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all">
-                      <stat.icon className={`w-8 h-8 mx-auto mb-3 bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} />
-                      <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                      <div className="text-sm text-slate-300">{stat.label}</div>
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Award className="w-10 h-10 text-indigo-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        {level.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm">
+                        Programme complet avec exercices et évaluations
+                      </p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Subject Selection View */}
+          {activeView === 'overview' && selectedLevel && (
+            <motion.div
+              key="subject-selection"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Choisissez votre matière
+                </h2>
+                <p className="text-gray-600">
+                  Sélectionnez la matière que vous souhaitez étudier
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {subjects.map((subject) => (
+                  <motion.div
+                    key={subject.id}
+                    whileHover={{ y: -5 }}
+                    className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                    onClick={() => handleSelectSubject(subject)}
+                  >
+                    <div className="h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <BookOpen className="w-8 h-8 text-indigo-600" />
+                        <span className="text-sm font-medium text-indigo-600">
+                          {subject.completedChapters}/{subject.totalChapters} chapitres
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        {subject.name}
+                      </h3>
+                      
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                        <Clock className="w-4 h-4" />
+                        <span>{subject.estimatedTime}</span>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Progression</span>
+                          <span className="font-medium text-indigo-600">
+                            {subject.progress}%
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${subject.progress}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
               </div>
             </motion.div>
-          </div>
-        </div>
+          )}
 
-        {/* Courses Section - Completely Redesigned */}
-        <div className="relative bg-gradient-to-b from-transparent to-slate-900/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-6 py-20">
-            <motion.div 
+          {/* Learning Path Map View */}
+          {activeView === 'map' && selectedSubject && (
+            <motion.div
+              key="learning-map"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="text-center mb-16"
+              exit={{ opacity: 0 }}
             >
-              <h2 className="text-4xl font-bold text-white mb-4">
-                Choisissez votre aventure d'apprentissage
-              </h2>
-              <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-                Chaque parcours est conçu pour vous faire progresser étape par étape
-              </p>
+              <LearningPathMap
+                subject={selectedSubject}
+                onSelectChapter={handleSelectChapter}
+                onBack={() => setActiveView('overview')}
+              />
             </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {mockSubjects.map((subject, index) => (
-                <motion.div
-                  key={subject.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.9 + index * 0.1 }}
-                  whileHover={{ y: -10 }}
-                  onClick={() => setSelectedSubject(subject)}
-                  className="group relative cursor-pointer"
-                >
-                  {/* Card Glow Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
-                  
-                  {/* Main Card */}
-                  <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm rounded-3xl overflow-hidden border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-                    {/* Progress Ring */}
-                    <div className="absolute top-6 right-6">
-                      <svg className="w-16 h-16 transform -rotate-90">
-                        <circle
-                          cx="32"
-                          cy="32"
-                          r="28"
-                          stroke="rgba(255,255,255,0.1)"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <circle
-                          cx="32"
-                          cy="32"
-                          r="28"
-                          stroke="url(#gradient)"
-                          strokeWidth="4"
-                          fill="none"
-                          strokeDasharray={`${2 * Math.PI * 28}`}
-                          strokeDashoffset={`${2 * Math.PI * 28 * (1 - subject.progress / 100)}`}
-                          className="transition-all duration-1000 ease-out"
-                        />
-                        <defs>
-                          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#3b82f6" />
-                            <stop offset="100%" stopColor="#8b5cf6" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">
-                        {subject.progress}%
-                      </div>
-                    </div>
+          )}
 
-                    <div className="p-8">
-                      {/* Icon with Animation */}
-                      <motion.div 
-                        whileHover={{ rotate: 360 }}
-                        transition={{ duration: 0.5 }}
-                        className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-2xl"
-                      >
-                        <BookOpen className="w-10 h-10 text-white" />
-                      </motion.div>
-
-                      <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:to-purple-400 group-hover:bg-clip-text transition-all">
-                        {subject.title}
-                      </h3>
-                      
-                      <p className="text-slate-400 mb-6 line-clamp-2">
-                        {subject.description}
-                      </p>
-                      
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2 mb-6">
-                        <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium">
-                          {subject.chapters.length} chapitres
-                        </span>
-                        <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs font-medium">
-                          {subject.totalDuration}
-                        </span>
-                        {subject.progress > 0 && (
-                          <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-medium">
-                            En cours
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Action Button */}
-                      <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium group-hover:shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300 flex items-center justify-center gap-2">
-                        {subject.progress > 0 ? 'Continuer' : 'Commencer'}
-                        <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Vue quiz
-  if (currentQuiz) {
-    return (
-      <QuizInterface 
-        quiz={currentQuiz}
-        onClose={() => setCurrentQuiz(null)}
-      />
-    );
-  }
-
-  // Vue lecteur vidéo
-  if (currentVideo) {
-    return (
-      <VideoPlayer
-        video={currentVideo}
-        subject={selectedSubject}
-        onClose={() => setCurrentVideo(null)}
-        onQuizStart={(quiz) => setCurrentQuiz(quiz)}
-      />
-    );
-  }
-
-  // Vue cours principal - Enhanced
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900/50 to-purple-900/50">
-      {/* Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('/grid.svg')] opacity-5"></div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-6 py-8">
-        {/* Enhanced Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-slate-400 mb-6">
-            <button
-              onClick={() => setSelectedSubject(null)}
-              className="hover:text-white transition-colors"
+          {/* Chapter Detail View */}
+          {activeView === 'chapter' && selectedChapter && (
+            <motion.div
+              key="chapter-detail"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              Parcours
-            </button>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-white font-medium">{selectedSubject.title}</span>
-          </nav>
-          
-          {/* Course Header Card */}
-          <div className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-700/50 p-8 shadow-2xl">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                    <BookOpen className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white">{selectedSubject.title}</h1>
-                    <p className="text-slate-400">{selectedSubject.description}</p>
-                  </div>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="mt-6">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-400">Progression globale</span>
-                    <span className="text-white font-medium">{selectedSubject.progress}%</span>
-                  </div>
-                  <div className="h-3 bg-slate-700/50 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${selectedSubject.progress}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full relative"
-                    >
-                      <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                    </motion.div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+              <ChapterDetail
+                chapter={selectedChapter}
+                onSelectVideo={(video) => {
+                  setActiveVideo(video);
+                  setActiveView('video');
+                }}
+                onStartQuiz={() => setActiveView('quiz')}
+                onBack={() => setActiveView('map')}
+              />
+            </motion.div>
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Enhanced Dashboard */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-1"
-          >
-            <SubjectDashboard 
-              subject={selectedSubject}
-              onVideoSelect={setCurrentVideo}
-            />
-          </motion.div>
-          
-          {/* Enhanced Course Outline */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="lg:col-span-3"
-          >
-            <CourseOutline 
-              subject={selectedSubject}
-              onVideoSelect={setCurrentVideo}
-            />
-          </motion.div>
-        </div>
+          {/* Video Player View */}
+          {activeView === 'video' && activeVideo && selectedChapter && (
+            <motion.div
+              key="video-player"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <VideoPlayer
+                video={activeVideo}
+                chapter={selectedChapter}
+                onComplete={handleVideoComplete}
+                onBack={() => setActiveView('chapter')}
+              />
+            </motion.div>
+          )}
+
+          {/* Quiz View */}
+          {activeView === 'quiz' && selectedChapter && (
+            <motion.div
+              key="quiz-section"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <QuizSection
+                chapter={selectedChapter}
+                quiz={selectedChapter.quiz}
+                onComplete={handleQuizComplete}
+                onBack={() => setActiveView('chapter')}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
-};
-
-export default LearningPath;
+}
