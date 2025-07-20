@@ -314,17 +314,11 @@ export const Navbar = () => {
                 Examens
               </NavLink>
               
-              <NavLink to="/learning-path" isActive={isActive('/learning-path')}>
+              <NavLink to="/learning-paths" isActive={isActive('/learning-path')}>
                 <Route className="w-4 h-4 mr-2" />
                 Learning Path
               </NavLink>
               
-              {user?.is_superuser && (
-                <NavLink to="/admin/learning-paths" isActive={isActive('/admin/learning-paths')}>
-                  <Shield className="w-4 h-4 mr-2" />
-                  Admin
-                </NavLink>
-              )}
             </div>
           </div>
 

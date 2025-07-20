@@ -1930,3 +1930,83 @@ body {
     border-radius: 0;
   }
 }
+
+
+/* Add to src/index.css or create a new CSS file */
+
+/* Learning Path Styles */
+.learning-path-line {
+  background: linear-gradient(
+    to bottom,
+    #e0e7ff 0%,
+    #c7d2fe 25%,
+    #a5b4fc 50%,
+    #818cf8 75%,
+    #6366f1 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.learning-path-line::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+  animation: flow 3s linear infinite;
+}
+
+@keyframes flow {
+  from {
+    top: -100%;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+/* Checkpoint animations */
+.checkpoint-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+}
+
+/* Video player controls */
+.video-controls {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.7) 50%,
+    transparent 100%
+  );
+}
+
+/* Quiz result animations */
+@keyframes confetti-fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
+
+.confetti {
+  animation: confetti-fall 3s linear;
+}

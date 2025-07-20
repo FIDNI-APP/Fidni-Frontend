@@ -329,3 +329,116 @@ export interface ExamFilters {
     end: string | null;
   } | null;
 }
+
+
+// src/types/learningPath.ts
+export interface LearningPath {
+  id: string;
+  subject: SubjectModel;
+  class_level: ClassLevelModel;
+  title: string;
+  description: string;
+  estimated_hours: number;
+  is_active: boolean;
+  path_chapters: PathChapter[];
+  total_chapters: number;
+  total_videos: number;
+  total_quiz_questions: number;
+  user_progress?: UserProgress;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PathChapter {
+  id: string;
+  learning_path: string;
+  chapter: ChapterModel;
+  title: string;
+  description: string;
+  estimated_minutes: number;
+  videos: Video[];
+  quiz?: ChapterQuiz;
+  user_progress?: UserChapterProgress;
+  is_locked: boolean;
+  total_videos: number;
+  total_quiz_questions: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Video {
+  id: string;
+  path_chapter: string;
+  title: string;
+  url: string;
+  thumbnail_url?: string;
+  video_type: 'lesson' | 'summary' | 'exercise' | 'tips';
+  duration_seconds: number;
+  duration: string;
+  resources: VideoResource[];
+  user_progress?: UserVideoProgress;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VideoResource {
+  id: string;
+  title: string;
+  resource_type: 'pdf' | 'link' | 'exercise' | 'summary';
+  url: string;
+}
+
+export interface ChapterQuiz {
+  id: string;
+  path_chapter: string;
+  title: string;
+  description?: string;
+  passing_score: number;
+  time_limit_minutes?: number;
+  shuffle_questions: boolean;
+  show_correct_answers: boolean;
+  questions: QuizQuestion[];
+  questions_count: number;
+  user_attempts?: QuizAttempt[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quiz?: string;
+  question_text: string;
+  options: string[];
+  correct_answer_index?: number;
+  explanation?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  points: number;
+}
+
+export interface QuizAttempt {
+  id: string;
+  started_at: string;
+  score: number;
+  passed: boolean;
+  time_spent_seconds: number;
+}
+
+export interface UserProgress {
+  started_at: string;
+  progress_percentage: number;
+  completed_chapters: number;
+}
+
+export interface UserChapterProgress {
+  is_completed: boolean;
+  progress_percentage: number;
+  quiz_score?: number;
+  started_at: string;
+}
+
+export interface UserVideoProgress {
+  watched_seconds: number;
+  is_completed: boolean;
+  progress_percentage: number;
+  notes?: string;
+}
