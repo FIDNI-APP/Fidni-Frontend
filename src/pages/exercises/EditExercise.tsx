@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ContentEditor from '../components/ContentEditor';
-import { getContentById, updateContent } from '../lib/api';
-import { Content, Difficulty } from '../types';
-import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft } from 'lucide-react';
+import ContentEditor from '@/components/exercise/ContentEditor';
+import { getContentById, updateContent } from '../../lib/api';
+import { Content, Difficulty } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import 'katex/dist/katex.min.css';
 
 export function EditExercise() {
@@ -92,7 +91,7 @@ export function EditExercise() {
             subject: exercise.subject?.id || '',
             difficulty: exercise.difficulty as Difficulty,
             chapters: exercise.chapters?.map(chapter => chapter.id) || [],
-            solution_content : exercise.solution?.content,
+            solution_content : exercise.solution?.content?.content,
             theorems : exercise.theorems?.map(theorem => theorem.id) || [],
             subfields : exercise.subfields?.map(subfield => subfield.id) || [],
 

@@ -3,11 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { NewContent } from './pages/NewContent';
-import { EditExercise } from './pages/EditExercise';
-import { EditSolution } from './pages/EditSolution';
-import { ExerciseList } from './pages/ExerciseList';
-import { ExerciseDetail } from './pages/ExerciseDetail';
-import AdminPanel from './pages/AdminPanel';
+import { EditExercise } from './pages/exercises/EditExercise';
+import { EditSolution } from './pages/exercises/EditSolution';
+import { ExerciseList } from './pages/exercises/ExerciseList';
+import { ExerciseDetail } from './pages/exercises/ExerciseDetail';
 import { Navbar } from './components/navbar/Navbar';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
@@ -15,8 +14,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/AuthController';
 import { UserProfile } from '@/pages/Profile';
 import OnboardingProfile from '@/pages/OnboardingProfile';
-import { LessonList } from './pages/LessonList';
-import { LessonDetail } from './pages/LessonDetail';
+import { LessonList } from './pages/lessons/LessonList';
+import { LessonDetail } from './pages/lessons/LessonDetail';
 import { CreateLesson } from './components/lesson/CreateLesson';
 import { EditLesson } from './components/lesson/EditLesson';
 import { FilterProvider } from './components/navbar/FilterContext';
@@ -26,13 +25,10 @@ import LegalRedirector from './components/LegalRedirector';
 import Footer from './components/Footer';
 
 // Import des pages d'examens
-import { ExamList } from './pages/ExamList';
-import { ExamDetail } from './pages/ExamDetail';
+import { ExamList } from './pages/exams/ExamList';
+import { ExamDetail } from './pages/exams/ExamDetail';
 import { CreateExam } from './components/exam/CreateExam';
 import { EditExam } from './components/exam/EditExam';
-
-// Import de la page Learning Path
-import LearningPath from './pages/LearningPath';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -199,20 +195,6 @@ function App() {
                   <Route path="/edit-exam/:id" element={
                     <NavbarWrapper>
                       <EditExam />
-                    </NavbarWrapper>
-                  } />
-                  
-                  {/* Route pour le Learning Path */}
-                  <Route path="/learning-path" element={
-                    <NavbarWrapper>
-                      <LearningPath />
-                    </NavbarWrapper>
-                  } />
-                  
-                  {/* Route pour l'Admin Panel */}
-                  <Route path="/admin" element={
-                    <NavbarWrapper>
-                      <AdminPanel />
                     </NavbarWrapper>
                   } />
                 </Routes>

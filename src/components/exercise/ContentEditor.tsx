@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems } from '@/lib/api';
 import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty, Subfield, Theorem } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import DualPaneEditor from './editor/DualPaneEditor';
+import DualPaneEditor from '@/components/editor/DualPaneEditor';
 import ContentPreview from './ContentPreview';
 import { 
   BookOpen, 
@@ -462,6 +462,7 @@ const SectionFrame: React.FC<SectionFrameProps> = ({
               <button
                 onClick={handleCancel}
                 className="p-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200"
+                title="Go back"
               >
                 <ChevronLeft className="w-5 h-5 text-gray-600" />
               </button>

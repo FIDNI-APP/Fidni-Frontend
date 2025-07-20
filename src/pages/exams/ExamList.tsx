@@ -1,15 +1,15 @@
 // src/pages/ExamList.tsx (or wherever your ExamList component is)
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown, X, Award, Calendar } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { Button } from '../../components/ui/button';
 import { getExams, voteExam, deleteExam } from '@/lib/api/examApi';
-import { Exam, Difficulty, VoteValue, ExamFilters as ExamFiltersType } from '../types'; // Renamed ExamFilters to ExamFiltersType to avoid conflict
+import { Exam, Difficulty, VoteValue, ExamFilters as ExamFiltersType } from '../../types'; // Renamed ExamFilters to ExamFiltersType to avoid conflict
 import { ExamFiltersPanel } from '@/components/exam/ExamFilters'; // Corrected import
-import { SortDropdown } from '../components/SortDropdown';
+import { SortDropdown } from '../../components/SortDropdown';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
-import { useFilters as useNavbarFilters } from '../components/navbar/FilterContext'; // Renamed useFilters to avoid conflict
+import { useFilters as useNavbarFilters } from '../../components/navbar/FilterContext'; // Renamed useFilters to avoid conflict
 import { ExamCard } from '@/components/exam/ExamCard';
 // DateRangePicker is now used internally by ExamFiltersPanel, so it might not be needed here directly unless used elsewhere.
 // import { DateRangePicker } from '@/components/exam/DateRangePicker';

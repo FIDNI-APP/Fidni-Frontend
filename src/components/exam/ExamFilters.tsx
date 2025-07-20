@@ -350,6 +350,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
                  value={selectedValue?.start || ''} 
                  onChange={(e) => onToggle({ start: e.target.value || null, end: selectedValue?.end || null })}
                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                 title='Sélectionnez l année de début de la période d examen'
                >
                  <option value="">Toutes</option>
                  {Array.from({ length: new Date().getFullYear() - 2008 + 1 }, (_, i) => 2008 + i).reverse().map(year => (
@@ -363,6 +364,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
                  value={selectedValue?.end || ''} 
                  onChange={(e) => onToggle({ start: selectedValue?.start || null, end: e.target.value || null })}
                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                 title='Sélectionnez l année de fin de la période d examen'
                >
                  <option value="">Toutes</option>
                  {Array.from({ length: new Date().getFullYear() - 2008 + 1 }, (_, i) => 2008 + i).reverse().map(year => (

@@ -3,6 +3,8 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User } from '@/types';
 import { getCurrentUser, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/lib/api';
 
+
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;

@@ -1006,8 +1006,10 @@ export function ExerciseDetail() {
                  </div>
                  <button
                    onClick={() => setShowSessionHistory(false)}
+                   title='Fermer l’historique des sessions'
                    className="text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 p-2 rounded-lg"
                  >
+
                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                    </svg>

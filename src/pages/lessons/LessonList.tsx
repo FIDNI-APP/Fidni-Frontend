@@ -1,16 +1,16 @@
 // src/pages/LessonList.tsx
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Loader2, Plus, Filter, BookOpen, ArrowUpDown} from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { getLessons, voteLesson, deleteLesson } from '../lib/api';
-import { Lesson, SortOption, VoteValue } from '../types';
-import { Filters } from '../components/Filters';
-import { SortDropdown } from '../components/SortDropdown';
+import { Button } from '../../components/ui/button';
+import { getLessons, voteLesson, deleteLesson } from '../../lib/api';
+import { Lesson, SortOption, VoteValue } from '../../types';
+import { Filters } from '../../components/Filters';
+import { SortDropdown } from '../../components/SortDropdown';
 import { ContentListItem } from '../components/ContentListItem';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
-import { useFilters } from '../components/navbar/FilterContext'; // AJOUT IMPORTANT
+import { useFilters } from '../../components/navbar/FilterContext'; // AJOUT IMPORTANT
 
 // Custom hook for debouncing values
 function useDebounce<T>(value: T, delay: number): T {

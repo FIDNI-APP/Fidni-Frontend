@@ -17,9 +17,9 @@ import {
   Share2,
 } from 'lucide-react';
 import { Content, Difficulty, VoteValue } from '@/types';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { VoteButtons } from './VoteButtons';
+import { VoteButtons } from '@/components/VoteButtons';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { useAuthModal } from '@/components/AuthController';
 import { saveExercise, unsaveExercise } from '@/lib/api';
@@ -80,7 +80,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     // If user is not authenticated, prompt login instead of navigating
     if (!isAuthenticated) {
       e.preventDefault();
-      openModal(`/exercises/${content.id}`);
+      openModal();
       return;
     }
     

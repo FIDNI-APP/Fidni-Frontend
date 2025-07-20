@@ -1,5 +1,3 @@
-import { C } from "node_modules/framer-motion/dist/types.d-DSjX-LJB";
-
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type SortOption = 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
 export type VoteValue = 1 | -1 | 0;
@@ -82,6 +80,7 @@ export interface Content {
 // src/types/index.ts
 
 // Update the User interface
+// src/types/index.ts - Update User interface
 export interface User {
   id: string;
   username: string;
@@ -90,7 +89,7 @@ export interface User {
   profile: UserProfile;
   is_self?: boolean;
   isAuthenticated: boolean;
-
+  is_superuser: boolean; // Add this field
 }
 
 // Create or update the UserProfile interface
