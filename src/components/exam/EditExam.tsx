@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ContentEditor from '../ContentEditor';
+import ContentEditor from '@/components/exercise/ContentEditor';
 import { Award, Calendar, Loader2 } from 'lucide-react';
 import { getExamById, updateExam } from '@/lib/api/examApi';
 import { Difficulty } from '@/types';

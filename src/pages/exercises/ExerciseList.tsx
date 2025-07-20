@@ -6,7 +6,7 @@ import { getContents, voteExercise, deleteContent } from '../../lib/api';
 import { Content, SortOption, Difficulty, VoteValue } from '../../types';
 import { Filters } from '../../components/Filters';
 import { SortDropdown } from '../../components/SortDropdown';
-import { ContentList } from '../components/ContentList';
+import { ContentList } from '@/components/exercise/ContentList';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';

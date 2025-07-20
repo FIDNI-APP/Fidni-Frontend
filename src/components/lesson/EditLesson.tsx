@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ContentEditor from '@/components/ContentEditor';
+import ContentEditor from '@/components/exercise/ContentEditor';
 import { getLessonById, updateLesson } from '@/lib/api';
 import { Lesson } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';

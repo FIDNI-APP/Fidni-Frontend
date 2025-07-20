@@ -6,7 +6,7 @@ import { getLessons, voteLesson, deleteLesson } from '../../lib/api';
 import { Lesson, SortOption, VoteValue } from '../../types';
 import { Filters } from '../../components/Filters';
 import { SortDropdown } from '../../components/SortDropdown';
-import { ContentListItem } from '../components/ContentListItem';
+import { ContentListItem } from '@/components/exercise/ContentListItem';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ContentEditor from '@/components/ContentEditor';
+import ContentEditor from '@/components/exercise/ContentEditor';
 import { createLesson } from '@/lib/api';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
