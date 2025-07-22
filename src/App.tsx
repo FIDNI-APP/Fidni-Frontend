@@ -32,8 +32,8 @@ import { EditExam } from './components/exam/EditExam';
 
 import { LearningPathList } from './pages/learningpaths/LearningPathList';
 import { LearningPathDetail } from './pages/learningpaths/LearningPathDetail';
-import { CreateLearningPath } from './pages/learningPaths/CreateLearningPath';
-import { CreatePathChapter } from './pages/learningPaths/CreatePathChapter';
+import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
+import { CreatePathChapter } from './pages/learningpaths/CreatePathChapter';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -215,6 +215,11 @@ function App() {
                     </NavbarWrapper>
                   } />
                   <Route path="/learning-paths/create" element={
+                  <NavbarWrapper>
+                    <CreateLearningPath />
+                  </NavbarWrapper>
+                } />
+                <Route path="/learning-paths/:id/edit" element={
                   <NavbarWrapper>
                     <CreateLearningPath />
                   </NavbarWrapper>

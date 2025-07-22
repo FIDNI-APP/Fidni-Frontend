@@ -344,6 +344,7 @@ export interface LearningPath {
   total_chapters: number;
   total_videos: number;
   total_quiz_questions: number;
+  total_enrolled?: number; // Add this for tracking enrollments
   user_progress?: UserProgress;
   created_at: string;
   updated_at: string;

@@ -21,7 +21,7 @@ import { PathChapter } from '@/types/index';
 import { updateVideoProgress } from '@/lib/api/learningpathApi';
 
 interface VideoPlayerProps {
-  chapter: PathChapter;
+  chapter?: PathChapter;
   currentVideoIndex: number;
   onClose: () => void;
   onVideoComplete: (index: number) => void;
@@ -45,7 +45,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [notes, setNotes] = useState('');
   const [watchedSeconds, setWatchedSeconds] = useState(0);
 
+  // Defensive checks for chapter and videos
+  if (!chapter || !chapter.videos || chapter.videos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white bg-black">
+        <p>No videos available for this chapter.</p>
+        <button onClick={onClose} className="mt-4 px-4 py-2 bg-indigo-600 rounded text-white">Close</button>
+      </div>
+    );
+  }
+
   const currentVideo = chapter.videos[currentVideoIndex];
+  if (!currentVideo) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white bg-black">
+        <p>Selected video not found.</p>
+        <button onClick={onClose} className="mt-4 px-4 py-2 bg-indigo-600 rounded text-white">Close</button>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Load saved notes and progress

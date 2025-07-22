@@ -39,7 +39,11 @@ export default defineConfig({
     proxy: {
       '/api': 'http://ec2-15-237-183-131.eu-west-3.compute.amazonaws.com',
     },
-    host: true
+    host: true ,
+    watch: {
+      usePolling: true, // Add this if you're on Windows/WSL
+      interval: 100
+    }
   },
   build: {
      minify: 'terser', // Enable minification

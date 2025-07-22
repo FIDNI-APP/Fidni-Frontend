@@ -2010,3 +2010,21 @@ body {
 .confetti {
   animation: confetti-fall 3s linear;
 }
+
+/* Add these to your global CSS file */
+body {
+  padding-top: 80px; /* Matches navbar height */
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.mobile-menu-open {
+  overflow: hidden;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
