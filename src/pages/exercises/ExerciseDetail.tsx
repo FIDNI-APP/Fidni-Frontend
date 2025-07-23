@@ -569,7 +569,7 @@ export function ExerciseDetail() {
               formatTimeAgo={formatTimeAgo}
               isAuthor={isAuthor}
             />
-            <div className="bg-gradient-to-r from-blue-800 via-indigo-800 to-indigo-900 text-white px-6 pb-2">
+            <div className="liquid-glass bg-gradient-to-r from-blue-800 via-indigo-800 to-indigo-900 text-white px-6 pb-2">
               <TabNavigation
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -660,7 +660,7 @@ export function ExerciseDetail() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
-                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
+                      className="liquid-glass bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6"
                     >
                       <div className="p-6" id="comments">
                         <CommentSection

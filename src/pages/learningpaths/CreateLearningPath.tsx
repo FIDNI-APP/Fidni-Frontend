@@ -14,7 +14,8 @@ import {
   Sparkles,
   CheckCircle,
   Target,
-  Layers
+  Layers,
+  X
 } from 'lucide-react';
 import { createLearningPath } from '@/lib/api/learningpathApi';
 import { getClassLevels, getSubjects } from '@/lib/api';
@@ -35,7 +36,7 @@ export const CreateLearningPath: React.FC = () => {
     title: '',
     description: '',
     subject_id: '',
-    class_level_id: '',
+    class_level_ids: [] as string[], // Changed from class_level_id to class_level_ids array
     estimated_hours: 0,
     is_active: true,
     difficulty_level: 'intermediate',
@@ -78,7 +79,7 @@ export const CreateLearningPath: React.FC = () => {
       if (formData.description.length < 20) errors.description = 'Description must be at least 20 characters';
     } else if (step === 2) {
       if (!formData.subject_id) errors.subject_id = 'Please select a subject';
-      if (!formData.class_level_id) errors.class_level_id = 'Please select a class level';
+      if (formData.class_level_ids.length === 0) errors.class_level_ids = 'Please select at least one class level';
       if (formData.estimated_hours <= 0) errors.estimated_hours = 'Estimated hours must be greater than 0';
     }
     
@@ -96,6 +97,16 @@ export const CreateLearningPath: React.FC = () => {
     setCurrentStep(currentStep - 1);
   };
 
+
+
+  // Remove a selected class level
+  const removeClassLevel = (levelId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      class_level_ids: prev.class_level_ids.filter(id => id !== levelId)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
@@ -104,31 +115,107 @@ export const CreateLearningPath: React.FC = () => {
     return;
   }
 
+  // Debug: Log form data before preparing submit data
+  console.log('Form data before submit:', formData);
+  console.log('Subject ID:', formData.subject_id);
+  console.log('Class Level IDs:', formData.class_level_ids);
+
   try {
     setLoading(true);
     setError('');
     
-    // Log the data being sent
-    console.log('Form data being sent:', formData);
+    // Validate required fields before submission
+    if (!formData.subject_id) {
+      setError('Subject is required');
+      setLoading(false);
+      return;
+    }
     
-    const response = await createLearningPath(formData);
+    if (!formData.class_level_ids || formData.class_level_ids.length === 0) {
+      setError('At least one class level is required');
+      setLoading(false);
+      return;
+    }
+    
+    // Prepare data for API
+    const submitData = {
+      title: formData.title,
+      description: formData.description,
+      subject: formData.subject_id, // Make sure this field is included
+      class_level: formData.class_level_ids, // Make sure this field is included
+      estimated_hours: formData.estimated_hours,
+      is_active: formData.is_active,
+      // Include optional fields only if they have values
+      ...(formData.learning_objectives && { learning_objectives: formData.learning_objectives }),
+      ...(formData.prerequisites && { prerequisites: formData.prerequisites }),
+    };
+    
+    console.log('Submit data being sent:', submitData);
+    
+    const response = await createLearningPath(submitData);
     setSuccess(true);
     
     setTimeout(() => {
       navigate(`/learning-paths/${response.id}`);
     }, 2000);
   } catch (error: any) {
-    // Enhanced error logging
     console.error('Full error object:', error);
     console.error('Error response:', error.response);
     console.error('Error response data:', error.response?.data);
     
-    setError(error.response?.data?.message || 'Failed to create learning path');
+    // Better error handling
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      if (typeof errorData === 'object') {
+        // Handle field-specific errors
+        const errorMessages = Object.entries(errorData)
+          .map(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              return `${field}: ${messages.join(', ')}`;
+            }
+            return `${field}: ${messages}`;
+          })
+          .join('; ');
+        setError(errorMessages);
+      } else {
+        setError(errorData.message || 'Failed to create learning path');
+      }
+    } else {
+      setError('Failed to create learning path');
+    }
   } finally {
     setLoading(false);
   }
 };
 
+
+const handleSubjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const value = e.target.value;
+  console.log('Subject changed to:', value); // Debug log
+  setFormData({ ...formData, subject_id: value });
+  setValidationErrors({ ...validationErrors, subject_id: '' });
+};
+
+const handleClassLevelToggle = (levelId: string) => {
+  console.log('Toggling class level:', levelId); // Debug log
+  setFormData(prev => {
+    const newClassLevelIds = prev.class_level_ids.includes(levelId)
+      ? prev.class_level_ids.filter(id => id !== levelId)
+      : [...prev.class_level_ids, levelId];
+    
+    console.log('New class level IDs:', newClassLevelIds); // Debug log
+    
+    return {
+      ...prev,
+      class_level_ids: newClassLevelIds
+    };
+  });
+  
+  // Clear validation error when user makes a selection
+  if (validationErrors.class_level_ids) {
+    setValidationErrors({ ...validationErrors, class_level_ids: '' });
+  }
+};
   const steps = [
     { number: 1, title: 'Basic Information', icon: BookOpen },
     { number: 2, title: 'Configuration', icon: GraduationCap },
@@ -136,14 +223,8 @@ export const CreateLearningPath: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-300/20 to-transparent rounded-full blur-3xl animate-blob" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-indigo-300/20 to-transparent rounded-full blur-3xl animate-blob animation-delay-2000" />
-      </div>
-
-      <div className="relative container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -160,14 +241,14 @@ export const CreateLearningPath: React.FC = () => {
             </button>
             
             <div className="flex items-center gap-4 mb-2">
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white">
-                <Sparkles className="w-8 h-8" />
+              <div className="p-3 bg-indigo-600 rounded-lg text-white">
+                <Sparkles className="w-6 h-6" />
               </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold text-gray-900">
                 Create Learning Path
               </h1>
             </div>
-            <p className="text-gray-600 ml-16">Design a structured learning journey for students</p>
+            <p className="text-gray-600 ml-14">Design a structured learning journey for students</p>
           </div>
 
           {/* Progress Steps */}
@@ -183,17 +264,17 @@ export const CreateLearningPath: React.FC = () => {
                       currentStep >= step.number ? 'text-indigo-600' : 'text-gray-400'
                     }`}
                   >
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
                       currentStep > step.number 
                         ? 'bg-green-500 text-white' 
                         : currentStep === step.number 
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' 
+                          ? 'bg-indigo-600 text-white' 
                           : 'bg-gray-200'
                     }`}>
                       {currentStep > step.number ? (
-                        <CheckCircle className="w-6 h-6" />
+                        <CheckCircle className="w-5 h-5" />
                       ) : (
-                        <step.icon className="w-6 h-6" />
+                        <step.icon className="w-5 h-5" />
                       )}
                     </div>
                     <span className="text-sm font-medium">{step.title}</span>
@@ -209,14 +290,14 @@ export const CreateLearningPath: React.FC = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-8">
+          <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-6">
               {/* Error Alert */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3"
+                  className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3"
                 >
                   <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
                   <div>
@@ -231,7 +312,7 @@ export const CreateLearningPath: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="mb-6 p-6 bg-green-50 border border-green-200 rounded-xl text-center"
+                  className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg text-center"
                 >
                   <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
                   <p className="text-green-800 font-semibold text-lg">Learning Path Created Successfully!</p>
@@ -258,7 +339,7 @@ export const CreateLearningPath: React.FC = () => {
                         setFormData({ ...formData, title: e.target.value });
                         setValidationErrors({ ...validationErrors, title: '' });
                       }}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
                         validationErrors.title ? 'border-red-300' : 'border-gray-300'
                       }`}
                       placeholder="e.g., Complete Mathematics Path for Grade 10"
@@ -279,7 +360,7 @@ export const CreateLearningPath: React.FC = () => {
                         setValidationErrors({ ...validationErrors, description: '' });
                       }}
                       rows={4}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all ${
                         validationErrors.description ? 'border-red-300' : 'border-gray-300'
                       }`}
                       placeholder="Describe what students will learn in this path..."
@@ -300,7 +381,7 @@ export const CreateLearningPath: React.FC = () => {
                       value={formData.learning_objectives}
                       onChange={(e) => setFormData({ ...formData, learning_objectives: e.target.value })}
                       rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                       placeholder="List the key learning objectives..."
                     />
                   </div>
@@ -309,71 +390,41 @@ export const CreateLearningPath: React.FC = () => {
 
               {/* Step 2: Configuration */}
               {currentStep === 2 && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        <BookOpen className="w-4 h-4 inline mr-1" />
-                        Subject <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={formData.subject_id}
-                        title='Subject'
-                        onChange={(e) => {
-                          setFormData({ ...formData, subject_id: e.target.value });
-                          setValidationErrors({ ...validationErrors, subject_id: '' });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white transition-all ${
-                          validationErrors.subject_id ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Select a subject</option>
-                        {subjects.map((subject) => (
-                          <option key={subject.id} value={subject.id}>
-                            {subject.name}
-                          </option>
-                        ))}
-                      </select>
-                      {validationErrors.subject_id && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.subject_id}</p>
-                      )}
-                    </div>
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-6"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          <BookOpen className="w-4 h-4 inline mr-1" />
+                          Subject <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.subject_id}
+                          onChange={handleSubjectChange} // Use the dedicated handler
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white transition-all ${
+                            validationErrors.subject_id ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Select a subject</option>
+                          {subjects.map((subject) => (
+                            <option key={subject.id} value={subject.id}>
+                              {subject.name}
+                            </option>
+                          ))}
+                        </select>
+                        {validationErrors.subject_id && (
+                          <p className="mt-1 text-sm text-red-600">{validationErrors.subject_id}</p>
+                        )}
+                        {/* Debug display */}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selected: {formData.subject_id || 'None'}
+                        </p>
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        <GraduationCap className="w-4 h-4 inline mr-1" />
-                        Class Level <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={formData.class_level_id}
-                        title='Class Level'
-                        onChange={(e) => {
-                          setFormData({ ...formData, class_level_id: e.target.value });
-                          setValidationErrors({ ...validationErrors, class_level_id: '' });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white transition-all ${
-                          validationErrors.class_level_id ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Select a class level</option>
-                        {classLevels.map((level) => (
-                          <option key={level.id} value={level.id}>
-                            {level.name}
-                          </option>
-                        ))}
-                      </select>
-                      {validationErrors.class_level_id && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.class_level_id}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         <Clock className="w-4 h-4 inline mr-1" />
@@ -381,7 +432,6 @@ export const CreateLearningPath: React.FC = () => {
                       </label>
                       <input
                         type="number"
-                        title='Estimated Duration'
                         value={formData.estimated_hours}
                         onChange={(e) => {
                           setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 });
@@ -389,7 +439,7 @@ export const CreateLearningPath: React.FC = () => {
                         }}
                         min="0"
                         step="0.5"
-                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
                           validationErrors.estimated_hours ? 'border-red-300' : 'border-gray-300'
                         }`}
                       />
@@ -397,26 +447,90 @@ export const CreateLearningPath: React.FC = () => {
                         <p className="mt-1 text-sm text-red-600">{validationErrors.estimated_hours}</p>
                       )}
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        <Layers className="w-4 h-4 inline mr-1" />
-                        Difficulty Level
-                      </label>
-                      <select
-                        value={formData.difficulty_level}
-                        title='Difficulty Level'
-                        onChange={(e) => setFormData({ ...formData, difficulty_level: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-                      >
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                      </select>
-                    </div>
                   </div>
 
-                  <div className="bg-indigo-50 rounded-xl p-4 flex items-start gap-3">
+                  {/* Class Levels Selection */}
+                  <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <GraduationCap className="w-4 h-4 inline mr-1" />
+                        Class Levels <span className="text-red-500">*</span>
+                      </label>
+                      
+                      {/* Debug display */}
+                      <p className="text-xs text-gray-500 mb-2">
+                        Selected IDs: {JSON.stringify(formData.class_level_ids)}
+                      </p>
+                      
+                      {/* Selected Class Levels Display */}
+                      {formData.class_level_ids.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-600 mb-2">Selected levels:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.class_level_ids.map((levelId) => {
+                              const level = classLevels.find(l => l.id === levelId);
+                              return level ? (
+                                <span
+                                  key={levelId}
+                                  className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
+                                >
+                                  {level.name}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeClassLevel(levelId)}
+                                    className="text-indigo-500 hover:text-indigo-700"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Class Levels Checkboxes */}
+                      <div className={`border rounded-lg p-4 max-h-48 overflow-y-auto ${
+                        validationErrors.class_level_ids ? 'border-red-300' : 'border-gray-300'
+                      }`}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {classLevels.map((level) => (
+                            <label
+                              key={level.id}
+                              className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.class_level_ids.includes(level.id)}
+                                onChange={() => handleClassLevelToggle(level.id)}
+                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                              />
+                              <span className="ml-2 text-sm text-gray-700">{level.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      {validationErrors.class_level_ids && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.class_level_ids}</p>
+                      )}
+                    </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Layers className="w-4 h-4 inline mr-1" />
+                      Difficulty Level
+                    </label>
+                    <select
+                      value={formData.difficulty_level}
+                      onChange={(e) => setFormData({ ...formData, difficulty_level: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-indigo-50 rounded-lg p-4 flex items-start gap-3">
                     <Info className="w-5 h-5 text-indigo-600 mt-0.5" />
                     <div className="text-sm text-indigo-800">
                       <p className="font-medium mb-1">Tip: Duration Estimation</p>
@@ -442,7 +556,7 @@ export const CreateLearningPath: React.FC = () => {
                       value={formData.prerequisites}
                       onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
                       rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                       placeholder="What should students know before starting this path?"
                     />
                   </div>
@@ -464,7 +578,7 @@ export const CreateLearningPath: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                     {formData.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
@@ -482,7 +596,7 @@ export const CreateLearningPath: React.FC = () => {
                               })}
                               className="ml-1 text-indigo-500 hover:text-indigo-700"
                             >
-                              ×
+                              <X className="w-4 h-4" />
                             </button>
                           </span>
                         ))}
@@ -490,13 +604,13 @@ export const CreateLearningPath: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
                     <label className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
                         checked={formData.is_active}
                         onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                        className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
                       <div className="ml-3">
                         <span className="text-gray-800 font-medium">Make this learning path active</span>
@@ -509,14 +623,13 @@ export const CreateLearningPath: React.FC = () => {
             </div>
 
             {/* Actions */}
-            <div className="bg-gray-50 px-8 py-6 flex justify-between items-center">
+            <div className="bg-gray-50 px-6 py-4 flex justify-between items-center border-t border-gray-200">
               <div>
                 {currentStep > 1 && (
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handlePreviousStep}
-                    className="mr-4"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Previous
@@ -524,7 +637,7 @@ export const CreateLearningPath: React.FC = () => {
                 )}
               </div>
               
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <Button
                   type="button"
                   variant="outline"
@@ -537,7 +650,7 @@ export const CreateLearningPath: React.FC = () => {
                   <Button
                     type="button"
                     onClick={handleNextStep}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                   >
                     Next Step
                     <ChevronRight className="w-4 h-4 ml-2" />
@@ -546,7 +659,7 @@ export const CreateLearningPath: React.FC = () => {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 min-w-[150px]"
+                    className="bg-indigo-600 hover:bg-indigo-700 min-w-[150px]"
                   >
                     {loading ? (
                       <>

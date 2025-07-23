@@ -83,7 +83,7 @@ export function VoteButtons({
         };
       case 'lg':
         return {
-          container: 'py-2 px-3',
+          container: 'py-1 px-3',
           button: 'w-10 h-10',
           icon: 'h-6 w-7',
           text: 'text-lg font-medium'
@@ -106,38 +106,38 @@ export function VoteButtons({
       ? 'flex-col space-y-1' 
       : 'flex-row space-x-2 items-center';
     
-    const baseClasses = `inline-flex ${orientation} rounded-xl transition-all duration-300 ${sizeClasses.container}`;
+    const baseClasses = `transition-transform duration-300 group-hover:scale-100 inline-flex ${orientation} rounded-xl transition-all duration-300 ${sizeClasses.container}`;
     
     // Background colors based on vote state
     if (userVote === 1) {
-      return `${baseClasses} bg-gradient-to-r from-purple-100 to-indigo-100 border border-indigo-200`;
+      return `${baseClasses} liquid-effect bg-gradient-to-r from-purple-100 to-indigo-100 border border-indigo-200 rounded-xl`;
     } else if (userVote === -1) {
-      return `${baseClasses} bg-gradient-to-r from-red-50 to-orange-100 border border-orange-200`;
+      return `${baseClasses} liquid-effect bg-gradient-to-r from-red-50 to-orange-100 border border-orange-200 rounded-xl`;
     }
     
-    return `${baseClasses} bg-gray-100 border border-gray-400 shadow-sm hover:border-indigo-400`;
+    return `${baseClasses}  liquid-effect shadow-sm hover:border-indigo-400 rounded-xl`;
   };
 
   // Upvote button styles
   const getUpvoteClasses = () => {
-    const baseClasses = `rounded-full flex items-center justify-center ${sizeClasses.button} transition-all duration-200`;
+    const baseClasses = `liquid-glass liquid-effect rounded-full flex items-center justify-center ${sizeClasses.button} transition-all duration-200`;
     
     if (userVote === 1) {
-      return `${baseClasses} bg-gradient-to-r from-indigo-600 to-purple-600 text-white transform scale-105 shadow-md`;
+      return `${baseClasses} liquid-glass liquid-effect bg-gradient-to-r from-indigo-600 to-purple-600 text-white transform scale-105 shadow-md`;
     }
     
-    return `${baseClasses} bg-white text-black font-semibold hover:bg-indigo-50 hover:text-indigo-600`;
+    return `${baseClasses} liquid-glass liquid-effect bg-white text-black font-semibold hover:bg-indigo-50 hover:text-indigo-600`;
   };
 
   // Downvote button styles
   const getDownvoteClasses = () => {
-    const baseClasses = `rounded-full flex items-center justify-center ${sizeClasses.button} transition-all duration-200`;
+    const baseClasses = `liquid-glass liquid-effect rounded-full flex items-center justify-center ${sizeClasses.button} transition-all duration-200`;
     
     if (userVote === -1) {
-      return `${baseClasses} bg-gradient-to-r from-red-900 to-red-600 text-white transform scale-105 shadow-md`;
+      return `${baseClasses} liquid-glass liquid-effect bg-gradient-to-r from-red-900 to-red-600 text-white transform scale-105 shadow-md`;
     }
     
-    return `${baseClasses} bg-white text-black font-semibold hover:bg-red-50 hover:text-red-600`;
+    return `${baseClasses} liquid-glass liquid-effect bg-white text-black font-semibold hover:bg-red-50 hover:text-red-600`;
   };
 
   // Vote count styles

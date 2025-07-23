@@ -53,7 +53,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
   };
 
   return (
-    <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
+    <div className="liquid-glass liquid-effect bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
       {/* Background Pattern - positioned relative to header */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -145,14 +145,14 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
           {/* Main Category Tags in header */}
           <div className="flex flex-wrap gap-2">
             {exercise.subject && (
-              <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
+              <span className="liquid-glass-button !backdrop-filter-none !bg-transparent liquid-effect text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
                 <BookOpen className="w-4 h-4 mr-1.5 text-indigo-300" />
                 {exercise.subject.name}
               </span>
             )}
             
             {exercise.class_levels && exercise.class_levels.length > 0 && (
-              <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
+              <span className="liquid-glass-button liquid-effect text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
                 <GraduationCap className="w-4 h-4 mr-1.5 text-indigo-300" />
                 {exercise.class_levels[0].name}
               </span>

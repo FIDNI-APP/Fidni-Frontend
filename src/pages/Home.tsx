@@ -4,6 +4,7 @@ import { Search, CheckCircle, TrendingUp, Users, ArrowRight, Sparkles, ChevronRi
 import { HomeContentCard } from '@/components/HomeContentCard';
 import { getContents, voteExercise, getClassLevels } from '@/lib/api';
 import { Content, VoteValue } from '@/types';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import '@/lib/styles.css';
 
@@ -113,16 +114,20 @@ export function Home() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button type="submit" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-white transition-colors" title="Search">
+            <Button
+              type="submit"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300"
+              title="Search"
+            >
               <Search className="w-6 h-6" />
-            </button>
+            </Button>
           </form>
 
           <Link to="/exercises" className="inline-block animate-bounce-subtle">
-  <button className="group flex items-center justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-10 py-5 rounded-full text-lg font-semibold hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+  <Button className="group flex items-center justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-10 py-5 rounded-full text-lg font-semibold hover:shadow-xl transition-all duration-300 transform hover:scale-105">
     Commencer à pratiquer
     <ChevronRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-  </button>
+  </Button>
 </Link>
         </div>
         

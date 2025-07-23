@@ -162,7 +162,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
             {/* Completion status buttons */}
             <Button
               onClick={() => markAsCompleted('success')}
-              variant={completed === 'success' ? "default" : "outline"}
+              variant={completed === 'success' ? "default" : "ghost"}
               size="sm"
               className={`rounded-lg ${
                 completed === 'success' 
@@ -181,12 +181,12 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
             
             <Button
               onClick={() => markAsCompleted("review")}
-              variant={completed === "review" ? "default" : "outline"}
+              variant={completed === "review" ? "default" : "ghost"}
               size="sm"
               className={`rounded-lg ${
                 completed === "review" 
-                  ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                  : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
+                  ? 'liquid-glass bg-rose-500 hover:bg-rose-600 text-white' 
+                  : 'liquid-glass liquid-effect border-gray-200 hover:border-rose-300 hover:text-rose-600'
               }`}
               disabled={loadingStates.progress}
             >
@@ -200,7 +200,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
             
             {/* Print button */}
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={handlePrint}
               className="rounded-lg text-sm"
               size="sm"

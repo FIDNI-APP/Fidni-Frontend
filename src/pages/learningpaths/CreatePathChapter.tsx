@@ -66,12 +66,14 @@ export const CreatePathChapter: React.FC = () => {
       setLearningPath(pathData);
       
       // Load chapters based on subject and class level
-      const chaptersData = await getChapters(
-        pathData.subject.id,
-        [pathData.class_level.id],
-        [] // Empty array for subfields as they're not used in this context
-      );
-      setChapters(chaptersData);
+      if (pathData?.subject?.id && pathData?.class_level?.id) {
+        const chaptersData = await getChapters(
+          pathData.subject.id,
+          [pathData.class_level.id],
+          [] 
+        );
+        setChapters(chaptersData);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     }

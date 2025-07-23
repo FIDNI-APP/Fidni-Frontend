@@ -240,17 +240,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   );
 
   return (
-    <div
+      <div
       className="group h-full transition-all duration-300"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div 
-        className="flex flex-col h-full bg-white cursor-pointer rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-300 transform hover:-translate-y-1"
+        className="flex flex-col h-full cursor-pointer rounded-xl overflow-hidden transform"
         onClick={handleCardClick}
       >
         {/* Card Header with Improved Styling */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-4 relative overflow-hidden">
+            <div className="liquid-glass bg-gradient-to-r from-indigo-600 to-violet-600 p-4 relative overflow-hidden">
           {/* Background Pattern - Subtle Grid Texture */}
           <div className="absolute inset-0 opacity-10">
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -343,7 +343,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           {/* Left side - votes and tags */}
           <div className="flex items-center gap-3 overflow-hidden">
             {/* Vote Buttons - Improved visibility on hover */}
-            <div className="transition-transform duration-300 group-hover:scale-105">
               <VoteButtons
                 initialVotes={content.vote_count}
                 onVote={(value) => {
@@ -353,8 +352,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 vertical={false}
                 userVote={content.user_vote}
                 size="sm"
+                
               />
-            </div>
             
             {/* Tags - More consistent styling between tag types */}
             <div className="flex items-center flex-wrap gap-1.5 overflow-hidden max-w-xs">
@@ -477,7 +476,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               e.stopPropagation();
               handleCardClick(e);
             }}
-            className={`bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
+            className={`liquid-glass-button bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
             aria-label="Voir l'exercice"
           >
             <ChevronRight className="w-8 h-8" />

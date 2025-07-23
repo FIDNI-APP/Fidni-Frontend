@@ -344,7 +344,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   };
 
   // Add class based on compact mode
-  const containerClass = `tiptap-readonly-editor latex-style text-lg ${compact ? 'tiptap-compact' : ''} ${className}`;
+  const containerClass = ` tiptap-readonly-editor latex-style text-lg ${compact ? 'tiptap-compact' : ''} ${className}`;
 
   // Get cursor class based on active tool
   const getCursorClass = () => {
@@ -363,7 +363,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     <div className="relative" ref={containerRef}>
       {/* Annotation Tools (only show if annotations are enabled) */}
       {enableAnnotations && (
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 flex items-center space-x-2 shadow-sm">
+        <div className="liquid-glass sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 flex items-center space-x-2 shadow-sm">
           <div className="flex items-center">
             <button
               onClick={() => toggleTool('highlight')}
@@ -407,7 +407,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
           
           {/* Color Palette - only show when a color-based tool is active */}
           {(activeTool === 'highlight' || activeTool === 'pen' || activeTool === 'note') && (
-            <div className="flex space-x-1 ml-3 items-center">
+            <div className="liquid-glass flex space-x-1 ml-3 items-center">
               <span className="text-xs text-gray-500 mr-1">Color:</span>
               {colorPalette.map(color => (
                 <button

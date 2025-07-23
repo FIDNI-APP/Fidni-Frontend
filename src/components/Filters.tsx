@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Filter, BookOpen, GraduationCap, ChevronUp, ChevronDown, Tag, BarChart3, FileText, Award } from 'lucide-react';
 import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems } from '@/lib/api';
 import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty, Subfield, Theorem } from '@/types';
-
+import { Button } from '@/components/ui/button';
 interface FiltersProps {
   onFilterChange: (filters: {
     classLevels: string[];
@@ -411,13 +411,13 @@ export const Filters: React.FC<FiltersProps> = ({
   const getDifficultyColor = (difficulty: string): string => {
     switch (difficulty) {
       case 'easy':
-        return 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200';
+        return 'liquid-glass bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200';
       case 'medium':
-        return 'bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200';
+        return 'liquid-glass bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200';
       case 'hard':
-        return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
+        return 'liquid-glass bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200';
+        return 'liquid-glass bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -478,7 +478,7 @@ export const Filters: React.FC<FiltersProps> = ({
       <div className="mb-2 border-b border-gray-100 pb-4" key={`section-${category}`}>
         <button 
           onClick={() => toggleSection(category)}
-          className={`flex items-center justify-between w-full text-left mb-3 ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`} // Ajout de cursor-not-allowed
+          className={`liquid-effect flex items-center justify-between w-full text-left mb-3 ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`} // Ajout de cursor-not-allowed
           disabled={isDisabled && !['classLevels', 'subjects', 'difficulties'].includes(category)} // Désactiver le bouton si la section dépendante est vide de prérequis
         >
           <div className="flex items-center space-x-2">
@@ -519,21 +519,21 @@ export const Filters: React.FC<FiltersProps> = ({
                     const isSelected = selectedFilters[category].includes(itemId as any);
                     
                     let buttonClass = isSelected
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200';
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent hover:bg-gradient-to-r from-indigo-700 to-purple-700 hover:text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r from-indigo-600 to-purple-600 hover:text-white border-gray-200';
                     
                     if (category === 'difficulties' && !isSelected) {
                       buttonClass = getDifficultyColor(itemId);
                     }
                     
                     return (
-                      <button
+                      <Button
                         key={`${category}-${itemId}-${index}`}
                         onClick={() => toggleFilter(category, itemId)}
                         className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 border ${buttonClass} shadow-sm hover:shadow`}
                       >
                         {itemName}
-                      </button>
+                      </Button>
                     );
                   })}
                   {items.length === 0 && (
