@@ -96,5 +96,20 @@ export {
   getNotebookActivity
 } from './notebookApi';
 
+export {
+  getLearningPaths,
+  startLearningPath,
+  getPathChapters,
+  getPathChapter,
+  createLearningPath,
+  updateLearningPath,
+  updatePathChapter,
+  createPathChapter,
+  getLearningPath,
+  deleteLearningPath,
+  deletePathChapter,
+  startChapter,
+  updateVideoProgress,
+} from './LearningPathApi';
 // Export the API client itself
 export default api;

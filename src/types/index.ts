@@ -315,3 +315,171 @@ export interface Exam {
   is_national_exam: boolean;
   national_date: string | null;
 }
+
+
+// Main Learning Path structure
+export interface LearningPath {
+  id: string;
+  subject: SubjectModel;
+  class_level: ClassLevelModel[];
+  title: string;
+  description: string;
+  estimated_hours: number;
+  is_active: boolean;
+  path_chapters: PathChapter[];
+  user_progress?: UserLearningPathProgress;
+  created_at: string;
+  updated_at: string;
+  total_chapters?: number;
+  total_videos?: number;
+}
+
+// Path Chapter (lessons within a learning path)
+export interface PathChapter {
+  id: string;
+  learning_path: LearningPath;
+  chapter: ChapterModel;
+  title: string;
+  description: string;
+  order: number;
+  total_duration: string;
+  videos: Video[];
+  quiz?: ChapterQuiz;
+  user_progress?: UserChapterProgress;
+  created_at: string;
+  updated_at: string;
+}
+
+// Video content within chapters
+export interface Video {
+  id: string;
+  path_chapter: string;
+  title: string;
+  url: string;
+  thumbnail_url?: string;
+  video_type: VideoType;
+  duration_seconds: number;
+  duration: string;
+  order: number;
+  resources: VideoResource[];
+  user_progress?: UserVideoProgress;
+  created_at: string;
+  updated_at: string;
+}
+
+export type VideoType = 'lesson' | 'introduction' | 'explanation' | 'demo' | 'tips' | 'summary';
+
+// Quiz structures
+export interface ChapterQuiz {
+  id: string;
+  path_chapter: string;
+  title: string;
+  description?: string;
+  estimated_minutes: number;
+  estimated_duration: string;
+  passing_score: number;
+  time_limit_minutes?: number;
+  shuffle_questions: boolean;
+  questions: QuizQuestion[];
+  user_attempts?: QuizAttemptSummary[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quiz: string;
+  question_text: string;
+  question_type: QuestionType;
+  options: string[];
+  correct_answer_index?: number;
+  correct_answer_indices?: number[];
+  explanation: string;
+  difficulty: Difficulty;
+  points: number;
+  order: number;
+}
+
+export type QuestionType = 'multiple_choice' | 'true_false' | 'multiple_select';
+
+// User Progress tracking
+export interface UserLearningPathProgress {
+  started_at: string;
+  progress_percentage: number;
+  last_activity?: string;
+  total_time_seconds?: number;
+}
+
+export interface UserChapterProgress {
+  chapter_id: string;
+  is_completed: boolean;
+  progress_percentage: number;
+  quiz_score?: number;
+  quiz_passed?: boolean;
+  started_at: string;
+  completed_at?: string;
+}
+
+export interface UserVideoProgress {
+  watched_seconds: number;
+  is_completed: boolean;
+  progress_percentage: number;
+  notes?: string;
+}
+
+// Additional types
+export interface VideoResource {
+  id: string;
+  title: string;
+  resource_type: 'pdf' | 'link' | 'exercise' | 'summary' | 'code' | 'slides';
+  url: string;
+  description?: string;
+}
+
+export interface QuizAttemptSummary {
+  id: string;
+  started_at: string;
+  score: number;
+  passed: boolean;
+  time_spent_seconds: number;
+}
+
+// Add these type definitions if they don't exist
+export type LearningPathSortOption = 'newest' | 'popular' | 'duration' | 'difficulty';
+export type ProgressFilter = 'all' | 'not_started' | 'in_progress' | 'completed';
+
+export interface QuizResult {
+  score: number;
+  passed: boolean;
+  correct_answers: number;
+  total_questions: number;
+  time_spent_seconds: number;
+  results?: {
+    question_id: string;
+    is_correct: boolean;
+    your_answer: number | number[];
+    correct_answer?: number | number[];
+    explanation?: string;
+  }[];
+  passing_score: number;
+}
+
+// Also add these interfaces if they're missing:
+export interface QuizSubmission {
+  attempt_id: string;
+  answers: {
+    question_id: string;
+    answer_index?: number;
+    answer_indices?: number[];
+  }[];
+}
+
+export interface StartQuizResponse {
+  attempt_id: string;
+  questions: QuizQuestion[];
+  time_limit_minutes?: number;
+  total_questions: number;
+}
+
+export interface ResourceType {
+  id: string;}

@@ -32,8 +32,10 @@ import { EditExam } from './components/exam/EditExam';
 
 import { LearningPathList } from './pages/learningpaths/LearningPathList';
 import { LearningPathDetail } from './pages/learningpaths/LearningPathDetail';
-import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
+import { ChapterVideo } from './pages/learningpaths/ChapterVideo';
+import { ChapterQuiz } from './pages/learningpaths/ChapterQuiz';
 import { CreatePathChapter } from './pages/learningpaths/CreatePathChapter';
+import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -214,21 +216,33 @@ function App() {
                       <LearningPathDetail />
                     </NavbarWrapper>
                   } />
-                  <Route path="/learning-paths/create" element={
-                  <NavbarWrapper>
-                    <CreateLearningPath />
-                  </NavbarWrapper>
-                } />
-                <Route path="/learning-paths/:id/edit" element={
-                  <NavbarWrapper>
-                    <CreateLearningPath />
-                  </NavbarWrapper>
-                } />
-                <Route path="/learning-paths/:id/chapters/create" element={
-                <NavbarWrapper>
-                  <CreatePathChapter />
-                </NavbarWrapper>
-              } />
+                  
+                  <Route path="/learning-paths/:pathId/chapters/:chapterId/videos/:videoId" element={
+                      <NavbarWrapper showFooter={false}>
+                        <ChapterVideo />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/learning-paths/:pathId/chapters/:chapterId/quiz" element={
+                      <NavbarWrapper showFooter={false}>
+                        <ChapterQuiz />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/learning-paths/create" element={
+                        <NavbarWrapper>
+                          <CreateLearningPath />
+                        </NavbarWrapper>
+                      } />
+                      <Route path="/learning-paths/:id/edit" element={
+                        <NavbarWrapper>
+                          <CreateLearningPath />
+                        </NavbarWrapper>
+                      } />
+                      <Route path="/learning-paths/:id/chapters/create" element={
+                        <NavbarWrapper>
+                          <CreatePathChapter />
+                        </NavbarWrapper>
+                      } />
+                  
 
                 </Routes>
               </div>
