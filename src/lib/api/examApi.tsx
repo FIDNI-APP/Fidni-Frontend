@@ -1,6 +1,5 @@
 import api from './index';
 import { Exam, Difficulty, VoteValue } from '@/types';
-import { ExamFilters } from '@/types/index';
 
 interface ExamResponse {
   results: Exam[];

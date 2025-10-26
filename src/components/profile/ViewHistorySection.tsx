@@ -13,15 +13,17 @@ interface ViewHistorySectionProps {
   isLoading: boolean;
 }
 
-export const ViewHistorySection: React.FC<ViewHistorySectionProps> = ({ historyItems, isLoading }) => {
+export const ViewHistorySection: React.FC<ViewHistorySectionProps> = ({ historyItems = [], isLoading }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const [localHistoryItems, setLocalHistoryItems] = useState<ViewHistoryItem[]>(historyItems);
-  
+  const [localHistoryItems, setLocalHistoryItems] = useState<ViewHistoryItem[]>(historyItems || []);
+
   // Update local state when props change
   useEffect(() => {
-    setLocalHistoryItems(historyItems);
+    if (historyItems) {
+      setLocalHistoryItems(historyItems);
+    }
   }, [historyItems]);
   
   const handleVote = async (id: string, value: VoteValue) => {
@@ -109,25 +111,33 @@ export const ViewHistorySection: React.FC<ViewHistorySectionProps> = ({ historyI
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold flex items-center">
             <History className="w-5 h-5 mr-2 text-indigo-600" />
-            Recently Viewed
+            Historique récent
           </h2>
         </div>
 
         <div className="space-y-3">
-          {localHistoryItems.map((item) => (
-            <div key={item.content.id} className="transform hover:scale-105 transition-all duration-300">
-              <HomeContentCard 
-                content={item.content} 
-                onVote={handleVote}
-              />
-            </div>
-          ))}
+          {localHistoryItems.map((item) => {
+            // Safety check to ensure item and content exist
+            if (!item || !item.content) {
+              console.error('Invalid history item:', item);
+              return null;
+            }
+
+            return (
+              <div key={item.content.id} className="transform hover:scale-105 transition-all duration-300">
+                <HomeContentCard
+                  content={item.content}
+                  onVote={handleVote}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {localHistoryItems.length > 5 && (
           <div className="mt-4 text-center">
             <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-              View Complete History
+              Voir tout l'historique
             </Button>
           </div>
         )}

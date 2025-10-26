@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Content, VoteValue } from '@/types';
-import { BookOpen, Bookmark, Search, ChevronRight } from 'lucide-react';
+import { Bookmark, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HomeContentCard } from '@/components/HomeContentCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +43,7 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
       const updatedExercise = await voteExercise(id, value);
       setLocalExercises(prevExercises =>
         prevExercises.map(exercise =>
-          exercise.id === id ? updatedExercise : exercise
+          exercise.id.toString() === id ? updatedExercise : exercise
         )
       );
     } catch (err) {
@@ -132,7 +132,7 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
               Try different keywords or clear your search
             </p>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               onClick={() => setSearchQuery('')}
               className="text-indigo-600"
             >
@@ -155,7 +155,7 @@ export const SavedExercisesSection: React.FC<SavedExercisesSectionProps> = ({ ex
         {localExercises.length > 9 && (
           <div className="mt-6 text-center">
             <Link to="/saved">
-              <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+              <Button variant="ghost" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
                 View All {localExercises.length} Saved Exercises
               </Button>
             </Link>

@@ -1,6 +1,6 @@
 // src/pages/Profile.tsx - Version améliorée et affinée
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getUserProfile,
   getUserStats,
@@ -14,121 +14,88 @@ import { Content, User, ViewHistoryItem } from '@/types'; // Vos types
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
-  Book,
   FileText,
   Activity,
   Edit2,
   BookOpen,
-  Trophy,
   Target,
-  TrendingUp,
-  Star,
-  Award,
-  MoreVertical,
   Share2,
   Flag,
   UserPlus,
+  ListChecks,
+  TrendingUp,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
-// Import des composants de profil (assumant qu'ils ont été améliorés comme dans les tours précédents)
+// Import des composants de profil
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
-// import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard'; // Remplacé par QuickStatsBar et ProgressCharts
-import { SavedExercisesSection } from '@/components/profile/SavedExercisesSection';
+import { ProfileInfoCard } from '@/components/profile/ProfileInfoCard';
+import { SavedContentSection } from '@/components/profile/SavedContentSection';
 import { ViewHistorySection } from '@/components/profile/ViewHistorySection';
 import { ProgressSection } from '@/components/profile/ProgressSection';
 import { ContributionsSection } from '@/components/profile/ContributionsSection';
-import { EditProfileForm } from '@/components/profile/EditProfileForm';
 import { ProgressCharts } from '@/components/profile/ProgressCharts';
 import { TimeTrackingStats } from '@/components/profile/TimeTrackingStats';
 import StudentNotebook from '@/components/profile/StudentNotebook'; // Renommé pour correspondre au nom de fichier
+import { RevisionListsSection } from '@/components/profile/RevisionListsSection';
+import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard';
+import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap';
 
-// QuickStatsBar: Style affiné pour une meilleure intégration
-const QuickStatsBar: React.FC<{ stats: any }> = ({ stats }) => {
-  const items = [
-    { label: 'Exercices Créés', value: stats?.contribution_stats?.exercises || 0, icon: Book, color: 'text-blue-600 bg-blue-100/70 ring-blue-500/20' },
-    { label: 'Complétés', value: stats?.learning_stats?.exercises_completed || 0, icon: Trophy, color: 'text-emerald-600 bg-emerald-100/70 ring-emerald-500/20' },
-    { label: 'Réputation', value: stats?.contribution_stats?.upvotes_received || 0, icon: Star, color: 'text-amber-600 bg-amber-100/70 ring-amber-500/20' },
-    { label: 'Impact (Vues)', value: stats?.contribution_stats?.view_count || 0, icon: TrendingUp, color: 'text-purple-600 bg-purple-100/70 ring-purple-500/20' }
-  ];
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
-      {items.map((item, index) => (
-        <motion.div
-          key={item.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 + index * 0.1, type: "spring", stiffness: 200, damping: 15 }}
-          className="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200/50 ring-1 ring-inset ring-gray-900/5"
-        >
-          <div className="flex items-center justify-between mb-1.5">
-            <div className={`p-2.5 rounded-xl ${item.color} ring-1 ring-inset`}>
-              <item.icon className="w-5 h-5" />
-            </div>
-            <span className="text-2xl md:text-3xl font-bold text-gray-800">{item.value.toLocaleString()}</span>
-          </div>
-          <p className="text-sm text-gray-600 truncate">{item.label}</p>
-        </motion.div>
-      ))}
-    </div>
-  );
-};
-
-// TabNavigation: Style affiné
+// TabNavigation: Clean professional design matching homepage style
 const TabNavigation: React.FC<{
   activeTab: string;
   onTabChange: (tab: string) => void;
   isOwner: boolean;
-}> = ({ activeTab, onTabChange, isOwner }) => {
+  userType: 'student' | 'teacher';
+}> = ({ activeTab, onTabChange, isOwner, userType }) => {
   const tabs = [
     { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard, available: true },
+    { id: 'informations', label: 'Informations', icon: UserPlus, available: isOwner },
+    { id: 'saved', label: 'Enregistrés', icon: Star, available: isOwner },
     { id: 'progress', label: 'Progression', icon: Target, available: isOwner },
-    { id: 'contributions', label: 'Contributions', icon: FileText, available: true },
-    { id: 'timetracking', label: 'Temps d\'étude', icon: TrendingUp, available: isOwner },
-    { id: 'activity', label: 'Activité', icon: Activity, available: isOwner },
-    { id: 'notebook', label: 'Cahier Digital', icon: BookOpen, available: isOwner }
+    { id: 'revisionlists', label: 'Révisions', icon: ListChecks, available: isOwner },
+    { id: 'contributions', label: 'Contributions', icon: FileText, available: userType === 'teacher' },
+    { id: 'timetracking', label: 'Statistiques', icon: TrendingUp, available: isOwner },
+    { id: 'notebook', label: 'Notes', icon: BookOpen, available: isOwner }
   ].filter(tab => tab.available);
 
   const tabContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="bg-white/80 backdrop-blur-md sticky top-0 md:top-16 z-30 border-b border-gray-200/80 shadow-sm">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
-        <div ref={tabContainerRef} className="relative flex gap-1 sm:gap-2 py-2 overflow-x-auto hide-scrollbar">
+    <div className="bg-white/80 backdrop-blur-md sticky top-0 md:top-16 z-30 border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div ref={tabContainerRef} className="flex gap-2 py-3 overflow-x-auto hide-scrollbar">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                data-tab-id={tab.id} // For indicator positioning
                 onClick={() => onTabChange(tab.id)}
-                className={`
-                  relative flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-lg font-medium text-xs sm:text-sm
-                  transition-colors duration-200 ease-in-out whitespace-nowrap group
-                  ${isActive
-                    ? 'text-indigo-700'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/70'
-                  }
-                `}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTabIndicator"
-                    className="absolute inset-0 bg-indigo-100/80 rounded-lg z-0 shadow-sm"
-                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10 flex items-center">
-                  <tab.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-                  <span className="ml-1.5 hidden sm:inline">{tab.label}</span>
-                </span>
+                <tab.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
           })}
         </div>
       </div>
+
+      <style jsx>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };
@@ -138,6 +105,7 @@ export function UserProfile() {
   const { username } = useParams<{ username: string }>();
   const { user: currentUser, isLoading: authLoading } = useAuth(); // Added authLoading
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,18 +114,36 @@ export function UserProfile() {
   const [contributions, setContributions] = useState<Content[]>([]);
   const [savedExercises, setSavedExercises] = useState<Content[]>([]);
   const [history, setHistory] = useState<ViewHistoryItem[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
   const [successExercises, setSuccessExercises] = useState<Content[]>([]);
   const [reviewExercises, setReviewExercises] = useState<Content[]>([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [dailyActivity, setDailyActivity] = useState<any[]>([]);
+
+  // Initialize activeTab from URL query parameter or default to 'overview'
+  const [activeTab, setActiveTab] = useState(() => {
+    return searchParams.get('tab') || 'overview';
+  });
 
   // More granular data loading states
   const [dataLoaded, setDataLoaded] = useState({
     profile: false, stats: false, contributions: false,
-    savedExercises: false, history: false, progressExercises: false
+    savedExercises: false, history: false, progressExercises: false, dailyActivity: false
   });
 
   const isOwner = !authLoading && currentUser?.username === username;
+
+  // Handler to change tab and update URL
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
+
+  // Sync tab from URL changes (browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (authLoading) return; // Wait for auth context to load
@@ -166,7 +152,7 @@ export function UserProfile() {
       if (!username) return;
       setIsLoadingProfile(true);
       setError(null);
-      setDataLoaded(prev => ({ ...prev, profile: false, stats: false, contributions: false, savedExercises: false }));
+      setDataLoaded(prev => ({ ...prev, profile: false, stats: false, contributions: false, savedExercises: false, dailyActivity: false }));
 
       try {
         const [profileData, statsData, contributionsData] = await Promise.all([
@@ -181,9 +167,21 @@ export function UserProfile() {
         setDataLoaded(prev => ({ ...prev, profile: true, stats: true, contributions: true }));
 
         if (isOwner) {
+          // Load saved exercises
           getUserSavedExercises(username).then(data => {
             setSavedExercises(data);
             setDataLoaded(prev => ({ ...prev, savedExercises: true }));
+          });
+
+          // Load daily activity for heatmap
+          import('@/lib/api/apiClient').then(({ api }) => {
+            api.get(`/users/${username}/study-stats/`).then(response => {
+              setDailyActivity(response.data.daily_activity || []);
+              setDataLoaded(prev => ({ ...prev, dailyActivity: true }));
+            }).catch(err => {
+              console.error('Failed to load daily activity:', err);
+              setDataLoaded(prev => ({ ...prev, dailyActivity: true })); // Mark as loaded even on error
+            });
           });
         }
       } catch (err) {
@@ -229,34 +227,25 @@ export function UserProfile() {
   }, [activeTab, username, isOwner, dataLoaded.progressExercises, dataLoaded.history, authLoading]);
 
 
-  const handleEditProfile = () => setIsEditing(true);
-  const handleSaveProfile = async (formData: FormData) => { // Updated to accept FormData
-    if (!userProfile) return;
-    try {
-      const updatedData = await updateUserProfile(formData); // Assuming API handles FormData
-      setUserProfile(prev => prev ? { ...prev, ...updatedData, profile: {...prev.profile, ...updatedData.profile} } : null); // Adjust based on API response
-      setIsEditing(false);
-    } catch (err) {
-      console.error('Failed to update profile:', err);
-      throw err; // Re-throw for EditProfileForm to handle
-    }
+  const handleEditProfile = () => {
+    // Navigate to dedicated edit page instead of modal
+    navigate(`/profile/${username}/edit`);
   };
 
 
-  if (isLoadingProfile && !dataLoaded.profile) { // More specific loading condition
+  if (isLoadingProfile && !dataLoaded.profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl shadow-xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-4"
         >
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-indigo-200/50 rounded-full animate-pulse"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+            <div className="w-12 h-12 border-3 border-slate-200 rounded-full"></div>
+            <div className="absolute inset-0 w-12 h-12 border-3 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
           </div>
-          <p className="text-gray-700 font-semibold text-lg">Chargement du profil...</p>
-          <p className="text-gray-500 text-sm">Un instant, nous préparons tout pour vous.</p>
+          <p className="text-slate-700 font-medium">Chargement...</p>
         </motion.div>
       </div>
     );
@@ -288,82 +277,66 @@ export function UserProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-slate-50 to-indigo-100/30">
-      <AnimatePresence>
-        {isEditing && (
-          <motion.div
-            key="edit-modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setIsEditing(false)} // Close on backdrop click
-          >
-            <motion.div
-              key="edit-modal-content"
-              initial={{ scale: 0.9, opacity: 0, y:20 }}
-              animate={{ scale: 1, opacity: 1, y:0 }}
-              exit={{ scale: 0.9, opacity: 0, y:20, transition:{duration:0.2} }}
-              transition={{ type:"spring", stiffness:300, damping:25}}
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
-            >
-              {/* EditProfileForm is assumed to be styled from previous turn */}
-              <EditProfileForm
-                user={userProfile}
-                onSave={handleSaveProfile}
-                onCancel={() => setIsEditing(false)}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+      {/* Header Section with gradient matching homepage */}
+      <section className="relative bg-gradient-to-r from-gray-900 to-purple-800 text-white py-12 md:py-16 mb-8 overflow-hidden">
+        {/* Animated background elements - matching homepage */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute top-20 -left-20 w-60 h-60 bg-purple-300/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute -bottom-20 right-1/3 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
 
-      <div className="relative">
-        <div className="absolute inset-x-0 top-0 h-[450px] bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 overflow-hidden">
-          {/* Placeholder for particles or abstract background visuals */}
-          {/* <div className="absolute inset-0 particles-effect opacity-10"></div> */}
-          <div className="absolute -top-20 -left-20 w-80 h-80 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
-          <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-teal-500/10 rounded-full blur-3xl animate-pulse-slower"></div>
-        </div>
-
-        <div className="relative pt-12 md:pt-20 pb-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-end gap-2 mb-4 md:mb-6">
-              {isOwner ? (
-                <Button
-                  onClick={handleEditProfile}
-                  className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20 shadow-lg"
-                  size="sm"
-                >
-                  <Edit2 className="w-4 h-4 mr-1.5" /> Modifier
-                </Button>
-              ) : (
-                <> {/* Buttons for non-owner */}
-                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 backdrop-blur-sm"><UserPlus className="w-4 h-4 mr-1.5" />Suivre</Button>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 backdrop-blur-sm"><Share2 className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 backdrop-blur-sm"><MoreVertical className="w-4 h-4" /></Button>
-                </>
-              )}
-            </div>
-            {/* ProfileHeader is assumed to be styled from previous turn */}
-            <ProfileHeader
-              user={userProfile}
-              stats={stats}
-              isOwner={isOwner}
-              onEditProfile={handleEditProfile}
-            />
+          {/* Geometric patterns */}
+          <div className="absolute inset-0 opacity-10">
+            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
           </div>
         </div>
-        <div className="relative -mt-5 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            <QuickStatsBar stats={stats} />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Action buttons */}
+          <div className="flex justify-end gap-2 mb-6">
+            {isOwner ? (
+              <Button
+                onClick={handleEditProfile}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md text-sm"
+                size="sm"
+              >
+                <Edit2 className="w-4 h-4 mr-1" /> Modifier le profil
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
+                  <UserPlus className="w-4 h-4 mr-1" />Suivre
+                </Button>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Simplified ProfileHeader - only user identity info */}
+          <ProfileHeader
+            user={userProfile}
+            stats={stats}
+            isOwner={isOwner}
+            onEditProfile={handleEditProfile}
+          />
         </div>
-      </div>
+      </section>
 
       <TabNavigation
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         isOwner={isOwner}
+        userType={userProfile.profile.user_type}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
@@ -375,113 +348,139 @@ export function UserProfile() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="space-y-6 md:space-y-8"
+              className="space-y-6"
             >
-              {isOwner && stats && (dataLoaded.progressExercises || (!isLoadingProfile && successExercises.length > 0)) && ( // Show if data ready or not loading
-                // ProgressCharts is assumed to be styled from previous turn
-                <ProgressCharts
-                  stats={stats}
-                  successExercises={successExercises}
-                  reviewExercises={reviewExercises}
-                />
+              {/* Main Stats Overview */}
+              <StatsOverviewCard
+                contributionStats={stats?.contribution_stats || {}}
+                learningStats={stats?.learning_stats}
+                isLoading={!dataLoaded.stats}
+                userType={userProfile.profile.user_type}
+              />
+
+              {/* Activity Heatmap - only for owner */}
+              {isOwner && dailyActivity.length > 0 && (
+                <ActivityHeatmap daily_activity={dailyActivity} />
               )}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                {/* ContributionsSection and SavedExercisesSection will use their internal refined styling */}
-                 <ContributionsSection
-                    success_exercises={{ exercises: contributions.filter(c => !c.needs_review) }} // Example differentiation
-                    review_exercises={{ exercises: contributions.filter(c => c.needs_review) }}
-                    isLoading={!dataLoaded.contributions && isLoadingProfile}
-                  />
-                {isOwner && (
-                   <SavedExercisesSection
-                      exercises={savedExercises}
-                      isLoading={!dataLoaded.savedExercises && isLoadingProfile}
-                    />
-                )}
-              </div>
-              {/* Placeholder for Badges section from your original markup - style as needed */}
-              <motion.div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200/80">
-                <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-indigo-600" /> Badges et Récompenses
-                </h3>
-                 <p className="text-gray-500">Vos badges et récompenses apparaîtront ici bientôt !</p>
-              </motion.div>
+            </motion.div>
+          )}
+
+          {/* New Informations Tab */}
+          {activeTab === 'informations' && isOwner && (
+            <motion.div
+              key="informations-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ProfileInfoCard user={userProfile} />
+            </motion.div>
+          )}
+
+          {activeTab === 'saved' && isOwner && (
+            <motion.div
+              key="saved-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <SavedContentSection
+                exercises={savedExercises}
+                lessons={[]}
+                exams={[]}
+                isLoading={!dataLoaded.savedExercises}
+              />
             </motion.div>
           )}
 
           {activeTab === 'progress' && isOwner && (
-            <motion.div key="progress-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}} className="space-y-6 md:space-y-8">
-              {/* ProgressSection is assumed to be styled from previous turn */}
-               <ProgressSection
-                  successExercises={successExercises}
-                  reviewExercises={reviewExercises}
-                  isLoading={!dataLoaded.progressExercises && isLoadingProfile}
-                />
+            <motion.div
+              key="progress-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6 md:space-y-8"
+            >
+              <ProgressCharts stats={stats} />
+              <ProgressSection
+                successExercises={successExercises}
+                reviewExercises={reviewExercises}
+                isLoading={!dataLoaded.progressExercises}
+              />
             </motion.div>
           )}
-          
+
+          {activeTab === 'revisionlists' && isOwner && (
+            <motion.div
+              key="revisionlists-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <RevisionListsSection />
+            </motion.div>
+          )}
+
           {activeTab === 'contributions' && (
-             <motion.div key="contributions-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}}>
-                {/* ContributionsSection full view will be handled by its own internal logic if it has one, or just shows all here */}
-                <ContributionsSection 
-                    success_exercises={{ exercises: contributions.filter(c => !c.needs_review) }}
-                    review_exercises={{ exercises: contributions.filter(c => c.needs_review) }}
-                    isLoading={!dataLoaded.contributions && isLoadingProfile}
-                />
-             </motion.div>
+            <motion.div
+              key="contributions-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ContributionsSection
+                success_exercises={{ exercises: contributions }}
+                review_exercises={{ exercises: [] }}
+                isLoading={!dataLoaded.contributions}
+              />
+            </motion.div>
           )}
 
           {activeTab === 'timetracking' && isOwner && (
-            <motion.div key="timetracking-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}}>
-              {/* Time Tracking Statistics - Dedicated Tab */}
-              <TimeTrackingStats username={username || ''} />
+            <motion.div
+              key="timetracking-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <TimeTrackingStats username={username!} />
             </motion.div>
           )}
 
           {activeTab === 'activity' && isOwner && (
-            <motion.div key="activity-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}}>
-              {/* ViewHistorySection is assumed to be styled from previous turn */}
-               <ViewHistorySection
-                  historyItems={history}
-                  isLoading={!dataLoaded.history && isLoadingProfile}
-                />
+            <motion.div
+              key="activity-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ViewHistorySection
+                history={history}
+                isLoading={!dataLoaded.history}
+              />
             </motion.div>
           )}
 
           {activeTab === 'notebook' && isOwner && (
-            <motion.div key="notebook-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration:0.3}}>
-              {/* StudentNotebook styling is self-contained or needs separate full refactor */}
-              <div className="bg-white rounded-2xl shadow-xl overflow-hidden min-h-[calc(100vh-300px)] md:min-h-[calc(100vh-250px)]">
-                <StudentNotebook />
-              </div>
+            <motion.div
+              key="notebook-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StudentNotebook />
             </motion.div>
           )}
         </AnimatePresence>
       </main>
-
-      {/* Custom global styles can be kept if they are essential */}
-      <style jsx global>{`
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.05); }
-        }
-        @keyframes pulse-slower {
-          0%, 100% { opacity: 0.4; transform: scale(0.95); }
-          50% { opacity: 0.7; transform: scale(1); }
-        }
-        .animate-pulse-slow { animation: pulse-slow 8s infinite ease-in-out; }
-        .animate-pulse-slower { animation: pulse-slower 10s infinite ease-in-out; }
-
-        /* Basic particles effect placeholder (replace with actual library if needed) */
-        .particles-effect { 
-          /* background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); */
-          /* background-size: 1.5rem 1.5rem; */
-        }
-      `}</style>
     </div>
   );
-  
 }

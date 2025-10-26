@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area
+  Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import { 
-  CheckCircle, BarChart2, Activity, TrendingUp, 
+  CheckCircle, Activity, TrendingUp, 
   Calendar, Target, PieChart as ChartPie
 } from 'lucide-react';
 

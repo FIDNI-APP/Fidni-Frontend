@@ -1,0 +1,36 @@
+# robots.txt for Fidni - Educational Mathematics Platform
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow private/admin pages (if any)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Disallow user-specific pages that shouldn't be indexed
+Disallow: /profile/*/edit
+Disallow: /complete-profile
+
+# Allow all public content
+Allow: /exercises/
+Allow: /lessons/
+Allow: /exams/
+Allow: /learning-paths/
+
+# Sitemap location (you'll need to generate this)
+Sitemap: https://fidni.com/sitemap.xml
+
+# Crawl delay for polite crawling (optional)
+# Crawl-delay: 1
+
+# Specific rules for common search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /

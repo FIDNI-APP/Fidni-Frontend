@@ -138,6 +138,7 @@ export const FormulaEditorModal: React.FC<FormulaEditorModalProps> = ({
                 <div className="border border-gray-300 rounded-lg h-40 p-4 bg-gray-50 flex items-center justify-center overflow-auto">
                   <div className="max-w-full max-h-full">
                     <TipTapRenderer
+                      key={editedLatex + formulaInsertMode}
                       content={
                         formulaInsertMode === 'inline'
                           ? `<p>$${editedLatex}$</p>`

@@ -396,30 +396,31 @@ export const ExerciseList = () => {
     <>
       {/* Mobile filter toggle */}
       <div className="md:hidden mb-6">
-        <button 
+        <button
           onClick={() => setIsFilterOpen(prev => !prev)}
-          className="w-full bg-white rounded-lg shadow-md p-3 flex items-center justify-center space-x-2 text-indigo-800 font-medium"
+          className="w-full bg-white/80 backdrop-blur-md rounded-xl shadow-lg p-4 flex items-center justify-center space-x-3 text-gray-700 font-semibold hover:bg-white transition-all duration-200 border border-gray-200"
         >
           <Filter className="w-5 h-5" />
-          <span>{isFilterOpen ? 'Hide filters' : 'Show filters'}</span>
+          <span>{isFilterOpen ? 'Masquer les filtres' : 'Afficher les filtres'}</span>
         </button>
       </div>
 
       {/* Sort and Count Section */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center">
-          <div className="flex items-center gap-3 mb-4 sm:mb-0">
-            <span className="text-gray-600 flex items-center font-medium">
-              <ArrowUpDown className="w-5 h-5 mr-2 text-indigo-600" />
-              Sort by:
-            </span>
-            <SortDropdown 
-              value={sortBy} 
-              onChange={handleSortChange} 
+      <div className="bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 p-5 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <ArrowUpDown className="w-5 h-5 text-gray-700" />
+            </div>
+            <span className="text-gray-700 font-semibold">Trier par:</span>
+            <SortDropdown
+              value={sortBy}
+              onChange={handleSortChange}
             />
           </div>
-          <div className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full font-medium">
-            {totalCount} exercises found
+          <div className="flex items-center gap-2 bg-gray-100 text-gray-700 px-5 py-2 rounded-full font-bold shadow-sm">
+            <BookOpen className="w-4 h-4" />
+            <span>{totalCount} exercice{totalCount > 1 ? 's' : ''}</span>
           </div>
         </div>
       </div>
@@ -428,11 +429,11 @@ export const ExerciseList = () => {
 
   // Memoize filter component to prevent unnecessary re-renders
   const FilterComponent = useMemo(() => (
-    <div 
-  className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white rounded-xl shadow-sm`}
->
-      <Filters 
-        onFilterChange={handleFilterChange} 
+    <div
+      className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-100`}
+    >
+      <Filters
+        onFilterChange={handleFilterChange}
         initialClassLevels={filters.classLevels}
         initialSubjects={filters.subjects}
       />
@@ -470,24 +471,49 @@ export const ExerciseList = () => {
       `}</style>
       
       {/* Header Section */}
-      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 text-white py-8 mb-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-6 md:mb-0">
-              <h1 className="text-3xl md:text-4xl font-bold mb-3 flex items-center">
-                <BookOpen className="w-8 h-8 mr-3" /> 
-                Exercises
+      <div className="relative bg-gradient-to-r from-gray-900 to-purple-800 text-white py-16 md:py-20 mb-8 overflow-hidden">
+        {/* Animated background elements */}
+       <div className="absolute inset-0 opacity-10 pointer-events-none">
+  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="hexPattern" width="40" height="34.64" patternUnits="userSpaceOnUse">
+        <path
+          d="M20 0 L40 11.55 L40 23.09 L20 34.64 L0 23.09 L0 11.55 Z"
+          fill="none"
+          stroke="white"
+          strokeWidth="0.5"
+        />
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#hexPattern)" />
+  </svg>
+</div>
+
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-center md:text-left flex-1">
+              {/* Category badge */}
+              <div className="inline-flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full mb-4 border border-white/20">
+                <BookOpen className="w-4 h-4 mr-2" />
+                <span className="text-sm font-semibold">Pratique</span>
+              </div>
+
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 leading-tight">
+                <span className="bg-gradient-to-r from-yellow-200 to-purple-200 bg-clip-text text-transparent">Exercices</span>
               </h1>
-              <p className="text-indigo-200 text-lg">
-                Discover and practice with our collection of {totalCount} quality exercises
+              <p className="text-gray-300 text-lg md:text-xl max-w-2xl">
+                Découvrez et pratiquez avec notre collection de <span className="font-bold text-white">{totalCount}</span> exercices de qualité
               </p>
             </div>
-            <button 
+
+            <button
               onClick={handleNewExerciseClick}
-              className="bg-white text-indigo-700 hover:bg-indigo-50 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2"
+              className="group relative px-8 py-4 bg-white text-gray-800 hover:bg-gray-100 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-bold flex items-center gap-3 hover:scale-105"
             >
-              <Plus className="w-5 h-5" />
-              Add Exercise
+              <div className="absolute inset-0 bg-purple-500/10 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <Plus className="w-5 h-5 relative z-10" />
+              <span className="relative z-10">Ajouter un exercice</span>
             </button>
           </div>
         </div>
@@ -505,38 +531,58 @@ export const ExerciseList = () => {
           <div className="flex-grow min-w-0" ref={listRef}>
             {/* Error message if any */}
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg shadow-sm">
-                {error}
+              <div className="bg-red-50/80 backdrop-blur-sm border-l-4 border-red-500 text-red-700 p-5 mb-6 rounded-xl shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="font-medium">{error}</p>
+                </div>
               </div>
             )}
 
             {/* Exercise Content */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
               {loading ? (
-                <div className="flex justify-center items-center h-64">
+                <div className="flex justify-center items-center h-96">
                   <div className="text-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mx-auto mb-4" />
-                    <p className="text-gray-500">Loading exercises...</p>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gray-400 rounded-full blur-2xl opacity-10 animate-pulse"></div>
+                      <Loader2 className="relative w-12 h-12 animate-spin text-gray-600 mx-auto mb-4" />
+                    </div>
+                    <p className="text-gray-600 font-medium">Chargement des exercices...</p>
                   </div>
                 </div>
               ) : contents.length > 0 ? (
                 <div className="divide-y divide-gray-100">
-                  <ContentList 
-                    contents={contents} 
+                  <ContentList
+                    contents={contents}
                     onVote={handleVote}
                     onDelete={handleDelete}
                     onEdit={(id) => navigate(`/edit/${id}`)}
                   />
                 </div>
               ) : (
-                <div className="text-center py-16">
-                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <BookOpen className="w-8 h-8 text-gray-400" />
+                <div className="text-center py-20 px-6">
+                  <div className="relative inline-block mb-6">
+                    <div className="absolute inset-0 bg-gray-400 rounded-full blur-2xl opacity-10"></div>
+                    <div className="relative w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+                      <BookOpen className="w-10 h-10 text-gray-600" />
+                    </div>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">No exercises found</h3>
-                  <p className="text-gray-500 max-w-md mx-auto">
-                    Try adjusting your search filters or create a new exercise
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">Aucun exercice trouvé</h3>
+                  <p className="text-gray-600 max-w-md mx-auto mb-6">
+                    Essayez d'ajuster vos filtres de recherche ou créez un nouvel exercice pour enrichir notre collection
                   </p>
+                  <button
+                    onClick={handleNewExerciseClick}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Créer un exercice
+                  </button>
                 </div>
               )}
             </div>
@@ -544,20 +590,25 @@ export const ExerciseList = () => {
             {/* Load More Button */}
             {hasMore && !loading && (
               <div className="mt-8 text-center">
-                <Button
+                <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg shadow-sm transition-all"
+                  className="group relative px-8 py-4 bg-white/80 backdrop-blur-md hover:bg-white text-gray-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 hover:scale-105"
                 >
                   {loadingMore ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Loading...
-                    </>
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Chargement...</span>
+                    </div>
                   ) : (
-                    'Load more exercises'
+                    <div className="flex items-center gap-3">
+                      <span>Charger plus d'exercices</span>
+                      <svg className="w-5 h-5 group-hover:translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   )}
-                </Button>
+                </button>
               </div>
             )}
           </div>

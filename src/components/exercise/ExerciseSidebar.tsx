@@ -52,7 +52,7 @@ export const ExerciseSidebar: React.FC<ExerciseSidebarProps> = ({
           </Button>
           <Button 
             onClick={resetTimer} 
-            variant="outline" 
+            variant="ghost" 
             className="flex-1 h-9 text-sm bg-indigo-500/20 border-indigo-300/30 text-white hover:bg-indigo-500/30"
           >
             Réinitialiser

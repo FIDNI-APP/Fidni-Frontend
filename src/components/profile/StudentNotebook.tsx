@@ -475,13 +475,13 @@ const StudentNotebook: React.FC = () => {
                     <div className="flex flex-col items-center justify-center h-full p-8">
                       <div className="bg-white p-6 rounded-lg max-w-md text-center shadow-md">
                         <FileText className="w-16 h-16 mx-auto text-indigo-300 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-800 mb-2">Select a chapter</h3>
+                        <h3 className="text-lg font-medium text-gray-800 mb-2">Sélectionner un chapitre</h3>
                         <p className="text-gray-600 mb-4">
-                          Choose a chapter from the sidebar to view its content.
+                          Choisir un chapitre à partir de la liste de chapitres disponibles.
                         </p>
                         <p className="text-sm text-indigo-600">
                           <ChevronRight className="w-4 h-4 inline mr-1" />
-                          Chapters with lessons are highlighted
+                          Les chapitres contenant des leçons sont cliquables.
                         </p>
                       </div>
                     </div>

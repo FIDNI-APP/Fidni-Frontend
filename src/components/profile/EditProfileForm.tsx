@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Save, X,  } from 'lucide-react';
+import { X,  } from 'lucide-react';
 
 interface EditProfileFormProps {
   user: User;

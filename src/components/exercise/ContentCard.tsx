@@ -1,13 +1,13 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MessageSquare, 
-  Trash2, 
-  Edit, 
-  Tag, 
-  Eye, 
-  GraduationCap, 
-  BookOpen, 
+import {
+  MessageSquare,
+  Trash2,
+  Edit,
+  Tag,
+  Eye,
+  GraduationCap,
+  BookOpen,
   Bookmark,
   Lightbulb,
   Loader2,
@@ -15,6 +15,8 @@ import {
   BookMarked,
   ChevronRight,
   Share2,
+  Award,
+  Calendar,
 } from 'lucide-react';
 import { Content, Difficulty, VoteValue } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -35,11 +37,12 @@ const MemoizedTipTapRenderer = memo(
 );
 
 interface ContentCardProps {
-  content: Content;
+  content: Content | any; // Accept Content, Lesson, or Exam
   onVote: (id: string, value: VoteValue) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
   onSave?: (id: string, saved: boolean) => void;
+  contentType?: 'exercise' | 'lesson' | 'exam'; // Optional type specification
 }
 
 export const ContentCard: React.FC<ContentCardProps> = ({
@@ -48,6 +51,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   onDelete,
   onEdit,
   onSave,
+  contentType = 'exercise', // Default to exercise for backward compatibility
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -69,6 +73,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   // Check if solution exists
   const hasSolution = !!content.solution;
 
+  // Get navigation path based on content type
+  const getNavigationPath = () => {
+    const basePaths = {
+      exercise: '/exercises',
+      lesson: '/lessons',
+      exam: '/exams'
+    };
+    return `${basePaths[contentType]}/${content.id}`;
+  };
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Check if any text is selected
     const selection = window.getSelection();
@@ -76,16 +90,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       // User is selecting text, do not navigate
       return;
     }
-    
+
     // If user is not authenticated, prompt login instead of navigating
     if (!isAuthenticated) {
       e.preventDefault();
       openModal();
       return;
     }
-    
-    // Navigate to the exercise page
-    navigate(`/exercises/${content.id}`);
+
+    // Navigate to the appropriate content page
+    navigate(getNavigationPath());
   };
 
   useEffect(() => {
@@ -222,9 +236,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const hasTheorems = content.theorems && content.theorems.length > 0;
   const hasSubfields = content.subfields && content.subfields.length > 0;
   const hasChapters = content.chapters && content.chapters.length > 0;
-  
+
+  // Check if content has difficulty (exercises and exams have it, lessons don't)
+  const hasDifficulty = content.difficulty !== undefined && content.difficulty !== null;
+
   // Get difficulty info
-  const difficultyInfo = getDifficultyInfo(content.difficulty);
+  const difficultyInfo = hasDifficulty ? getDifficultyInfo(content.difficulty) : null;
   
   // Truncate title if too long
   const truncateTitle = (title: string, maxLength = 60) => {
@@ -296,6 +313,22 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             
             {/* Tags Section - Made More Compact & Consistent */}
             <div className="flex flex-wrap items-center gap-2">
+              {/* National Exam Badge - For exams only */}
+              {contentType === 'exam' && (content as any).is_national_exam && (
+                <span className="bg-blue-500 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-bold text-white flex items-center shadow-md">
+                  <Award className="w-3 h-3 mr-1" />
+                  Examen National
+                </span>
+              )}
+
+              {/* National Exam Year - For national exams only */}
+              {contentType === 'exam' && (content as any).is_national_exam && (content as any).national_exam_date && (
+                <span className="bg-white/30 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-semibold text-white flex items-center">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {new Date((content as any).national_exam_date).getFullYear()}
+                </span>
+              )}
+
               {/* Subject Tag */}
               {content.subject && (
                 <span className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center">
@@ -303,13 +336,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   {content.subject.name}
                 </span>
               )}
-              
-              {/* Difficulty Badge */}
-              <span className={`bg-gradient-to-r ${difficultyInfo.color} px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center`}>
-                {difficultyInfo.icon}
-                <span className="ml-1">{difficultyInfo.label}</span>
-              </span>
-              
+
+              {/* Difficulty Badge - Only for content with difficulty (exercises and exams) */}
+              {hasDifficulty && difficultyInfo && (
+                <span className={`bg-gradient-to-r ${difficultyInfo.color} px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center`}>
+                  {difficultyInfo.icon}
+                  <span className="ml-1">{difficultyInfo.label}</span>
+                </span>
+              )}
+
               {/* Class Level Badge */}
               {content.class_levels && content.class_levels.length > 0 && (
                 <span className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center">
@@ -411,19 +446,19 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/exercises/${content.id}#comments`);
+                navigate(`${getNavigationPath()}#comments`);
               }}
               className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
             >
               <MessageSquare className="w-4 h-4 mr-1 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
               <span>{(content.comments || []).length}</span>
             </button>
-            
+
             {/* Share Button - New Feature */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigator.clipboard.writeText(window.location.origin + `/exercises/${content.id}`);
+                navigator.clipboard.writeText(window.location.origin + getNavigationPath());
                 // Add a toast notification here in a real implementation
               }}
               className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
@@ -468,7 +503,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </div>
         
         {/* Action Button - Positioned to not interfere with edit/delete buttons */}
-        <div 
+        <div
           className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none ${isHovered ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'}`}
         >
           <button
@@ -477,10 +512,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               handleCardClick(e);
             }}
             className={`liquid-glass-button bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
-            aria-label="Voir l'exercice"
+            aria-label={`Voir ${contentType === 'exercise' ? 'l\'exercice' : contentType === 'lesson' ? 'la leçon' : 'l\'examen'}`}
           >
             <ChevronRight className="w-8 h-8" />
-            <p className="font-medium text-lg mb-1 text-white">Voir l'exercice</p>
+            <p className="font-medium text-lg mb-1 text-white">
+              {contentType === 'exercise' ? 'Voir l\'exercice' : contentType === 'lesson' ? 'Voir la leçon' : 'Voir l\'examen'}
+            </p>
           </button>
         </div>
       </div>

@@ -144,7 +144,7 @@ export const ContributionsSection: React.FC<ContributionsSectionProps> = ({
             Mes Contributions ({allContributions.length})
           </h2>
           <Link to="/new">
-            <Button variant="outline" className="border-indigo-500 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 w-full sm:w-auto">
+            <Button variant="ghost" className="border-indigo-500 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 w-full sm:w-auto">
                <PlusCircle className="w-4 h-4 mr-2" /> Créer
             </Button>
           </Link>

@@ -5,12 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AuthButton } from '@/components/ui/AuthButton';
 import { NavDropdown } from './NavbarDropdown';
 import { getClassLevels} from '@/lib/api';
+import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 import '@/lib/styles.css';
 import Logo2 from "@/assets/logo2.svg";
 import Logo3 from "@/assets/logo3.svg";
-
-// Separate CSS classes
-const mobileNavItemClass = "flex items-center w-full px-3 py-2 text-white rounded-lg hover:bg-white/10 transition-colors";
 
 export const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -127,35 +125,53 @@ export const Navbar = () => {
   const NavLink = ({ to, isActive, children, hasDropdown, dropdown }: NavLinkProps) => (
     <div className="relative">
       {hasDropdown ? (
-        <button 
+        <button
           onClick={() => toggleDropdown(dropdown!)}
-          className={`flex items-center text-base font-medium transition-colors duration-200 ${
+          className={`flex items-center text-sm font-semibold transition-all duration-200 px-4 py-2 rounded-xl relative group ${
             isActive || activeDropdown === dropdown
-              ? 'text-white' 
-              : 'text-gray-300 hover:text-white'
+              ? isScrolled
+                ? 'text-purple-600 bg-purple-50'
+                : 'text-white bg-white/20 backdrop-blur-md'
+              : isScrolled
+                ? 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}
         >
           <div className="flex items-center">
             {children}
           </div>
           <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === dropdown ? 'rotate-180' : ''}`} />
+          {(isActive || activeDropdown === dropdown) && (
+            <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 rounded-full transition-all duration-200 ${
+              isScrolled ? 'bg-gradient-to-r from-purple-600 to-pink-500' : 'bg-white'
+            }`} />
+          )}
         </button>
       ) : (
-        <Link 
-          to={to} 
-          className={`flex items-center text-base font-medium transition-colors duration-200 ${
-            isActive 
-              ? 'text-white' 
-              : 'text-gray-300 hover:text-white'
+        <Link
+          to={to}
+          className={`flex items-center text-sm font-semibold transition-all duration-200 px-4 py-2 rounded-xl relative group ${
+            isActive
+              ? isScrolled
+                ? 'text-purple-600 bg-purple-50'
+                : 'text-white bg-white/20 backdrop-blur-md'
+              : isScrolled
+                ? 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}
           onClick={closeDropdowns}
         >
           <div className="flex items-center">
             {children}
           </div>
+          {isActive && (
+            <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 rounded-full transition-all duration-200 ${
+              isScrolled ? 'bg-gradient-to-r from-purple-600 to-pink-500' : 'bg-white'
+            }`} />
+          )}
         </Link>
       )}
-      
+
       {hasDropdown && activeDropdown === dropdown && (
         <NavDropdown type={dropdown!} onClose={closeDropdowns} />
       )}
@@ -192,38 +208,38 @@ export const Navbar = () => {
         <div>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors duration-200 ${
-              isActive 
-                ? 'bg-white/10 text-white' 
-                : 'text-gray-300 hover:bg-white/5 hover:text-white'
+            className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+              isActive
+                ? 'bg-white/20 backdrop-blur-md text-white shadow-lg'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
             }`}
           >
             {children}
             <ChevronDown className={`w-4 h-4 ml-auto transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {isExpanded && (
-            <div className="ml-6 mt-1 space-y-1 border-l-2 border-white/10 pl-2">
+            <div className="ml-6 mt-2 space-y-1 border-l-2 border-white/20 pl-3">
               {isLoading ? (
-                <div className="py-2 px-3 text-white/60">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div> 
-                  Loading...
+                <div className="py-3 px-4 text-white/60 flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
+                  Chargement...
                 </div>
               ) : (
                 <>
                   <Link
                     to={`/${dropdown}`}
-                    className="block w-full px-3 py-2 text-sm text-white/80 hover:text-white rounded-lg hover:bg-white/5"
+                    className="block w-full px-4 py-2.5 text-sm text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition-all duration-150 font-medium"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    All {dropdown}
+                    Tous les {dropdown === 'exercises' ? 'exercices' : dropdown === 'lessons' ? 'leçons' : 'examens'}
                   </Link>
-                  
+
                   {mobileSubItems.map((item) => (
                     <Link
                       key={item.id}
                       to={`/${dropdown}?classLevels=${item.id}`}
-                      className="block w-full px-3 py-2 text-sm text-white/80 hover:text-white rounded-lg hover:bg-white/5"
+                      className="block w-full px-4 py-2.5 text-sm text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-all duration-150"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       {item.name}
@@ -236,14 +252,14 @@ export const Navbar = () => {
         </div>
       );
     }
-    
+
     return (
-      <Link 
-        to={to} 
-        className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors duration-200 ${
-          isActive 
-            ? 'bg-white/10 text-white' 
-            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+      <Link
+        to={to}
+        className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+          isActive
+            ? 'bg-white/20 backdrop-blur-md text-white shadow-lg'
+            : 'text-white/80 hover:bg-white/10 hover:text-white'
         }`}
         onClick={() => setMobileMenuOpen(false)}
       >
@@ -253,105 +269,129 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${isScrolled ? 'py-2 shadow-lg' : 'py-4'} bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900`}>
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 lg:px-8">
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      isScrolled
+        ? 'py-3 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
+        : 'py-4 bg-gradient-to-r from-gray-800 to-purple-800'
+    }`}>
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="hexPattern" width="40" height="34.64" patternUnits="userSpaceOnUse">
+        <path
+          d="M20 0 L40 11.55 L40 23.09 L20 34.64 L0 23.09 L0 11.55 Z"
+          fill="none"
+          stroke="white"
+          strokeWidth="0.5"
+        />
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#hexPattern)" />
+  </svg>
+</div>
+
+      <div className="max-w-7xl mx-auto px-4 lg:px-6">
         <div className="flex items-center justify-between">
           {/* Logo and desktop navigation */}
           <div className="flex items-center space-x-8">
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div 
-                className="logo-container relative transition-transform duration-300 transform group-hover:scale-110"
+            <Link to="/" className="flex items-center space-x-3 group relative">
+              <div
+                className="relative transition-all duration-300 transform group-hover:scale-110"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
-                <div className="w-12 h-13 flex items-center justify-center overflow-hidden">
+                <div className={`w-10 h-10 flex items-center justify-center overflow-hidden rounded-xl ${
+                  isScrolled ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-white/10 backdrop-blur-md border border-white/30'
+                }`}>
                   <img
                     src={isHovered ? Logo2 : Logo3}
                     alt="Fidni Logo"
-                    className="w-full h-full object-contain"
+                    className="w-7 h-7 object-contain"
                   />
                 </div>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                <div className={`absolute inset-0 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300 ${
+                  isScrolled ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-white'
+                }`}></div>
               </div>
-              <span className="text-3xl fjalla-one-regular font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-900 text-transparent bg-clip-text">
+              <span className={`text-2xl fjalla-one-regular font-extrabold transition-all duration-300 ${
+                isScrolled
+                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-transparent bg-clip-text'
+                  : 'text-white'
+              }`}>
                 Fidni
               </span>
             </Link>
             
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-2">
               <NavLink to="/" isActive={isActive('/')}>
                 <Home className="w-4 h-4 mr-2" />
-                Home
+                Accueil
               </NavLink>
-              
-              <NavLink 
-                to="/exercises" 
-                isActive={isActive('/exercises')} 
-                hasDropdown={true} 
+
+              <NavLink
+                to="/exercises"
+                isActive={isActive('/exercises')}
+                hasDropdown={true}
                 dropdown="exercises"
               >
                 <BookOpen className="w-4 h-4 mr-2" />
-                Exercises
+                Exercices
               </NavLink>
-              
-              <NavLink 
-                to="/lessons" 
-                isActive={isActive('/lessons')} 
-                hasDropdown={true} 
+
+              <NavLink
+                to="/lessons"
+                isActive={isActive('/lessons')}
+                hasDropdown={true}
                 dropdown="lessons"
               >
                 <GraduationCap className="w-4 h-4 mr-2" />
-                Lessons
+                Leçons
               </NavLink>
-              
-              <NavLink 
-                to="/exams" 
-                isActive={isActive('/exams')} 
-                hasDropdown={true} 
+
+              <NavLink
+                to="/exams"
+                isActive={isActive('/exams')}
+                hasDropdown={true}
                 dropdown="exams"
               >
                 <Award className="w-4 h-4 mr-2" />
                 Examens
               </NavLink>
-              
-              <NavLink to="/learning-paths" isActive={isActive('/learning-path')}>
+
+              <NavLink to="/learning-path" isActive={isActive('/learning-path')}>
                 <Route className="w-4 h-4 mr-2" />
-                Learning Path
+                Parcours
               </NavLink>
-              
+
             </div>
           </div>
 
           {/* Search bar - desktop */}
           <div className="hidden md:block w-full max-w-md mx-6">
-            <form onSubmit={handleSearch} className="relative group">
-              <input
-                type="text"
-                placeholder="Search for exercises, lessons, exams..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 bg-white/10 text-white border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder-gray-300 transition-all duration-300"
-              />
-              <button 
-                type="submit" 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-200 hover:text-white transition-colors duration-200"
-                aria-label="Search"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </form>
+            <SearchAutocomplete
+              placeholder="Rechercher des exercices, leçons, examens..."
+              inputClassName={`w-full px-4 py-2 pr-20 rounded-xl focus:outline-none transition-all duration-300 ${
+                isScrolled
+                  ? 'bg-gray-50 text-gray-900 border border-gray-200 focus:ring-2 focus:ring-purple-500 placeholder-gray-400'
+                  : 'bg-white/10 backdrop-blur-md text-white border border-white/30 focus:ring-2 focus:ring-white/50 placeholder-white/60'
+              }`}
+            />
           </div>
 
           {/* Auth buttons - desktop */}
-          <div className="hidden md:flex items-center space-x-4">
-            <AuthButton />
+          <div className="hidden md:flex items-center space-x-3">
+            <AuthButton isScrolled={isScrolled} />
           </div>
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-white p-2"
+              className={`p-2 rounded-xl transition-all duration-300 ${
+                isScrolled
+                  ? 'text-gray-900 hover:bg-gray-100'
+                  : 'text-white hover:bg-white/10'
+              }`}
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -365,68 +405,56 @@ export const Navbar = () => {
       </div>
 
       {/* Mobile menu */}
-      <div className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${mobileMenuOpen ? 'max-h-screen opacity-100 py-4' : 'max-h-0 opacity-0'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+      <div className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${mobileMenuOpen ? 'max-h-screen opacity-100 py-6' : 'max-h-0 opacity-0'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Mobile search */}
-          <form onSubmit={handleSearch} className="relative">
-            <input
-              type="text"
-              placeholder="Search for exercises, lessons, exams..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 bg-white/10 text-white border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder-gray-300"
-            />
-            <button 
-              type="submit" 
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-200"
-              aria-label="Search"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-          </form>
+          <SearchAutocomplete
+            placeholder="Rechercher..."
+            inputClassName="w-full px-4 py-3 pr-20 bg-white/10 backdrop-blur-md text-white border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-white/60 transition-all duration-300"
+          />
 
           {/* Mobile navigation */}
-          <div className="flex flex-col space-y-3">
+          <div className="flex flex-col space-y-2">
             <NavLinkMobile to="/" isActive={isActive('/')}>
               <Home className="w-5 h-5 mr-3" />
-              Home
+              Accueil
             </NavLinkMobile>
-            
-            <NavLinkMobile 
-              to="/exercises" 
-              isActive={isActive('/exercises')} 
-              hasDropdown={true} 
+
+            <NavLinkMobile
+              to="/exercises"
+              isActive={isActive('/exercises')}
+              hasDropdown={true}
               dropdown="exercises"
             >
               <BookOpen className="w-5 h-5 mr-3" />
-              Exercises
+              Exercices
             </NavLinkMobile>
-            
-            <NavLinkMobile 
-              to="/lessons" 
-              isActive={isActive('/lessons')} 
-              hasDropdown={true} 
+
+            <NavLinkMobile
+              to="/lessons"
+              isActive={isActive('/lessons')}
+              hasDropdown={true}
               dropdown="lessons"
             >
               <GraduationCap className="w-5 h-5 mr-3" />
-              Lessons
+              Leçons
             </NavLinkMobile>
-            
-            <NavLinkMobile 
-              to="/exams" 
-              isActive={isActive('/exams')} 
-              hasDropdown={true} 
+
+            <NavLinkMobile
+              to="/exams"
+              isActive={isActive('/exams')}
+              hasDropdown={true}
               dropdown="exams"
             >
               <Award className="w-5 h-5 mr-3" />
               Examens
             </NavLinkMobile>
-            
+
             <NavLinkMobile to="/learning-path" isActive={isActive('/learning-path')}>
               <Route className="w-5 h-5 mr-3" />
-              Learning Path
+              Parcours
             </NavLinkMobile>
-            
+
             {user?.is_superuser && (
               <NavLinkMobile to="/admin/learning-paths" isActive={isActive('/admin/learning-paths')}>
                 <Shield className="w-5 h-5 mr-3" />
@@ -436,42 +464,50 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile auth */}
-          <div className="pt-4 border-t border-white/10">
+          <div className="pt-6 border-t border-white/20">
             {isAuthenticated ? (
               <div className="flex flex-col space-y-3">
-                <div className="flex items-center space-x-3 px-3 py-2">
+                <div className="flex items-center space-x-3 px-4 py-3 bg-white/10 backdrop-blur-md rounded-xl">
                   <img
-                    src={user?.username.charAt(0).toUpperCase() || '/avatar-placeholder.jpg'}
+                    src={user?.avatar || '/avatar-placeholder.jpg'}
                     alt="Profile"
-                    className="w-10 h-10 rounded-full border-2 border-purple-300"
+                    className="w-12 h-12 rounded-full border-2 border-white/50 shadow-lg"
                   />
-                  <div>
-                    <div className="text-white font-medium">{user?.username}</div>
-                    <div className="text-gray-300 text-sm">{user?.email}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-base truncate">{user?.username}</div>
+                    <div className="text-white/70 text-sm truncate">{user?.email}</div>
                   </div>
                 </div>
-                
-                <Link to={`/profile/${user?.username}`} className={mobileNavItemClass}>
-                  <User className="w-5 h-5 mr-3" />
-                  Profile
+
+                <Link to={`/profile/${user?.username}`} className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                    <User className="w-5 h-5" />
+                  </div>
+                  Mon profil
                 </Link>
-                
-                <Link to="/saved" className={mobileNavItemClass}>
-                  <BookmarkIcon className="w-5 h-5 mr-3" />
-                  Saved Items
+
+                <Link to="/saved" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                    <BookmarkIcon className="w-5 h-5" />
+                  </div>
+                  Enregistrés
                 </Link>
-                
-                <Link to="/settings" className={mobileNavItemClass}>
-                  <Settings className="w-5 h-5 mr-3" />
-                  Settings
+
+                <Link to="/settings" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                    <Settings className="w-5 h-5" />
+                  </div>
+                  Paramètres
                 </Link>
-                
+
                 <button
                   onClick={handleLogout}
-                  className={`${mobileNavItemClass} text-red-300 hover:text-red-200`}
+                  className="flex items-center w-full px-4 py-3 text-red-300 hover:text-red-200 rounded-xl hover:bg-red-500/10 transition-all duration-200 font-medium"
                 >
-                  <LogOut className="w-5 h-5 mr-3" />
-                  Logout
+                  <div className="p-2 rounded-lg bg-red-500/10 mr-3">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  Se déconnecter
                 </button>
               </div>
             ) : (

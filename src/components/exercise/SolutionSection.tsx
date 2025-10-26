@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lightbulb, ChevronDown, Edit, Trash2, PenSquare } from 'lucide-react';
+import { Lightbulb, ChevronDown, Edit, Trash2, PenSquare, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Content, VoteValue } from '@/types';
 import { VoteButtons } from '@/components/VoteButtons';
@@ -20,6 +20,8 @@ interface SolutionSectionProps {
   handleDeleteSolution: () => Promise<void>;
   handleAddSolution: (solutionContent: string) => Promise<void>;
   setSolutionVisible: (visible: boolean) => void;
+  userSolutionMatched?: boolean;
+  onMarkSolutionMatched?: () => Promise<void>;
 }
 
 export const SolutionSection: React.FC<SolutionSectionProps> = ({
@@ -34,7 +36,9 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
   handleEditSolution,
   handleDeleteSolution,
   handleAddSolution,
-  setSolutionVisible
+  setSolutionVisible,
+  userSolutionMatched = false,
+  onMarkSolutionMatched
 }) => {
   const [solution, setSolution] = useState('');
   const hasSolution = !!exercise.solution;
@@ -42,10 +46,13 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
   if (hasSolution) {
     return (
       <motion.div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div 
+        <div
           className={`px-6 py-4 cursor-pointer ${solutionVisible ? 'bg-indigo-50 border-b border-indigo-100' : 'bg-gray-50 hover:bg-gray-100'} transition-colors`}
           onClick={(e) => {
             e.stopPropagation();
+            if (!solutionVisible) {
+              toggleSolutionVisibility(e);
+            }
             setSolutionVisible(!solutionVisible);
           }}
         >
@@ -64,6 +71,9 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
+                if (!solutionVisible) {
+                  toggleSolutionVisibility(e);
+                }
                 setSolutionVisible(!solutionVisible);
               }}
               className="text-gray-500 hover:text-indigo-600 h-9 w-9 p-0 rounded-full"
@@ -86,34 +96,58 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
                 <div className="prose max-w-none text-gray-800">
                   <TipTapRenderer content={exercise.solution.content} />
                 </div>
-                <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-100">
-                  <VoteButtons
-                    initialVotes={exercise.solution.vote_count}
-                    onVote={(value) => handleVote(value, 'solution')}
-                    vertical={false}
-                    userVote={exercise.solution.user_vote}
-                    size="sm"
-                  />
-                  
-                  {canEditSolution && (
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={handleEditSolution}
-                        className="text-indigo-600 border-indigo-200 rounded-lg h-9"
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <VoteButtons
+                      initialVotes={exercise.solution.vote_count}
+                      onVote={(value) => handleVote(value, 'solution')}
+                      vertical={false}
+                      userVote={exercise.solution.user_vote}
+                      size="sm"
+                    />
+
+                    {canEditSolution && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          onClick={handleEditSolution}
+                          className="text-indigo-600 border-indigo-200 rounded-lg h-9"
+                          size="sm"
+                        >
+                          <Edit className="w-4 h-4 mr-1.5" />
+                          Modifier
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={handleDeleteSolution}
+                          className="text-red-600 border-red-200 rounded-lg h-9"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1.5" />
+                          Supprimer
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {onMarkSolutionMatched && (
+                    <div className="space-y-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Votre solution correspond-elle à celle proposée?</span>
+                        <span className="block text-gray-600 mt-1">Cliquez ci-dessous pour indiquer si votre solution correspond à la solution proposée.</span>
+                      </p>
+                      <Button
+                        variant={userSolutionMatched ? 'default' : 'ghost'}
+                        onClick={onMarkSolutionMatched}
+                        className={`w-full rounded-lg ${
+                          userSolutionMatched
+                            ? 'bg-green-600 hover:bg-green-700 text-white border-green-600'
+                            : 'border-green-200 text-green-600 hover:bg-green-50 bg-white'
+                        }`}
                         size="sm"
                       >
-                        <Edit className="w-4 h-4 mr-1.5" />
-                        Modifier
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={handleDeleteSolution}
-                        className="text-red-600 border-red-200 rounded-lg h-9"
-                        size="sm"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1.5" />
-                        Supprimer
+                        <CheckCircle className="w-4 h-4 mr-1.5" />
+                        {userSolutionMatched ? 'Solution validée - Cliquer pour annuler' : 'Valider la solution'}
                       </Button>
                     </div>
                   )}

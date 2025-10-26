@@ -2,10 +2,9 @@
 import React, { useState } from 'react';
 import { 
   Activity, BookOpen, ChevronUp, MessageSquare, Eye, 
-  CheckCircle, XCircle, Bookmark, Brain, Award, TrendingUp,
+  CheckCircle, XCircle, Bookmark, Brain, Award,
   Target, Zap, Star, Clock, BarChart3, Users,
-  ArrowUp, ArrowDown, Minus, Trophy, Flame,
-  Heart, Share2, ThumbsUp
+  ArrowUp, ArrowDown, Minus, Trophy,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

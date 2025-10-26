@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Calendar, Eye, Share2, Bookmark, MoreHorizontal, GraduationCap, BookOpen } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Eye, Share2, Bookmark, MoreHorizontal, GraduationCap, BookOpen, Printer, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Content, Difficulty } from '@/types';
+import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 
 interface ExerciseHeaderProps {
   exercise: Content;
@@ -14,6 +15,7 @@ interface ExerciseHeaderProps {
   toggleSavedForLater: () => Promise<void>;
   formatTimeAgo: (dateString: string) => string;
   isAuthor: boolean;
+  onPrint?: () => void;
 }
 
 export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
@@ -22,9 +24,12 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
   loadingStates,
   toggleSavedForLater,
   formatTimeAgo,
-  isAuthor
+  isAuthor,
+  onPrint
 }) => {
   const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showRevisionListModal, setShowRevisionListModal] = useState(false);
 
   const getDifficultyColor = (difficulty: Difficulty): string => {
     switch (difficulty) {
@@ -53,7 +58,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
   };
 
   return (
-    <div className="liquid-glass liquid-effect bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
+    <div className="liquid-glass liquid-effect bg-gradient-to-r from-gray-800 to-purple-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
       {/* Background Pattern - positioned relative to header */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -80,7 +85,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
           
           <div className="flex items-center gap-2">
             {/* Save button */}
-            <Button 
+            <Button
               onClick={toggleSavedForLater}
               variant="ghost"
               className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
@@ -93,29 +98,58 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
               )}
               {savedForLater ? 'Enregistré' : 'Enregistrer'}
             </Button>
-            
-            {/* Share button */}
-            <Button 
-            onClick={handleShare}
-            variant="ghost"
-            className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-          >
-            <Share2 className="w-5 h-5 mr-1.5" />
-            Partager
-          </Button>
-            
-            {/* More options dropdown for author */}
-            {isAuthor && (
-              <div className="relative">
-                <Button 
-                  variant="ghost"
-                  className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                </Button>
-                {/* Dropdown menu would be implemented here */}
-              </div>
-            )}
+
+            {/* Add to Revision List button - Now visible directly */}
+            <Button
+              onClick={() => setShowRevisionListModal(true)}
+              variant="ghost"
+              className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <ListPlus className="w-5 h-5 mr-1.5" />
+              <span className="hidden sm:inline">Ajouter à une révision</span>
+              <span className="sm:hidden">Liste</span>
+            </Button>
+
+            {/* More options dropdown */}
+            <div className="relative">
+              <Button
+                onClick={() => setShowDropdown(!showDropdown)}
+                variant="ghost"
+                className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 py-1">
+                  {/* Share option */}
+                  <button
+                    onClick={() => {
+                      handleShare();
+                      setShowDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Partager</span>
+                  </button>
+
+                  {/* Print option */}
+                  {onPrint && (
+                    <button
+                      onClick={() => {
+                        onPrint();
+                        setShowDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors border-t"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Imprimer</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         
@@ -167,6 +201,15 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
         
         {/* We don't include the tab navigation here as it's being rendered in the parent component */}
       </div>
+
+      {/* Add to Revision List Modal */}
+      <AddToRevisionListModal
+        isOpen={showRevisionListModal}
+        onClose={() => setShowRevisionListModal(false)}
+        contentType="exercise"
+        contentId={exercise.id}
+        contentTitle={exercise.title}
+      />
     </div>
   );
 };

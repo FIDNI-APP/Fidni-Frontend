@@ -107,11 +107,11 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   const getTypeIcon = () => {
     switch (type) {
       case 'exercises':
-        return <BookOpen className="h-4 w-4 mr-2 text-indigo-300" />;
+        return <BookOpen className="h-4 w-4 mr-2 text-gray-400" />;
       case 'lessons':
-        return <GraduationCap className="h-4 w-4 mr-2 text-indigo-300" />;
+        return <GraduationCap className="h-4 w-4 mr-2 text-gray-400" />;
       case 'exams':
-        return <Award className="h-4 w-4 mr-2 text-indigo-300" />;
+        return <Award className="h-4 w-4 mr-2 text-gray-400" />;
       default:
         return null;
     }
@@ -123,7 +123,7 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
 
     return (
       <>
-        <div className="px-4 py-2 border-b border-indigo-700/30">
+        <div className="px-4 py-2 border-b border-gray-700/50">
           <button
             onClick={() => {
               navigate('/exams?isNational=true');
@@ -131,12 +131,12 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
             }}
             className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-white/10 transition-colors flex items-center text-gray-200"
           >
-            <Award className="h-4 w-4 mr-2 text-yellow-400" />
+            <Award className="h-4 w-4 mr-2 text-purple-400" />
             Examens Nationaux
           </button>
         </div>
         <div className="px-2 py-1">
-          <div className="text-xs text-indigo-300 uppercase tracking-wide px-4 py-1">
+          <div className="text-xs text-gray-400 uppercase tracking-wide px-4 py-1">
             Par niveau
           </div>
         </div>
@@ -145,83 +145,75 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
   };
 
   return (
-    <div 
+    <div
       ref={dropdownRef}
-      className="absolute top-full left-0 mt-2 w-72 bg-indigo-900/95 backdrop-blur-md rounded-xl shadow-xl border border-indigo-700/30 overflow-hidden z-50"
+      className="absolute top-full left-0 mt-1 w-64 bg-gray-800/95 backdrop-blur-lg rounded-lg shadow-xl border border-gray-700/50 overflow-hidden z-50"
     >
-      {/* Subtle decorative element */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/20 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/20 rounded-full blur-2xl"></div>
-      </div>
-
-      <div className="relative max-h-[450px] overflow-y-auto hide-scrollbar">
-        {/* Special options for exams */}
-        {renderExamSpecialOptions()}
-        
-        {loadingClassLevels ? (
-          <div className="flex items-center justify-center py-6">
-            <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-indigo-300">
-              <span className="sr-only">Loading...</span>
+      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+        {/* Special exam option */}
+        {type === 'exams' && (
+          <>
+            <div className="px-2 pt-2 pb-1">
+              <button
+                onClick={() => {
+                  navigate('/exams?isNational=true');
+                  onClose();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-colors"
+              >
+                <Award className="h-3.5 w-3.5 text-purple-400" />
+                <span className="font-medium">Examens Nationaux</span>
+              </button>
             </div>
+            <div className="h-px bg-gray-700/50 mx-2 my-1"></div>
+          </>
+        )}
+
+        {loadingClassLevels ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-600 border-t-gray-400"></div>
           </div>
         ) : (
           <div className="py-1">
             {classLevels.map((classLevel) => (
-              <div key={classLevel.id} className="transition-colors">
+              <div key={classLevel.id}>
                 <button
                   onClick={() => handleClassLevelClick(classLevel.id)}
-                  className={`flex items-center justify-between w-full px-4 py-2.5 text-base hover:bg-white/5 transition-colors ${
-                    expandedClassLevel === classLevel.id ? 'bg-white/10' : ''
-                  }`}
+                  className="flex items-center justify-between w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-colors"
                 >
-                  <div className="flex items-center text-sm">
-                    <GraduationCap className="h-4 w-4 mr-2 text-indigo-300" />
-                    <span className="font-medium text-gray-200">
-                      {classLevel.name}
-                    </span>
-                  </div>
-                  <span className="ml-2">
-                    {expandedClassLevel === classLevel.id ? (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
-                    )}
-                  </span>
+                  <span className="font-medium">{classLevel.name}</span>
+                  <ChevronRight className={`h-3.5 w-3.5 text-gray-500 transition-transform ${
+                    expandedClassLevel === classLevel.id ? 'rotate-90' : ''
+                  }`} />
                 </button>
-                
+
                 {expandedClassLevel === classLevel.id && (
-                  <div className="bg-indigo-800/30 pl-5 pr-2 py-1.5 mx-2 rounded-md mb-1">
+                  <div className="bg-gray-900/50 py-1">
                     {loadingSubjects[classLevel.id] ? (
-                      <div className="flex items-center justify-center py-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-300"></div>
+                      <div className="flex justify-center py-3">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-gray-400"></div>
                       </div>
                     ) : subjectsByClassLevel[classLevel.id]?.length > 0 ? (
                       <>
-                        <div className="space-y-1 py-1">
-                          {subjectsByClassLevel[classLevel.id].map((subject) => (
-                            <button
-                              key={subject.id}
-                              onClick={() => handleSubjectClick(classLevel.id, subject.id)}
-                              className="w-full text-left px-3 py-1.5 rounded-md text-sm hover:bg-white/10 transition-colors flex items-center"
-                            >
-                              <BookOpen className="h-3.5 w-3.5 mr-2 text-indigo-300" />
-                              <span className="text-gray-300">{subject.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="mt-1 pt-1 border-t border-white/10">
+                        {subjectsByClassLevel[classLevel.id].map((subject) => (
                           <button
-                            onClick={() => handleViewAll(classLevel.id)}
-                            className="w-full text-left px-3 py-1.5 rounded-md text-xs font-medium hover:bg-white/5  transition-colors text-indigo-300"
+                            key={subject.id}
+                            onClick={() => handleSubjectClick(classLevel.id, subject.id)}
+                            className="w-full text-left px-6 py-1.5 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-700/30 transition-colors"
                           >
-                            Voir tous les {type === 'exercises' ? 'exercices' : type === 'lessons' ? 'cours' : 'examens'} →
+                            {subject.name}
                           </button>
-                        </div>
+                        ))}
+                        <button
+                          onClick={() => handleViewAll(classLevel.id)}
+                          className="w-full text-left px-6 py-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                        >
+                          Voir tout →
+                        </button>
                       </>
                     ) : (
-                      <p className="px-3 py-2 text-xs italic text-gray-400">
-                        Aucune matière disponible
+                      <p className="px-6 py-2 text-xs text-gray-500 italic">
+                        Aucune matière
                       </p>
                     )}
                   </div>
@@ -230,30 +222,25 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
             ))}
           </div>
         )}
-        
-        {/* View all option at the bottom */}
-        {type === 'exams' && (
-          <div className="border-t border-indigo-700/30 px-4 py-3">
-            <button
-              onClick={() => {
-                navigate('/exams');
-                onClose();
-              }}
-              className="w-full text-center px-3 py-2 rounded-md text-sm font-medium bg-indigo-800/50 hover:bg-indigo-800/70 transition-colors text-gray-200"
-            >
-              Voir tous les examens
-            </button>
-          </div>
-        )}
       </div>
-      
+
       <style jsx>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
         }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(107, 114, 128, 0.3);
+          border-radius: 2px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(107, 114, 128, 0.5);
+        }
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(107, 114, 128, 0.3) transparent;
         }
       `}</style>
     </div>

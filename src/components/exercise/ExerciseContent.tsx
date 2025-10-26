@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, CheckCircle, XCircle, Printer, Layers, Tag, BookMarked } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Printer, Layers, Tag, BookMarked, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Content, Difficulty, VoteValue } from '@/types';
 import { VoteButtons } from '@/components/VoteButtons';
@@ -15,6 +15,8 @@ interface ExerciseContentProps {
   };
   handleVote: (value: VoteValue, target?: 'exercise' | 'solution') => Promise<void>;
   handlePrint: () => void;
+  userViewedSolution?: boolean;
+  onRemoveSolutionFlag?: () => Promise<void>;
 }
 
 export const ExerciseContent: React.FC<ExerciseContentProps> = ({
@@ -23,7 +25,9 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
   markAsCompleted,
   loadingStates,
   handleVote,
-  handlePrint
+  handlePrint,
+  userViewedSolution,
+  onRemoveSolutionFlag
 }) => {
   const [showAllTags, setShowAllTags] = useState<boolean>(false);
   
@@ -176,16 +180,16 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
               ) : (
                 <CheckCircle className="w-4 h-4 mr-1.5" />
               )}
-              Réussi
+              {completed === 'success' ? 'Réussi' : 'Réussir'}
             </Button>
-            
+
             <Button
               onClick={() => markAsCompleted("review")}
               variant={completed === "review" ? "default" : "ghost"}
               size="sm"
               className={`rounded-lg ${
-                completed === "review" 
-                  ? 'liquid-glass bg-rose-500 hover:bg-rose-600 text-white' 
+                completed === "review"
+                  ? 'liquid-glass bg-rose-500 hover:bg-rose-600 text-white'
                   : 'liquid-glass liquid-effect border-gray-200 hover:border-rose-300 hover:text-rose-600'
               }`}
               disabled={loadingStates.progress}
@@ -195,19 +199,25 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
               ) : (
                 <XCircle className="w-4 h-4 mr-1.5" />
               )}
-              À revoir
+              {completed === 'review' ? 'Échoué' : 'Échoué'}
             </Button>
             
-            {/* Print button */}
-            <Button
-              variant="ghost"
-              onClick={handlePrint}
-              className="rounded-lg text-sm"
-              size="sm"
-            >
-              <Printer className="w-4 h-4 mr-1.5" />
-              Imprimer
-            </Button>
+            {/* Viewed Solution Badge */}
+            {userViewedSolution && (
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                <Eye className="w-4 h-4" />
+                <span className="font-medium">Solution consultée</span>
+                {onRemoveSolutionFlag && (
+                  <button
+                    onClick={onRemoveSolutionFlag}
+                    className="ml-1 p-0.5 hover:bg-amber-200 rounded transition-colors"
+                    title="Annuler - Supprimer le marquage"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

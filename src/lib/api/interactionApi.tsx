@@ -1,18 +1,11 @@
 import {api} from './apiClient';
-import { Solution } from '@/types/index';
+import { exerciseContentAPI, examContentAPI, lessonContentAPI, VoteValue } from '../factories/contentApiFactory';
 
-// Vote types and functions
-type VoteValue = 1 | -1 | 0;  // Matches Vote.UP, Vote.DOWN, Vote.UNVOTE
+// Re-export VoteValue type for backwards compatibility
+export type { VoteValue };
 
-export const voteExercise = async (id: string, value: VoteValue) => {
-  try {
-    const response = await api.post(`/exercises/${id}/vote/`, { value });
-    return response.data.item; // Return the updated exercise
-  } catch (error) {
-    console.error('Vote error:', error);
-    throw error;
-  }
-};
+// Use factory-generated vote functions instead of duplicating code
+export const voteExercise = exerciseContentAPI.vote;
 
 export const voteSolution = async (id: string, value: VoteValue) => {
   try {
@@ -49,19 +42,13 @@ export const deleteSolution = async (id: string) => {
   await api.delete(`/solutions/${id}/`);
 };
 
-export const addSolution = async (exerciseId: string, data: { content: string }): Promise<Solution> => {
+export const addSolution = async (exerciseId: string, data: { content: string }) => {
   const response = await api.post(`/exercises/${exerciseId}/solution/`, data);
   return response.data;
 };
 
-// Comment API
-export const addComment = async (exerciseId: string, content: string, parentId?: string) => {
-  const response = await api.post(`/exercises/${exerciseId}/comment/`, { 
-    content,
-    parent: parentId
-  });
-  return response.data;
-};
+// Comment API - use factory function
+export const addComment = exerciseContentAPI.addComment;
 
 export const updateComment = async (commentId: string, content: string) => {
   const response = await api.put(`/comments/${commentId}/`, { content });
@@ -73,36 +60,15 @@ export const deleteComment = async (commentId: string) => {
 };
 
 
-// Time spent API functions
+// Time spent API functions - simplified with factory
 export const saveTimeSpent = async (contentType: 'exercise' | 'exam', contentId: string, timeSeconds: number) => {
-  try {
-    const endpoint = contentType === 'exercise' 
-      ? `/exercises/${contentId}/save_time_spent/`
-      : `/exams/${contentId}/save_time_spent/`;
-      
-    const response = await api.post(endpoint, { 
-      time_spent: timeSeconds 
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error saving time spent:', error);
-    throw error;
-  }
+  const contentAPI = contentType === 'exercise' ? exerciseContentAPI : examContentAPI;
+  return contentAPI.saveTimeSpent(contentId, timeSeconds);
 };
 
 export const getTimeSpent = async (contentType: 'exercise' | 'exam', contentId: string) => {
-  try {
-    const endpoint = contentType === 'exercise' 
-      ? `/exercises/${contentId}/get_time_spent/`
-      : `/exams/${contentId}/get_time_spent/`;
-      
-    const response = await api.get(endpoint);
-    return response.data;
-  } catch (error) {
-    console.error('Error getting time spent:', error);
-    throw error;
-  }
+  const contentAPI = contentType === 'exercise' ? exerciseContentAPI : examContentAPI;
+  return contentAPI.getTimeSpent(contentId);
 };
 
 // Session API functions
@@ -116,41 +82,20 @@ export interface TimeSession {
   notes: string;
 }
 
+// Session API - simplified with factory
 export const saveSession = async (
-  contentType: 'exercise' | 'exam', 
-  contentId: string, 
+  contentType: 'exercise' | 'exam',
+  contentId: string,
   sessionType: string = 'study',
   notes: string = ''
 ) => {
-  try {
-    const endpoint = contentType === 'exercise' 
-      ? `/exercises/${contentId}/save_session/`
-      : `/exams/${contentId}/save_session/`;
-      
-    const response = await api.post(endpoint, { 
-      session_type: sessionType,
-      notes: notes
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error saving session:', error);
-    throw error;
-  }
+  const contentAPI = contentType === 'exercise' ? exerciseContentAPI : examContentAPI;
+  return contentAPI.saveSession(contentId, sessionType, notes);
 };
 
 export const getSessionHistory = async (contentType: 'exercise' | 'exam', contentId: string): Promise<TimeSession[]> => {
-  try {
-    const endpoint = contentType === 'exercise' 
-      ? `/exercises/${contentId}/session_history/`
-      : `/exams/${contentId}/session_history/`;
-      
-    const response = await api.get(endpoint);
-    return response.data.sessions;
-  } catch (error) {
-    console.error('Error getting session history:', error);
-    throw error;
-  }
+  const contentAPI = contentType === 'exercise' ? exerciseContentAPI : examContentAPI;
+  return contentAPI.getSessionHistory(contentId);
 };
 
 // Fonction utilitaire pour sauvegarder automatiquement le temps

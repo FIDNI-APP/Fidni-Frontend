@@ -59,7 +59,7 @@ const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete
           </div>
           
           <div className="mt-2 flex justify-between text-xs text-indigo-100">
-            <span>Progress</span>
+            <span>Progrès</span>
             <span>
               {notebook.sections?.filter(s => s.lesson).length || 0} / {notebook.sections?.length || 0} lessons
             </span>

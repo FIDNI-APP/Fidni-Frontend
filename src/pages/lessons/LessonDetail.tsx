@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  BookOpen, 
-  GraduationCap, 
-  Tag, 
-  Edit, 
-  Printer, 
-  Share2, 
-  Eye, 
+import {
+  BookOpen,
+  GraduationCap,
+  Tag,
+  Edit,
+  Printer,
+  Share2,
+  Eye,
   BookMarked,
   Calendar,
   User,
   ArrowLeft,
   CheckCircle,
-  XCircle
+  XCircle,
+  MoreHorizontal,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +28,8 @@ import { CommentSection } from '@/components/CommentSection';
 import { LessonTabNavigation } from '@/components/lesson/LessonTabNavigation';
 import { ActivityEmptyState } from '@/components/exercise/EmptyStates';
 import AddToNotebookButton from '@/components/lesson/AddToNotebookButton';
+import { SEO, createLessonStructuredData, createBreadcrumbStructuredData } from '@/components/SEO';
+import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
 
 import { formatDate } from '@/lib/utils';
 import '@/lib/styles.css';
@@ -33,11 +37,17 @@ import '@/lib/styles.css';
 export function LessonDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'lesson' | 'discussions' | 'activity'>('lesson');
+
+  // Initialize activeSection from URL or default to 'lesson'
+  const [activeSection, setActiveSection] = useState<'lesson' | 'discussions' | 'activity'>(() => {
+    const tab = searchParams.get('tab');
+    return (tab === 'discussions' || tab === 'activity') ? tab : 'lesson';
+  });
   const [completed, setCompleted] = useState<'success' | 'review' | null>(null);
   const [savedForLater, setSavedForLater] = useState<boolean>(false);
   const [loadingStates, setLoadingStates] = useState({
@@ -45,6 +55,41 @@ export function LessonDetail() {
     save: false
   });
   const [showPrint, setShowPrint] = useState<boolean>(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Page time tracker - automatically tracks time spent on this page
+  usePageTimeTracker({
+    contentType: 'lesson',
+    contentId: id,
+    enabled: !!id  // Track as soon as we have an ID, don't wait for lesson to load
+  });
+
+  // Handler to change section and update URL
+  const handleSectionChange = (newSection: 'lesson' | 'discussions' | 'activity') => {
+    setActiveSection(newSection);
+    setSearchParams({ tab: newSection });
+  };
+
+  // Sync section from URL changes (browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && (tabFromUrl === 'discussions' || tabFromUrl === 'activity' || tabFromUrl === 'lesson') && tabFromUrl !== activeSection) {
+      setActiveSection(tabFromUrl as 'lesson' | 'discussions' | 'activity');
+    }
+  }, [searchParams]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -210,6 +255,7 @@ export function LessonDetail() {
         .then(() => alert('Link copied to clipboard!'))
         .catch(err => console.error('Error copying link:', err));
     }
+    setShowDropdown(false);
   };
 
   const handlePrint = () => {
@@ -218,6 +264,20 @@ export function LessonDetail() {
       window.print();
       setShowPrint(false);
     }, 300);
+    setShowDropdown(false);
+  };
+
+  const handleEdit = () => {
+    navigate(`/edit-lesson/${lesson?.id}`);
+    setShowDropdown(false);
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette leçon ?')) {
+      // TODO: Implement delete functionality
+      console.log('Delete lesson:', lesson?.id);
+    }
+    setShowDropdown(false);
   };
 
   if (loading) {
@@ -281,6 +341,19 @@ export function LessonDetail() {
   const hasChapters = lesson.chapters && lesson.chapters.length > 0;
   const hasSubfields = lesson.subfields && lesson.subfields.length > 0;
 
+  // Generate structured data for SEO
+  const lessonStructuredData = createLessonStructuredData(lesson);
+  const breadcrumbData = createBreadcrumbStructuredData([
+    { name: 'Accueil', url: '/' },
+    { name: 'Leçons', url: '/lessons' },
+    { name: lesson.title, url: `/lessons/${lesson.id}` },
+  ]);
+
+  // Combine structured data
+  const combinedStructuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [lessonStructuredData, breadcrumbData],
+  };
 
   // Print-only view
   if (showPrint) {
@@ -309,6 +382,23 @@ export function LessonDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
+      <SEO
+        title={`${lesson.title} - Leçon de mathématiques`}
+        description={lesson.content.substring(0, 160).replace(/<[^>]*>/g, '') || `Apprenez avec cette leçon de mathématiques: ${lesson.title}. Explications détaillées et exemples.`}
+        keywords={[
+          'leçon de mathématiques',
+          'cours de maths',
+          lesson.subject?.name || 'mathématiques',
+          ...(lesson.class_levels?.map(level => level.name) || []),
+          ...(lesson.chapters?.map(chapter => chapter.name) || []),
+          'apprentissage',
+          'théorie mathématique',
+        ]}
+        ogType="article"
+        ogImage={`/og-lesson-${lesson.id}.jpg`}
+        canonicalUrl={`/lessons/${lesson.id}`}
+        structuredData={combinedStructuredData}
+      />
       {/* Print-only view */}
       {showPrint && (
         <div className="hidden print:block">
@@ -363,7 +453,7 @@ export function LessonDetail() {
                 
                 <div className="flex items-center gap-2">
                   {/* Save button */}
-                  <Button 
+                  <Button
                     onClick={toggleSavedForLater}
                     variant="ghost"
                     className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
@@ -376,35 +466,65 @@ export function LessonDetail() {
                     )}
                     {savedForLater ? 'Enregistré' : 'Enregistrer'}
                   </Button>
-                  
-                  {/* Add to Notebook Button - AJOUTÉ ICI */}
+
+                  {/* Add to Notebook Button */}
                   {id && (
-                    <AddToNotebookButton 
-                      lessonId={id} 
+                    <AddToNotebookButton
+                      lessonId={id}
                     />
                   )}
-                  
-                  {/* Share button */}
-                  <Button 
-                    onClick={handleShare}
-                    variant="ghost"
-                    className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-                  >
-                    <Share2 className="w-5 h-5 mr-1.5" />
-                    Partager
-                  </Button>
-                  
-                  {/* Edit button for author */}
-                  {isAuthor && (
-                    <Button 
-                      onClick={() => navigate(`/edit-lesson/${lesson.id}`)}
+
+                  {/* More options dropdown */}
+                  <div className="relative" ref={dropdownRef}>
+                    <Button
+                      onClick={() => setShowDropdown(!showDropdown)}
                       variant="ghost"
                       className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
                     >
-                      <Edit className="w-5 h-5 mr-1.5" />
-                      Modifier
+                      <MoreHorizontal className="w-5 h-5" />
                     </Button>
-                  )}
+
+                    {/* Dropdown menu */}
+                    {showDropdown && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
+                        <button
+                          onClick={handleShare}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          Partager
+                        </button>
+
+                        <button
+                          onClick={handlePrint}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <Printer className="w-4 h-4" />
+                          Imprimer
+                        </button>
+
+                        {isAuthor && (
+                          <>
+                            <div className="border-t border-gray-100 my-1"></div>
+                            <button
+                              onClick={handleEdit}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Modifier
+                            </button>
+                            <button
+                              onClick={handleDelete}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Supprimer
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -454,7 +574,7 @@ export function LessonDetail() {
           <div className="bg-gradient-to-r from-blue-800 via-indigo-800 to-indigo-900 text-white px-6 pb-2">
                 <LessonTabNavigation
                   activeSection={activeSection}
-                  setActiveSection={setActiveSection}
+                  setActiveSection={handleSectionChange}
                   commentsCount={lesson.comments?.length || 0}
                 />
               </div>

@@ -32,28 +32,28 @@ const NotebooksListView: React.FC<NotebooksListViewProps> = ({
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-900 flex items-center">
           <Book className="w-5 h-5 mr-2 text-indigo-600" />
-          My Notebooks
+          Mes cahiers de cours
         </h2>
         <Button 
           onClick={onCreateNotebook}
           className="bg-indigo-600 hover:bg-indigo-700 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
-          New Notebook
+          Nouveau cahier
         </Button>
       </div>
 
       {notebooks.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl shadow-md">
           <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No notebooks yet</h3>
-          <p className="text-gray-500 mb-6">Create your first notebook to get started</p>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Pas de cahier créee</h3>
+          <p className="text-gray-500 mb-6">Créez votre premier cahier de cours</p>
           <Button 
             onClick={onCreateNotebook}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Create First Notebook
+            Créer un cahier
           </Button>
         </div>
       ) : (
@@ -76,8 +76,8 @@ const NotebooksListView: React.FC<NotebooksListViewProps> = ({
               <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
                 <Plus className="w-8 h-8 text-indigo-600" />
               </div>
-              <h3 className="font-medium text-gray-800 mb-1">Create New Notebook</h3>
-              <p className="text-sm text-gray-500">Add a new subject notebook</p>
+              <h3 className="font-medium text-gray-800 mb-1">Créer un cahier</h3>
+              <p className="text-sm text-gray-500">Ajouter une nouvelle matière</p>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from 'react-confetti';
 import { Exam, VoteValue } from '@/types';
@@ -7,26 +7,41 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
 import { CommentSection } from '@/components/CommentSection';
 import { useAdvancedTimeTracker } from '@/hooks/useAdvancedTimeTracker';
-import { 
-  getExamById, 
-  voteExam, 
-  addExamComment, 
+import { useSessionHistory } from '@/hooks/useSessionHistory';
+import { useContentActions } from '@/hooks/useContentActions';
+import { useContentUI } from '@/hooks/useContentUI';
+import { useContentStatistics } from '@/hooks/useContentStatistics';
+import { useSolutionTracking } from '@/hooks/useSolutionTracking';
+import { useSolutionManagement } from '@/hooks/content/useSolutionManagement';
+import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
+import { voteSolution } from '@/lib/api';
+import {
+  getExamById,
+  voteExam,
+  addExamComment,
   markExamViewed,
-  markExamProgress, 
-  removeExamProgress, 
-  saveExam, 
+  markExamProgress,
+  removeExamProgress,
+  saveExam,
   unsaveExam,
 } from '@/lib/api/examApi';
-import { getSessionHistory, TimeSession } from '@/lib/api/interactionApi';
+import { getSessionHistory as getSessionHistoryAPI } from '@/lib/api/interactionApi';
+import { undoSolutionViewed, toggleSolutionMatched } from '@/lib/api/statisticsApi';
 
-// Import enhanced components (we'll need to create exam-specific versions)
+// Import enhanced components
 import { ExamHeader } from '@/components/exam/ExamHeader';
-import { TabNavigation } from '@/components/exam/TabNavigation';
-import { FloatingToolbar } from '@/components/exam/FloatingToolbar';
 import { ExamContent } from '@/components/exam/ExamContent';
 import { ProposalsEmptyState, ActivityEmptyState } from '@/components/exercise/EmptyStates';
 import { ExamPrintView } from '@/components/exam/ExamPrintView';
-import { MobileSidebar } from '@/components/exam/MobileSidebar';
+import { ExamSidebar } from '@/components/exam/ExamSidebar';
+import { SolutionSection } from '@/components/exercise/SolutionSection';
+
+// Import shared components (consolidated from exam/exercise duplicates)
+import { FloatingToolbar } from '@/components/shared/FloatingToolbar';
+import { MobileSidebar } from '@/components/shared/MobileSidebar';
+import { TabNavigation } from '@/components/shared/TabNavigation';
+import { ActivitySection } from '@/components/activity/ActivitySection';
+import { Toast } from '@/components/shared/Toast';
 import { 
   ArrowLeft, 
   Share2, 
@@ -37,43 +52,94 @@ import {
   RotateCcw,
   Award,
   Calendar,
-  Eye,
   MessageSquare,
-  CheckCircle,
-  XCircle,
   Bookmark,
-  Printer,
   BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { SEO, createBreadcrumbStructuredData } from '@/components/SEO';
+import { formatTimeAgo, formatDate } from '@/lib/utils/dateHelpers';
+import { handleShare as shareContent } from '@/lib/utils/shareHelpers';
+import { getDifficultyInfo } from '@/lib/utils/difficultyHelpers';
 import 'katex/dist/katex.min.css';
 
 export function ExamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const { openModal } = useAuthModal();
   const [exam, setExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'exam' | 'discussions' | 'proposals' | 'activity'>('exam');
-  const [completed, setCompleted] = useState<'success' | 'review' | null>(null);
-  const [savedForLater, setSavedForLater] = useState<boolean>(false);
-  const [showConfetti, setShowConfetti] = useState<boolean>(false);
-  const [loadingStates, setLoadingStates] = useState({
-    progress: false,
-    save: false
+
+  // Content Actions hook (manages: completed, savedForLater, showConfetti, loadingStates, handleVote)
+  const {
+    completed,
+    savedForLater,
+    showConfetti,
+    loadingStates,
+    handleVote: handleContentVote,
+    markComplete,
+    removeComplete,
+    toggleSave,
+    setCompleted,
+    setSavedForLater
+  } = useContentActions({
+    contentId: id || '',
+    contentType: 'exam',
+    initialCompleted: exam?.user_complete,
+    initialSaved: exam?.user_save || false,
+    onVote: (value) => voteExam(id || '', value).then(data => { setExam(data); return data; }),
+    onMarkProgress: (status) => markExamProgress(id || '', status),
+    onRemoveProgress: () => removeExamProgress(id || ''),
+    onSave: () => saveExam(id || ''),
+    onUnsave: () => unsaveExam(id || '')
   });
-  
-  // User interaction states
-  const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
-  const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
-  const [showToolbar, setShowToolbar] = useState<boolean>(true);
-  const [isSticky, setIsSticky] = useState<boolean>(false);
-  const [showPrint, setShowPrint] = useState<boolean>(false);
-  const [showSessionHistory, setShowSessionHistory] = useState<boolean>(false);
-  const [fullSessionHistory, setFullSessionHistory] = useState<TimeSession[]>([]);
+
+  // Content UI hook (manages: fullscreenMode, showToolbar, isSticky, showPrint, activeSection, difficultyRating)
+  const {
+    fullscreenMode,
+    showToolbar,
+    isSticky,
+    showPrint,
+    activeSection,
+    difficultyRating,
+    toggleFullscreen,
+    handlePrint,
+    setActiveSection,
+    setShowToolbar,
+    rateDifficulty
+  } = useContentUI({ contentType: 'exam' });
+
+  // Helper to toggle toolbar
+  const toggleToolbar = () => setShowToolbar(!showToolbar);
+
+  // Handler to change section and update URL
+  const handleSectionChange = (newSection: 'exam' | 'discussions' | 'proposals' | 'activity') => {
+    setActiveSection(newSection);
+    setSearchParams({ tab: newSection });
+  };
+
+  // Initialize from URL on mount
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && (tabFromUrl === 'discussions' || tabFromUrl === 'proposals' || tabFromUrl === 'activity' || tabFromUrl === 'exam')) {
+      setActiveSection(tabFromUrl as 'exam' | 'discussions' | 'proposals' | 'activity');
+    }
+  }, []);
+
+  // Sync section from URL changes (browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && (tabFromUrl === 'discussions' || tabFromUrl === 'proposals' || tabFromUrl === 'activity' || tabFromUrl === 'exam') && tabFromUrl !== activeSection) {
+      setActiveSection(tabFromUrl as 'exam' | 'discussions' | 'proposals' | 'activity');
+    }
+  }, [searchParams]);
+
+  // Session History hook
+  const { showSessionHistory, fullSessionHistory, loadHistory, closeHistory, setFullSessionHistory } =
+    useSessionHistory();
   
   // Time tracking with enhanced hook for session history
   const {
@@ -102,11 +168,60 @@ export function ExamDetail() {
     contentId: id || '',
     enabled: !!id && !!exam && isAuthenticated
   });
-  
+
+  // Statistics hook
+  const { statistics, loading: statsLoading, refetch: refetchStatistics } = useContentStatistics({
+    contentType: 'exam',
+    contentId: id,
+    enabled: !!id
+  });
+
+  // Solution tracking hook
+  const {
+    showNotification,
+    notificationMessage,
+    trackSolutionView,
+    closeNotification
+  } = useSolutionTracking({
+    contentType: 'exam',
+    contentId: id || '',
+    isCompleted: completed,
+    onRefetchStatistics: refetchStatistics
+  });
+
+  // Solution management hook
+  const {
+    handleAddSolution: addSolution,
+    handleDeleteSolution: deleteSolution,
+    isSubmitting: isSolutionSubmitting
+  } = useSolutionManagement({
+    contentId: id || '',
+    onSolutionAdded: () => {
+      setSolutionVisible(true);
+    },
+    onSolutionDeleted: () => {
+      if (exam) {
+        setExam({ ...exam, solution: undefined });
+      }
+    }
+  });
+
+  // Page time tracker - automatically tracks time spent on this page
+  usePageTimeTracker({
+    contentType: 'exam',
+    contentId: id,
+    enabled: !!id  // Track as soon as we have an ID
+  });
+
+  // Local state for solution
+  const [showSolution, setShowSolution] = useState(false);
+  const [solutionVisible, setSolutionVisible] = useState(false);
+
   // Refs for scroll handling
   const headerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  
+  const hasMarkedView = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (id) {
       if (isAuthenticated) {
@@ -114,67 +229,20 @@ export function ExamDetail() {
       } else {
         loadExam(id);
       }
-      markExamViewed(id).catch(console.error);
+
+      // Mark view only once per exam ID using a Set to track
+      if (!hasMarkedView.current.has(id)) {
+        hasMarkedView.current.add(id);
+        markExamViewed(id).catch(console.error);
+      }
     }
-    
+
     // Add page transition animation
     document.body.classList.add('page-transition');
     return () => {
       document.body.classList.remove('page-transition');
     };
   }, [id, isAuthenticated]);
-
-  // Scroll effect to track sticky header
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      setIsSticky(scrollPosition > 300);
-      
-      // Auto-hide toolbar when scrolling down
-      if (scrollPosition > 600 && showToolbar) {
-        setShowToolbar(false);
-      } else if (scrollPosition < 300 && !showToolbar) {
-        setShowToolbar(true);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [showToolbar]);
-
-  // Format date as time ago (e.g. "2 hours ago")
-  const formatTimeAgo = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
-    
-    if (diffSecs < 60) return `${diffSecs} second${diffSecs !== 1 ? 's' : ''} ago`;
-    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
-    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
-    return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
-  };
-  
-  // Format date for display (used for national exam date)
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'Date non spécifiée';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }).format(date);
-  };
 
   const loadExamWithUserStatus = async (examId: string) => {
     try {
@@ -256,73 +324,39 @@ export function ExamDetail() {
     }
   };
   
+  // Handle vote with authentication check
   const handleVote = async (value: VoteValue) => {
-    if (!isAuthenticated || !id) {
+    if (!isAuthenticated) {
+      openModal();
+      return;
+    }
+    await handleContentVote(value);
+  };
+
+  // Handle marking as completed with toggle logic
+  const handleMarkAsCompleted = async (status: 'success' | 'review') => {
+    if (!isAuthenticated) {
       openModal();
       return;
     }
 
-    try {
-      const updatedExam = await voteExam(id, value);
-      setExam(updatedExam);
-    } catch (err) {
-      console.error('Failed to vote:', err);
+    if (completed === status) {
+      await removeComplete();
+    } else {
+      await markComplete(status);
     }
+
+    // Refetch statistics after any progress change
+    refetchStatistics();
   };
-  
-  // Implement progress tracking (Success/Review)
-  const markAsCompleted = async (status: 'success' | 'review') => {
-    if (!isAuthenticated || !id) {
+
+  // Handle save toggle with authentication check
+  const handleToggleSave = async () => {
+    if (!isAuthenticated) {
       openModal();
       return;
     }
-    
-    try {
-      setLoadingStates(prev => ({ ...prev, progress: true }));
-      
-      // If user clicks the same status button again, remove the progress
-      if (completed === status) {
-        await removeExamProgress(id);
-        setCompleted(null);
-      } else {
-        await markExamProgress(id, status);
-        setCompleted(status);
-        
-        // Show confetti animation when marking as success
-        if (status === 'success') {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 3000);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to update progress:', err);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, progress: false }));
-    }
-  };
-  
-  // Toggle saved status (Bookmark)
-  const toggleSavedForLater = async () => {
-    if (!isAuthenticated || !id) {
-      openModal();
-      return;
-    }
-    
-    try {
-      setLoadingStates(prev => ({ ...prev, save: true }));
-      
-      if (savedForLater) {
-        await unsaveExam(id);
-        setSavedForLater(false);
-      } else {
-        await saveExam(id);
-        setSavedForLater(true);
-      }
-    } catch (err) {
-      console.error('Failed to update saved status:', err);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, save: false }));
-    }
+    await toggleSave();
   };
 
   // Timer functions
@@ -343,82 +377,52 @@ export function ExamDetail() {
     }
   };
 
-  // Difficulty rating
-  const rateDifficulty = (rating: number) => {
-    setDifficultyRating(rating);
-    // TODO: API call would go here
-  };
-
-  // Layout control functions
-  const toggleFullscreen = () => {
-    setFullscreenMode(!fullscreenMode);
-  };
-
-  const toggleToolbar = () => {
-    setShowToolbar(!showToolbar);
-  };
-  
-  // Print function with enhanced preview
-  const handlePrint = () => {
-    setShowPrint(true);
-    setTimeout(() => {
-      window.print();
-      setShowPrint(false);
-    }, 300);
-  };
-  
-  // Share function
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: exam?.title || 'Exam',
-        text: `Check out this exam: ${exam?.title}`,
-        url: window.location.href
-      }).catch(err => console.error('Error sharing:', err));
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => alert('Link copied to clipboard!'))
-        .catch(err => console.error('Error copying link:', err));
+  // Share function using utility
+  const handleShare = async () => {
+    if (!exam) return;
+    try {
+      await shareContent(exam.title, 'exam');
+    } catch (err) {
+      console.error('Error sharing:', err);
     }
   };
 
-  // Get difficulty color and label
-  const getDifficultyInfo = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return {
-          label: 'Facile',
-          color: 'from-emerald-500 to-green-500',
-          bgColor: 'bg-emerald-50',
-          textColor: 'text-emerald-700',
-          borderColor: 'border-emerald-100'
-        };
-      case 'medium':
-        return {
-          label: 'Moyen',
-          color: 'from-amber-500 to-yellow-500',
-          bgColor: 'bg-amber-50',
-          textColor: 'text-amber-700',
-          borderColor: 'border-amber-100'
-        };
-      case 'hard':
-        return {
-          label: 'Difficile',
-          color: 'from-rose-500 to-pink-500',
-          bgColor: 'bg-rose-50',
-          textColor: 'text-rose-700',
-          borderColor: 'border-rose-100'
-        };
-      default:
-        return {
-          label: difficulty,
-          color: 'from-gray-500 to-gray-400',
-          bgColor: 'bg-gray-50',
-          textColor: 'text-gray-700',
-          borderColor: 'border-gray-100'
-        };
+  const handleRemoveSolutionFlag = async () => {
+    try {
+      await undoSolutionViewed('exam', id || '');
+      // Refetch statistics to update the UI
+      refetchStatistics();
+    } catch (err) {
+      console.error('Failed to remove solution flag:', err);
     }
+  };
+
+  const handleMarkSolutionMatched = async () => {
+    try {
+      await toggleSolutionMatched('exam', id || '', statistics?.user_solution_matched || false);
+      // Refetch statistics to update the UI
+      refetchStatistics();
+    } catch (err) {
+      console.error('Failed to toggle solution match:', err);
+    }
+  };
+
+  const handleVoteSolution = async (value: VoteValue) => {
+    if (!exam?.solution) return;
+
+    const updatedSolution = await voteSolution(exam.solution.id, value);
+    if (updatedSolution) {
+      setExam(prev => prev ? { ...prev, solution: updatedSolution } : prev);
+    }
+  };
+
+  const handleAddSolutionWrapper = async (solutionContent: string) => {
+    await addSolution(solutionContent, setExam);
+  };
+
+  const handleDeleteSolutionWrapper = async () => {
+    if (!exam?.solution) return;
+    await deleteSolution(exam.solution.id);
   };
 
   if (loading) {
@@ -477,10 +481,64 @@ export function ExamDetail() {
   const isAuthor = user?.id === exam.author.id;
   const difficultyInfo = getDifficultyInfo(exam.difficulty);
 
+  // Generate structured data for SEO
+  const examType = exam.is_national_exam ? 'Examen National' : 'Examen';
+  const breadcrumbData = createBreadcrumbStructuredData([
+    { name: 'Accueil', url: '/' },
+    { name: 'Examens', url: '/exams' },
+    { name: exam.title, url: `/exams/${exam.id}` },
+  ]);
+
+  const examStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'EducationalOccupationalCredential',
+    name: exam.title,
+    description: exam.content.substring(0, 200).replace(/<[^>]*>/g, ''),
+    credentialCategory: exam.is_national_exam ? 'National Exam' : 'Exam',
+    educationalLevel: exam.class_levels?.map(level => level.name).join(', ') || 'Secondary Education',
+    inLanguage: 'fr',
+    competencyRequired: exam.subject?.name || 'Mathématiques',
+    dateCreated: exam.created_at,
+  };
+
+  // Combine structured data
+  const combinedStructuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [examStructuredData, breadcrumbData],
+  };
+
   return (
     <div className={`min-h-screen bg-gray-50 pb-16 transition-all duration-300 ${fullscreenMode ? 'bg-white' : ''}`}>
+      <SEO
+        title={`${exam.title} - ${examType} de mathématiques`}
+        description={`${examType} de mathématiques${exam.is_national_exam && exam.national_exam_date ? ` - ${formatDate(exam.national_exam_date)}` : ''}. ${exam.content.substring(0, 120).replace(/<[^>]*>/g, '')}`}
+        keywords={[
+          examType.toLowerCase(),
+          'examen mathématiques',
+          exam.subject?.name || 'mathématiques',
+          ...(exam.class_levels?.map(level => level.name) || []),
+          ...(exam.chapters?.map(chapter => chapter.name) || []),
+          exam.is_national_exam ? 'bac' : 'test',
+          exam.is_national_exam ? 'épreuve nationale' : 'évaluation',
+          'préparation examen',
+          'annales',
+        ]}
+        ogType="article"
+        ogImage={`/og-exam-${exam.id}.jpg`}
+        canonicalUrl={`/exams/${exam.id}`}
+        structuredData={combinedStructuredData}
+      />
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
-      
+
+      {/* Solution tracking notification */}
+      <Toast
+        show={showNotification}
+        message={notificationMessage}
+        type={completed ? 'success' : 'warning'}
+        duration={5000}
+        onClose={closeNotification}
+      />
+
       {/* Print-only view */}
       {showPrint && (
         <div className="hidden print:block">
@@ -500,7 +558,7 @@ export function ExamDetail() {
           fullscreenMode={fullscreenMode}
           toggleFullscreen={toggleFullscreen}
           savedForLater={savedForLater}
-          toggleSavedForLater={toggleSavedForLater}
+          toggleSavedForLater={handleToggleSave}
           formatTime={formatTime}
         />
         
@@ -516,6 +574,20 @@ export function ExamDetail() {
           viewCount={exam.view_count}
           voteCount={exam.vote_count}
           commentsCount={exam.comments?.length || 0}
+          sidebarContent={
+            <ExamSidebar
+              timer={currentTime}
+              timerActive={isRunning}
+              toggleTimer={toggleTimer}
+              resetTimer={resetTimer}
+              difficultyRating={difficultyRating}
+              rateDifficulty={rateDifficulty}
+              formatTime={formatTime}
+              viewCount={exam.view_count}
+              voteCount={exam.vote_count}
+              commentsCount={exam.comments?.length || 0}
+            />
+          }
         />
         
         {/* Sticky header (appears on scroll) */}
@@ -563,15 +635,38 @@ export function ExamDetail() {
               exam={exam}
               savedForLater={savedForLater}
               loadingStates={loadingStates}
-              toggleSavedForLater={toggleSavedForLater}
+              toggleSavedForLater={handleToggleSave}
               formatTimeAgo={formatTimeAgo}
               isAuthor={isAuthor}
+              onPrint={handlePrint}
             />
             <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-blue-800 to-blue-600' : 'from-blue-800 via-indigo-800 to-indigo-900'} text-white px-6 pb-2`}>
               <TabNavigation
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-                commentsCount={exam.comments?.length || 0}
+                tabs={[
+                  {
+                    id: 'exam',
+                    label: 'Examen',
+                    icon: <Award className="w-4 h-4" />
+                  },
+                  {
+                    id: 'discussions',
+                    label: 'Discussions',
+                    icon: <MessageSquare className="w-4 h-4" />,
+                    count: exam.comments?.length || 0
+                  },
+                  {
+                    id: 'proposals',
+                    label: 'Solutions alternatives',
+                    icon: <BarChart3 className="w-4 h-4" />
+                  },
+                  {
+                    id: 'activity',
+                    label: 'Activité',
+                    icon: <Calendar className="w-4 h-4" />
+                  }
+                ]}
+                activeTab={activeSection}
+                onTabChange={(tabId) => handleSectionChange(tabId as 'exam' | 'discussions' | 'proposals' | 'activity')}
               />
             </div>
           </div>
@@ -594,33 +689,38 @@ export function ExamDetail() {
                       <ExamContent
                         exam={exam}
                         completed={completed}
-                        markAsCompleted={markAsCompleted}
+                        markAsCompleted={handleMarkAsCompleted}
                         loadingStates={loadingStates}
                         handleVote={handleVote}
                         handlePrint={handlePrint}
+                        userViewedSolution={statistics?.user_viewed_solution}
                       />
-                      
-                      {/* Additional actions */}
-                      <div className="grid grid-cols-2 gap-4 mt-6">
-                        <button
-                          onClick={handleShare}
-                          className="bg-white border border-gray-200 hover:border-indigo-300 text-gray-700 hover:text-indigo-600 flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-200"
-                        >
-                          <Share2 className="w-5 h-5" />
-                          <span>Partager l'examen</span>
-                        </button>
-                        
-                        <button
-                          onClick={toggleSavedForLater}
-                          className={`${savedForLater 
-                            ? 'bg-yellow-100 border-yellow-300 text-yellow-700' 
-                            : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white'
-                          } flex items-center justify-center gap-2 px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200`}
-                        >
-                          <Bookmark className={`w-5 h-5 ${savedForLater ? 'fill-yellow-500' : ''}`} />
-                          <span>{savedForLater ? 'Enregistré' : 'Enregistrer pour plus tard'}</span>
-                        </button>
-                      </div>
+
+                      {/* Solution Section - Only show if solution exists */}
+                      {exam.solution && (
+                        <SolutionSection
+                          exercise={exam as any}
+                          canEditSolution={(exam.solution && user?.id === exam.solution.author.id) || false}
+                          isAuthor={isAuthor}
+                          solutionVisible={solutionVisible}
+                          showSolution={showSolution}
+                          handleSolutionToggle={() => setShowSolution(!showSolution)}
+                          toggleSolutionVisibility={(e) => {
+                            e.stopPropagation();
+                            if (!solutionVisible) {
+                              trackSolutionView();
+                            }
+                            setSolutionVisible(!solutionVisible);
+                          }}
+                          handleVote={(value, target) => target === 'solution' ? handleVoteSolution(value) : handleVote(value)}
+                          handleEditSolution={() => navigate(`/solutions/${exam.solution?.id}/edit`)}
+                          handleDeleteSolution={handleDeleteSolutionWrapper}
+                          handleAddSolution={handleAddSolutionWrapper}
+                          setSolutionVisible={setSolutionVisible}
+                          userSolutionMatched={statistics?.user_solution_matched || false}
+                          onMarkSolutionMatched={handleMarkSolutionMatched}
+                        />
+                      )}
                     </motion.div>
                   )}
 
@@ -674,7 +774,12 @@ export function ExamDetail() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
                     >
-                      <ActivityEmptyState />
+                      <ActivitySection
+                        statistics={statistics}
+                        loading={statsLoading}
+                        contentType="exam"
+                        onRemoveSolutionFlag={handleRemoveSolutionFlag}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -775,7 +880,7 @@ export function ExamDetail() {
                            
                            <Button 
                              onClick={resetTimer} 
-                             variant="outline" 
+                             variant="ghost" 
                              className="h-9 px-3 text-sm bg-white/10 border-white/30 text-white hover:bg-white/20"
                              disabled={currentTime === 0 || isRunning}
                            >
@@ -816,7 +921,7 @@ export function ExamDetail() {
                                  alert('Erreur lors de la sauvegarde');
                                }
                              }}
-                             variant="outline"
+                             variant="ghost"
                              className="w-full h-9 text-sm bg-white/10 border-white/30 text-white hover:bg-white/20 font-medium"
                              disabled={saving || isRunning}
                            >
@@ -839,13 +944,8 @@ export function ExamDetail() {
                        {getSessionCount() > 0 && (
                          <button
                            onClick={async () => {
-                             try {
-                               if (!id) return;
-                               const history = await getSessionHistory('exam', id);
-                               setFullSessionHistory(history);
-                               setShowSessionHistory(true);
-                             } catch (error) {
-                               console.error('Failed to load session history:', error);
+                             if (id) {
+                               loadHistory('exam', id);
                              }
                            }}
                            className="w-full mt-3 text-xs text-white/70 hover:text-white/90 transition-colors"
@@ -951,7 +1051,7 @@ export function ExamDetail() {
            animate={{ opacity: 1 }}
            exit={{ opacity: 0 }}
            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-           onClick={() => setShowSessionHistory(false)}
+           onClick={closeHistory}
          >
            <motion.div
              initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -973,7 +1073,7 @@ export function ExamDetail() {
                    </div>
                  </div>
                  <button
-                   onClick={() => setShowSessionHistory(false)}
+                   onClick={closeHistory}
                    title='Fermer l’historique des sessions'
                    className="text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 p-2 rounded-lg"
                  >
@@ -1005,7 +1105,7 @@ export function ExamDetail() {
                          try {
                            await deleteSession(session.id);
                            // Refresh the full session history
-                           const updatedHistory = await getSessionHistory('exam', id!);
+                           const updatedHistory = await getSessionHistoryAPI('exam', id!);
                            setFullSessionHistory(updatedHistory);
                          } catch (error) {
                            console.error('Failed to delete session:', error);

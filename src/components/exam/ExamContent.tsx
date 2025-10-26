@@ -15,6 +15,7 @@ interface ExamContentProps {
   };
   handleVote: (value: VoteValue) => Promise<void>;
   handlePrint: () => void;
+  userViewedSolution?: boolean;
 }
 
 export const ExamContent: React.FC<ExamContentProps> = ({
@@ -23,7 +24,8 @@ export const ExamContent: React.FC<ExamContentProps> = ({
   markAsCompleted,
   loadingStates,
   handleVote,
-  handlePrint
+  handlePrint,
+  userViewedSolution
 }) => {
   const [showAllTags, setShowAllTags] = useState<boolean>(false);
   
@@ -162,7 +164,7 @@ export const ExamContent: React.FC<ExamContentProps> = ({
             {/* Completion status buttons */}
             <Button
               onClick={() => markAsCompleted('success')}
-              variant={completed === 'success' ? "default" : "outline"}
+              variant={completed === 'success' ? "default" : "ghost"}
               size="sm"
               className={`rounded-lg ${
                 completed === 'success' 
@@ -176,16 +178,16 @@ export const ExamContent: React.FC<ExamContentProps> = ({
               ) : (
                 <CheckCircle className="w-4 h-4 mr-1.5" />
               )}
-              Réussi
+              {completed === 'success' ? 'Réussi' : 'Corriger'}
             </Button>
-            
+
             <Button
               onClick={() => markAsCompleted("review")}
-              variant={completed === "review" ? "default" : "outline"}
+              variant={completed === "review" ? "default" : "ghost"}
               size="sm"
               className={`rounded-lg ${
-                completed === "review" 
-                  ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                completed === "review"
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white'
                   : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
               }`}
               disabled={loadingStates.progress}
@@ -195,19 +197,16 @@ export const ExamContent: React.FC<ExamContentProps> = ({
               ) : (
                 <XCircle className="w-4 h-4 mr-1.5" />
               )}
-              À revoir
+              {completed === 'review' ? 'Échoué' : 'Échoué'}
             </Button>
             
-            {/* Print button */}
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              className="rounded-lg text-sm"
-              size="sm"
-            >
-              <Printer className="w-4 h-4 mr-1.5" />
-              Imprimer
-            </Button>
+            {/* Viewed Solution Badge */}
+            {userViewedSolution && (
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                <Eye className="w-4 h-4" />
+                <span className="font-medium">Solution consultée</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

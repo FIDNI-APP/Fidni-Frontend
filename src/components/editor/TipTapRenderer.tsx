@@ -2,18 +2,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import TextStyle from '@tiptap/extension-text-style';
+import {TextStyle} from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import Image from '@tiptap/extension-image';
-import Mathematics from '@tiptap-pro/extension-mathematics';
+import Mathematics from '@tiptap/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
 import ListItem from '@tiptap/extension-list-item';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
 import Heading from '@tiptap/extension-heading';
 import ImageResize from 'tiptap-extension-resize-image';
-
 import { useNavigate } from 'react-router-dom';
+import { migrateMathStrings } from '@tiptap/extension-mathematics'
 import 'katex/dist/katex.min.css';
 import { Highlighter, Pen, Type, Eraser, Trash2, X } from 'lucide-react';
 
@@ -105,7 +104,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   
   // Color palette for annotations
   const colorPalette = ['#ffeb3b', '#4caf50', '#2196f3', '#f44336', '#9c27b0'];
-  
+  const regex = /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi;
   // Initialize TipTap editor for content rendering
   const editor = useEditor({
     extensions: [
@@ -143,20 +142,17 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         },
       }),
       Mathematics.configure({
-        regex: /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi,
         katexOptions: {
           throwOnError: false,
           strict: false
         },
-        shouldRender: (state, pos, node) => {
-          const $pos = state.doc.resolve(pos);
-          return node.type.name === 'text' && $pos.parent.type.name !== 'codeBlock';
-        }
       })
     ],
     content: content,
     editable: false,
   });
+  migrateMathStrings(editor, regex);
+
 
   // Update content when it changes
   useEffect(() => {

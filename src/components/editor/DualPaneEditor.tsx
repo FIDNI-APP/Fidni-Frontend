@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import TextStyle from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import TextAlign from '@tiptap/extension-text-align';
 import Heading from '@tiptap/extension-heading';
@@ -14,7 +14,7 @@ import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import 'katex/dist/katex.min.css';
 import ImageResize from 'tiptap-extension-resize-image';
-import { FileHandler } from '@tiptap-pro/extension-file-handler';
+import { FileHandler } from '@tiptap/extension-file-handler';
 import { Sparkles, Settings } from "lucide-react";
 
 // Import des composants existants
@@ -34,14 +34,27 @@ import {
 } from './editorConstants';
 
 // Import de notre extension mathématique corrigée
-import { RealTimeMathExtension } from './RealTimeMathExtension';
+import { RealTimeMathExtension, getFormulaAtPosition } from './RealTimeMathExtension';
 
 interface DualPaneEditorProps {
-  content: string;
-  setContent: React.Dispatch<React.SetStateAction<string>>;
+  content?: string;
+  setContent?: React.Dispatch<React.SetStateAction<string>>;
+  initialContent?: string;
+  onChange?: (content: string) => void;
+  placeholder?: string;
 }
 
-const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) => {
+const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
+  content,
+  setContent,
+  initialContent,
+  onChange,
+  placeholder
+}) => {
+  // Use initialContent if provided, otherwise use content
+  const editorContent = initialContent || content || '';
+  // Use onChange if provided, otherwise use setContent
+  const handleChange = onChange || setContent || (() => {});
   // UI state
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#000000");
@@ -64,26 +77,72 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [currentFormula, setCurrentFormula] = useState<MathFormula | null>(null);
   const [editedLatex, setEditedLatex] = useState("");
+  const [originalLatex, setOriginalLatex] = useState("");
+  const [originalIsDisplay, setOriginalIsDisplay] = useState(false);
   const [formulaInsertMode, setFormulaInsertMode] = useState<'inline' | 'block' | 'centered'>('inline');
   const [isEditingFormula, setIsEditingFormula] = useState(false);
+  const [editingFormulaPosition, setEditingFormulaPosition] = useState<number | null>(null);
   
   // Refs
   const tooltipTimeoutRef = useRef<number | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   // Gestionnaire pour éditer une formule existante
-  const handleEditMath = (latex: string, isDisplay: boolean) => {
-    // Configurer l'éditeur de formule
-    const formulaToEdit = { 
-      name: isDisplay ? "Formule en bloc" : "Formule en ligne", 
-      latex: latex 
-    };
-    
-    setCurrentFormula(formulaToEdit);
-    setEditedLatex(latex);
-    setFormulaInsertMode(isDisplay ? (activeToolbar === 'centered' ? 'centered' : 'block') : 'inline');
-    setIsEditingFormula(true);
-    setShowFormulaModal(true);
+  const handleEditMath = (latex: string, isDisplay: boolean, nodePos: number) => {
+    // Récupérer le LaTeX actuel directement du document à cette position
+    // Cela garantit qu'on a toujours la version la plus récente
+    const currentFormula = getFormulaAtPosition(editor, nodePos);
+
+    if (currentFormula) {
+      const { latex: currentLatex, isDisplay: currentIsDisplay } = currentFormula;
+
+      console.log('📝 handleEditMath - LaTeX récupéré du document:', {
+        passedLatex: latex,
+        currentLatex,
+        passedIsDisplay: isDisplay,
+        currentIsDisplay,
+        position: nodePos
+      });
+
+      // Configurer l'éditeur de formule avec le LaTeX actuel
+      const formulaToEdit = {
+        name: currentIsDisplay ? "Formule en bloc" : "Formule en ligne",
+        latex: currentLatex
+      };
+
+      setCurrentFormula(formulaToEdit);
+      setOriginalLatex(currentLatex); // Stocker le LaTeX ACTUEL pour le retrouver
+      setOriginalIsDisplay(currentIsDisplay); // Stocker le mode ACTUEL
+      setEditedLatex(currentLatex);
+      setFormulaInsertMode(currentIsDisplay ? (activeToolbar === 'centered' ? 'centered' : 'block') : 'inline');
+      setIsEditingFormula(true);
+      setEditingFormulaPosition(nodePos);
+      setShowFormulaModal(true);
+    } else {
+      // Fallback si on ne trouve pas la formule (ne devrait pas arriver)
+      console.warn('⚠️ Formule non trouvée à la position:', nodePos);
+      const formulaToEdit = {
+        name: isDisplay ? "Formule en bloc" : "Formule en ligne",
+        latex: latex
+      };
+
+      setCurrentFormula(formulaToEdit);
+      setOriginalLatex(latex);
+      setOriginalIsDisplay(isDisplay);
+      setEditedLatex(latex);
+      setFormulaInsertMode(isDisplay ? (activeToolbar === 'centered' ? 'centered' : 'block') : 'inline');
+      setIsEditingFormula(true);
+      setEditingFormulaPosition(nodePos);
+      setShowFormulaModal(true);
+    }
+  };
+
+  // Gestionnaire pour supprimer une formule
+  const handleDeleteMath = (nodePos: number, latex: string, isDisplay: boolean) => {
+    if (!editor) return;
+
+    editor.commands.deleteFormulaAtPosition(nodePos, latex, isDisplay);
+    editor.commands.focus();
   };
 
   // Initialize TipTap editor
@@ -167,6 +226,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
       // Utilisation de notre extension mathématique améliorée
       RealTimeMathExtension.configure({
         onEditMath: handleEditMath,
+        onDeleteMath: handleDeleteMath,
         katexOptions: {
           throwOnError: false,
           strict: false,
@@ -174,9 +234,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         }
       })
     ],
-    content: content,
+    content: editorContent,
     onUpdate: ({ editor }) => {
-      setContent(editor.getHTML());
+      handleChange(editor.getHTML());
     },
   });
 
@@ -202,30 +262,50 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   const openFormulaEditor = (formula: MathFormula, defaultMode: 'inline' | 'block' | 'centered' = 'inline') => {
     setCurrentFormula(formula);
     setEditedLatex(formula.latex);
+    setOriginalLatex(""); // Réinitialiser pour une nouvelle formule
+    setOriginalIsDisplay(false); // Réinitialiser
     setFormulaInsertMode(defaultMode);
     setIsEditingFormula(false);
+    setEditingFormulaPosition(null);
     setShowFormulaModal(true);
   };
   
   // Handle inserting the edited formula
   const insertEditedFormula = () => {
     if (!editor || !editedLatex.trim()) return;
-    
+
     editor.chain().focus();
-    
-    if (isEditingFormula) {
-      // Dans un cas réel, il faudrait mettre à jour la formule existante
-      // Pour cette démo, nous insérons simplement une nouvelle formule
-      // car il est difficile de localiser la formule originale
-      if (formulaInsertMode === 'inline') {
-        editor.commands.insertContent(`$${editedLatex}$`);
-      } else if (formulaInsertMode === 'centered') {
-        editor.commands.setTextAlign('center');
-        editor.commands.insertContent(`$$${editedLatex}$$`);
-      } else {
-        editor.commands.insertContent(`$$${editedLatex}$$`);
+
+    if (isEditingFormula && originalLatex) {
+      // Mise à jour de la formule existante en la cherchant par son contenu
+      const newIsDisplay = formulaInsertMode === 'block' || formulaInsertMode === 'centered';
+
+      console.log('🔧 insertEditedFormula - Mode édition:', {
+        isEditingFormula,
+        originalLatex,
+        editedLatex,
+        originalIsDisplay,
+        newIsDisplay,
+        formulaInsertMode,
+        position: editingFormulaPosition
+      });
+
+      const replaced = editor.commands.replaceFormula(originalLatex, editedLatex, originalIsDisplay, newIsDisplay);
+
+      console.log('📝 Résultat replaceFormula:', replaced);
+
+      // Si le remplacement a échoué, essayer avec la position en fallback
+      if (!replaced && editingFormulaPosition !== null) {
+        console.log('⚠️ Utilisation du fallback setFormulaAtPosition');
+        editor.commands.setFormulaAtPosition(editingFormulaPosition, editedLatex, newIsDisplay);
       }
+
+      // Forcer la mise à jour de la vue pour rafraîchir les decorations
+      setTimeout(() => {
+        editor?.view.updateState(editor.state);
+      }, 10);
     } else {
+      console.log('➕ insertEditedFormula - Mode insertion nouvelle formule');
       // Insertion d'une nouvelle formule
       if (formulaInsertMode === 'inline') {
         editor.commands.insertContent(`$${editedLatex}$`);
@@ -236,16 +316,19 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         editor.commands.insertContent(`$$${editedLatex}$$`);
       }
     }
-    
+
     if (currentFormula) {
       addToRecentFormulas({
         ...currentFormula,
         latex: editedLatex
       });
     }
-    
+
     setShowFormulaModal(false);
     setIsEditingFormula(false);
+    setEditingFormulaPosition(null);
+    setOriginalLatex("");
+    setOriginalIsDisplay(false);
   };
 
   // Apply text color
@@ -267,9 +350,16 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
   };
 
   // Insert math inline example
-  const insertMathInline = () => {
-    const inlineFormula = { name: "Équation inline", latex: "x^2 + y^2 = r^2" };
-    openFormulaEditor(inlineFormula, 'inline');
+  const insertMathInline = (latex?: string) => {
+    if (latex) {
+      // Direct insertion for quick input
+      editor?.commands.insertContent(`$${latex}$`);
+      editor?.commands.focus();
+    } else {
+      // Open editor for empty formula
+      const inlineFormula = { name: "Équation inline", latex: "x^2 + y^2 = r^2" };
+      openFormulaEditor(inlineFormula, 'inline');
+    }
   };
 
   // Insert centered math formula
@@ -398,7 +488,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         content: "✎";
         position: absolute;
         top: -10px;
-        right: -10px;
+        left: -10px;
         width: 20px;
         height: 20px;
         background-color: rgba(79, 70, 229, 0.9);
@@ -442,6 +532,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({ content, setContent }) 
         
         <div className="flex gap-2">
           <button
+            type='button'
             onClick={() => setShowSettings(!showSettings)}
             onMouseEnter={(e) => showButtonTooltip("Paramètres", e)}
             onMouseLeave={hideTooltip}

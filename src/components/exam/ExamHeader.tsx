@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Calendar, Eye, Share2, Bookmark, MoreHorizontal, GraduationCap, BookOpen, Award } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Eye, Share2, Bookmark, MoreHorizontal, GraduationCap, BookOpen, Award, Printer, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Exam, Difficulty } from '@/types';
 
@@ -14,6 +14,7 @@ interface ExamHeaderProps {
   toggleSavedForLater: () => Promise<void>;
   formatTimeAgo: (dateString: string) => string;
   isAuthor: boolean;
+  onPrint?: () => void;
 }
 
 export const ExamHeader: React.FC<ExamHeaderProps> = ({
@@ -22,9 +23,24 @@ export const ExamHeader: React.FC<ExamHeaderProps> = ({
   loadingStates,
   toggleSavedForLater,
   formatTimeAgo,
-  isAuthor
+  isAuthor,
+  onPrint
 }) => {
   const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getDifficultyColor = (difficulty: Difficulty): string => {
     switch (difficulty) {
@@ -51,6 +67,27 @@ export const ExamHeader: React.FC<ExamHeaderProps> = ({
         .then(() => alert('Link copied to clipboard!'))
         .catch(err => console.error('Error copying link:', err));
     }
+    setShowDropdown(false);
+  };
+
+  const handlePrint = () => {
+    if (onPrint) {
+      onPrint();
+    }
+    setShowDropdown(false);
+  };
+
+  const handleEdit = () => {
+    navigate(`/exams/${exam.id}/edit`);
+    setShowDropdown(false);
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
+      // TODO: Implement delete functionality
+      console.log('Delete exam:', exam.id);
+    }
+    setShowDropdown(false);
   };
 
   // Format date for display (used for national exam date)
@@ -65,9 +102,9 @@ export const ExamHeader: React.FC<ExamHeaderProps> = ({
   };
 
   return (
-    <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-blue-800 to-blue-600' : 'from-blue-800 via-indigo-800 to-indigo-900'} text-white rounded-xl overflow-hidden shadow-lg mb-6 relative`}>
+    <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-blue-800 to-blue-600' : 'from-blue-800 via-indigo-800 to-indigo-900'} text-white rounded-xl shadow-lg mb-6 relative`}>
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
+      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden rounded-xl">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
@@ -92,7 +129,7 @@ export const ExamHeader: React.FC<ExamHeaderProps> = ({
           
           <div className="flex items-center gap-2">
             {/* Save button */}
-            <Button 
+            <Button
               onClick={toggleSavedForLater}
               variant="ghost"
               className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
@@ -105,29 +142,60 @@ export const ExamHeader: React.FC<ExamHeaderProps> = ({
               )}
               {savedForLater ? 'Enregistré' : 'Enregistrer'}
             </Button>
-            
-            {/* Share button */}
-            <Button 
-              onClick={handleShare}
-              variant="ghost"
-              className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-            >
-              <Share2 className="w-5 h-5 mr-1.5" />
-              Partager
-            </Button>
-            
-            {/* More options dropdown for author */}
-            {isAuthor && (
-              <div className="relative">
-                <Button 
-                  variant="ghost"
-                  className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                </Button>
-                {/* Dropdown menu would be implemented here */}
-              </div>
-            )}
+
+            {/* More options dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <Button
+                onClick={() => setShowDropdown(!showDropdown)}
+                variant="ghost"
+                className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+
+              {/* Dropdown menu */}
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
+                  <button
+                    onClick={handleShare}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Partager
+                  </button>
+
+                  {onPrint && (
+                    <button
+                      onClick={handlePrint}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Imprimer
+                    </button>
+                  )}
+
+                  {isAuthor && (
+                    <>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      <button
+                        onClick={handleEdit}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Modifier
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Supprimer
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         

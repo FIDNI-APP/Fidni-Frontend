@@ -143,6 +143,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
       {/* Toolbar Tabs */}
       <div className="flex border-b border-gray-200 bg-gray-50 px-3 pt-1">
         <button
+          type="button"
           className={`px-3 py-1.5 text-sm font-medium rounded-t-lg ${
             activeToolbar === 'text' ? 'bg-white border-t border-l border-r border-gray-200 border-b-white -mb-px text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
           }`}
@@ -151,6 +152,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           Texte
         </button>
         <button
+          type="button"
           className={`px-3 py-1.5 text-sm font-medium rounded-t-lg ${
             activeToolbar === 'math' ? 'bg-white border-t border-l border-r border-gray-200 border-b-white -mb-px text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
           }`}

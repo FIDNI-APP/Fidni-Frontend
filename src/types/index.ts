@@ -42,7 +42,7 @@ export interface Theorem{
 
 export interface Solution {
   id: string;
-  content: Content;
+  content: Content & string;
   author: User;
   created_at: string;
   updated_at: string;
@@ -56,7 +56,7 @@ export interface Solution {
 
 
 export interface Content {
-  id: string;
+  id: number;
   title: string;
   content: string;
   class_levels: ClassLevelModel[];
@@ -310,10 +310,11 @@ export interface Exam {
   user_save?: boolean;
   user_complete?: 'success' | 'review' | null;
   user_timespent?: number;
-  
+  solution?: Solution;
+
   // Champs spécifiques aux examens
   is_national_exam: boolean;
-  national_date: string | null;
+  national_exam_date: string | null;
 }
 
 

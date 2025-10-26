@@ -253,12 +253,13 @@ const AddToNotebookButton: React.FC<AddToNotebookButtonProps> = ({ lessonId }) =
 
                     <Button
                       onClick={handleAddToNotebook}
-                      className="w-full flex justify-center items-center"
+                      className="w-full text-black flex justify-center items-center hover:bg-purple-600 bg-purple-500 mt-2"
                       disabled={!selectedNotebook || !selectedSection || isLoading}
                       type="button"
+                      variant='ghost'
                     >
                       {isLoading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                        <div className="animate-spin text-dark rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                       ) : (
                         <>
                           <Plus className="w-4 h-4 mr-2" />

@@ -6,16 +6,10 @@ import {
   CheckCircle, 
   XCircle, 
   BookOpen, 
-  BarChart3, 
   ChevronRight, 
   Trophy,
   Target,
-  TrendingUp,
   Calendar,
-  Clock,
-  Zap,
-  Award,
-  Filter,
   Grid,
   List
 } from 'lucide-react';
@@ -304,7 +298,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         
         {exercises.length > 6 && (
           <div className="mt-8 text-center">
-            <Button variant="outline" className="group">
+            <Button variant="ghost" className="group">
               Voir tous les exercices ({exercises.length})
               <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>

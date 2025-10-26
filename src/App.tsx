@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/AuthController';
 import { UserProfile } from '@/pages/Profile';
+import { EditProfile } from '@/pages/EditProfile';
 import OnboardingProfile from '@/pages/OnboardingProfile';
 import { LessonList } from './pages/lessons/LessonList';
 import { LessonDetail } from './pages/lessons/LessonDetail';
@@ -23,6 +24,7 @@ import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import LegalRedirector from './components/LegalRedirector';
 import Footer from './components/Footer';
+import { Search } from './pages/Search';
 
 // Import des pages d'examens
 import { ExamList } from './pages/exams/ExamList';
@@ -36,6 +38,7 @@ import { ChapterVideo } from './pages/learningpaths/ChapterVideo';
 import { ChapterQuiz } from './pages/learningpaths/ChapterQuiz';
 import { CreatePathChapter } from './pages/learningpaths/CreatePathChapter';
 import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
+import { RevisionListDetail } from './pages/RevisionListDetail';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -117,6 +120,11 @@ function App() {
                       <Home />
                     </NavbarWrapper>
                   } />
+                  <Route path="/search" element={
+                    <NavbarWrapper>
+                      <Search />
+                    </NavbarWrapper>
+                  } />
                   <Route path="/login" element={
                     <NavbarWrapper>
                       <Login />
@@ -145,6 +153,16 @@ function App() {
                   <Route path="/profile/:username" element={
                     <NavbarWrapper>
                       <UserProfile />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/profile/:username/edit" element={
+                    <NavbarWrapper>
+                      <EditProfile />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/profile/revision-lists/:id" element={
+                    <NavbarWrapper>
+                      <RevisionListDetail />
                     </NavbarWrapper>
                   } />
                   <Route path="/exercises" element={
@@ -206,38 +224,38 @@ function App() {
                   } />
 
 
-                  <Route path="/learning-paths" element={
+                  <Route path="/learning-path" element={
                     <NavbarWrapper>
                       <LearningPathList />
                     </NavbarWrapper>
                   } />
-                  <Route path="/learning-paths/:id" element={
+                  <Route path="/learning-path/:id" element={
                     <NavbarWrapper>
                       <LearningPathDetail />
                     </NavbarWrapper>
                   } />
                   
-                  <Route path="/learning-paths/:pathId/chapters/:chapterId/videos/:videoId" element={
+                  <Route path="/learning-path/:pathId/chapters/:chapterId/videos/:videoId" element={
                       <NavbarWrapper showFooter={false}>
                         <ChapterVideo />
                       </NavbarWrapper>
                     } />
-                    <Route path="/learning-paths/:pathId/chapters/:chapterId/quiz" element={
+                    <Route path="/learning-path/:pathId/chapters/:chapterId/quiz" element={
                       <NavbarWrapper showFooter={false}>
                         <ChapterQuiz />
                       </NavbarWrapper>
                     } />
-                    <Route path="/learning-paths/create" element={
+                    <Route path="/learning-path/create" element={
                         <NavbarWrapper>
                           <CreateLearningPath />
                         </NavbarWrapper>
                       } />
-                      <Route path="/learning-paths/:id/edit" element={
+                      <Route path="/learning-path/:id/edit" element={
                         <NavbarWrapper>
                           <CreateLearningPath />
                         </NavbarWrapper>
                       } />
-                      <Route path="/learning-paths/:id/chapters/create" element={
+                      <Route path="/learning-path/:id/chapters/create" element={
                         <NavbarWrapper>
                           <CreatePathChapter />
                         </NavbarWrapper>

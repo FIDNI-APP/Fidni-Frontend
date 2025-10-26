@@ -5,14 +5,12 @@ import {
   MessageSquare, 
   Tag, 
   Eye, 
-  BarChart3, 
   GraduationCap,
   Bookmark,
   Lightbulb,
   ChevronRight,
   BookOpen,
   Layers,
-  Share2,
   Loader2
 } from 'lucide-react';
 import { Content, VoteValue, Difficulty } from '@/types';
@@ -25,7 +23,7 @@ import axios from 'axios';
 
 interface HomeContentCardProps {
   content: Content;
-  onVote: (id: string, value: VoteValue) => void;
+  onVote: (id: string, value: VoteValue, contentType?: 'exercise' | 'lesson' | 'exam') => void;
   onSave?: (id: string, saved: boolean) => void;
 }
 
@@ -48,6 +46,26 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
     }
   }, [content]);
 
+  // Detect content type based on properties
+  const getContentType = (): 'exercise' | 'lesson' | 'exam' => {
+    // Exams have is_national_exam property
+    if ('is_national_exam' in content) return 'exam';
+    // Exercises have difficulty property, lessons don't
+    if ('difficulty' in content && content.difficulty) return 'exercise';
+    // Otherwise it's a lesson
+    return 'lesson';
+  };
+
+  const getNavigationPath = () => {
+    const contentType = getContentType();
+    const basePaths = {
+      exercise: '/exercises',
+      lesson: '/lessons',
+      exam: '/exams'
+    };
+    return `${basePaths[contentType]}/${content.id}`;
+  };
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Check if any text is selected
     const selection = window.getSelection();
@@ -55,14 +73,14 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
       // User is selecting text, do not navigate
       return;
     }
-    
+
     if (!isAuthenticated) {
       e.preventDefault();
-      openModal(`/exercises/${content.id}`);
+      openModal();
       return;
     }
-    
-    navigate(`/exercises/${content.id}`);
+
+    navigate(getNavigationPath());
   };
 
   const handleSaveClick = async (e: React.MouseEvent) => {
@@ -78,13 +96,14 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         setIsSaving(true);
         
         if (isSaved) {
-            // If currently saved, unsave it
-            await unsaveExercise(content.id);
+            // If currently saved, unsave it and take content.id to string 
+
+            await unsaveExercise(content.id.toString());
             setIsSaved(false);
         } else {
             // If not saved, save it
             try {
-                await saveExercise(content.id);
+                await saveExercise(content.id.toString());
                 setIsSaved(true);
             } catch (error) {
                 // If error is "already saved", consider it a success
@@ -100,7 +119,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         
         // Call the callback if provided
         if (onSave) {
-            onSave(content.id, !isSaved);
+            onSave(content.id.toString(), !isSaved);
         }
     } catch (error) {
         console.error("Error toggling save status:", error);
@@ -198,183 +217,191 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
   };
 
   return (
-    <div 
-      className="relative group bg-white rounded-xl shadow-md transition-all duration-300 border border-gray-200 overflow-hidden h-full transform hover:-translate-y-1 hover:shadow-xl hover:border-indigo-300"
+    <div
+      className="relative group bg-white rounded-xl shadow-md transition-all duration-300 border border-gray-200 overflow-hidden transform hover:-translate-y-2 hover:shadow-2xl hover:border-purple-300 h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Card Header with Improved Styling */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#smallGrid)" />
-          </svg>
-        </div>
-        
-        {/* Header Content with Save Button */}
-        <div className="flex justify-between items-start mb-3 relative z-10">
-          {/* Title with Solution Indicator */}
-          <div className="flex items-start gap-1.5">
-            {hasSolution && (
-              <div className="flex-shrink-0 bg-emerald-400 p-1 rounded-full mt-1 transform transition-transform group-hover:scale-110">
-                <Lightbulb className="w-3 h-3 text-white" />
-              </div>
-            )}
-            <h3 
-              className="text-lg font-bold text-white leading-tight cursor-pointer hover:underline" 
-              onClick={handleCardClick}
-            >
-              {truncateTitle(content.title)}
-            </h3>
+      <div className="flex flex-col h-full">
+        {/* Card Header with Improved Styling */}
+        <div className="relative bg-gradient-to-r from-purple-600 to-indigo-600 p-3 flex-shrink-0">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#smallGrid)" />
+            </svg>
           </div>
-          
-          {/* Save Button */}
-          <button 
-            onClick={handleSaveClick}
-            className="p-1.5 rounded-full bg-white/10 hover:bg-white/30 transition-all cursor-pointer hover:scale-110"
-            aria-label={isSaved ? "Retirer des favoris" : "Ajouter aux favoris"}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 text-white animate-spin" />
-            ) : (
-              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-yellow-300 text-yellow-300' : 'text-white'}`} />
+
+          {/* Header Content with Save Button */}
+          <div className="flex justify-between items-start mb-2 relative z-10">
+            {/* Title with Solution Indicator */}
+            <div className="flex items-start gap-1.5 flex-1 min-w-0">
+              {hasSolution && (
+                <div className="flex-shrink-0 bg-emerald-400 p-1 rounded-full mt-1 transform transition-transform group-hover:scale-110">
+                  <Lightbulb className="w-3 h-3 text-white" />
+                </div>
+              )}
+              <h3
+                className="text-lg font-bold text-white leading-tight cursor-pointer hover:underline line-clamp-2"
+                onClick={handleCardClick}
+              >
+                {truncateTitle(content.title)}
+              </h3>
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={handleSaveClick}
+              className="p-1.5 rounded-full bg-white/10 hover:bg-white/30 transition-all cursor-pointer hover:scale-110 flex-shrink-0"
+              aria-label={isSaved ? "Retirer des favoris" : "Ajouter aux favoris"}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-yellow-300 text-yellow-300' : 'text-white'}`} />
+              )}
+            </button>
+          </div>
+
+          {/* Difficulty and Subject Tags */}
+          <div className="flex flex-wrap gap-1 relative z-10">
+            {/* Subject Tag */}
+            {content.subject && (
+              <span
+                className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center cursor-pointer hover:bg-white/30 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Navigate to subject filter or similar action
+                }}
+              >
+                <BookOpen className="w-3 h-3 mr-1" />
+                {content.subject.name}
+              </span>
             )}
-          </button>
-        </div>
-        
-        {/* Difficulty and Subject Tags */}
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {/* Subject Tag */}
-          {content.subject && (
-            <span 
-              className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center cursor-pointer hover:bg-white/30 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Navigate to subject filter or similar action
-              }}
-            >
-              <BookOpen className="w-3 h-3 mr-1" />
-              {content.subject.name}
+
+            {/* Difficulty Badge */}
+            <span className={`${difficultyInfo.badgeColor} px-2 py-0.5 rounded-full text-xs font-medium flex items-center cursor-pointer hover:opacity-90 transition-opacity`}>
+              {difficultyInfo.icon}
+              <span className="ml-1">{difficultyInfo.label}</span>
             </span>
-          )}
-          
-          {/* Difficulty Badge */}
-          <span className={`${difficultyInfo.badgeColor} px-2 py-0.5 rounded-full text-xs font-medium flex items-center cursor-pointer hover:opacity-90 transition-opacity`}>
-            {difficultyInfo.icon}
-            <span className="ml-1">{difficultyInfo.label}</span>
-          </span>
-          
-          {/* Class Levels Badge - if available */}
-          {content.class_levels && content.class_levels.length > 0 && (
-            <span 
-              className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center cursor-pointer hover:bg-white/30 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Navigate to class level filter or similar action
-              }}
-            >
-              <GraduationCap className="w-3 h-3 mr-1" />
-              {content.class_levels[0].name}
-            </span>
-          )}
-        </div>
-      </div>
-      
-      {/* Content Preview - Added click handler */}
-      <div className="px-4 py-4 flex-grow cursor-pointer" onClick={handleCardClick}>
-        <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
-          <TipTapRenderer content={content.content} compact={true} />
-        </div>
-      </div>
-      
-      {/* Card Footer */}
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center mt-auto">
-        {/* Left side - Vote and Stats */}
-        <div className="flex items-center gap-3">
-          <VoteButtons
-            initialVotes={content.vote_count}
-            onVote={(value) => {
-              onVote(content.id, value);
-              event?.stopPropagation();
-            }}
-            vertical={false}
-            userVote={content.user_vote}
-            size="sm"
-          />
-          
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className="flex items-center">
-              <Eye className="w-3 h-3 text-indigo-400 mr-1" />
-              <span>{content.view_count}</span>
-            </span>
-            
-            <span className="flex items-center">
-              <MessageSquare className="w-3 h-3 text-indigo-400 mr-1" />
-              <span>{(content.comments || []).length}</span>
-            </span>
+
+            {/* Class Levels Badge - if available */}
+            {content.class_levels && content.class_levels.length > 0 && (
+              <span
+                className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center cursor-pointer hover:bg-white/30 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Navigate to class level filter or similar action
+                }}
+              >
+                <GraduationCap className="w-3 h-3 mr-1" />
+                {content.class_levels[0].name}
+              </span>
+            )}
           </div>
         </div>
-        
-        {/* Right side - Tags */}
-        <div className="flex items-center gap-1">
-          {hasChapters && content.chapters.slice(0, 1).map(chapter => (
-            <span
-              key={chapter.id}
-              className="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded text-xs flex items-center border border-purple-100 hover:bg-purple-100 transition-colors cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Navigate to chapter filter
-              }}
-            >
-              <Tag className="w-2.5 h-2.5 mr-0.5" />
-              <span className="truncate max-w-[80px]">{chapter.name}</span>
-            </span>
-          ))}
-          
-          {hasSubfields && content.subfields.slice(0, 1).map(subfield => (
-            <span
-              key={subfield.id}
-              className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs flex items-center border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Navigate to subfield filter
-              }}
-            >
-              <Layers className="w-2.5 h-2.5 mr-0.5" />
-              <span className="truncate max-w-[80px]">{subfield.name}</span>
-            </span>
-          ))}
+
+        {/* Content Preview */}
+        <div className="px-4 py-3 cursor-pointer flex-grow overflow-hidden" onClick={handleCardClick}>
+          <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3">
+            <TipTapRenderer content={content.content} compact={true} />
+          </div>
+        </div>
+
+        {/* Tags Section */}
+        <div className="px-3 pb-2 flex-shrink-0">
+          <div className="flex items-center gap-1 overflow-hidden">
+            {hasChapters && content.chapters.slice(0, 1).map(chapter => (
+              <span
+                key={chapter.id}
+                className="inline-flex items-center bg-purple-50 text-purple-600 px-2 py-0.5 rounded text-xs border border-purple-100 hover:bg-purple-100 transition-colors cursor-pointer max-w-[120px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Navigate to chapter filter
+                }}
+              >
+                <Tag className="w-3 h-3 mr-1 flex-shrink-0" />
+                <span className="truncate">{chapter.name}</span>
+              </span>
+            ))}
+
+            {hasSubfields && content.subfields.slice(0, 1).map(subfield => (
+              <span
+                key={subfield.id}
+                className="inline-flex items-center bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer max-w-[120px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Navigate to subfield filter
+                }}
+              >
+                <Layers className="w-3 h-3 mr-1 flex-shrink-0" />
+                <span className="truncate">{subfield.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Card Footer */}
+        <div className="mt-auto px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+          {/* Left side - Vote and Stats */}
+          <div className="flex items-center gap-3">
+            {/* Vote buttons */}
+            <div className="w-20">
+              <VoteButtons
+                initialVotes={content.vote_count}
+                onVote={(value) => {
+                  const contentType = getContentType();
+                  onVote(content.id.toString(), value, contentType);
+                }}
+                vertical={false}
+                userVote={content.user_vote}
+                size="sm"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              <span className="flex items-center gap-1">
+                <Eye className="w-4 h-4 text-purple-500" />
+                <span className="font-medium">{content.view_count}</span>
+              </span>
+
+              <span className="flex items-center gap-1">
+                <MessageSquare className="w-4 h-4 text-purple-500" />
+                <span className="font-medium">{(content.comments || []).length}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Right side - Time */}
+          <div className="flex items-center text-xs text-gray-500">
+            <span className="whitespace-nowrap">{getTimeAgo(content.created_at)}</span>
+          </div>
         </div>
       </div>
-      
+
       {/* Centered Action Button */}
-      
-      <div 
-        className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none ${isHovered ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'}`}
+      <div
+        className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
       >
         <button
           onClick={(e) => {
             e.stopPropagation();
             handleCardClick(e);
           }}
-          className={`bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-100' : 'scale-40 opacity-40 hover:opacity-10'}`}
-          aria-label="Voir l'exercice"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all duration-300 pointer-events-auto transform hover:scale-105 font-semibold"
+          aria-label={`Voir ${getContentType() === 'exercise' ? 'l\'exercice' : getContentType() === 'lesson' ? 'la leçon' : 'l\'examen'}`}
         >
-          <ChevronRight className="w-8 h-8" />
-          <p className="font-medium text-lg mb-1 text-white">Voir l'exercice</p>
+          <span>{getContentType() === 'exercise' ? 'Voir l\'exercice' : getContentType() === 'lesson' ? 'Voir la leçon' : 'Voir l\'examen'}</span>
+          <ChevronRight className="w-5 h-5" />
         </button>
-        
-
       </div>
     </div>
-    
   );
 };
 

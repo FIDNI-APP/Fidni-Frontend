@@ -33,7 +33,7 @@ const CreateNotebookForm: React.FC<CreateNotebookFormProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 fade-in">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Create New Notebook</h2>
+        <h2 className="text-xl font-bold text-gray-900">Créer un cahier de cours</h2>
         <Button
           variant="ghost"
           size="sm"
@@ -60,14 +60,14 @@ const CreateNotebookForm: React.FC<CreateNotebookFormProps> = ({
         </div>
         
         <div>
-          <label htmlFor="classLevel" className="block text-sm font-medium text-gray-700 mb-1">Class Level</label>
+          <label htmlFor="classLevel" className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
           <select
             id="classLevel"
             value={selectedClassLevel}
             onChange={(e) => setSelectedClassLevel(e.target.value)}
             className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
           >
-            <option value="">Select a class level</option>
+            <option value="">Choisir votre niveau</option>
             {classLevels.map(level => (
               <option key={level.id} value={level.id}>{level.name}</option>
             ))}
@@ -75,7 +75,7 @@ const CreateNotebookForm: React.FC<CreateNotebookFormProps> = ({
         </div>
 
         <div>
-          <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+          <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Matière</label>
           <select
             id="subject"
             value={selectedSubject}
@@ -98,7 +98,7 @@ const CreateNotebookForm: React.FC<CreateNotebookFormProps> = ({
 
         <div className="flex justify-end space-x-3 mt-4">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={onClose}
             className="border-gray-300"
           >
@@ -112,12 +112,12 @@ const CreateNotebookForm: React.FC<CreateNotebookFormProps> = ({
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Creating...
+                Création...
               </>
             ) : (
               <>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Notebook
+                Créer un cahier de cours
               </>
             )}
           </Button>
