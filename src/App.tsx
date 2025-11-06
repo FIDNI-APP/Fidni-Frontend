@@ -39,6 +39,8 @@ import { ChapterQuiz } from './pages/learningpaths/ChapterQuiz';
 import { CreatePathChapter } from './pages/learningpaths/CreatePathChapter';
 import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
 import { RevisionListDetail } from './pages/RevisionListDetail';
+import { SavedItems } from './pages/SavedItems';
+import { RevisionLists } from './pages/RevisionLists';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -123,6 +125,16 @@ function App() {
                   <Route path="/search" element={
                     <NavbarWrapper>
                       <Search />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/saved" element={
+                    <NavbarWrapper>
+                      <SavedItems />
+                    </NavbarWrapper>
+                  } />
+                  <Route path="/revision-lists" element={
+                    <NavbarWrapper>
+                      <RevisionLists />
                     </NavbarWrapper>
                   } />
                   <Route path="/login" element={
