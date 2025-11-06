@@ -28,6 +28,15 @@ export const ExamContent: React.FC<ExamContentProps> = ({
   userViewedSolution
 }) => {
   const [showAllTags, setShowAllTags] = useState<boolean>(false);
+  const [animatingBtn, setAnimatingBtn] = useState<'success' | 'review' | null>(null);
+
+  const handleMarkAsCompleted = async (status: 'success' | 'review') => {
+    setAnimatingBtn(status);
+    await markAsCompleted(status);
+
+    // Clear button animation
+    setTimeout(() => setAnimatingBtn(null), 500);
+  };
   
   // Check if the content has theorems and subfields
   const hasTheorems = exam.theorems && exam.theorems.length > 0;
@@ -163,43 +172,51 @@ export const ExamContent: React.FC<ExamContentProps> = ({
           <div className="flex items-center gap-2">
             {/* Completion status buttons */}
             <Button
-              onClick={() => markAsCompleted('success')}
+              onClick={() => handleMarkAsCompleted('success')}
               variant={completed === 'success' ? "default" : "ghost"}
               size="sm"
-              className={`rounded-lg ${
-                completed === 'success' 
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                  : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
+              className={`btn-validation ${
+                animatingBtn === 'success' ? 'btn-success-active btn-animating' : ''
+              } ${completed === 'success' ? 'btn-active' : ''} rounded-lg ${
+                completed === 'success'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                  : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600 hover:shadow-md'
               }`}
               disabled={loadingStates.progress}
             >
               {loadingStates.progress ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               ) : (
-                <CheckCircle className="w-4 h-4 mr-1.5" />
+                <span className="icon-wrapper">
+                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                </span>
               )}
-              {completed === 'success' ? 'Réussi' : 'Corriger'}
+              <span className="relative z-10">{completed === 'success' ? 'Réussi' : 'Corriger'}</span>
             </Button>
 
             <Button
-              onClick={() => markAsCompleted("review")}
+              onClick={() => handleMarkAsCompleted("review")}
               variant={completed === "review" ? "default" : "ghost"}
               size="sm"
-              className={`rounded-lg ${
+              className={`btn-validation ${
+                animatingBtn === 'review' ? 'btn-fail-active btn-animating' : ''
+              } ${completed === 'review' ? 'btn-active' : ''} rounded-lg ${
                 completed === "review"
-                  ? 'bg-rose-500 hover:bg-rose-600 text-white'
-                  : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/30'
+                  : 'border-gray-200 hover:border-rose-300 hover:text-rose-600 hover:shadow-md'
               }`}
               disabled={loadingStates.progress}
             >
               {loadingStates.progress ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               ) : (
-                <XCircle className="w-4 h-4 mr-1.5" />
+                <span className="icon-wrapper">
+                  <XCircle className="w-4 h-4 mr-1.5" />
+                </span>
               )}
-              {completed === 'review' ? 'Échoué' : 'Échoué'}
+              <span className="relative z-10">{completed === 'review' ? 'Échoué' : 'Échoué'}</span>
             </Button>
-            
+
             {/* Viewed Solution Badge */}
             {userViewedSolution && (
               <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">

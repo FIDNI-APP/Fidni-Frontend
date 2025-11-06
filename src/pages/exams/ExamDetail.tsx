@@ -61,7 +61,6 @@ import { SEO, createBreadcrumbStructuredData } from '@/components/SEO';
 import { formatTimeAgo, formatDate } from '@/lib/utils/dateHelpers';
 import { handleShare as shareContent } from '@/lib/utils/shareHelpers';
 import { getDifficultyInfo } from '@/lib/utils/difficultyHelpers';
-import 'katex/dist/katex.min.css';
 
 export function ExamDetail() {
   const { id } = useParams<{ id: string }>();
@@ -640,7 +639,7 @@ export function ExamDetail() {
               isAuthor={isAuthor}
               onPrint={handlePrint}
             />
-            <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-blue-800 to-blue-600' : 'from-blue-800 via-indigo-800 to-indigo-900'} text-white px-6 pb-2`}>
+            <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-gray-800 to-green-900' : 'from-gray-800 to-green-900'} text-white px-6 pb-2`}>
               <TabNavigation
                 tabs={[
                   {

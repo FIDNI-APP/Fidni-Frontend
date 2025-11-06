@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, LogOut, LogIn } from 'lucide-react';
+import { User, LogOut, LogIn, Bookmark, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
@@ -51,6 +51,26 @@ export const AuthButton = ({ isMobile = false, isScrolled = false }) => {
                 <User className="w-4 h-4" />
               </div>
               <span className="font-medium">Mon profil</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/saved')}
+              className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 w-full text-left transition-all duration-150 group/item"
+            >
+              <div className="p-1.5 rounded-lg bg-gray-100 group-hover/item:bg-blue-100 transition-colors">
+                <Bookmark className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Éléments sauvegardés</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/revision-lists')}
+              className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 w-full text-left transition-all duration-150 group/item"
+            >
+              <div className="p-1.5 rounded-lg bg-gray-100 group-hover/item:bg-green-100 transition-colors">
+                <ListChecks className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Listes de révision</span>
             </button>
 
             <button

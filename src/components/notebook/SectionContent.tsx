@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, X, BookMarked, Plus, Trash, MessageSquare } from 'lucide-react';
+import { Save, X, BookMarked, Plus, Trash, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotebookContent from './NotebookContent';
 import { Section } from '@/types';
@@ -57,6 +57,9 @@ const SectionContent: React.FC<SectionContentProps> = ({
   const [annotations, setAnnotations] = useState<any[]>([]);
   const [loadingAnnotations, setLoadingAnnotations] = useState(false);
   const [addingNote, setAddingNote] = useState<boolean>(false);
+  
+  // États pour la navigation des pages
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [newNoteContent, setNewNoteContent] = useState<string>('');
   const [newNoteColor, setNewNoteColor] = useState<string>('#FFEB3B'); // Jaune par défaut
@@ -80,6 +83,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
       // Reset states
       setContentLoading(true);
       setShowContent(false);
+      setCurrentPageIndex(0); // Reset to first page when section changes
       
       // Force TipTapRenderer to re-render with new content by changing its key
       setRenderKey(prev => prev + 1);
@@ -91,6 +95,16 @@ const SectionContent: React.FC<SectionContentProps> = ({
       loadAnnotations();
     }
   }, [section?.id, notebookId]);
+
+  // Reset content when page changes
+  useEffect(() => {
+    if (section?.lesson_entries && section.lesson_entries.length > 0) {
+      setContentLoading(true);
+      setShowContent(false);
+      setRenderKey(prev => prev + 1);
+      loadAnnotations();
+    }
+  }, [currentPageIndex]);
 
   // Fonction pour charger les notes modulaires
   const loadModularNotes = (sectionId: string) => {
@@ -169,13 +183,14 @@ const SectionContent: React.FC<SectionContentProps> = ({
   
   // Fonctions pour gérer les annotations
   const handleSaveAnnotations = async (annotationsData: any[]) => {
-    if (!section?.lesson?.id || !notebookId) {
-      console.warn('Missing lesson ID or notebook ID for saving annotations');
+    const currentLessonEntry = section?.lesson_entries?.[currentPageIndex];
+    if (!notebookId || !section?.id || !currentLessonEntry?.id) {
+      console.warn('Missing notebook ID, chapter ID, or lesson entry ID for saving annotations');
       return;
     }
-    
+
     try {
-      await saveLessonAnnotations(notebookId, section.lesson.id, annotationsData);
+      await saveLessonAnnotations(notebookId, section.id, currentLessonEntry.id, annotationsData);
       setAnnotations(annotationsData);
     } catch (error) {
       console.error('Failed to save annotations:', error);
@@ -183,13 +198,14 @@ const SectionContent: React.FC<SectionContentProps> = ({
       throw error;
     }
   };
-  
+
   const loadAnnotations = async () => {
-    if (!section?.lesson?.id || !notebookId) return;
-    
+    const currentLessonEntry = section?.lesson_entries?.[currentPageIndex];
+    if (!notebookId || !section?.id || !currentLessonEntry?.id) return;
+
     try {
       setLoadingAnnotations(true);
-      const savedAnnotations = await getLessonAnnotations(notebookId, section.lesson.id);
+      const savedAnnotations = await getLessonAnnotations(notebookId, section.id, currentLessonEntry.id);
       setAnnotations(savedAnnotations);
     } catch (error) {
       console.error('Failed to load annotations:', error);
@@ -231,7 +247,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
     }, 100);
   };
 
-  if (!section || !section.lesson) {
+  if (!section || !section.lesson_entries || section.lesson_entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <div className="bg-indigo-50 p-6 rounded-lg max-w-md text-center">
@@ -245,17 +261,54 @@ const SectionContent: React.FC<SectionContentProps> = ({
     );
   }
 
+  // Get current lesson entry
+  const currentLessonEntry = section.lesson_entries[currentPageIndex];
+  const totalPages = section.lesson_entries.length;
+
   return (
     <div className="p-8 flex-1 relative bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-2xl shadow-xl mb-6">
-            <h2 className="text-3xl font-bold mb-2">
-              {section.lesson.title}
-            </h2>
-            <p className="text-indigo-100 text-lg">
-              Chapitre: {section.chapter.name}
-            </p>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">
+                  {currentLessonEntry.lesson.title}
+                </h2>
+                <p className="text-indigo-100 text-lg">
+                  Chapitre: {section.chapter.name}
+                </p>
+              </div>
+              
+              {/* Page Navigation */}
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-4">
+                  <Button
+                    onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
+                    disabled={currentPageIndex === 0}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/20 disabled:opacity-50"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <span className="text-indigo-100 font-medium">
+                    Page {currentPageIndex + 1} / {totalPages}
+                  </span>
+                  
+                  <Button
+                    onClick={() => setCurrentPageIndex(Math.min(totalPages - 1, currentPageIndex + 1))}
+                    disabled={currentPageIndex === totalPages - 1}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/20 disabled:opacity-50"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {/* Lesson Content - Clickable for adding notes */}
@@ -384,8 +437,8 @@ const SectionContent: React.FC<SectionContentProps> = ({
             
 
             <NotebookContent
-              content={section.lesson.content}
-              lessonId={section.lesson.id}
+              content={currentLessonEntry.lesson.content}
+              lessonId={currentLessonEntry.lesson.id}
               className="p-6 w-full h-full"
               notebookTheme={{
                 bgColor: '#fefefe',
@@ -398,7 +451,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
               onReady={handleContentReady}
               onSaveAnnotations={handleSaveAnnotations}
               initialAnnotations={annotations}
-              key={renderKey}
+              key={`${renderKey}-${currentPageIndex}`}
             />
            
           </div>

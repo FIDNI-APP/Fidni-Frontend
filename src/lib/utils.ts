@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import katex from 'katex';
 
 
 // Utility function to merge Tailwind CSS classes
@@ -106,26 +105,5 @@ export const truncateText = (text: string, maxLength: number): string => {
   return truncatedText + (currentLength > maxLength ? '......' : '');
 };
 
-export function renderLatexContent(content: string): string {
-  // Replace inline math: $...$ with rendered LaTeX
-  content = content.replace(/\$([^\$]+)\$/g, (match, latex) => {
-    try {
-      return katex.renderToString(latex, { displayMode: false });
-    } catch (error) {
-      console.error('LaTeX parsing error:', error);
-      return match;
-    }
-  });
-
-  // Replace display math: $$...$$
-  content = content.replace(/\$\$([^\$]+)\$\$/g, (match, latex) => {
-    try {
-      return katex.renderToString(latex, { displayMode: true });
-    } catch (error) {
-      console.error('LaTeX parsing error:', error);
-      return match;
-    }
-  });
-
-  return content;
-}
+// renderLatexContent removed - MathJax rendering is handled by RealTimeMathExtension
+// This function is no longer needed as MathJax dynamically renders formulas

@@ -20,6 +20,39 @@ export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Add new state for dropdowns
   const [activeDropdown, setActiveDropdown] = useState<'exercises' | 'lessons' | 'exams' | null>(null);
+  
+  // Fonction pour déterminer le gradient de couleur en fonction de la page actuelle
+  const getNavbarGradient = () => {
+    if (location.pathname.includes('/lessons')) {
+      return 'from-gray-800 to-blue-800'; // Bleu pour les leçons
+    } else if (location.pathname.includes('/exams')) {
+      return 'from-gray-800 to-green-800'; // Vert pour les examens
+    } else {
+      return 'from-gray-800 to-purple-800'; // Violet par défaut (exercices)
+    }
+  };
+  
+  // Fonction pour déterminer la couleur du texte survolé/actif en fonction de la page
+  const getHoverColor = () => {
+    if (location.pathname.includes('/lessons')) {
+      return 'text-blue-600'; // Bleu pour les leçons
+    } else if (location.pathname.includes('/exams')) {
+      return 'text-green-600'; // Vert pour les examens
+    } else {
+      return 'text-purple-600'; // Violet par défaut (exercices)
+    }
+  };
+  
+  // Fonction pour déterminer la couleur du gradient de la barre sous les liens actifs
+  const getActiveBarGradient = () => {
+    if (location.pathname.includes('/lessons')) {
+      return 'bg-gradient-to-r from-blue-600 to-indigo-500'; // Bleu pour les leçons
+    } else if (location.pathname.includes('/exams')) {
+      return 'bg-gradient-to-r from-green-600 to-teal-500'; // Vert pour les examens
+    } else {
+      return 'bg-gradient-to-r from-purple-600 to-pink-500'; // Violet par défaut (exercices)
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -130,10 +163,10 @@ export const Navbar = () => {
           className={`flex items-center text-sm font-semibold transition-all duration-200 px-4 py-2 rounded-xl relative group ${
             isActive || activeDropdown === dropdown
               ? isScrolled
-                ? 'text-purple-600 bg-purple-50'
+                ? `${getHoverColor()} bg-${getHoverColor().split('-')[1]}-50`
                 : 'text-white bg-white/20 backdrop-blur-md'
               : isScrolled
-                ? 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'
+                ? `text-gray-700 hover:${getHoverColor()} hover:bg-gray-50`
                 : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}
         >
@@ -143,7 +176,7 @@ export const Navbar = () => {
           <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === dropdown ? 'rotate-180' : ''}`} />
           {(isActive || activeDropdown === dropdown) && (
             <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 rounded-full transition-all duration-200 ${
-              isScrolled ? 'bg-gradient-to-r from-purple-600 to-pink-500' : 'bg-white'
+              isScrolled ? getActiveBarGradient() : 'bg-white'
             }`} />
           )}
         </button>
@@ -153,10 +186,10 @@ export const Navbar = () => {
           className={`flex items-center text-sm font-semibold transition-all duration-200 px-4 py-2 rounded-xl relative group ${
             isActive
               ? isScrolled
-                ? 'text-purple-600 bg-purple-50'
+                ? `${getHoverColor()} bg-${getHoverColor().split('-')[1]}-50`
                 : 'text-white bg-white/20 backdrop-blur-md'
               : isScrolled
-                ? 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'
+                ? `text-gray-700 hover:${getHoverColor()} hover:bg-gray-50`
                 : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}
           onClick={closeDropdowns}
@@ -166,7 +199,7 @@ export const Navbar = () => {
           </div>
           {isActive && (
             <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 rounded-full transition-all duration-200 ${
-              isScrolled ? 'bg-gradient-to-r from-purple-600 to-pink-500' : 'bg-white'
+              isScrolled ? getActiveBarGradient() : 'bg-white'
             }`} />
           )}
         </Link>
@@ -272,7 +305,7 @@ export const Navbar = () => {
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
       isScrolled
         ? 'py-3 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
-        : 'py-4 bg-gradient-to-r from-gray-800 to-purple-800'
+        : `py-4 bg-gradient-to-r ${getNavbarGradient()}`
     }`}>
       <div className="absolute inset-0 opacity-10 pointer-events-none">
   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -301,7 +334,13 @@ export const Navbar = () => {
                 onMouseLeave={() => setIsHovered(false)}
               >
                 <div className={`w-10 h-10 flex items-center justify-center overflow-hidden rounded-xl ${
-                  isScrolled ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-white/10 backdrop-blur-md border border-white/30'
+                  isScrolled 
+                    ? location.pathname.includes('/lessons')
+                      ? 'bg-gradient-to-br from-indigo-500 to-blue-600'
+                      : location.pathname.includes('/exams')
+                        ? 'bg-gradient-to-br from-indigo-500 to-green-600'
+                        : 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                    : 'bg-white/10 backdrop-blur-md border border-white/30'
                 }`}>
                   <img
                     src={isHovered ? Logo2 : Logo3}
@@ -310,12 +349,22 @@ export const Navbar = () => {
                   />
                 </div>
                 <div className={`absolute inset-0 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300 ${
-                  isScrolled ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-white'
+                  isScrolled 
+                    ? location.pathname.includes('/lessons')
+                      ? 'bg-gradient-to-r from-indigo-500 to-blue-600'
+                      : location.pathname.includes('/exams')
+                        ? 'bg-gradient-to-r from-indigo-500 to-green-600'
+                        : 'bg-gradient-to-r from-indigo-500 to-purple-600'
+                    : 'bg-white'
                 }`}></div>
               </div>
               <span className={`text-2xl fjalla-one-regular font-extrabold transition-all duration-300 ${
                 isScrolled
-                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-transparent bg-clip-text'
+                  ? location.pathname.includes('/lessons')
+                    ? 'bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 text-transparent bg-clip-text'
+                    : location.pathname.includes('/exams')
+                      ? 'bg-gradient-to-r from-indigo-600 via-green-600 to-teal-500 text-transparent bg-clip-text'
+                      : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-transparent bg-clip-text'
                   : 'text-white'
               }`}>
                 Fidni
@@ -369,7 +418,7 @@ export const Navbar = () => {
           {/* Search bar - desktop */}
           <div className="hidden md:block w-full max-w-md mx-6">
             <SearchAutocomplete
-              placeholder="Rechercher des exercices, leçons, examens..."
+              placeholder="Rechercher un exercice de maths, physique..."
               inputClassName={`w-full px-4 py-2 pr-20 rounded-xl focus:outline-none transition-all duration-300 ${
                 isScrolled
                   ? 'bg-gray-50 text-gray-900 border border-gray-200 focus:ring-2 focus:ring-purple-500 placeholder-gray-400'

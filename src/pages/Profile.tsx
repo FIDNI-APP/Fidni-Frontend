@@ -75,7 +75,7 @@ const TabNavigation: React.FC<{
                 onClick={() => onTabChange(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-gray-700 to-purple-800 text-white shadow-md'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
@@ -315,7 +315,7 @@ export function UserProfile() {
                 <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
                   <UserPlus className="w-4 h-4 mr-1" />Suivre
                 </Button>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
                   <Share2 className="w-4 h-4" />
                 </Button>
               </>
@@ -404,7 +404,11 @@ export function UserProfile() {
               transition={{ duration: 0.3 }}
               className="space-y-6 md:space-y-8"
             >
-              <ProgressCharts stats={stats} />
+              <ProgressCharts
+                stats={stats}
+                successExercises={successExercises}
+                reviewExercises={reviewExercises}
+              />
               <ProgressSection
                 successExercises={successExercises}
                 reviewExercises={reviewExercises}
@@ -462,7 +466,7 @@ export function UserProfile() {
               transition={{ duration: 0.3 }}
             >
               <ViewHistorySection
-                history={history}
+                items={history}
                 isLoading={!dataLoaded.history}
               />
             </motion.div>

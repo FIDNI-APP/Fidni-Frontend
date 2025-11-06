@@ -1,174 +1,393 @@
-import React, { useRef } from 'react';
-import { RevisionList, RevisionListItem } from '@/lib/api';
-import { Content } from '@/types';
-import { Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { RevisionList } from '@/lib/api';
 
 interface PrintRevisionListProps {
   list: RevisionList;
 }
 
+const processLatexContent = (content: string): string => {
+  try {
+    const json = JSON.parse(content);
+    
+    const processNode = (node: any): string => {
+      if (typeof node === 'string') return node;
+      
+      if (typeof node.text === 'string') {
+        if (node.type === 'mathematics') {
+          return node.attrs?.mode === 'display' ? `\\[${node.text}\\]` : `\\(${node.text}\\)`;
+        }
+        return node.text;
+      }
+      
+      if (Array.isArray(node.content)) {
+        return node.content.map(processNode).join('');
+      }
+      
+      if (node.content) return processNode(node.content);
+      
+      return '';
+    };
+
+    return processNode(json);
+  } catch {
+    // If not JSON, assume content already has proper LaTeX delimiters
+    return content;
+  }
+};
+
+const formatDate = (date: Date): string => {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+};
+
 export const PrintRevisionList: React.FC<PrintRevisionListProps> = ({ list }) => {
-  const printRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handlePrint = () => {
-    window.print();
+  // Extract plain text from any content format
+  const extractText = (content: string): string => {
+    if (!content) return 'Contenu non disponible';
+
+    try {
+      // If HTML, extract text
+      if (content.trim().startsWith('<')) {
+        const div = document.createElement('div');
+        div.innerHTML = content;
+        return div.textContent || div.innerText || 'Contenu non disponible';
+      }
+
+      // Try parsing as JSON
+      try {
+        const json = JSON.parse(content);
+        
+        // Recursive text extraction from JSON
+        const extract = (node: any): string => {
+          if (!node) return '';
+          if (typeof node === 'string') return node;
+          if (node.text) return node.text;
+          if (node.type === 'text' && node.text) return node.text;
+          if (node.type === 'mathematics' && node.attrs?.latex) {
+            return node.attrs.latex;
+          }
+          if (Array.isArray(node.content)) {
+            return node.content.map(extract).join(' ');
+          }
+          if (node.content) return extract(node.content);
+          return '';
+        };
+
+        const text = extract(json);
+        return text || content;
+      } catch {
+        // Not JSON, return as plain text
+        return content;
+      }
+    } catch (err) {
+      console.error('Error extracting text:', err);
+      return content;
+    }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }).format(date);
-  };
+  const handleDownloadPDF = async () => {
+    if (!list.items || list.items.length === 0) {
+      alert('Aucun exercice dans cette liste');
+      return;
+    }
 
-  const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return 'Facile';
-      case 'medium':
-        return 'Moyen';
-      case 'hard':
-        return 'Difficile';
-      default:
-        return difficulty;
+    try {
+      setIsGenerating(true);
+
+      // Load jsPDF dynamically if not already loaded
+      let jsPDF: any;
+      
+      // Try to use global jsPDF or dynamically import it
+      if (typeof window !== 'undefined' && window.jspdf?.jsPDF) {
+        jsPDF = window.jspdf.jsPDF;
+      } else {
+        // Dynamically load jsPDF from CDN
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        document.head.appendChild(script);
+        
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+          setTimeout(() => reject(new Error('jsPDF loading timeout')), 5000);
+        });
+        
+        jsPDF = (window as any).jspdf?.jsPDF;
+        if (!jsPDF) {
+          throw new Error('jsPDF not loaded');
+        }
+      }
+
+      // Create new PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 20;
+      const maxWidth = pageWidth - (2 * margin);
+      let y = margin;
+
+      // Helper function to add text with word wrap
+      const addText = (text: string, fontSize: number = 11, isBold: boolean = false) => {
+        doc.setFontSize(fontSize);
+        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+        
+        const lines = doc.splitTextToSize(text, maxWidth);
+        
+        for (const line of lines) {
+          if (y > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.text(line, margin, y);
+          y += fontSize * 0.5;
+        }
+        
+        return y;
+      };
+
+      // Add centered title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      const title = list.name.toUpperCase();
+      const titleWidth = doc.getTextWidth(title);
+      doc.text(title, (pageWidth - titleWidth) / 2, y);
+      y += 12;
+
+      // Add subtitle
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const subtitle = `${formatDate(new Date().toISOString())} — ${list.item_count} exercice${list.item_count > 1 ? 's' : ''}`;
+      const subtitleWidth = doc.getTextWidth(subtitle);
+      doc.text(subtitle, (pageWidth - subtitleWidth) / 2, y);
+      y += 10;
+
+      // Add line separator
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+
+      // Process each exercise
+      for (let i = 0; i < list.items.length; i++) {
+        const item = list.items[i];
+        const content = item.content_object as Content;
+        
+        if (!content) continue;
+
+        // Check if we need a new page
+        if (y > pageHeight - 40) {
+          doc.addPage();
+          y = margin;
+        }
+
+        // Exercise title
+        y = addText(`Exercice ${i + 1}: ${content.title}`, 13, true);
+        y += 2;
+
+        // Metadata
+        if (content.subject?.name || content.difficulty || content.chapters?.length > 0) {
+          doc.setTextColor(100, 100, 100);
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(10);
+          
+          let metadata = '';
+          if (content.subject?.name) {
+            metadata += `Matière : ${content.subject.name}`;
+          }
+          if (content.chapters && content.chapters.length > 0) {
+            if (metadata) metadata += ' — ';
+            metadata += `Chapitre : ${content.chapters.map(ch => ch.name).join(', ')}`;
+          }
+          if (content.difficulty) {
+            if (metadata) metadata += ' — ';
+            metadata += `Difficulté : ${getDifficultyLabel(content.difficulty)}`;
+          }
+          
+          const metaLines = doc.splitTextToSize(metadata, maxWidth);
+          for (const line of metaLines) {
+            if (y > pageHeight - margin) {
+              doc.addPage();
+              y = margin;
+            }
+            doc.text(line, margin, y);
+            y += 5;
+          }
+          
+          doc.setTextColor(0, 0, 0);
+          y += 3;
+        }
+
+        // Exercise content
+        const contentText = extractText(content.content);
+        y = addText(contentText, 11, false);
+        y += 8;
+      }
+
+      // Add footer
+      if (y > pageHeight - 30) {
+        doc.addPage();
+        y = pageHeight / 2;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      const footerText = '• • • FIN • • •';
+      const footerWidth = doc.getTextWidth(footerText);
+      doc.text(footerText, (pageWidth - footerWidth) / 2, y + 10);
+
+      // Save the PDF
+      doc.save(`${list.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      
+      // Fallback: Generate simple HTML and use browser print
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${list.name}</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                padding: 20px;
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              h1 {
+                text-align: center;
+                text-transform: uppercase;
+                font-size: 24px;
+                margin-bottom: 10px;
+              }
+              .subtitle {
+                text-align: center;
+                color: #666;
+                margin-bottom: 30px;
+              }
+              .exercise {
+                margin-bottom: 30px;
+                page-break-inside: avoid;
+              }
+              .exercise h2 {
+                font-size: 16px;
+                margin-bottom: 8px;
+              }
+              .metadata {
+                font-size: 11px;
+                color: #666;
+                font-style: italic;
+                margin-bottom: 10px;
+              }
+              .content {
+                font-size: 12px;
+                white-space: pre-wrap;
+              }
+              hr {
+                border: none;
+                border-top: 1px solid #ccc;
+                margin: 30px 0;
+              }
+              .footer {
+                text-align: center;
+                font-weight: bold;
+                margin-top: 50px;
+              }
+              @media print {
+                body { padding: 0; }
+                .exercise { page-break-inside: avoid; }
+              }
+            </style>
+          </head>
+          <body>
+            <h1>${list.name}</h1>
+            <p class="subtitle">${formatDate(new Date().toISOString())} — ${list.item_count} exercice${list.item_count > 1 ? 's' : ''}</p>
+            <hr>
+            ${list.items.map((item, index) => {
+              const content = item.content_object as Content;
+              if (!content) return '';
+              
+              const metadata = [];
+              if (content.subject?.name) metadata.push(`Matière : ${content.subject.name}`);
+              if (content.chapters?.length > 0) metadata.push(`Chapitre : ${content.chapters.map(ch => ch.name).join(', ')}`);
+              if (content.difficulty) metadata.push(`Difficulté : ${getDifficultyLabel(content.difficulty)}`);
+              
+              return `
+                <div class="exercise">
+                  <h2>Exercice ${index + 1}: ${content.title}</h2>
+                  ${metadata.length > 0 ? `<p class="metadata">${metadata.join(' — ')}</p>` : ''}
+                  <div class="content">${extractText(content.content)}</div>
+                </div>
+              `;
+            }).join('')}
+            <hr>
+            <div class="footer">• • • FIN • • •</div>
+          </body>
+          </html>
+        `;
+        
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        
+        // Auto-trigger print dialog
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+        
+        alert('Une nouvelle fenêtre s\'est ouverte avec le contenu. Utilisez Ctrl+P (ou Cmd+P sur Mac) pour imprimer ou sauvegarder en PDF.');
+      }
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   return (
-    <>
-      {/* Print Button - Only visible on screen */}
-      <Button
-        onClick={handlePrint}
-        variant="outline"
-        className="print:hidden flex items-center gap-2"
-      >
-        <Printer className="w-4 h-4" />
-        Imprimer en TD
-      </Button>
-
-      {/* Print Content - Hidden on screen, visible when printing */}
-      <div ref={printRef} className="hidden print:block">
-        <style>{`
-          @media print {
-            @page {
-              size: A4;
-              margin: 1.5cm 1cm;
-            }
-
-            body {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-            }
-
-            * {
-              visibility: hidden;
-            }
-
-            .print-content, .print-content * {
-              visibility: visible;
-            }
-
-            .print-content {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              min-height: 100vh;
-              display: flex !important;
-              flex-direction: column;
-            }
-
-            .page-break {
-              page-break-after: always;
-              break-after: page;
-            }
-
-            .avoid-break {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-
-            .print-footer {
-              position: fixed;
-              bottom: 0;
-              left: 0;
-              right: 0;
-              margin-top: auto;
-            }
-          }
-        `}</style>
-
-        <div className="print-content bg-white text-black px-6 py-6">
-          {/* Header */}
-          <div className="border-b-4 border-double border-black pb-4 mb-6">
-            <div className="flex justify-between items-center">
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {list.name}
-                </h1>
-                <p className="text-xs text-gray-600 mt-1 uppercase tracking-wider">Liste de Révisions</p>
-              </div>
-              <div className="text-right border-l-2 border-gray-300 pl-4">
-                <p className="text-sm font-semibold text-gray-800">{formatDate(new Date().toISOString())}</p>
-                <p className="text-xs text-gray-600 mt-1">
-                  {list.item_count} exercice{list.item_count !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Exercises */}
-          <div className="space-y-6">
-            {list.items && list.items.map((item: RevisionListItem, index: number) => {
-              const content = item.content_object as Content;
-              if (!content) return null;
-
-              return (
-                <div key={item.id} className="avoid-break mb-8">
-                  {/* Exercise Header */}
-                  <div className="mb-3">
-                    <h3 className="text-lg font-bold mb-2">
-                      Exercice {index + 1}: {content.title}
-                    </h3>
-                    <div className="flex gap-4 text-xs text-gray-700">
-                      {content.subject && (
-                        <span className="font-medium">
-                          Matière: {content.subject.name}
-                        </span>
-                      )}
-                      {content.difficulty && (
-                        <span>
-                          Difficulté: {getDifficultyLabel(content.difficulty)}
-                        </span>
-                      )}
-                      {content.chapters && content.chapters.length > 0 && (
-                        <span>
-                          Chapitre: {content.chapters.map(ch => ch.name).join(', ')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Exercise Content */}
-                  <div className="prose prose-sm max-w-none">
-                    <TipTapRenderer content={content.content} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Footer - Fixed at bottom */}
-          <div className="print-footer mt-auto pt-4 border-t-2 border-gray-400 text-center text-xs text-gray-600 bg-white px-6 pb-4">
-            <p className="font-medium">{list.name}</p>
-            <p className="text-gray-500 mt-0.5">{formatDate(new Date().toISOString())}</p>
-          </div>
-        </div>
-      </div>
-    </>
+    <Button
+      onClick={handleDownloadPDF}
+      disabled={isGenerating}
+      className="bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md shadow-lg hover:shadow-xl transition-all hover:scale-105"
+    >
+      {isGenerating ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Génération...
+        </>
+      ) : (
+        <>
+          <Download className="w-4 h-4 mr-2" />
+          Télécharger PDF
+        </>
+      )}
+    </Button>
   );
 };
+function getDifficultyLabel(difficulty: number): string {
+  switch (difficulty) {
+    case 1:
+      return 'Très facile';
+    case 2:
+      return 'Facile';
+    case 3:
+      return 'Moyen';
+    case 4:
+      return 'Difficile';
+    case 5:
+      return 'Très difficile';
+    default:
+      return 'Non défini';
+  }
+}

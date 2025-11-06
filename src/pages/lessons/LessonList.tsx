@@ -454,6 +454,7 @@ export const LessonList = () => {
         onFilterChange={handleFilterChange}
         initialClassLevels={filters.classLevels}
         initialSubjects={filters.subjects}
+        contentType="lesson"
       />
     </div>
   ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
@@ -524,14 +525,14 @@ export const LessonList = () => {
               </p>
             </div>
 
-            <button
+            <Button
               onClick={handleNewLessonClick}
-              className="group relative px-8 py-4 bg-white text-gray-800 hover:bg-gray-100 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-bold flex items-center gap-3 hover:scale-105"
+              variant="ghost"
+              className="liquid-glass rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3 bg-gradient-to-r from-yellow-200 to-blue-200 text-blue-900 rounded-xl group relative px-4 py-3"
             >
-              <div className="absolute inset-0 bg-purple-500/10 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <Plus className="w-5 h-5 relative z-10" />
-              <span className="relative z-10">Créer une leçon</span>
-            </button>
+              <span className="relative z-10">Ajouter une leçon</span>
+            </Button>
           </div>
         </div>
       </div>

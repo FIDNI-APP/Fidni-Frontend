@@ -6,7 +6,7 @@ interface NotebookSectionsProps {
   sections: Section[];
   activeSectionId: string | null;
   onSelectSection: (id: string) => void;
-  onRemoveLesson: (id: string) => void;
+  onRemoveLesson: (sectionId: string, lessonEntryId: string) => void;
 }
 
 const NotebookSections: React.FC<NotebookSectionsProps> = ({ 
@@ -29,21 +29,21 @@ const NotebookSections: React.FC<NotebookSectionsProps> = ({
       ) : (
         <div className="space-y-2 px-2">
           {sections.map((section) => {
-            // Determine if this section has a lesson
-            const hasLesson = !!section.lesson;
+            const hasLessons = section.lesson_entries && section.lesson_entries.length > 0;
+            const lessonCount = section.lesson_entries ? section.lesson_entries.length : 0;
             
             return (
               <div 
                 key={section.id}
-                className={`relative group ${hasLesson ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
-                onClick={() => hasLesson && onSelectSection(section.id)}
+                className="group cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                onClick={() => hasLessons && onSelectSection(section.id)}
               >
                 {/* Improved tab design */}
                 <div 
                   className={`relative rounded-lg py-3 px-4 
                     ${activeSectionId === section.id 
                       ? 'bg-white shadow-md border-l-4 border-indigo-600' 
-                      : hasLesson 
+                      : hasLessons 
                         ? 'bg-white/70 hover:bg-white border-l-4 border-transparent hover:border-indigo-300' 
                         : 'bg-gray-100 border-l-4 border-transparent'}
                   `}
@@ -53,23 +53,19 @@ const NotebookSections: React.FC<NotebookSectionsProps> = ({
                       <div className={`font-medium ${activeSectionId === section.id ? 'text-indigo-800' : 'text-gray-800'}`}>
                         {section.chapter.name}
                       </div>
-                      {section.lesson && (
-                        <div className="text-xs text-gray-500 mt-1 truncate max-w-[180px]">
-                          {section.lesson.title}
+                      {hasLessons && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {lessonCount} lesson{lessonCount > 1 ? 's' : ''}
                         </div>
                       )}
                     </div>
-                    {hasLesson && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveLesson(section.id);
-                        }}
-                        className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Remove lesson"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    {hasLessons && (
+                      <div className="flex items-center space-x-1">
+                        <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">
+                          {lessonCount}
+                        </span>
+                        {/* For now, we'll remove the delete button since we need to handle multiple lessons */}
+                      </div>
                     )}
                   </div>
                 </div>

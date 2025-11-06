@@ -4,7 +4,6 @@ import ContentEditor from '@/components/exercise/ContentEditor';
 import { getContentById, updateContent } from '../../lib/api';
 import { Content, Difficulty } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import 'katex/dist/katex.min.css';
 
 export function EditExercise() {
   const { id } = useParams<{ id: string }>();

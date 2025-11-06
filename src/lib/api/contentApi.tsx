@@ -201,4 +201,48 @@ export const markLessonViewed = async (lessonId: string) => {
   return response.data;
 };
 
+// Get filter counts for any content type
+export const getFilterCounts = async (params: {
+  classLevels?: string[];
+  subjects?: string[];
+  chapters?: string[];
+  difficulties?: Difficulty[];
+  subfields?: string[];
+  theorems?: string[];
+  filterType: 'classLevels' | 'subjects' | 'subfields' | 'chapters' | 'theorems' | 'difficulties';
+  contentType?: 'exercise' | 'lesson' | 'exam';
+}) => {
+  // Determine endpoint based on content type
+  const endpoint = params.contentType === 'lesson' ? '/lessons/'
+                 : params.contentType === 'exam' ? '/exams/'
+                 : '/exercises/';
+
+  // Make a request with current filters to get counts for the specified filter type
+  const response = await api.get(endpoint, {
+    params: {
+      class_levels: params.classLevels,
+      subjects: params.subjects,
+      chapters: params.chapters,
+      difficulties: params.difficulties,
+      subfields: params.subfields,
+      theorems: params.theorems,
+      per_page: 1 // We only need the count, not the actual results
+    }
+  });
+
+  return {
+    count: response.data.count || 0,
+    filterType: params.filterType
+  };
+};
+
+// Get similar exercises based on same chapters
+export const getSimilarExercises = async (exerciseId: string) => {
+  const response = await api.get(`/exercises/${exerciseId}/similar/`);
+  return {
+    results: response.data.results || [],
+    count: response.data.count || 0
+  };
+};
+
 

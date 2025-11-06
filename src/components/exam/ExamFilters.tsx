@@ -321,7 +321,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
              onClick={() => onToggle(opt.id)} 
              className={`px-3 py-2 text-sm rounded-full transition-all duration-200 border ${
                selectedValue === opt.id 
-                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent' 
+                 ? 'bg-gradient-to-r from-green-900 to-green-800 text-white border-transparent' 
                  : opt.color
              }`}
            >
@@ -490,7 +490,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
 
  return (
    <div className="bg-white rounded-xl shadow-md overflow-hidden sticky top-28 w-full max-w-4xl">
-     <div className="p-6 bg-gradient-to-r from-indigo-700 to-purple-700 text-white font-medium">
+     <div className="p-6 bg-gradient-to-r from-gray-800 to-green-900 text-white font-medium">
        <div className="flex items-center justify-between">
          <div className="flex items-center space-x-3">
            <h2 className="text-xl font-semibold">
@@ -556,17 +556,17 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
                  <h3 className="text-lg font-medium text-gray-800">{section.title}</h3>
                  
                  {!isDisabled && Array.isArray(selectedValuesForCategory) && selectedValuesForCategory.length > 0 && (
-                   <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
+                   <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-2">
                      {selectedValuesForCategory.length}
                    </span>
                  )}
                  {!isDisabled && section.id === 'isNationalExam' && selectedFilters.isNationalExam !== null && (
-                   <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
+                   <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-2">
                      1
                    </span>
                  )}
                  {!isDisabled && section.id === 'dateRange' && selectedFilters.dateRange && (
-                   <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
+                   <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-2">
                      1
                    </span>
                  )}
@@ -601,7 +601,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
                        const isSelected = Array.isArray(selectedValuesForCategory) && selectedValuesForCategory.includes(itemId); 
                        
                        let buttonClass = isSelected 
-                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent' 
+                         ? 'bg-gradient-to-r from-green-900 to-green-800 text-white border-transparent' 
                          : item.color || 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200'; 
                          
                        return (
@@ -635,7 +635,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
        })}
        
        {getActiveFiltersCount() > 0 && (
-         <div className="mt-6 pt-6 border-t border-gray-100">
+         <div className="mt-6 pt-6">
            <div className="flex items-center justify-between mb-4">
              <h3 className="text-base font-medium text-gray-800">
                Filtres actifs
@@ -699,7 +699,7 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
                return null; 
              })}
            </div>
-         </div>
+           </div>
        )}
      </div>
    </div>

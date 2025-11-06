@@ -102,7 +102,7 @@ export const ExamHeader: React.FC<ExamHeaderProps> = ({
   };
 
   return (
-    <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-blue-800 to-blue-600' : 'from-blue-800 via-indigo-800 to-indigo-900'} text-white rounded-xl shadow-lg mb-6 relative`}>
+    <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-gray-800 to-green-900' : 'from-gray-800 to-green-900'} text-white rounded-xl shadow-lg mb-6 relative`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden rounded-xl">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">

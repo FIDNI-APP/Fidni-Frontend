@@ -36,6 +36,16 @@ export interface AddItemData {
   notes?: string;
 }
 
+export interface RevisionListStatistics {
+  total_items: number;
+  completed: number;
+  pending: number;
+  success: number;
+  review: number;
+  progress_percentage: number;
+  total_time_seconds: number;
+}
+
 /**
  * Get all revision lists for the current user
  */
@@ -123,6 +133,19 @@ export async function removeItemFromRevisionList(listId: number, itemId: number)
     });
   } catch (error) {
     console.error('Failed to remove item from revision list:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get statistics for a revision list
+ */
+export async function getRevisionListStatistics(listId: number): Promise<RevisionListStatistics> {
+  try {
+    const response = await api.get(`/revision-lists/${listId}/statistics/`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch revision list statistics:', error);
     throw error;
   }
 }

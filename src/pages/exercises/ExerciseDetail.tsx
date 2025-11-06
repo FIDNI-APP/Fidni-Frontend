@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import Confetti from 'react-confetti';
 import { VoteValue } from '@/types';
+import { CompletionAnimation } from '@/components/animations/CompletionAnimation';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommentSection } from '@/components/CommentSection';
 import { useAdvancedTimeTracker } from '@/hooks/useAdvancedTimeTracker';
@@ -11,16 +11,17 @@ import { undoSolutionViewed, toggleSolutionMatched } from '@/lib/api/statisticsA
 
 // Import enhanced components
 import { ExerciseHeader } from '@/components/exercise/ExerciseHeader';
+import { ExerciseTitleSection } from '@/components/exercise/ExerciseTitleSection';
 import { ExerciseContent } from '@/components/exercise/ExerciseContent';
 import { ProposalsEmptyState } from '@/components/exercise/EmptyStates';
 import { SolutionSection } from '@/components/exercise/SolutionSection';
+import { SimilarExercises } from '@/components/exercise/SimilarExercises';
 import { ExercisePrintView } from '@/components/exercise/ExercisePrintView';
 import { ExerciseSidebar } from '@/components/exercise/ExerciseSidebar';
 
 // Import shared components
 import { FloatingToolbar } from '@/components/shared/FloatingToolbar';
 import { MobileSidebar } from '@/components/shared/MobileSidebar';
-import { TabNavigation } from '@/components/shared/TabNavigation';
 import { ActivitySection } from '@/components/activity/ActivitySection';
 import { Toast } from '@/components/shared/Toast';
 
@@ -37,7 +38,7 @@ import { useSolutionTracking } from '@/hooks/useSolutionTracking';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
 
 // Import utilities
-import { triggerConfetti } from '@/lib/utils/component-helpers/confetti';
+import { triggerAnimation } from '@/lib/utils/component-helpers/confetti';
 import {
   ArrowLeft,
   Clock,
@@ -48,12 +49,12 @@ import {
   BookOpen,
   MessageSquare,
   GitPullRequest,
-  Activity
+  Activity,
+  Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SEO, createExerciseStructuredData, createBreadcrumbStructuredData } from '@/components/SEO';
 import { formatTimeAgo } from '@/lib/utils/dateHelpers';
-import 'katex/dist/katex.min.css';
 
 export function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -89,7 +90,9 @@ export function ExerciseDetail() {
     initialSaved: exercise?.user_save || false,
     onProgressChange: (status) => {
       if (status === 'success') {
-        triggerConfetti(setShowConfetti);
+        triggerAnimation(setShowAnimation, 'success');
+      } else if (status === 'review') {
+        triggerAnimation(setShowAnimation, 'failure');
       }
       // Refetch statistics after any progress change
       refetchStatistics();
@@ -114,7 +117,7 @@ export function ExerciseDetail() {
   } = useSolutionManagement({
     contentId: id || '',
     onSolutionAdded: () => {
-      triggerConfetti(setShowConfetti);
+      triggerAnimation(setShowAnimation, 'success');
       setSolutionVisible(true);
     },
     onSolutionDeleted: () => {
@@ -148,7 +151,7 @@ export function ExerciseDetail() {
     const tab = searchParams.get('tab');
     return (tab === 'discussions' || tab === 'proposals' || tab === 'activity') ? tab : 'exercise';
   });
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [showAnimation, setShowAnimation] = useState<{ show: boolean; type: 'success' | 'failure' }>({ show: false, type: 'success' });
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [undoNotification, setUndoNotification] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
@@ -384,7 +387,11 @@ export function ExerciseDetail() {
         structuredData={combinedStructuredData}
       />
 
-      {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
+      <CompletionAnimation
+        show={showAnimation.show}
+        type={showAnimation.type}
+        onComplete={() => setShowAnimation({ show: false, type: 'success' })}
+      />
 
       {/* Solution tracking notification */}
       <Toast
@@ -475,26 +482,13 @@ export function ExerciseDetail() {
               formatTimeAgo={formatTimeAgo}
               isAuthor={isAuthor}
               onPrint={handlePrint}
+              activeTab={activeSection}
+              onTabChange={handleSectionChange}
             />
-            <div className="liquid-glass bg-gradient-to-r from-gray-800 to-purple-900 text-white px-6 pb-2">
-              <TabNavigation
-                tabs={[
-                  { id: 'exercise', label: 'Exercice', icon: <BookOpen className="w-4 h-4" /> },
-                  {
-                    id: 'discussions',
-                    label: 'Discussions',
-                    icon: <MessageSquare className="w-4 h-4" />,
-                    count: exercise.comments?.length || 0
-                  },
-                  { id: 'proposals', label: 'Solutions alternatives', icon: <GitPullRequest className="w-4 h-4" /> },
-                  { id: 'activity', label: 'Activité', icon: <Activity className="w-4 h-4" /> }
-                ]}
-                activeTab={activeSection}
-                onTabChange={(tabId) =>
-                  handleSectionChange(tabId as 'exercise' | 'discussions' | 'proposals' | 'activity')
-                }
-              />
-            </div>
+            <ExerciseTitleSection
+              exercise={exercise}
+              formatTimeAgo={formatTimeAgo}
+            />
           </div>
 
           {/* Main content grid */}
@@ -544,6 +538,8 @@ export function ExerciseDetail() {
                         onMarkSolutionMatched={handleMarkSolutionMatched}
                       />
 
+                      <SimilarExercises exerciseId={exercise.id} />
+
                     </motion.div>
                   )}
 
@@ -577,43 +573,74 @@ export function ExerciseDetail() {
               {!fullscreenMode && (
                 <div className="hidden lg:block lg:w-72 lg:flex-shrink-0">
                   <div className="lg:sticky lg:top-28" style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
-                    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-                      {/* Timer Section - Using inline code for now, can be extracted to component */}
-                      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-medium flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1.5" />
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                      {/* Timer Section - Enhanced UI */}
+                      <div className="bg-gradient-to-br from-gray-700 to-purple-800 text-white p-5">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-semibold flex items-center text-base">
+                            <Clock className="w-5 h-5 mr-2" />
                             Chronomètre
                           </h3>
                           {getSessionCount() > 0 && (
-                            <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-white/25 backdrop-blur-sm px-2.5 py-1 rounded-full font-medium">
                               {getSessionCount()} session{getSessionCount() > 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
 
-                        <div className="text-center mb-4">
-                          <div className="font-mono text-3xl font-bold">{formatCurrentTime()}</div>
-                          <div className="text-xs text-white/70">Temps actuel</div>
+                        <div className="text-center mb-5 bg-white/10 backdrop-blur-sm rounded-xl py-4 px-3">
+                          <div className="font-mono text-4xl font-bold tracking-tight">{formatCurrentTime()}</div>
+                          <div className="text-xs text-white/80 mt-1 font-medium">Temps actuel</div>
                         </div>
 
-                        {/* Control buttons */}
-                        <div className="space-y-2">
+                        {/* Control buttons - Enhanced */}
+                        <div className="space-y-2.5">
                           <div className="flex gap-2">
                             <Button
                               onClick={() => (isRunning ? stopTimer() : startTimer())}
-                              className={`flex-1 ${isRunning ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-indigo-700'}`}
+                              className={`flex-1 font-semibold rounded-lg shadow-md transition-all ${
+                                isRunning
+                                  ? 'bg-rose-500 hover:bg-rose-600 hover:shadow-lg'
+                                  : 'bg-white text-indigo-700 hover:bg-gray-50 hover:shadow-lg'
+                              }`}
                             >
-                              {isRunning ? <><Pause className="w-4 h-4 mr-1" />Pause</> : <><Play className="w-4 h-4 mr-1" />Démarrer</>}
+                              {isRunning ? (
+                                <>
+                                  <Pause className="w-4 h-4 mr-2" />
+                                  Pause
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-4 h-4 mr-2 fill-current" />
+                                  Démarrer
+                                </>
+                              )}
                             </Button>
-                            <Button onClick={resetTimer} variant="ghost" disabled={currentTime === 0 || isRunning}>
+                            <Button
+                              onClick={resetTimer}
+                              variant="ghost"
+                              className="bg-white/10 hover:bg-white/20 text-white border-0"
+                              disabled={currentTime === 0 || isRunning}
+                            >
                               <RotateCcw className="w-4 h-4" />
                             </Button>
                           </div>
 
                           {currentTime > 0 && (
-                            <Button onClick={saveTimeManually} variant="ghost" className="w-full" disabled={saving || isRunning}>
-                              {saving ? 'Sauvegarde...' : <><Save className="w-4 h-4 mr-2" />Terminer la session</>}
+                            <Button
+                              onClick={saveTimeManually}
+                              variant="ghost"
+                              className="w-full bg-white/10 hover:bg-white/20 text-white font-medium border-0"
+                              disabled={saving || isRunning}
+                            >
+                              {saving ? (
+                                'Sauvegarde...'
+                              ) : (
+                                <>
+                                  <Save className="w-4 h-4 mr-2" />
+                                  Terminer la session
+                                </>
+                              )}
                             </Button>
                           )}
                         </div>
@@ -621,7 +648,7 @@ export function ExerciseDetail() {
                         {getSessionCount() > 0 && (
                           <button
                             onClick={() => id && loadHistory('exercise', id)}
-                            className="w-full mt-3 text-xs text-white/70 hover:text-white/90"
+                            className="w-full mt-3 text-sm text-white/90 hover:text-white font-medium underline-offset-2 hover:underline transition-all"
                           >
                             Voir l'historique complet →
                           </button>

@@ -48,6 +48,8 @@ export {
   type ExerciseData,
 } from './exerciseApiExtensions';
 
+export { getFilterCounts } from './contentApi';
+
 // ============ EXAM API ============
 export {
   getExams,
@@ -141,7 +143,7 @@ export {
   addChapterToNotebook,
   addLessonToNotebook,
   removeFromNotebook,
-  updateLessonNotes,
+  updateChapterNotes,
   getNotebookActivity,
 } from './notebookApi';
 
@@ -171,10 +173,12 @@ export {
   deleteRevisionList,
   addItemToRevisionList,
   removeItemFromRevisionList,
+  getRevisionListStatistics,
   type RevisionList,
   type RevisionListItem,
   type CreateRevisionListData,
   type AddItemData,
+  type RevisionListStatistics,
 } from './revisionListApi';
 
 // ============ DASHBOARD API ============

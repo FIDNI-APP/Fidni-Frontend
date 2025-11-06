@@ -3,11 +3,11 @@ import axios from 'axios';
 
 // Create the API instance without setting the Authorization header initially
 export const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://bulletin-futures-getting-protein.trycloudflare.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, 
+  withCredentials: true,
 });
 
 // Add a request interceptor to dynamically check and add the token

@@ -12,7 +12,6 @@ import OrderedList from '@tiptap/extension-ordered-list';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
-import 'katex/dist/katex.min.css';
 import ImageResize from 'tiptap-extension-resize-image';
 import { FileHandler } from '@tiptap/extension-file-handler';
 import { Sparkles, Settings } from "lucide-react";
@@ -223,15 +222,14 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
           });
         },
       }),
-      // Utilisation de notre extension mathématique améliorée
+      // Utilisation de notre extension mathématique améliorée avec MathJax
       RealTimeMathExtension.configure({
         onEditMath: handleEditMath,
         onDeleteMath: handleDeleteMath,
-        katexOptions: {
-          throwOnError: false,
-          strict: false,
-          displayMode: true
-        }
+        delimiters: [
+          { left: '$', right: '$', display: false },
+          { left: '$$', right: '$$', display: true },
+        ],
       })
     ],
     content: editorContent,

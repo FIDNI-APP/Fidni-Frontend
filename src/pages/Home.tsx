@@ -118,7 +118,7 @@ export function Home() {
       return;
     }
     try {
-      let updatedContent;
+      let updatedContent: Content;
 
       // Determine content type by checking which array contains the item if not provided
       if (!contentType) {
@@ -147,8 +147,9 @@ export function Home() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+  return (     
+
+    <div className="md:p_26px_36px min-h_100vh p_16px bg-gradient-to-b from-gray-50 via-white to-gray-50">
       <SEO
         title="Fidni - Plateforme d'apprentissage en mathématiques"
         description="Accédez à des exercices, leçons et examens de mathématiques adaptés à votre niveau."
@@ -187,7 +188,7 @@ export function Home() {
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   Connecté
                 </div>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 animate-fade-in leading-tight">
+                <h1 className="text-3xl md:text-6xl lg:text-6xl font-extrabold text-white mb-4 animate-fade-in leading-tight">
                   Bonjour, <span className="bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 bg-clip-text text-transparent">{user.username}</span> 👋
                 </h1>
                 <p className="text-xl md:text-2xl text-white/90 font-medium animate-fade-in-up animation-delay-100">
@@ -196,7 +197,7 @@ export function Home() {
               </div>
             ) : (
               <div className="mb-8 space-y-6">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 animate-fade-in leading-tight">
+                <h1 className="text-4xl md:text-6xl lg:text-6xl font-extrabold text-white mb-4 animate-fade-in leading-tight">
                   Maîtrisez les <span className="bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 bg-clip-text text-transparent">mathématiques</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-white/90 font-medium animate-fade-in-up animation-delay-100 max-w-2xl mx-auto">

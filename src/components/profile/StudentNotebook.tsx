@@ -80,6 +80,22 @@ const StudentNotebook: React.FC = () => {
     }
   }, [currentNotebookId]);
 
+  // Add a refresh function that can be called from outside
+  useEffect(() => {
+    const handleNotebookRefresh = () => {
+      if (currentNotebookId) {
+        loadNotebookDetails(currentNotebookId);
+      }
+    };
+
+    // Listen for custom refresh events
+    window.addEventListener('refreshNotebook', handleNotebookRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshNotebook', handleNotebookRefresh);
+    };
+  }, [currentNotebookId]);
+
   // Auto-generate notebook title when subject and class level are selected
   useEffect(() => {
     if (selectedSubject && selectedClassLevel && !notebookTitle) {
@@ -185,10 +201,22 @@ const StudentNotebook: React.FC = () => {
       // Set current section ID immediately for UI feedback
       setCurrentSectionId(sectionId);
       
-      // Important: Directly fetch the section data to ensure we get the complete and latest data
-      // This is the key fix: fetching the full section details separately instead of relying on 
+      // Important: Directly fetch the chapter data to ensure we get the complete and latest data
+      // This is the key fix: fetching the full chapter details separately instead of relying on 
       // previously loaded data that might be incomplete
-      const response = await api.get(`/sections/${sectionId}/`);
+      let response;
+      try {
+        // Try the new nested API first
+        response = await api.get(`/notebooks/${currentNotebook.id}/chapters/${sectionId}/`);
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          // Fallback to old API if new one doesn't exist yet (server not restarted)
+          console.log("New API not available, falling back to old API");
+          response = await api.get(`/sections/${sectionId}/`);
+        } else {
+          throw error;
+        }
+      }
       console.log("Section data response:", response.data);
       
       if (response.data) {
@@ -313,32 +341,21 @@ const StudentNotebook: React.FC = () => {
     }
   };
 
-  const handleRemoveLesson = async (sectionId: string) => {
-    if (!window.confirm('Are you sure you want to remove this lesson?')) return;
+  const handleRemoveLesson = async (sectionId: string, lessonEntryId: string) => {
+    if (!window.confirm('Are you sure you want to remove this lesson page?')) return;
     
     try {
-      await api.post(`/sections/${sectionId}/remove_lesson/`);
+      if (!currentNotebook) return;
       
-      // Update local state
-      setCurrentNotebook(prev => {
-        if (!prev) return null;
-        
-        return {
-          ...prev,
-          sections: prev.sections.map(section => 
-            section.id === sectionId 
-              ? { ...section, lesson: null } 
-              : section
-          )
-        };
+      // Use the new nested API for removing lesson pages
+      await api.post(`/notebooks/${currentNotebook.id}/chapters/${sectionId}/remove_lesson_page/`, {
+        lesson_entry_id: lessonEntryId
       });
       
-      // If we just removed the active section, clear the selection
-      if (currentSectionId === sectionId) {
-        setCurrentSectionId(null);
-      }
+      // Refresh the notebook data
+      loadNotebookDetails(currentNotebook.id);
       
-      toast.success('Lesson removed successfully');
+      toast.success('Lesson page removed successfully');
     } catch (err) {
       console.error('Error removing lesson:', err);
       toast.error('Failed to remove lesson');

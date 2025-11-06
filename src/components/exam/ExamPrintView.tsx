@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Exam } from '@/types';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import 'katex/dist/katex.min.css';
 
 interface ExamPrintViewProps {
   exam: Exam;

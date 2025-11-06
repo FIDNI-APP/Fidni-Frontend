@@ -45,9 +45,8 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
 
   if (hasSolution) {
     return (
-      <motion.div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div
-          className={`px-6 py-4 cursor-pointer ${solutionVisible ? 'bg-indigo-50 border-b border-indigo-100' : 'bg-gray-50 hover:bg-gray-100'} transition-colors`}
+      <motion.div className="bg-gradient-to-r from-gray-50 to-purple-100 border-l-4 border-purple-800 rounded-lg overflow-hidden shadow-md mb-6">
+        <button
           onClick={(e) => {
             e.stopPropagation();
             if (!solutionVisible) {
@@ -55,33 +54,25 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
             }
             setSolutionVisible(!solutionVisible);
           }}
+          className="w-full p-5 flex items-center justify-between hover:bg-white/50 transition-colors"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-full ${solutionVisible ? 'bg-indigo-100' : 'bg-white/90'}`}>
-                <Lightbulb className={`w-5 h-5 ${solutionVisible ? 'text-indigo-600' : 'text-amber-500'}`} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Solution de l'exercice</h3>
-                <p className="text-sm text-gray-500">Cliquez pour {solutionVisible ? 'masquer' : 'afficher'} la solution</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-purple-800 flex items-center justify-center flex-shrink-0">
+              <span className="text-3xl">💡</span>
             </div>
-
-            <Button
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!solutionVisible) {
-                  toggleSolutionVisibility(e);
+            <div className="text-left">
+              <h3 className="font-bold text-gray-900 text-lg">Afficher la Solution Détaillée</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {solutionVisible
+                  ? 'Cliquez pour masquer la solution complète'
+                  : 'Cliquez pour révéler la solution complète'
                 }
-                setSolutionVisible(!solutionVisible);
-              }}
-              className="text-gray-500 hover:text-indigo-600 h-9 w-9 p-0 rounded-full"
-            >
-              <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${solutionVisible ? "rotate-180" : ""}`} />
-            </Button>
+              </p>
+            </div>
           </div>
-        </div>
+
+          <ChevronDown className={`w-6 h-6 transition-transform duration-300 text-purple-600 ${solutionVisible ? "rotate-180" : ""}`} />
+        </button>
 
         <AnimatePresence>
           {solutionVisible && exercise.solution && (
@@ -92,7 +83,7 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="px-6 py-6 bg-white">
+              <div className="p-6 bg-white border-t-2 border-purple-200">
                 <div className="prose max-w-none text-gray-800">
                   <TipTapRenderer content={exercise.solution.content} />
                 </div>

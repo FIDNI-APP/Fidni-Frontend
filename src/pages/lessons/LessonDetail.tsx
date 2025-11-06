@@ -160,7 +160,7 @@ export function LessonDetail() {
     if (!lesson || !id) return;
   
     try {
-      const newComment = await addComment(id, content, parentId);
+      const newComment = await addComment(id, content, parentId || undefined);
       
       setLesson(prev => {
         if (!prev) return prev;
@@ -426,7 +426,7 @@ export function LessonDetail() {
       <div className="print:hidden">
         <div className="container mx-auto px-4 lg:px-6 relative">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-xl shadow-lg mb-6 relative">
+          <div className="bg-gradient-to-r from-gray-800 to-blue-900 text-white rounded-xl shadow-lg mb-6 relative">
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -443,7 +443,7 @@ export function LessonDetail() {
               {/* Navigation row */}
               <div className="flex justify-between items-center mb-6">
                 <Button 
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate(`/lessons`)}
                   variant="ghost"
                   className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
                 >
@@ -571,7 +571,7 @@ export function LessonDetail() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-800 via-indigo-800 to-indigo-900 text-white px-6 pb-2">
+          <div className="bg-gradient-to-r from-gray-900 to-blue-900 text-white px-6 pb-2">
                 <LessonTabNavigation
                   activeSection={activeSection}
                   setActiveSection={handleSectionChange}
@@ -685,7 +685,7 @@ export function LessonDetail() {
                               {/* Completion status buttons */}
                               <Button
                                 onClick={() => markAsCompleted('success')}
-                                variant={completed === 'success' ? "default" : "outline"}
+                                variant={completed === 'success' ? "default" : "ghost"}
                                 size="sm"
                                 className={`rounded-lg ${
                                   completed === 'success' 
@@ -704,7 +704,7 @@ export function LessonDetail() {
                               
                               <Button
                                 onClick={() => markAsCompleted("review")}
-                                variant={completed === "review" ? "default" : "outline"}
+                                variant={completed === "review" ? "default" : "ghost"}
                                 size="sm"
                                 className={`rounded-lg ${
                                   completed === "review" 
@@ -725,7 +725,7 @@ export function LessonDetail() {
                               
                               {/* Print button */}
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 onClick={handlePrint}
                                 className="rounded-lg text-sm"
                                 size="sm"

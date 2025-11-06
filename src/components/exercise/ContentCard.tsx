@@ -256,18 +256,66 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     (hasTheorems ? Math.max(0, content.theorems.length - 1) : 0)
   );
 
+  // Get color scheme based on content type
+  const getContentTypeColors = () => {
+    switch (contentType) {
+      case 'lesson':
+        return {
+          gradient: 'from-gray-900 to-blue-800',
+          hoverColor: 'text-blue-600',
+          tagBgColor: 'bg-blue-50',
+          tagTextColor: 'text-blue-900',
+          tagBorderColor: 'border-blue-100',
+          iconColor: 'text-blue-500',
+          hoverBg: 'group-hover:bg-blue-50',
+          hoverText: 'group-hover:text-blue-600',
+          hoverBorder: 'group-hover:border-blue-100'
+        };
+      case 'exam':
+        return {
+          gradient: 'from-gray-900 to-green-800',
+          hoverColor: 'text-green-700',
+          tagBgColor: 'bg-green-90',
+          tagTextColor: 'text-green-900',
+          tagBorderColor: 'border-green-100',
+          iconColor: 'text-green-500',
+          hoverBg: 'group-hover:bg-green-50',
+          hoverText: 'group-hover:text-green-600',
+          hoverBorder: 'group-hover:border-green-100'
+        };
+      default: // exercise
+        return {
+          gradient: 'from-gray-700 to-purple-700',
+          hoverColor: 'text-purple-600',
+          tagBgColor: 'bg-purple-50',
+          tagTextColor: 'text-purple-700',
+          tagBorderColor: 'border-purple-100',
+          iconColor: 'text-purple-500',
+          hoverBg: 'group-hover:bg-indigo-50',
+          hoverText: 'group-hover:text-indigo-600',
+          hoverBorder: 'group-hover:border-indigo-100'
+        };
+    }
+  };
+  
+  // Get colors for current content type
+  const colors = getContentTypeColors();
+
+  // Check if content has been viewed (has completion status)
+  const isViewed = content.user_complete === 'success' || content.user_complete === 'review';
+
   return (
       <div
-      className="group h-full transition-all duration-300"
+      className={`group h-full transition-all duration-300 hover:scale-[1.02] ${isViewed ? 'opacity-60 hover:opacity-80' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div 
-        className="flex flex-col h-full cursor-pointer rounded-xl overflow-hidden transform"
+      <div
+        className="flex flex-col h-full cursor-pointer rounded-xl overflow-hidden transform shadow-md hover:shadow-2xl transition-shadow duration-300 bg-white border border-gray-200"
         onClick={handleCardClick}
       >
         {/* Card Header with Improved Styling */}
-            <div className="liquid-glass bg-gradient-to-r from-indigo-600 to-violet-600 p-4 relative overflow-hidden">
+            <div className={`liquid-glass bg-gradient-to-r ${colors.gradient} p-4 relative overflow-hidden`}>
           {/* Background Pattern - Subtle Grid Texture */}
           <div className="absolute inset-0 opacity-10">
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -289,14 +337,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     <Lightbulb className="w-3 h-3 text-white" />
                   </div>
                 )}
-                <h2 className="text-xl font-bold text-white leading-tight group-hover:underline decoration-2 decoration-white/60">
+                <h2 className="text-2xl font-extrabold text-white leading-snug group-hover:underline decoration-2 decoration-white/60">
                   {truncateTitle(content.title)}
                 </h2>
               </div>
               
               {/* Save Button with improved hover effect */}
-              <div className="flex items-center gap-2">
-                <button 
+              <div className="flex items-center gap-2 relative group/bookmark">
+                <button
                   onClick={handleSaveClick}
                   className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all hover:scale-110 flex-shrink-0"
                   aria-label={isSaved ? "Retirer des favoris" : "Ajouter aux favoris"}
@@ -308,11 +356,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-yellow-300 text-yellow-300' : 'text-white/80'}`} />
                   )}
                 </button>
+                {/* Tooltip */}
+                <span className="absolute -top-10 right-0 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/bookmark:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                  {isSaved ? "Retirer des favoris" : "Sauvegarder cet exercice"}
+                </span>
               </div>
             </div>
             
             {/* Tags Section - Made More Compact & Consistent */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               {/* National Exam Badge - For exams only */}
               {contentType === 'exam' && (content as any).is_national_exam && (
                 <span className="bg-blue-500 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-bold text-white flex items-center shadow-md">
@@ -331,24 +383,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
               {/* Subject Tag */}
               {content.subject && (
-                <span className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center">
-                  <BookOpen className="w-3 h-3 mr-1" />
+                <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
                   {content.subject.name}
                 </span>
               )}
 
               {/* Difficulty Badge - Only for content with difficulty (exercises and exams) */}
               {hasDifficulty && difficultyInfo && (
-                <span className={`bg-gradient-to-r ${difficultyInfo.color} px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center`}>
+                <span className={`bg-gradient-to-r ${difficultyInfo.color} px-3 py-1 rounded-full text-xs font-semibold text-white flex items-center gap-1.5`}>
                   {difficultyInfo.icon}
-                  <span className="ml-1">{difficultyInfo.label}</span>
+                  <span>{difficultyInfo.label}</span>
                 </span>
               )}
 
               {/* Class Level Badge */}
               {content.class_levels && content.class_levels.length > 0 && (
-                <span className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-medium text-white flex items-center">
-                  <GraduationCap className="w-3 h-3 mr-1" />
+                <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5" />
                   {content.class_levels[0].name}
                 </span>
               )}
@@ -357,9 +409,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </div>
         
         {/* Content Preview with Loading State */}
-        <div className="px-5 py-4 flex-grow">
+        <div className="px-5 py-5 flex-grow relative">
           <div className={`transition-opacity duration-150 ${!contentLoaded ? 'opacity-0 absolute' : 'opacity-100'}`}>
-            <div className="prose prose-sm max-w-none text-gray-700 line-clamp-3 overflow-hidden">
+            <div className={`prose prose-sm max-w-none text-gray-700 overflow-hidden leading-relaxed transition-all duration-300 ${isHovered ? 'line-clamp-6' : 'line-clamp-3'}`}>
               <MemoizedTipTapRenderer content={content.content} onReady={handleTipTapReady} />
             </div>
           </div>
@@ -393,41 +445,41 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {/* Tags - More consistent styling between tag types */}
             <div className="flex items-center flex-wrap gap-1.5 overflow-hidden max-w-xs">
               {/* Chapter Tags */}
-              {hasChapters && content.chapters.slice(0, 1).map(chapter => (
+              {hasChapters && content.chapters.slice(0, 1).map((chapter: { id: string; name: string }) => (
                 <span
                   key={chapter.id}
-                  className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-purple-100 transition-transform duration-300 group-hover:scale-105"
+                  className={`${colors.tagBgColor} ${colors.tagTextColor} px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap ${colors.tagBorderColor} transition-transform duration-300 group-hover:scale-105`}
                 >
-                  <Tag className="w-3 h-3 mr-1 text-purple-500" />
+                  <Tag className={`w-3 h-3 mr-1 ${colors.iconColor}`} />
                   <span className="truncate max-w-[80px]">{chapter.name}</span>
                 </span>
               ))}
               
               {/* Subfield Tags */}
-              {hasSubfields && content.subfields.slice(0, 1).map(subfield => (
+              {hasSubfields && content.subfields.slice(0, 1).map((subfield: { id: string; name: string }) => (
                 <span
                   key={subfield.id}
-                  className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-blue-100 transition-transform duration-300 group-hover:scale-105"
+                  className={`${colors.tagBgColor} ${colors.tagTextColor} px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap ${colors.tagBorderColor} transition-transform duration-300 group-hover:scale-105`}
                 >
-                  <Layers className="w-3 h-3 mr-1 text-blue-500" />
+                  <Layers className={`w-3 h-3 mr-1 ${colors.iconColor}`} />
                   <span className="truncate max-w-[80px]">{subfield.name}</span>
                 </span>
               ))}
               
               {/* Theorem Tags */}
-              {hasTheorems && content.theorems.slice(0, 1).map(theorem => (
+              {hasTheorems && content.theorems.slice(0, 1).map((theorem: { id: string; name: string }) => (
                 <span
                   key={theorem.id}
-                  className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap border border-amber-100 transition-transform duration-300 group-hover:scale-105"
+                  className={`${colors.tagBgColor} ${colors.tagTextColor} px-2 py-0.5 text-xs rounded-md flex items-center whitespace-nowrap ${colors.tagBorderColor} transition-transform duration-300 group-hover:scale-105`}
                 >
-                  <BookMarked className="w-3 h-3 mr-1 text-amber-500" />
+                  <BookMarked className={`w-3 h-3 mr-1 ${colors.iconColor}`} />
                   <span className="truncate max-w-[80px]">{theorem.name}</span>
                 </span>
               ))}
               
               {/* More Tag with nicer styling */}
               {totalMoreTags > 0 && (
-                <span className="bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md text-xs flex-shrink-0 border border-gray-200 flex items-center group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors duration-300">
+                <span className={`bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md text-xs flex-shrink-0 border border-gray-200 flex items-center ${colors.hoverBg} ${colors.hoverText} ${colors.hoverBorder} transition-colors duration-300`}>
                   <span>+{totalMoreTags}</span>
                 </span>
               )}
@@ -437,35 +489,56 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           {/* Right side - stats and actions with improved interaction */}
           <div className="flex items-center gap-3">
             {/* Views */}
-            <div className="flex items-center text-xs text-gray-500 group-hover:text-indigo-600 transition-colors duration-300">
-              <Eye className="w-4 h-4 mr-1 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
+            <div className={`flex items-center text-xs text-gray-500 ${colors.hoverText} transition-colors duration-300 relative group/views`}>
+              <Eye className={`w-4 h-4 mr-1 text-gray-400 ${colors.hoverText} transition-colors duration-300`} />
               <span>{content.view_count}</span>
+              {/* Tooltip */}
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/views:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Vues
+              </span>
             </div>
-            
+
+            {/* Divider */}
+            <div className="h-4 w-px bg-gray-300"></div>
+
             {/* Comments Button - Improved hover effect */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`${getNavigationPath()}#comments`);
-              }}
-              className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
-            >
-              <MessageSquare className="w-4 h-4 mr-1 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
-              <span>{(content.comments || []).length}</span>
-            </button>
+            <div className="relative group/comments">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`${getNavigationPath()}#comments`);
+                }}
+                className={`flex items-center text-xs text-gray-500 hover:${colors.hoverColor} transition-all duration-300 hover:scale-105`}
+              >
+                <MessageSquare className={`w-4 h-4 mr-1 text-gray-400 ${colors.hoverText} transition-colors duration-300`} />
+                <span>{(content.comments || []).length}</span>
+              </button>
+              {/* Tooltip */}
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/comments:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Commentaires
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="h-4 w-px bg-gray-300"></div>
 
             {/* Share Button - New Feature */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(window.location.origin + getNavigationPath());
-                // Add a toast notification here in a real implementation
-              }}
-              className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
-              title="Copier le lien"
-            >
-              <Share2 className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
-            </button>
+            <div className="relative group/share">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(window.location.origin + getNavigationPath());
+                  // Add a toast notification here in a real implementation
+                }}
+                className="flex items-center text-xs text-gray-500 hover:text-indigo-600 transition-all duration-300 hover:scale-105"
+              >
+                <Share2 className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors duration-300" />
+              </button>
+              {/* Tooltip */}
+              <span className="absolute -top-8 right-0 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/share:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Partager
+              </span>
+            </div>
             
             {/* Author actions - Always visible on hover with higher z-index */}
             {isAuthor && (
@@ -511,7 +584,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               e.stopPropagation();
               handleCardClick(e);
             }}
-            className={`liquid-glass-button bg-indigo-600/80 hover:bg-indigo-700/90 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
+            className={`liquid-glass-button ${contentType === 'lesson' ? 'bg-blue-800/80 hover:bg-blue-900/90' : contentType === 'exam' ? 'bg-green-800/80 hover:bg-green-900/90' : 'bg-purple-600/80 hover:bg-purple-700/90'} text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 backdrop-blur-sm pointer-events-auto ${isHovered ? 'scale-10 opacity-80' : 'scale-40 opacity-100 hover:opacity-100'}`}
             aria-label={`Voir ${contentType === 'exercise' ? 'l\'exercice' : contentType === 'lesson' ? 'la leçon' : 'l\'examen'}`}
           >
             <ChevronRight className="w-8 h-8" />

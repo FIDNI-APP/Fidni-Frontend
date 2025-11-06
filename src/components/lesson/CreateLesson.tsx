@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import ContentEditorV2 from '@/components/exercise/ContentEditorV2';
 import { createLesson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import 'katex/dist/katex.min.css';
 
 export function CreateLesson() {
   const navigate = useNavigate();

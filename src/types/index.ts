@@ -3,6 +3,17 @@ export type SortOption = 'newest' | 'oldest' | 'most_upvoted' | 'most_commented'
 export type VoteValue = 1 | -1 | 0;
 export type CompleteValue = 'success' | 'review';
 
+export interface ExamFilters {
+  classLevels: string[];
+  subjects: string[];
+  subfields: string[];
+  chapters: string[];
+  theorems: string[];
+  difficulties: Difficulty[];
+  isNationalExam: boolean | null;
+  dateRange: { start: string | null; end: string | null } | null;
+}
+
 
 export interface ClassLevelModel {
   id: string;
@@ -253,11 +264,19 @@ export interface Section {
     id: string;
     name: string;
   };
-  lesson: {
+  lesson_entries: {
     id: string;
-    title: string;
-    content: string;
-  } | null;
+    lesson: {
+      id: string;
+      title: string;
+      content: string;
+    };
+    page_order: number;
+    content_start: number;
+    content_end: number | null;
+    is_continuation: boolean;
+    added_at: string;
+  }[];
   user_notes: string;
   order: number;
 }

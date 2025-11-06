@@ -88,6 +88,11 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   const [history, setHistory] = useState<Annotation[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
+  // Update annotations when initialAnnotations prop changes
+  useEffect(() => {
+    setAnnotations(initialAnnotations);
+  }, [initialAnnotations]);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const annotationLayerRef = useRef<HTMLDivElement>(null);
@@ -207,6 +212,8 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
         content: '',
       };
       setAnnotations(prev => [...prev, newAnnotation]);
+      // Automatically switch back to select tool after creating text annotation
+      setActiveTool('select');
     }
   };
 

@@ -1,8 +1,8 @@
-// src/components/Filters.tsx - Version corrigée
+// src/components/Filters.tsx - Version adaptative selon le type de contenu
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Filter, BookOpen, GraduationCap, ChevronUp, ChevronDown, Tag, BarChart3, FileText, Award } from 'lucide-react';
-import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems } from '@/lib/api';
+import { getClassLevels, getSubjects, getChapters, getSubfields, getTheorems, getFilterCounts } from '@/lib/api';
 import { ClassLevelModel, SubjectModel, ChapterModel, Difficulty, Subfield, Theorem } from '@/types';
 import { Button } from '@/components/ui/button';
 interface FiltersProps {
@@ -13,9 +13,18 @@ interface FiltersProps {
     chapters: string[];
     theorems: string[];
     difficulties: Difficulty[];
+    showViewed?: boolean;
+    showCompleted?: boolean;
   }) => void;
   initialClassLevels?: string[];
   initialSubjects?: string[];
+  initialSubfields?: string[];
+  initialChapters?: string[];
+  initialTheorems?: string[];
+  initialDifficulties?: Difficulty[];
+  initialShowViewed?: boolean;
+  initialShowCompleted?: boolean;
+  contentType?: 'exercise' | 'lesson' | 'exam'; // Type de contenu pour adapter les filtres disponibles
 }
 
 type FilterCategories = {
@@ -25,6 +34,8 @@ type FilterCategories = {
   chapters: string[];
   theorems: string[];
   difficulties: Difficulty[];
+  showViewed: boolean;
+  showCompleted: boolean;
 };
 
 type FilterSection = {
@@ -46,26 +57,35 @@ const debounce = (func: Function, wait: number) => {
   };
 };
 
-export const Filters: React.FC<FiltersProps> = ({ 
-  onFilterChange, 
-  initialClassLevels = [], 
-  initialSubjects = [] 
+export const Filters: React.FC<FiltersProps> = ({
+  onFilterChange,
+  initialClassLevels = [],
+  initialSubjects = [],
+  initialSubfields = [],
+  initialChapters = [],
+  initialTheorems = [],
+  initialDifficulties = [],
+  initialShowViewed = false,
+  initialShowCompleted = false,
+  contentType = 'exercise' // Valeur par défaut
 }) => {
   const [classLevels, setClassLevels] = useState<ClassLevelModel[]>([]);
   const [subjects, setSubjects] = useState<SubjectModel[]>([]);
   const [subfields, setSubfields] = useState<Subfield[]>([]);
   const [chapters, setChapters] = useState<ChapterModel[]>([]);
   const [theorems, setTheorems] = useState<Theorem[]>([]);
-  
+
   const initialValuesSet = useRef(false);
-  
+
   const [selectedFilters, setSelectedFilters] = useState<FilterCategories>({
     classLevels: initialClassLevels.map(String),
     subjects: initialSubjects.map(String),
-    subfields: [],
-    chapters: [],
-    theorems: [],
-    difficulties: [],
+    subfields: initialSubfields.map(String),
+    chapters: initialChapters.map(String),
+    theorems: initialTheorems.map(String),
+    difficulties: initialDifficulties,
+    showViewed: initialShowViewed,
+    showCompleted: initialShowCompleted,
   });
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -80,11 +100,21 @@ export const Filters: React.FC<FiltersProps> = ({
   const [isLoadingSubfields, setIsLoadingSubfields] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [isLoadingTheorems, setIsLoadingTheorems] = useState(false);
-  
+
   const [lastRequests, setLastRequests] = useState({
     subfields: '',
     chapters: '',
     theorems: ''
+  });
+
+  // State for filter counts
+  const [filterCounts, setFilterCounts] = useState<Record<string, Record<string, number>>>({
+    classLevels: {},
+    subjects: {},
+    subfields: {},
+    chapters: {},
+    theorems: {},
+    difficulties: {}
   });
 
   const shouldShowSubfieldOptions = () => {
@@ -99,33 +129,87 @@ export const Filters: React.FC<FiltersProps> = ({
     return shouldShowChapterOptions() && selectedFilters.chapters.length > 0;
   };
 
-  const filterSections: FilterSection[] = [
-    { title: 'Niveau', category: 'classLevels', icon: <GraduationCap className="w-4 h-4 text-indigo-600" /> },
-    { title: 'Matières', category: 'subjects', icon: <BookOpen className="w-4 h-4 text-purple-600" /> },
-    { title: 'Sous-domaines', category: 'subfields', icon: <FileText className="w-4 h-4 text-indigo-600" /> },
-    { title: 'Chapitres', category: 'chapters', icon: <Tag className="w-4 h-4 text-purple-600" /> },
-    { title: 'Théorèmes', category: 'theorems', icon: <Award className="w-4 h-4 text-indigo-600" /> },
-    { title: 'Difficulté', category: 'difficulties', icon: <BarChart3 className="w-4 h-4 text-purple-600" /> },
-  ];
-  
+  // Fonction pour déterminer quels filtres afficher selon le type de contenu
+  const getAvailableFilterSections = (): FilterSection[] => {
+    // Définir les couleurs selon le type de contenu
+    const primaryColor = contentType === 'lesson' ? 'text-blue-800' : 
+                         contentType === 'exam' ? 'text-green-800' : 
+                         'text-indigo-600';
+    const secondaryColor = contentType === 'lesson' ? 'text-blue-800' : 
+                           contentType === 'exam' ? 'text-amber-600' : 
+                           'text-purple-600';
+
+    const allSections: FilterSection[] = [
+      { title: 'Niveau', category: 'classLevels', icon: <GraduationCap className={`w-4 h-4 ${primaryColor}`} /> },
+      { title: 'Matières', category: 'subjects', icon: <BookOpen className={`w-4 h-4 ${secondaryColor}`} /> },
+      { title: 'Sous-domaines', category: 'subfields', icon: <FileText className={`w-4 h-4 ${primaryColor}`} /> },
+      { title: 'Chapitres', category: 'chapters', icon: <Tag className={`w-4 h-4 ${secondaryColor}`} /> },
+      { title: 'Théorèmes', category: 'theorems', icon: <Award className={`w-4 h-4 ${primaryColor}`} /> },
+    ];
+
+    // Ajouter la difficulté uniquement pour les exercices et examens
+    if (contentType !== 'lesson') {
+      allSections.push({ 
+        title: 'Difficulté', 
+        category: 'difficulties', 
+        icon: <BarChart3 className={`w-4 h-4 ${secondaryColor}`} /> 
+      });
+    }
+
+    return allSections;
+  };
+
+  const filterSections = getAvailableFilterSections();
+
+  // Fetch counts for filter options
+  const fetchFilterCounts = async (category: keyof FilterCategories, items: any[]) => {
+    if (items.length === 0) return;
+
+    try {
+      const counts: Record<string, number> = {};
+
+      // For each item, fetch the count with that filter applied
+      await Promise.all(
+        items.map(async (item) => {
+          const itemId = typeof item === 'string' ? item : String(item.id);
+
+          // Build params with current filters + this specific item
+          const params = {
+            classLevels: category === 'classLevels' ? [itemId] : selectedFilters.classLevels,
+            subjects: category === 'subjects' ? [itemId] : selectedFilters.subjects,
+            subfields: category === 'subfields' ? [itemId] : selectedFilters.subfields,
+            chapters: category === 'chapters' ? [itemId] : selectedFilters.chapters,
+            theorems: category === 'theorems' ? [itemId] : selectedFilters.theorems,
+            difficulties: category === 'difficulties' ? [itemId as Difficulty] : selectedFilters.difficulties,
+            filterType: category,
+            contentType: contentType
+          };
+
+          try {
+            const result = await getFilterCounts(params);
+            counts[itemId] = result.count;
+          } catch (error) {
+            console.error(`Error fetching count for ${category}:${itemId}`, error);
+            counts[itemId] = 0;
+          }
+        })
+      );
+
+      setFilterCounts(prev => ({
+        ...prev,
+        [category]: counts
+      }));
+    } catch (error) {
+      console.error(`Error fetching counts for ${category}`, error);
+    }
+  };
+
   useEffect(() => {
     loadClassLevels();
   }, []);
-  
-  useEffect(() => {
-    if (!initialValuesSet.current && (initialClassLevels?.length > 0 || initialSubjects?.length > 0)) {
-      initialValuesSet.current = true;
-      const newFilters = {
-        classLevels: initialClassLevels.map(String),
-        subjects: initialSubjects.map(String),
-        subfields: [],
-        chapters: [],
-        theorems: [],
-        difficulties: [],
-      };
-      setSelectedFilters(newFilters);
-    }
-  }, [initialClassLevels, initialSubjects]);
+
+  // REMOVED: This useEffect was causing filters to reset to empty arrays
+  // The initial state is already set correctly in useState() above
   
   useEffect(() => {
     if (selectedFilters.classLevels.length > 0) {
@@ -192,7 +276,7 @@ export const Filters: React.FC<FiltersProps> = ({
       onFilterChange(filters);
     }, 300)
   ).current;
-  
+
   useEffect(() => {
     debouncedOnFilterChange(selectedFilters);
   }, [selectedFilters, debouncedOnFilterChange]); // Ajout de debouncedOnFilterChange aux dépendances
@@ -214,6 +298,47 @@ export const Filters: React.FC<FiltersProps> = ({
       setExpandedSections(prev => ({ ...prev, theorems: true }));
     }
   }, [selectedFilters.chapters]);
+
+  // Fetch counts when class levels are loaded or filters change
+  useEffect(() => {
+    if (classLevels.length > 0) {
+      fetchFilterCounts('classLevels', classLevels);
+    }
+  }, [classLevels, selectedFilters.subjects, selectedFilters.subfields, selectedFilters.chapters, selectedFilters.theorems, selectedFilters.difficulties]);
+
+  // Fetch counts for subjects when loaded or filters change
+  useEffect(() => {
+    if (subjects.length > 0) {
+      fetchFilterCounts('subjects', subjects);
+    }
+  }, [subjects, selectedFilters.classLevels, selectedFilters.subfields, selectedFilters.chapters, selectedFilters.theorems, selectedFilters.difficulties]);
+
+  // Fetch counts for subfields when loaded or filters change
+  useEffect(() => {
+    if (subfields.length > 0) {
+      fetchFilterCounts('subfields', subfields);
+    }
+  }, [subfields, selectedFilters.classLevels, selectedFilters.subjects, selectedFilters.chapters, selectedFilters.theorems, selectedFilters.difficulties]);
+
+  // Fetch counts for chapters when loaded or filters change
+  useEffect(() => {
+    if (chapters.length > 0) {
+      fetchFilterCounts('chapters', chapters);
+    }
+  }, [chapters, selectedFilters.classLevels, selectedFilters.subjects, selectedFilters.subfields, selectedFilters.theorems, selectedFilters.difficulties]);
+
+  // Fetch counts for theorems when loaded or filters change
+  useEffect(() => {
+    if (theorems.length > 0) {
+      fetchFilterCounts('theorems', theorems);
+    }
+  }, [theorems, selectedFilters.classLevels, selectedFilters.subjects, selectedFilters.subfields, selectedFilters.chapters, selectedFilters.difficulties]);
+
+  // Fetch counts for difficulties when filters change
+  useEffect(() => {
+    const difficulties = ['easy', 'medium', 'hard'];
+    fetchFilterCounts('difficulties', difficulties);
+  }, [selectedFilters.classLevels, selectedFilters.subjects, selectedFilters.subfields, selectedFilters.chapters, selectedFilters.theorems]);
 
   const loadClassLevels = async () => {
     try {
@@ -341,7 +466,7 @@ export const Filters: React.FC<FiltersProps> = ({
   const toggleFilter = (category: keyof FilterCategories, value: string | Difficulty) => {
     setSelectedFilters(prev => {
       const newFilters = { ...prev };
-      
+
       if (category === 'difficulties') {
         if (newFilters.difficulties.includes(value as Difficulty)) {
           newFilters.difficulties = newFilters.difficulties.filter(v => v !== value);
@@ -352,7 +477,7 @@ export const Filters: React.FC<FiltersProps> = ({
         const currentCategoryFilters = newFilters[category] as string[]; // Cast pour type string[]
         if (currentCategoryFilters.includes(value as string)) {
           newFilters[category] = currentCategoryFilters.filter(v => v !== value);
-          
+
           if (category === 'classLevels') {
             // Géré dans useEffect pour selectedFilters.classLevels
           } else if (category === 'subjects') {
@@ -369,13 +494,11 @@ export const Filters: React.FC<FiltersProps> = ({
           newFilters[category] = [...currentCategoryFilters, value as string];
         }
       }
-      
+
       return newFilters;
     });
   };
   
-  // ... (le reste du code reste inchangé)
-
   const getFilterName = (category: keyof FilterCategories, id: string) => {
     const source: Record<string, any[]> = { 
       classLevels, 
@@ -474,8 +597,13 @@ export const Filters: React.FC<FiltersProps> = ({
       isLoading = true;
     }
 
+    // Déterminer si c'est la dernière section (difficulté pour exercise/exam, théorèmes pour lesson)
+    const isLastSection = 
+      (contentType !== 'lesson' && category === 'difficulties') || 
+      (contentType === 'lesson' && category === 'theorems');
+      
     return (
-      <div className="mb-2 border-b border-gray-100 pb-4" key={`section-${category}`}>
+      <div className={`mb-2 ${!isLastSection ? 'border-b border-gray-100' : ''} pb-4`} key={`section-${category}`}>
         <button 
           onClick={() => toggleSection(category)}
           className={`liquid-effect flex items-center justify-between w-full text-left mb-3 ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`} // Ajout de cursor-not-allowed
@@ -486,7 +614,7 @@ export const Filters: React.FC<FiltersProps> = ({
             <h3 className="text-lg font-medium text-gray-800">{title}</h3>
             
             {!isDisabled && items.length > 0 && (
-              <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">
+              <span className={`text-xs ${getContentTypeColors().badge} px-2 py-0.5 rounded-full ml-2`}>
                 {items.length}
               </span>
             )}
@@ -518,21 +646,43 @@ export const Filters: React.FC<FiltersProps> = ({
                     
                     const isSelected = selectedFilters[category].includes(itemId as any);
                     
+                    // Définir les gradients selon le type de contenu
+                    let selectedGradient = '';
+                    let hoverGradient = '';
+                    
+                    if (contentType === 'lesson') {
+                      selectedGradient = 'bg-gradient-to-r from-gray-600 to-blue-600';
+                      hoverGradient = 'hover:bg-gradient-to-r hover:from-blue-600 hover:to-sky-700';
+                    } else if (contentType === 'exam') {
+                      selectedGradient = 'bg-gradient-to-r from-gray-800 to-green-600';
+                      hoverGradient = 'hover:bg-gradient-to-r hover:from-gray-800 hover:to-green-700';
+                    } else {
+                      selectedGradient = 'bg-gradient-to-r from-indigo-600 to-purple-600';
+                      hoverGradient = 'hover:bg-gradient-to-r hover:from-indigo-600 hover:to-purple-700';
+                    }
+                    
                     let buttonClass = isSelected
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent hover:bg-gradient-to-r from-indigo-700 to-purple-700 hover:text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r from-indigo-600 to-purple-600 hover:text-white border-gray-200';
+                      ? `${selectedGradient} text-white border-transparent ${hoverGradient} hover:text-white`
+                      : `bg-gray-100 text-gray-700 ${hoverGradient} hover:text-white border-gray-200`;
                     
                     if (category === 'difficulties' && !isSelected) {
                       buttonClass = getDifficultyColor(itemId);
                     }
                     
+                    const count = filterCounts[category]?.[itemId] ?? null;
+
                     return (
                       <Button
                         key={`${category}-${itemId}-${index}`}
                         onClick={() => toggleFilter(category, itemId)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 border ${buttonClass} shadow-sm hover:shadow`}
+                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 border ${buttonClass} shadow-sm hover:shadow flex items-center gap-1.5`}
                       >
-                        {itemName}
+                        <span>{itemName}</span>
+                        {count !== null && count > 0 && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-white/20' : 'bg-gray-200 text-gray-600'}`}>
+                            {count}
+                          </span>
+                        )}
                       </Button>
                     );
                   })}
@@ -559,34 +709,116 @@ export const Filters: React.FC<FiltersProps> = ({
   };
 
   const getActiveFiltersCount = () => {
-    return Object.values(selectedFilters).reduce((count, filters) => count + filters.length, 0);
+    // Obtenir les catégories disponibles pour ce type de contenu
+    const availableCategories = filterSections.map(section => section.category);
+
+    // Count array filters
+    let count = Object.entries(selectedFilters)
+      .filter(([category]) => availableCategories.includes(category as keyof FilterCategories))
+      .reduce((acc, [key, filters]) => {
+        if (key === 'showViewed' || key === 'showCompleted') return acc;
+        return acc + (Array.isArray(filters) ? filters.length : 0);
+      }, 0);
+
+    // Add boolean filters
+    if (selectedFilters.showViewed) count++;
+    if (selectedFilters.showCompleted) count++;
+
+    return count;
+  };
+  
+  // Fonction pour obtenir les classes CSS de couleur selon le type de contenu
+  const getContentTypeColors = () => {
+    if (contentType === 'lesson') {
+      return {
+        bg: 'bg-blue-100',
+        text: 'text-blue-800',
+        badge: 'bg-blue-100 text-blue-800'
+      };
+    } else if (contentType === 'exam') {
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
+        badge: 'bg-orange-100 text-orange-800'
+      };
+    } else {
+      return {
+        bg: 'bg-indigo-100',
+        text: 'text-indigo-800',
+        badge: 'bg-indigo-100 text-indigo-800'
+      };
+    };
   };
 
   const clearAllFilters = () => {
-    setSelectedFilters({
+    const baseFilters = {
       classLevels: [],
       subjects: [],
       subfields: [],
       chapters: [],
       theorems: [],
       difficulties: [],
-    });
+      showViewed: false,
+      showCompleted: false,
+    };
+
+    // Si c'est une leçon, on garde les difficultés actuelles (ne pas les réinitialiser)
+    const newFilters = contentType === 'lesson' 
+      ? { ...baseFilters, difficulties: selectedFilters.difficulties }
+      : baseFilters;
+
+    setSelectedFilters(newFilters);
+    
     // Aussi réinitialiser les sections ouvertes si désiré, et les lastRequests
-    setExpandedSections({
+    const baseExpandedSections = {
         classLevels: true,
         subjects: true,
         subfields: false,
         chapters: false,
         theorems: false,
         difficulties: true,
-    });
+    };
+
+    // Pour les leçons, on peut fermer la section difficulté puisqu'elle n'est pas affichée
+    const newExpandedSections = contentType === 'lesson'
+      ? { ...baseExpandedSections, difficulties: false }
+      : baseExpandedSections;
+
+    setExpandedSections(newExpandedSections);
     setLastRequests({ subfields: '', chapters: '', theorems: ''});
+  };
+
+  // Fonction pour obtenir les classes de couleur du header selon le type de contenu
+  const getHeaderGradient = () => {
+    switch(contentType) {
+      case 'lesson':
+        return 'bg-gradient-to-r from-gray-700 to-blue-900';
+      case 'exam':
+        return 'bg-gradient-to-r from-gray-700 to-green-900';
+      default: // exercise ou valeur par défaut
+        return 'bg-gradient-to-r from-gray-700 to-purple-900';
+    }
   };
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden sticky top-28 w-full max-w-4xl">
-      <div className="p-6 bg-gradient-to-r from-indigo-700 to-purple-700 text-white font-medium">
-        <div className="flex items-center justify-between">
+      <div className={`p-6 ${getHeaderGradient()} text-white font-medium relative overflow-hidden`}>
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="hexPattern" width="40" height="34.64" patternUnits="userSpaceOnUse">
+                <path
+                  d="M20 0 L40 11.55 L40 23.09 L20 34.64 L0 23.09 L0 11.55 Z"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="0.5"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#hexPattern)" />
+          </svg>
+        </div>
+        <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center space-x-3">
             <h2 className="text-xl font-semibold">
               <Filter className="w-6 h-6 mr-3 inline" />
@@ -603,8 +835,47 @@ export const Filters: React.FC<FiltersProps> = ({
           )}
         </div>
       </div>
-      
+
       <div className="p-6">
+        {/* Quick status filters - Only for exercises and exams */}
+        {contentType !== 'lesson' && (
+          <div className="mb-6 pb-6 border-b border-gray-200">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Statut</h3>
+            <div className="space-y-2">
+              <label className="flex items-center cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedFilters.showViewed}
+                  onChange={(e) => {
+                    const newFilters = { ...selectedFilters, showViewed: e.target.checked };
+                    setSelectedFilters(newFilters);
+                    onFilterChange(newFilters);
+                  }}
+                  className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+                />
+                <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900">
+                  Déjà vus (avec succès/révision)
+                </span>
+              </label>
+              <label className="flex items-center cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedFilters.showCompleted}
+                  onChange={(e) => {
+                    const newFilters = { ...selectedFilters, showCompleted: e.target.checked };
+                    setSelectedFilters(newFilters);
+                    onFilterChange(newFilters);
+                  }}
+                  className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                />
+                <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900">
+                  Complétés uniquement
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+
         {filterSections.map((section) => 
           renderFilterCategory(
             section, 
@@ -623,17 +894,22 @@ export const Filters: React.FC<FiltersProps> = ({
         )}
 
         {getActiveFiltersCount() > 0 && (
-          <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="mt-6 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium text-gray-800">
                 Filtres actifs
               </h3>
-              <span className="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
+              <span className={`text-sm ${getContentTypeColors().badge} px-3 py-1 rounded-full`}>
                 {getActiveFiltersCount()}
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
-              {Object.entries(selectedFilters).map(([category, values]) =>
+              {Object.entries(selectedFilters)
+                .filter(([category]) => {
+                  const availableCategories = filterSections.map(section => section.category);
+                  return availableCategories.includes(category as keyof FilterCategories);
+                })
+                .map(([category, values]) =>
                 values.map((value, index) => {
                   if (!value) return null;
                   

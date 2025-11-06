@@ -28,7 +28,7 @@ interface Section {
     id: string;
     name: string;
   };
-  lesson: any | null;
+  lesson_entries: any[];
 }
 
 const AddToNotebookButton: React.FC<AddToNotebookButtonProps> = ({ lessonId }) => {
@@ -121,12 +121,17 @@ const AddToNotebookButton: React.FC<AddToNotebookButtonProps> = ({ lessonId }) =
 
     try {
       setIsLoading(true);
-      await api.post(`/sections/${selectedSection}/add_lesson/`, {
+      
+      // Use the new nested API
+      await api.post(`/notebooks/${selectedNotebook}/chapters/${selectedSection}/add_lesson/`, {
         lesson_id: lessonId
       });
       
       setSuccess('Leçon ajoutée à votre cahier');
       setIsLoading(false);
+      
+      // Trigger notebook refresh event
+      window.dispatchEvent(new CustomEvent('refreshNotebook'));
       
       // Fermer le dropdown après un délai
       setTimeout(() => {
@@ -238,9 +243,8 @@ const AddToNotebookButton: React.FC<AddToNotebookButtonProps> = ({ lessonId }) =
                               <option 
                                 key={section.id} 
                                 value={section.id}
-                                disabled={section.lesson !== null}
                               >
-                                {section.chapter.name} {section.lesson !== null ? '(Déjà une leçon)' : ''}
+                                {section.chapter.name}
                               </option>
                             ))}
                           </select>

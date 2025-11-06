@@ -59,37 +59,42 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ daily_activity
 
   // Group days by week for the heatmap grid
   const monthLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-  const dayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  // Ordre des jours pour l'affichage (commençant par lundi)
+  const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const uniqueActivity = Array.from(
+  new Map(daily_activity.map(day => [day.date, day])).values()
+).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Create a map of date -> day data for quick lookup
-  const dateMap = new Map();
-  daily_activity.forEach(day => {
-    dateMap.set(day.date, day);
-  });
+const dateMap = new Map();
+uniqueActivity.forEach(day => dateMap.set(day.date, day));
+
+
 
   // Calculate weeks needed
-  const firstDate = new Date(daily_activity[0].date);
-  const lastDate = new Date(daily_activity[daily_activity.length - 1].date);
+  const firstDate = new Date(uniqueActivity[0].date);
+  const lastDate = new Date(uniqueActivity[uniqueActivity.length - 1].date);
 
-  // Find the Sunday before or on the first date
+  // Find the Monday before or on the first date (1 = Monday in JavaScript)
   const startDate = new Date(firstDate);
-  while (startDate.getDay() !== 0) {
+  while (startDate.getDay() !== 1) { // 1 = Monday
     startDate.setDate(startDate.getDate() - 1);
   }
 
-  // Find the Saturday after or on the last date
+  // Find the Sunday after or on the last date (0 = Sunday in JavaScript)
   const endDate = new Date(lastDate);
-  while (endDate.getDay() !== 6) {
+  while (endDate.getDay() !== 0) { // 0 = Sunday
     endDate.setDate(endDate.getDate() + 1);
   }
 
   // Build weeks array
-  const weeks: (typeof daily_activity[0] | null)[][] = [];
+  const weeks: (typeof uniqueActivity[0] | null)[][] = [];
   let currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
-    const week: (typeof daily_activity[0] | null)[] = [];
+    const week: (typeof uniqueActivity[0] | null)[] = [];
 
+    // Construire la semaine du lundi au dimanche
     for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
       const dateStr = currentDate.toISOString().split('T')[0];
       const dayData = dateMap.get(dateStr);
@@ -108,7 +113,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ daily_activity
           Activité d'étude
         </h3>
         <p className="text-sm text-gray-600">
-          {daily_activity.filter(d => d.total_time_seconds > 0).length} jours d'étude dans les {daily_activity.length} derniers jours
+          {uniqueActivity.filter(d => d.total_time_seconds > 0).length} jours d'étude dans les {uniqueActivity.length} derniers jours
         </p>
       </div>
 
@@ -186,8 +191,12 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ daily_activity
                 <div key={weekIndex} className="flex flex-col gap-1">
                   {week.map((day, dayIndex) => {
                     if (!day) {
-                      return <div key={`empty-${weekIndex}-${dayIndex}`} className="w-3 h-3" />;
-                    }
+                        return <div
+                          key={`empty-${weekIndex}-${dayIndex}`}
+                          className="w-3 h-3 rounded-sm border bg-gray-100 border-gray-200"
+                        />;
+                      }
+
 
                     const intensityLevel = getIntensityLevel(day.total_time_seconds);
                     const date = new Date(day.date);
@@ -226,15 +235,15 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ daily_activity
         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
           <div className="flex items-center gap-1">
             <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-            <span className="font-medium">{daily_activity.reduce((sum, d) => sum + (d.content_types?.exercise || 0), 0)} exercices</span>
+            <span className="font-medium">{uniqueActivity.reduce((sum, d) => sum + (d.content_types?.exercise || 0), 0)} exercices</span>
           </div>
           <div className="flex items-center gap-1">
             <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
-            <span className="font-medium">{daily_activity.reduce((sum, d) => sum + (d.content_types?.lesson || 0), 0)} leçons</span>
+            <span className="font-medium">{uniqueActivity.reduce((sum, d) => sum + (d.content_types?.lesson || 0), 0)} leçons</span>
           </div>
           <div className="flex items-center gap-1">
             <FileText className="w-3.5 h-3.5 text-green-600" />
-            <span className="font-medium">{daily_activity.reduce((sum, d) => sum + (d.content_types?.exam || 0), 0)} examens</span>
+            <span className="font-medium">{uniqueActivity.reduce((sum, d) => sum + (d.content_types?.exam || 0), 0)} examens</span>
           </div>
         </div>
       </div>

@@ -87,12 +87,10 @@ export const addLessonToNotebook = async (
   lessonId: string,
   notes?: string,
   highlighted: boolean = false
-): Promise<NotebookLessonEntry> => {
+): Promise<NotebookChapter> => {
   try {
-    const response = await api.post(`/notebooks/${notebookId}/chapters/${chapterId}/lessons/`, {
-      lesson_id: lessonId,
-      notes,
-      highlighted
+    const response = await api.post(`/notebooks/${notebookId}/chapters/${chapterId}/add_lesson/`, {
+      lesson_id: lessonId
     });
     return response.data;
   } catch (error) {
@@ -101,36 +99,37 @@ export const addLessonToNotebook = async (
   }
 };
 
-// Remove a lesson from a notebook chapter
+// Remove a lesson entry from a notebook chapter
 export const removeFromNotebook = async (
   notebookId: string,
   chapterId: string,
-  lessonId: string
-): Promise<void> => {
+  lessonEntryId: string
+): Promise<NotebookChapter> => {
   try {
-    await api.delete(`/notebooks/${notebookId}/chapters/${chapterId}/lessons/${lessonId}/`);
+    const response = await api.post(`/notebooks/${notebookId}/chapters/${chapterId}/remove_lesson_page/`, {
+      lesson_entry_id: lessonEntryId
+    });
+    return response.data;
   } catch (error) {
     console.error('Error removing lesson from notebook:', error);
     throw error;
   }
 };
 
-// Update notes for a lesson in a notebook
-export const updateLessonNotes = async (
+// Update notes for a chapter in a notebook
+export const updateChapterNotes = async (
   notebookId: string,
   chapterId: string,
-  lessonId: string,
-  notes: string,
-  highlighted?: boolean
-): Promise<NotebookLessonEntry> => {
+  notes: string
+): Promise<NotebookChapter> => {
   try {
-    const response = await api.patch(
-      `/notebooks/${notebookId}/chapters/${chapterId}/lessons/${lessonId}/`,
-      { notes, highlighted }
+    const response = await api.post(
+      `/notebooks/${notebookId}/chapters/${chapterId}/update_notes/`,
+      { user_notes: notes }
     );
     return response.data;
   } catch (error) {
-    console.error('Error updating lesson notes:', error);
+    console.error('Error updating chapter notes:', error);
     throw error;
   }
 };
@@ -146,15 +145,15 @@ export const getNotebookActivity = async (username: string): Promise<any> => {
   }
 };
 
-// Annotations API
+// Annotations API - nested under notebook/chapter/lesson_entry
 export const saveLessonAnnotations = async (
   notebookId: string,
-  lessonId: string,
+  chapterId: string,
+  lessonEntryId: string,
   annotations: any[]
 ): Promise<void> => {
   try {
-    await api.post(`/notebooks/${notebookId}/save_lesson_annotations/`, {
-      lesson_id: lessonId,
+    await api.post(`/notebooks/${notebookId}/chapters/${chapterId}/lesson_entry/${lessonEntryId}/annotations/`, {
       annotations
     });
   } catch (error) {
@@ -165,12 +164,11 @@ export const saveLessonAnnotations = async (
 
 export const getLessonAnnotations = async (
   notebookId: string,
-  lessonId: string
+  chapterId: string,
+  lessonEntryId: string
 ): Promise<any[]> => {
   try {
-    const response = await api.get(`/notebooks/${notebookId}/get_lesson_annotations/`, {
-      params: { lesson_id: lessonId }
-    });
+    const response = await api.get(`/notebooks/${notebookId}/chapters/${chapterId}/lesson_entry/${lessonEntryId}/annotations/`);
     return response.data.annotations || [];
   } catch (error) {
     console.error('Error fetching lesson annotations:', error);

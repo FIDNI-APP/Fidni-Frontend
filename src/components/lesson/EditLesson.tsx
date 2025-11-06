@@ -5,7 +5,6 @@ import { getLessonById, updateLesson } from '@/lib/api';
 import { Lesson } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
-import 'katex/dist/katex.min.css';
 
 export function EditLesson() {
   const { id } = useParams<{ id: string }>();

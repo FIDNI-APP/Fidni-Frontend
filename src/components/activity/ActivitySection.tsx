@@ -153,7 +153,9 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({
             <span className="text-sm text-amber-700 font-medium">Votre classement</span>
           </div>
           <div className={`text-3xl font-bold mb-1 ${getPercentileColor(statistics.user_time_percentile)}`}>
-            {statistics.user_time_percentile !== null ? `${statistics.user_time_percentile}%` : 'N/A'}
+            {statistics.user_time_percentile !== null
+              ? `Top ${Math.max(0, 100 - statistics.user_time_percentile)}%`
+              : 'N/A'}
           </div>
           <p className={`text-sm font-medium ${getPercentileColor(statistics.user_time_percentile)}`}>
             {getPercentileLabel(statistics.user_time_percentile)}

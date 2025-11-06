@@ -411,6 +411,40 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
                   )}
                 </div>
               </div>
+
+              {/* Theorems */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Théorèmes
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
+                  {theorems.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      {selectedChapters.length === 0
+                        ? 'Sélectionnez des chapitres d\'abord'
+                        : 'Aucun théorème disponible pour les chapitres sélectionnés'}
+                    </p>
+                  ) : (
+                    theorems.map((theorem) => (
+                      <label key={theorem.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedTheorems.includes(theorem.id.toString())}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTheorems([...selectedTheorems, theorem.id.toString()]);
+                            } else {
+                              setSelectedTheorems(selectedTheorems.filter(id => id !== theorem.id.toString()));
+                            }
+                          }}
+                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                        />
+                        <span className="text-sm text-gray-700">{theorem.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </Section>
 

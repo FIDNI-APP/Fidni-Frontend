@@ -70,24 +70,34 @@ export const ExerciseList = () => {
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
-    
+    const subfieldsParam = searchParams.get('subfields');
+    const chaptersParam = searchParams.get('chapters');
+    const theoremsParam = searchParams.get('theorems');
+    const difficultiesParam = searchParams.get('difficulties');
+    const showViewedParam = searchParams.get('showViewed');
+    const showCompletedParam = searchParams.get('showCompleted');
+
     // Priorité 1: Paramètres URL (garder comme strings)
-    if (classLevelsParam || subjectsParam) {
+    const hasUrlParams = classLevelsParam || subjectsParam || subfieldsParam || chaptersParam || theoremsParam || difficultiesParam || showViewedParam || showCompletedParam;
+
+    if (hasUrlParams) {
       return {
         classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
         subjects: subjectsParam ? subjectsParam.split(',') : [],
-        subfields: [] as string[],
-        chapters: [] as string[],
-        theorems: [] as string[],
-        difficulties: [] as Difficulty[],
+        subfields: subfieldsParam ? subfieldsParam.split(',') : [],
+        chapters: chaptersParam ? chaptersParam.split(',') : [],
+        theorems: theoremsParam ? theoremsParam.split(',') : [],
+        difficulties: difficultiesParam ? difficultiesParam.split(',') as Difficulty[] : [],
+        showViewed: showViewedParam === 'true',
+        showCompleted: showCompletedParam === 'true',
       };
     }
-    
+
     // Priorité 2: Filtres complets du contexte
     if (fullFilters) {
       return fullFilters;
     }
-    
+
     // Priorité 3: Filtres simples du contexte
     if (selectedClassLevel || selectedSubject) {
       return {
@@ -97,9 +107,11 @@ export const ExerciseList = () => {
         chapters: [] as string[],
         theorems: [] as string[],
         difficulties: [] as Difficulty[],
+        showViewed: false,
+        showCompleted: false,
       };
     }
-    
+
     // Par défaut: filtres vides
     return {
       classLevels: [] as string[],
@@ -108,6 +120,8 @@ export const ExerciseList = () => {
       chapters: [] as string[],
       theorems: [] as string[],
       difficulties: [] as Difficulty[],
+      showViewed: false,
+      showCompleted: false,
     };
   };
   
@@ -119,6 +133,7 @@ export const ExerciseList = () => {
   const [filters, setFilters] = useState(getInitialFilters()); // UTILISATION DE LA FONCTION D'INITIALISATION
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [unfilteredTotalCount, setUnfilteredTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false); // NOUVEAU FLAG
@@ -137,43 +152,47 @@ export const ExerciseList = () => {
   // MODIFICATION: Gérer les changements d'URL seulement après le chargement initial
   useEffect(() => {
     // Ne traiter les changements d'URL qu'après le premier chargement
-    if (!initialLoadComplete) return;
-    
+    if (!initialLoadComplete) {
+      return;
+    }
+
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
-    
-    if (classLevelsParam || subjectsParam) {
-      const newFilters = { ...filters };
-      let hasChanges = false;
-      
-      if (classLevelsParam) {
-        const classLevels = classLevelsParam.split(',');
-        if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
-          newFilters.classLevels = classLevels;
-          hasChanges = true;
-        }
-      }
-      
-      if (subjectsParam) {
-        const subjects = subjectsParam.split(',');
-        if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
-          newFilters.subjects = subjects;
-          hasChanges = true;
-        }
-      }
-      
-      if (hasChanges) {
-        // Reset dependent filters
-        newFilters.subfields = [];
-        newFilters.chapters = [];
-        newFilters.theorems = [];
-        
-        // Update filters
-        setFilters(newFilters);
-      }
-    }
-  }, [location.search, initialLoadComplete]); // Dépendance sur initialLoadComplete
+    const subfieldsParam = searchParams.get('subfields');
+    const chaptersParam = searchParams.get('chapters');
+    const theoremsParam = searchParams.get('theorems');
+    const difficultiesParam = searchParams.get('difficulties');
+    const showViewedParam = searchParams.get('showViewed');
+    const showCompletedParam = searchParams.get('showCompleted');
+
+    // Build new filters from URL
+    const urlFilters = {
+      classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
+      subjects: subjectsParam ? subjectsParam.split(',') : [],
+      subfields: subfieldsParam ? subfieldsParam.split(',') : [],
+      chapters: chaptersParam ? chaptersParam.split(',') : [],
+      theorems: theoremsParam ? theoremsParam.split(',') : [],
+      difficulties: difficultiesParam ? difficultiesParam.split(',') as Difficulty[] : [],
+      showViewed: showViewedParam === 'true',
+      showCompleted: showCompletedParam === 'true',
+    };
+
+    // Only update if different from current filters
+    setFilters(prevFilters => {
+      const isDifferent =
+        JSON.stringify(prevFilters.classLevels) !== JSON.stringify(urlFilters.classLevels) ||
+        JSON.stringify(prevFilters.subjects) !== JSON.stringify(urlFilters.subjects) ||
+        JSON.stringify(prevFilters.subfields) !== JSON.stringify(urlFilters.subfields) ||
+        JSON.stringify(prevFilters.chapters) !== JSON.stringify(urlFilters.chapters) ||
+        JSON.stringify(prevFilters.theorems) !== JSON.stringify(urlFilters.theorems) ||
+        JSON.stringify(prevFilters.difficulties) !== JSON.stringify(urlFilters.difficulties) ||
+        prevFilters.showViewed !== urlFilters.showViewed ||
+        prevFilters.showCompleted !== urlFilters.showCompleted;
+
+      return isDifferent ? urlFilters : prevFilters;
+    });
+  }, [location.search, initialLoadComplete]);
   
   // NOUVEAU: Marquer le chargement initial comme terminé
   useEffect(() => {
@@ -189,6 +208,8 @@ export const ExerciseList = () => {
       difficulties: debouncedFilters.difficulties as Difficulty[],
       subfields: debouncedFilters.subfields,
       theorems: debouncedFilters.theorems,
+      showViewed: debouncedFilters.showViewed,
+      showCompleted: debouncedFilters.showCompleted,
       sort: debouncedSortBy,
       page,
       per_page: ITEMS_PER_PAGE
@@ -203,14 +224,14 @@ export const ExerciseList = () => {
   // Optimized function to fetch contents
   const fetchContents = useCallback(async (isLoadMore = false) => {
     const setLoadingState = isLoadMore ? setLoadingMore : setLoading;
-    
+
     try {
       setLoadingState(true);
       setError(null);
-      
+
       // Generate cache key from the current query params
       const cacheKey = getCacheKey(queryParams);
-      
+
       // Check if we have cached results
       const cachedResult = getCachedData(cacheKey);
       if (cachedResult) {
@@ -224,23 +245,34 @@ export const ExerciseList = () => {
         setLoadingState(false);
         return;
       }
-      
+
       // If not cached, fetch from API
       const data = await getContents(queryParams);
-      
+
       // Cache the results
       setCachedData(cacheKey, data);
-      
+
       setContents(prev => isLoadMore ? [...prev, ...data.results] : data.results);
       setTotalCount(data.count);
       setHasMore(!!data.next);
+
+      // Fetch unfiltered total count on first load (when no filters applied)
+      const hasActiveFilters = Object.entries(debouncedFilters).some(([key, value]) => {
+        if (key === 'showViewed' || key === 'showCompleted') {
+          return value === true;
+        }
+        return Array.isArray(value) && value.length > 0;
+      });
+      if (!hasActiveFilters && unfilteredTotalCount === 0) {
+        setUnfilteredTotalCount(data.count);
+      }
     } catch (err) {
       console.error('Error fetching contents:', err);
       setError('Failed to load exercises. Please try again.');
     } finally {
       setLoadingState(false);
     }
-  }, [queryParams, getCacheKey, getCachedData, setCachedData]);
+  }, [queryParams, getCacheKey, getCachedData, setCachedData, debouncedFilters, unfilteredTotalCount]);
 
   // Load data when debounced filters/sort change or page changes
   useEffect(() => {
@@ -270,7 +302,7 @@ export const ExerciseList = () => {
       // Optimistically update UI
       setContents(prevContents => 
         prevContents.map(content => {
-          if (content.id === id) {
+          if (content.id.toString() === id) {
             // Calculate new vote count based on previous state and new vote
             let newVoteCount = content.vote_count;
             if (content.user_vote === type) {
@@ -300,7 +332,7 @@ export const ExerciseList = () => {
       // Update with actual server response to ensure consistency
       setContents(prevContents => 
         prevContents.map(content => 
-          content.id === id ? updatedExercise : content
+          content.id.toString() === id ? updatedExercise : content
         )
       );
     } catch (err) {
@@ -315,7 +347,7 @@ export const ExerciseList = () => {
     if (window.confirm('Are you sure you want to delete this content?')) {
       try {
         // Optimistically update UI
-        setContents(prev => prev.filter(content => content.id !== id));
+        setContents(prev => prev.filter(content => content.id.toString() !== id));
         setTotalCount(prev => prev - 1);
         
         // Make API call in background
@@ -348,20 +380,44 @@ export const ExerciseList = () => {
     if (listRef.current) {
       listRef.current.scrollTop = 0;
     }
-    
+
     setFilters(newFilters);
-    
+
     // Update URL with the new filters
     const params = new URLSearchParams();
-    
+
     if (newFilters.classLevels.length > 0) {
       params.set('classLevels', newFilters.classLevels.join(','));
     }
-    
+
     if (newFilters.subjects.length > 0) {
       params.set('subjects', newFilters.subjects.join(','));
     }
-    
+
+    if (newFilters.subfields.length > 0) {
+      params.set('subfields', newFilters.subfields.join(','));
+    }
+
+    if (newFilters.chapters.length > 0) {
+      params.set('chapters', newFilters.chapters.join(','));
+    }
+
+    if (newFilters.theorems.length > 0) {
+      params.set('theorems', newFilters.theorems.join(','));
+    }
+
+    if (newFilters.difficulties.length > 0) {
+      params.set('difficulties', newFilters.difficulties.join(','));
+    }
+
+    if (newFilters.showViewed) {
+      params.set('showViewed', 'true');
+    }
+
+    if (newFilters.showCompleted) {
+      params.set('showCompleted', 'true');
+    }
+
     const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
     window.history.replaceState(null, '', newUrl);
   }, []);
@@ -420,14 +476,23 @@ export const ExerciseList = () => {
           </div>
           <div className="flex items-center gap-2 bg-gray-100 text-gray-700 px-5 py-2 rounded-full font-bold shadow-sm">
             <BookOpen className="w-4 h-4" />
-            <span>{totalCount} exercice{totalCount > 1 ? 's' : ''}</span>
+            <span>
+              {totalCount} exercice{totalCount > 1 ? 's' : ''}
+              {unfilteredTotalCount > 0 && totalCount < unfilteredTotalCount && (
+                <span className="text-gray-500 font-normal ml-1">
+                  (sur {unfilteredTotalCount} total)
+                </span>
+              )}
+            </span>
           </div>
         </div>
       </div>
     </>
-  ), [isFilterOpen, sortBy, totalCount, handleSortChange]);
+  ), [isFilterOpen, sortBy, totalCount, unfilteredTotalCount, handleSortChange]);
 
   // Memoize filter component to prevent unnecessary re-renders
+  // Use JSON.stringify for proper deep comparison of filter arrays
+  const filtersKey = JSON.stringify(filters);
   const FilterComponent = useMemo(() => (
     <div
       className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-100`}
@@ -436,9 +501,13 @@ export const ExerciseList = () => {
         onFilterChange={handleFilterChange}
         initialClassLevels={filters.classLevels}
         initialSubjects={filters.subjects}
+        initialSubfields={filters.subfields}
+        initialChapters={filters.chapters}
+        initialTheorems={filters.theorems}
+        initialDifficulties={filters.difficulties}
       />
     </div>
-  ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
+  ), [isFilterOpen, handleFilterChange, filtersKey]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -507,14 +576,20 @@ export const ExerciseList = () => {
               </p>
             </div>
 
-            <button
+            <Button
               onClick={handleNewExerciseClick}
-              className="group relative px-8 py-4 bg-white text-gray-800 hover:bg-gray-100 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-bold flex items-center gap-3 hover:scale-105"
+              variant="ghost"
+              className="liquid-glass rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3 bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 text-purple-900 rounded-xl group relative px-4 py-3"
             >
-              <div className="absolute inset-0 bg-purple-500/10 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <Plus className="w-5 h-5 relative z-10" />
               <span className="relative z-10">Ajouter un exercice</span>
-            </button>
+            </Button>
+             {/* <Button 
+                className="liquid-glass group w-full bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 hover:from-yellow-300 hover:via-pink-300 hover:to-purple-300 text-purple-900 rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3"
+                variant="ghost"
+                onClick={handleNewExerciseClick}>
+                  Ajouter un exercice
+                </Button> */}
           </div>
         </div>
       </div>
@@ -576,13 +651,13 @@ export const ExerciseList = () => {
                   <p className="text-gray-600 max-w-md mx-auto mb-6">
                     Essayez d'ajuster vos filtres de recherche ou créez un nouvel exercice pour enrichir notre collection
                   </p>
-                  <button
-                    onClick={handleNewExerciseClick}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Créer un exercice
-                  </button>
+                   <Button 
+                className="liquid-glass group w-full bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 hover:from-yellow-300 hover:via-pink-300 hover:to-purple-300 text-purple-900 rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3"
+                variant="ghost"
+                onClick={handleNewExerciseClick}>
+                  <Plus className="w-5 h-5" />
+                  Créer un exercice
+                </Button>
                 </div>
               )}
             </div>

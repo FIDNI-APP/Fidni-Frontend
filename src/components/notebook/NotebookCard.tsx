@@ -13,8 +13,8 @@ const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete
   // Calculate progress percentage
   const getProgressPercentage = (notebook: Notebook) => {
     if (!notebook.sections || notebook.sections.length === 0) return 0;
-    const lessonsCount = notebook.sections.filter(s => s.lesson).length;
-    return Math.round((lessonsCount / notebook.sections.length) * 100);
+    const sectionsWithLessons = notebook.sections.filter(s => s.lesson_entries && s.lesson_entries.length > 0).length;
+    return Math.round((sectionsWithLessons / notebook.sections.length) * 100);
   };
 
   const progress = getProgressPercentage(notebook);
@@ -61,7 +61,7 @@ const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete
           <div className="mt-2 flex justify-between text-xs text-indigo-100">
             <span>Progrès</span>
             <span>
-              {notebook.sections?.filter(s => s.lesson).length || 0} / {notebook.sections?.length || 0} lessons
+              {notebook.sections?.filter(s => s.lesson_entries && s.lesson_entries.length > 0).length || 0} / {notebook.sections?.length || 0} lessons
             </span>
           </div>
         </div>

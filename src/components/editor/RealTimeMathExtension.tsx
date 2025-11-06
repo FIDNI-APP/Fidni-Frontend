@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
 // Type for formula info
 export interface FormulaInfo {
@@ -43,7 +44,6 @@ interface MathRenderOptions {
     right: string;
     display: boolean;
   }>;
-  katexOptions: katex.KatexOptions;
   onEditMath?: (latex: string, isDisplay: boolean, nodePos: number) => void;
   onDeleteMath?: (nodePos: number, latex: string, isDisplay: boolean) => void;
 }
@@ -63,31 +63,48 @@ class MathView {
   ) {
     this.nodePos = nodePos;
 
-    // Créer un conteneur pour la formule et le bouton de suppression
+    // Create container for formula and delete button
     const container = document.createElement(isDisplay ? 'div' : 'span');
     container.style.position = 'relative';
     container.style.display = isDisplay ? 'block' : 'inline-block';
     container.classList.add(isDisplay ? 'math-display' : 'math-inline');
     container.setAttribute('data-formula-pos', String(nodePos));
 
-    // Créer l'élément pour le rendu KaTeX
+    // Create element for KaTeX rendering
     const mathElement = document.createElement(isDisplay ? 'div' : 'span');
+    mathElement.style.display = isDisplay ? 'block' : 'inline-block';
+    mathElement.style.margin = isDisplay ? '0.5em 0' : '0';
+    mathElement.style.padding = isDisplay ? '0.5em' : '0.1em 0.2em';
 
+    // Render with KaTeX (synchronous, fast!)
     try {
       katex.render(latex, mathElement, {
         displayMode: isDisplay,
         throwOnError: false,
-        errorColor: '#f44336',
+        errorColor: '#cc0000',
+        strict: false,
+        trust: false,
+        output: 'html',
+        fleqn: false,
+        macros: {
+          "\\f": "#1f(#2)"
+        }
       });
     } catch (e) {
-      console.error('KaTeX error:', e);
-      mathElement.textContent = latex;
+      console.error('KaTeX rendering error:', e);
+      mathElement.textContent = `[Math Error: ${latex}]`;
       mathElement.classList.add('math-error');
+      mathElement.style.color = '#f44336';
+      mathElement.style.fontFamily = 'monospace';
+      mathElement.style.fontSize = '0.9em';
+      mathElement.style.padding = '2px 4px';
+      mathElement.style.backgroundColor = '#fee';
+      mathElement.style.borderRadius = '3px';
     }
 
     container.appendChild(mathElement);
 
-    // Ajouter le bouton de suppression
+    // Add delete button
     if (onDeleteMath) {
       this.deleteButton = document.createElement('button');
       this.deleteButton.innerHTML = '×';
@@ -105,33 +122,35 @@ class MathView {
         cursor: pointer;
         font-size: 14px;
         font-weight: bold;
-        line-height: 1;
+        line-height: 18px;
+        text-align: center;
         padding: 0;
+        z-index: 10;
         display: none;
         align-items: center;
         justify-content: center;
-        z-index: 20;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       `;
-
-      this.deleteButton.addEventListener('click', (e) => {
+      this.deleteButton.onmousedown = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        onDeleteMath(this.nodePos, this.latex, this.isDisplay);
-      });
-
+        if (onDeleteMath) {
+          onDeleteMath(this.nodePos, latex, isDisplay);
+        }
+      };
       container.appendChild(this.deleteButton);
     }
 
-    if (this.onEditMath) {
-      container.classList.add('math-editable');
-      mathElement.addEventListener('click', (e) => {
+    // Add hover effects
+    container.style.cursor = onEditMath ? 'pointer' : 'default';
+
+    // Click to edit
+    if (onEditMath) {
+      container.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-
-        const currentPos = parseInt(container.getAttribute('data-formula-pos') || '0', 10);
-        this.onEditMath?.(this.latex, this.isDisplay, currentPos);
-      });
+        onEditMath(latex, isDisplay, this.nodePos);
+      };
     }
 
     container.addEventListener('mouseenter', () => {
@@ -153,323 +172,298 @@ class MathView {
     this.dom = container;
   }
 
-  destroy() {
-    // Cleanup if needed
+  update(latex: string, isDisplay: boolean) {
+    if (latex !== this.latex || isDisplay !== this.isDisplay) {
+      return false;
+    }
+    return true;
   }
-  
-  update(nodePos: number) {
-    this.nodePos = nodePos;
-    this.dom.setAttribute('data-formula-pos', String(nodePos));
+
+  destroy() {
+    if (this.deleteButton) {
+      this.deleteButton.remove();
+    }
   }
 }
 
-export const RealTimeMathExtension = Extension.create<MathRenderOptions>({
+// Helper function to get formula at position
+export function getFormulaAtPosition(editor: any, position: number): FormulaInfo | null {
+  if (!editor) return null;
+
+  const doc = editor.state.doc;
+  const node = doc.nodeAt(position);
+
+  if (!node || node.type.name !== 'text') return null;
+
+  const text = node.text || '';
+  const regex = /\$\$([^\$]+)\$\$|\$([^\$]+)\$/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const fullMatch = match[0];
+    const latex = match[1] || match[2];
+    const isDisplay = fullMatch.startsWith('$$');
+    const matchStart = position + match.index;
+    const matchEnd = matchStart + fullMatch.length;
+
+    if (position >= matchStart && position < matchEnd) {
+      return { latex, isDisplay };
+    }
+  }
+
+  return null;
+}
+
+// Helper to find all math formulas in document
+function findMathFormulas(doc: any, delimiters: MathRenderOptions['delimiters']): Array<{
+  from: number;
+  to: number;
+  latex: string;
+  isDisplay: boolean;
+}> {
+  const formulas: Array<{
+    from: number;
+    to: number;
+    latex: string;
+    isDisplay: boolean;
+  }> = [];
+
+  doc.descendants((node: any, pos: number) => {
+    if (node.type.name === 'text' && node.text) {
+      const text = node.text;
+
+      // Sort delimiters by length (longest first) to handle $$ before $
+      const sortedDelimiters = [...delimiters].sort((a, b) => b.left.length - a.left.length);
+
+      for (const delimiter of sortedDelimiters) {
+        const regex = new RegExp(
+          `\\${delimiter.left}([^\\${delimiter.right.charAt(0)}]+)\\${delimiter.right}`,
+          'g'
+        );
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+          const latex = match[1];
+          const from = pos + match.index;
+          const to = from + match[0].length;
+
+          // Check if this position is already covered by a longer delimiter
+          const overlaps = formulas.some(
+            f => (from >= f.from && from < f.to) || (to > f.from && to <= f.to)
+          );
+
+          if (!overlaps) {
+            formulas.push({
+              from,
+              to,
+              latex,
+              isDisplay: delimiter.display,
+            });
+          }
+        }
+      }
+    }
+  });
+
+  return formulas;
+}
+
+// Create decorations for math formulas
+function createMathDecorations(
+  doc: any,
+  delimiters: MathRenderOptions['delimiters'],
+  onEditMath?: MathRenderOptions['onEditMath'],
+  onDeleteMath?: MathRenderOptions['onDeleteMath']
+): DecorationSet {
+  const decorations: Decoration[] = [];
+  const formulas = findMathFormulas(doc, delimiters);
+
+  formulas.forEach(({ from, to, latex, isDisplay }) => {
+    decorations.push(
+      Decoration.widget(
+        from,
+        (view, getPos) => {
+          const pos = typeof getPos === 'function' ? getPos() : from;
+          return new MathView(latex, isDisplay, pos, onEditMath, onDeleteMath).dom;
+        },
+        {
+          side: -1,
+          key: `math-${from}-${latex}`,
+        }
+      )
+    );
+
+    // Hide the source text
+    decorations.push(
+      Decoration.inline(from, to, {
+        class: 'math-source-hidden',
+        nodeName: 'span',
+      })
+    );
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
+
+export const RealTimeMathExtension = Extension.create({
   name: 'realTimeMath',
 
   addOptions() {
     return {
       delimiters: [
-        { left: '$', right: '$', display: false },
         { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
       ],
-      katexOptions: {
-        throwOnError: false,
-        strict: false,
-      },
       onEditMath: undefined,
       onDeleteMath: undefined,
     };
   },
 
+  addCommands() {
+    return {
+      setFormulaAtPosition:
+        (position: number, newLatex: string, isDisplay: boolean) =>
+        ({ tr, dispatch, state }) => {
+          try {
+            const doc = state.doc;
+            const node = doc.nodeAt(position);
+
+            if (!node || node.type.name !== 'text') {
+              return false;
+            }
+
+            const text = node.text || '';
+            const regex = /\$\$([^\$]+)\$\$|\$([^\$]+)\$/g;
+            let match;
+            let found = false;
+
+            while ((match = regex.exec(text)) !== null) {
+              const fullMatch = match[0];
+              const matchStart = position + match.index;
+              const matchEnd = matchStart + fullMatch.length;
+
+              if (position >= matchStart && position < matchEnd) {
+                const newFormula = isDisplay ? `$$${newLatex}$$` : `$${newLatex}$`;
+
+                if (dispatch) {
+                  tr.insertText(newFormula, matchStart, matchEnd);
+                }
+
+                found = true;
+                break;
+              }
+            }
+
+            return found;
+          } catch (error) {
+            console.error('Error in setFormulaAtPosition:', error);
+            return false;
+          }
+        },
+      replaceFormula:
+        (oldLatex: string, newLatex: string, oldIsDisplay: boolean, newIsDisplay: boolean) =>
+        ({ tr, dispatch, state }) => {
+          try {
+            const doc = state.doc;
+            const oldFormula = oldIsDisplay ? `$$${oldLatex}$$` : `$${oldLatex}$`;
+            const newFormula = newIsDisplay ? `$$${newLatex}$$` : `$${newLatex}$`;
+
+            let found = false;
+
+            doc.descendants((node: any, pos: number) => {
+              if (node.type.name === 'text' && node.text) {
+                const text = node.text;
+                const index = text.indexOf(oldFormula);
+
+                if (index !== -1) {
+                  const from = pos + index;
+                  const to = from + oldFormula.length;
+
+                  if (dispatch) {
+                    tr.insertText(newFormula, from, to);
+                  }
+
+                  found = true;
+                  return false;
+                }
+              }
+            });
+
+            return found;
+          } catch (error) {
+            console.error('Error in replaceFormula:', error);
+            return false;
+          }
+        },
+      deleteFormulaAtPosition:
+        (position: number, latex: string, isDisplay: boolean) =>
+        ({ tr, dispatch, state }) => {
+          try {
+            const doc = state.doc;
+            const node = doc.nodeAt(position);
+
+            if (!node || node.type.name !== 'text') {
+              return false;
+            }
+
+            const text = node.text || '';
+            const formula = isDisplay ? `$$${latex}$$` : `$${latex}$`;
+            const index = text.indexOf(formula);
+
+            if (index !== -1) {
+              const from = position + index;
+              const to = from + formula.length;
+
+              if (dispatch) {
+                tr.delete(from, to);
+              }
+              return true;
+            }
+
+            return false;
+          } catch (error) {
+            console.error('Error in deleteFormulaAtPosition:', error);
+            return false;
+          }
+        },
+    };
+  },
+
   addProseMirrorPlugins() {
-    const { delimiters, onEditMath, onDeleteMath } = this.options;
+    const options = this.options as MathRenderOptions;
 
     return [
       new Plugin({
         key: new PluginKey('realTimeMath'),
-        
-        props: {
-          attributes: {
-            class: 'real-time-math-editor',
+        state: {
+          init(_, { doc }) {
+            return createMathDecorations(
+              doc,
+              options.delimiters,
+              options.onEditMath,
+              options.onDeleteMath
+            );
           },
-          
+          apply(tr, decorationSet) {
+            if (tr.docChanged) {
+              return createMathDecorations(
+                tr.doc,
+                options.delimiters,
+                options.onEditMath,
+                options.onDeleteMath
+              );
+            }
+            return decorationSet.map(tr.mapping, tr.doc);
+          },
+        },
+        props: {
           decorations(state) {
-            const { doc } = state;
-            const decorations: Decoration[] = [];
-            
-            doc.descendants((node, pos) => {
-              if (!node.isText) return;
-              
-              const nodeText = node.text || '';
-              
-              for (const delimiter of delimiters) {
-                const { left, right, display } = delimiter;
-                
-                let startPos = 0;
-                let searchText = nodeText;
-                
-                while (startPos < searchText.length) {
-                  const startDelimPos = searchText.indexOf(left, startPos);
-                  if (startDelimPos === -1) break;
-                  
-                  const endDelimPos = searchText.indexOf(right, startDelimPos + left.length);
-                  if (endDelimPos === -1) break;
-                  
-                  const formula = searchText.slice(
-                    startDelimPos + left.length, 
-                    endDelimPos
-                  );
-                  
-                  const startRealPos = pos + startDelimPos;
-                  const endRealPos = pos + endDelimPos + right.length;
-                  
-                  // Widget decoration with node position
-                  decorations.push(
-                    Decoration.widget(startRealPos, () => {
-                      const view = new MathView(formula, display, startRealPos, onEditMath, onDeleteMath);
-                      return view.dom;
-                    }, {
-                      side: -1,
-                      key: `math-${startRealPos}`
-                    })
-                  );
-                  
-                  // Hide original text
-                  decorations.push(
-                    Decoration.inline(startRealPos, endRealPos, {
-                      class: 'math-source-hidden',
-                    })
-                  );
-                  
-                  startPos = endDelimPos + right.length;
-                }
-              }
-            });
-            
-            return DecorationSet.create(doc, decorations);
+            return this.getState(state);
           },
         },
       }),
     ];
   },
-  
-  // Add commands to replace formulas
-  addCommands() {
-    return {
-      // Replace formula by searching for exact LaTeX content
-      replaceFormula: (oldLatex: string, newLatex: string, oldIsDisplay: boolean, newIsDisplay: boolean) =>
-        ({ state, dispatch, tr: transaction, commands }) => {
-          if (!dispatch) return false;
-
-          const { doc, selection } = state;
-          const tr = transaction || state.tr;
-          let found = false;
-          let replacePos = { start: 0, end: 0 };
-
-          // Normalize backslashes: LaTeX from KaTeX may have double backslashes
-          // but the document stores single backslashes
-          const normalizeLatex = (latex: string) => latex.replace(/\\\\/g, '\\');
-
-          const normalizedOldLatex = normalizeLatex(oldLatex);
-          const normalizedNewLatex = normalizeLatex(newLatex);
-
-          // Build the search string with delimiters
-          const oldDelims = oldIsDisplay ? '$$' : '$';
-          const searchString = `${oldDelims}${normalizedOldLatex}${oldDelims}`;
-
-          // Build the replacement string
-          const newDelims = newIsDisplay ? '$$' : '$';
-          const replaceString = `${newDelims}${normalizedNewLatex}${newDelims}`;
-
-          doc.descendants((node, pos) => {
-            if (!node.isText || found) return;
-
-            const nodeText = node.text || '';
-            const searchIdx = nodeText.indexOf(searchString);
-
-            if (searchIdx !== -1) {
-              const start = pos + searchIdx;
-              const end = start + searchString.length;
-
-              replacePos = { start, end };
-              found = true;
-            }
-          });
-
-          if (found) {
-            // Delete the old formula
-            tr.delete(replacePos.start, replacePos.end);
-            // Insert the new formula at the same position
-            tr.insertText(replaceString, replacePos.start);
-            // Force decoration recalculation by updating metadata
-            tr.setMeta('addToHistory', true);
-
-            dispatch(tr);
-            return true;
-          }
-
-          return false;
-        },
-
-      // Fallback: Replace formula at position (less reliable)
-      setFormulaAtPosition: (position: number, newLatex: string, isDisplay: boolean) =>
-        ({ state, dispatch, tr: transaction }) => {
-          if (!dispatch) return false;
-
-          const { doc } = state;
-          const tr = transaction || state.tr;
-          let found = false;
-
-          doc.descendants((node, pos) => {
-            if (!node.isText || found) return;
-
-            const nodeText = node.text || '';
-
-            // Try both delimiters - check $$ first (longer delimiter)
-            const delimiterSets = [
-              { left: '$$', right: '$$', display: true },
-              { left: '$', right: '$', display: false }
-            ];
-
-            for (const delims of delimiterSets) {
-              let searchStart = 0;
-
-              while (searchStart < nodeText.length) {
-                const startIdx = nodeText.indexOf(delims.left, searchStart);
-                if (startIdx === -1) break;
-
-                // For $, make sure it's not part of $$ (avoid matching $ in $$)
-                if (delims.left === '$' && nodeText[startIdx + 1] === '$') {
-                  searchStart = startIdx + 1;
-                  continue;
-                }
-
-                const endIdx = nodeText.indexOf(delims.right, startIdx + delims.left.length);
-                if (endIdx === -1) break;
-
-                const formulaStart = pos + startIdx;
-                const formulaEnd = pos + endIdx + delims.right.length;
-
-                // Check if position is within this formula (with some tolerance)
-                if (position >= formulaStart - 2 && position <= formulaEnd + 2) {
-                  // Use the correct delimiters based on the requested mode
-                  const newDelims = isDisplay ? '$$' : '$';
-                  const newFormula = `${newDelims}${newLatex}${newDelims}`;
-
-                  tr.replaceWith(formulaStart, formulaEnd, state.schema.text(newFormula));
-                  found = true;
-                  break;
-                }
-
-                searchStart = endIdx + delims.right.length;
-              }
-
-              if (found) break;
-            }
-          });
-
-          if (found) {
-            dispatch(tr);
-            return true;
-          }
-
-          return false;
-        },
-
-      // Delete formula at position
-      deleteFormulaAtPosition: (position: number, latex: string, isDisplay: boolean) =>
-        ({ state, dispatch, tr: transaction }) => {
-          if (!dispatch) return false;
-
-          const { doc } = state;
-          const tr = transaction || state.tr;
-          let found = false;
-
-          // Normalize the latex
-          const normalizeLatex = (latex: string) => latex.replace(/\\\\/g, '\\');
-          const normalizedLatex = normalizeLatex(latex);
-
-          // Build the search string with delimiters
-          const delims = isDisplay ? '$$' : '$';
-          const searchString = `${delims}${normalizedLatex}${delims}`;
-
-          doc.descendants((node, pos) => {
-            if (!node.isText || found) return;
-
-            const nodeText = node.text || '';
-            const searchIdx = nodeText.indexOf(searchString);
-
-            if (searchIdx !== -1 && Math.abs(pos + searchIdx - position) < 5) {
-              const start = pos + searchIdx;
-              const end = start + searchString.length;
-
-              tr.delete(start, end);
-              found = true;
-            }
-          });
-
-          if (found) {
-            dispatch(tr);
-            return true;
-          }
-
-          return false;
-        }
-
-    };
-  },
 });
 
-// Helper function to get formula at position (outside of TipTap command system)
-export function getFormulaAtPosition(editor: any, position: number): FormulaInfo | null {
-  if (!editor || !editor.state) return null;
-
-  const { doc } = editor.state;
-  let result: FormulaInfo | null = null;
-
-  doc.descendants((node: any, pos: number) => {
-    if (!node.isText || result) return;
-
-    const nodeText = node.text || '';
-
-    // Try both delimiters - check $$ first (longer delimiter)
-    const delimiterSets = [
-      { left: '$$', right: '$$', display: true },
-      { left: '$', right: '$', display: false }
-    ];
-
-    for (const delims of delimiterSets) {
-      let searchStart = 0;
-
-      while (searchStart < nodeText.length) {
-        const startIdx = nodeText.indexOf(delims.left, searchStart);
-        if (startIdx === -1) break;
-
-        // For $, make sure it's not part of $$ (avoid matching $ in $$)
-        if (delims.left === '$' && nodeText[startIdx + 1] === '$') {
-          searchStart = startIdx + 1;
-          continue;
-        }
-
-        const endIdx = nodeText.indexOf(delims.right, startIdx + delims.left.length);
-        if (endIdx === -1) break;
-
-        const formulaStart = pos + startIdx;
-        const formulaEnd = pos + endIdx + delims.right.length;
-
-        // Check if position is within this formula (with some tolerance)
-        if (position >= formulaStart - 2 && position <= formulaEnd + 2) {
-          const latex = nodeText.slice(startIdx + delims.left.length, endIdx);
-          result = { latex, isDisplay: delims.display };
-          break;
-        }
-
-        searchStart = endIdx + delims.right.length;
-      }
-
-      if (result) break;
-    }
-  });
-
-  return result;
-}
+export default RealTimeMathExtension;

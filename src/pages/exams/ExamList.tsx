@@ -4,7 +4,7 @@ import { Loader2, Plus, Filter, SortAsc, BookOpen, ArrowUpDown, X, Award, Calend
 import { Button } from '../../components/ui/button';
 import { getExams, voteExam, deleteExam } from '@/lib/api/examApi';
 import { Exam, Difficulty, VoteValue, ExamFilters as ExamFiltersType } from '../../types'; // Renamed ExamFilters to ExamFiltersType to avoid conflict
-import { ExamFiltersPanel } from '@/components/exam/ExamFilters'; // Corrected import
+import { ExamFiltersPanel } from '@/components/exam/ExamFilters'; // Import the original ExamFilters component
 import { SortDropdown } from '../../components/SortDropdown';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -320,21 +320,26 @@ export const ExamList = () => {
     if (listRef.current) {
       listRef.current.scrollTop = 0;
     }
-    setFilters(newFilters);
+    
+    // Use the complete filters from ExamFiltersPanel
+    const updatedFilters: ExamFiltersType = newFilters;
+    
+    setFilters(updatedFilters);
     
     const params = new URLSearchParams();
-    if (newFilters.classLevels.length > 0) params.set('classLevels', newFilters.classLevels.join(','));
-    if (newFilters.subjects.length > 0) params.set('subjects', newFilters.subjects.join(','));
-    if (newFilters.subfields.length > 0) params.set('subfields', newFilters.subfields.join(','));
-    if (newFilters.chapters.length > 0) params.set('chapters', newFilters.chapters.join(','));
-    // Add theorems and difficulties if you want them in URL
-    if (newFilters.isNationalExam !== undefined && newFilters.isNationalExam !== null) params.set('isNational', newFilters.isNationalExam.toString());
-    if (newFilters.dateRange?.start) params.set('dateStart', newFilters.dateRange.start);
-    if (newFilters.dateRange?.end) params.set('dateEnd', newFilters.dateRange.end);
+    if (updatedFilters.classLevels.length > 0) params.set('classLevels', updatedFilters.classLevels.join(','));
+    if (updatedFilters.subjects.length > 0) params.set('subjects', updatedFilters.subjects.join(','));
+    if (updatedFilters.subfields.length > 0) params.set('subfields', updatedFilters.subfields.join(','));
+    if (updatedFilters.chapters.length > 0) params.set('chapters', updatedFilters.chapters.join(','));
+    if (updatedFilters.theorems.length > 0) params.set('theorems', updatedFilters.theorems.join(','));
+    if (updatedFilters.difficulties.length > 0) params.set('difficulties', updatedFilters.difficulties.join(','));
+    if (updatedFilters.isNationalExam !== undefined && updatedFilters.isNationalExam !== null) params.set('isNational', updatedFilters.isNationalExam.toString());
+    if (updatedFilters.dateRange?.start) params.set('dateStart', updatedFilters.dateRange.start);
+    if (updatedFilters.dateRange?.end) params.set('dateEnd', updatedFilters.dateRange.end);
     
     const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
     window.history.replaceState(null, '', newUrl);
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     if (!loadingMore && page > 1 && listRef.current) {
@@ -373,7 +378,7 @@ export const ExamList = () => {
             <SortDropdown
               value={sortBy}
               onChange={handleSortChange}
-              options={sortDropdownOptions}
+              // options removed: SortDropdown now manages its own options internally
             />
           </div>
           <div className="flex items-center gap-2 bg-gray-100 text-gray-700 px-5 py-2 rounded-full font-bold shadow-sm">
@@ -387,7 +392,7 @@ export const ExamList = () => {
 
   const FilterComponent = useMemo(() => (
     <div
-      className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-100`}
+      className={`filter-sidebar ${isFilterOpen ? 'block' : 'hidden'} md:block md:w-full lg:w-80 xl:w-96 flex-shrink-0 custom-scrollbar`}
     >
       <ExamFiltersPanel
         onFilterChange={handleFilterChange}
@@ -442,14 +447,14 @@ export const ExamList = () => {
               </p>
             </div>
 
-            <button
+            <Button
               onClick={handleNewExamClick}
-              className="group relative px-8 py-4 bg-white text-gray-800 hover:bg-gray-100 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-bold flex items-center gap-3 hover:scale-105"
+              variant="ghost"
+              className="liquid-glass rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3 bg-gradient-to-r from-yellow-200 to-green-200 text-green-900 rounded-xl group relative px-4 py-3"
             >
-              <div className="absolute inset-0 bg-purple-500/10 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <Plus className="w-5 h-5 relative z-10" />
               <span className="relative z-10">Ajouter un examen</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

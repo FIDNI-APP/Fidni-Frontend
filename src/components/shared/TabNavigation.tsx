@@ -32,20 +32,29 @@ export const TabButton: React.FC<TabButtonProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-3 flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
+      className={`relative px-5 py-3 flex items-center space-x-2 border-b-3 transition-all duration-300 whitespace-nowrap group ${
         active
-          ? 'border-white text-white font-medium'
-          : 'border-transparent text-white/70 hover:text-white hover:border-white/50'
+          ? 'border-white text-white font-semibold bg-white/10'
+          : 'border-transparent text-white/60 hover:text-white/90 hover:bg-white/5'
       }`}
     >
-      {icon}
-      <span>{label}</span>
+      {/* Icon with color */}
+      <span className={`transition-colors ${active ? 'text-yellow-300' : 'text-white/60 group-hover:text-yellow-200'}`}>
+        {icon}
+      </span>
+      <span className="font-medium">{label}</span>
       {count !== undefined && count > 0 && (
-        <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
-          active ? 'bg-white text-indigo-700' : 'bg-white/20 text-white'
+        <span className={`ml-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full transition-all ${
+          active
+            ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 shadow-sm'
+            : 'bg-white/20 text-white group-hover:bg-white/30'
         }`}>
           {count}
         </span>
+      )}
+      {/* Active indicator bar */}
+      {active && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 rounded-t-full"></div>
       )}
     </button>
   );

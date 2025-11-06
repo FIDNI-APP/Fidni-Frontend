@@ -1,10 +1,9 @@
 // Modified version of your TipTapRenderer.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {TextStyle} from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import Mathematics from '@tiptap/extension-mathematics';
 import TextAlign from '@tiptap/extension-text-align';
 import ListItem from '@tiptap/extension-list-item';
 import BulletList from '@tiptap/extension-bullet-list';
@@ -12,15 +11,59 @@ import OrderedList from '@tiptap/extension-ordered-list';
 import Heading from '@tiptap/extension-heading';
 import ImageResize from 'tiptap-extension-resize-image';
 import { useNavigate } from 'react-router-dom';
-import { migrateMathStrings } from '@tiptap/extension-mathematics'
-import 'katex/dist/katex.min.css';
 import { Highlighter, Pen, Type, Eraser, Trash2, X } from 'lucide-react';
+import { RealTimeMathExtension } from './RealTimeMathExtension';
+
+// Error Boundary for TipTap renderer
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class TipTapErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('TipTap Renderer Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-red-800 font-semibold mb-2">Error rendering content</h3>
+          <p className="text-red-600 text-sm">
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 interface TipTapRendererProps {
   content: string;
   className?: string;
   maxHeight?: string;
-  // New props
   notebookStyle?: boolean;
   notebookTheme?: {
     bgColor: string;
@@ -31,7 +74,6 @@ interface TipTapRendererProps {
   enableAnnotations?: boolean;
   compact?: boolean;
   onReady?: () => void;
-  // For redirection
   lessonId?: string;
 }
 
@@ -104,24 +146,24 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   
   // Color palette for annotations
   const colorPalette = ['#ffeb3b', '#4caf50', '#2196f3', '#f44336', '#9c27b0'];
-  const regex = /\$([^\$]+)\$|\$\$([^\$]+)\$\$/gi;
+
   // Initialize TipTap editor for content rendering
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: false,      // Disable heading from StarterKit
-        bulletList: false,   // Disable bulletList from StarterKit
-        orderedList: false,  // Disable orderedList from StarterKit
-        listItem: false,     // Disable listItem from StarterKit
-        }),
+        heading: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+      }),
       TextStyle,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
       Color,
       Heading.configure({
-              levels: [1, 2],
-            }),
+        levels: [1, 2],
+      }),
       BulletList.configure({
         HTMLAttributes: {
           class: 'list-disc pl-5',
@@ -133,89 +175,182 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         },
       }),
       ListItem,
-      
       ImageResize.configure({
-        allowBase64: true, // For development
+        allowBase64: true,
         inline: false,
         HTMLAttributes: {
           class: 'content-image rounded-lg max-w-full',
         },
       }),
-      Mathematics.configure({
-        katexOptions: {
-          throwOnError: false,
-          strict: false
-        },
-      })
+      RealTimeMathExtension.configure({
+        delimiters: [
+          { left: '$', right: '$', display: false },
+          { left: '$$', right: '$$', display: true },
+        ],
+      }),
     ],
     content: content,
     editable: false,
   });
-  migrateMathStrings(editor, regex);
 
 
   // Update content when it changes
   useEffect(() => {
-    if (editor && content) {
-      // Use requestAnimationFrame to schedule the update for next paint
+    if (!editor || !content) return;
+
+    try {
+      // Parse content to determine if it's JSON or HTML
+      let parsedContent = content;
+
+      // Try to parse as JSON first (TipTap format)
+      try {
+        if (typeof content === 'string' && content.trim().startsWith('{')) {
+          parsedContent = JSON.parse(content);
+        }
+      } catch (parseError) {
+        // If parsing fails, treat as HTML/plain text
+        console.log('Content is not JSON, treating as HTML/text');
+      }
+
+      // Use requestAnimationFrame for smooth updates
       const rafId = requestAnimationFrame(() => {
-        if (editor.getHTML() !== content) {
-          editor.commands.setContent(content);
+        try {
+          // Only update if content actually changed
+          const currentContent = editor.getJSON();
+          const contentChanged = JSON.stringify(currentContent) !== JSON.stringify(parsedContent);
+
+          if (contentChanged) {
+            editor.commands.setContent(parsedContent, false);
+          }
+        } catch (error) {
+          console.error('Error updating editor content:', error);
         }
       });
-      
+
       return () => cancelAnimationFrame(rafId);
+    } catch (error) {
+      console.error('Error in content update effect:', error);
     }
   }, [editor, content]);
 
   // Notify when editor is ready and setup clickable headings
   useEffect(() => {
-    if (editor) {
-      // Small delay to ensure LaTeX rendering is complete
-      const timeout = setTimeout(() => {
-        setContentLoaded(true);
-        
-        // Setup clickable titles after content is loaded
-        if (lessonId) {
-          setupClickableHeadings();
+    if (!editor) return;
+
+    let mounted = true;
+
+    // Wait for MathJax and content to be fully rendered
+    const checkRendering = async () => {
+      try {
+        // Initial delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Check if editor view is available before accessing DOM
+        if (!editor.view || !editor.view.dom) {
+          if (mounted) {
+            setContentLoaded(true);
+            if (onReady) onReady();
+          }
+          return;
         }
-        
-        if (onReady) onReady();
-      }, 100);
-      
-      return () => clearTimeout(timeout);
-    }
+
+        // Check if MathJax SVG elements are rendered
+        const editorElement = editor.view.dom;
+        const mathElements = editorElement.querySelectorAll('.math-inline, .math-display');
+
+        if (mathElements.length > 0) {
+          // Wait for MathJax to be fully rendered
+          let attempts = 0;
+          let allRendered = false;
+
+          while (!allRendered && attempts < 10 && mounted) {
+            allRendered = Array.from(mathElements).every(el => {
+              const hasSvg = el.querySelector('svg');
+              const hasHeight = (el as HTMLElement).offsetHeight > 0;
+              return hasSvg && hasHeight;
+            });
+
+            if (!allRendered) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+              attempts++;
+            }
+          }
+        }
+
+        if (mounted) {
+          setContentLoaded(true);
+
+          // Setup clickable titles after content is loaded
+          if (lessonId) {
+            setupClickableHeadings();
+          }
+
+          if (onReady) onReady();
+        }
+      } catch (error) {
+        console.error('Error in rendering check:', error);
+        if (mounted) {
+          setContentLoaded(true);
+          if (onReady) onReady();
+        }
+      }
+    };
+
+    checkRendering();
+
+    return () => {
+      mounted = false;
+    };
   }, [editor, onReady, lessonId]);
   
   // Setup clickable headings for navigation to lesson detail
   const setupClickableHeadings = () => {
     if (!editor || !lessonId) return;
-    
-    // Find all h1, h2, h3 elements in the editor
-    const editorElement = editor.view.dom;
-    const headings = editorElement.querySelectorAll('h1, h2, h3');
-    
-    // Add click handlers to each heading
-    headings.forEach(heading => {
-      (heading as HTMLElement).style.cursor = 'pointer';
-      heading.classList.add('hover:text-indigo-600', 'transition-colors');
-      
-      // Add hover effect for better UX
-      heading.addEventListener('mouseover', () => {
-        heading.classList.add('text-indigo-500');
+
+    try {
+      // Find all h1, h2, h3 elements in the editor
+      const editorElement = editor.view.dom;
+      const headings = editorElement.querySelectorAll('h1, h2, h3');
+
+      // Add click handlers to each heading
+      headings.forEach(heading => {
+        try {
+          (heading as HTMLElement).style.cursor = 'pointer';
+          heading.classList.add('hover:text-indigo-600', 'transition-colors');
+
+          // Add hover effect for better UX
+          const handleMouseOver = () => {
+            heading.classList.add('text-indigo-500');
+          };
+
+          const handleMouseOut = () => {
+            heading.classList.remove('text-indigo-500');
+          };
+
+          // Add click handler
+          const handleClick = (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            navigate(`/lessons/${lessonId}`);
+          };
+
+          heading.addEventListener('mouseover', handleMouseOver);
+          heading.addEventListener('mouseout', handleMouseOut);
+          heading.addEventListener('click', handleClick);
+
+          // Store handlers for cleanup (optional, helps prevent memory leaks)
+          (heading as any)._headingHandlers = {
+            handleMouseOver,
+            handleMouseOut,
+            handleClick
+          };
+        } catch (error) {
+          console.error('Error setting up heading click handler:', error);
+        }
       });
-      
-      heading.addEventListener('mouseout', () => {
-        heading.classList.remove('text-indigo-500');
-      });
-      
-      // Add click handler
-      heading.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        navigate(`/lessons/${lessonId}`);
-      });
-    });
+    } catch (error) {
+      console.error('Error in setupClickableHeadings:', error);
+    }
   };
 
   // Toggle active tool (improved to allow cancelling the active tool)
@@ -356,9 +491,10 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
-      {/* Annotation Tools (only show if annotations are enabled) */}
-      {enableAnnotations && (
+    <TipTapErrorBoundary>
+      <div className="relative" ref={containerRef}>
+        {/* Annotation Tools (only show if annotations are enabled) */}
+        {enableAnnotations && (
         <div className="liquid-glass sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 flex items-center space-x-2 shadow-sm">
           <div className="flex items-center">
             <button
@@ -546,8 +682,53 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         )}
       </div>
       
-      {/* CSS for custom cursors */}
-      <style jsx global>{`
+      {/* CSS for custom cursors and formula rendering */}
+      <style>
+  {`
+        /* Hide source text for formulas */
+        .math-source-hidden {
+          font-size: 0 !important;
+          line-height: 0 !important;
+          display: inline !important;
+          width: 0 !important;
+          height: 0 !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          position: absolute !important;
+        }
+
+        /* Math styling */
+        .math-inline {
+          display: inline-block;
+          vertical-align: middle;
+          margin: 0 2px;
+        }
+
+        .math-display {
+          display: block;
+          margin: 1em 0;
+          text-align: center;
+        }
+
+        .math-editable {
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .math-hover {
+          background-color: rgba(99, 102, 241, 0.1);
+          border-radius: 4px;
+        }
+
+        .math-error {
+          color: #f44336;
+          background-color: #ffebee;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-family: monospace;
+        }
+
+        /* Custom cursors */
         .cursor-pen {
           cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19l7-7 3 3-7 7-3-3z'%3E%3C/path%3E%3Cpath d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'%3E%3C/path%3E%3Cpath d='M2 2l7.586 7.586'%3E%3C/path%3E%3Cpath d='M11 11l2 2'%3E%3C/path%3E%3C/svg%3E") 0 24, auto;
         }
@@ -563,8 +744,29 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
         .cursor-eraser {
           cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f43f5e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpath d='M15.5 2H18a2 2 0 0 1 2 2v2.5'%3E%3C/path%3E%3Cpath d='M22 13H18V9'%3E%3C/path%3E%3Cpath d='M22 2 11 13'%3E%3C/path%3E%3C/svg%3E") 0 24, auto;
         }
+          @media print {
+          .tiptap-readonly-editor {
+            color: #000 !important;
+            background: #fff !important;
+          }
+
+          .tiptap-readonly-editor * {
+            color: #000 !important;
+            background: transparent !important;
+          }
+
+          .tiptap-readonly-editor img {
+            max-width: 100% !important;
+          }
+
+          .ProseMirror {
+            overflow: visible !important;
+          }
+        }
+
       `}</style>
-    </div>
+      </div>
+    </TipTapErrorBoundary>
   );
 };
 

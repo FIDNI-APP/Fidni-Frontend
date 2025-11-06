@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Calendar, Eye, Share2, Bookmark, MoreHorizontal, GraduationCap, BookOpen, Printer, ListPlus } from 'lucide-react';
+import { Share2, Bookmark, MoreHorizontal, BookOpen, Printer, ListPlus, ChevronRight, Home, MessageSquare, GitPullRequest, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Content, Difficulty } from '@/types';
+import { Content } from '@/types';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
+import { TabNavigation } from '@/components/shared/TabNavigation';
 
 interface ExerciseHeaderProps {
   exercise: Content;
@@ -16,6 +17,8 @@ interface ExerciseHeaderProps {
   formatTimeAgo: (dateString: string) => string;
   isAuthor: boolean;
   onPrint?: () => void;
+  activeTab: 'exercise' | 'discussions' | 'proposals' | 'activity';
+  onTabChange: (tab: 'exercise' | 'discussions' | 'proposals' | 'activity') => void;
 }
 
 export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
@@ -25,23 +28,23 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
   toggleSavedForLater,
   formatTimeAgo,
   isAuthor,
-  onPrint
+  onPrint,
+  activeTab,
+  onTabChange
 }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showRevisionListModal, setShowRevisionListModal] = useState(false);
 
-  const getDifficultyColor = (difficulty: Difficulty): string => {
-    switch (difficulty) {
-      case 'easy':
-        return 'from-emerald-500 to-emerald-400 text-white';
-      case 'medium':
-        return 'from-amber-500 to-amber-400 text-white';
-      case 'hard':
-        return 'from-rose-500 to-rose-400 text-white';
-      default:
-        return 'from-gray-500 to-gray-400 text-white';
-    }
+  // Build filter params for navigation
+  const buildFilterUrl = (filters: { level?: string; subject?: string; subfield?: string; chapter?: string; theorem?: string }) => {
+    const params = new URLSearchParams();
+    if (filters.level) params.set('classLevels', filters.level);
+    if (filters.subject) params.set('subjects', filters.subject);
+    if (filters.subfield) params.set('subfields', filters.subfield);
+    if (filters.chapter) params.set('chapters', filters.chapter);
+    if (filters.theorem) params.set('theorems', filters.theorem);
+    return `/exercises?${params.toString()}`;
   };
   const handleShare = () => {
     if (navigator.share) {
@@ -58,7 +61,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
   };
 
   return (
-    <div className="liquid-glass liquid-effect bg-gradient-to-r from-gray-800 to-purple-900 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
+    <div className="liquid-glass liquid-effect bg-gradient-to-r from-gray-700 to-purple-800 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
       {/* Background Pattern - positioned relative to header */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -72,17 +75,110 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
       </div>
 
       <div className="px-6 pt-6 pb-4 relative">
-        {/* Navigation row */}
+        {/* Breadcrumb Navigation */}
         <div className="flex justify-between items-center mb-6">
-          <Button 
-            onClick={() => navigate("/exercises")}
-            variant="ghost"
-            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Retour
-          </Button>
-          
+          <nav className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm text-white/80">
+            <button
+              onClick={() => navigate("/")}
+              className="hover:text-white transition-colors flex items-center"
+            >
+              <Home className="w-4 h-4" />
+            </button>
+            <ChevronRight className="w-4 h-4" />
+            <button
+              onClick={() => navigate("/exercises")}
+              className="hover:text-white transition-colors"
+            >
+              Exercices
+            </button>
+
+            {/* Class Level */}
+            {exercise.class_levels && exercise.class_levels.length > 0 && (
+              <>
+                <ChevronRight className="w-4 h-4" />
+                <button
+                  onClick={() => navigate(buildFilterUrl({ level: exercise.class_levels[0].id.toString() }))}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  {exercise.class_levels[0].name}
+                </button>
+              </>
+            )}
+
+            {/* Subject */}
+            {exercise.subject && (
+              <>
+                <ChevronRight className="w-4 h-4" />
+                <button
+                  onClick={() => navigate(buildFilterUrl({
+                    level: exercise.class_levels?.[0]?.id.toString(),
+                    subject: exercise.subject.id.toString()
+                  }))}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  {exercise.subject.name}
+                </button>
+              </>
+            )}
+
+            {/* Subfield */}
+            {exercise.subfields && exercise.subfields.length > 0 && (
+              <>
+                <ChevronRight className="w-4 h-4" />
+                <button
+                  onClick={() => navigate(buildFilterUrl({
+                    level: exercise.class_levels?.[0]?.id.toString(),
+                    subject: exercise.subject?.id.toString(),
+                    subfield: exercise.subfields[0].id.toString()
+                  }))}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  {exercise.subfields[0].name}
+                </button>
+              </>
+            )}
+
+            {/* Chapter */}
+            {exercise.chapters && exercise.chapters.length > 0 && (
+              <>
+                <ChevronRight className="w-4 h-4" />
+                <button
+                  onClick={() => navigate(buildFilterUrl({
+                    level: exercise.class_levels?.[0]?.id.toString(),
+                    subject: exercise.subject?.id.toString(),
+                    subfield: exercise.subfields?.[0]?.id.toString(),
+                    chapter: exercise.chapters[0].id.toString()
+                  }))}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  {exercise.chapters[0].name}
+                </button>
+              </>
+            )}
+
+            {/* Theorems */}
+            {exercise.theorems && exercise.theorems.length > 0 && (
+              <>
+                <ChevronRight className="w-4 h-4" />
+                <button
+                  onClick={() => navigate(buildFilterUrl({
+                    level: exercise.class_levels?.[0]?.id.toString(),
+                    subject: exercise.subject?.id.toString(),
+                    subfield: exercise.subfields?.[0]?.id.toString(),
+                    chapter: exercise.chapters?.[0]?.id.toString(),
+                    theorem: exercise.theorems[0].id.toString()
+                  }))}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  {exercise.theorems[0].name}
+                </button>
+              </>
+            )}
+
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-white font-medium line-clamp-1">{exercise.title}</span>
+          </nav>
+
           <div className="flex items-center gap-2">
             {/* Save button */}
             <Button
@@ -153,53 +249,24 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
           </div>
         </div>
         
-        {/* Exercise title and metadata */}
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-6">
-          <div className="max-w-3xl">
-            <h1 className="text-3xl font-bold mb-3">{exercise.title}</h1>
-            
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <div className="flex items-center">
-                <User className="w-4 h-4 mr-1.5 text-indigo-300" />
-                <span className="text-indigo-100">{exercise.author.username}</span>
-              </div>
-              
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1.5 text-indigo-300" />
-                <span className="text-indigo-100">{formatTimeAgo(exercise.created_at)}</span>
-              </div>
-              
-              <div className="flex items-center">
-                <Eye className="w-4 h-4 mr-1.5 text-indigo-300" />
-                <span className="text-indigo-100">{exercise.view_count} vues</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Main Category Tags in header */}
-          <div className="flex flex-wrap gap-2">
-            {exercise.subject && (
-              <span className="liquid-glass-button !backdrop-filter-none !bg-transparent liquid-effect text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
-                <BookOpen className="w-4 h-4 mr-1.5 text-indigo-300" />
-                {exercise.subject.name}
-              </span>
-            )}
-            
-            {exercise.class_levels && exercise.class_levels.length > 0 && (
-              <span className="liquid-glass-button liquid-effect text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
-                <GraduationCap className="w-4 h-4 mr-1.5 text-indigo-300" />
-                {exercise.class_levels[0].name}
-              </span>
-            )}
-            
-            <span className={`bg-gradient-to-r ${getDifficultyColor(exercise.difficulty)} px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5`}>
-              <DifficultyIcon difficulty={exercise.difficulty} />
-              <span>{getDifficultyLabel(exercise.difficulty)}</span>
-            </span>
-          </div>
+        {/* Tab Navigation - now in header where title was */}
+        <div>
+          <TabNavigation
+            tabs={[
+              { id: 'exercise', label: 'Exercice', icon: <BookOpen className="w-4 h-4" /> },
+              {
+                id: 'discussions',
+                label: 'Discussions',
+                icon: <MessageSquare className="w-4 h-4" />,
+                count: exercise.comments?.length || 0
+              },
+              { id: 'proposals', label: 'Solutions alternatives', icon: <GitPullRequest className="w-4 h-4" /> },
+              { id: 'activity', label: 'Activité', icon: <Activity className="w-4 h-4" /> }
+            ]}
+            activeTab={activeTab}
+            onTabChange={(tabId) => onTabChange(tabId as 'exercise' | 'discussions' | 'proposals' | 'activity')}
+          />
         </div>
-        
-        {/* We don't include the tab navigation here as it's being rendered in the parent component */}
       </div>
 
       {/* Add to Revision List Modal */}
@@ -212,41 +279,4 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
       />
     </div>
   );
-};
-
-// Helper components
-export const DifficultyIcon = ({ difficulty }: { difficulty: Difficulty }) => {
-  return (
-    <svg 
-      viewBox="0 0 24 24" 
-      className="w-4 h-4"
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M3 3v18h18"/>
-      <path d={
-        difficulty === 'easy' 
-          ? "M18 17H9V8" 
-          : difficulty === 'medium' 
-            ? "M18 12H9v-4M9 16v-4" 
-            : "M18 8H9v4M9 16v-4M18 12h-4"
-      }/>
-    </svg>
-  );
-};
-
-export const getDifficultyLabel = (difficulty: Difficulty): string => {
-  switch (difficulty) {
-    case 'easy':
-      return 'Facile';
-    case 'medium':
-      return 'Moyen';
-    case 'hard':
-      return 'Difficile';
-    default:
-      return difficulty;
-  }
 };
