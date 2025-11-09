@@ -1,0 +1,3 @@
+# ads.txt file for fidni.fr
+# Google AdSense
+google.com, pub-1910021700658911, DIRECT, f08c47fec0942fa0

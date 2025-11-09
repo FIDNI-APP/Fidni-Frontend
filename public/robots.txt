@@ -20,7 +20,7 @@ Allow: /exams/
 Allow: /learning-paths/
 
 # Sitemap location (you'll need to generate this)
-Sitemap: https://fidni.com/sitemap.xml
+Sitemap: https://fidni.fr/sitemap.xml
 
 # Crawl delay for polite crawling (optional)
 # Crawl-delay: 1
