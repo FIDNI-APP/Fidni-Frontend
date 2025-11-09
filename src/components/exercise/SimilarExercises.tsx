@@ -1,61 +1,79 @@
 import React, { useEffect, useState } from 'react';
-import { getSimilarExercises } from '@/lib/api/contentApi';
-import { Content } from '@/types';
+import { api } from '@/lib/api/apiClient';
+import { Content, Lesson, Exam } from '@/types';
 import { ContentCard } from '@/components/exercise/ContentCard';
-import { Layers } from 'lucide-react';
 
 interface SimilarExercisesProps {
-  exerciseId: string;
+  contentId: string;
+  contentType: 'exercise' | 'lesson' | 'exam';
 }
 
-export const SimilarExercises: React.FC<SimilarExercisesProps> = ({ exerciseId }) => {
-  const [similarExercises, setSimilarExercises] = useState<Content[]>([]);
+interface Recommendations {
+  exercises?: Content[];
+  lessons?: Lesson[];
+  exams?: Exam[];
+}
+
+export const SimilarExercises: React.FC<SimilarExercisesProps> = ({
+  contentId,
+  contentType = 'exercise'
+}) => {
+  const [recommendations, setRecommendations] = useState<Recommendations>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSimilar = async () => {
+    const fetchRecommendations = async () => {
       try {
         setLoading(true);
-        const data = await getSimilarExercises(exerciseId);
-        setSimilarExercises(data.results);
+        const response = await api.get(`/${contentType}s/${contentId}/recommendations/`);
+        setRecommendations(response.data);
       } catch (error) {
-        console.error('Failed to fetch similar exercises:', error);
+        console.error('Failed to fetch recommendations:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSimilar();
-  }, [exerciseId]);
+    fetchRecommendations();
+  }, [contentType, contentId]);
+
+  // Flatten all recommendations into a single array with type info
+  const allContent: Array<{ item: any; type: 'exercise' | 'lesson' | 'exam' }> = [
+    ...(recommendations.exercises?.map(ex => ({ item: ex, type: 'exercise' as const })) || []),
+    ...(recommendations.lessons?.map(ls => ({ item: ls, type: 'lesson' as const })) || []),
+    ...(recommendations.exams?.map(ex => ({ item: ex, type: 'exam' as const })) || [])
+  ];
+
+  const totalCount = allContent.length;
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-lg border-2 border-gray-100 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Layers className="w-5 h-5 text-indigo-600" />
-          <h3 className="text-lg font-semibold text-gray-800">Exercices similaires</h3>
-        </div>
+      <div className="py-6">
+        <div className="border-t border-gray-200 mb-6" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Contenu similaire</h3>
         <p className="text-sm text-gray-500">Chargement...</p>
       </div>
     );
   }
 
-  if (similarExercises.length === 0) {
-    return null; // Don't show section if no similar exercises
+  if (totalCount === 0) {
+    return null; // Don't show section if no recommendations
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border-2 border-gray-100 p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Layers className="w-5 h-5 text-indigo-600" />
-        <h3 className="text-lg font-semibold text-gray-800">Exercices similaires</h3>
-        <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
-          {similarExercises.length}
-        </span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {similarExercises.map((exercise) => (
-          <ContentCard key={exercise.id} content={exercise} contentType="exercise" />
+    <div className="py-6">
+      <div className="border-t border-gray-200 mb-6" />
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Contenu similaire ({totalCount})
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {allContent.map(({ item, type }) => (
+          <ContentCard
+            key={`${type}-${item.id}`}
+            content={item}
+            contentType={type}
+            onVote={() => {}}
+          />
         ))}
       </div>
     </div>

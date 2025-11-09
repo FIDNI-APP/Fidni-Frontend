@@ -2,36 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen,
-  GraduationCap,
-  Tag,
-  Edit,
-  Printer,
-  Share2,
-  Eye,
-  BookMarked,
-  Calendar,
-  User,
   ArrowLeft,
-  CheckCircle,
-  XCircle,
-  MoreHorizontal,
-  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { getLessonById, voteLesson, addComment, voteComment } from '@/lib/api';
+import { getLessonById, voteLesson, addComment, voteComment, saveLesson, unsaveLesson } from '@/lib/api';
 import { Lesson, Comment, VoteValue } from '@/types';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
-import { LessonTabNavigation } from '@/components/lesson/LessonTabNavigation';
+import { LessonHeader } from '@/components/lesson/LessonHeader';
 import { ActivityEmptyState } from '@/components/exercise/EmptyStates';
-import AddToNotebookButton from '@/components/lesson/AddToNotebookButton';
+import { LessonMainCard } from '@/components/lesson/LessonMainCard';
 import { SEO, createLessonStructuredData, createBreadcrumbStructuredData } from '@/components/SEO';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
+import { SimilarExercises } from '@/components/exercise/SimilarExercises';
 
 import { formatDate } from '@/lib/utils';
+import { formatTimeAgo } from '@/lib/utils/dateHelpers';
 import '@/lib/styles.css';
 
 export function LessonDetail() {
@@ -102,14 +89,13 @@ export function LessonDetail() {
       setLoading(true);
       const data = await getLessonById(lessonId);
       setLesson(data);
-      
-      // Set user-specific states if authenticated
-      if (isAuthenticated && data.user_complete) {
+
+      // Set user-specific states - data.user_save will be false if not authenticated
+      if (data.user_complete) {
         setCompleted(data.user_complete);
       }
-      if (isAuthenticated && data.user_save) {
-        setSavedForLater(data.user_save);
-      }
+      // Always set savedForLater from the API response
+      setSavedForLater(Boolean(data.user_save));
     } catch (err) {
       console.error('Failed to fetch lesson:', err);
       setError('Failed to load the lesson. Please try again later.');
@@ -160,7 +146,7 @@ export function LessonDetail() {
     if (!lesson || !id) return;
   
     try {
-      const newComment = await addComment(id, content, parentId || undefined);
+      const newComment = await addComment('lesson', id, content, parentId || undefined);
       
       setLesson(prev => {
         if (!prev) return prev;
@@ -201,39 +187,20 @@ export function LessonDetail() {
     }
   };
 
-  // Implement progress tracking (Success/Review)
-  const markAsCompleted = async (status: 'success' | 'review') => {
-    if (!isAuthenticated || !id) return;
-    
-    try {
-      setLoadingStates(prev => ({ ...prev, progress: true }));
-      
-      if (completed === status) {
-        // TODO: Implement API call to remove progress
-        setCompleted(null);
-      } else {
-        // TODO: Implement API call to mark progress
-        setCompleted(status);
-      }
-    } catch (err) {
-      console.error('Failed to update progress:', err);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, progress: false }));
-    }
-  };
-  
   // Toggle saved status (Bookmark)
   const toggleSavedForLater = async () => {
     if (!isAuthenticated || !id) return;
-    
+
     try {
       setLoadingStates(prev => ({ ...prev, save: true }));
-      
+
       if (savedForLater) {
-        // TODO: Implement API call to unsave
+        // Unsave lesson
+        await unsaveLesson(id);
         setSavedForLater(false);
       } else {
-        // TODO: Implement API call to save
+        // Save lesson
+        await saveLesson(id);
         setSavedForLater(true);
       }
     } catch (err) {
@@ -241,21 +208,6 @@ export function LessonDetail() {
     } finally {
       setLoadingStates(prev => ({ ...prev, save: false }));
     }
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: lesson?.title || 'Math Lesson',
-        text: `Check out this math lesson: ${lesson?.title}`,
-        url: window.location.href
-      }).catch(err => console.error('Error sharing:', err));
-    } else {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => alert('Link copied to clipboard!'))
-        .catch(err => console.error('Error copying link:', err));
-    }
-    setShowDropdown(false);
   };
 
   const handlePrint = () => {
@@ -267,18 +219,6 @@ export function LessonDetail() {
     setShowDropdown(false);
   };
 
-  const handleEdit = () => {
-    navigate(`/edit-lesson/${lesson?.id}`);
-    setShowDropdown(false);
-  };
-
-  const handleDelete = () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette leçon ?')) {
-      // TODO: Implement delete functionality
-      console.log('Delete lesson:', lesson?.id);
-    }
-    setShowDropdown(false);
-  };
 
   if (loading) {
     return (
@@ -337,9 +277,6 @@ export function LessonDetail() {
   }
 
   const isAuthor = user?.id === lesson.author.id;
-  const hasTheorems = lesson.theorems && lesson.theorems.length > 0;
-  const hasChapters = lesson.chapters && lesson.chapters.length > 0;
-  const hasSubfields = lesson.subfields && lesson.subfields.length > 0;
 
   // Generate structured data for SEO
   const lessonStructuredData = createLessonStructuredData(lesson);
@@ -425,159 +362,19 @@ export function LessonDetail() {
       {/* Main content - hidden during print */}
       <div className="print:hidden">
         <div className="container mx-auto px-4 lg:px-6 relative">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-gray-800 to-blue-900 text-white rounded-xl shadow-lg mb-6 relative">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-              <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#smallGrid)" />
-              </svg>
-            </div>
-
-            <div className="px-6 pt-6 pb-4 relative">
-              {/* Navigation row */}
-              <div className="flex justify-between items-center mb-6">
-                <Button 
-                  onClick={() => navigate(`/lessons`)}
-                  variant="ghost"
-                  className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Retour
-                </Button>
-                
-                <div className="flex items-center gap-2">
-                  {/* Save button */}
-                  <Button
-                    onClick={toggleSavedForLater}
-                    variant="ghost"
-                    className={`rounded-lg text-white/80 hover:text-white hover:bg-white/10 ${savedForLater ? 'bg-white/20' : ''}`}
-                    disabled={loadingStates.save}
-                  >
-                    {loadingStates.save ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    ) : (
-                      <BookMarked className={`w-5 h-5 mr-1.5 ${savedForLater ? 'fill-white' : ''}`} />
-                    )}
-                    {savedForLater ? 'Enregistré' : 'Enregistrer'}
-                  </Button>
-
-                  {/* Add to Notebook Button */}
-                  {id && (
-                    <AddToNotebookButton
-                      lessonId={id}
-                    />
-                  )}
-
-                  {/* More options dropdown */}
-                  <div className="relative" ref={dropdownRef}>
-                    <Button
-                      onClick={() => setShowDropdown(!showDropdown)}
-                      variant="ghost"
-                      className="rounded-lg text-white/80 hover:text-white hover:bg-white/10"
-                    >
-                      <MoreHorizontal className="w-5 h-5" />
-                    </Button>
-
-                    {/* Dropdown menu */}
-                    {showDropdown && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
-                        <button
-                          onClick={handleShare}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Partager
-                        </button>
-
-                        <button
-                          onClick={handlePrint}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Printer className="w-4 h-4" />
-                          Imprimer
-                        </button>
-
-                        {isAuthor && (
-                          <>
-                            <div className="border-t border-gray-100 my-1"></div>
-                            <button
-                              onClick={handleEdit}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Modifier
-                            </button>
-                            <button
-                              onClick={handleDelete}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Supprimer
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Lesson title and metadata */}
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-6">
-                <div className="max-w-3xl">
-                  <h1 className="text-3xl font-bold mb-3">{lesson.title}</h1>
-                  
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <div className="flex items-center">
-                      <User className="w-4 h-4 mr-1.5 text-indigo-300" />
-                      <span className="text-indigo-100">{lesson.author.username}</span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1.5 text-indigo-300" />
-                      <span className="text-indigo-100">{formatDate(lesson.created_at)}</span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Eye className="w-4 h-4 mr-1.5 text-indigo-300" />
-                      <span className="text-indigo-100">{lesson.view_count} vues</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Main Category Tags in header */}
-                <div className="flex flex-wrap gap-2">
-                  {lesson.subject && (
-                    <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
-                      <BookOpen className="w-4 h-4 mr-1.5 text-indigo-300" />
-                      {lesson.subject.name}
-                    </span>
-                  )}
-                  
-                  {lesson.class_levels && lesson.class_levels.length > 0 && (
-                    <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center">
-                      <GraduationCap className="w-4 h-4 mr-1.5 text-indigo-300" />
-                      {lesson.class_levels[0].name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-gray-900 to-blue-900 text-white px-6 pb-2">
-                <LessonTabNavigation
-                  activeSection={activeSection}
-                  setActiveSection={handleSectionChange}
-                  commentsCount={lesson.comments?.length || 0}
-                />
-              </div>
+          {/* Header with breadcrumbs, navigation, and tabs */}
+          <LessonHeader
+            lesson={lesson}
+            lessonId={id || ''}
+            savedForLater={savedForLater}
+            loadingStates={loadingStates}
+            toggleSavedForLater={toggleSavedForLater}
+            formatTimeAgo={formatTimeAgo}
+            isAuthor={isAuthor}
+            onPrint={handlePrint}
+            activeTab={activeSection}
+            onTabChange={handleSectionChange}
+          />
             
           
           {/* Main content grid */}
@@ -594,148 +391,13 @@ export function LessonDetail() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
                     >
-                      {/* Lesson Content */}
-                      <div className="bg-white rounded-xl shadow-md border border-gray-200  mb-6">
-                        <div className="p-6">
-                          {/* Tags section */}
-                          {(hasChapters || hasTheorems ||hasSubfields) && (
-                            <div className="bg-gray-50 -mx-6 -mt-6 px-6 py-4 mb-6 border-b border-gray-200">
-                              <div className="flex flex-wrap gap-2">
-                                {/* Chapter Tags */}
-                                {hasChapters && (
-                                  <div className="flex flex-wrap gap-1.5 mr-4">
-                                    <span className="flex items-center text-xs text-gray-500 mr-1 whitespace-nowrap">
-                                      <Tag className="w-3 h-3 mr-1 text-gray-400" />
-                                      Chapitres:
-                                    </span>
-                                    {lesson.chapters.map((chapter) => (
-                                      <span
-                                        key={chapter.id}
-                                        className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-xs flex items-center whitespace-nowrap border border-purple-100"
-                                      >
-                                        {chapter.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                {/* Subfields Tags */}
-
-                                {hasSubfields && (
-                                  <div className="flex flex-wrap gap-1.5 mr-4">
-                                    <span className="flex items-center text-xs text-gray-500 mr-1 whitespace-nowrap">
-                                      <Tag className="w-3 h-3 mr-1 text-gray-400" />
-                                      Domaines:
-                                    </span>
-                                    {lesson.subfields.map((subfield) => (
-                                      <span
-                                        key={subfield.id}
-                                        className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-xs flex items-center whitespace-nowrap border border-purple-100"
-                                      >
-                                        {subfield.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                
-                                {/* Theorem Tags */}
-                                {hasTheorems && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    <span className="flex items-center text-xs text-gray-500 mr-1 whitespace-nowrap">
-                                      <BookMarked className="w-3 h-3 mr-1 text-gray-400" />
-                                      Théorèmes:
-                                    </span>
-                                    {lesson.theorems.map((theorem) => (
-                                      <span
-                                        key={theorem.id}
-                                        className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs flex items-center whitespace-nowrap border border-amber-100"
-                                      >
-                                        {theorem.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="prose max-w-none text-gray-800 mb-6">
-                            <TipTapRenderer content={lesson.content} />
-                          </div>
-                          
-                          {/* Footer with votes, progress tracking, etc */}
-                          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-100">
-                            <div className="flex items-center gap-4">
-                              {/* Vote Buttons */}
-                              <VoteButtons
-                                initialVotes={lesson.vote_count}
-                                onVote={handleVote}
-                                vertical={false}
-                                userVote={lesson.user_vote}
-                                size="sm"
-                              />
-                              
-                              {/* Views count */}
-                              <span className="flex items-center gap-1 text-sm text-gray-500">
-                                <Eye className="w-4 h-4 text-gray-400" />
-                                <span>{lesson.view_count} vues</span>
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              {/* Completion status buttons */}
-                              <Button
-                                onClick={() => markAsCompleted('success')}
-                                variant={completed === 'success' ? "default" : "ghost"}
-                                size="sm"
-                                className={`rounded-lg ${
-                                  completed === 'success' 
-                                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                                    : 'border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
-                                }`}
-                                disabled={loadingStates.progress}
-                              >
-                                {loadingStates.progress ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                ) : (
-                                  <CheckCircle className="w-4 h-4 mr-1.5" />
-                                )}
-                                Réussi
-                              </Button>
-                              
-                              <Button
-                                onClick={() => markAsCompleted("review")}
-                                variant={completed === "review" ? "default" : "ghost"}
-                                size="sm"
-                                className={`rounded-lg ${
-                                  completed === "review" 
-                                    ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                                    : 'border-gray-200 hover:border-rose-300 hover:text-rose-600'
-                                }`}
-                                disabled={loadingStates.progress}
-                              >
-                                {loadingStates.progress ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                ) : (
-                                  <XCircle className="w-4 h-4 mr-1.5" />
-                                )}
-                                À revoir
-                              </Button>
-
-                              
-                              
-                              {/* Print button */}
-                              <Button
-                                variant="ghost"
-                                onClick={handlePrint}
-                                className="rounded-lg text-sm"
-                                size="sm"
-                              >
-                                <Printer className="w-4 h-4 mr-1.5" />
-                                Imprimer
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                      {/* Unified container matching ExerciseDetail */}
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-8">
+                        <LessonMainCard
+                          lesson={lesson}
+                          handleVote={handleVote}
+                          formatTimeAgo={formatTimeAgo}
+                        />
                       </div>
                     </motion.div>
                   )}
@@ -778,52 +440,9 @@ export function LessonDetail() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-              
-              {/* Right Sidebar - Only show on larger screens */}
-              <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
-                <div 
-                  className="lg:sticky lg:top-28"
-                  style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
-                >
-                  <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100">
-                    {/* Exercise Statistics */}
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Vues</span>
-                          <span className="font-medium">{lesson.view_count}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Votes</span>
-                          <span className="font-medium">{lesson.vote_count}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Commentaires</span>
-                          <span className="font-medium">{lesson.comments?.length || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Related Lessons Section */}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-gray-800 text-sm flex items-center gap-1.5">
-                          <BookOpen className="w-4 h-4 text-indigo-600" />
-                          Leçons similaires
-                        </h3>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-indigo-600 h-6 p-0 text-xs hover:bg-transparent hover:text-indigo-800"
-                        >
-                          Voir plus
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
+                {/* Similar content */}
+                <SimilarExercises contentId={lesson.id.toString()} contentType="lesson" />
               </div>
             </div>
           </div>

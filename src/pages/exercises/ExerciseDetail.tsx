@@ -6,13 +6,11 @@ import { CompletionAnimation } from '@/components/animations/CompletionAnimation
 import { useAuth } from '@/contexts/AuthContext';
 import { CommentSection } from '@/components/CommentSection';
 import { useAdvancedTimeTracker } from '@/hooks/useAdvancedTimeTracker';
-import { voteSolution, getSessionHistory } from '@/lib/api';
-import { undoSolutionViewed, toggleSolutionMatched } from '@/lib/api/statisticsApi';
+import { voteSolution, getSessionHistory, undoSolutionViewed, toggleSolutionMatched, voteComment } from '@/lib/api';
 
 // Import enhanced components
 import { ExerciseHeader } from '@/components/exercise/ExerciseHeader';
-import { ExerciseTitleSection } from '@/components/exercise/ExerciseTitleSection';
-import { ExerciseContent } from '@/components/exercise/ExerciseContent';
+import { ExerciseMainCard } from '@/components/exercise/ExerciseMainCard';
 import { ProposalsEmptyState } from '@/components/exercise/EmptyStates';
 import { SolutionSection } from '@/components/exercise/SolutionSection';
 import { SimilarExercises } from '@/components/exercise/SimilarExercises';
@@ -106,7 +104,8 @@ export function ExerciseDetail() {
 
   // Comments
   const { handleAddComment, isSubmitting: isCommentSubmitting } = useCommentManagement({
-    contentId: id || ''
+    contentId: id || '',
+    contentType: 'exercise'
   });
 
   // Solutions
@@ -145,6 +144,7 @@ export function ExerciseDetail() {
   // Local state
   const [showSolution, setShowSolution] = useState(false);
   const [solutionVisible, setSolutionVisible] = useState(false);
+  const [optimisticSolutionMatched, setOptimisticSolutionMatched] = useState<boolean | null>(null);
 
   // Initialize activeSection from URL or default to 'exercise'
   const [activeSection, setActiveSection] = useState<'exercise' | 'discussions' | 'proposals' | 'activity'>(() => {
@@ -246,6 +246,39 @@ export function ExerciseDetail() {
     await handleAddComment(exercise, setExercise, content, parentId);
   };
 
+  const handleCommentVote = async (commentId: string, value: VoteValue) => {
+    if (!exercise) return;
+
+    try {
+      const updatedComment = await voteComment(commentId, value);
+
+      const updateComments = (comments: any[]): any[] => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            return updatedComment;
+          }
+          if (comment.replies) {
+            return {
+              ...comment,
+              replies: updateComments(comment.replies)
+            };
+          }
+          return comment;
+        });
+      };
+
+      setExercise(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          comments: updateComments(prev.comments)
+        };
+      });
+    } catch (err) {
+      console.error('Failed to vote on comment:', err);
+    }
+  };
+
   const handleAddSolutionWrapper = async (solutionContent: string) => {
     await addSolution(solutionContent, setExercise);
   };
@@ -307,12 +340,30 @@ export function ExerciseDetail() {
   };
 
   const handleMarkSolutionMatched = async () => {
+    if (!id) return;
+
+    const isCurrentlyMatched = optimisticSolutionMatched !== null
+      ? optimisticSolutionMatched
+      : (statistics?.user_solution_matched || false);
+
+    // Optimistically update UI
+    setOptimisticSolutionMatched(!isCurrentlyMatched);
+
     try {
-      await toggleSolutionMatched('exercise', id || '', statistics?.user_solution_matched || false);
-      // Refetch statistics to update the UI
+      // Toggle the solution match on server
+      await toggleSolutionMatched('exercise', id, isCurrentlyMatched);
+
+      // Refetch statistics to sync with server
       await refetchStatistics();
+
+      // Clear optimistic state when server confirms
+      setOptimisticSolutionMatched(null);
     } catch (err) {
       console.error('Failed to toggle solution match:', err);
+      // Revert optimistic state on error
+      setOptimisticSolutionMatched(null);
+      // Refetch to sync with server state
+      await refetchStatistics();
     }
   };
 
@@ -485,198 +536,94 @@ export function ExerciseDetail() {
               activeTab={activeSection}
               onTabChange={handleSectionChange}
             />
-            <ExerciseTitleSection
-              exercise={exercise}
-              formatTimeAgo={formatTimeAgo}
-            />
           </div>
 
-          {/* Main content grid */}
-          <div className="w-full relative">
-            <div className="flex flex-col lg:flex-row lg:gap-6">
-              <div className="flex-grow" ref={contentRef}>
-                <AnimatePresence mode="wait">
-                  {activeSection === 'exercise' && (
-                    <motion.div
-                      key="exercise-content"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                    >
-                      <ExerciseContent
-                        exercise={exercise}
-                        completed={completed}
-                        markAsCompleted={markAsCompleted}
-                        loadingStates={loadingStates}
-                        handleVote={handleVote}
-                        handlePrint={handlePrint}
-                        userViewedSolution={statistics?.user_viewed_solution}
-                        onRemoveSolutionFlag={handleRemoveSolutionFlag}
-                      />
-
-                      <SolutionSection
-                        exercise={exercise}
-                        canEditSolution={canEditSolution || false}
-                        isAuthor={isAuthor}
-                        solutionVisible={solutionVisible}
-                        showSolution={showSolution}
-                        handleSolutionToggle={() => setShowSolution(!showSolution)}
-                        toggleSolutionVisibility={(e) => {
-                          e.stopPropagation();
-                          if (!solutionVisible) {
-                            // Solution is being shown
-                            trackSolutionView();
-                          }
-                          setSolutionVisible(!solutionVisible);
-                        }}
-                        handleVote={handleVote}
-                        handleEditSolution={() => navigate(`/solutions/${exercise.solution?.id}/edit`)}
-                        handleDeleteSolution={handleDeleteSolutionWrapper}
-                        handleAddSolution={handleAddSolutionWrapper}
-                        setSolutionVisible={setSolutionVisible}
-                        userSolutionMatched={statistics?.user_solution_matched || false}
-                        onMarkSolutionMatched={handleMarkSolutionMatched}
-                      />
-
-                      <SimilarExercises exerciseId={exercise.id} />
-
-                    </motion.div>
-                  )}
-
-                  {activeSection === 'discussions' && (
-                    <motion.div key="discussions-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                      <div className="liquid-glass bg-white rounded-xl shadow-md p-6">
-                        <CommentSection
-                          comments={exercise?.comments || []}
-                          onAddComment={handleAddCommentWrapper}
-                          onVoteComment={async () => Promise.resolve()}
-                          onEditComment={async () => Promise.resolve()}
-                          onDeleteComment={async () => Promise.resolve()}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {activeSection === 'proposals' && <ProposalsEmptyState />}
-                  {activeSection === 'activity' && (
-                    <ActivitySection
-                      statistics={statistics}
-                      loading={statsLoading}
-                      contentType="exercise"
-                      onRemoveSolutionFlag={handleRemoveSolutionFlag}
+          {/* Main content - Single column with unified container */}
+          <div className="w-full relative mt-6">
+            <div ref={contentRef}>
+              <AnimatePresence mode="wait">
+                {activeSection === 'exercise' && (
+                  <motion.div
+                    key="exercise-content"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="bg-white rounded-lg shadow-sm border border-gray-100 px-8"
+                  >
+                    {/* Main Exercise Card - with integrated timer */}
+                    <ExerciseMainCard
+                      exercise={exercise}
+                      completed={completed}
+                      markAsCompleted={markAsCompleted}
+                      loadingStates={loadingStates}
+                      handleVote={handleVote}
+                      formatTimeAgo={formatTimeAgo}
+                      timer={currentTime}
+                      isTimerRunning={isRunning}
+                      startTimer={startTimer}
+                      stopTimer={stopTimer}
+                      resetTimer={resetTimer}
+                      saveSession={saveTimeManually}
+                      formatCurrentTime={formatCurrentTime}
+                      getSessionCount={getSessionCount}
+                      loadHistory={() => id && loadHistory('exercise', id)}
+                      saving={saving}
                     />
-                  )}
-                </AnimatePresence>
-              </div>
 
-              {/* Right Sidebar */}
-              {!fullscreenMode && (
-                <div className="hidden lg:block lg:w-72 lg:flex-shrink-0">
-                  <div className="lg:sticky lg:top-28" style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                      {/* Timer Section - Enhanced UI */}
-                      <div className="bg-gradient-to-br from-gray-700 to-purple-800 text-white p-5">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold flex items-center text-base">
-                            <Clock className="w-5 h-5 mr-2" />
-                            Chronomètre
-                          </h3>
-                          {getSessionCount() > 0 && (
-                            <span className="text-xs bg-white/25 backdrop-blur-sm px-2.5 py-1 rounded-full font-medium">
-                              {getSessionCount()} session{getSessionCount() > 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </div>
+                    {/* Solution Section */}
+                    <SolutionSection
+                      exercise={exercise}
+                      canEditSolution={canEditSolution || false}
+                      isAuthor={isAuthor}
+                      solutionVisible={solutionVisible}
+                      showSolution={showSolution}
+                      handleSolutionToggle={() => setShowSolution(!showSolution)}
+                      toggleSolutionVisibility={(e) => {
+                        e.stopPropagation();
+                        if (!solutionVisible) {
+                          trackSolutionView();
+                        }
+                        setSolutionVisible(!solutionVisible);
+                      }}
+                      handleVote={handleVote}
+                      handleEditSolution={() => navigate(`/solutions/${exercise.solution?.id}/edit`)}
+                      handleDeleteSolution={handleDeleteSolutionWrapper}
+                      handleAddSolution={handleAddSolutionWrapper}
+                      setSolutionVisible={setSolutionVisible}
+                      userSolutionMatched={optimisticSolutionMatched !== null ? optimisticSolutionMatched : (statistics?.user_solution_matched || false)}
+                      onMarkSolutionMatched={handleMarkSolutionMatched}
+                    />
 
-                        <div className="text-center mb-5 bg-white/10 backdrop-blur-sm rounded-xl py-4 px-3">
-                          <div className="font-mono text-4xl font-bold tracking-tight">{formatCurrentTime()}</div>
-                          <div className="text-xs text-white/80 mt-1 font-medium">Temps actuel</div>
-                        </div>
+                    {/* Similar content (exercises, lessons, exams) */}
+                    <SimilarExercises contentId={String(exercise.id)} contentType="exercise" />
+                  </motion.div>
+                )}
 
-                        {/* Control buttons - Enhanced */}
-                        <div className="space-y-2.5">
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => (isRunning ? stopTimer() : startTimer())}
-                              className={`flex-1 font-semibold rounded-lg shadow-md transition-all ${
-                                isRunning
-                                  ? 'bg-rose-500 hover:bg-rose-600 hover:shadow-lg'
-                                  : 'bg-white text-indigo-700 hover:bg-gray-50 hover:shadow-lg'
-                              }`}
-                            >
-                              {isRunning ? (
-                                <>
-                                  <Pause className="w-4 h-4 mr-2" />
-                                  Pause
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-4 h-4 mr-2 fill-current" />
-                                  Démarrer
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              onClick={resetTimer}
-                              variant="ghost"
-                              className="bg-white/10 hover:bg-white/20 text-white border-0"
-                              disabled={currentTime === 0 || isRunning}
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
-                          </div>
-
-                          {currentTime > 0 && (
-                            <Button
-                              onClick={saveTimeManually}
-                              variant="ghost"
-                              className="w-full bg-white/10 hover:bg-white/20 text-white font-medium border-0"
-                              disabled={saving || isRunning}
-                            >
-                              {saving ? (
-                                'Sauvegarde...'
-                              ) : (
-                                <>
-                                  <Save className="w-4 h-4 mr-2" />
-                                  Terminer la session
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
-
-                        {getSessionCount() > 0 && (
-                          <button
-                            onClick={() => id && loadHistory('exercise', id)}
-                            className="w-full mt-3 text-sm text-white/90 hover:text-white font-medium underline-offset-2 hover:underline transition-all"
-                          >
-                            Voir l'historique complet →
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Stats Section */}
-                      <div className="p-4">
-                        <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Vues</span>
-                            <span className="font-medium">{exercise.view_count}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Votes</span>
-                            <span className="font-medium">{exercise.vote_count}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Commentaires</span>
-                            <span className="font-medium">{exercise.comments?.length || 0}</span>
-                          </div>
-                        </div>
-                      </div>
+                {activeSection === 'discussions' && (
+                  <motion.div key="discussions-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <CommentSection
+                        comments={exercise?.comments || []}
+                        onAddComment={handleAddCommentWrapper}
+                        onVoteComment={handleCommentVote}
+                        onEditComment={async () => Promise.resolve()}
+                        onDeleteComment={async () => Promise.resolve()}
+                      />
                     </div>
-                  </div>
-                </div>
-              )}
+                  </motion.div>
+                )}
+
+                {activeSection === 'proposals' && <ProposalsEmptyState />}
+
+                {activeSection === 'activity' && (
+                  <ActivitySection
+                    statistics={statistics}
+                    loading={statsLoading}
+                    contentType="exercise"
+                    onRemoveSolutionFlag={handleRemoveSolutionFlag}
+                  />
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

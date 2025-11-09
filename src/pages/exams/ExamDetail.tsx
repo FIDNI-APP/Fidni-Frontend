@@ -14,7 +14,7 @@ import { useContentStatistics } from '@/hooks/useContentStatistics';
 import { useSolutionTracking } from '@/hooks/useSolutionTracking';
 import { useSolutionManagement } from '@/hooks/content/useSolutionManagement';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
-import { voteSolution } from '@/lib/api';
+import { voteSolution, undoSolutionViewed, toggleSolutionMatched, voteComment } from '@/lib/api';
 import {
   getExamById,
   voteExam,
@@ -26,11 +26,11 @@ import {
   unsaveExam,
 } from '@/lib/api/examApi';
 import { getSessionHistory as getSessionHistoryAPI } from '@/lib/api/interactionApi';
-import { undoSolutionViewed, toggleSolutionMatched } from '@/lib/api/statisticsApi';
 
 // Import enhanced components
-import { ExamHeader } from '@/components/exam/ExamHeader';
-import { ExamContent } from '@/components/exam/ExamContent';
+import { ExamHeaderNew } from '@/components/exam/ExamHeaderNew';
+import { ExamTitleSection } from '@/components/exam/ExamTitleSection';
+import { ExamMainCard } from '@/components/exam/ExamMainCard';
 import { ProposalsEmptyState, ActivityEmptyState } from '@/components/exercise/EmptyStates';
 import { ExamPrintView } from '@/components/exam/ExamPrintView';
 import { ExamSidebar } from '@/components/exam/ExamSidebar';
@@ -39,22 +39,18 @@ import { SolutionSection } from '@/components/exercise/SolutionSection';
 // Import shared components (consolidated from exam/exercise duplicates)
 import { FloatingToolbar } from '@/components/shared/FloatingToolbar';
 import { MobileSidebar } from '@/components/shared/MobileSidebar';
-import { TabNavigation } from '@/components/shared/TabNavigation';
 import { ActivitySection } from '@/components/activity/ActivitySection';
 import { Toast } from '@/components/shared/Toast';
-import { 
-  ArrowLeft, 
-  Share2, 
+import { SimilarExercises } from '@/components/exercise/SimilarExercises';
+import {
+  ArrowLeft,
   Clock,
   Save,
   Play,
   Pause,
   RotateCcw,
   Award,
-  Calendar,
-  MessageSquare,
-  Bookmark,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SEO, createBreadcrumbStructuredData } from '@/components/SEO';
@@ -71,6 +67,7 @@ export function ExamDetail() {
   const [exam, setExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [optimisticSolutionMatched, setOptimisticSolutionMatched] = useState<boolean | null>(null);
 
   // Content Actions hook (manages: completed, savedForLater, showConfetti, loadingStates, handleVote)
   const {
@@ -79,8 +76,6 @@ export function ExamDetail() {
     showConfetti,
     loadingStates,
     handleVote: handleContentVote,
-    markComplete,
-    removeComplete,
     toggleSave,
     setCompleted,
     setSavedForLater
@@ -216,6 +211,7 @@ export function ExamDetail() {
   const [showSolution, setShowSolution] = useState(false);
   const [solutionVisible, setSolutionVisible] = useState(false);
 
+
   // Refs for scroll handling
   const headerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -280,15 +276,15 @@ export function ExamDetail() {
 
   const handleAddComment = async (content: string, parentId?: string) => {
     if (!id || !exam) return;
-  
+
     try {
       const newComment = await addExamComment(id, content, parentId);
-      
+
       setExam(prev => {
         if (!prev) return prev;
-  
+
         let updatedComments = [...prev.comments];
-        
+
         if (parentId) {
           const updateCommentsTree = (comments: any[]): any[] => {
             return comments.map(comment => {
@@ -307,12 +303,12 @@ export function ExamDetail() {
               return comment;
             });
           };
-          
+
           updatedComments = updateCommentsTree(updatedComments);
         } else {
           updatedComments.push(newComment);
         }
-  
+
         return {
           ...prev,
           comments: updatedComments
@@ -322,7 +318,40 @@ export function ExamDetail() {
       console.error('Failed to add comment:', err);
     }
   };
-  
+
+  const handleCommentVote = async (commentId: string, value: VoteValue) => {
+    if (!exam) return;
+
+    try {
+      const updatedComment = await voteComment(commentId, value);
+
+      const updateComments = (comments: any[]): any[] => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            return updatedComment;
+          }
+          if (comment.replies) {
+            return {
+              ...comment,
+              replies: updateComments(comment.replies)
+            };
+          }
+          return comment;
+        });
+      };
+
+      setExam(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          comments: updateComments(prev.comments)
+        };
+      });
+    } catch (err) {
+      console.error('Failed to vote on comment:', err);
+    }
+  };
+
   // Handle vote with authentication check
   const handleVote = async (value: VoteValue) => {
     if (!isAuthenticated) {
@@ -332,22 +361,6 @@ export function ExamDetail() {
     await handleContentVote(value);
   };
 
-  // Handle marking as completed with toggle logic
-  const handleMarkAsCompleted = async (status: 'success' | 'review') => {
-    if (!isAuthenticated) {
-      openModal();
-      return;
-    }
-
-    if (completed === status) {
-      await removeComplete();
-    } else {
-      await markComplete(status);
-    }
-
-    // Refetch statistics after any progress change
-    refetchStatistics();
-  };
 
   // Handle save toggle with authentication check
   const handleToggleSave = async () => {
@@ -367,42 +380,32 @@ export function ExamDetail() {
     }
   };
 
-  const saveTimeManually = async () => {
-    try {
-      await saveSession();
-      console.log('Session saved successfully');
-    } catch (err) {
-      console.error('Failed to save session manually:', err);
-    }
-  };
-
-  // Share function using utility
-  const handleShare = async () => {
-    if (!exam) return;
-    try {
-      await shareContent(exam.title, 'exam');
-    } catch (err) {
-      console.error('Error sharing:', err);
-    }
-  };
-
-  const handleRemoveSolutionFlag = async () => {
-    try {
-      await undoSolutionViewed('exam', id || '');
-      // Refetch statistics to update the UI
-      refetchStatistics();
-    } catch (err) {
-      console.error('Failed to remove solution flag:', err);
-    }
-  };
 
   const handleMarkSolutionMatched = async () => {
+    if (!id) return;
+
+    const isCurrentlyMatched = optimisticSolutionMatched !== null
+      ? optimisticSolutionMatched
+      : (statistics?.user_solution_matched || false);
+
+    // Optimistically update UI
+    setOptimisticSolutionMatched(!isCurrentlyMatched);
+
     try {
-      await toggleSolutionMatched('exam', id || '', statistics?.user_solution_matched || false);
-      // Refetch statistics to update the UI
-      refetchStatistics();
+      // Toggle the solution match on server
+      await toggleSolutionMatched('exam', id, isCurrentlyMatched);
+
+      // Refetch statistics to sync with server
+      await refetchStatistics();
+
+      // Clear optimistic state when server confirms
+      setOptimisticSolutionMatched(null);
     } catch (err) {
       console.error('Failed to toggle solution match:', err);
+      // Revert optimistic state on error
+      setOptimisticSolutionMatched(null);
+      // Refetch to sync with server state
+      await refetchStatistics();
     }
   };
 
@@ -628,9 +631,9 @@ export function ExamDetail() {
         </div>
 
         <div className="container mx-auto px-4 lg:px-6 relative">
-          {/* Header Section */}
+          {/* Header Section with breadcrumbs, navigation, and tabs */}
           <div ref={headerRef}>
-            <ExamHeader
+            <ExamHeaderNew
               exam={exam}
               savedForLater={savedForLater}
               loadingStates={loadingStates}
@@ -638,36 +641,9 @@ export function ExamDetail() {
               formatTimeAgo={formatTimeAgo}
               isAuthor={isAuthor}
               onPrint={handlePrint}
+              activeTab={activeSection as 'exam' | 'discussions' | 'proposals' | 'activity'}
+              onTabChange={(tabId) => handleSectionChange(tabId as 'exam' | 'discussions' | 'proposals' | 'activity')}
             />
-            <div className={`bg-gradient-to-r ${exam.is_national_exam ? 'from-gray-800 to-green-900' : 'from-gray-800 to-green-900'} text-white px-6 pb-2`}>
-              <TabNavigation
-                tabs={[
-                  {
-                    id: 'exam',
-                    label: 'Examen',
-                    icon: <Award className="w-4 h-4" />
-                  },
-                  {
-                    id: 'discussions',
-                    label: 'Discussions',
-                    icon: <MessageSquare className="w-4 h-4" />,
-                    count: exam.comments?.length || 0
-                  },
-                  {
-                    id: 'proposals',
-                    label: 'Solutions alternatives',
-                    icon: <BarChart3 className="w-4 h-4" />
-                  },
-                  {
-                    id: 'activity',
-                    label: 'Activité',
-                    icon: <Calendar className="w-4 h-4" />
-                  }
-                ]}
-                activeTab={activeSection}
-                onTabChange={(tabId) => handleSectionChange(tabId as 'exam' | 'discussions' | 'proposals' | 'activity')}
-              />
-            </div>
           </div>
           
           {/* Main content grid */}
@@ -684,42 +660,45 @@ export function ExamDetail() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
                     >
-                      {/* Exam Content */}
-                      <ExamContent
-                        exam={exam}
-                        completed={completed}
-                        markAsCompleted={handleMarkAsCompleted}
-                        loadingStates={loadingStates}
-                        handleVote={handleVote}
-                        handlePrint={handlePrint}
-                        userViewedSolution={statistics?.user_viewed_solution}
-                      />
+                      {/* Unified container matching ExerciseDetail */}
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-8">
+                        <ExamMainCard
+                          exam={exam}
+                          handleVote={handleVote}
+                          formatTimeAgo={formatTimeAgo}
+                        />
+                      </div>
 
                       {/* Solution Section - Only show if solution exists */}
                       {exam.solution && (
-                        <SolutionSection
-                          exercise={exam as any}
-                          canEditSolution={(exam.solution && user?.id === exam.solution.author.id) || false}
-                          isAuthor={isAuthor}
-                          solutionVisible={solutionVisible}
-                          showSolution={showSolution}
-                          handleSolutionToggle={() => setShowSolution(!showSolution)}
-                          toggleSolutionVisibility={(e) => {
-                            e.stopPropagation();
-                            if (!solutionVisible) {
-                              trackSolutionView();
-                            }
-                            setSolutionVisible(!solutionVisible);
-                          }}
-                          handleVote={(value, target) => target === 'solution' ? handleVoteSolution(value) : handleVote(value)}
-                          handleEditSolution={() => navigate(`/solutions/${exam.solution?.id}/edit`)}
-                          handleDeleteSolution={handleDeleteSolutionWrapper}
-                          handleAddSolution={handleAddSolutionWrapper}
-                          setSolutionVisible={setSolutionVisible}
-                          userSolutionMatched={statistics?.user_solution_matched || false}
-                          onMarkSolutionMatched={handleMarkSolutionMatched}
-                        />
+                        <>
+                          <SolutionSection
+                            exercise={exam as any}
+                            canEditSolution={(exam.solution && user?.id === exam.solution.author.id) || false}
+                            isAuthor={isAuthor}
+                            solutionVisible={solutionVisible}
+                            showSolution={showSolution}
+                            handleSolutionToggle={() => setShowSolution(!showSolution)}
+                            toggleSolutionVisibility={(e) => {
+                              e.stopPropagation();
+                              if (!solutionVisible) {
+                                trackSolutionView();
+                              }
+                              setSolutionVisible(!solutionVisible);
+                            }}
+                            handleVote={(value, target) => target === 'solution' ? handleVoteSolution(value) : handleVote(value)}
+                            handleEditSolution={() => navigate(`/solutions/${exam.solution?.id}/edit`)}
+                            handleDeleteSolution={handleDeleteSolutionWrapper}
+                            handleAddSolution={handleAddSolutionWrapper}
+                            setSolutionVisible={setSolutionVisible}
+                            userSolutionMatched={optimisticSolutionMatched !== null ? optimisticSolutionMatched : (statistics?.user_solution_matched || false)}
+                            onMarkSolutionMatched={handleMarkSolutionMatched}
+                          />
+                        </>
                       )}
+
+                      {/* Similar content */}
+                      <SimilarExercises contentId={exam.id} contentType="exam" />
                     </motion.div>
                   )}
 
@@ -737,10 +716,7 @@ export function ExamDetail() {
                         <CommentSection
                           comments={exam?.comments || []}
                           onAddComment={handleAddComment}
-                          onVoteComment={async (commentId: string, type: VoteValue) => {
-                            // TODO: Implement comment voting logic
-                            return Promise.resolve();
-                          }}
+                          onVoteComment={handleCommentVote}
                           onEditComment={async (commentId: string, content: string) => {
                             // TODO: Implement comment editing logic
                             return Promise.resolve();
@@ -793,7 +769,7 @@ export function ExamDetail() {
                   >
                     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100">
                       {/* Timer Section with Session History */}
-                      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
+                      <div className="bg-gradient-to-r from-green-900 to-green-800 text-white p-4">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-medium flex items-center text-sm">
                             <Clock className="w-4 h-4 mr-1.5" />
@@ -959,79 +935,6 @@ export function ExamDetail() {
                            Synchronisation...
                          </div>
                        )}
-                     </div>
-                     
-                     {/* Difficulty Rating */}
-                     <div className="p-4">
-                       <div className="flex items-center gap-2 mb-2">
-                         <BarChart3 className="w-4 h-4 text-indigo-600" />
-                         <span className="font-medium text-gray-800 text-sm">Évaluer la difficulté</span>
-                       </div>
-                       <div className="flex gap-1">
-                         {[1, 2, 3, 4, 5].map(rating => (
-                           <button 
-                             key={rating}
-                             onClick={() => rateDifficulty(rating)}
-                             className={`flex-1 p-1.5 rounded text-sm transition-all ${
-                               difficultyRating === rating 
-                                 ? 'bg-indigo-600 text-white shadow-sm' 
-                                 : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                             }`}
-                           >
-                             {rating}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                     
-                     {/* Exam Statistics */}
-                     <div className="p-4">
-                       <h3 className="font-medium text-gray-800 text-sm mb-2">Statistiques</h3>
-                       <div className="space-y-1.5">
-                         <div className="flex justify-between text-sm">
-                           <span className="text-gray-600">Vues</span>
-                           <span className="font-medium">{exam.view_count}</span>
-                         </div>
-                         <div className="flex justify-between text-sm">
-                           <span className="text-gray-600">Votes</span>
-                           <span className="font-medium">{exam.vote_count}</span>
-                         </div>
-                         <div className="flex justify-between text-sm">
-                           <span className="text-gray-600">Commentaires</span>
-                           <span className="font-medium">{exam.comments?.length || 0}</span>
-                         </div>
-                         <div className="flex justify-between text-sm">
-                           <span className="text-gray-600">Session actuelle</span>
-                           <span className="font-medium">{formatCurrentTime()}</span>
-                         </div>
-                         <div className="flex justify-between text-sm">
-                           <span className="text-gray-600">Temps total</span>
-                           <span className="font-medium">{formatTime(currentTime)}</span>
-                         </div>
-                       </div>
-                     </div>
-                     
-                     {/* Related Exams Section */}
-                     <div className="p-4">
-                       <div className="flex items-center justify-between mb-2">
-                         <h3 className="font-medium text-gray-800 text-sm flex items-center gap-1.5">
-                           <Award className="w-4 h-4 text-indigo-600" />
-                           Examens similaires
-                         </h3>
-                         <Button 
-                           variant="ghost" 
-                           size="sm"
-                           className="text-indigo-600 h-6 p-0 text-xs hover:bg-transparent hover:text-indigo-800"
-                         >
-                           Voir plus
-                         </Button>
-                       </div>
-                       
-                       <div className="space-y-2">
-                         <p className="text-sm text-gray-500 italic">
-                           Bientôt disponible
-                         </p>
-                       </div>
                      </div>
                    </div>
                  </div>
