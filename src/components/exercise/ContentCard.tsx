@@ -24,8 +24,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { VoteButtons } from '@/components/VoteButtons';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { useAuthModal } from '@/components/AuthController';
-import { saveExercise, unsaveExercise } from '@/lib/api';
-import axios from 'axios';
+import {
+  saveExercise, unsaveExercise,
+  saveLesson, unsaveLesson,
+  saveExam, unsaveExam
+} from '@/lib/api';
 import '@/lib/styles.css';
 
 // Memoize TipTapRenderer to improve performance but keep the onReady callback capability
@@ -91,14 +94,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       return;
     }
 
-    // If user is not authenticated, prompt login instead of navigating
-    if (!isAuthenticated) {
-      e.preventDefault();
-      openModal();
-      return;
-    }
-
-    // Navigate to the appropriate content page
+    // Navigate to the appropriate content page (allow unauthenticated users to view)
     navigate(getNavigationPath());
   };
 
@@ -110,43 +106,34 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   
   const handleSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!isAuthenticated) {
         // Prompt login if not authenticated
         openModal();
         return;
     }
-    
+
     try {
         setIsSaving(true);
-        
+
         if (isSaved) {
             // If currently saved, unsave it
-            await unsaveExercise(content.id);
+            const unsaveFn = contentType === 'lesson' ? unsaveLesson : contentType === 'exam' ? unsaveExam : unsaveExercise;
+            await unsaveFn(content.id);
             setIsSaved(false);
         } else {
-            // If not saved, save it
-            try {
-                await saveExercise(content.id);
-                setIsSaved(true);
-            } catch (error) {
-                // If error is "already saved", consider it a success
-                if (axios.isAxiosError(error) && error.response?.status === 400) {
-                    // Already saved - still update UI
-                    setIsSaved(true);
-                } else {
-                    // Rethrow other errors
-                    throw error;
-                }
-            }
+            // If not saved, save it (API factory handles "already saved" case)
+            const saveFn = contentType === 'lesson' ? saveLesson : contentType === 'exam' ? saveExam : saveExercise;
+            await saveFn(content.id);
+            setIsSaved(true);
         }
-        
+
         // Call the callback if provided
         if (onSave) {
             onSave(content.id, !isSaved);
         }
     } catch (error) {
-        console.error("Error toggling save status:", error);
+        console.error('Error toggling save status:', error);
     } finally {
         setIsSaving(false);
     }

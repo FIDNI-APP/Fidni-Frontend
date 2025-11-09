@@ -12,8 +12,11 @@ import { VoteButtons } from './VoteButtons';
 import TipTapRenderer from './editor/TipTapRenderer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/AuthController';
-import { saveExercise, unsaveExercise } from '@/lib/api';
-import axios from 'axios';
+import {
+  saveExercise, unsaveExercise,
+  saveLesson, unsaveLesson,
+  saveExam, unsaveExam
+} from '@/lib/api';
 
 interface HomeContentCardProps {
   content: Content;
@@ -63,12 +66,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
       return;
     }
 
-    if (!isAuthenticated) {
-      e.preventDefault();
-      openModal();
-      return;
-    }
-
+    // Navigate to content (allow unauthenticated users to view)
     navigate(getNavigationPath());
   };
 
@@ -82,25 +80,23 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
 
     try {
       setIsSaving(true);
+      const contentType = getContentType();
+      const contentId = content.id.toString();
 
       if (isSaved) {
-        await unsaveExercise(content.id.toString());
+        // If currently saved, unsave it
+        const unsaveFn = contentType === 'lesson' ? unsaveLesson : contentType === 'exam' ? unsaveExam : unsaveExercise;
+        await unsaveFn(contentId);
         setIsSaved(false);
       } else {
-        try {
-          await saveExercise(content.id.toString());
-          setIsSaved(true);
-        } catch (error) {
-          if (axios.isAxiosError(error) && error.response?.status === 400) {
-            setIsSaved(true);
-          } else {
-            throw error;
-          }
-        }
+        // If not saved, save it (API factory handles "already saved" case)
+        const saveFn = contentType === 'lesson' ? saveLesson : contentType === 'exam' ? saveExam : saveExercise;
+        await saveFn(contentId);
+        setIsSaved(true);
       }
 
       if (onSave) {
-        onSave(content.id.toString(), !isSaved);
+        onSave(contentId, !isSaved);
       }
     } catch (error) {
       console.error("Error toggling save status:", error);
