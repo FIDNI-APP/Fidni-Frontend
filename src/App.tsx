@@ -41,7 +41,6 @@ import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
 import { RevisionListDetail } from './pages/RevisionListDetail';
 import { SavedItems } from './pages/SavedItems';
 import { RevisionLists } from './pages/RevisionLists';
-
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
   const { openModal, setInitialTab } = useAuthModal();
@@ -272,6 +271,7 @@ function App() {
                           <CreatePathChapter />
                         </NavbarWrapper>
                       } />
+
                   
 
                 </Routes>
