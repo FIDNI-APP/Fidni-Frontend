@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lightbulb, ChevronDown, Edit, Trash2, PenSquare, CheckCircle } from 'lucide-react';
+import { Lightbulb, ChevronDown, Edit, Trash2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Content, VoteValue } from '@/types';
 import { VoteButtons } from '@/components/VoteButtons';
@@ -45,7 +45,9 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
 
   if (hasSolution) {
     return (
-      <motion.div className="bg-gradient-to-r from-gray-50 to-purple-100 border-l-4 border-purple-800 rounded-lg overflow-hidden shadow-md mb-6">
+      <div className="py-6">
+        <div className="border-t border-gray-200 mb-6" />
+
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -54,24 +56,14 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
             }
             setSolutionVisible(!solutionVisible);
           }}
-          className="w-full p-5 flex items-center justify-between hover:bg-white/50 transition-colors"
+          className="w-full flex items-center justify-between hover:bg-gray-50 transition-colors py-3 rounded-lg"
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-purple-800 flex items-center justify-center flex-shrink-0">
-              <span className="text-3xl">💡</span>
-            </div>
-            <div className="text-left">
-              <h3 className="font-bold text-gray-900 text-lg">Afficher la Solution Détaillée</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {solutionVisible
-                  ? 'Cliquez pour masquer la solution complète'
-                  : 'Cliquez pour révéler la solution complète'
-                }
-              </p>
-            </div>
+            <span className="text-2xl">💡</span>
+            <h3 className="font-bold text-gray-900 text-lg">Solution</h3>
           </div>
 
-          <ChevronDown className={`w-6 h-6 transition-transform duration-300 text-purple-600 ${solutionVisible ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-5 h-5 transition-transform duration-300 text-purple-600 ${solutionVisible ? "rotate-180" : ""}`} />
         </button>
 
         <AnimatePresence>
@@ -83,7 +75,7 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="p-6 bg-white border-t-2 border-purple-200">
+              <div className="pt-4">
                 <div className="prose max-w-none text-gray-800">
                   <TipTapRenderer content={exercise.solution.content} />
                 </div>
@@ -147,49 +139,47 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
     );
   } else if (isAuthor) {
     // Add Solution Section for Author
     return (
-      <motion.div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100">
-              <PenSquare className="w-5 h-5 text-indigo-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold">Ajouter une solution</h3>
-              <p className="text-sm text-gray-500 mt-1">Partagez votre solution pour aider les autres</p>
-            </div>
-          </div>
-          
-          <DualPaneEditor 
-            content={solution} 
-            setContent={setSolution} 
-          />
-          
-          <div className="mt-6 flex justify-end">
-            <Button
-              onClick={() => handleAddSolution(solution)}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md rounded-lg px-6 py-2.5 font-medium transition-all duration-300 hover:shadow-lg"
-              disabled={!solution.trim()}
-            >
-              <Lightbulb className="w-4 h-4 mr-2" />
-              Publier la solution
-            </Button>
+      <div className="py-6">
+        <div className="border-t border-gray-200 mb-6" />
+
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-2xl">✍️</span>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Ajouter une solution</h3>
+            <p className="text-sm text-gray-500">Partagez votre solution pour aider les autres</p>
           </div>
         </div>
-      </motion.div>
+
+        <DualPaneEditor
+          content={solution}
+          setContent={setSolution}
+        />
+
+        <div className="mt-6 flex justify-end">
+          <Button
+            onClick={() => handleAddSolution(solution)}
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-6 py-2.5 font-medium"
+            disabled={!solution.trim()}
+          >
+            <Lightbulb className="w-4 h-4 mr-2" />
+            Publier la solution
+          </Button>
+        </div>
+      </div>
     );
   } else {
     // No Solution Message for non-authors
     return (
-      <motion.div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div className="px-6 py-6 flex items-center gap-4">
-          <div className="p-3 rounded-full bg-amber-100">
-            <Lightbulb className="w-5 h-5 text-amber-600" />
-          </div>
+      <div className="py-6">
+        <div className="border-t border-gray-200 mb-6" />
+
+        <div className="flex items-center gap-3 py-4">
+          <span className="text-2xl">💡</span>
           <div>
             <h3 className="text-lg font-semibold text-gray-800">Aucune solution disponible</h3>
             <p className="text-sm text-gray-500 mt-1">
@@ -197,7 +187,7 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 };

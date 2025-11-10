@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api/apiClient';
+import { TaxonomyTimeStatsNew } from './TaxonomyTimeStatsNew';
 
 interface TimeStats {
   content_type: string;
@@ -334,6 +335,9 @@ export const TimeTrackingStats: React.FC<TimeTrackingStatsProps> = ({ username }
           </div>
         </div>
       </div>
+
+      {/* Taxonomy Time Stats */}
+      <TaxonomyTimeStatsNew />
     </div>
   );
 

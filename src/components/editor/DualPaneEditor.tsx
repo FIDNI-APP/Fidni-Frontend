@@ -85,6 +85,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
   // Refs
   const tooltipTimeoutRef = useRef<number | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   // Gestionnaire pour éditer une formule existante
   const handleEditMath = (latex: string, isDisplay: boolean, nodePos: number) => {
@@ -227,8 +228,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
         onEditMath: handleEditMath,
         onDeleteMath: handleDeleteMath,
         delimiters: [
-          { left: '$', right: '$', display: false },
           { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
         ],
       })
     ],
@@ -430,22 +431,22 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (showColorPicker || activeCategoryIndex !== null || showSettings) {
         const target = event.target as HTMLElement;
-        
+
         if (showColorPicker && !target.closest('.color-picker-container')) {
           setShowColorPicker(false);
         }
-        
+
         if (activeCategoryIndex !== null && !target.closest('.formula-category-container')) {
           setActiveCategoryIndex(null);
           setSearchTerm("");
         }
-        
+
         if (showSettings && !target.closest('.settings-container')) {
           setShowSettings(false);
         }
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -520,14 +521,14 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
   }, []);
 
   return (
-    <div className={`w-full border border-gray-200 rounded-lg shadow-lg ${currentTheme.bgColor} transition-colors duration-300`}>
+    <div className={`w-full border border-gray-200 rounded-lg shadow-lg ${currentTheme.bgColor} transition-colors duration-300 overflow-hidden`}>
       {/* Header */}
-      <div className={`flex items-center justify-between gap-2 px-4 py-2 bg-gradient-to-r ${currentTheme.accentColor} text-white rounded-t-lg shadow-sm`}>
+      <div className={`flex items-center justify-between gap-2 px-4 py-2 bg-gradient-to-r ${currentTheme.accentColor} text-white shadow-sm`}>
         <div className="flex items-center">
           <Sparkles className="w-5 h-5 mr-2 opacity-80" />
           <span className="font-medium">Éditeur de Formules Mathématiques</span>
         </div>
-        
+
         <div className="flex gap-2">
           <button
             type='button'
@@ -550,8 +551,11 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
         setCurrentTheme={setCurrentTheme}
       />
 
-      {/* Toolbar */}
-      <div ref={toolbarRef}>
+      {/* Toolbar - Simple sticky */}
+      <div
+        ref={toolbarRef}
+        className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-md"
+      >
         <EditorToolbar
           editor={editor}
           activeToolbar={activeToolbar}
@@ -567,7 +571,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
           showButtonTooltip={showButtonTooltip}
           hideTooltip={hideTooltip}
         />
-        
+
         {/* Math Toolbar */}
         {activeToolbar === 'math' && (
           <div className="px-3 py-2 bg-white border-b border-gray-200">
@@ -585,14 +589,14 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
             />
           </div>
         )}
-        
+
         {/* Tooltip */}
         {showTooltip && (
-          <div 
+          <div
             className="absolute bg-gray-800 text-white text-xs rounded py-1 px-2 pointer-events-none transform -translate-x-1/2 -translate-y-full opacity-90 z-50"
-            style={{ 
-              left: `${tooltipPosition.x}px`, 
-              top: `${tooltipPosition.y}px` 
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`
             }}
           >
             {tooltipText}
@@ -601,15 +605,27 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
         )}
       </div>
 
-      {/* Editor Area */}
-      <div 
-        className={`p-4 ${currentTheme.bgColor} ${currentTheme.textColor} latex-style min-h-[400px] text-lg border-none focus-within:outline-none transition-colors duration-300`} 
-        onClick={focusEditor}
+      {/* Editor Area - Continuous scrollable with visual page markers */}
+      <div
+        ref={editorContainerRef}
+        className="overflow-y-auto"
+        style={{ maxHeight: '700px', backgroundColor: '#e5e7eb', padding: '20px' }}
       >
-        <EditorContent 
-          editor={editor} 
-          className="min-h-[400px] focus:outline-none prose max-w-none real-time-math-editor"
-        />
+        <div
+          className="mx-auto bg-white shadow-lg relative"
+          style={{
+            width: '210mm',
+            maxWidth: '100%'
+          }}
+          onClick={focusEditor}
+        >
+          <div style={{ padding: '20mm' }}>
+            <EditorContent
+              editor={editor}
+              className="focus:outline-none prose max-w-none real-time-math-editor paginated-editor"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
@@ -642,13 +658,13 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
       {/* Hints Panel */}
       <EditorHints />
 
-      {/* Custom CSS for LaTeX styling */}
+      {/* Custom CSS for LaTeX styling and pagination */}
       <style>{`
         .latex-style .ProseMirror {
-          min-height: 400px;
+          min-height: 257mm;
           outline: none;
         }
-        
+
         .content-image {
           display: block;
           margin: 1rem auto;
@@ -665,6 +681,34 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
           bottom: -4px;
           left: 50%;
           margin-left: -4px;
+        }
+
+        /* Page styling for print-like appearance */
+        .ProseMirror {
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 12pt;
+          line-height: 1.6;
+          color: #000;
+          min-height: 257mm;
+          position: relative;
+          outline: none !important;
+          border: none !important;
+        }
+
+        /* Remove all editor borders and outlines */
+        .ProseMirror:focus,
+        .ProseMirror:focus-visible,
+        .ProseMirror-focused {
+          outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+
+        /* Responsive page width for smaller screens */
+        @media (max-width: 768px) {
+          .ProseMirror {
+            font-size: 11pt;
+          }
         }
       `}</style>
     </div>

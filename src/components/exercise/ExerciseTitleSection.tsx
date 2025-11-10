@@ -61,7 +61,7 @@ export const ExerciseTitleSection: React.FC<ExerciseTitleSectionProps> = ({
   formatTimeAgo
 }) => {
   return (
-    <div className="liquid-glass bg-gradient-to-r from-gray-700 to-purple-800 text-white px-6 py-6 rounded-xl mb-6">
+    <div className="liquid-glass bg-gradient-to-r from-purple-900 to-purple-800 text-white px-6 py-6 rounded-xl mb-6">
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>

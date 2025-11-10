@@ -73,6 +73,7 @@ export const SimilarExercises: React.FC<SimilarExercisesProps> = ({
             content={item}
             contentType={type}
             onVote={() => {}}
+            compact={true}
           />
         ))}
       </div>

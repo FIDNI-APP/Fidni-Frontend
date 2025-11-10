@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X, Award, Route, Shield } from 'lucide-react';
+import { Search, User, LogOut, BookOpen, GraduationCap, Home, Settings, BookmarkIcon, ChevronDown, Menu, X, Award, Route, Shield, List } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthButton } from '@/components/ui/AuthButton';
 import { NavDropdown } from './NavbarDropdown';
@@ -21,33 +21,55 @@ export const Navbar = () => {
   // Add new state for dropdowns
   const [activeDropdown, setActiveDropdown] = useState<'exercises' | 'lessons' | 'exams' | null>(null);
   
+  // Fonction pour déterminer le type de contenu basé sur l'URL
+  const getContentType = () => {
+    const path = location.pathname;
+    // Check for lesson routes (list, detail, edit)
+    if (path.includes('/lessons') || path.includes('/lesson') || path.includes('/edit-lesson') || path.includes('/new-lesson')) {
+      return 'lesson';
+    }
+    // Check for exam routes (list, detail, edit)
+    if (path.includes('/exams') || path.includes('/exam') || path.includes('/edit-exam') || path.includes('/new-exam')) {
+      return 'exam';
+    }
+    // Check for exercise routes, /new route, and /edit route (defaults to exercise)
+    if (path.includes('/exercises') || path.includes('/exercise') || path === '/new' || path.startsWith('/edit/')) {
+      return 'exercise';
+    }
+    // Default to exercise
+    return 'exercise';
+  };
+
   // Fonction pour déterminer le gradient de couleur en fonction de la page actuelle
   const getNavbarGradient = () => {
-    if (location.pathname.includes('/lessons')) {
+    const type = getContentType();
+    if (type === 'lesson') {
       return 'from-gray-800 to-blue-800'; // Bleu pour les leçons
-    } else if (location.pathname.includes('/exams')) {
+    } else if (type === 'exam') {
       return 'from-gray-800 to-green-800'; // Vert pour les examens
     } else {
       return 'from-gray-800 to-purple-800'; // Violet par défaut (exercices)
     }
   };
-  
+
   // Fonction pour déterminer la couleur du texte survolé/actif en fonction de la page
   const getHoverColor = () => {
-    if (location.pathname.includes('/lessons')) {
+    const type = getContentType();
+    if (type === 'lesson') {
       return 'text-blue-600'; // Bleu pour les leçons
-    } else if (location.pathname.includes('/exams')) {
+    } else if (type === 'exam') {
       return 'text-green-600'; // Vert pour les examens
     } else {
       return 'text-purple-600'; // Violet par défaut (exercices)
     }
   };
-  
+
   // Fonction pour déterminer la couleur du gradient de la barre sous les liens actifs
   const getActiveBarGradient = () => {
-    if (location.pathname.includes('/lessons')) {
+    const type = getContentType();
+    if (type === 'lesson') {
       return 'bg-gradient-to-r from-blue-600 to-indigo-500'; // Bleu pour les leçons
-    } else if (location.pathname.includes('/exams')) {
+    } else if (type === 'exam') {
       return 'bg-gradient-to-r from-green-600 to-teal-500'; // Vert pour les examens
     } else {
       return 'bg-gradient-to-r from-purple-600 to-pink-500'; // Violet par défaut (exercices)
@@ -335,9 +357,9 @@ export const Navbar = () => {
               >
                 <div className={`w-10 h-10 flex items-center justify-center overflow-hidden rounded-xl ${
                   isScrolled 
-                    ? location.pathname.includes('/lessons')
+                    ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
                       ? 'bg-gradient-to-br from-indigo-500 to-blue-600'
-                      : location.pathname.includes('/exams')
+                      : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
                         ? 'bg-gradient-to-br from-indigo-500 to-green-600'
                         : 'bg-gradient-to-br from-indigo-500 to-purple-600'
                     : 'bg-white/10 backdrop-blur-md border border-white/30'
@@ -350,9 +372,9 @@ export const Navbar = () => {
                 </div>
                 <div className={`absolute inset-0 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300 ${
                   isScrolled 
-                    ? location.pathname.includes('/lessons')
+                    ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
                       ? 'bg-gradient-to-r from-indigo-500 to-blue-600'
-                      : location.pathname.includes('/exams')
+                      : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
                         ? 'bg-gradient-to-r from-indigo-500 to-green-600'
                         : 'bg-gradient-to-r from-indigo-500 to-purple-600'
                     : 'bg-white'
@@ -360,9 +382,9 @@ export const Navbar = () => {
               </div>
               <span className={`text-2xl fjalla-one-regular font-extrabold transition-all duration-300 ${
                 isScrolled
-                  ? location.pathname.includes('/lessons')
+                  ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
                     ? 'bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 text-transparent bg-clip-text'
-                    : location.pathname.includes('/exams')
+                    : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
                       ? 'bg-gradient-to-r from-indigo-600 via-green-600 to-teal-500 text-transparent bg-clip-text'
                       : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-transparent bg-clip-text'
                   : 'text-white'
@@ -419,6 +441,7 @@ export const Navbar = () => {
           <div className="hidden md:block w-full max-w-md mx-6">
             <SearchAutocomplete
               placeholder="Rechercher un exercice de maths, physique..."
+              type={getContentType()}
               inputClassName={`w-full px-4 py-2 pr-20 rounded-xl focus:outline-none transition-all duration-300 ${
                 isScrolled
                   ? 'bg-gray-50 text-gray-900 border border-gray-200 focus:ring-2 focus:ring-purple-500 placeholder-gray-400'
@@ -540,6 +563,13 @@ export const Navbar = () => {
                     <BookmarkIcon className="w-5 h-5" />
                   </div>
                   Enregistrés
+                </Link>
+
+                <Link to="/revision-lists" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                    <List className="w-5 h-5" />
+                  </div>
+                  Listes de révision
                 </Link>
 
                 <Link to="/settings" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>

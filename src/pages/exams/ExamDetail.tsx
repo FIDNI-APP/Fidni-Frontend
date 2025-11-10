@@ -666,6 +666,19 @@ export function ExamDetail() {
                           exam={exam}
                           handleVote={handleVote}
                           formatTimeAgo={formatTimeAgo}
+                          timer={currentTime}
+                          isTimerRunning={isRunning}
+                          startTimer={startTimer}
+                          stopTimer={stopTimer}
+                          resetTimer={resetTimer}
+                          saveSession={saveSession}
+                          formatCurrentTime={formatCurrentTime}
+                          getSessionCount={getSessionCount}
+                          loadHistory={() => loadHistory('exam', id!)}
+                          saving={saving}
+                          completed={completed}
+                          markAsCompleted={setCompleted}
+                          loadingStates={loadingStates}
                         />
                       </div>
 
@@ -759,187 +772,6 @@ export function ExamDetail() {
                   )}
                 </AnimatePresence>
               </div>
-              
-              {/* Right Sidebar - Only show on larger screens */}
-              {!fullscreenMode && (
-                <div className="hidden lg:block lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
-                  <div 
-                    className="lg:sticky lg:top-28"
-                    style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}
-                  >
-                    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-100">
-                      {/* Timer Section with Session History */}
-                      <div className="bg-gradient-to-r from-green-900 to-green-800 text-white p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-medium flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1.5" />
-                            Chronomètre
-                          </h3>
-                          {getSessionCount() > 0 && (
-                            <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
-                              {getSessionCount()} session{getSessionCount() > 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Current Timer */}
-                        <div className="text-center mb-4">
-                          <div className="font-mono text-3xl font-bold">{formatCurrentTime()}</div>
-                          <div className="text-xs text-white/70">Temps actuel</div>
-                          
-                          {/* Real-time comparison with last session */}
-                          {isRunning && getTimeComparison() && (
-                            <div className={`mt-2 text-sm ${getTimeComparison()!.isFaster ? 'text-green-300' : 'text-red-300'}`}>
-                              {getTimeComparison()!.isFaster ? '▲' : '▼'} 
-                              {getTimeComparison()!.differenceFormatted} 
-                              {getTimeComparison()!.isFaster ? ' plus rapide' : ' plus lent'}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Previous Sessions Stats */}
-                        {sessionStats && sessionStats.total_sessions > 0 && (
-                          <div className="bg-white/10 rounded-lg p-3 mb-4 space-y-2">
-                            <div className="text-xs font-medium text-white/80 mb-2">Sessions précédentes</div>
-                           
-                           <div className="grid grid-cols-2 gap-2 text-xs">
-                             <div>
-                               <div className="text-white/60">Dernière session</div>
-                               <div className="font-mono font-semibold">{getLastTime() || '-'}</div>
-                             </div>
-                             <div>
-                               <div className="text-white/60">Meilleur temps</div>
-                               <div className="font-mono font-semibold text-green-300">{getBestTime() || '-'}</div>
-                             </div>
-                             <div>
-                               <div className="text-white/60">Temps moyen</div>
-                               <div className="font-mono font-semibold">{getAverageTime() || '-'}</div>
-                             </div>
-                             <div>
-                               <div className="text-white/60">Sessions</div>
-                               <div className="font-semibold">{getSessionCount()}</div>
-                             </div>
-                           </div>
-                         </div>
-                       )}
-                       
-                       {/* Control Buttons */}
-                       <div className="space-y-2">
-                         <div className="flex gap-2">
-                           <Button 
-                             onClick={() => {
-                               if (isRunning) {
-                                 stopTimer();
-                               } else {
-                                 startTimer();
-                               }
-                             }}
-                             className={`flex-1 h-9 text-sm font-medium ${
-                               isRunning 
-                                 ? 'bg-red-500 hover:bg-red-600 text-white' 
-                                 : 'bg-white text-indigo-700 hover:bg-indigo-50'
-                             }`}
-                           >
-                             {isRunning ? (
-                               <>
-                                 <Pause className="w-4 h-4 mr-1" />
-                                 Pause
-                               </>
-                             ) : (
-                               <>
-                                 <Play className="w-4 h-4 mr-1" />
-                                 {currentTime > 0 ? 'Reprendre' : 'Démarrer'}
-                               </>
-                             )}
-                           </Button>
-                           
-                           <Button 
-                             onClick={resetTimer} 
-                             variant="ghost" 
-                             className="h-9 px-3 text-sm bg-white/10 border-white/30 text-white hover:bg-white/20"
-                             disabled={currentTime === 0 || isRunning}
-                           >
-                             <RotateCcw className="w-4 h-4" />
-                           </Button>
-                         </div>
-                         
-                         {/* Save Session Button */}
-                         {currentTime > 0 && (
-                           <Button
-                             onClick={async () => {
-                               try {
-                                 const result = await saveSession();
-                                 if (result) {
-                                   // Show comparison with previous session if exists
-                                   if (sessionStats?.last_session) {
-                                     const improvement = calculateImprovement(
-                                       currentTime, 
-                                       sessionStats.last_session.duration_seconds
-                                     );
-                                     
-                                     if (improvement !== null) {
-                                       if (improvement > 0) {
-                                         alert(`Bravo! Vous avez amélioré votre temps de ${improvement}% 🎉`);
-                                       } else if (improvement < 0) {
-                                         alert(`Session enregistrée. Vous étiez ${Math.abs(improvement)}% plus lent cette fois.`);
-                                       } else {
-                                         alert('Session enregistrée. Même temps que la dernière fois!');
-                                       }
-                                     } else {
-                                       alert('Session enregistrée avec succès!');
-                                     }
-                                   } else {
-                                     alert('Première session enregistrée! 🎉');
-                                   }
-                                 }
-                               } catch (error) {
-                                 alert('Erreur lors de la sauvegarde');
-                               }
-                             }}
-                             variant="ghost"
-                             className="w-full h-9 text-sm bg-white/10 border-white/30 text-white hover:bg-white/20 font-medium"
-                             disabled={saving || isRunning}
-                           >
-                             {saving ? (
-                               <>
-                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                                 Sauvegarde...
-                               </>
-                             ) : (
-                               <>
-                                 <Save className="w-4 h-4 mr-2" />
-                                 Terminer la session
-                               </>
-                             )}
-                           </Button>
-                         )}
-                       </div>
-
-                       {/* View History Button */}
-                       {getSessionCount() > 0 && (
-                         <button
-                           onClick={async () => {
-                             if (id) {
-                               loadHistory('exam', id);
-                             }
-                           }}
-                           className="w-full mt-3 text-xs text-white/70 hover:text-white/90 transition-colors"
-                         >
-                           Voir l'historique complet →
-                         </button>
-                       )}
-                       
-                       {/* Loading indicator */}
-                       {timeLoading && (
-                         <div className="mt-2 text-xs text-white/60 text-center">
-                           Synchronisation...
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             )}
            </div>
          </div>
        </div>

@@ -46,6 +46,7 @@ interface ContentCardProps {
   onEdit?: (id: string) => void;
   onSave?: (id: string, saved: boolean) => void;
   contentType?: 'exercise' | 'lesson' | 'exam'; // Optional type specification
+  compact?: boolean; // Compact mode for recommendations
 }
 
 export const ContentCard: React.FC<ContentCardProps> = ({
@@ -55,6 +56,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   onEdit,
   onSave,
   contentType = 'exercise', // Default to exercise for backward compatibility
+  compact = false,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -293,16 +295,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   return (
       <div
-      className={`group h-full transition-all duration-300 hover:scale-[1.02] ${isViewed ? 'opacity-60 hover:opacity-80' : ''}`}
+      className={`group h-full transition-all duration-300 ${compact ? 'hover:scale-[1.01]' : 'hover:scale-[1.02]'} ${isViewed ? 'opacity-60 hover:opacity-80' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className="flex flex-col h-full cursor-pointer rounded-xl overflow-hidden transform shadow-md hover:shadow-2xl transition-shadow duration-300 bg-white border border-gray-200"
+        className={`flex flex-col h-full cursor-pointer rounded-xl overflow-hidden transform ${compact ? 'shadow hover:shadow-lg' : 'shadow-md hover:shadow-2xl'} transition-shadow duration-300 bg-white border border-gray-200`}
         onClick={handleCardClick}
       >
         {/* Card Header with Improved Styling */}
-            <div className={`liquid-glass bg-gradient-to-r ${colors.gradient} p-4 relative overflow-hidden`}>
+            <div className={`liquid-glass bg-gradient-to-r ${colors.gradient} ${compact ? 'p-2.5' : 'p-4'} relative overflow-hidden`}>
           {/* Background Pattern - Subtle Grid Texture */}
           <div className="absolute inset-0 opacity-10">
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -317,19 +319,20 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           
           <div className="relative">
             {/* Title and Bookmark Section */}
-            <div className="flex justify-between items-start mb-3">
+            <div className={`flex justify-between items-start ${compact ? 'mb-1.5' : 'mb-3'}`}>
               <div className="flex items-start gap-2">
-                {hasSolution && (
+                {hasSolution && !compact && (
                   <div className="bg-emerald-400 p-1 rounded-full flex-shrink-0 mt-1 transition-transform duration-300 transform group-hover:scale-110">
                     <Lightbulb className="w-3 h-3 text-white" />
                   </div>
                 )}
-                <h2 className="text-2xl font-extrabold text-white leading-snug group-hover:underline decoration-2 decoration-white/60">
-                  {truncateTitle(content.title)}
+                <h2 className={`${compact ? 'text-sm' : 'text-2xl'} font-extrabold text-white ${compact ? 'leading-tight line-clamp-2' : 'leading-snug'} group-hover:underline decoration-2 decoration-white/60`}>
+                  {compact ? content.title : truncateTitle(content.title)}
                 </h2>
               </div>
-              
+
               {/* Save Button with improved hover effect */}
+              {!compact && (
               <div className="flex items-center gap-2 relative group/bookmark">
                 <button
                   onClick={handleSaveClick}
@@ -348,9 +351,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   {isSaved ? "Retirer des favoris" : "Sauvegarder cet exercice"}
                 </span>
               </div>
+              )}
             </div>
-            
+
             {/* Tags Section - Made More Compact & Consistent */}
+            {!compact && (
             <div className="flex flex-wrap items-center gap-2.5">
               {/* National Exam Badge - For exams only */}
               {contentType === 'exam' && (content as any).is_national_exam && (
@@ -392,10 +397,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 </span>
               )}
             </div>
+            )}
           </div>
         </div>
-        
+
         {/* Content Preview with Loading State */}
+        {!compact && (
         <div className="px-5 py-5 flex-grow relative">
           <div className={`transition-opacity duration-150 ${!contentLoaded ? 'opacity-0 absolute' : 'opacity-100'}`}>
             <div className={`prose prose-sm max-w-none text-gray-700 overflow-hidden leading-relaxed transition-all duration-300 ${isHovered ? 'line-clamp-6' : 'line-clamp-3'}`}>
@@ -411,12 +418,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </div>
           )}
         </div>
-        
+        )}
+
         {/* Footer Section with Integration - More Dynamic on Hover */}
-        <div className="mt-auto px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between transition-colors duration-300 group-hover:bg-white">
+        <div className={`mt-auto ${compact ? 'px-2.5 py-1.5' : 'px-5 py-3'} border-t border-gray-100 bg-gray-50 flex items-center justify-between transition-colors duration-300 group-hover:bg-white`}>
           {/* Left side - votes and tags */}
-          <div className="flex items-center gap-3 overflow-hidden">
-            {/* Vote Buttons - Improved visibility on hover */}
+          <div className={`flex items-center ${compact ? 'gap-1.5 text-xs' : 'gap-3'} overflow-hidden flex-1`}>
+            {/* Vote count (compact) or Vote Buttons (full) */}
+            {compact ? (
+              <span className="text-gray-600 font-medium flex items-center gap-1">
+                ↑ {content.vote_count}
+              </span>
+            ) : (
               <VoteButtons
                 initialVotes={content.vote_count}
                 onVote={(value) => {
@@ -426,10 +439,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 vertical={false}
                 userVote={content.user_vote}
                 size="sm"
-                
               />
-            
+            )}
+
             {/* Tags - More consistent styling between tag types */}
+            {!compact && (
             <div className="flex items-center flex-wrap gap-1.5 overflow-hidden max-w-xs">
               {/* Chapter Tags */}
               {hasChapters && content.chapters.slice(0, 1).map((chapter: { id: string; name: string }) => (
@@ -471,9 +485,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 </span>
               )}
             </div>
+            )}
           </div>
-          
+
           {/* Right side - stats and actions with improved interaction */}
+          {!compact && (
           <div className="flex items-center gap-3">
             {/* Views */}
             <div className={`flex items-center text-xs text-gray-500 ${colors.hoverText} transition-colors duration-300 relative group/views`}>
@@ -560,6 +576,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </div>
             )}
           </div>
+          )}
         </div>
         
         {/* Action Button - Positioned to not interfere with edit/delete buttons */}

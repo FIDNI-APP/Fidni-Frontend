@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ContentEditor from '@/components/exercise/ContentEditor';
+import ContentEditorV2 from '@/components/exercise/ContentEditorV2';
 import { getLessonById, updateLesson } from '@/lib/api';
 import { Lesson } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,19 +44,7 @@ export function EditLesson() {
     if (!id) return;
 
     try {
-      // Prepare lesson data without solution or difficulty
-      const lessonData = {
-        title: data.title,
-        content: data.content,
-        class_levels: data.class_levels,
-        subject: data.subject,
-        chapters: data.chapters,
-        theorems: data.theorems,
-        subfields: data.subfields,
-        type: 'lesson'
-      };
-      
-      await updateLesson(id, lessonData);
+      await updateLesson(id, data);
       navigate(`/lessons/${id}`);
     } catch (err) {
       console.error('Failed to update lesson:', err);
@@ -83,42 +71,18 @@ export function EditLesson() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Simple Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-        <div className="flex items-center mb-4">
-          <button 
-            onClick={() => navigate('/lessons')}
-            className="mr-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Edit Lesson</h1>
-        </div>
-
-        {/* Error display */}
-        {error && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {/* Content Editor */}
-        <ContentEditor
-          onSubmit={handleSubmit}
-          isLesson={true} // Indicate this is a lesson to hide solution & difficulty sections
-          initialValues={{
-            title: lesson.title,
-            content: lesson.content,
-            class_level: lesson.class_levels?.map(level => level.id) || [],
-            subject: lesson.subject?.id || '',
-            chapters: lesson.chapters?.map(chapter => chapter.id) || [],
-            theorems: lesson.theorems?.map(theorem => theorem.id) || [],
-            subfields: lesson.subject?.subfields?.map(subfield => subfield.id) || [],
-          }}
-        />
-      </div>
-    </div>
+    <ContentEditorV2
+      contentType="lesson"
+      onSubmit={handleSubmit}
+      initialValues={{
+        title: lesson.title,
+        content: lesson.content,
+        class_levels: lesson.class_levels?.map(level => level.id) || [],
+        subject: lesson.subject?.id || '',
+        chapters: lesson.chapters?.map(chapter => chapter.id) || [],
+        theorems: lesson.theorems?.map(theorem => theorem.id) || [],
+        subfields: lesson.subfields?.map(subfield => subfield.id) || [],
+      }}
+    />
   );
 }

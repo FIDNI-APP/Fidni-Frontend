@@ -29,51 +29,32 @@ export function Home() {
   // Real data from API
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
-  // Debug log for state changes
-  useEffect(() => {
-    console.log('[Home] STATE UPDATE - loading:', loading, 'exercisesCount:', featuredExercises.length, 'lessonsCount:', featuredLessons.length, 'examsCount:', featuredExams.length);
-  }, [loading, featuredExercises, featuredLessons, featuredExams]);
 
   useEffect(() => {
-    console.log('[Home] useEffect triggered - authLoading:', authLoading, 'isAuthenticated:', isAuthenticated);
     // Wait for auth to finish loading before fetching content
     if (!authLoading) {
-      console.log('[Home] Auth finished loading, fetching content...');
       fetchFeaturedContent();
-    } else {
-      console.log('[Home] Auth still loading, waiting...');
     }
   }, [isAuthenticated, authLoading]);
 
   useEffect(() => {
-    console.log('[Home] Dashboard useEffect - isAuthenticated:', isAuthenticated);
     // Fetch dashboard data only when authenticated
     if (isAuthenticated) {
-      console.log('[Home] User authenticated, fetching dashboard data...');
       fetchDashboardData();
     }
   }, [isAuthenticated]);
 
   const fetchFeaturedContent = async () => {
     try {
-      console.log('[Home] fetchFeaturedContent START - isAuthenticated:', isAuthenticated);
       setLoading(true);
-      console.log('[Home] Loading set to TRUE');
 
       if (isAuthenticated) {
-        console.log('[Home] Fetching RECOMMENDED content for authenticated user...');
         // Use recommendation API for authenticated users
         const recommendedData = await getRecommendedContent();
-        console.log('[Home] Recommended data received:', {
-          exercises: recommendedData.exercises?.length || 0,
-          lessons: recommendedData.lessons?.length || 0,
-          exams: recommendedData.exams?.length || 0
-        });
         setFeaturedExercises(recommendedData.exercises || []);
         setFeaturedLessons(recommendedData.lessons || []);
         setFeaturedExams(recommendedData.exams || []);
       } else {
-        console.log('[Home] Fetching MOST UPVOTED content for non-authenticated user...');
         // Fallback to most upvoted for non-authenticated users
         const { getExercises, getLessons, getExams } = await import('@/lib/api');
         const [exercisesData, lessonsData, examsData] = await Promise.all([
@@ -81,16 +62,10 @@ export function Home() {
           getLessons({ sort: 'most_upvoted', per_page: 8 }),
           getExams({ sort: 'most_upvoted', per_page: 8 }),
         ]);
-        console.log('[Home] Most upvoted data received:', {
-          exercises: exercisesData.results?.length || 0,
-          lessons: lessonsData.results?.length || 0,
-          exams: examsData.results?.length || 0
-        });
         setFeaturedExercises(exercisesData.results || []);
         setFeaturedLessons(lessonsData.results || []);
         setFeaturedExams(examsData.results || []);
       }
-      console.log('[Home] Content set successfully');
     } catch (err) {
       console.error('[Home] ERROR fetching featured content:', err);
       // Set empty arrays on error to show the empty state
@@ -98,7 +73,6 @@ export function Home() {
       setFeaturedLessons([]);
       setFeaturedExams([]);
     } finally {
-      console.log('[Home] Loading set to FALSE');
       setLoading(false);
     }
   };

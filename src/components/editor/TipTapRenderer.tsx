@@ -184,8 +184,8 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       }),
       RealTimeMathExtension.configure({
         delimiters: [
-          { left: '$', right: '$', display: false },
           { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
         ],
       }),
     ],
@@ -708,6 +708,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
           display: block;
           margin: 1em 0;
           text-align: center;
+          width: 100%;
         }
 
         .math-editable {

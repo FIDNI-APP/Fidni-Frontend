@@ -73,8 +73,11 @@ class MathView {
     // Create element for KaTeX rendering
     const mathElement = document.createElement(isDisplay ? 'div' : 'span');
     mathElement.style.display = isDisplay ? 'block' : 'inline-block';
-    mathElement.style.margin = isDisplay ? '0.5em 0' : '0';
+    mathElement.style.margin = isDisplay ? '1em auto' : '0';
     mathElement.style.padding = isDisplay ? '0.5em' : '0.1em 0.2em';
+    if (isDisplay) {
+      mathElement.style.textAlign = 'center';
+    }
 
     // Render with KaTeX (synchronous, fast!)
     try {
@@ -232,18 +235,39 @@ function findMathFormulas(doc: any, delimiters: MathRenderOptions['delimiters'])
     if (node.type.name === 'text' && node.text) {
       const text = node.text;
 
+      // Debug: log text content to see what we're working with
+      if (text.includes('$')) {
+        console.log('💬 Text node with $:', { text, pos });
+      }
+
       // Sort delimiters by length (longest first) to handle $$ before $
       const sortedDelimiters = [...delimiters].sort((a, b) => b.left.length - a.left.length);
 
       for (const delimiter of sortedDelimiters) {
-        const regex = new RegExp(
-          `\\${delimiter.left}([^\\${delimiter.right.charAt(0)}]+)\\${delimiter.right}`,
-          'g'
-        );
+        let regex: RegExp;
+
+        // Handle $$ differently from $
+        if (delimiter.left === '$$' && delimiter.right === '$$') {
+          // Match $$....$$ - non-greedy, stops at $$
+          regex = /\$\$([\s\S]*?)\$\$/g;
+        } else if (delimiter.left === '$' && delimiter.right === '$') {
+          // Match $...$ but NOT $$
+          // More robust pattern that handles edge cases:
+          // - Spaces before/after delimiters
+          // - Special chars like <, >, (, ), [, ]
+          // - Multiple formulas on same line
+          regex = /\$(?!\$)([^\$\n]+?)\$(?!\$)/g;
+        } else {
+          // Generic handler for other delimiters
+          const leftEscaped = delimiter.left.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const rightEscaped = delimiter.right.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          regex = new RegExp(`${leftEscaped}([^${delimiter.right.charAt(0)}]+)${rightEscaped}`, 'g');
+        }
+
         let match;
 
         while ((match = regex.exec(text)) !== null) {
-          const latex = match[1];
+          const latex = match[1].trim(); // Trim whitespace from captured content
           const from = pos + match.index;
           const to = from + match[0].length;
 
@@ -253,6 +277,12 @@ function findMathFormulas(doc: any, delimiters: MathRenderOptions['delimiters'])
           );
 
           if (!overlaps) {
+            console.log('📐 Found formula:', {
+              delimiter: delimiter.left,
+              isDisplay: delimiter.display,
+              latex,
+              text: text.substring(from - pos, to - pos)
+            });
             formulas.push({
               from,
               to,

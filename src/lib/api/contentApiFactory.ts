@@ -179,8 +179,19 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
      * Save content for later review
      */
     save: async (id: string) => {
-      const response = await api.post(`/${resourcePath}/${id}/save_${resourceName}/`);
-      return response.data;
+      const url = `/${resourcePath}/${id}/save_${resourceName}/`;
+
+      try {
+        const response = await api.post(url);
+        return response.data;
+      } catch (error: any) {
+        // Handle case where item is already saved
+        if (error.response?.status === 400 && error.response?.data?.already_saved) {
+          return error.response.data;
+        }
+
+        throw error;
+      }
     },
 
     /**

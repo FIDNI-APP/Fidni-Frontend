@@ -7,9 +7,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  ContentStatistics,
+  type ContentStatistics,
   getContentStatistics
-} from '@/lib/api/statisticsApi';
+} from '@/lib/api';
 
 interface UseContentStatisticsProps {
   contentType: 'exercise' | 'exam';
@@ -50,8 +50,8 @@ export function useContentStatistics({
     loadStatistics();
   }, [loadStatistics]);
 
-  const refetch = useCallback(() => {
-    loadStatistics();
+  const refetch = useCallback(async () => {
+    await loadStatistics();
   }, [loadStatistics]);
 
   return {

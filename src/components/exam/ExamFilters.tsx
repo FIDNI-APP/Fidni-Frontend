@@ -77,15 +77,15 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
     theorems: false 
   });
   
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ 
-    classLevels: true, 
-    subjects: true, 
-    difficulties: true, 
-    isNationalExam: true, 
-    dateRange: true, 
-    subfields: false, 
-    chapters: false, 
-    theorems: false 
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    classLevels: true,
+    subjects: true,
+    difficulties: true,
+    isNationalExam: true,
+    dateRange: true,
+    subfields: (initialFilters.subfields && initialFilters.subfields.length > 0) || false,
+    chapters: (initialFilters.chapters && initialFilters.chapters.length > 0) || false,
+    theorems: (initialFilters.theorems && initialFilters.theorems.length > 0) || false
   });
   
   const [lastRequests, setLastRequests] = useState<Record<string, string>>({});
@@ -385,43 +385,43 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
        return `${dr.start} - ${dr.end}`; 
      }, 
    },
-    { 
-      id: 'classLevels', 
-      title: 'Niveau', 
-      icon: <GraduationCap className="w-4 h-4 text-indigo-600" />, 
-      getDisplayName: (id, data) => data?.find((d: any) => d.id === id)?.name || id, 
+    {
+      id: 'classLevels',
+      title: 'Niveau',
+      icon: <GraduationCap className="w-4 h-4 text-indigo-600" />,
+      getDisplayName: (id, data) => data?.find((d: any) => String(d.id) === String(id))?.name || id,
     },
-    { 
-      id: 'subjects', 
-      title: 'Matières', 
-      icon: <BookOpen className="w-4 h-4 text-purple-600" />, 
-      dependent: true, 
-      shouldShowOptions: (sf) => sf.classLevels.length > 0, 
-      getDisplayName: (id, data) => data?.find((d: any) => d.id === id)?.name || id, 
+    {
+      id: 'subjects',
+      title: 'Matières',
+      icon: <BookOpen className="w-4 h-4 text-purple-600" />,
+      dependent: true,
+      shouldShowOptions: (sf) => sf.classLevels.length > 0,
+      getDisplayName: (id, data) => data?.find((d: any) => String(d.id) === String(id))?.name || id,
     },
-    { 
-      id: 'subfields', 
-      title: 'Sous-domaines', 
-      icon: <FileText className="w-4 h-4 text-teal-600" />, 
-      dependent: true, 
-      shouldShowOptions: (sf) => sf.classLevels.length > 0 && sf.subjects.length > 0, 
-      getDisplayName: (id, data) => data?.find((d: any) => d.id === id)?.name || id, 
+    {
+      id: 'subfields',
+      title: 'Sous-domaines',
+      icon: <FileText className="w-4 h-4 text-teal-600" />,
+      dependent: true,
+      shouldShowOptions: (sf) => sf.classLevels.length > 0 && sf.subjects.length > 0,
+      getDisplayName: (id, data) => data?.find((d: any) => String(d.id) === String(id))?.name || id,
     },
-    { 
-      id: 'chapters', 
-      title: 'Chapitres', 
-      icon: <Tag className="w-4 h-4 text-pink-600" />, 
-      dependent: true, 
-      shouldShowOptions: (sf) => sf.subfields.length > 0, 
-      getDisplayName: (id, data) => data?.find((d: any) => d.id === id)?.name || id, 
+    {
+      id: 'chapters',
+      title: 'Chapitres',
+      icon: <Tag className="w-4 h-4 text-pink-600" />,
+      dependent: true,
+      shouldShowOptions: (sf) => sf.subfields.length > 0,
+      getDisplayName: (id, data) => data?.find((d: any) => String(d.id) === String(id))?.name || id,
     },
-    { 
-      id: 'theorems', 
-      title: 'Théorèmes', 
-      icon: <Award className="w-4 h-4 text-orange-600" />, 
-      dependent: true, 
-      shouldShowOptions: (sf) => sf.chapters.length > 0, 
-      getDisplayName: (id, data) => data?.find((d: any) => d.id === id)?.name || id, 
+    {
+      id: 'theorems',
+      title: 'Théorèmes',
+      icon: <Award className="w-4 h-4 text-orange-600" />,
+      dependent: true,
+      shouldShowOptions: (sf) => sf.chapters.length > 0,
+      getDisplayName: (id, data) => data?.find((d: any) => String(d.id) === String(id))?.name || id,
     },
     { 
       id: 'difficulties', 
@@ -595,19 +595,19 @@ export const ExamFiltersPanel: React.FC<ExamFiltersPanelProps> = ({
                        section.options || categoryData
                      )
                    ) : categoryData.length > 0 || section.options ? (
-                     (section.options || categoryData).map((item: any) => { 
-                       const itemId = item.id; 
-                       const itemName = item.name; 
-                       const isSelected = Array.isArray(selectedValuesForCategory) && selectedValuesForCategory.includes(itemId); 
+                     (section.options || categoryData).map((item: any) => {
+                       const itemId = item.id;
+                       const itemName = item.name;
+                       const isSelected = Array.isArray(selectedValuesForCategory) && selectedValuesForCategory.some(v => String(v) === String(itemId)); 
                        
                        let buttonClass = isSelected 
                          ? 'bg-gradient-to-r from-green-900 to-green-800 text-white border-transparent' 
                          : item.color || 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200'; 
                          
                        return (
-                         <button 
-                           key={itemId} 
-                           onClick={() => handleToggleFilter(section.id, itemId)} 
+                         <button
+                           key={itemId}
+                           onClick={() => handleToggleFilter(section.id, String(itemId))}
                            className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 border ${buttonClass} shadow-sm hover:shadow`}
                          >
                            {itemName}

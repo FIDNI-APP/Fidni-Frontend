@@ -70,16 +70,20 @@ export const LessonList = () => {
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
-    
-    // Priorité 1: Paramètres URL
-    if (classLevelsParam || subjectsParam) {
+    const subfieldsParam = searchParams.get('subfields');
+    const chaptersParam = searchParams.get('chapters');
+    const theoremsParam = searchParams.get('theorems');
+    const difficultiesParam = searchParams.get('difficulties');
+
+    // Priorité 1: Paramètres URL - check for ANY URL param
+    if (classLevelsParam || subjectsParam || subfieldsParam || chaptersParam || theoremsParam || difficultiesParam) {
       return {
         classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
         subjects: subjectsParam ? subjectsParam.split(',') : [],
-        subfields: [] as string[],
-        chapters: [] as string[],
-        theorems: [] as string[],
-        difficulties: [] as string[],
+        subfields: subfieldsParam ? subfieldsParam.split(',') : [],
+        chapters: chaptersParam ? chaptersParam.split(',') : [],
+        theorems: theoremsParam ? theoremsParam.split(',') : [],
+        difficulties: difficultiesParam ? difficultiesParam.split(',') : [],
       };
     }
     
@@ -138,38 +142,28 @@ export const LessonList = () => {
   useEffect(() => {
     // Ne traiter les changements d'URL qu'après le premier chargement
     if (!initialLoadComplete) return;
-    
+
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
-    
-    if (classLevelsParam || subjectsParam) {
-      const newFilters = { ...filters };
-      let hasChanges = false;
-      
-      if (classLevelsParam) {
-        const classLevels = classLevelsParam.split(',');
-        if (JSON.stringify(classLevels) !== JSON.stringify(filters.classLevels)) {
-          newFilters.classLevels = classLevels;
-          hasChanges = true;
-        }
-      }
-      
-      if (subjectsParam) {
-        const subjects = subjectsParam.split(',');
-        if (JSON.stringify(subjects) !== JSON.stringify(filters.subjects)) {
-          newFilters.subjects = subjects;
-          hasChanges = true;
-        }
-      }
-      
-      if (hasChanges) {
-        // Reset dependent filters
-        newFilters.subfields = [];
-        newFilters.chapters = [];
-        newFilters.theorems = [];
-        
-        // Update filters
+    const subfieldsParam = searchParams.get('subfields');
+    const chaptersParam = searchParams.get('chapters');
+    const theoremsParam = searchParams.get('theorems');
+    const difficultiesParam = searchParams.get('difficulties');
+
+    // If there are ANY URL params, update filters from URL
+    if (classLevelsParam || subjectsParam || subfieldsParam || chaptersParam || theoremsParam || difficultiesParam) {
+      const newFilters = {
+        classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
+        subjects: subjectsParam ? subjectsParam.split(',') : [],
+        subfields: subfieldsParam ? subfieldsParam.split(',') : [],
+        chapters: chaptersParam ? chaptersParam.split(',') : [],
+        theorems: theoremsParam ? theoremsParam.split(',') : [],
+        difficulties: difficultiesParam ? difficultiesParam.split(',') : [],
+      };
+
+      // Only update if different from current filters
+      if (JSON.stringify(newFilters) !== JSON.stringify(filters)) {
         setFilters(newFilters);
       }
     }
@@ -366,20 +360,36 @@ export const LessonList = () => {
     if (listRef.current) {
       listRef.current.scrollTop = 0;
     }
-    
+
     setFilters(newFilters);
-    
+
     // Update URL with the new filters
     const params = new URLSearchParams();
-    
+
     if (newFilters.classLevels.length > 0) {
       params.set('classLevels', newFilters.classLevels.join(','));
     }
-    
+
     if (newFilters.subjects.length > 0) {
       params.set('subjects', newFilters.subjects.join(','));
     }
-    
+
+    if (newFilters.subfields.length > 0) {
+      params.set('subfields', newFilters.subfields.join(','));
+    }
+
+    if (newFilters.chapters.length > 0) {
+      params.set('chapters', newFilters.chapters.join(','));
+    }
+
+    if (newFilters.theorems.length > 0) {
+      params.set('theorems', newFilters.theorems.join(','));
+    }
+
+    if (newFilters.difficulties.length > 0) {
+      params.set('difficulties', newFilters.difficulties.join(','));
+    }
+
     const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
     window.history.replaceState(null, '', newUrl);
   }, []);
@@ -454,10 +464,14 @@ export const LessonList = () => {
         onFilterChange={handleFilterChange}
         initialClassLevels={filters.classLevels}
         initialSubjects={filters.subjects}
+        initialSubfields={filters.subfields}
+        initialChapters={filters.chapters}
+        initialTheorems={filters.theorems}
+        initialDifficulties={filters.difficulties}
         contentType="lesson"
       />
     </div>
-  ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects]);
+  ), [isFilterOpen, handleFilterChange, filters.classLevels, filters.subjects, filters.subfields, filters.chapters, filters.theorems, filters.difficulties]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">

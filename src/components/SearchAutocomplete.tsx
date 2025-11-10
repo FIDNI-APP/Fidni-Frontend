@@ -9,6 +9,7 @@ interface SearchAutocompleteProps {
   className?: string;
   inputClassName?: string;
   onSearch?: (query: string) => void;
+  type?: 'exercise' | 'lesson' | 'exam';
 }
 
 export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
@@ -16,6 +17,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
   className = "",
   inputClassName = "",
   onSearch,
+  type = 'exercise',
 }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -189,7 +191,10 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
           {/* Search button */}
           <button
             type="submit"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-white px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 
+              ${type === 'exercise' ? 'bg-violet-600 hover:bg-violet-700' : 
+                type === 'lesson' ? 'bg-blue-600 hover:bg-blue-700' : 
+                'bg-green-600 hover:bg-emerald-700'}`}
             aria-label="Search"
           >
             {loading ? (

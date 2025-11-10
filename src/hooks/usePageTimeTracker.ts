@@ -28,9 +28,8 @@ export function usePageTimeTracker({
 
   // Debug log on mount
   useEffect(() => {
-    console.log(`[PageTimeTracker] MOUNTED - contentType: ${contentType}, contentId: ${contentId}, enabled: ${enabled}, authenticated: ${isAuthenticated}`);
     return () => {
-      console.log(`[PageTimeTracker] UNMOUNTED - contentType: ${contentType}, contentId: ${contentId}`);
+      // Cleanup
     };
   }, []);
 
@@ -54,8 +53,6 @@ export function usePageTimeTracker({
 
   // Handle page visibility changes
   useEffect(() => {
-    console.log('[PageTimeTracker] Setting up visibility change listener');
-
     const handleVisibilityChange = () => {
       const now = Date.now();
 
@@ -65,21 +62,18 @@ export function usePageTimeTracker({
           const sessionTime = (now - startTimeRef.current) / 1000; // Convert to seconds
           totalTimeRef.current += sessionTime;
           isVisibleRef.current = false;
-          console.log(`[PageTimeTracker] Page hidden - session: ${Math.floor(sessionTime)}s, total: ${Math.floor(totalTimeRef.current)}s`);
         }
       } else {
         // Page became visible - restart timer
         if (!isVisibleRef.current) {
           startTimeRef.current = now;
           isVisibleRef.current = true;
-          console.log('[PageTimeTracker] Page visible - restarting timer');
         }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
-      console.log('[PageTimeTracker] Removing visibility change listener');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);

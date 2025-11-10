@@ -91,9 +91,9 @@ export const Filters: React.FC<FiltersProps> = ({
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     classLevels: true,
     subjects: true,
-    subfields: false,
-    chapters: false,
-    theorems: false,
+    subfields: initialSubfields.length > 0 || false,
+    chapters: initialChapters.length > 0 || false,
+    theorems: initialTheorems.length > 0 || false,
     difficulties: true,
   });
   
@@ -640,11 +640,11 @@ export const Filters: React.FC<FiltersProps> = ({
                 <>
                   {items.map((item, index) => {
                     const itemId = typeof item === 'string' ? item : String(item.id);
-                    const itemName = typeof item === 'string' ? 
-                      getDifficultyLabel(item) : 
+                    const itemName = typeof item === 'string' ?
+                      getDifficultyLabel(item) :
                       item.name;
-                    
-                    const isSelected = selectedFilters[category].includes(itemId as any);
+
+                    const isSelected = selectedFilters[category].some((v: any) => String(v) === String(itemId));
                     
                     // Définir les gradients selon le type de contenu
                     let selectedGradient = '';

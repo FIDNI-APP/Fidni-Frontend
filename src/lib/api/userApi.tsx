@@ -72,6 +72,28 @@ export const getUserSavedExercises = async (username: string) => {
   }
 };
 
+export const getUserSavedLessons = async (username: string) => {
+  try {
+    const response = await api.get(`/users/${username}/saved_lessons/`);
+    console.log("Saved lessons response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching saved lessons:", error);
+    throw error;
+  }
+};
+
+export const getUserSavedExams = async (username: string) => {
+  try {
+    const response = await api.get(`/users/${username}/saved_exams/`);
+    console.log("Saved exams response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching saved exams:", error);
+    throw error;
+  }
+};
+
 export const getUserProgressExercises = async (username: string, progress: string) => {
   try {
     const response = await api.get(`/users/${username}/${progress}_thing/`);

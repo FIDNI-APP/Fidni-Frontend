@@ -61,7 +61,7 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
   };
 
   return (
-    <div className="liquid-glass liquid-effect bg-gradient-to-r from-gray-700 to-purple-800 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
+    <div className="liquid-glass liquid-effect bg-gradient-to-r from-purple-900 to-purple-800 text-white rounded-xl overflow-hidden shadow-lg mb-6 relative">
       {/* Background Pattern - positioned relative to header */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -178,7 +178,18 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
             <ChevronRight className="w-4 h-4" />
             <span className="text-white font-medium line-clamp-1">{exercise.title}</span>
           </nav>
+          </div>
 
+
+          {/* Navigation row */}
+            <div className="flex justify-between items-center mb-6">
+              <Button
+                onClick={() => navigate(`/exercises`)}
+                variant="ghost"
+                className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                Retour
+              </Button>
           <div className="flex items-center gap-2">
             {/* Save button */}
             <Button
@@ -217,37 +228,45 @@ export const ExerciseHeader: React.FC<ExerciseHeaderProps> = ({
               </Button>
 
               {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 py-1">
-                  {/* Share option */}
-                  <button
-                    onClick={() => {
-                      handleShare();
-                      setShowDropdown(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>Partager</span>
-                  </button>
-
-                  {/* Print option */}
-                  {onPrint && (
+                <>
+                  {/* Backdrop to close dropdown */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 py-1 border border-gray-200">
+                    {/* Share option */}
                     <button
                       onClick={() => {
-                        onPrint();
+                        handleShare();
                         setShowDropdown(false);
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors border-t"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors"
                     >
-                      <Printer className="w-4 h-4" />
-                      <span>Imprimer</span>
+                      <Share2 className="w-4 h-4" />
+                      <span>Partager</span>
                     </button>
-                  )}
-                </div>
+
+                    {/* Print option */}
+                    {onPrint && (
+                      <button
+                        onClick={() => {
+                          onPrint();
+                          setShowDropdown(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors border-t"
+                      >
+                        <Printer className="w-4 h-4" />
+                        <span>Imprimer</span>
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
+
         
         {/* Tab Navigation - now in header where title was */}
         <div>

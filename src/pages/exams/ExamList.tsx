@@ -73,6 +73,10 @@ export const ExamList = () => {
     const searchParams = new URLSearchParams(location.search);
     const classLevelsParam = searchParams.get('classLevels');
     const subjectsParam = searchParams.get('subjects');
+    const subfieldsParam = searchParams.get('subfields');
+    const chaptersParam = searchParams.get('chapters');
+    const theoremsParam = searchParams.get('theorems');
+    const difficultiesParam = searchParams.get('difficulties');
     const isNationalParam = searchParams.get('isNational');
     const dateStartParam = searchParams.get('dateStart');
     const dateEndParam = searchParams.get('dateEnd');
@@ -85,15 +89,15 @@ export const ExamList = () => {
         };
     }
 
-    // Priority 1: Paramètres URL
-    if (classLevelsParam || subjectsParam || isNationalParam || dateStartParam || dateEndParam) {
+    // Priority 1: Paramètres URL - check for ANY URL param
+    if (classLevelsParam || subjectsParam || subfieldsParam || chaptersParam || theoremsParam || difficultiesParam || isNationalParam || dateStartParam || dateEndParam) {
       return {
         classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
         subjects: subjectsParam ? subjectsParam.split(',') : [],
-        subfields: searchParams.get('subfields')?.split(',') || [],
-        chapters: searchParams.get('chapters')?.split(',') || [],
-        theorems: searchParams.get('theorems')?.split(',') || [],
-        difficulties: (searchParams.get('difficulties')?.split(',') || []) as Difficulty[],
+        subfields: subfieldsParam ? subfieldsParam.split(',') : [],
+        chapters: chaptersParam ? chaptersParam.split(',') : [],
+        theorems: theoremsParam ? theoremsParam.split(',') : [],
+        difficulties: (difficultiesParam?.split(',') || []) as Difficulty[],
         isNationalExam: isNationalParam === 'true' ? true : isNationalParam === 'false' ? false : null,
         dateRange: initialDateRange
       };

@@ -79,13 +79,14 @@ export interface Content {
   updated_at: string;
   user_vote: VoteValue;
   vote_count: number;
-  solution?:  Solution;  
+  solution?:  Solution;
   comments: Comment[];
   view_count: number;
   theorems : Theorem[];
   subfields : Subfield[];
   user_save: boolean;
   user_complete: CompleteValue;
+  user_timespent?: number;
 }
 
 // src/types/index.ts

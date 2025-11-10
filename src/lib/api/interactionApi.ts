@@ -59,9 +59,14 @@ export async function voteComment(id: string, value: VoteValue) {
 /**
  * Add a comment to any content type (uses factory)
  */
-export function addComment(contentType: ContentType, contentId: string, content: string, parentId?: string) {
-  const contentAPI = getContentAPI(contentType);
-  return contentAPI.addComment(contentId, content, parentId);
+export async function addComment(contentType: ContentType, contentId: string, content: string, parentId?: string) {
+  try {
+    const contentAPI = getContentAPI(contentType);
+    return await contentAPI.addComment(contentId, content, parentId);
+  } catch (error) {
+    console.error(`Error adding comment to ${contentType}:`, error);
+    throw error;
+  }
 }
 
 /**

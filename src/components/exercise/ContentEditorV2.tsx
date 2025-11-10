@@ -63,14 +63,65 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
     loadInitialData();
   }, []);
 
+  // Load initial dependent data when editing (initialValues provided)
+  useEffect(() => {
+    const loadInitialDependentData = async () => {
+      if (initialValues.subject && initialValues.class_levels?.length > 0) {
+        // Load subfields
+        try {
+          const subfieldsData = await getSubfields(
+            initialValues.subject,
+            initialValues.class_levels
+          );
+          setSubfields(subfieldsData);
+        } catch (err) {
+          console.error('Failed to load initial subfields:', err);
+        }
+
+        // Load chapters if subfields exist
+        if (initialValues.subfields?.length > 0) {
+          try {
+            const chaptersData = await getChapters(
+              initialValues.subject,
+              initialValues.class_levels,
+              initialValues.subfields
+            );
+            setChapters(chaptersData);
+          } catch (err) {
+            console.error('Failed to load initial chapters:', err);
+          }
+
+          // Load theorems if chapters exist
+          if (initialValues.chapters?.length > 0) {
+            try {
+              const theoremsData = await getTheorems(
+                initialValues.subject,
+                initialValues.class_levels,
+                initialValues.subfields,
+                initialValues.chapters
+              );
+              setTheorems(theoremsData);
+            } catch (err) {
+              console.error('Failed to load initial theorems:', err);
+            }
+          }
+        }
+      }
+    };
+
+    loadInitialDependentData();
+  }, []);
+
   // Load subfields when subject is selected
   useEffect(() => {
     if (selectedClassLevels.length > 0 && selectedSubject) {
       loadSubfields();
-      // Reset dependent fields when subject changes
-      setSelectedSubfields([]);
-      setSelectedChapters([]);
-      setSelectedTheorems([]);
+      // Reset dependent fields when subject changes ONLY if not in initial load
+      if (!initialValues.subject) {
+        setSelectedSubfields([]);
+        setSelectedChapters([]);
+        setSelectedTheorems([]);
+      }
     }
   }, [selectedClassLevels, selectedSubject]);
 
@@ -78,9 +129,11 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
   useEffect(() => {
     if (selectedSubfields.length > 0) {
       loadChapters();
-      // Reset dependent fields when subfields change
-      setSelectedChapters([]);
-      setSelectedTheorems([]);
+      // Reset dependent fields when subfields change ONLY if not in initial load
+      if (!initialValues.subfields?.length) {
+        setSelectedChapters([]);
+        setSelectedTheorems([]);
+      }
     } else {
       setChapters([]);
     }
@@ -218,38 +271,84 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
     }
   };
 
+  const getThemeColors = () => {
+    switch (contentType) {
+      case 'exercise': return {
+        gradient: 'from-purple-900 to-purple-800',
+        button: 'bg-purple-600 hover:bg-purple-700',
+        headerText: 'text-purple-100',
+        sectionHeader: 'from-purple-50 to-indigo-50',
+        sectionHeaderIcon: 'text-purple-600',
+        classificationHeader: 'from-purple-600 to-indigo-600',
+        classificationBorder: 'border-purple-300',
+        classificationRing: 'ring-purple-100',
+        focusRing: 'focus:ring-purple-500',
+        tabActive: 'bg-purple-600 text-white',
+        tabHover: 'hover:bg-purple-50'
+      };
+      case 'lesson': return {
+        gradient: 'from-blue-900 to-blue-800',
+        button: 'bg-blue-600 hover:bg-blue-700',
+        headerText: 'text-blue-100',
+        sectionHeader: 'from-blue-50 to-cyan-50',
+        sectionHeaderIcon: 'text-blue-600',
+        classificationHeader: 'from-blue-600 to-cyan-600',
+        classificationBorder: 'border-blue-300',
+        classificationRing: 'ring-blue-100',
+        focusRing: 'focus:ring-blue-500',
+        tabActive: 'bg-blue-600 text-white',
+        tabHover: 'hover:bg-blue-50'
+      };
+      case 'exam': return {
+        gradient: 'from-green-900 to-green-800',
+        button: 'bg-green-600 hover:bg-green-700',
+        headerText: 'text-green-100',
+        sectionHeader: 'from-green-50 to-emerald-50',
+        sectionHeaderIcon: 'text-green-600',
+        classificationHeader: 'from-green-800 to-emerald-900',
+        classificationBorder: 'border-green-800',
+        classificationRing: 'ring-green-100',
+        focusRing: 'focus:ring-green-500',
+        tabActive: 'bg-green-600 text-white',
+        tabHover: 'hover:bg-green-50'
+      };
+    }
+  };
+
+  const themeColors = getThemeColors();
+
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Enhanced Header with pattern background */}
-      <div className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-600 text-white overflow-hidden">
-        {/* Decorative background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
+      {/* Enhanced Header matching webapp design */}
+      <div className={`relative bg-gradient-to-br ${themeColors.gradient} text-white overflow-hidden`}>
+        {/* Decorative hexagon pattern background */}
+        <div className="absolute inset-0 opacity-5">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="hexagons" width="50" height="43.4" patternUnits="userSpaceOnUse" patternTransform="scale(2)">
+                <path d="M25 0l12.5 7.2v14.5L25 28.9 12.5 21.7V7.2z" fill="none" stroke="white" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#hexagons)"/>
+          </svg>
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-4 py-8">
+        <div className="relative max-w-7xl mx-auto px-4 py-6">
           <button
             onClick={() => navigate(-1)}
-            className="group flex items-center gap-2 text-white/80 hover:text-white transition-all mb-6 hover:gap-3"
+            className="group flex items-center gap-2 text-white/80 hover:text-white transition-all mb-4"
           >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Retour</span>
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Retour</span>
           </button>
 
-          <div className="flex items-start gap-4">
-            {/* Icon with animated background */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-white/20 rounded-2xl blur-xl"></div>
-              <div className="relative bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20 shadow-2xl">
-                {getIcon()}
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
+              {getIcon()}
             </div>
-
-            {/* Title and description */}
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold mb-2 tracking-tight">{getTitle()}</h1>
-              <p className="text-purple-100 text-lg">
+            <div>
+              <h1 className="text-3xl font-extrabold mb-1">{getTitle()}</h1>
+              <p className={`${themeColors.headerText} text-sm`}>
                 {contentType === 'exercise' && 'Partagez un exercice avec la communauté'}
                 {contentType === 'lesson' && 'Partagez vos connaissances avec une leçon'}
                 {contentType === 'exam' && 'Créez un examen pour tester les compétences'}
@@ -259,19 +358,21 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 mt-8">
+      <div className="max-w-7xl mx-auto px-4 mt-6">
         {error && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
-            <p className="font-medium">{error}</p>
+          <div className="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-xl">
+            <p className="font-medium text-sm">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info Section */}
-          <Section title="Informations de base" icon={<Info className="w-5 h-5" />}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+          {/* Main Content Grid - 2 columns */}
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Left Column - Content Editors (2/3 width) */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Title */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Titre <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -279,267 +380,315 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Entrez un titre clair et descriptif"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 ${themeColors.focusRing} focus:border-transparent transition-all text-sm`}
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contenu <span className="text-red-500">*</span>
-                </label>
-                <DualPaneEditor
-                  initialContent={content}
-                  onChange={setContent}
-                  placeholder="Rédigez le contenu ici..."
-                />
-              </div>
-            </div>
-          </Section>
-
-          {/* Classification Section */}
-          <Section title="Classification" icon={<Tag className="w-5 h-5" />}>
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Class Levels */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Niveaux <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
-                  {classLevels.map((level) => (
-                    <label key={level.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedClassLevels.includes(level.id.toString())}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedClassLevels([...selectedClassLevels, level.id.toString()]);
-                          } else {
-                            setSelectedClassLevels(selectedClassLevels.filter(id => id !== level.id.toString()));
-                          }
-                        }}
-                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                      />
-                      <span className="text-sm text-gray-700">{level.name}</span>
-                    </label>
-                  ))}
+              {/* Content Editor */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className={`bg-gradient-to-r ${themeColors.sectionHeader} px-4 py-3 border-b border-gray-200 flex items-center gap-2`}>
+                  <FileText className={`w-4 h-4 ${themeColors.sectionHeaderIcon}`} />
+                  <h2 className="text-sm font-semibold text-gray-900">Contenu <span className="text-red-500">*</span></h2>
                 </div>
-              </div>
-
-              {/* Subject */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Matière <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  required
-                >
-                  <option value="">Sélectionner une matière</option>
-                  {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Subfields - Now BEFORE Chapters */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sous-domaines
-                </label>
-                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
-                  {subfields.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      Sélectionnez un niveau et une matière d'abord
-                    </p>
-                  ) : (
-                    subfields.map((subfield) => (
-                      <label key={subfield.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={selectedSubfields.includes(subfield.id.toString())}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedSubfields([...selectedSubfields, subfield.id.toString()]);
-                            } else {
-                              setSelectedSubfields(selectedSubfields.filter(id => id !== subfield.id.toString()));
-                            }
-                          }}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                        />
-                        <span className="text-sm text-gray-700">{subfield.name}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Chapters - Now AFTER Subfields */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chapitres
-                </label>
-                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
-                  {chapters.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      {selectedSubfields.length === 0
-                        ? 'Sélectionnez des sous-domaines d\'abord'
-                        : 'Aucun chapitre disponible pour les sous-domaines sélectionnés'}
-                    </p>
-                  ) : (
-                    chapters.map((chapter) => (
-                      <label key={chapter.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={selectedChapters.includes(chapter.id.toString())}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedChapters([...selectedChapters, chapter.id.toString()]);
-                            } else {
-                              setSelectedChapters(selectedChapters.filter(id => id !== chapter.id.toString()));
-                            }
-                          }}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                        />
-                        <span className="text-sm text-gray-700">{chapter.name}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Theorems */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Théorèmes
-                </label>
-                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
-                  {theorems.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      {selectedChapters.length === 0
-                        ? 'Sélectionnez des chapitres d\'abord'
-                        : 'Aucun théorème disponible pour les chapitres sélectionnés'}
-                    </p>
-                  ) : (
-                    theorems.map((theorem) => (
-                      <label key={theorem.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={selectedTheorems.includes(theorem.id.toString())}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedTheorems([...selectedTheorems, theorem.id.toString()]);
-                            } else {
-                              setSelectedTheorems(selectedTheorems.filter(id => id !== theorem.id.toString()));
-                            }
-                          }}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                        />
-                        <span className="text-sm text-gray-700">{theorem.name}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </Section>
-
-          {/* Difficulty (for exercises and exams only) */}
-          {(contentType === 'exercise' || contentType === 'exam') && (
-            <Section title="Difficulté" icon={<BarChart3 className="w-5 h-5" />}>
-              <div className="flex gap-3">
-                {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => (
-                  <button
-                    key={diff}
-                    type="button"
-                    onClick={() => setDifficulty(diff)}
-                    className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
-                      difficulty === diff
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {diff === 'easy' ? 'Facile' : diff === 'medium' ? 'Moyen' : 'Difficile'}
-                  </button>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Solution (exercises and exams) */}
-          {(contentType === 'exercise' || contentType === 'exam') && (
-            <Section title="Solution" icon={<Lightbulb className="w-5 h-5" />}>
-              <DualPaneEditor
-                initialContent={solution}
-                onChange={setSolution}
-                placeholder="Rédigez la solution détaillée..."
-              />
-            </Section>
-          )}
-
-          {/* Exam-specific fields */}
-          {contentType === 'exam' && (
-            <Section title="Informations d'examen" icon={<Award className="w-5 h-5" />}>
-              <div className="space-y-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isNationalExam}
-                    onChange={(e) => setIsNationalExam(e.target.checked)}
-                    className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                <div className="p-4">
+                  <DualPaneEditor
+                    initialContent={content}
+                    onChange={setContent}
+                    placeholder="Rédigez le contenu ici..."
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                    Ceci est un examen national officiel
-                  </span>
-                </label>
+                </div>
+              </div>
 
-                {isNationalExam && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Année de l'examen
-                    </label>
-                    <input
-                      type="number"
-                      value={nationalYear}
-                      onChange={(e) => setNationalYear(e.target.value)}
-                      placeholder="2024"
-                      min="2000"
-                      max="2100"
-                      className="w-full md:w-48 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              {/* Solution Editor (for exercises and exams) */}
+              {(contentType === 'exercise' || contentType === 'exam') && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className={`bg-gradient-to-r ${themeColors.sectionHeader} px-4 py-3 border-b border-gray-200 flex items-center gap-2`}>
+                    <Lightbulb className={`w-4 h-4 ${themeColors.sectionHeaderIcon}`} />
+                    <h2 className="text-sm font-semibold text-gray-900">Solution</h2>
+                  </div>
+                  <div className="p-4">
+                    <DualPaneEditor
+                      initialContent={solution}
+                      onChange={setSolution}
+                      placeholder="Rédigez la solution détaillée..."
                     />
                   </div>
-                )}
-              </div>
-            </Section>
-          )}
+                </div>
+              )}
+            </div>
 
-          {/* Submit Button */}
-          <div className="flex gap-4 pt-6">
+            {/* Right Column - Classification & Metadata (1/3 width) */}
+            <div className="space-y-6">
+              {/* Classification Section - Highlighted as important */}
+              <div className={`bg-white rounded-xl shadow-lg border-2 ${themeColors.classificationBorder} overflow-hidden ring-4 ${themeColors.classificationRing}`}>
+                <div className={`bg-gradient-to-r ${themeColors.classificationHeader} px-4 py-3 border-b flex items-center gap-2`}>
+                  <Tag className="w-4 h-4 text-white" />
+                  <h2 className="text-sm font-bold text-white">Classification</h2>
+                  <span className="ml-auto text-xs bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full font-bold">Important</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  {/* Class Levels */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Niveaux <span className="text-red-500">*</span>
+                    </label>
+                    <div className="space-y-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                      {classLevels.map((level) => (
+                        <label key={level.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedClassLevels.includes(level.id.toString())}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedClassLevels([...selectedClassLevels, level.id.toString()]);
+                              } else {
+                                setSelectedClassLevels(selectedClassLevels.filter(id => id !== level.id.toString()));
+                              }
+                            }}
+                            className={`w-3.5 h-3.5 ${themeColors.sectionHeaderIcon} border-gray-300 rounded ${themeColors.focusRing}`}
+                          />
+                          <span className="text-xs text-gray-700">{level.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Matière <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={selectedSubject}
+                      onChange={(e) => setSelectedSubject(e.target.value)}
+                      className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${themeColors.focusRing} focus:border-transparent transition-all`}
+                      required
+                    >
+                      <option value="">Sélectionner</option>
+                      {subjects.map((subject) => (
+                        <option key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Subfields */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Sous-domaines
+                    </label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                      {subfields.length === 0 ? (
+                        <p className="text-xs text-gray-500 text-center py-2">
+                          Sélectionnez niveau et matière
+                        </p>
+                      ) : (
+                        subfields.map((subfield) => (
+                          <label key={subfield.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedSubfields.includes(subfield.id.toString())}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSubfields([...selectedSubfields, subfield.id.toString()]);
+                                } else {
+                                  setSelectedSubfields(selectedSubfields.filter(id => id !== subfield.id.toString()));
+                                }
+                              }}
+                              className={`w-3.5 h-3.5 ${themeColors.sectionHeaderIcon} border-gray-300 rounded ${themeColors.focusRing}`}
+                            />
+                            <span className="text-xs text-gray-700">{subfield.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Chapters */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Chapitres
+                    </label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                      {chapters.length === 0 ? (
+                        <p className="text-xs text-gray-500 text-center py-2">
+                          {selectedSubfields.length === 0 ? 'Sélectionnez sous-domaines' : 'Aucun disponible'}
+                        </p>
+                      ) : (
+                        chapters.map((chapter) => (
+                          <label key={chapter.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedChapters.includes(chapter.id.toString())}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedChapters([...selectedChapters, chapter.id.toString()]);
+                                } else {
+                                  setSelectedChapters(selectedChapters.filter(id => id !== chapter.id.toString()));
+                                }
+                              }}
+                              className={`w-3.5 h-3.5 ${themeColors.sectionHeaderIcon} border-gray-300 rounded ${themeColors.focusRing}`}
+                            />
+                            <span className="text-xs text-gray-700">{chapter.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Theorems */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Théorèmes
+                    </label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                      {theorems.length === 0 ? (
+                        <p className="text-xs text-gray-500 text-center py-2">
+                          {selectedChapters.length === 0 ? 'Sélectionnez chapitres' : 'Aucun disponible'}
+                        </p>
+                      ) : (
+                        theorems.map((theorem) => (
+                          <label key={theorem.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedTheorems.includes(theorem.id.toString())}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedTheorems([...selectedTheorems, theorem.id.toString()]);
+                                } else {
+                                  setSelectedTheorems(selectedTheorems.filter(id => id !== theorem.id.toString()));
+                                }
+                              }}
+                              className={`w-3.5 h-3.5 ${themeColors.sectionHeaderIcon} border-gray-300 rounded ${themeColors.focusRing}`}
+                            />
+                            <span className="text-xs text-gray-700">{theorem.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Difficulty (for exercises and exams only) */}
+              {(contentType === 'exercise' || contentType === 'exam') && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className={`bg-gradient-to-r ${themeColors.sectionHeader} px-4 py-3 border-b border-gray-200 flex items-center gap-2`}>
+                    <BarChart3 className={`w-4 h-4 ${themeColors.sectionHeaderIcon}`} />
+                    <h2 className="text-sm font-semibold text-gray-900">Difficulté</h2>
+                  </div>
+                  <div className="p-4">
+                    <div className="space-y-2">
+                      {/* Easy - Green */}
+                      <button
+                        type="button"
+                        onClick={() => setDifficulty('easy')}
+                        className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                          difficulty === 'easy'
+                            ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300'
+                            : 'bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100'
+                        }`}
+                      >
+                        ● Facile
+                      </button>
+
+                      {/* Medium - Amber */}
+                      <button
+                        type="button"
+                        onClick={() => setDifficulty('medium')}
+                        className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                          difficulty === 'medium'
+                            ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-300'
+                            : 'bg-amber-50 text-amber-700 border-2 border-amber-200 hover:bg-amber-100'
+                        }`}
+                      >
+                        ● Moyen
+                      </button>
+
+                      {/* Hard - Red/Orange */}
+                      <button
+                        type="button"
+                        onClick={() => setDifficulty('hard')}
+                        className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                          difficulty === 'hard'
+                            ? 'bg-red-600 text-white shadow-md ring-2 ring-red-300'
+                            : 'bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100'
+                        }`}
+                      >
+                        ● Difficile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Exam-specific fields */}
+              {contentType === 'exam' && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className={`bg-gradient-to-r ${themeColors.sectionHeader} px-4 py-3 border-b border-gray-200 flex items-center gap-2`}>
+                    <Award className={`w-4 h-4 ${themeColors.sectionHeaderIcon}`} />
+                    <h2 className="text-sm font-semibold text-gray-900">Infos examen</h2>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isNationalExam}
+                        onChange={(e) => setIsNationalExam(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      />
+                      <span className="text-xs text-gray-700">
+                        Examen national officiel
+                      </span>
+                    </label>
+
+                    {isNationalExam && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Année
+                        </label>
+                        <input
+                          type="number"
+                          value={nationalYear}
+                          onChange={(e) => setNationalYear(e.target.value)}
+                          placeholder="2024"
+                          min="2000"
+                          max="2100"
+                          className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${themeColors.focusRing} focus:border-transparent transition-all`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Submit Buttons - Sticky at bottom */}
+          <div className="sticky bottom-0 bg-white border-t-2 border-gray-200 p-4 rounded-xl shadow-lg flex gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+              className="px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
+              className={`flex-1 px-5 py-2.5 ${themeColors.button} text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg`}
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Publication en cours...
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Publication...
                 </>
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
+                  <Check className="w-4 h-4" />
                   Publier {contentType === 'exercise' ? "l'exercice" : contentType === 'lesson' ? "la leçon" : "l'examen"}
                 </>
               )}
@@ -551,11 +700,11 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
   );
 };
 
-// Section component for consistent styling
+// Section component for consistent styling (not currently used but keeping for reference)
 const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-      <span className="text-purple-600">{icon}</span>
+    <div className="bg-gradient-to-r from-gray-50 to-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+      <span>{icon}</span>
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
     </div>
     <div className="p-6">

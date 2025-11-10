@@ -103,6 +103,8 @@ export {
   getUserStats,
   getUserContributions,
   getUserSavedExercises,
+  getUserSavedLessons,
+  getUserSavedExams,
   getUserProgressExercises,
   getUserHistory,
   checkOnboardingStatus,
@@ -191,6 +193,32 @@ export {
   type LearningPathProgress,
   type RecommendedContent,
 } from './dashboardApi';
+
+// ============ STATISTICS API ============
+export {
+  getExerciseStatistics,
+  getExamStatistics,
+  getContentStatistics,
+  markExerciseSolutionViewed,
+  markExamSolutionViewed,
+  markSolutionViewed,
+  undoExerciseSolutionViewed,
+  undoExamSolutionViewed,
+  undoSolutionViewed,
+  markExerciseSolutionMatched,
+  markExamSolutionMatched,
+  markSolutionMatched,
+  undoExerciseSolutionMatched,
+  undoExamSolutionMatched,
+  undoSolutionMatched,
+  toggleSolutionMatched,
+  getTaxonomyTimeStats,
+  type ContentStatistics,
+  type SolutionViewTrackingResponse,
+  type TaxonomyTimeItem,
+  type TaxonomyTimeStatsResponse,
+  type TaxonomyTimeStatsParams,
+} from './statisticsApi';
 
 // ============ LEGACY ALIASES (for backwards compatibility) ============
 // Remove these gradually as you update imports throughout the app

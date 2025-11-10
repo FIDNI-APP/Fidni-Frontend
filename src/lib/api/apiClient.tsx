@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create the API instance without setting the Authorization header initially
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://bulletin-futures-getting-protein.trycloudflare.com/api',
+  baseURL: 'https://api.fidni.fr/api/',
   headers: {
     'Content-Type': 'application/json',
   },

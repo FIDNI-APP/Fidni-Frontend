@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ContentEditor from '@/components/exercise/ContentEditor';
+import ContentEditorV2 from '@/components/exercise/ContentEditorV2';
 import { getContentById, updateContent } from '../../lib/api';
 import { Content, Difficulty } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -69,35 +69,20 @@ export function EditExercise() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-    {/* Simple Header */}
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-
-      {/* Error display - if not handled by ContentEditor */}
-      {error && (
-        <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
-          <p>{error}</p>
-        </div>
-      )}
-
-      
-        <ContentEditor
-          onSubmit={handleSubmit}
-          initialValues={{
-            title: exercise.title,
-            content: exercise.content,
-            class_level: exercise.class_levels?.map(level => level.id) || [],
-            subject: exercise.subject?.id || '',
-            difficulty: exercise.difficulty as Difficulty,
-            chapters: exercise.chapters?.map(chapter => chapter.id) || [],
-            solution_content : exercise.solution?.content?.content,
-            theorems : exercise.theorems?.map(theorem => theorem.id) || [],
-            subfields : exercise.subfields?.map(subfield => subfield.id) || [],
-
-          }}
-          
-        />
-      </div>
-    </div>
+    <ContentEditorV2
+      contentType="exercise"
+      onSubmit={handleSubmit}
+      initialValues={{
+        title: exercise.title,
+        content: exercise.content,
+        class_levels: exercise.class_levels?.map(level => level.id) || [],
+        subject: exercise.subject?.id || '',
+        difficulty: exercise.difficulty as Difficulty,
+        chapters: exercise.chapters?.map(chapter => chapter.id) || [],
+        solution_content: exercise.solution?.content?.content,
+        theorems: exercise.theorems?.map(theorem => theorem.id) || [],
+        subfields: exercise.subfields?.map(subfield => subfield.id) || [],
+      }}
+    />
   );
 }

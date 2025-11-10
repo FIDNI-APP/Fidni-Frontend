@@ -34,8 +34,7 @@ export const colorOptions = [
 ];
 
 export const editorThemes: EditorTheme[] = [
-  { name: "Classique", bgColor: "bg-white", textColor: "text-gray-800", accentColor: "from-indigo-500 to-purple-600" },
-  { name: "Sombre", bgColor: "bg-gray-900", textColor: "text-gray-100", accentColor: "from-purple-500 to-indigo-600" },
+  { name: "Classique", bgColor: "bg-white", textColor: "text-gray-800", accentColor: "from-gray-800 to-gray-900" },
   { name: "Pastel", bgColor: "bg-blue-50", textColor: "text-gray-800", accentColor: "from-blue-400 to-indigo-500" },
   { name: "Académique", bgColor: "bg-amber-50", textColor: "text-gray-800", accentColor: "from-amber-500 to-orange-500" },
   { name: "Minimaliste", bgColor: "bg-gray-50", textColor: "text-gray-800", accentColor: "from-gray-500 to-gray-600" }

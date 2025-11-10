@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { markSolutionViewed, SolutionViewTrackingResponse } from '@/lib/api/statisticsApi';
+import { markSolutionViewed, type SolutionViewTrackingResponse } from '@/lib/api';
 
 interface UseSolutionTrackingProps {
   contentType: 'exercise' | 'exam';

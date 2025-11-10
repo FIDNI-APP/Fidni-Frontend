@@ -37,7 +37,7 @@ import { ViewHistorySection } from '@/components/profile/ViewHistorySection';
 import { ProgressSection } from '@/components/profile/ProgressSection';
 import { ContributionsSection } from '@/components/profile/ContributionsSection';
 import { ProgressCharts } from '@/components/profile/ProgressCharts';
-import { TimeTrackingStats } from '@/components/profile/TimeTrackingStats';
+import { TimeTrackingStatsRevised } from '@/components/profile/TimeTrackingStatsRevised';
 import StudentNotebook from '@/components/profile/StudentNotebook'; // Renommé pour correspondre au nom de fichier
 import { RevisionListsSection } from '@/components/profile/RevisionListsSection';
 import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard';
@@ -53,9 +53,7 @@ const TabNavigation: React.FC<{
   const tabs = [
     { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard, available: true },
     { id: 'informations', label: 'Informations', icon: UserPlus, available: isOwner },
-    { id: 'saved', label: 'Enregistrés', icon: Star, available: isOwner },
     { id: 'progress', label: 'Progression', icon: Target, available: isOwner },
-    { id: 'revisionlists', label: 'Révisions', icon: ListChecks, available: isOwner },
     { id: 'contributions', label: 'Contributions', icon: FileText, available: userType === 'teacher' },
     { id: 'timetracking', label: 'Statistiques', icon: TrendingUp, available: isOwner },
     { id: 'notebook', label: 'Notes', icon: BookOpen, available: isOwner }
@@ -378,23 +376,6 @@ export function UserProfile() {
             </motion.div>
           )}
 
-          {activeTab === 'saved' && isOwner && (
-            <motion.div
-              key="saved-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <SavedContentSection
-                exercises={savedExercises}
-                lessons={[]}
-                exams={[]}
-                isLoading={!dataLoaded.savedExercises}
-              />
-            </motion.div>
-          )}
-
           {activeTab === 'progress' && isOwner && (
             <motion.div
               key="progress-content"
@@ -414,18 +395,6 @@ export function UserProfile() {
                 reviewExercises={reviewExercises}
                 isLoading={!dataLoaded.progressExercises}
               />
-            </motion.div>
-          )}
-
-          {activeTab === 'revisionlists' && isOwner && (
-            <motion.div
-              key="revisionlists-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <RevisionListsSection />
             </motion.div>
           )}
 
@@ -453,7 +422,7 @@ export function UserProfile() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <TimeTrackingStats username={username!} />
+              <TimeTrackingStatsRevised username={username!} />
             </motion.div>
           )}
 

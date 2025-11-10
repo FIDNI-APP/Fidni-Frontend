@@ -249,3 +249,52 @@ export async function toggleSolutionMatched(
     ? undoSolutionMatched(contentType, contentId)
     : markSolutionMatched(contentType, contentId);
 }
+
+/**
+ * Taxonomy Time Statistics
+ */
+
+export interface TaxonomyTimeItem {
+  id: number;
+  taxonomy_type: 'subject' | 'subfield' | 'chapter' | 'theorem';
+  taxonomy_id: number;
+  name: string;
+  total_time_seconds: number;
+  total_time_formatted: string;
+  // Content type breakdown
+  exercise_time_seconds: number;
+  lesson_time_seconds: number;
+  exam_time_seconds: number;
+}
+
+export interface TaxonomyTimeStatsResponse {
+  count: number;
+  results: TaxonomyTimeItem[];
+}
+
+export interface TaxonomyTimeStatsParams {
+  taxonomy_type?: 'subject' | 'subfield' | 'chapter' | 'theorem';
+  search?: string;
+  limit?: number;
+}
+
+/**
+ * Get taxonomy time statistics for the current user
+ */
+export async function getTaxonomyTimeStats(
+  params?: TaxonomyTimeStatsParams
+): Promise<TaxonomyTimeStatsResponse> {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.taxonomy_type) queryParams.set('taxonomy_type', params.taxonomy_type);
+    if (params?.search) queryParams.set('search', params.search);
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const url = `/study-time/taxonomy-stats/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch taxonomy time statistics:', error);
+    throw error;
+  }
+}

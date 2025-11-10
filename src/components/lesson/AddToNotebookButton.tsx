@@ -149,11 +149,12 @@ const AddToNotebookButton: React.FC<AddToNotebookButtonProps> = ({ lessonId }) =
     <div ref={containerRef} className="relative inline-block">
       <Button
         onClick={handleButtonClick}
-        className="flex items-center bg-amber-500 hover:bg-amber-600 text-white"
+        className="flex items-center bg-amber-500 hover:bg-amber-600 text-white whitespace-nowrap"
         size="sm"
       >
-        <Book className="w-4 h-4 mr-2" />
-        Ajouter au cahier
+        <Book className="w-4 h-4 mr-2 flex-shrink-0" />
+        <span className="hidden sm:inline">Ajouter au cahier</span>
+        <span className="sm:hidden">Cahier</span>
       </Button>
       
       {isOpen && (

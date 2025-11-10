@@ -12,11 +12,6 @@ ENV VITE_API_URL=${VITE_API_URL}
 COPY package*.json ./
 COPY .npmrc ./
 
-# Configure Tiptap Pro registry and token
-RUN npm config set "@tiptap-pro:registry" https://registry.tiptap.dev/ && \
-    npm config set "@tiptap-cloud:registry" https://registry.tiptap.dev/ && \
-    npm config set "//registry.tiptap.dev/:_authToken" "tGfd2UZcfGYMS3Du6+sMZaYfBuXJ8WMCzIaQ71tVybQR/kDU8mVla/akmobCPob6"
-
 # Install ALL dependencies (dev deps needed for TypeScript/Vite build)
 RUN npm ci
 

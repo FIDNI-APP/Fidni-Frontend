@@ -201,7 +201,7 @@ export const RevisionListDetail: React.FC = () => {
             Cette liste de révision n'existe pas ou a été supprimée.
           </p>
           <Button
-            onClick={() => user?.username ? navigate(`/profile/${user.username}?tab=revisionlists`) : navigate('/')}
+            onClick={() => navigate(`/revision-lists`)}
             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
