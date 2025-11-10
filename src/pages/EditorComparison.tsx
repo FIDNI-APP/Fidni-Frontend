@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import EquationEditor from "equation-editor-react";
 import { DualPaneEditor } from "@/components/editor/DualPaneEditor";
+import EquationEditorErrorBoundary from "@/components/editor/EquationEditorErrorBoundary";
 
 /**
  * Comparison page to test equation-editor-react vs TipTap editor
@@ -46,12 +47,14 @@ const EditorComparison: React.FC = () => {
               Type LaTeX commands: \pi, \theta, \sqrt, \frac, \sum, \sin, \cos, etc.
             </p>
             <div className="equation-editor-container">
-              <EquationEditor
-                value={equation}
-                onChange={setEquation}
-                autoCommands="pi theta sqrt sum prod alpha beta gamma rho delta epsilon zeta eta iota kappa lambda mu nu xi omicron sigma tau upsilon phi chi psi omega int frac infty partial nabla forall exists emptyset in notin subset subseteq supset supseteq cup cap times cdot div pm mp leq geq neq approx equiv lim"
-                autoOperatorNames="sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh log ln lim max min sup inf det dim ker"
-              />
+              <EquationEditorErrorBoundary>
+                <EquationEditor
+                  value={equation}
+                  onChange={setEquation}
+                  autoCommands="pi theta sqrt sum prod alpha beta gamma rho delta epsilon zeta eta iota kappa lambda mu nu xi omicron sigma tau upsilon phi chi psi omega int frac infty partial nabla forall exists emptyset in notin subset subseteq supset supseteq cup cap times cdot div pm mp leq geq neq approx equiv lim"
+                  autoOperatorNames="sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh log ln lim max min sup inf det dim ker"
+                />
+              </EquationEditorErrorBoundary>
             </div>
           </div>
 
