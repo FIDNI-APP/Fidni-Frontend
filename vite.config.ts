@@ -22,9 +22,6 @@ export default defineConfig({
       }
     })
   ],
-  define: {
-    'global': 'globalThis',
-  },
   optimizeDeps: {
     include: [
       'framer-motion',
@@ -33,9 +30,7 @@ export default defineConfig({
       'recharts',
       '@chakra-ui/react',
       'react-hot-toast',
-      'react-toastify',
-      'react-mathquill',
-      'mathquill'
+      'react-toastify'
     ],
   },
   resolve: {

@@ -41,7 +41,6 @@ import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
 import { RevisionListDetail } from './pages/RevisionListDetail';
 import { SavedItems } from './pages/SavedItems';
 import { RevisionLists } from './pages/RevisionLists';
-import { MathQuillTest } from './pages/MathQuillTest';
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
   const { openModal, setInitialTab } = useAuthModal();
@@ -273,12 +272,7 @@ function App() {
                         </NavbarWrapper>
                       } />
 
-                  {/* Test route for MathQuill */}
-                  <Route path="/test-mathquill" element={
-                    <NavbarWrapper>
-                      <MathQuillTest />
-                    </NavbarWrapper>
-                  } />
+
 
                 </Routes>
               </div>
