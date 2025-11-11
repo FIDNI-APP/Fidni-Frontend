@@ -355,48 +355,18 @@ export const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo and desktop navigation */}
           <div className="flex items-center space-x-8">
-            <Link to="/" className="flex items-center space-x-3 group relative">
+            <Link to="/" className="flex items-center group relative">
               <div
-                className="relative transition-all duration-300 transform group-hover:scale-110"
+                className="relative transition-all duration-300 transform group-hover:scale-105"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
-                <div className={`w-12 h-12 flex items-center justify-center overflow-hidden rounded-xl ${
-                  isScrolled
-                    ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
-                      ? 'bg-gradient-to-br from-indigo-500 to-blue-600'
-                      : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
-                        ? 'bg-gradient-to-br from-indigo-500 to-green-600'
-                        : 'bg-gradient-to-br from-indigo-500 to-purple-600'
-                    : 'bg-white/10 backdrop-blur-md border border-white/30'
-                }`}>
-                  <img
-                    src={isHovered ? Logo2 : Logo3}
-                    alt="Fidni Logo"
-                    className="w-12 h-12 object-contain"
-                  />
-                </div>
-                <div className={`absolute inset-0 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300 ${
-                  isScrolled 
-                    ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
-                      ? 'bg-gradient-to-r from-indigo-500 to-blue-600'
-                      : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
-                        ? 'bg-gradient-to-r from-indigo-500 to-green-600'
-                        : 'bg-gradient-to-r from-indigo-500 to-purple-600'
-                    : 'bg-white'
-                }`}></div>
+                <img
+                  src={isHovered ? Logo2 : Logo3}
+                  alt="Fidni Logo"
+                  className="h-12 w-auto object-contain"
+                />
               </div>
-              <span className={`text-2xl fjalla-one-regular font-extrabold transition-all duration-300 ${
-                isScrolled
-                  ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
-                    ? 'bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 text-transparent bg-clip-text'
-                    : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
-                      ? 'bg-gradient-to-r from-indigo-600 via-green-600 to-teal-500 text-transparent bg-clip-text'
-                      : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-transparent bg-clip-text'
-                  : 'text-white'
-              }`}>
-                Fidni
-              </span>
             </Link>
             
             <div className="hidden md:flex items-center space-x-2">
