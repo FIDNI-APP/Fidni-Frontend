@@ -364,7 +364,7 @@ export const Navbar = () => {
                 <img
                   src={isHovered ? Logo2 : Logo3}
                   alt="Fidni Logo"
-                  className="h-12 md:h-16 w-auto object-contain"
+                  className="h-12 md:h-16 w-32 md:w-40 object-contain"
                 />
               </div>
             </Link>
