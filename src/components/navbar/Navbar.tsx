@@ -361,8 +361,8 @@ export const Navbar = () => {
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
-                <div className={`w-10 h-10 flex items-center justify-center overflow-hidden rounded-xl ${
-                  isScrolled 
+                <div className={`w-12 h-12 flex items-center justify-center overflow-hidden rounded-xl ${
+                  isScrolled
                     ? (location.pathname.includes('/lessons') || location.pathname.includes('/edit-lesson') || location.pathname.includes('/new-lesson'))
                       ? 'bg-gradient-to-br from-indigo-500 to-blue-600'
                       : (location.pathname.includes('/exams') || location.pathname.includes('/edit-exam') || location.pathname.includes('/new-exam'))
@@ -373,7 +373,7 @@ export const Navbar = () => {
                   <img
                     src={isHovered ? Logo2 : Logo3}
                     alt="Fidni Logo"
-                    className="w-7 h-7 object-contain"
+                    className="w-12 h-12 object-contain"
                   />
                 </div>
                 <div className={`absolute inset-0 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300 ${
