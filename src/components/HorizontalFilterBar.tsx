@@ -101,7 +101,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   const loadSubjects = async (classLevelIds: string[]) => {
     try {
-      const data = await getSubjects({ classLevel: classLevelIds });
+      const data = await getSubjects(classLevelIds);
       setSubjects(data);
     } catch (error) {
       console.error('Error loading subjects:', error);
@@ -110,11 +110,15 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   const loadSubfields = async (classLevelIds: string[], subjectIds: string[]) => {
     try {
-      const data = await getSubfields({
-        classLevel: classLevelIds,
-        subject: subjectIds[0], // Use first subject for now
-      });
-      setSubfields(data);
+      // Load subfields for all selected subjects and merge results
+      const promises = subjectIds.map(subjectId => getSubfields(subjectId, classLevelIds));
+      const results = await Promise.all(promises);
+      // Flatten and deduplicate by id
+      const allSubfields = results.flat();
+      const uniqueSubfields = Array.from(
+        new Map(allSubfields.map(item => [item.id, item])).values()
+      );
+      setSubfields(uniqueSubfields);
     } catch (error) {
       console.error('Error loading subfields:', error);
     }
@@ -122,7 +126,13 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   const loadChapters = async (subfieldIds: string[]) => {
     try {
-      const data = await getChapters({ subfield: subfieldIds });
+      if (filters.subjects.length === 0 || filters.classLevels.length === 0) {
+        setChapters([]);
+        return;
+      }
+      // Use first subject for chapters API call
+      const subjectId = filters.subjects[0];
+      const data = await getChapters(subjectId, filters.classLevels, subfieldIds);
       setChapters(data);
     } catch (error) {
       console.error('Error loading chapters:', error);
@@ -131,7 +141,13 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   const loadTheorems = async (chapterIds: string[]) => {
     try {
-      const data = await getTheorems({ chapter: chapterIds });
+      if (filters.subjects.length === 0 || filters.classLevels.length === 0 || filters.subfields.length === 0) {
+        setTheorems([]);
+        return;
+      }
+      // Use first subject for theorems API call
+      const subjectId = filters.subjects[0];
+      const data = await getTheorems(subjectId, filters.classLevels, filters.subfields, chapterIds);
       setTheorems(data);
     } catch (error) {
       console.error('Error loading theorems:', error);
@@ -144,7 +160,36 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       ? currentValues.filter((v) => v !== value)
       : [...currentValues, value];
 
-    onFilterChange({ ...filters, [filterKey]: newValues });
+    const updatedFilters = { ...filters, [filterKey]: newValues };
+
+    // Reset dependent filters when parent filter changes
+    if (filterKey === 'classLevels') {
+      updatedFilters.subjects = [];
+      updatedFilters.subfields = [];
+      updatedFilters.chapters = [];
+      updatedFilters.theorems = [];
+      setSubjects([]);
+      setSubfields([]);
+      setChapters([]);
+      setTheorems([]);
+    } else if (filterKey === 'subjects') {
+      updatedFilters.subfields = [];
+      updatedFilters.chapters = [];
+      updatedFilters.theorems = [];
+      setSubfields([]);
+      setChapters([]);
+      setTheorems([]);
+    } else if (filterKey === 'subfields') {
+      updatedFilters.chapters = [];
+      updatedFilters.theorems = [];
+      setChapters([]);
+      setTheorems([]);
+    } else if (filterKey === 'chapters') {
+      updatedFilters.theorems = [];
+      setTheorems([]);
+    }
+
+    onFilterChange(updatedFilters);
   };
 
   const handleClearAll = () => {
@@ -173,7 +218,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     count += filters.difficulties.length;
     if (filters.showViewed) count++;
     if (filters.showCompleted) count++;
-    if (filters.isNationalExam) count++;
+    if (filters.isNationalExam !== undefined && filters.isNationalExam !== null) count++;
+    if (filters.dateStart) count++;
+    if (filters.dateEnd) count++;
     return count;
   };
 
@@ -264,9 +311,21 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 renderChip('Complétés', () =>
                   onFilterChange({ ...filters, showCompleted: false })
                 )}
-              {filters.isNationalExam &&
+              {filters.isNationalExam === true &&
                 renderChip('Examen National', () =>
-                  onFilterChange({ ...filters, isNationalExam: false })
+                  onFilterChange({ ...filters, isNationalExam: undefined })
+                )}
+              {filters.isNationalExam === false &&
+                renderChip('Autres examens', () =>
+                  onFilterChange({ ...filters, isNationalExam: undefined })
+                )}
+              {filters.dateStart &&
+                renderChip(`Depuis ${filters.dateStart}`, () =>
+                  onFilterChange({ ...filters, dateStart: null })
+                )}
+              {filters.dateEnd &&
+                renderChip(`Jusqu'à ${filters.dateEnd}`, () =>
+                  onFilterChange({ ...filters, dateEnd: null })
                 )}
             </div>
 
@@ -416,21 +475,69 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
               {/* National Exam filter (only for exams) */}
               {contentType === 'exam' && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Type d'examen</h3>
-                  <button
-                    onClick={() =>
-                      onFilterChange({ ...filters, isNationalExam: !filters.isNationalExam })
-                    }
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      filters.isNationalExam
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Examen National
-                  </button>
-                </div>
+                <>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">Type d'examen</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() =>
+                          onFilterChange({ ...filters, isNationalExam: filters.isNationalExam ? undefined : true })
+                        }
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                          filters.isNationalExam === true
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Examen National
+                      </button>
+                      <button
+                        onClick={() =>
+                          onFilterChange({ ...filters, isNationalExam: filters.isNationalExam === false ? undefined : false })
+                        }
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                          filters.isNationalExam === false
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Autres examens
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">Période d'examen</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Année de début</label>
+                        <select
+                          value={filters.dateStart || ''}
+                          onChange={(e) => onFilterChange({ ...filters, dateStart: e.target.value || null })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value="">Toutes</option>
+                          {Array.from({ length: new Date().getFullYear() - 2008 + 1 }, (_, i) => 2008 + i).reverse().map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Année de fin</label>
+                        <select
+                          value={filters.dateEnd || ''}
+                          onChange={(e) => onFilterChange({ ...filters, dateEnd: e.target.value || null })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value="">Toutes</option>
+                          {Array.from({ length: new Date().getFullYear() - 2008 + 1 }, (_, i) => 2008 + i).reverse().map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
