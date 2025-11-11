@@ -196,16 +196,22 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       {/* Horizontal Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Filter Button */}
+          {/* Filter Button - More prominent and eye-catching */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-700 font-medium transition-colors border border-gray-200"
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md ${
+              activeFilterCount > 0
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-600'
+                : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-2 border-transparent animate-pulse hover:animate-none'
+            }`}
           >
-            <FilterIcon className="w-4 h-4" />
-            <span>Filtres</span>
-            {activeFilterCount > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-indigo-600 text-white text-xs rounded-full">
-                {activeFilterCount}
+            <FilterIcon className="w-5 h-5" />
+            <span className="text-sm">
+              {activeFilterCount > 0 ? `Filtres (${activeFilterCount})` : 'Filtrer les résultats'}
+            </span>
+            {activeFilterCount === 0 && (
+              <span className="hidden sm:inline text-xs opacity-90">
+                ✨ Cliquez ici
               </span>
             )}
           </button>
