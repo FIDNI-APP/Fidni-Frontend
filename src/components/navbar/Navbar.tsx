@@ -238,6 +238,12 @@ export const Navbar = () => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [mobileSubItems, setMobileSubItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Get text colors based on scroll state
+    const getTextColor = () => isScrolled ? 'text-gray-900' : 'text-white';
+    const getTextColorSecondary = () => isScrolled ? 'text-gray-600' : 'text-white/80';
+    const getBgHover = () => isScrolled ? 'hover:bg-gray-100' : 'hover:bg-white/10';
+    const getBgActive = () => isScrolled ? 'bg-gray-100' : 'bg-white/20 backdrop-blur-md';
     
     useEffect(() => {
       // If dropdown is expanded, fetch class levels
@@ -265,8 +271,8 @@ export const Navbar = () => {
             onClick={() => setIsExpanded(!isExpanded)}
             className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
               isActive
-                ? 'bg-white/20 backdrop-blur-md text-white shadow-lg'
-                : 'text-white/80 hover:bg-white/10 hover:text-white'
+                ? `${getBgActive()} ${getTextColor()} shadow-lg`
+                : `${getTextColorSecondary()} ${getBgHover()} ${getTextColor()}`
             }`}
           >
             {children}
@@ -274,17 +280,17 @@ export const Navbar = () => {
           </button>
 
           {isExpanded && (
-            <div className="ml-6 mt-2 space-y-1 border-l-2 border-white/20 pl-3">
+            <div className={`ml-6 mt-2 space-y-1 border-l-2 pl-3 ${isScrolled ? 'border-gray-300' : 'border-white/20'}`}>
               {isLoading ? (
-                <div className="py-3 px-4 text-white/60 flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
+                <div className={`py-3 px-4 flex items-center ${getTextColorSecondary()}`}>
+                  <div className={`animate-spin rounded-full h-4 w-4 border-b-2 inline-block mr-2 ${isScrolled ? 'border-gray-600' : 'border-white'}`}></div>
                   Chargement...
                 </div>
               ) : (
                 <>
                   <Link
                     to={`/${dropdown}`}
-                    className="block w-full px-4 py-2.5 text-sm text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition-all duration-150 font-medium"
+                    className={`block w-full px-4 py-2.5 text-sm rounded-lg ${getBgHover()} transition-all duration-150 font-medium ${getTextColor()}`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Tous les {dropdown === 'exercises' ? 'exercices' : dropdown === 'lessons' ? 'leçons' : 'examens'}
@@ -294,7 +300,7 @@ export const Navbar = () => {
                     <Link
                       key={item.id}
                       to={`/${dropdown}?classLevels=${item.id}`}
-                      className="block w-full px-4 py-2.5 text-sm text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-all duration-150"
+                      className={`block w-full px-4 py-2.5 text-sm rounded-lg ${getBgHover()} transition-all duration-150 ${getTextColorSecondary()}`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       {item.name}
@@ -313,8 +319,8 @@ export const Navbar = () => {
         to={to}
         className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
           isActive
-            ? 'bg-white/20 backdrop-blur-md text-white shadow-lg'
-            : 'text-white/80 hover:bg-white/10 hover:text-white'
+            ? `${getBgActive()} ${getTextColor()} shadow-lg`
+            : `${getTextColorSecondary()} ${getBgHover()}`
         }`}
         onClick={() => setMobileMenuOpen(false)}
       >
@@ -477,13 +483,18 @@ export const Navbar = () => {
       </div>
 
       {/* Mobile menu */}
-      <div className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${mobileMenuOpen ? 'max-h-screen opacity-100 py-6' : 'max-h-0 opacity-0'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          {/* Mobile search */}
-          <SearchAutocomplete
-            placeholder="Rechercher..."
-            inputClassName="w-full px-4 py-3 pr-20 bg-white/10 backdrop-blur-md text-white border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-white/60 transition-all duration-300"
-          />
+      {mobileMenuOpen && (
+        <div className={`md:hidden transition-all duration-300 ease-in-out ${isScrolled ? 'bg-white border-t border-gray-200' : ''}`}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            {/* Mobile search */}
+            <SearchAutocomplete
+              placeholder="Rechercher..."
+              inputClassName={`w-full px-4 py-3 pr-20 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 ${
+                isScrolled
+                  ? 'bg-gray-50 text-gray-900 border border-gray-200 focus:ring-purple-500 placeholder-gray-400'
+                  : 'bg-white/10 backdrop-blur-md text-white border border-white/30 focus:ring-white/50 placeholder-white/60'
+              }`}
+            />
 
           {/* Mobile navigation */}
           <div className="flex flex-col space-y-2">
@@ -536,44 +547,68 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile auth */}
-          <div className="pt-6 border-t border-white/20">
+          <div className={`pt-6 border-t ${isScrolled ? 'border-gray-200' : 'border-white/20'}`}>
             {isAuthenticated ? (
               <div className="flex flex-col space-y-3">
-                <div className="flex items-center space-x-3 px-4 py-3 bg-white/10 backdrop-blur-md rounded-xl">
+                <div className={`flex items-center space-x-3 px-4 py-3 rounded-xl ${
+                  isScrolled ? 'bg-gray-100' : 'bg-white/10 backdrop-blur-md'
+                }`}>
                   <img
                     src={user?.avatar || '/avatar-placeholder.jpg'}
                     alt="Profile"
-                    className="w-12 h-12 rounded-full border-2 border-white/50 shadow-lg"
+                    className={`w-12 h-12 rounded-full border-2 shadow-lg ${
+                      isScrolled ? 'border-gray-300' : 'border-white/50'
+                    }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-white font-semibold text-base truncate">{user?.username}</div>
-                    <div className="text-white/70 text-sm truncate">{user?.email}</div>
+                    <div className={`font-semibold text-base truncate ${
+                      isScrolled ? 'text-gray-900' : 'text-white'
+                    }`}>{user?.username}</div>
+                    <div className={`text-sm truncate ${
+                      isScrolled ? 'text-gray-600' : 'text-white/70'
+                    }`}>{user?.email}</div>
                   </div>
                 </div>
 
-                <Link to={`/profile/${user?.username}`} className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                <Link to={`/profile/${user?.username}`} className={`flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                  isScrolled ? 'text-gray-900 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+                }`} onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`p-2 rounded-lg mr-3 ${
+                    isScrolled ? 'bg-gray-200' : 'bg-white/10'
+                  }`}>
                     <User className="w-5 h-5" />
                   </div>
                   Mon profil
                 </Link>
 
-                <Link to="/saved" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                <Link to="/saved" className={`flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                  isScrolled ? 'text-gray-900 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+                }`} onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`p-2 rounded-lg mr-3 ${
+                    isScrolled ? 'bg-gray-200' : 'bg-white/10'
+                  }`}>
                     <BookmarkIcon className="w-5 h-5" />
                   </div>
                   Enregistrés
                 </Link>
 
-                <Link to="/revision-lists" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                <Link to="/revision-lists" className={`flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                  isScrolled ? 'text-gray-900 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+                }`} onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`p-2 rounded-lg mr-3 ${
+                    isScrolled ? 'bg-gray-200' : 'bg-white/10'
+                  }`}>
                     <List className="w-5 h-5" />
                   </div>
                   Listes de révision
                 </Link>
 
-                <Link to="/settings" className="flex items-center w-full px-4 py-3 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg bg-white/10 mr-3">
+                <Link to="/settings" className={`flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                  isScrolled ? 'text-gray-900 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+                }`} onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`p-2 rounded-lg mr-3 ${
+                    isScrolled ? 'bg-gray-200' : 'bg-white/10'
+                  }`}>
                     <Settings className="w-5 h-5" />
                   </div>
                   Paramètres
@@ -581,9 +616,13 @@ export const Navbar = () => {
 
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-full px-4 py-3 text-red-300 hover:text-red-200 rounded-xl hover:bg-red-500/10 transition-all duration-200 font-medium"
+                  className={`flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                    isScrolled ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
+                  }`}
                 >
-                  <div className="p-2 rounded-lg bg-red-500/10 mr-3">
+                  <div className={`p-2 rounded-lg mr-3 ${
+                    isScrolled ? 'bg-red-100' : 'bg-red-500/10'
+                  }`}>
                     <LogOut className="w-5 h-5" />
                   </div>
                   Se déconnecter

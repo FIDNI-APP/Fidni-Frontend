@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, X, Filter as FilterIcon, RotateCcw } from 'lucide-react';
-import { Difficulty } from '@/types';
+import { ChevronDown, X, Filter as FilterIcon, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { Difficulty, SortOption } from '@/types';
 import { getClassLevels, getSubjects, getSubfields, getChapters, getTheorems } from '@/lib/api';
+import { SortDropdown } from './SortDropdown';
 
 interface HorizontalFilterBarProps {
   contentType: 'exercise' | 'lesson' | 'exam';
@@ -19,6 +20,8 @@ interface HorizontalFilterBarProps {
     dateEnd?: string | null;
   };
   onFilterChange: (filters: any) => void;
+  sortBy: SortOption;
+  onSortChange: (sort: SortOption) => void;
 }
 
 interface Option {
@@ -30,6 +33,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   contentType,
   filters,
   onFilterChange,
+  sortBy,
+  onSortChange,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classLevels, setClassLevels] = useState<Option[]>([]);
@@ -193,86 +198,99 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   return (
     <>
-      {/* Horizontal Filter Bar */}
+      {/* Horizontal Filter Bar with Sort */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Filter Button - More prominent and eye-catching */}
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md ${
-              activeFilterCount > 0
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-600'
-                : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-2 border-transparent animate-pulse hover:animate-none'
-            }`}
-          >
-            <FilterIcon className="w-5 h-5" />
-            <span className="text-sm">
-              {activeFilterCount > 0 ? `Filtres (${activeFilterCount})` : 'Filtrer les résultats'}
-            </span>
-            {activeFilterCount === 0 && (
-              <span className="hidden sm:inline text-xs opacity-90">
-                ✨ Cliquez ici
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* Left side: Filter Button and Chips */}
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            {/* Filter Button - More prominent and eye-catching */}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md ${
+                activeFilterCount > 0
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-600'
+                  : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-2 border-transparent animate-pulse hover:animate-none'
+              }`}
+            >
+              <FilterIcon className="w-5 h-5" />
+              <span className="text-sm">
+                {activeFilterCount > 0 ? `Filtres (${activeFilterCount})` : 'Filtrer les résultats'}
               </span>
-            )}
-          </button>
+              {activeFilterCount === 0 && (
+                <span className="hidden sm:inline text-xs opacity-90">
+                  ✨ Cliquez ici
+                </span>
+              )}
+            </button>
 
-          {/* Active Filter Chips */}
-          <div className="flex flex-wrap items-center gap-2">
-            {filters.classLevels.map((id) =>
-              renderChip(`Niveau: ${getOptionName(classLevels, id)}`, () =>
-                handleToggleFilter('classLevels', id)
-              )
-            )}
-            {filters.subjects.map((id) =>
-              renderChip(`Matière: ${getOptionName(subjects, id)}`, () =>
-                handleToggleFilter('subjects', id)
-              )
-            )}
-            {filters.subfields.map((id) =>
-              renderChip(`Sous-domaine: ${getOptionName(subfields, id)}`, () =>
-                handleToggleFilter('subfields', id)
-              )
-            )}
-            {filters.chapters.map((id) =>
-              renderChip(`Chapitre: ${getOptionName(chapters, id)}`, () =>
-                handleToggleFilter('chapters', id)
-              )
-            )}
-            {filters.theorems.map((id) =>
-              renderChip(`Théorème: ${getOptionName(theorems, id)}`, () =>
-                handleToggleFilter('theorems', id)
-              )
-            )}
-            {filters.difficulties.map((diff) =>
-              renderChip(
-                `Difficulté: ${diff === 'easy' ? 'Facile' : diff === 'medium' ? 'Moyen' : 'Difficile'}`,
-                () => handleToggleFilter('difficulties', diff)
-              )
-            )}
-            {filters.showViewed &&
-              renderChip('Vus', () =>
-                onFilterChange({ ...filters, showViewed: false })
+            {/* Active Filter Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              {filters.classLevels.map((id) =>
+                renderChip(`Niveau: ${getOptionName(classLevels, id)}`, () =>
+                  handleToggleFilter('classLevels', id)
+                )
               )}
-            {filters.showCompleted &&
-              renderChip('Complétés', () =>
-                onFilterChange({ ...filters, showCompleted: false })
+              {filters.subjects.map((id) =>
+                renderChip(`Matière: ${getOptionName(subjects, id)}`, () =>
+                  handleToggleFilter('subjects', id)
+                )
               )}
-            {filters.isNationalExam &&
-              renderChip('Examen National', () =>
-                onFilterChange({ ...filters, isNationalExam: false })
+              {filters.subfields.map((id) =>
+                renderChip(`Sous-domaine: ${getOptionName(subfields, id)}`, () =>
+                  handleToggleFilter('subfields', id)
+                )
               )}
+              {filters.chapters.map((id) =>
+                renderChip(`Chapitre: ${getOptionName(chapters, id)}`, () =>
+                  handleToggleFilter('chapters', id)
+                )
+              )}
+              {filters.theorems.map((id) =>
+                renderChip(`Théorème: ${getOptionName(theorems, id)}`, () =>
+                  handleToggleFilter('theorems', id)
+                )
+              )}
+              {filters.difficulties.map((diff) =>
+                renderChip(
+                  `Difficulté: ${diff === 'easy' ? 'Facile' : diff === 'medium' ? 'Moyen' : 'Difficile'}`,
+                  () => handleToggleFilter('difficulties', diff)
+                )
+              )}
+              {filters.showViewed &&
+                renderChip('Vus', () =>
+                  onFilterChange({ ...filters, showViewed: false })
+                )}
+              {filters.showCompleted &&
+                renderChip('Complétés', () =>
+                  onFilterChange({ ...filters, showCompleted: false })
+                )}
+              {filters.isNationalExam &&
+                renderChip('Examen National', () =>
+                  onFilterChange({ ...filters, isNationalExam: false })
+                )}
+            </div>
+
+            {/* Clear All Button */}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={handleClearAll}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span className="hidden sm:inline">Réinitialiser</span>
+              </button>
+            )}
           </div>
 
-          {/* Clear All Button */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Réinitialiser</span>
-            </button>
-          )}
+          {/* Right side: Sort dropdown */}
+          <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-gray-200 pt-3 sm:pt-0 sm:pl-3">
+            <ArrowUpDown className="w-4 h-4 text-gray-600" />
+            <span className="text-sm text-gray-600 font-medium">Trier:</span>
+            <SortDropdown
+              value={sortBy}
+              onChange={onSortChange}
+            />
+          </div>
         </div>
       </div>
 

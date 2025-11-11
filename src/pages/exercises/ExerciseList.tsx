@@ -453,39 +453,14 @@ export const ExerciseList = () => {
 
       {/* Main layout */}
       <div className="container mx-auto px-4">
-        {/* Horizontal Filter Bar */}
+        {/* Horizontal Filter Bar with Sort */}
         <HorizontalFilterBar
           contentType="exercise"
           filters={filters}
           onFilterChange={handleFilterChange}
+          sortBy={sortBy}
+          onSortChange={handleSortChange}
         />
-
-        {/* Sort and Count Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <ArrowUpDown className="w-5 h-5 text-gray-700" />
-              </div>
-              <span className="text-gray-700 font-semibold">Trier par:</span>
-              <SortDropdown
-                value={sortBy}
-                onChange={handleSortChange}
-              />
-            </div>
-            <div className="flex items-center gap-2 bg-gray-100 text-gray-700 px-5 py-2 rounded-full font-bold shadow-sm">
-              <BookOpen className="w-4 h-4" />
-              <span>
-                {totalCount} exercice{totalCount > 1 ? 's' : ''}
-                {unfilteredTotalCount > 0 && totalCount < unfilteredTotalCount && (
-                  <span className="text-gray-500 font-normal ml-1">
-                    (sur {unfilteredTotalCount} total)
-                  </span>
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Content Area */}
         <div ref={listRef}>
