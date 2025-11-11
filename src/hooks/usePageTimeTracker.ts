@@ -6,7 +6,7 @@
  * It also handles page visibility changes (when user switches tabs)
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 
@@ -26,15 +26,31 @@ export function usePageTimeTracker({
   const totalTimeRef = useRef<number>(0);
   const isVisibleRef = useRef<boolean>(true);
 
-  // Debug log on mount
+  // Use refs to store latest values for cleanup function
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  const contentIdRef = useRef(contentId);
+  const enabledRef = useRef(enabled);
+  const contentTypeRef = useRef(contentType);
+
+  // Update refs whenever values change
   useEffect(() => {
-    return () => {
-      // Cleanup
-    };
-  }, []);
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    contentIdRef.current = contentId;
+  }, [contentId]);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    contentTypeRef.current = contentType;
+  }, [contentType]);
 
   // Function to send time to backend
-  const sendStudyTime = async (timeSpentSeconds: number) => {
+  const sendStudyTime = useCallback(async (timeSpentSeconds: number) => {
     if (!isAuthenticated || !contentId || !enabled || timeSpentSeconds < 1) {
       return;
     }
@@ -49,7 +65,7 @@ export function usePageTimeTracker({
     } catch (error) {
       console.error('[PageTimeTracker] Failed to send study time:', error);
     }
-  };
+  }, [isAuthenticated, contentId, enabled, contentType]);
 
   // Handle page visibility changes
   useEffect(() => {
@@ -97,26 +113,32 @@ export function usePageTimeTracker({
     }
 
     previousContentIdRef.current = contentId;
-  }, [contentId]);
+  }, [contentId, isAuthenticated, enabled, sendStudyTime]);
 
   // Send time when component unmounts
   useEffect(() => {
-    // This cleanup runs when component unmounts OR when dependencies change
+    // This cleanup runs when component unmounts
     return () => {
-      if (isVisibleRef.current && isAuthenticated && contentId && enabled) {
+      // Use refs to get latest values at unmount time
+      const latestIsAuthenticated = isAuthenticatedRef.current;
+      const latestContentId = contentIdRef.current;
+      const latestEnabled = enabledRef.current;
+      const latestContentType = contentTypeRef.current;
+
+      if (isVisibleRef.current && latestIsAuthenticated && latestContentId && latestEnabled) {
         const now = Date.now();
         const sessionTime = (now - startTimeRef.current) / 1000;
         const totalTime = totalTimeRef.current + sessionTime;
 
         if (totalTime >= 1) {
-          console.log(`[PageTimeTracker] Unmounting - total time: ${Math.floor(totalTime)}s for ${contentType} ${contentId}`);
+          console.log(`[PageTimeTracker] Unmounting - total time: ${Math.floor(totalTime)}s for ${latestContentType} ${latestContentId}`);
 
           // Use sendBeacon with token in FormData (since headers don't work with sendBeacon)
           try {
             const token = localStorage.getItem('token');
             const data = new FormData();
-            data.append('content_type', contentType);
-            data.append('content_id', contentId);
+            data.append('content_type', latestContentType);
+            data.append('content_id', latestContentId);
             data.append('time_spent_seconds', Math.floor(totalTime).toString());
             data.append('token', token || ''); // Send token in body
 
