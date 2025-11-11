@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Content, VoteValue } from '@/types';
 import { VoteButtons } from '@/components/VoteButtons';
 import DualPaneEditor from '@/components/editor/DualPaneEditor';
-import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { RealPaginatedRenderer } from '@/components/editor/RealPaginatedRenderer';
 import { AnimatePresence, motion } from 'framer-motion';
 
 interface SolutionSectionProps {
@@ -76,8 +76,13 @@ export const SolutionSection: React.FC<SolutionSectionProps> = ({
               className="overflow-hidden"
             >
               <div className="pt-4">
-                <div className="prose max-w-none text-gray-800">
-                  <TipTapRenderer content={exercise.solution.content} />
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <RealPaginatedRenderer
+                    content={exercise.solution.content}
+                    pageHeight={700}
+                    pageWidth={900}
+                    padding={24}
+                  />
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between mb-4">
