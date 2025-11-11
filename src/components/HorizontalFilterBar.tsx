@@ -199,10 +199,10 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       subfields: [],
       chapters: [],
       theorems: [],
-      difficulties: [],
+      difficulties: [] as Difficulty[],
       showViewed: false,
       showCompleted: false,
-      isNationalExam: false,
+      isNationalExam: undefined,
       dateStart: null,
       dateEnd: null,
     });

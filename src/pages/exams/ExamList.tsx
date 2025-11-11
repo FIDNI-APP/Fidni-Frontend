@@ -87,7 +87,7 @@ export const ExamList = () => {
     chapters: [],
     theorems: [],
     difficulties: [],
-    isNationalExam: false,
+    isNationalExam: undefined,
     dateStart: null,
     dateEnd: null,
   });
