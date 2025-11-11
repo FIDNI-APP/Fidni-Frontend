@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import TipTapRenderer from './TipTapRenderer';
 
 interface RealPaginatedRendererProps {
   content: string;
@@ -11,15 +12,17 @@ interface RealPaginatedRendererProps {
 /**
  * Real paginated renderer with automatic content splitting
  * Splits content across multiple pages based on actual height
+ * Uses TipTapRenderer for proper LaTeX rendering
  */
 export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   content,
-  pageHeight = 1000,  // Taller pages
-  pageWidth = 900,    // Wider for better screen usage
-  padding = 20        // Minimal padding
+  pageHeight = 700,   // Reduced from 1000px for better UX
+  pageWidth = 900,
+  padding = 24
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pages, setPages] = useState<string[]>([]);
+  const [isReady, setIsReady] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Split content into pages based on actual rendered height
@@ -85,6 +88,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     document.body.removeChild(tempContainer);
     setPages(splitPages.length > 0 ? splitPages : [content]);
     setCurrentPage(0);
+    setIsReady(true);
   }, [content, pageHeight, pageWidth, padding]);
 
   const goToPage = (pageIndex: number) => {
@@ -93,35 +97,32 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     }
   };
 
-  if (pages.length === 0) {
+  if (pages.length === 0 || !isReady) {
     return <div className="text-center py-8 text-gray-500">Chargement...</div>;
   }
 
   return (
     <div className="w-full">
-      {/* Navigation controls */}
+      {/* Cleaner, more compact navigation */}
       {pages.length > 1 && (
-        <div className="flex items-center justify-between mb-6 px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+        <div className="flex items-center justify-between mb-4 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
           <button
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage === 0}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-purple-700 bg-white rounded-lg hover:bg-purple-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-gray-200"
           >
             <ChevronLeft className="w-4 h-4" />
             Précédent
           </button>
 
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-purple-900">
-              Page <span className="font-bold text-lg">{currentPage + 1}</span> sur{' '}
-              <span className="font-bold text-lg">{pages.length}</span>
-            </span>
-          </div>
+          <span className="text-sm text-gray-600">
+            Page <span className="font-semibold text-gray-900">{currentPage + 1}</span> / {pages.length}
+          </span>
 
           <button
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage === pages.length - 1}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-purple-700 bg-white rounded-lg hover:bg-purple-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-gray-200"
           >
             Suivant
             <ChevronRight className="w-4 h-4" />
@@ -129,32 +130,30 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
         </div>
       )}
 
-      {/* Page content */}
-      <div className="relative bg-white"
+      {/* Page content with TipTap renderer for proper LaTeX */}
+      <div
+        className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
         style={{
-          minHeight: `${pageHeight}px`
+          minHeight: `${pageHeight}px`,
+          maxHeight: `${pageHeight}px`
         }}
       >
-        {/* Page number */}
-        <div className="absolute top-2 right-4 text-xs text-gray-400 font-medium">
-          {currentPage + 1} / {pages.length}
-        </div>
-
-        {/* Content with overflow hidden */}
         <div
           ref={contentRef}
-          className="prose prose-lg max-w-none"
           style={{
             padding: `${padding}px`,
             minHeight: `${pageHeight}px`,
-            overflow: 'hidden',
-            fontFamily: '"Latin Modern Roman", "Computer Modern", "CMU Serif", Georgia, serif',
-            fontSize: '11pt',
-            lineHeight: '1.6',
-            color: '#1a1a1a'
+            maxHeight: `${pageHeight}px`,
+            overflow: 'auto'
           }}
-          dangerouslySetInnerHTML={{ __html: pages[currentPage] || '' }}
-        />
+        >
+          {/* Use TipTapRenderer for proper LaTeX rendering */}
+          <TipTapRenderer
+            content={pages[currentPage] || ''}
+            compact={true}
+            className="text-base"
+          />
+        </div>
       </div>
     </div>
   );
