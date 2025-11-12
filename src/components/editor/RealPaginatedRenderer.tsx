@@ -27,71 +27,133 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const [zoom, setZoom] = useState(100);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Split content into pages based on actual rendered height
+  // Split content into pages based on actual rendered TipTap height
   useEffect(() => {
     if (!content) {
       setPages([]);
       return;
     }
 
-    // Create a temporary container to measure content
+    // Parse TipTap content to get individual nodes
+    let parsedContent;
+    try {
+      if (typeof content === 'string' && content.trim().startsWith('{')) {
+        parsedContent = JSON.parse(content);
+      } else {
+        // If it's HTML, just use one page
+        setPages([content]);
+        setIsReady(true);
+        return;
+      }
+    } catch (e) {
+      // If parsing fails, use content as-is
+      setPages([content]);
+      setIsReady(true);
+      return;
+    }
+
+    // If no content nodes, use as-is
+    if (!parsedContent.content || parsedContent.content.length === 0) {
+      setPages([content]);
+      setIsReady(true);
+      return;
+    }
+
+    // Create temporary container to measure rendered content
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
+    tempContainer.style.top = '-10000px';
+    tempContainer.style.left = '-10000px';
+    tempContainer.style.width = `${pageWidth}px`;
+    tempContainer.style.padding = `${padding}px`;
     tempContainer.style.visibility = 'hidden';
-    tempContainer.style.width = `${pageWidth - 2 * padding}px`;
-    tempContainer.style.fontFamily = '"Latin Modern Roman", "Computer Modern", "CMU Serif", serif';
-    tempContainer.style.fontSize = '11pt';
-    tempContainer.style.lineHeight = '1.6';
-    tempContainer.innerHTML = content;
+    tempContainer.className = 'tiptap-readonly-editor latex-style text-lg tiptap-compact text-base leading-relaxed';
     document.body.appendChild(tempContainer);
 
     const maxHeight = pageHeight - 2 * padding;
-    const splitPages: string[] = [];
+    const splitPages: any[] = [];
+    let currentPageNodes: any[] = [];
+    let currentHeight = 0;
 
-    // Get all child nodes
-    const children = Array.from(tempContainer.children);
+    // Render each node and measure its height
+    for (const node of parsedContent.content) {
+      // Create temp div for this node
+      const nodeDiv = document.createElement('div');
+      tempContainer.appendChild(nodeDiv);
 
-    if (children.length === 0) {
-      // No children, just use the content as-is
-      splitPages.push(content);
-    } else {
-      let currentPageContent: HTMLElement[] = [];
-      let currentHeight = 0;
+      // Create mini TipTap content for this node
+      const nodeContent = JSON.stringify({
+        type: 'doc',
+        content: [node]
+      });
 
-      for (const child of children) {
-        const childClone = child.cloneNode(true) as HTMLElement;
-        const childHeight = (child as HTMLElement).offsetHeight;
+      // Set HTML approximation to measure (simplified)
+      nodeDiv.innerHTML = getNodeHTML(node);
 
-        // Check if adding this element would exceed page height
-        if (currentHeight + childHeight > maxHeight && currentPageContent.length > 0) {
-          // Create a new page with current content
-          const pageDiv = document.createElement('div');
-          currentPageContent.forEach(el => pageDiv.appendChild(el));
-          splitPages.push(pageDiv.innerHTML);
+      const nodeHeight = nodeDiv.offsetHeight;
+      tempContainer.removeChild(nodeDiv);
 
-          // Start new page with current element
-          currentPageContent = [childClone];
-          currentHeight = childHeight;
-        } else {
-          // Add to current page
-          currentPageContent.push(childClone);
-          currentHeight += childHeight;
-        }
-      }
+      // Check if adding this node would exceed page height
+      if (currentHeight + nodeHeight > maxHeight && currentPageNodes.length > 0) {
+        // Save current page
+        splitPages.push({
+          type: 'doc',
+          content: currentPageNodes
+        });
 
-      // Add remaining content as last page
-      if (currentPageContent.length > 0) {
-        const pageDiv = document.createElement('div');
-        currentPageContent.forEach(el => pageDiv.appendChild(el));
-        splitPages.push(pageDiv.innerHTML);
+        // Start new page with current node
+        currentPageNodes = [node];
+        currentHeight = nodeHeight;
+      } else {
+        // Add to current page
+        currentPageNodes.push(node);
+        currentHeight += nodeHeight;
       }
     }
 
+    // Add remaining content as last page
+    if (currentPageNodes.length > 0) {
+      splitPages.push({
+        type: 'doc',
+        content: currentPageNodes
+      });
+    }
+
     document.body.removeChild(tempContainer);
-    setPages(splitPages.length > 0 ? splitPages : [content]);
+
+    // Convert pages to JSON strings
+    const pageStrings = splitPages.map(page => JSON.stringify(page));
+    setPages(pageStrings.length > 0 ? pageStrings : [content]);
     setCurrentPage(0);
     setIsReady(true);
   }, [content, pageHeight, pageWidth, padding]);
+
+  // Helper function to convert TipTap node to HTML for measurement
+  const getNodeHTML = (node: any): string => {
+    if (node.type === 'paragraph') {
+      const text = node.content?.map((n: any) => n.text || '').join('') || '';
+      return `<p>${text}</p>`;
+    } else if (node.type === 'heading') {
+      const level = node.attrs?.level || 1;
+      const text = node.content?.map((n: any) => n.text || '').join('') || '';
+      return `<h${level}>${text}</h${level}>`;
+    } else if (node.type === 'bulletList') {
+      const items = node.content?.map((item: any) => {
+        const itemText = item.content?.[0]?.content?.map((n: any) => n.text || '').join('') || '';
+        return `<li>${itemText}</li>`;
+      }).join('') || '';
+      return `<ul class="list-disc pl-5">${items}</ul>`;
+    } else if (node.type === 'orderedList') {
+      const items = node.content?.map((item: any) => {
+        const itemText = item.content?.[0]?.content?.map((n: any) => n.text || '').join('') || '';
+        return `<li>${itemText}</li>`;
+      }).join('') || '';
+      return `<ol class="list-decimal pl-5">${items}</ol>`;
+    } else if (node.type === 'image') {
+      return `<img src="${node.attrs?.src || ''}" style="max-width: 100%;" />`;
+    }
+    return '<div></div>';
+  };
 
   // Keyboard navigation
   useEffect(() => {
@@ -252,14 +314,21 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                             transformOrigin: 'top left',
                             width: `${pageWidth}px`,
                             height: `${pageHeight}px`,
-                            padding: `${padding}px`,
                           }}
                         >
-                          <TipTapRenderer
-                            content={pageContent}
-                            compact={true}
-                            className="text-base leading-relaxed"
-                          />
+                          <div
+                            style={{
+                              padding: `${padding}px`,
+                              height: `${pageHeight}px`,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <TipTapRenderer
+                              content={pageContent}
+                              compact={true}
+                              className="text-base leading-relaxed"
+                            />
+                          </div>
                         </div>
                         {/* Page number overlay */}
                         <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] px-1 py-0.5 rounded">
@@ -317,8 +386,8 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                   className="relative z-10"
                   style={{
                     padding: `${padding}px`,
-                    minHeight: `${pageHeight}px`,
-                    overflow: 'auto'
+                    height: `${pageHeight}px`,
+                    overflow: 'hidden'
                   }}
                 >
                   {/* Use TipTapRenderer for proper LaTeX rendering */}
