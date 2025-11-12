@@ -59,18 +59,61 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
       return;
     }
 
-    // Simple pagination: limit nodes per page to avoid overflow
-    const NODES_PER_PAGE = 5; // Conservative limit to prevent truncation
+    // Create a hidden container to render and measure actual TipTap content
+    const measureContainer = document.createElement('div');
+    measureContainer.style.position = 'absolute';
+    measureContainer.style.top = '-99999px';
+    measureContainer.style.left = '-99999px';
+    measureContainer.style.width = `${pageWidth - 2 * padding}px`;
+    measureContainer.style.visibility = 'hidden';
+    measureContainer.className = 'tiptap-readonly-editor latex-style text-base leading-relaxed tiptap-compact';
+    document.body.appendChild(measureContainer);
+
     const allNodes = parsedContent.content;
     const splitPages: any[] = [];
+    let currentPageNodes: any[] = [];
+    const maxContentHeight = pageHeight - 2 * padding;
 
-    for (let i = 0; i < allNodes.length; i += NODES_PER_PAGE) {
-      const pageNodes = allNodes.slice(i, i + NODES_PER_PAGE);
+    // Measure each node by adding it to the container
+    for (let i = 0; i < allNodes.length; i++) {
+      const testNodes = [...currentPageNodes, allNodes[i]];
+
+      // Create test content with current nodes
+      const testContent = {
+        type: 'doc',
+        content: testNodes
+      };
+
+      // Render to measure
+      measureContainer.innerHTML = renderTipTapToHTML(testContent);
+
+      const currentHeight = measureContainer.offsetHeight;
+
+      // If adding this node exceeds max height, start new page
+      if (currentHeight > maxContentHeight && currentPageNodes.length > 0) {
+        // Save current page
+        splitPages.push({
+          type: 'doc',
+          content: currentPageNodes
+        });
+        // Start new page with current node
+        currentPageNodes = [allNodes[i]];
+      } else {
+        // Add node to current page
+        currentPageNodes.push(allNodes[i]);
+      }
+    }
+
+    // Add remaining nodes as last page
+    if (currentPageNodes.length > 0) {
       splitPages.push({
         type: 'doc',
-        content: pageNodes
+        content: currentPageNodes
       });
     }
+
+    // Cleanup
+    document.body.removeChild(measureContainer);
 
     // Convert pages to JSON strings
     const pageStrings = splitPages.map(page => JSON.stringify(page));
@@ -78,6 +121,53 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     setCurrentPage(0);
     setIsReady(true);
   }, [content, pageHeight, pageWidth, padding]);
+
+  // Helper to render TipTap JSON to HTML for measurement
+  const renderTipTapToHTML = (doc: any): string => {
+    if (!doc.content) return '';
+
+    return doc.content.map((node: any) => {
+      switch (node.type) {
+        case 'paragraph':
+          return `<p>${renderInlineContent(node.content || [])}</p>`;
+        case 'heading':
+          const level = node.attrs?.level || 1;
+          return `<h${level}>${renderInlineContent(node.content || [])}</h${level}>`;
+        case 'bulletList':
+          const bulletItems = (node.content || []).map((item: any) =>
+            `<li>${item.content?.[0] ? renderInlineContent(item.content[0].content || []) : ''}</li>`
+          ).join('');
+          return `<ul class="list-disc pl-5">${bulletItems}</ul>`;
+        case 'orderedList':
+          const orderedItems = (node.content || []).map((item: any) =>
+            `<li>${item.content?.[0] ? renderInlineContent(item.content[0].content || []) : ''}</li>`
+          ).join('');
+          return `<ol class="list-decimal pl-5">${orderedItems}</ol>`;
+        case 'image':
+          return `<img src="${node.attrs?.src || ''}" style="max-width: 100%; height: auto;" />`;
+        default:
+          return '<div></div>';
+      }
+    }).join('');
+  };
+
+  const renderInlineContent = (content: any[]): string => {
+    return content.map((node: any) => {
+      if (node.type === 'text') {
+        let text = node.text || '';
+        // Apply marks
+        if (node.marks) {
+          node.marks.forEach((mark: any) => {
+            if (mark.type === 'bold') text = `<strong>${text}</strong>`;
+            if (mark.type === 'italic') text = `<em>${text}</em>`;
+            if (mark.type === 'code') text = `<code>${text}</code>`;
+          });
+        }
+        return text;
+      }
+      return '';
+    }).join('');
+  };
 
   // Keyboard navigation
   useEffect(() => {
