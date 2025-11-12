@@ -332,8 +332,8 @@ export const Navbar = () => {
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
       isScrolled
-        ? 'py-3 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
-        : `py-4 bg-gradient-to-r ${getNavbarGradient()}`
+        ? 'py-4 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
+        : `py-5 bg-gradient-to-r ${getNavbarGradient()}`
     }`}>
       <div className="absolute inset-0 opacity-10 pointer-events-none">
   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -351,7 +351,7 @@ export const Navbar = () => {
   </svg>
 </div>
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-6">
+      <div className="max-w-7xl mx-auto px-5 md:px-10 lg:px-16">
         <div className="flex items-center justify-between">
           {/* Logo and desktop navigation */}
           <div className="flex items-center space-x-8">
@@ -364,7 +364,7 @@ export const Navbar = () => {
                 <img
                   src={isHovered ? Logo2 : Logo3}
                   alt="Fidni Logo"
-                  className="h-12 md:h-16 w-auto object-contain"
+                  className="h-14 md:h-20 w-auto object-contain"
                 />
               </div>
             </Link>
@@ -455,7 +455,7 @@ export const Navbar = () => {
       {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className={`md:hidden transition-all duration-300 ease-in-out ${isScrolled ? 'bg-white border-t border-gray-200' : ''}`}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          <div className="max-w-7xl mx-auto px-5 md:px-10 lg:px-16 py-6 space-y-6">
             {/* Mobile search */}
             <SearchAutocomplete
               placeholder="Rechercher..."
