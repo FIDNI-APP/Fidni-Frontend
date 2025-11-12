@@ -223,11 +223,11 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 style={{ maxHeight: `${pageHeight}px` }}
               >
                 <div className="flex flex-col gap-3">
-                  {pages.map((_, index) => (
+                  {pages.map((pageContent, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentPage(index)}
-                      className={`flex-shrink-0 w-20 h-28 rounded border-2 transition-all hover:scale-105 ${
+                      className={`relative flex-shrink-0 w-20 h-28 rounded border-2 transition-all hover:scale-105 overflow-hidden ${
                         index === currentPage
                           ? 'border-indigo-500 shadow-lg ring-2 ring-indigo-200'
                           : 'border-gray-300 hover:border-gray-400 opacity-60 hover:opacity-100'
@@ -236,7 +236,33 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                         background: 'linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)',
                       }}
                     >
-                      <div className="flex items-center justify-center h-full text-sm font-medium text-gray-600">
+                      {/* Miniature preview of page content */}
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          transform: `scale(${80 / pageWidth})`,
+                          transformOrigin: 'top left',
+                          width: `${pageWidth}px`,
+                          height: `${pageHeight}px`,
+                        }}
+                      >
+                        <div
+                          className="bg-white"
+                          style={{
+                            width: `${pageWidth}px`,
+                            height: `${pageHeight}px`,
+                            padding: `${padding}px`,
+                          }}
+                        >
+                          <TipTapRenderer
+                            content={pageContent}
+                            compact={true}
+                            className="text-base leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                      {/* Page number overlay */}
+                      <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] px-1 py-0.5 rounded">
                         {index + 1}
                       </div>
                     </button>
