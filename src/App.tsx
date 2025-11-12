@@ -272,7 +272,7 @@ function App() {
                         </NavbarWrapper>
                       } />
 
-                  
+
 
                 </Routes>
               </div>
