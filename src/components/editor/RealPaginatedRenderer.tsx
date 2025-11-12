@@ -223,29 +223,37 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 style={{ maxHeight: `${pageHeight}px` }}
               >
                 <div className="flex flex-col gap-3">
-                  {pages.map((pageContent, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPage(index)}
-                      className={`relative flex-shrink-0 w-20 h-28 rounded border-2 transition-all hover:scale-105 overflow-hidden ${
-                        index === currentPage
-                          ? 'border-indigo-500 shadow-lg ring-2 ring-indigo-200'
-                          : 'border-gray-300 hover:border-gray-400 opacity-60 hover:opacity-100'
-                      }`}
-                      style={{
-                        background: 'linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)',
-                      }}
-                    >
-                      {/* Miniature preview of page content */}
-                      <div
-                        className="absolute inset-0 pointer-events-none"
+                  {pages.map((pageContent, index) => {
+                    // Calculate thumbnail dimensions to match page aspect ratio
+                    const thumbnailWidth = 80;
+                    const thumbnailHeight = Math.round((thumbnailWidth * pageHeight) / pageWidth);
+                    const scale = thumbnailWidth / pageWidth;
+
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPage(index)}
+                        className={`relative flex-shrink-0 rounded border-2 transition-all hover:scale-105 overflow-hidden ${
+                          index === currentPage
+                            ? 'border-indigo-500 shadow-lg ring-2 ring-indigo-200'
+                            : 'border-gray-300 hover:border-gray-400 opacity-60 hover:opacity-100'
+                        }`}
                         style={{
-                          transform: `scale(${80 / pageWidth})`,
-                          transformOrigin: 'top left',
-                          width: `${pageWidth}px`,
-                          height: `${pageHeight}px`,
+                          width: `${thumbnailWidth}px`,
+                          height: `${thumbnailHeight}px`,
+                          background: 'linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)',
                         }}
                       >
+                        {/* Miniature preview of page content */}
+                        <div
+                          className="absolute top-0 left-0 pointer-events-none"
+                          style={{
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'top left',
+                            width: `${pageWidth}px`,
+                            height: `${pageHeight}px`,
+                          }}
+                        >
                         <div
                           className="bg-white"
                           style={{
@@ -260,13 +268,14 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                             className="text-base leading-relaxed"
                           />
                         </div>
-                      </div>
-                      {/* Page number overlay */}
-                      <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] px-1 py-0.5 rounded">
-                        {index + 1}
-                      </div>
-                    </button>
-                  ))}
+                        </div>
+                        {/* Page number overlay */}
+                        <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] px-1 py-0.5 rounded">
+                          {index + 1}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
