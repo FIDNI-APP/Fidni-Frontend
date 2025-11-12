@@ -235,11 +235,6 @@ function findMathFormulas(doc: any, delimiters: MathRenderOptions['delimiters'])
     if (node.type.name === 'text' && node.text) {
       const text = node.text;
 
-      // Debug: log text content to see what we're working with
-      if (text.includes('$')) {
-        console.log('💬 Text node with $:', { text, pos });
-      }
-
       // Sort delimiters by length (longest first) to handle $$ before $
       const sortedDelimiters = [...delimiters].sort((a, b) => b.left.length - a.left.length);
 
@@ -277,12 +272,6 @@ function findMathFormulas(doc: any, delimiters: MathRenderOptions['delimiters'])
           );
 
           if (!overlaps) {
-            console.log('📐 Found formula:', {
-              delimiter: delimiter.left,
-              isDisplay: delimiter.display,
-              latex,
-              text: text.substring(from - pos, to - pos)
-            });
             formulas.push({
               from,
               to,

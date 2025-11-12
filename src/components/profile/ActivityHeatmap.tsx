@@ -89,21 +89,26 @@ uniqueActivity.forEach(day => dateMap.set(day.date, day));
 
   // Build weeks array
   const weeks: (typeof uniqueActivity[0] | null)[][] = [];
-  let currentDate = new Date(startDate);
+  
+let currentDate = new Date(startDate);
 
-  while (currentDate <= endDate) {
-    const week: (typeof uniqueActivity[0] | null)[] = [];
+while (currentDate < endDate) {
+  const week: (typeof uniqueActivity[0] | null)[] = [];
 
-    // Construire la semaine du lundi au dimanche
-    for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const dayData = dateMap.get(dateStr);
-      week.push(dayData || null);
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    weeks.push(week);
+  for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+    const dateStr = currentDate.toLocaleDateString('fr-CA'); // ✅ corrige le décalage UTC
+    const dayData = dateMap.get(dateStr);
+    week.push(dayData || null);
+    currentDate.setDate(currentDate.getDate() + 1);
   }
+
+  weeks.push(week);
+}
+
+// Vérification
+const allDates = weeks.flat().filter(Boolean).map(d => d.date);
+const duplicates = allDates.filter((d, i, arr) => arr.indexOf(d) !== i);
+console.log("Dates dupliquées :", duplicates);
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
@@ -123,55 +128,50 @@ uniqueActivity.forEach(day => dateMap.set(day.date, day));
           {/* Month labels */}
           <div className="relative h-5 ml-12 mb-1">
             {(() => {
-              const monthPositions: { month: string; startCol: number; width: number }[] = [];
-              let currentMonth: string | null = null;
-              let monthStartCol = 0;
+              const monthPositions: { month: string; startCol: number }[] = [];
 
+              // Flatten all valid days with their week index
+              const flatDays: { date: Date; weekIndex: number }[] = [];
               weeks.forEach((week, weekIndex) => {
-                const firstDay = week.find(d => d !== null);
-                if (firstDay) {
-                  const date = new Date(firstDay.date);
-                  const yearMonth = `${date.getFullYear()}-${date.getMonth()}`;
-
-                  if (currentMonth !== yearMonth) {
-                    if (currentMonth && monthStartCol < weekIndex) {
-                      const parts = currentMonth.split('-');
-                      const monthNum = parseInt(parts[1], 10);
-                      monthPositions.push({
-                        month: monthLabels[monthNum],
-                        startCol: monthStartCol,
-                        width: weekIndex - monthStartCol
-                      });
-                    }
-                    currentMonth = yearMonth;
-                    monthStartCol = weekIndex;
+                week.forEach(day => {
+                  if (day) {
+                    flatDays.push({ date: new Date(day.date), weekIndex });
                   }
-                }
+                });
               });
 
-              if (currentMonth) {
-                const parts = (currentMonth as string).split('-');
-                const monthNum = parseInt(parts[1], 10);
-                monthPositions.push({
-                  month: monthLabels[monthNum],
-                  startCol: monthStartCol,
-                  width: weeks.length - monthStartCol
-                });
-              }
+                  // Sort by date (just to be safe)
+                  flatDays.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-              return monthPositions.map((pos, idx) => (
-                <div
-                  key={idx}
-                  className="absolute text-xs text-gray-600 font-medium"
-                  style={{
-                    left: `${pos.startCol * 15}px`,
-                    top: 0
-                  }}
-                >
-                  {pos.month}
-                </div>
-              ));
-            })()}
+                  // Track first occurrence of each month
+                  const seenMonths = new Set<string>();
+                  flatDays.forEach(({ date, weekIndex }) => {
+                    const ym = `${date.getFullYear()}-${date.getMonth()}`;
+                    if (!seenMonths.has(ym)) {
+                      seenMonths.add(ym);
+                      monthPositions.push({
+                        month: monthLabels[date.getMonth()],
+                        startCol: weekIndex,
+                      });
+                    }
+                  });
+
+                  return monthPositions.map((pos, idx) => (
+                    <div
+                      key={idx}
+                      className="absolute text-xs text-gray-600 font-medium"
+                      style={{
+                        left: `${pos.startCol * 15}px`, // adjust if your cell+gap width differs
+                        top: 0,
+                      }}
+                    >
+                      {pos.month}
+                    </div>
+                  ));
+                })()}
+
+
+
           </div>
 
           {/* Grid with day labels */}

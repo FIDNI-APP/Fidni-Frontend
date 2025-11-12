@@ -25,12 +25,6 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       'framer-motion',
-      'react-router-dom',
-      'lucide-react',
-      'recharts',
-      '@chakra-ui/react',
-      'react-hot-toast',
-      'react-toastify'
     ],
   },
   resolve: {
@@ -38,16 +32,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    proxy: {
-      '/api': 'http://ec2-15-237-183-131.eu-west-3.compute.amazonaws.com',
-    },
-    host: true ,
-    allowedHosts: ['fidni.fr', '.fidni.fr'],
-    watch: {
-      usePolling: true, // Add this if you're on Windows/WSL
-      interval: 100
-    }
+ server: {
+    allowedHosts: ['fidni.fr'], // 👈 add your custom host
   },
   build: {
      minify: 'terser', // Enable minification

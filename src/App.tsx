@@ -41,7 +41,6 @@ import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
 import { RevisionListDetail } from './pages/RevisionListDetail';
 import { SavedItems } from './pages/SavedItems';
 import { RevisionLists } from './pages/RevisionLists';
-import EditorComparison from './pages/EditorComparison';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -274,12 +273,7 @@ function App() {
                         </NavbarWrapper>
                       } />
 
-                  {/* Editor Comparison Test Page */}
-                  <Route path="/editor-test" element={
-                    <NavbarWrapper>
-                      <EditorComparison />
-                    </NavbarWrapper>
-                  } />
+
 
                 </Routes>
               </div>

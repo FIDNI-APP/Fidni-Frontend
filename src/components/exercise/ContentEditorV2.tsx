@@ -591,7 +591,7 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
                             : 'bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100'
                         }`}
                       >
-                        ● Facile
+                        Facile
                       </button>
 
                       {/* Medium - Amber */}
@@ -604,7 +604,7 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
                             : 'bg-amber-50 text-amber-700 border-2 border-amber-200 hover:bg-amber-100'
                         }`}
                       >
-                        ● Moyen
+                        Moyen
                       </button>
 
                       {/* Hard - Red/Orange */}
@@ -617,7 +617,7 @@ const ContentEditorV2: React.FC<ContentEditorV2Props> = ({
                             : 'bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100'
                         }`}
                       >
-                        ● Difficile
+                        Difficile
                       </button>
                     </div>
                   </div>

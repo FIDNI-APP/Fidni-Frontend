@@ -1,0 +1,9 @@
+version: "3.9"
+
+services:
+  fidni-backend:
+    image: fidni-frontend
+    container_name: fidni-frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
