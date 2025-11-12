@@ -59,67 +59,18 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
       return;
     }
 
-    // Create temporary container to measure rendered content
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.top = '-10000px';
-    tempContainer.style.left = '-10000px';
-    tempContainer.style.width = `${pageWidth}px`;
-    tempContainer.style.padding = `${padding}px`;
-    tempContainer.style.visibility = 'hidden';
-    tempContainer.className = 'tiptap-readonly-editor latex-style text-lg tiptap-compact text-base leading-relaxed';
-    document.body.appendChild(tempContainer);
-
-    const maxHeight = pageHeight - 2 * padding;
+    // Simple pagination: limit nodes per page to avoid overflow
+    const NODES_PER_PAGE = 5; // Conservative limit to prevent truncation
+    const allNodes = parsedContent.content;
     const splitPages: any[] = [];
-    let currentPageNodes: any[] = [];
-    let currentHeight = 0;
 
-    // Render each node and measure its height
-    for (const node of parsedContent.content) {
-      // Create temp div for this node
-      const nodeDiv = document.createElement('div');
-      tempContainer.appendChild(nodeDiv);
-
-      // Create mini TipTap content for this node
-      const nodeContent = JSON.stringify({
-        type: 'doc',
-        content: [node]
-      });
-
-      // Set HTML approximation to measure (simplified)
-      nodeDiv.innerHTML = getNodeHTML(node);
-
-      const nodeHeight = nodeDiv.offsetHeight;
-      tempContainer.removeChild(nodeDiv);
-
-      // Check if adding this node would exceed page height
-      if (currentHeight + nodeHeight > maxHeight && currentPageNodes.length > 0) {
-        // Save current page
-        splitPages.push({
-          type: 'doc',
-          content: currentPageNodes
-        });
-
-        // Start new page with current node
-        currentPageNodes = [node];
-        currentHeight = nodeHeight;
-      } else {
-        // Add to current page
-        currentPageNodes.push(node);
-        currentHeight += nodeHeight;
-      }
-    }
-
-    // Add remaining content as last page
-    if (currentPageNodes.length > 0) {
+    for (let i = 0; i < allNodes.length; i += NODES_PER_PAGE) {
+      const pageNodes = allNodes.slice(i, i + NODES_PER_PAGE);
       splitPages.push({
         type: 'doc',
-        content: currentPageNodes
+        content: pageNodes
       });
     }
-
-    document.body.removeChild(tempContainer);
 
     // Convert pages to JSON strings
     const pageStrings = splitPages.map(page => JSON.stringify(page));
@@ -127,33 +78,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     setCurrentPage(0);
     setIsReady(true);
   }, [content, pageHeight, pageWidth, padding]);
-
-  // Helper function to convert TipTap node to HTML for measurement
-  const getNodeHTML = (node: any): string => {
-    if (node.type === 'paragraph') {
-      const text = node.content?.map((n: any) => n.text || '').join('') || '';
-      return `<p>${text}</p>`;
-    } else if (node.type === 'heading') {
-      const level = node.attrs?.level || 1;
-      const text = node.content?.map((n: any) => n.text || '').join('') || '';
-      return `<h${level}>${text}</h${level}>`;
-    } else if (node.type === 'bulletList') {
-      const items = node.content?.map((item: any) => {
-        const itemText = item.content?.[0]?.content?.map((n: any) => n.text || '').join('') || '';
-        return `<li>${itemText}</li>`;
-      }).join('') || '';
-      return `<ul class="list-disc pl-5">${items}</ul>`;
-    } else if (node.type === 'orderedList') {
-      const items = node.content?.map((item: any) => {
-        const itemText = item.content?.[0]?.content?.map((n: any) => n.text || '').join('') || '';
-        return `<li>${itemText}</li>`;
-      }).join('') || '';
-      return `<ol class="list-decimal pl-5">${items}</ol>`;
-    } else if (node.type === 'image') {
-      return `<img src="${node.attrs?.src || ''}" style="max-width: 100%;" />`;
-    }
-    return '<div></div>';
-  };
 
   // Keyboard navigation
   useEffect(() => {
