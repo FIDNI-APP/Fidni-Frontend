@@ -355,7 +355,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo and desktop navigation */}
           <div className="flex items-center space-x-8">
-            <Link to="/" className="inline-block group">
+            <Link to="/" className="flex-shrink-0 group">
               <div
                 className="transition-all duration-300 transform group-hover:scale-105"
                 onMouseEnter={() => setIsHovered(true)}
