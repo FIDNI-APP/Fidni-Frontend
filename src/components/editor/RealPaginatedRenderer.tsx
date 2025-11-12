@@ -9,6 +9,20 @@ interface RealPaginatedRendererProps {
   padding?: number; // in px
 }
 
+// Helper to parse TipTap JSON content
+interface TipTapNode {
+  type: string;
+  content?: TipTapNode[];
+  attrs?: any;
+  marks?: any[];
+  text?: string;
+}
+
+interface TipTapDocument {
+  type: 'doc';
+  content: TipTapNode[];
+}
+
 /**
  * Professional PDF-like paginated renderer with enhanced UX
  * Splits content across multiple pages based on actual height
@@ -26,19 +40,119 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(100);
   const contentRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLDivElement>(null);
 
-  // Split content into pages based on actual rendered height
+  // State for node measurements
+  const [nodeMeasurements, setNodeMeasurements] = useState<Map<number, number>>(new Map());
+  const [measurementNodes, setMeasurementNodes] = useState<TipTapNode[]>([]);
+  const [isMeasuring, setIsMeasuring] = useState(false);
+
+  // Step 1: Parse content and extract nodes
   useEffect(() => {
     if (!content) {
       setPages([]);
+      setIsReady(true);
       return;
     }
 
-    // For now, just show all content in one scrollable page
-    // TODO: Implement proper pagination once we figure out TipTap height measurement
-    setPages([content]);
+    try {
+      // Parse the content
+      let parsedContent: TipTapDocument;
+
+      try {
+        if (typeof content === 'string' && content.trim().startsWith('{')) {
+          parsedContent = JSON.parse(content);
+        } else {
+          // If it's not JSON, wrap it as a simple document
+          parsedContent = {
+            type: 'doc',
+            content: [{
+              type: 'paragraph',
+              content: [{ type: 'text', text: content }]
+            }]
+          };
+        }
+      } catch (parseError) {
+        console.error('Error parsing content:', parseError);
+        setPages([content]);
+        setIsReady(true);
+        return;
+      }
+
+      // If no content nodes, return empty
+      if (!parsedContent.content || parsedContent.content.length === 0) {
+        setPages([]);
+        setIsReady(true);
+        return;
+      }
+
+      // Set nodes for measurement
+      setMeasurementNodes(parsedContent.content);
+      setIsMeasuring(true);
+      setIsReady(false);
+    } catch (error) {
+      console.error('Error parsing content:', error);
+      setPages([content]);
+      setIsReady(true);
+    }
+  }, [content]);
+
+  // Step 2: Handle measurements from TipTapRenderer
+  const handleNodeMeasurement = (index: number, height: number) => {
+    setNodeMeasurements(prev => {
+      const newMap = new Map(prev);
+      newMap.set(index, height);
+      return newMap;
+    });
+  };
+
+  // Step 3: Once all nodes are measured, paginate
+  useEffect(() => {
+    if (!isMeasuring || measurementNodes.length === 0) return;
+    if (nodeMeasurements.size !== measurementNodes.length) return;
+
+    // All nodes have been measured, now paginate
+    const availableHeight = pageHeight - (padding * 2);
+    const pageContents: TipTapDocument[] = [];
+    let currentPageNodes: TipTapNode[] = [];
+    let currentHeight = 0;
+
+    measurementNodes.forEach((node, index) => {
+      const nodeHeight = nodeMeasurements.get(index) || 0;
+
+      // Check if adding this node would exceed the page height
+      if (currentHeight + nodeHeight > availableHeight && currentPageNodes.length > 0) {
+        // Create a new page with current nodes
+        pageContents.push({
+          type: 'doc',
+          content: [...currentPageNodes]
+        });
+
+        // Start a new page with this node
+        currentPageNodes = [node];
+        currentHeight = nodeHeight;
+      } else {
+        // Add node to current page
+        currentPageNodes.push(node);
+        currentHeight += nodeHeight;
+      }
+    });
+
+    // Add the last page if it has content
+    if (currentPageNodes.length > 0) {
+      pageContents.push({
+        type: 'doc',
+        content: currentPageNodes
+      });
+    }
+
+    // Convert page contents back to JSON strings
+    const pageStrings = pageContents.map(page => JSON.stringify(page));
+
+    setPages(pageStrings);
+    setIsMeasuring(false);
     setIsReady(true);
-  }, [content, pageHeight, pageWidth, padding]);
+  }, [isMeasuring, measurementNodes, nodeMeasurements, pageHeight, padding]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -264,15 +378,14 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                   </div>
                 )}
 
-                {/* Content - SCROLLABLE to show ALL content */}
+                {/* Content - Fixed height, no overflow */}
                 <div
                   ref={contentRef}
                   className="relative z-10"
                   style={{
                     padding: `${padding}px`,
-                    minHeight: `${pageHeight}px`,
-                    maxHeight: `${pageHeight}px`,
-                    overflow: 'auto'
+                    height: `${pageHeight}px`,
+                    overflow: 'visible'
                   }}
                 >
                   {/* Use TipTapRenderer for proper LaTeX rendering */}
@@ -286,6 +399,42 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Hidden measurement container */}
+        {isMeasuring && measurementNodes.length > 0 && (
+          <div
+            ref={measurementRef}
+            className="fixed top-0 left-0 pointer-events-none"
+            style={{
+              position: 'absolute',
+              visibility: 'hidden',
+              top: '-9999px',
+              left: '-9999px',
+              width: `${pageWidth - (padding * 2)}px`,
+            }}
+          >
+            {measurementNodes.map((node, index) => {
+              const nodeDoc: TipTapDocument = {
+                type: 'doc',
+                content: [node]
+              };
+
+              return (
+                <div
+                  key={index}
+                  style={{ marginBottom: '10px' }}
+                >
+                  <TipTapRenderer
+                    content={JSON.stringify(nodeDoc)}
+                    compact={true}
+                    className="text-base leading-relaxed"
+                    onHeightMeasured={(height) => handleNodeMeasurement(index, height)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
