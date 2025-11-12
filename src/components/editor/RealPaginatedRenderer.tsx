@@ -246,17 +246,10 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                       >
                         {/* Miniature preview of page content */}
                         <div
-                          className="absolute top-0 left-0 pointer-events-none"
+                          className="absolute top-0 left-0 pointer-events-none bg-white overflow-hidden"
                           style={{
                             transform: `scale(${scale})`,
                             transformOrigin: 'top left',
-                            width: `${pageWidth}px`,
-                            height: `${pageHeight}px`,
-                          }}
-                        >
-                        <div
-                          className="bg-white"
-                          style={{
                             width: `${pageWidth}px`,
                             height: `${pageHeight}px`,
                             padding: `${padding}px`,
@@ -267,7 +260,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                             compact={true}
                             className="text-base leading-relaxed"
                           />
-                        </div>
                         </div>
                         {/* Page number overlay */}
                         <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] px-1 py-0.5 rounded">
@@ -326,8 +318,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                   style={{
                     padding: `${padding}px`,
                     minHeight: `${pageHeight}px`,
-                    maxHeight: `${pageHeight}px`,
-                    overflow: 'hidden'
+                    overflow: 'auto'
                   }}
                 >
                   {/* Use TipTapRenderer for proper LaTeX rendering */}
