@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom/client';
+import ReactDOM from 'react-dom';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
 import TipTapRenderer from './TipTapRenderer';
 
@@ -65,15 +65,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
       let currentPageNodes: any[] = [];
       let currentHeight = 0;
 
-      // Create hidden container for measurement
-      const measureContainer = document.createElement('div');
-      measureContainer.style.position = 'absolute';
-      measureContainer.style.top = '-99999px';
-      measureContainer.style.left = '-99999px';
-      measureContainer.style.width = `${pageWidth - 2 * padding}px`;
-      measureContainer.style.visibility = 'hidden';
-      document.body.appendChild(measureContainer);
-
       // Measure each node using TipTapRenderer
       for (let i = 0; i < allNodes.length; i++) {
         const nodeHeight = await new Promise<number>((resolve) => {
@@ -82,23 +73,32 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
             content: [allNodes[i]]
           });
 
-          // Create a temporary root for this measurement
-          const tempRoot = document.createElement('div');
-          measureContainer.appendChild(tempRoot);
+          // Create div for measurement
+          const measureDiv = document.createElement('div');
+          measureDiv.style.position = 'absolute';
+          measureDiv.style.top = '-99999px';
+          measureDiv.style.width = `${pageWidth - 2 * padding}px`;
+          measureDiv.style.visibility = 'hidden';
+          document.body.appendChild(measureDiv);
 
           // Render TipTapRenderer to measure
-          const root = ReactDOM.createRoot(tempRoot);
-          root.render(
+          ReactDOM.render(
             <TipTapRenderer
               content={nodeContent}
               compact={true}
-              onHeightMeasured={(height) => {
+              className="text-base leading-relaxed"
+              onReady={() => {
+                // Measure AFTER render complete
+                const height = measureDiv.offsetHeight;
+
                 // Clean up
-                root.unmount();
-                measureContainer.removeChild(tempRoot);
+                ReactDOM.unmountComponentAtNode(measureDiv);
+                document.body.removeChild(measureDiv);
+
                 resolve(height);
               }}
-            />
+            />,
+            measureDiv
           );
         });
 
@@ -126,9 +126,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
           content: currentPageNodes
         });
       }
-
-      // Clean up
-      document.body.removeChild(measureContainer);
 
       // Convert to JSON strings
       const pageStrings = splitPages.map(page => JSON.stringify(page));
