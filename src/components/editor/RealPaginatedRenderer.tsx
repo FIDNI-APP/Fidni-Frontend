@@ -128,8 +128,8 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   }
 
   return (
-    <div className={`w-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-8' : ''}`}>
-      <div className="max-w-5xl mx-auto">
+    <div className={`w-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-8' : 'h-screen overflow-hidden'}`}>
+      <div className="max-w-5xl mx-auto h-full flex flex-col">
         {/* Enhanced Toolbar */}
         <div className="flex items-center justify-between mb-6 px-4 py-3 bg-white rounded-lg shadow-md border border-gray-200">
           {/* Page Navigation */}
@@ -214,7 +214,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
         </div>
 
         {/* Main Layout: Thumbnails on left, content on right */}
-        <div className="flex gap-6">
+        <div className="flex gap-6 flex-1 overflow-hidden">
           {/* Left Sidebar: Page thumbnails (scrollable) */}
           {pages.length > 1 && (
             <div className="flex-shrink-0">
@@ -292,7 +292,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                     padding: `${padding}px`,
                     minHeight: `${pageHeight}px`,
                     maxHeight: `${pageHeight}px`,
-                    overflow: 'auto'
+                    overflow: 'hidden'
                   }}
                 >
                   {/* Use TipTapRenderer for proper LaTeX rendering */}
