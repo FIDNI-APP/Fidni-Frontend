@@ -314,8 +314,8 @@ export const Navbar = () => {
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
       isScrolled
-        ? 'py-4 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
-        : 'py-5 bg-white shadow-md'
+        ? 'py-2 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
+        : 'py-3 bg-white shadow-md'
     }`}>
       <div className="absolute inset-0 opacity-5 pointer-events-none">
   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -345,7 +345,7 @@ export const Navbar = () => {
               <img
                 src={isHovered ? Logo2 : Logo3}
                 alt="Fidni Logo"
-                className="h-16 md:h-24 w-auto object-contain"
+                className="h-10 md:h-12 w-auto object-contain"
               />
             </div>
           </Link>
