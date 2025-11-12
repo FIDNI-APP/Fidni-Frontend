@@ -27,99 +27,16 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const [zoom, setZoom] = useState(100);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Split content into pages based on actual rendered TipTap height
+  // Split content into pages based on actual rendered height
   useEffect(() => {
     if (!content) {
       setPages([]);
       return;
     }
 
-    // Parse TipTap content to get individual nodes
-    let parsedContent;
-    try {
-      if (typeof content === 'string' && content.trim().startsWith('{')) {
-        parsedContent = JSON.parse(content);
-      } else {
-        // If it's HTML, just use one page
-        setPages([content]);
-        setIsReady(true);
-        return;
-      }
-    } catch (e) {
-      // If parsing fails, use content as-is
-      setPages([content]);
-      setIsReady(true);
-      return;
-    }
-
-    // If no content nodes, use as-is
-    if (!parsedContent.content || parsedContent.content.length === 0) {
-      setPages([content]);
-      setIsReady(true);
-      return;
-    }
-
-    const allNodes = parsedContent.content;
-    const splitPages: any[] = [];
-    let currentPageNodes: any[] = [];
-    const maxContentHeight = pageHeight - 2 * padding;
-    let estimatedHeight = 0;
-
-    // Estimate height for each node type
-    const estimateNodeHeight = (node: any): number => {
-      switch (node.type) {
-        case 'paragraph':
-          // Estimate ~30px per paragraph + extra for long text
-          const textLength = node.content?.reduce((sum: number, n: any) => sum + (n.text?.length || 0), 0) || 0;
-          const lines = Math.ceil(textLength / 80); // ~80 chars per line
-          return Math.max(30, lines * 28);
-        case 'heading':
-          const level = node.attrs?.level || 1;
-          return level === 1 ? 60 : 45; // h1 bigger than h2
-        case 'bulletList':
-        case 'orderedList':
-          const itemCount = node.content?.length || 1;
-          return itemCount * 32; // ~32px per list item
-        case 'image':
-          return 250; // Estimate for images
-        default:
-          return 50; // Default
-      }
-    };
-
-    // Split content by estimated height
-    for (let i = 0; i < allNodes.length; i++) {
-      const nodeHeight = estimateNodeHeight(allNodes[i]);
-
-      // If adding this node would exceed max height, start new page
-      if (estimatedHeight + nodeHeight > maxContentHeight && currentPageNodes.length > 0) {
-        // Save current page
-        splitPages.push({
-          type: 'doc',
-          content: currentPageNodes
-        });
-        // Start new page with current node
-        currentPageNodes = [allNodes[i]];
-        estimatedHeight = nodeHeight;
-      } else {
-        // Add node to current page
-        currentPageNodes.push(allNodes[i]);
-        estimatedHeight += nodeHeight;
-      }
-    }
-
-    // Add remaining nodes as last page
-    if (currentPageNodes.length > 0) {
-      splitPages.push({
-        type: 'doc',
-        content: currentPageNodes
-      });
-    }
-
-    // Convert pages to JSON strings
-    const pageStrings = splitPages.map(page => JSON.stringify(page));
-    setPages(pageStrings.length > 0 ? pageStrings : [content]);
-    setCurrentPage(0);
+    // For now, just show all content in one scrollable page
+    // TODO: Implement proper pagination once we figure out TipTap height measurement
+    setPages([content]);
     setIsReady(true);
   }, [content, pageHeight, pageWidth, padding]);
 
@@ -325,7 +242,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 style={{
                   width: `${pageWidth}px`,
                   minHeight: `${pageHeight}px`,
-                  maxHeight: `${pageHeight}px`,
                   boxShadow: `
                     0 2px 4px rgba(0, 0, 0, 0.05),
                     0 4px 8px rgba(0, 0, 0, 0.08),
@@ -348,14 +264,15 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                   </div>
                 )}
 
-                {/* Content */}
+                {/* Content - SCROLLABLE to show ALL content */}
                 <div
                   ref={contentRef}
                   className="relative z-10"
                   style={{
                     padding: `${padding}px`,
-                    height: `${pageHeight}px`,
-                    overflow: 'hidden'
+                    minHeight: `${pageHeight}px`,
+                    maxHeight: `${pageHeight}px`,
+                    overflow: 'auto'
                   }}
                 >
                   {/* Use TipTapRenderer for proper LaTeX rendering */}
