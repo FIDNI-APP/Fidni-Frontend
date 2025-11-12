@@ -16,7 +16,7 @@ interface RealPaginatedRendererProps {
  */
 export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   content,
-  pageHeight = 700,
+  pageHeight = 1000,
   pageWidth = 900,
   padding = 48
 }) => {
@@ -213,91 +213,99 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
           </div>
         </div>
 
-        {/* PDF-like Page Container with beautiful shadows */}
-        <div className="flex justify-center">
-          <div
-            className="transition-all duration-300 ease-out"
-            style={{
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'top center'
-            }}
-          >
-            {/* Paper-like page with realistic shadows */}
+        {/* Main Layout: Thumbnails on left, content on right */}
+        <div className="flex gap-6">
+          {/* Left Sidebar: Page thumbnails (scrollable) */}
+          {pages.length > 1 && (
+            <div className="flex-shrink-0">
+              <div
+                className="sticky top-6 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                style={{ maxHeight: `${pageHeight}px` }}
+              >
+                <div className="flex flex-col gap-3">
+                  {pages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPage(index)}
+                      className={`flex-shrink-0 w-20 h-28 rounded border-2 transition-all hover:scale-105 ${
+                        index === currentPage
+                          ? 'border-indigo-500 shadow-lg ring-2 ring-indigo-200'
+                          : 'border-gray-300 hover:border-gray-400 opacity-60 hover:opacity-100'
+                      }`}
+                      style={{
+                        background: 'linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)',
+                      }}
+                    >
+                      <div className="flex items-center justify-center h-full text-sm font-medium text-gray-600">
+                        {index + 1}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Right: PDF-like Page Container with beautiful shadows */}
+          <div className="flex-1 flex justify-center">
             <div
-              className="bg-white rounded-sm overflow-hidden relative group"
+              className="transition-all duration-300 ease-out"
               style={{
-                width: `${pageWidth}px`,
-                minHeight: `${pageHeight}px`,
-                maxHeight: `${pageHeight}px`,
-                boxShadow: `
-                  0 2px 4px rgba(0, 0, 0, 0.05),
-                  0 4px 8px rgba(0, 0, 0, 0.08),
-                  0 8px 16px rgba(0, 0, 0, 0.08),
-                  0 16px 32px rgba(0, 0, 0, 0.08)
-                `
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'top center'
               }}
             >
-              {/* Subtle paper texture overlay */}
-              <div className="absolute inset-0 pointer-events-none opacity-[0.015]"
-                   style={{
-                     backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.05\'/%3E%3C/svg%3E")'
-                   }}
-              />
-
-              {/* Page number watermark */}
-              {pages.length > 1 && (
-                <div className="absolute bottom-8 right-12 text-gray-400 text-sm font-medium select-none">
-                  {currentPage + 1}
-                </div>
-              )}
-
-              {/* Content */}
+              {/* Paper-like page with realistic shadows */}
               <div
-                ref={contentRef}
-                className="relative z-10"
+                className="bg-white rounded-sm overflow-hidden relative group"
                 style={{
-                  padding: `${padding}px`,
+                  width: `${pageWidth}px`,
                   minHeight: `${pageHeight}px`,
                   maxHeight: `${pageHeight}px`,
-                  overflow: 'auto'
+                  boxShadow: `
+                    0 2px 4px rgba(0, 0, 0, 0.05),
+                    0 4px 8px rgba(0, 0, 0, 0.08),
+                    0 8px 16px rgba(0, 0, 0, 0.08),
+                    0 16px 32px rgba(0, 0, 0, 0.08)
+                  `
                 }}
               >
-                {/* Use TipTapRenderer for proper LaTeX rendering */}
-                <TipTapRenderer
-                  content={pages[currentPage] || ''}
-                  compact={true}
-                  className="text-base leading-relaxed"
+                {/* Subtle paper texture overlay */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.015]"
+                     style={{
+                       backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.05\'/%3E%3C/svg%3E")'
+                     }}
                 />
+
+                {/* Page number watermark */}
+                {pages.length > 1 && (
+                  <div className="absolute bottom-8 right-12 text-gray-400 text-sm font-medium select-none">
+                    {currentPage + 1}
+                  </div>
+                )}
+
+                {/* Content */}
+                <div
+                  ref={contentRef}
+                  className="relative z-10"
+                  style={{
+                    padding: `${padding}px`,
+                    minHeight: `${pageHeight}px`,
+                    maxHeight: `${pageHeight}px`,
+                    overflow: 'auto'
+                  }}
+                >
+                  {/* Use TipTapRenderer for proper LaTeX rendering */}
+                  <TipTapRenderer
+                    content={pages[currentPage] || ''}
+                    compact={true}
+                    className="text-base leading-relaxed"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Page thumbnails for multi-page documents */}
-        {pages.length > 1 && (
-          <div className="mt-8 px-4">
-            <div className="flex items-center gap-2 overflow-x-auto pb-4">
-              {pages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentPage(index)}
-                  className={`flex-shrink-0 w-16 h-20 rounded border-2 transition-all hover:scale-105 ${
-                    index === currentPage
-                      ? 'border-indigo-500 shadow-lg ring-2 ring-indigo-200'
-                      : 'border-gray-300 hover:border-gray-400 opacity-60 hover:opacity-100'
-                  }`}
-                  style={{
-                    background: 'linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)',
-                  }}
-                >
-                  <div className="flex items-center justify-center h-full text-xs font-medium text-gray-600">
-                    {index + 1}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Keyboard shortcuts hint */}
         {pages.length > 1 && (
