@@ -59,38 +59,40 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
       return;
     }
 
-    // Create a hidden container to render and measure actual TipTap content
-    const measureContainer = document.createElement('div');
-    measureContainer.style.position = 'absolute';
-    measureContainer.style.top = '-99999px';
-    measureContainer.style.left = '-99999px';
-    measureContainer.style.width = `${pageWidth - 2 * padding}px`;
-    measureContainer.style.visibility = 'hidden';
-    measureContainer.className = 'tiptap-readonly-editor latex-style text-base leading-relaxed tiptap-compact';
-    document.body.appendChild(measureContainer);
-
     const allNodes = parsedContent.content;
     const splitPages: any[] = [];
     let currentPageNodes: any[] = [];
     const maxContentHeight = pageHeight - 2 * padding;
+    let estimatedHeight = 0;
 
-    // Measure each node by adding it to the container
+    // Estimate height for each node type
+    const estimateNodeHeight = (node: any): number => {
+      switch (node.type) {
+        case 'paragraph':
+          // Estimate ~30px per paragraph + extra for long text
+          const textLength = node.content?.reduce((sum: number, n: any) => sum + (n.text?.length || 0), 0) || 0;
+          const lines = Math.ceil(textLength / 80); // ~80 chars per line
+          return Math.max(30, lines * 28);
+        case 'heading':
+          const level = node.attrs?.level || 1;
+          return level === 1 ? 60 : 45; // h1 bigger than h2
+        case 'bulletList':
+        case 'orderedList':
+          const itemCount = node.content?.length || 1;
+          return itemCount * 32; // ~32px per list item
+        case 'image':
+          return 250; // Estimate for images
+        default:
+          return 50; // Default
+      }
+    };
+
+    // Split content by estimated height
     for (let i = 0; i < allNodes.length; i++) {
-      const testNodes = [...currentPageNodes, allNodes[i]];
+      const nodeHeight = estimateNodeHeight(allNodes[i]);
 
-      // Create test content with current nodes
-      const testContent = {
-        type: 'doc',
-        content: testNodes
-      };
-
-      // Render to measure
-      measureContainer.innerHTML = renderTipTapToHTML(testContent);
-
-      const currentHeight = measureContainer.offsetHeight;
-
-      // If adding this node exceeds max height, start new page
-      if (currentHeight > maxContentHeight && currentPageNodes.length > 0) {
+      // If adding this node would exceed max height, start new page
+      if (estimatedHeight + nodeHeight > maxContentHeight && currentPageNodes.length > 0) {
         // Save current page
         splitPages.push({
           type: 'doc',
@@ -98,9 +100,11 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
         });
         // Start new page with current node
         currentPageNodes = [allNodes[i]];
+        estimatedHeight = nodeHeight;
       } else {
         // Add node to current page
         currentPageNodes.push(allNodes[i]);
+        estimatedHeight += nodeHeight;
       }
     }
 
@@ -112,62 +116,12 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
       });
     }
 
-    // Cleanup
-    document.body.removeChild(measureContainer);
-
     // Convert pages to JSON strings
     const pageStrings = splitPages.map(page => JSON.stringify(page));
     setPages(pageStrings.length > 0 ? pageStrings : [content]);
     setCurrentPage(0);
     setIsReady(true);
   }, [content, pageHeight, pageWidth, padding]);
-
-  // Helper to render TipTap JSON to HTML for measurement
-  const renderTipTapToHTML = (doc: any): string => {
-    if (!doc.content) return '';
-
-    return doc.content.map((node: any) => {
-      switch (node.type) {
-        case 'paragraph':
-          return `<p>${renderInlineContent(node.content || [])}</p>`;
-        case 'heading':
-          const level = node.attrs?.level || 1;
-          return `<h${level}>${renderInlineContent(node.content || [])}</h${level}>`;
-        case 'bulletList':
-          const bulletItems = (node.content || []).map((item: any) =>
-            `<li>${item.content?.[0] ? renderInlineContent(item.content[0].content || []) : ''}</li>`
-          ).join('');
-          return `<ul class="list-disc pl-5">${bulletItems}</ul>`;
-        case 'orderedList':
-          const orderedItems = (node.content || []).map((item: any) =>
-            `<li>${item.content?.[0] ? renderInlineContent(item.content[0].content || []) : ''}</li>`
-          ).join('');
-          return `<ol class="list-decimal pl-5">${orderedItems}</ol>`;
-        case 'image':
-          return `<img src="${node.attrs?.src || ''}" style="max-width: 100%; height: auto;" />`;
-        default:
-          return '<div></div>';
-      }
-    }).join('');
-  };
-
-  const renderInlineContent = (content: any[]): string => {
-    return content.map((node: any) => {
-      if (node.type === 'text') {
-        let text = node.text || '';
-        // Apply marks
-        if (node.marks) {
-          node.marks.forEach((mark: any) => {
-            if (mark.type === 'bold') text = `<strong>${text}</strong>`;
-            if (mark.type === 'italic') text = `<em>${text}</em>`;
-            if (mark.type === 'code') text = `<code>${text}</code>`;
-          });
-        }
-        return text;
-      }
-      return '';
-    }).join('');
-  };
 
   // Keyboard navigation
   useEffect(() => {
