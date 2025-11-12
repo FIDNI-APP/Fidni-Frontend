@@ -352,24 +352,24 @@ export const Navbar = () => {
 </div>
 
       <div className="max-w-7xl mx-auto px-5 md:px-10 lg:px-16">
-        <div className="flex items-center justify-between">
-          {/* Logo and desktop navigation */}
-          <div className="flex items-center space-x-8">
-            <Link to="/" className="flex-shrink-0 group">
-              <div
-                className="transition-all duration-300 transform group-hover:scale-105"
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-              >
-                <img
-                  src={isHovered ? Logo2 : Logo3}
-                  alt="Fidni Logo"
-                  className="h-16 md:h-24 w-auto object-contain"
-                />
-              </div>
-            </Link>
-            
-            <div className="hidden md:flex items-center space-x-2">
+        <div className="flex items-center justify-between gap-8">
+          {/* Logo - far left */}
+          <Link to="/" className="flex-shrink-0 group">
+            <div
+              className="transition-all duration-300 transform group-hover:scale-105"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              <img
+                src={isHovered ? Logo2 : Logo3}
+                alt="Fidni Logo"
+                className="h-16 md:h-24 w-auto object-contain"
+              />
+            </div>
+          </Link>
+
+          {/* Desktop navigation */}
+          <div className="hidden md:flex items-center space-x-2">
               <NavLink to="/" isActive={isActive('/')}>
                 <Home className="w-4 h-4 mr-2" />
                 Accueil
@@ -409,8 +409,6 @@ export const Navbar = () => {
                 <Route className="w-4 h-4 mr-2" />
                 Parcours
               </NavLink>
-
-            </div>
           </div>
 
           {/* Search bar - desktop */}
