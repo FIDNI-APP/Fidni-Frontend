@@ -74,6 +74,7 @@ interface TipTapRendererProps {
   enableAnnotations?: boolean;
   compact?: boolean;
   onReady?: () => void;
+  onHeightMeasured?: (height: number) => void; // Nouveau callback pour la hauteur
   lessonId?: string;
 }
 
@@ -115,8 +116,8 @@ type Annotation = {
   path?: string;
 };
 
-const TipTapRenderer: React.FC<TipTapRendererProps> = ({ 
-  content, 
+const TipTapRenderer: React.FC<TipTapRendererProps> = ({
+  content,
   className = '',
   maxHeight,
   notebookStyle = false,
@@ -124,6 +125,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
   enableAnnotations = false,
   compact = true,
   onReady,
+  onHeightMeasured,
   lessonId
 }) => {
   // For navigation
@@ -285,12 +287,25 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
             setupClickableHeadings();
           }
 
+          // Measure and report height after content is fully rendered
+          if (onHeightMeasured && contentRef.current) {
+            const height = contentRef.current.offsetHeight;
+            onHeightMeasured(height);
+          }
+
           if (onReady) onReady();
         }
       } catch (error) {
         console.error('Error in rendering check:', error);
         if (mounted) {
           setContentLoaded(true);
+
+          // Measure height even on error
+          if (onHeightMeasured && contentRef.current) {
+            const height = contentRef.current.offsetHeight;
+            onHeightMeasured(height);
+          }
+
           if (onReady) onReady();
         }
       }
@@ -301,7 +316,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
     return () => {
       mounted = false;
     };
-  }, [editor, onReady, lessonId]);
+  }, [editor, onReady, onHeightMeasured, lessonId]);
   
   // Setup clickable headings for navigation to lesson detail
   const setupClickableHeadings = () => {

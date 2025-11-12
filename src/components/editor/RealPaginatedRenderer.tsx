@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
 import TipTapRenderer from './TipTapRenderer';
 
@@ -27,17 +28,116 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const [zoom, setZoom] = useState(100);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Split content into pages based on actual rendered height
+  // Split content into pages based on actual rendered TipTap height
   useEffect(() => {
     if (!content) {
       setPages([]);
       return;
     }
 
-    // For now, just show all content in one scrollable page
-    // TODO: Implement proper pagination once we figure out TipTap height measurement
-    setPages([content]);
-    setIsReady(true);
+    const paginateContent = async () => {
+      // Parse TipTap content
+      let parsedContent;
+      try {
+        if (typeof content === 'string' && content.trim().startsWith('{')) {
+          parsedContent = JSON.parse(content);
+        } else {
+          // HTML fallback - single page
+          setPages([content]);
+          setIsReady(true);
+          return;
+        }
+      } catch (e) {
+        setPages([content]);
+        setIsReady(true);
+        return;
+      }
+
+      if (!parsedContent.content || parsedContent.content.length === 0) {
+        setPages([content]);
+        setIsReady(true);
+        return;
+      }
+
+      const allNodes = parsedContent.content;
+      const maxContentHeight = pageHeight - 2 * padding;
+      const splitPages: any[] = [];
+      let currentPageNodes: any[] = [];
+      let currentHeight = 0;
+
+      // Create hidden container for measurement
+      const measureContainer = document.createElement('div');
+      measureContainer.style.position = 'absolute';
+      measureContainer.style.top = '-99999px';
+      measureContainer.style.left = '-99999px';
+      measureContainer.style.width = `${pageWidth - 2 * padding}px`;
+      measureContainer.style.visibility = 'hidden';
+      document.body.appendChild(measureContainer);
+
+      // Measure each node using TipTapRenderer
+      for (let i = 0; i < allNodes.length; i++) {
+        const nodeHeight = await new Promise<number>((resolve) => {
+          const nodeContent = JSON.stringify({
+            type: 'doc',
+            content: [allNodes[i]]
+          });
+
+          // Create a temporary root for this measurement
+          const tempRoot = document.createElement('div');
+          measureContainer.appendChild(tempRoot);
+
+          // Render TipTapRenderer to measure
+          const root = ReactDOM.createRoot(tempRoot);
+          root.render(
+            <TipTapRenderer
+              content={nodeContent}
+              compact={true}
+              onHeightMeasured={(height) => {
+                // Clean up
+                root.unmount();
+                measureContainer.removeChild(tempRoot);
+                resolve(height);
+              }}
+            />
+          );
+        });
+
+        // Check if adding this node exceeds page height
+        if (currentHeight + nodeHeight > maxContentHeight && currentPageNodes.length > 0) {
+          // Save current page
+          splitPages.push({
+            type: 'doc',
+            content: currentPageNodes
+          });
+          // Start new page
+          currentPageNodes = [allNodes[i]];
+          currentHeight = nodeHeight;
+        } else {
+          // Add to current page
+          currentPageNodes.push(allNodes[i]);
+          currentHeight += nodeHeight;
+        }
+      }
+
+      // Add remaining nodes
+      if (currentPageNodes.length > 0) {
+        splitPages.push({
+          type: 'doc',
+          content: currentPageNodes
+        });
+      }
+
+      // Clean up
+      document.body.removeChild(measureContainer);
+
+      // Convert to JSON strings
+      const pageStrings = splitPages.map(page => JSON.stringify(page));
+      setPages(pageStrings.length > 0 ? pageStrings : [content]);
+      setCurrentPage(0);
+      setIsReady(true);
+    };
+
+    paginateContent();
   }, [content, pageHeight, pageWidth, padding]);
 
   // Keyboard navigation
@@ -264,15 +364,14 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                   </div>
                 )}
 
-                {/* Content - SCROLLABLE to show ALL content */}
+                {/* Content - Fixed height, no scroll (content paginated) */}
                 <div
                   ref={contentRef}
                   className="relative z-10"
                   style={{
                     padding: `${padding}px`,
-                    minHeight: `${pageHeight}px`,
-                    maxHeight: `${pageHeight}px`,
-                    overflow: 'auto'
+                    height: `${pageHeight}px`,
+                    overflow: 'hidden'
                   }}
                 >
                   {/* Use TipTapRenderer for proper LaTeX rendering */}
