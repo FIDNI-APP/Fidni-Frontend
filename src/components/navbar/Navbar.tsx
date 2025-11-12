@@ -355,16 +355,16 @@ export const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo and desktop navigation */}
           <div className="flex items-center space-x-8">
-            <Link to="/" className="flex-shrink-0 group">
+            <Link to="/" className="flex-shrink-0 group h-full flex items-center">
               <div
-                className="transition-all duration-300 transform group-hover:scale-105"
+                className="h-full transition-all duration-300 transform group-hover:scale-105"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
                 <img
                   src={isHovered ? Logo2 : Logo3}
                   alt="Fidni Logo"
-                  className="h-14 md:h-20 w-auto object-contain"
+                  className="h-full w-auto object-contain"
                 />
               </div>
             </Link>
