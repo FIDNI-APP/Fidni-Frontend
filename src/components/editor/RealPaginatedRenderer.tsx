@@ -1,5 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { generateJSON } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import TextAlign from '@tiptap/extension-text-align';
+import ListItem from '@tiptap/extension-list-item';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
+import Heading from '@tiptap/extension-heading';
+import ImageResize from 'tiptap-extension-resize-image';
+import { RealTimeMathExtension } from './RealTimeMathExtension';
 import TipTapRenderer from './TipTapRenderer';
 
 interface RealPaginatedRendererProps {
@@ -45,15 +56,51 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const [parsedNodes, setParsedNodes] = useState<TipTapNode[]>([]);
   const measurementContainerRef = useRef<HTMLDivElement>(null);
   const hasMeasured = useRef(false);
-  const [htmlElements, setHtmlElements] = useState<string[]>([]);
-  const htmlMeasurementRef = useRef<HTMLDivElement>(null);
 
-  // Step 1: Parse content and extract nodes/elements
+  // TipTap extensions for HTML parsing
+  const extensions = [
+    StarterKit.configure({
+      heading: false,
+      bulletList: false,
+      orderedList: false,
+      listItem: false,
+    }),
+    TextStyle,
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+    }),
+    Color,
+    Heading.configure({
+      levels: [1, 2],
+    }),
+    BulletList.configure({
+      HTMLAttributes: {
+        class: 'list-disc pl-5',
+      },
+    }),
+    OrderedList.configure({
+      HTMLAttributes: {
+        class: 'list-decimal pl-5',
+      },
+    }),
+    ListItem,
+    ImageResize.configure({
+      allowBase64: true,
+      inline: false,
+    }),
+    RealTimeMathExtension.configure({
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+      ],
+    }),
+  ];
+
+  // Step 1: Parse content and extract nodes
   useEffect(() => {
     // Reset state when content changes
     setCurrentPage(0);
     setParsedNodes([]);
-    setHtmlElements([]);
 
     if (!content) {
       setPages([]);
@@ -63,50 +110,52 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
 
     try {
       const trimmedContent = content.trim();
+      let parsedContent: TipTapDocument;
 
       // Check if content is JSON (TipTap format)
       if (trimmedContent.startsWith('{')) {
         try {
-          const parsedContent: TipTapDocument = JSON.parse(content);
+          parsedContent = JSON.parse(content);
 
           if (!parsedContent.content || parsedContent.content.length === 0) {
             setPages([]);
             setIsReady(true);
             return;
           }
-
-          // Valid TipTap JSON - proceed with node-level pagination
-          setParsedNodes(parsedContent.content);
-          hasMeasured.current = false;
-          setIsReady(false);
         } catch (parseError) {
           console.error('Error parsing JSON content:', parseError);
-          // Invalid JSON - treat as HTML
-          setPages([content]);
-          setIsReady(true);
+          // Invalid JSON - treat as HTML and convert to TipTap JSON
+          try {
+            parsedContent = generateJSON(content, extensions);
+          } catch (htmlError) {
+            console.error('Error converting HTML to JSON:', htmlError);
+            setPages([content]);
+            setIsReady(true);
+            return;
+          }
         }
       } else {
-        // Content is HTML - parse into block elements
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(content, 'text/html');
-        const elements: string[] = [];
-
-        // Extract block-level elements (p, h1, h2, ul, ol, etc.)
-        const blockElements = doc.body.children;
-        for (let i = 0; i < blockElements.length; i++) {
-          elements.push(blockElements[i].outerHTML);
-        }
-
-        if (elements.length === 0) {
-          // Fallback: treat entire content as one element
+        // Content is HTML - convert to TipTap JSON using generateJSON
+        try {
+          parsedContent = generateJSON(content, extensions);
+        } catch (htmlError) {
+          console.error('Error converting HTML to JSON:', htmlError);
           setPages([content]);
           setIsReady(true);
-        } else {
-          setHtmlElements(elements);
-          hasMeasured.current = false;
-          setIsReady(false);
+          return;
         }
       }
+
+      // Now we have TipTap JSON - extract nodes for pagination
+      if (!parsedContent.content || parsedContent.content.length === 0) {
+        setPages([]);
+        setIsReady(true);
+        return;
+      }
+
+      setParsedNodes(parsedContent.content);
+      hasMeasured.current = false;
+      setIsReady(false);
     } catch (error) {
       console.error('Error parsing content:', error);
       setPages([content]);
@@ -181,65 +230,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
 
     measureAndPaginate();
   }, [parsedNodes, pageHeight, padding]);
-
-  // Step 3: Measure and paginate HTML elements
-  useEffect(() => {
-    if (htmlElements.length === 0 || hasMeasured.current) return;
-
-    const measureAndPaginateHtml = async () => {
-      // Wait for content to render
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const container = htmlMeasurementRef.current;
-      if (!container) {
-        // Fallback: show all HTML on one page
-        setPages([htmlElements.join('')]);
-        setIsReady(true);
-        hasMeasured.current = true;
-        return;
-      }
-
-      // Measure each HTML element
-      const elementDivs = container.querySelectorAll('.html-element-measurement');
-      const measurements: number[] = [];
-
-      elementDivs.forEach((el) => {
-        measurements.push((el as HTMLElement).offsetHeight);
-      });
-
-      // Paginate based on measurements
-      const availableHeight = pageHeight - (padding * 2);
-      const htmlPages: string[] = [];
-      let currentPageHtml: string[] = [];
-      let currentHeight = 0;
-
-      htmlElements.forEach((element, index) => {
-        const elementHeight = measurements[index] || 0;
-
-        if (currentHeight + elementHeight > availableHeight && currentPageHtml.length > 0) {
-          // Create new page
-          htmlPages.push(currentPageHtml.join(''));
-          currentPageHtml = [element];
-          currentHeight = elementHeight;
-        } else {
-          // Add to current page
-          currentPageHtml.push(element);
-          currentHeight += elementHeight;
-        }
-      });
-
-      // Add last page
-      if (currentPageHtml.length > 0) {
-        htmlPages.push(currentPageHtml.join(''));
-      }
-
-      setPages(htmlPages);
-      setIsReady(true);
-      hasMeasured.current = true;
-    };
-
-    measureAndPaginateHtml();
-  }, [htmlElements, pageHeight, padding]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -484,7 +474,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
           </div>
         </div>
 
-        {/* Hidden measurement container for JSON nodes */}
+        {/* Hidden measurement container */}
         {!isReady && parsedNodes.length > 0 && (
           <div
             ref={measurementContainerRef}
@@ -517,30 +507,6 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {/* Hidden measurement container for HTML elements */}
-        {!isReady && htmlElements.length > 0 && (
-          <div
-            ref={htmlMeasurementRef}
-            className="fixed top-0 left-0 pointer-events-none"
-            style={{
-              position: 'absolute',
-              visibility: 'hidden',
-              top: '-9999px',
-              left: '-9999px',
-              width: `${pageWidth - (padding * 2)}px`,
-            }}
-          >
-            {htmlElements.map((element, index) => (
-              <div
-                key={`html-${index}`}
-                className="html-element-measurement"
-                style={{ marginBottom: '10px' }}
-                dangerouslySetInnerHTML={{ __html: element }}
-              />
-            ))}
           </div>
         )}
       </div>
