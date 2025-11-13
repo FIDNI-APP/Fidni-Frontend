@@ -42,11 +42,9 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
 
-  // Use refs for measurements to avoid re-render loops
-  const measurementNodesRef = useRef<TipTapNode[]>([]);
-  const nodeMeasurementsRef = useRef<Map<number, number>>(new Map());
-  const measuredCountRef = useRef<number>(0);
-  const [measurementTrigger, setMeasurementTrigger] = useState(0);
+  const [parsedNodes, setParsedNodes] = useState<TipTapNode[]>([]);
+  const measurementContainerRef = useRef<HTMLDivElement>(null);
+  const hasMeasured = useRef(false);
 
   // Step 1: Parse content and extract nodes
   useEffect(() => {
@@ -57,14 +55,12 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     }
 
     try {
-      // Parse the content
       let parsedContent: TipTapDocument;
 
       try {
         if (typeof content === 'string' && content.trim().startsWith('{')) {
           parsedContent = JSON.parse(content);
         } else {
-          // If it's not JSON, wrap it as a simple document
           parsedContent = {
             type: 'doc',
             content: [{
@@ -80,19 +76,15 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
         return;
       }
 
-      // If no content nodes, return empty
       if (!parsedContent.content || parsedContent.content.length === 0) {
         setPages([]);
         setIsReady(true);
         return;
       }
 
-      // Reset measurements and set nodes
-      measurementNodesRef.current = parsedContent.content;
-      nodeMeasurementsRef.current = new Map();
-      measuredCountRef.current = 0;
+      setParsedNodes(parsedContent.content);
+      hasMeasured.current = false;
       setIsReady(false);
-      setMeasurementTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error parsing content:', error);
       setPages([content]);
@@ -100,65 +92,73 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     }
   }, [content]);
 
-  // Step 2: Paginate content once all measurements are done
-  const paginateContent = useCallback(() => {
-    const availableHeight = pageHeight - (padding * 2);
-    const pageContents: TipTapDocument[] = [];
-    let currentPageNodes: TipTapNode[] = [];
-    let currentHeight = 0;
+  // Step 2: Measure and paginate after nodes are rendered
+  useEffect(() => {
+    if (parsedNodes.length === 0 || hasMeasured.current) return;
 
-    measurementNodesRef.current.forEach((node, index) => {
-      const nodeHeight = nodeMeasurementsRef.current.get(index) || 0;
+    // Wait for content to render, then measure
+    const measureAndPaginate = async () => {
+      // Give time for rendering
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Check if adding this node would exceed the page height
-      if (currentHeight + nodeHeight > availableHeight && currentPageNodes.length > 0) {
-        // Create a new page with current nodes
+      const container = measurementContainerRef.current;
+      if (!container) {
+        // Fallback: show all content on one page
+        const fallbackDoc: TipTapDocument = {
+          type: 'doc',
+          content: parsedNodes
+        };
+        setPages([JSON.stringify(fallbackDoc)]);
+        setIsReady(true);
+        hasMeasured.current = true;
+        return;
+      }
+
+      // Measure each node
+      const nodeElements = container.querySelectorAll('.node-measurement');
+      const measurements: number[] = [];
+
+      nodeElements.forEach((el) => {
+        measurements.push((el as HTMLElement).offsetHeight);
+      });
+
+      // Paginate based on measurements
+      const availableHeight = pageHeight - (padding * 2);
+      const pageContents: TipTapDocument[] = [];
+      let currentPageNodes: TipTapNode[] = [];
+      let currentHeight = 0;
+
+      parsedNodes.forEach((node, index) => {
+        const nodeHeight = measurements[index] || 0;
+
+        if (currentHeight + nodeHeight > availableHeight && currentPageNodes.length > 0) {
+          pageContents.push({
+            type: 'doc',
+            content: [...currentPageNodes]
+          });
+          currentPageNodes = [node];
+          currentHeight = nodeHeight;
+        } else {
+          currentPageNodes.push(node);
+          currentHeight += nodeHeight;
+        }
+      });
+
+      if (currentPageNodes.length > 0) {
         pageContents.push({
           type: 'doc',
-          content: [...currentPageNodes]
-        });
-
-        // Start a new page with this node
-        currentPageNodes = [node];
-        currentHeight = nodeHeight;
-      } else {
-        // Add node to current page
-        currentPageNodes.push(node);
-        currentHeight += nodeHeight;
-      }
-    });
-
-    // Add the last page if it has content
-    if (currentPageNodes.length > 0) {
-      pageContents.push({
-        type: 'doc',
-        content: currentPageNodes
-      });
-    }
-
-    // Convert page contents back to JSON strings
-    const pageStrings = pageContents.map(page => JSON.stringify(page));
-
-    setPages(pageStrings);
-    setIsReady(true);
-  }, [pageHeight, padding]);
-
-  // Step 3: Handle measurements from TipTapRenderer (stable callback)
-  const handleNodeMeasurement = useCallback((index: number, height: number) => {
-    // Only record if not already measured
-    if (!nodeMeasurementsRef.current.has(index)) {
-      nodeMeasurementsRef.current.set(index, height);
-      measuredCountRef.current += 1;
-
-      // Check if all measurements are complete
-      if (measuredCountRef.current === measurementNodesRef.current.length) {
-        // All nodes measured, trigger pagination
-        requestAnimationFrame(() => {
-          paginateContent();
+          content: currentPageNodes
         });
       }
-    }
-  }, [paginateContent]);
+
+      const pageStrings = pageContents.map(page => JSON.stringify(page));
+      setPages(pageStrings);
+      setIsReady(true);
+      hasMeasured.current = true;
+    };
+
+    measureAndPaginate();
+  }, [parsedNodes, pageHeight, padding]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -407,9 +407,9 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
         </div>
 
         {/* Hidden measurement container */}
-        {!isReady && measurementTrigger > 0 && measurementNodesRef.current.length > 0 && (
+        {!isReady && parsedNodes.length > 0 && (
           <div
-            ref={measurementRef}
+            ref={measurementContainerRef}
             className="fixed top-0 left-0 pointer-events-none"
             style={{
               position: 'absolute',
@@ -419,7 +419,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
               width: `${pageWidth - (padding * 2)}px`,
             }}
           >
-            {measurementNodesRef.current.map((node, index) => {
+            {parsedNodes.map((node, index) => {
               const nodeDoc: TipTapDocument = {
                 type: 'doc',
                 content: [node]
@@ -427,14 +427,14 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
 
               return (
                 <div
-                  key={`measure-${measurementTrigger}-${index}`}
+                  key={`node-${index}`}
+                  className="node-measurement"
                   style={{ marginBottom: '10px' }}
                 >
                   <TipTapRenderer
                     content={JSON.stringify(nodeDoc)}
                     compact={true}
                     className="text-base leading-relaxed"
-                    onHeightMeasured={(height) => handleNodeMeasurement(index, height)}
                   />
                 </div>
               );
