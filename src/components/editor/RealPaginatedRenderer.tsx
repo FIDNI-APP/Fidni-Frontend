@@ -45,17 +45,15 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
   const [parsedNodes, setParsedNodes] = useState<TipTapNode[]>([]);
   const measurementContainerRef = useRef<HTMLDivElement>(null);
   const hasMeasured = useRef(false);
-  const [isHtmlContent, setIsHtmlContent] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const htmlContentRef = useRef<HTMLDivElement>(null);
+  const [htmlElements, setHtmlElements] = useState<string[]>([]);
+  const htmlMeasurementRef = useRef<HTMLDivElement>(null);
 
-  // Step 1: Parse content and extract nodes
+  // Step 1: Parse content and extract nodes/elements
   useEffect(() => {
     // Reset state when content changes
     setCurrentPage(0);
-    setIsHtmlContent(false);
     setParsedNodes([]);
-    setTotalPages(1);
+    setHtmlElements([]);
 
     if (!content) {
       setPages([]);
@@ -64,13 +62,12 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     }
 
     try {
-      let parsedContent: TipTapDocument;
       const trimmedContent = content.trim();
 
       // Check if content is JSON (TipTap format)
       if (trimmedContent.startsWith('{')) {
         try {
-          parsedContent = JSON.parse(content);
+          const parsedContent: TipTapDocument = JSON.parse(content);
 
           if (!parsedContent.content || parsedContent.content.length === 0) {
             setPages([]);
@@ -89,12 +86,26 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
           setIsReady(true);
         }
       } else {
-        // Content is HTML or plain text
-        // TipTapRenderer can handle HTML directly
-        setIsHtmlContent(true);
-        setPages([content]);
-        hasMeasured.current = false;
-        setIsReady(false); // Will measure HTML height first
+        // Content is HTML - parse into block elements
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, 'text/html');
+        const elements: string[] = [];
+
+        // Extract block-level elements (p, h1, h2, ul, ol, etc.)
+        const blockElements = doc.body.children;
+        for (let i = 0; i < blockElements.length; i++) {
+          elements.push(blockElements[i].outerHTML);
+        }
+
+        if (elements.length === 0) {
+          // Fallback: treat entire content as one element
+          setPages([content]);
+          setIsReady(true);
+        } else {
+          setHtmlElements(elements);
+          hasMeasured.current = false;
+          setIsReady(false);
+        }
       }
     } catch (error) {
       console.error('Error parsing content:', error);
@@ -171,63 +182,83 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
     measureAndPaginate();
   }, [parsedNodes, pageHeight, padding]);
 
-  // Step 3: Measure HTML content height and calculate pages
+  // Step 3: Measure and paginate HTML elements
   useEffect(() => {
-    if (!isHtmlContent || hasMeasured.current) return;
+    if (htmlElements.length === 0 || hasMeasured.current) return;
 
-    const measureHtmlContent = async () => {
+    const measureAndPaginateHtml = async () => {
       // Wait for content to render
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const htmlContainer = htmlContentRef.current;
-      if (!htmlContainer) {
-        // Fallback: show on one page
-        setTotalPages(1);
+      const container = htmlMeasurementRef.current;
+      if (!container) {
+        // Fallback: show all HTML on one page
+        setPages([htmlElements.join('')]);
         setIsReady(true);
         hasMeasured.current = true;
         return;
       }
 
-      // Measure total content height
-      const totalHeight = htmlContainer.scrollHeight;
+      // Measure each HTML element
+      const elementDivs = container.querySelectorAll('.html-element-measurement');
+      const measurements: number[] = [];
+
+      elementDivs.forEach((el) => {
+        measurements.push((el as HTMLElement).offsetHeight);
+      });
+
+      // Paginate based on measurements
       const availableHeight = pageHeight - (padding * 2);
+      const htmlPages: string[] = [];
+      let currentPageHtml: string[] = [];
+      let currentHeight = 0;
 
-      // Calculate number of pages needed
-      const pagesNeeded = Math.max(1, Math.ceil(totalHeight / availableHeight));
+      htmlElements.forEach((element, index) => {
+        const elementHeight = measurements[index] || 0;
 
-      setTotalPages(pagesNeeded);
+        if (currentHeight + elementHeight > availableHeight && currentPageHtml.length > 0) {
+          // Create new page
+          htmlPages.push(currentPageHtml.join(''));
+          currentPageHtml = [element];
+          currentHeight = elementHeight;
+        } else {
+          // Add to current page
+          currentPageHtml.push(element);
+          currentHeight += elementHeight;
+        }
+      });
+
+      // Add last page
+      if (currentPageHtml.length > 0) {
+        htmlPages.push(currentPageHtml.join(''));
+      }
+
+      setPages(htmlPages);
       setIsReady(true);
       hasMeasured.current = true;
     };
 
-    measureHtmlContent();
-  }, [isHtmlContent, pageHeight, padding]);
+    measureAndPaginateHtml();
+  }, [htmlElements, pageHeight, padding]);
 
   // Keyboard navigation
   useEffect(() => {
-    const maxPages = isHtmlContent ? totalPages : pages.length;
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' && currentPage > 0) {
         setCurrentPage(prev => prev - 1);
-      } else if (e.key === 'ArrowRight' && currentPage < maxPages - 1) {
+      } else if (e.key === 'ArrowRight' && currentPage < pages.length - 1) {
         setCurrentPage(prev => prev + 1);
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentPage, pages.length, isHtmlContent, totalPages]);
+  }, [currentPage, pages.length]);
 
   const goToPage = (pageIndex: number) => {
-    const maxPages = isHtmlContent ? totalPages : pages.length;
-    if (pageIndex >= 0 && pageIndex < maxPages) {
+    if (pageIndex >= 0 && pageIndex < pages.length) {
       setCurrentPage(pageIndex);
     }
-  };
-
-  // Get current total pages (for HTML or JSON)
-  const getCurrentTotalPages = () => {
-    return isHtmlContent ? totalPages : pages.length;
   };
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 10, 150));
@@ -264,7 +295,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
               <input
                 type="number"
                 min="1"
-                max={getCurrentTotalPages()}
+                max={pages.length}
                 value={currentPage + 1}
                 onChange={(e) => {
                   const page = parseInt(e.target.value) - 1;
@@ -272,12 +303,12 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 }}
                 className="w-12 text-center text-sm font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              <span className="text-sm text-gray-600">/ {getCurrentTotalPages()}</span>
+              <span className="text-sm text-gray-600">/ {pages.length}</span>
             </div>
 
             <button
               onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === getCurrentTotalPages() - 1}
+              disabled={currentPage === pages.length - 1}
               className="p-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:shadow-sm"
               title="Page suivante (→)"
             >
@@ -290,11 +321,11 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300 rounded-full"
-                style={{ width: `${((currentPage + 1) / getCurrentTotalPages()) * 100}%` }}
+                style={{ width: `${((currentPage + 1) / pages.length) * 100}%` }}
               />
             </div>
             <span className="text-xs font-medium text-gray-600">
-              {Math.round(((currentPage + 1) / getCurrentTotalPages()) * 100)}%
+              {Math.round(((currentPage + 1) / pages.length) * 100)}%
             </span>
           </div>
 
@@ -331,7 +362,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
         {/* Main Layout: Thumbnails on left, content on right */}
         <div className="flex gap-6 flex-1 overflow-hidden">
           {/* Left Sidebar: Page thumbnails (scrollable) - only for JSON content */}
-          {!isHtmlContent && getCurrentTotalPages() > 1 && (
+          {parsedNodes.length > 0 && pages.length > 1 && (
             <div className="flex-shrink-0">
               <div
                 className="sticky top-6 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
@@ -426,52 +457,34 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 />
 
                 {/* Page number watermark */}
-                {getCurrentTotalPages() > 1 && (
+                {pages.length > 1 && (
                   <div className="absolute bottom-8 right-12 text-gray-400 text-sm font-medium select-none">
                     {currentPage + 1}
                   </div>
                 )}
 
-                {/* Content - Fixed height, no overflow */}
+                {/* Content - Fixed height, overflow visible to prevent truncation */}
                 <div
                   ref={contentRef}
                   className="relative z-10"
                   style={{
                     padding: `${padding}px`,
                     height: `${pageHeight}px`,
-                    overflow: 'hidden' // Hide overflow for HTML pagination
+                    overflow: 'visible'
                   }}
                 >
-                  {isHtmlContent ? (
-                    /* HTML Content - use clipping for pagination */
-                    <div
-                      ref={htmlContentRef}
-                      style={{
-                        transform: `translateY(-${currentPage * (pageHeight - padding * 2)}px)`,
-                        transition: 'transform 0.3s ease-out'
-                      }}
-                    >
-                      <TipTapRenderer
-                        content={pages[0] || ''}
-                        compact={true}
-                        className="text-base leading-relaxed"
-                      />
-                    </div>
-                  ) : (
-                    /* JSON Content - show specific page */
-                    <TipTapRenderer
-                      content={pages[currentPage] || ''}
-                      compact={true}
-                      className="text-base leading-relaxed"
-                    />
-                  )}
+                  <TipTapRenderer
+                    content={pages[currentPage] || ''}
+                    compact={true}
+                    className="text-base leading-relaxed"
+                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Hidden measurement container */}
+        {/* Hidden measurement container for JSON nodes */}
         {!isReady && parsedNodes.length > 0 && (
           <div
             ref={measurementContainerRef}
@@ -504,6 +517,30 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Hidden measurement container for HTML elements */}
+        {!isReady && htmlElements.length > 0 && (
+          <div
+            ref={htmlMeasurementRef}
+            className="fixed top-0 left-0 pointer-events-none"
+            style={{
+              position: 'absolute',
+              visibility: 'hidden',
+              top: '-9999px',
+              left: '-9999px',
+              width: `${pageWidth - (padding * 2)}px`,
+            }}
+          >
+            {htmlElements.map((element, index) => (
+              <div
+                key={`html-${index}`}
+                className="html-element-measurement"
+                style={{ marginBottom: '10px' }}
+                dangerouslySetInnerHTML={{ __html: element }}
+              />
+            ))}
           </div>
         )}
       </div>
