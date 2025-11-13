@@ -126,7 +126,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
           console.error('Error parsing JSON content:', parseError);
           // Invalid JSON - treat as HTML and convert to TipTap JSON
           try {
-            parsedContent = generateJSON(content, extensions);
+            parsedContent = generateJSON(content, extensions) as TipTapDocument;
           } catch (htmlError) {
             console.error('Error converting HTML to JSON:', htmlError);
             setPages([content]);
@@ -137,7 +137,7 @@ export const RealPaginatedRenderer: React.FC<RealPaginatedRendererProps> = ({
       } else {
         // Content is HTML - convert to TipTap JSON using generateJSON
         try {
-          parsedContent = generateJSON(content, extensions);
+          parsedContent = generateJSON(content, extensions) as TipTapDocument;
         } catch (htmlError) {
           console.error('Error converting HTML to JSON:', htmlError);
           setPages([content]);
