@@ -36,7 +36,7 @@ import {
 import { RealTimeMathExtension, getFormulaAtPosition } from './RealTimeMathExtension';
 
 // Import LaTeX space extension
-import { LatexSpaceExtension } from './LatexSpaceExtension';
+import { LatexSpaceExtension, wrapContentInMathDelimiters } from './LatexSpaceExtension';
 
 // Import pagination extensions
 import { PaginationPlus, A4_PAGE_SIZE } from './pagination';
@@ -260,7 +260,10 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
     ],
     content: editorContent || '<p></p>',
     onUpdate: ({ editor }) => {
-      handleChange(editor.getHTML());
+      const html = editor.getHTML();
+      // Auto-wrap all text content in $ delimiters for math mode
+      const wrappedHtml = wrapContentInMathDelimiters(html);
+      handleChange(wrappedHtml);
     },
   });
 
