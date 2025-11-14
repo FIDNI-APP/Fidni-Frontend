@@ -250,7 +250,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     switch (contentType) {
       case 'lesson':
         return {
-          gradient: 'from-gray-900 to-blue-800',
+          gradient: 'from-blue-900 to-blue-800',
           hoverColor: 'text-blue-600',
           tagBgColor: 'bg-blue-50',
           tagTextColor: 'text-blue-900',
@@ -262,7 +262,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         };
       case 'exam':
         return {
-          gradient: 'from-gray-900 to-green-800',
+          gradient: 'from-green-900 to-green-800',
           hoverColor: 'text-green-700',
           tagBgColor: 'bg-green-90',
           tagTextColor: 'text-green-900',
@@ -274,7 +274,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         };
       default: // exercise
         return {
-          gradient: 'from-gray-700 to-purple-700',
+          gradient: 'from-purple-700 to-purple-700',
           hoverColor: 'text-purple-600',
           tagBgColor: 'bg-purple-50',
           tagTextColor: 'text-purple-700',

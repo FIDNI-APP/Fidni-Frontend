@@ -35,6 +35,9 @@ import {
 // Import de notre extension mathématique corrigée
 import { RealTimeMathExtension, getFormulaAtPosition } from './RealTimeMathExtension';
 
+// Import pagination extensions
+import { PaginationPlus, A4_PAGE_SIZE } from './pagination';
+
 interface DualPaneEditorProps {
   content?: string;
   setContent?: React.Dispatch<React.SetStateAction<string>>;
@@ -154,9 +157,26 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
         orderedList: false,
         listItem: false,
       }),
+      PaginationPlus.configure({
+        pageHeight: A4_PAGE_SIZE.pageHeight,
+        pageWidth: A4_PAGE_SIZE.pageWidth,
+        pageGap: 30,
+        pageBreakBackground: '#ffffff',
+        pageGapBorderSize: 1,
+        pageGapBorderColor: '#d1d5db',
+        marginTop: A4_PAGE_SIZE.marginTop,
+        marginBottom: A4_PAGE_SIZE.marginBottom,
+        marginLeft: A4_PAGE_SIZE.marginLeft,
+        marginRight: A4_PAGE_SIZE.marginRight,
+        contentMarginTop: 10,
+        contentMarginBottom: 10,
+        footerRight: '{page}',
+        footerLeft: '',
+        headerRight: '',
+        headerLeft: '',
+      }),
       TextStyle,
       Color,
-      Document,
       Paragraph,
       Text,
       TextAlign.configure({
@@ -233,7 +253,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
         ],
       })
     ],
-    content: editorContent,
+    content: editorContent || '<p></p>',
     onUpdate: ({ editor }) => {
       handleChange(editor.getHTML());
     },
@@ -522,27 +542,6 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
 
   return (
     <div className={`w-full border border-gray-200 rounded-lg shadow-lg ${currentTheme.bgColor} transition-colors duration-300 overflow-hidden`}>
-      {/* Header */}
-      <div className={`flex items-center justify-between gap-2 px-4 py-2 bg-gradient-to-r ${currentTheme.accentColor} text-white shadow-sm`}>
-        <div className="flex items-center">
-          <Sparkles className="w-5 h-5 mr-2 opacity-80" />
-          <span className="font-medium">Éditeur de Formules Mathématiques</span>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type='button'
-            onClick={() => setShowSettings(!showSettings)}
-            onMouseEnter={(e) => showButtonTooltip("Paramètres", e)}
-            onMouseLeave={hideTooltip}
-            className="p-1 hover:bg-white/20 rounded-full transition-colors"
-            aria-label="Paramètres"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
       {/* Settings panel */}
       <EditorSettings
         showSettings={showSettings}
@@ -609,23 +608,13 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
       <div
         ref={editorContainerRef}
         className="overflow-y-auto"
-        style={{ maxHeight: '700px', backgroundColor: '#e5e7eb', padding: '20px' }}
+        style={{ maxHeight: '700px', backgroundColor: '#f5f5f5', padding: '20px' }}
+        onClick={focusEditor}
       >
-        <div
-          className="mx-auto bg-white shadow-lg relative"
-          style={{
-            width: '210mm',
-            maxWidth: '100%'
-          }}
-          onClick={focusEditor}
-        >
-          <div style={{ padding: '20mm' }}>
-            <EditorContent
-              editor={editor}
-              className="focus:outline-none prose max-w-none real-time-math-editor paginated-editor"
-            />
-          </div>
-        </div>
+        <EditorContent
+          editor={editor}
+          className="focus:outline-none prose max-w-none real-time-math-editor paginated-editor"
+        />
       </div>
 
       {/* Modals */}
@@ -661,8 +650,8 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
       {/* Custom CSS for LaTeX styling and pagination */}
       <style>{`
         .latex-style .ProseMirror {
-          min-height: 257mm;
           outline: none;
+          padding: 0;
         }
 
         .content-image {
@@ -689,10 +678,23 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
           font-size: 12pt;
           line-height: 1.6;
           color: #000;
-          min-height: 257mm;
           position: relative;
           outline: none !important;
           border: none !important;
+          background: white;
+        }
+
+        /* Pagination gap styling */
+        .rm-pagination-gap {
+          background: linear-gradient(to bottom, #f9fafb 0%, #ffffff 100%) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        /* Page footer styling */
+        .rm-page-footer {
+          color: #6b7280;
+          font-size: 10pt;
+          font-family: 'Times New Roman', Times, serif;
         }
 
         /* Remove all editor borders and outlines */

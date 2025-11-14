@@ -6,9 +6,11 @@ import obfuscator from 'rollup-plugin-obfuscator';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
-  plugins: [react(),
-    obfuscator({
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    react(),
+    // Only obfuscate in production
+    ...(mode === 'production' ? [obfuscator({
       options: {
         compact: true,
         controlFlowFlattening: true,
@@ -20,7 +22,7 @@ export default defineConfig({
         stringArrayThreshold: 0.75,
         identifierNamesGenerator: 'hexadecimal',
       }
-    })
+    })] : [])
   ],
   optimizeDeps: {
     include: [
@@ -63,4 +65,4 @@ export default defineConfig({
       
     }
   },
-});
+}));
