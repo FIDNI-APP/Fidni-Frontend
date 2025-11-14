@@ -8,7 +8,7 @@ import { User, Calendar, Eye, CheckCircle, XCircle, Clock, Play, Pause, RotateCc
 import { Button } from '@/components/ui/button';
 import { Content, Difficulty, VoteValue } from '@/types';
 import { VoteButtons } from '@/components/VoteButtons';
-import RealPaginatedRenderer from '@/components/editor/RealPaginatedRenderer';
+import TipTapRenderer from '@/components/editor/TipTapRenderer';
 
 interface ExerciseMainCardProps {
   exercise: Content;
@@ -209,7 +209,7 @@ export const ExerciseMainCard: React.FC<ExerciseMainCardProps> = ({
 
       {/* Content - Clean view */}
       <div className="mb-6">
-        <RealPaginatedRenderer content={exercise.content} />
+        <TipTapRenderer content={exercise.content} />
       </div>
 
       {/* Footer actions */}

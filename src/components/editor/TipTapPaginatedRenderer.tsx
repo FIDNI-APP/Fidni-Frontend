@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, LayoutList, LayoutGrid } from 'lucide-react';
 import StarterKit from '@tiptap/starter-kit';
 import { A4_PAGE_SIZE } from './pagination';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -32,6 +32,7 @@ export const TipTapPaginatedRenderer: React.FC<TipTapPaginatedRendererProps> = (
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  const [showPreviewPanels, setShowPreviewPanels] = useState(true);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   // Calculate the actual page height for viewport
@@ -318,6 +319,16 @@ export const TipTapPaginatedRenderer: React.FC<TipTapPaginatedRendererProps> = (
             </button>
             <div className="w-px h-6 bg-gray-300 mx-1" />
             <button
+              onClick={() => setShowPreviewPanels(!showPreviewPanels)}
+              className={`p-2 text-gray-700 rounded-lg transition-all hover:shadow-sm ${
+                showPreviewPanels ? 'bg-indigo-100 hover:bg-indigo-200' : 'bg-gray-50 hover:bg-gray-100'
+              }`}
+              title={showPreviewPanels ? "Masquer les aperçus" : "Afficher les aperçus"}
+            >
+              {showPreviewPanels ? <LayoutGrid className="w-4 h-4" /> : <LayoutList className="w-4 h-4" />}
+            </button>
+            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all hover:shadow-sm"
               title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
@@ -329,55 +340,57 @@ export const TipTapPaginatedRenderer: React.FC<TipTapPaginatedRendererProps> = (
 
         {/* Main content area with sidebar */}
         <div className="flex gap-4">
-          {/* Page Thumbnails Sidebar */}
-          <div className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md border border-gray-200 p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-            <div className="space-y-2">
-              {Array.from({ length: totalPages }, (_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToPage(index)}
-                  className={`w-full p-2 rounded-lg border-2 transition-all ${
-                    currentPage === index
-                      ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                      : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div
-                    className="bg-white border border-gray-300 rounded overflow-hidden relative"
-                    style={{
-                      aspectRatio: `${A4_PAGE_SIZE.pageWidth} / ${A4_PAGE_SIZE.pageHeight}`,
-                    }}
+          {/* Page Thumbnails Sidebar - Conditionally rendered */}
+          {showPreviewPanels && (
+            <div className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md border border-gray-200 p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+              <div className="space-y-2">
+                {Array.from({ length: totalPages }, (_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToPage(index)}
+                    className={`w-full p-2 rounded-lg border-2 transition-all ${
+                      currentPage === index
+                        ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                        : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                    }`}
                   >
-                    {/* CSS-based visual preview */}
                     <div
-                      className="absolute inset-0"
+                      className="bg-white border border-gray-300 rounded overflow-hidden relative"
                       style={{
-                        transform: 'scale(0.18)',
-                        transformOrigin: 'top left',
-                        width: `${A4_PAGE_SIZE.pageWidth}px`,
-                        height: `${A4_PAGE_SIZE.pageHeight}px`,
-                        overflow: 'hidden',
+                        aspectRatio: `${A4_PAGE_SIZE.pageWidth} / ${A4_PAGE_SIZE.pageHeight}`,
                       }}
                     >
+                      {/* CSS-based visual preview */}
                       <div
+                        className="absolute inset-0"
                         style={{
-                          transform: `translateY(-${index * PAGE_HEIGHT}px)`,
-                          padding: `${A4_PAGE_SIZE.marginTop}px ${A4_PAGE_SIZE.marginLeft}px`,
+                          transform: 'scale(0.18)',
+                          transformOrigin: 'top left',
+                          width: `${A4_PAGE_SIZE.pageWidth}px`,
+                          height: `${A4_PAGE_SIZE.pageHeight}px`,
+                          overflow: 'hidden',
                         }}
-                        dangerouslySetInnerHTML={{
-                          __html: editor?.getHTML() || ''
-                        }}
-                        className="preview-content"
-                      />
+                      >
+                        <div
+                          style={{
+                            transform: `translateY(-${index * PAGE_HEIGHT}px)`,
+                            padding: `${A4_PAGE_SIZE.marginTop}px ${A4_PAGE_SIZE.marginLeft}px`,
+                          }}
+                          dangerouslySetInnerHTML={{
+                            __html: editor?.getHTML() || ''
+                          }}
+                          className="preview-content"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-center mt-1 font-medium text-gray-600">
-                    {index + 1}
-                  </div>
-                </button>
-              ))}
+                    <div className="text-xs text-center mt-1 font-medium text-gray-600">
+                      {index + 1}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Page viewport container */}
           <div className="flex-1 flex justify-center">
