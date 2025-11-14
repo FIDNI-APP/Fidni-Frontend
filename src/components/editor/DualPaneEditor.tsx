@@ -35,6 +35,9 @@ import {
 // Import de notre extension mathématique corrigée
 import { RealTimeMathExtension, getFormulaAtPosition } from './RealTimeMathExtension';
 
+// Import LaTeX space extension
+import { LatexSpaceExtension } from './LatexSpaceExtension';
+
 // Import pagination extensions
 import { PaginationPlus, A4_PAGE_SIZE } from './pagination';
 
@@ -251,7 +254,9 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
           { left: '$$', right: '$$', display: true },
           { left: '$', right: '$', display: false },
         ],
-      })
+      }),
+      // Extension pour convertir les espaces en espaces LaTeX (\ )
+      LatexSpaceExtension,
     ],
     content: editorContent || '<p></p>',
     onUpdate: ({ editor }) => {
