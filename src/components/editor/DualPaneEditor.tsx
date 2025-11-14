@@ -674,7 +674,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
 
         /* Page styling for print-like appearance */
         .ProseMirror {
-          font-family: 'Times New Roman', Times, serif;
+          font-family: 'Latin Modern Roman', 'Computer Modern', serif;
           font-size: 12pt;
           line-height: 1.6;
           color: #000;
@@ -694,7 +694,7 @@ const DualPaneEditor: React.FC<DualPaneEditorProps> = ({
         .rm-page-footer {
           color: #6b7280;
           font-size: 10pt;
-          font-family: 'Times New Roman', Times, serif;
+          font-family: 'Latin Modern Roman', 'Computer Modern', serif;
         }
 
         /* Remove all editor borders and outlines */

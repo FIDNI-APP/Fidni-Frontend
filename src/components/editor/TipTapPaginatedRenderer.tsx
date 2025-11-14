@@ -478,7 +478,7 @@ export const TipTapPaginatedRenderer: React.FC<TipTapPaginatedRendererProps> = (
           }
 
           .tiptap-paginated-renderer .ProseMirror {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: 'Latin Modern Roman', 'Computer Modern', serif;
             font-size: 12pt;
             line-height: 1.6;
             color: #000;
@@ -556,7 +556,7 @@ export const TipTapPaginatedRenderer: React.FC<TipTapPaginatedRendererProps> = (
 
           /* Preview content styling */
           .preview-content {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: 'Latin Modern Roman', 'Computer Modern', serif;
             font-size: 12pt;
             line-height: 1.6;
             color: #000;

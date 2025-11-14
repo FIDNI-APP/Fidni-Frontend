@@ -50,7 +50,7 @@ const ExercisePrintView: React.FC<ExercisePrintViewProps> = ({
         }
 
         body, .exam-style-print {
-          font-family: 'Times New Roman', 'Georgia', serif;
+          font-family: 'Latin Modern Roman', 'Computer Modern', serif;
           color: #000;
           line-height: 1.55;
           background: white;

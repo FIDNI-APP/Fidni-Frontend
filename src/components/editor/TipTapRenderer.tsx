@@ -700,6 +700,11 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = ({
       {/* CSS for custom cursors and formula rendering */}
       <style>
   {`
+        /* TipTap editor font styling */
+        .ProseMirror {
+          font-family: 'Latin Modern Roman', 'Computer Modern', serif;
+        }
+
         /* Hide source text for formulas */
         .math-source-hidden {
           font-size: 0 !important;
