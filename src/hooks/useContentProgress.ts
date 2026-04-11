@@ -6,7 +6,7 @@ import {
   unsaveExercise
 } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/AuthController';
+import { useAuthModal } from '@/components/auth/AuthController';
 
 type ProgressStatus = 'success' | 'review' | null;
 

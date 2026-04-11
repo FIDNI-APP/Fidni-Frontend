@@ -15,7 +15,7 @@ interface RevisionListItem {
 }
 
 export const RevisionLists = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [lists, setLists] = useState<RevisionListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,13 +27,15 @@ export const RevisionLists = () => {
   const [newListDescription, setNewListDescription] = useState('');
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/login');
       return;
     }
 
-    fetchLists();
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) {
+      fetchLists();
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const fetchLists = async () => {
     try {

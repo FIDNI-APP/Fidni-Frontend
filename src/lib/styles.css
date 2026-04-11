@@ -249,8 +249,14 @@
     font-weight: 400;
     font-style: normal;
   }
-  .ProseMirror {
+  /* Only apply min-height to EDITABLE TipTap instances */
+  .tiptap-editor .ProseMirror {
           min-height: 400px;
+          outline: none;
+        }
+  /* Ensure read-only renderers don't have min-height */
+  .tiptap-full-renderer .ProseMirror {
+          min-height: 0 !important;
           outline: none;
         }
         
@@ -272,6 +278,30 @@
           display: flex;
           justify-content: center;
           margin: 1rem 0;}
+
+        /* Global: Hide LaTeX source text when rendered */
+        .math-source-hidden {
+          font-size: 0 !important;
+          line-height: 0 !important;
+          width: 0 !important;
+          height: 0 !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          position: absolute !important;
+          overflow: hidden !important;
+        }
+
+        .math-inline {
+          display: inline-block;
+          vertical-align: middle;
+          margin: 0 2px;
+        }
+
+        .math-display {
+          display: block;
+          margin: 1em 0;
+          text-align: center;
+        }
 /* TipTap Read-only Editor Styles */
 /* TipTap Read-only Editor Styles */
 .tiptap-readonly-editor {

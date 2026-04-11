@@ -18,12 +18,14 @@ export interface ExamFilters {
 export interface ClassLevelModel {
   id: string;
   name: string;
+  content_count?: number | null;
 }
 
 export interface SubjectModel {
   id: string;
   name: string;
   class_level: ClassLevelModel;
+  content_count?: number | null;
 }
 
 
@@ -32,6 +34,7 @@ export interface Subfield{
   name : string;
   subject : SubjectModel ;
   class_level : ClassLevelModel[];
+  content_count?: number | null;
 }
 
 export interface ChapterModel {
@@ -41,6 +44,7 @@ export interface ChapterModel {
   class_level: ClassLevelModel[];
   subfield : Subfield[];
   order: number;
+  content_count?: number | null;
 }
 export interface Theorem{
   id: string;
@@ -49,6 +53,7 @@ export interface Theorem{
   class_level: ClassLevelModel[];
   chapter : ChapterModel[];
   subfield : Subfield[];
+  content_count?: number | null;
 }
 
 export interface Solution {
@@ -68,6 +73,9 @@ export interface Solution {
 
 export interface Content {
   id: number;
+  exercise_id?: number;
+  lesson_id?: number;
+  exam_id?: number;
   title: string;
   content: string;
   class_levels: ClassLevelModel[];
@@ -184,6 +192,12 @@ export interface Comment {
   parent_id?: string;
   replies?: Comment[];
   vote_count: number;
+  attachments?: Array<{
+    id: string;
+    file_name: string;
+    file_type: string;
+    url: string;
+  }>;
 }
 
 export interface UserProfile {
@@ -228,6 +242,7 @@ export interface UserProfile {
 
 export interface Lesson {
   id: string;
+  lesson_id?: number;
   title: string;
   content: string;
   class_levels: ClassLevelModel[];
@@ -271,6 +286,7 @@ export interface Section {
       id: string;
       title: string;
       content: string;
+      structure?: any;
     };
     page_order: number;
     content_start: number;
@@ -312,6 +328,7 @@ export interface NotebookResponse {
 // src/types/exam.ts
 export interface Exam {
   id: string;
+  exam_id?: number;
   title: string;
   content: string;
   difficulty: Difficulty;

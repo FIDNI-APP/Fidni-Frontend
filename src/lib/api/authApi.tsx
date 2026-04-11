@@ -9,13 +9,19 @@ export const login = async (identifier : string, password : string) => {
       password 
     });
     
+    console.log('Login response:', response.data);
+    
     if (response.data.access) {
       // Store tokens
       localStorage.setItem('token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       
+      console.log('Token saved to localStorage:', response.data.access);
+      
       // Ensure proper format with space after "Bearer"
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+    } else {
+      console.error('No access token in response:', response.data);
     }
     
     return response.data;

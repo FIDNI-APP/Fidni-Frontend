@@ -110,6 +110,16 @@ export {
   checkOnboardingStatus,
   getOnboardingData,
   saveOnboardingProfile,
+  uploadAvatar,
+  removeAvatar,
+  getOnboardingState,
+  updateOnboardingStep,
+  completeOnboarding,
+  getTeacherStudents,
+  sendTeacherInvitation,
+  deleteTeacherInvitation,
+  getStudentInvitations,
+  respondToInvitation,
 } from './userApi';
 
 // ============ HIERARCHY API ============
@@ -119,6 +129,7 @@ export {
   getSubfields,
   getChapters,
   getTheorems,
+  getDifficultyCounts,
 } from './hierarchyApi';
 
 // ============ INTERACTION API ============
@@ -219,6 +230,16 @@ export {
   type TaxonomyTimeStatsResponse,
   type TaxonomyTimeStatsParams,
 } from './statisticsApi';
+
+// ============ STRUCTURED CONTENT API ============
+export {
+  structuredAPI,
+  structuredExerciseAPI,
+  structuredExamAPI,
+  structuredLessonAPI,
+  structuredProgressAPI,
+  type PaginatedResponse,
+} from './structuredApi';
 
 // ============ LEGACY ALIASES (for backwards compatibility) ============
 // Remove these gradually as you update imports throughout the app

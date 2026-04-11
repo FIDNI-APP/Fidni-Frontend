@@ -29,29 +29,49 @@ export interface SolutionViewTrackingResponse {
 }
 
 /**
+ * Get statistics for any content item
+ */
+export async function getContentStatistics(
+  contentType: 'exercise' | 'exam',
+  contentId: string
+): Promise<ContentStatistics> {
+  try {
+    const response = await api.get(`/contents/${contentId}/statistics/`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch content statistics:', error);
+    throw error;
+  }
+}
+
+/**
  * Get statistics for an exercise
  */
 export async function getExerciseStatistics(
   exerciseId: string
 ): Promise<ContentStatistics> {
-  try {
-    const response = await api.get(`/exercises/${exerciseId}/statistics/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch exercise statistics:', error);
-    throw error;
-  }
+  return getContentStatistics('exercise', exerciseId);
 }
 
 /**
  * Get statistics for an exam
  */
 export async function getExamStatistics(examId: string): Promise<ContentStatistics> {
+  return getContentStatistics('exam', examId);
+}
+
+/**
+ * Mark that current user viewed the solution
+ */
+export async function markSolutionViewed(
+  contentType: 'exercise' | 'exam',
+  contentId: string
+): Promise<SolutionViewTrackingResponse> {
   try {
-    const response = await api.get(`/exams/${examId}/statistics/`);
+    const response = await api.post(`/contents/${contentId}/mark_solution_viewed/`);
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch exam statistics:', error);
+    console.error('Failed to mark solution as viewed:', error);
     throw error;
   }
 }
@@ -62,13 +82,7 @@ export async function getExamStatistics(examId: string): Promise<ContentStatisti
 export async function markExerciseSolutionViewed(
   exerciseId: string
 ): Promise<SolutionViewTrackingResponse> {
-  try {
-    const response = await api.post(`/exercises/${exerciseId}/mark_solution_viewed/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to mark solution as viewed:', error);
-    throw error;
-  }
+  return markSolutionViewed('exercise', exerciseId);
 }
 
 /**
@@ -77,25 +91,23 @@ export async function markExerciseSolutionViewed(
 export async function markExamSolutionViewed(
   examId: string
 ): Promise<SolutionViewTrackingResponse> {
-  try {
-    const response = await api.post(`/exams/${examId}/mark_solution_viewed/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to mark solution as viewed:', error);
-    throw error;
-  }
+  return markSolutionViewed('exam', examId);
 }
 
 /**
- * Generic function to get statistics for any content type
+ * Remove/undo solution viewed flag
  */
-export async function getContentStatistics(
+export async function undoSolutionViewed(
   contentType: 'exercise' | 'exam',
   contentId: string
-): Promise<ContentStatistics> {
-  return contentType === 'exercise'
-    ? getExerciseStatistics(contentId)
-    : getExamStatistics(contentId);
+): Promise<SolutionViewTrackingResponse> {
+  try {
+    const response = await api.delete(`/contents/${contentId}/mark_solution_viewed/`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to undo solution view:', error);
+    throw error;
+  }
 }
 
 /**
@@ -104,13 +116,7 @@ export async function getContentStatistics(
 export async function undoExerciseSolutionViewed(
   exerciseId: string
 ): Promise<SolutionViewTrackingResponse> {
-  try {
-    const response = await api.delete(`/exercises/${exerciseId}/mark_solution_viewed/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to undo solution view:', error);
-    throw error;
-  }
+  return undoSolutionViewed('exercise', exerciseId);
 }
 
 /**
@@ -119,37 +125,23 @@ export async function undoExerciseSolutionViewed(
 export async function undoExamSolutionViewed(
   examId: string
 ): Promise<SolutionViewTrackingResponse> {
+  return undoSolutionViewed('exam', examId);
+}
+
+/**
+ * Mark that current user's solution matches the proposed solution
+ */
+export async function markSolutionMatched(
+  contentType: 'exercise' | 'exam',
+  contentId: string
+): Promise<SolutionViewTrackingResponse> {
   try {
-    const response = await api.delete(`/exams/${examId}/mark_solution_viewed/`);
+    const response = await api.post(`/contents/${contentId}/mark_solution_match/`);
     return response.data;
   } catch (error) {
-    console.error('Failed to undo solution view:', error);
+    console.error('Failed to mark solution match:', error);
     throw error;
   }
-}
-
-/**
- * Generic function to mark solution as viewed for any content type
- */
-export async function markSolutionViewed(
-  contentType: 'exercise' | 'exam',
-  contentId: string
-): Promise<SolutionViewTrackingResponse> {
-  return contentType === 'exercise'
-    ? markExerciseSolutionViewed(contentId)
-    : markExamSolutionViewed(contentId);
-}
-
-/**
- * Generic function to remove solution viewed flag for any content type
- */
-export async function undoSolutionViewed(
-  contentType: 'exercise' | 'exam',
-  contentId: string
-): Promise<SolutionViewTrackingResponse> {
-  return contentType === 'exercise'
-    ? undoExerciseSolutionViewed(contentId)
-    : undoExamSolutionViewed(contentId);
 }
 
 /**
@@ -158,13 +150,7 @@ export async function undoSolutionViewed(
 export async function markExerciseSolutionMatched(
   exerciseId: string
 ): Promise<SolutionViewTrackingResponse> {
-  try {
-    const response = await api.post(`/exercises/${exerciseId}/mark_solution_match/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to mark solution match:', error);
-    throw error;
-  }
+  return markSolutionMatched('exercise', exerciseId);
 }
 
 /**
@@ -173,11 +159,21 @@ export async function markExerciseSolutionMatched(
 export async function markExamSolutionMatched(
   examId: string
 ): Promise<SolutionViewTrackingResponse> {
+  return markSolutionMatched('exam', examId);
+}
+
+/**
+ * Remove/undo solution match flag
+ */
+export async function undoSolutionMatched(
+  contentType: 'exercise' | 'exam',
+  contentId: string
+): Promise<SolutionViewTrackingResponse> {
   try {
-    const response = await api.post(`/exams/${examId}/mark_solution_match/`);
+    const response = await api.delete(`/contents/${contentId}/mark_solution_match/`);
     return response.data;
   } catch (error) {
-    console.error('Failed to mark solution match:', error);
+    console.error('Failed to undo solution match:', error);
     throw error;
   }
 }
@@ -188,13 +184,7 @@ export async function markExamSolutionMatched(
 export async function undoExerciseSolutionMatched(
   exerciseId: string
 ): Promise<SolutionViewTrackingResponse> {
-  try {
-    const response = await api.delete(`/exercises/${exerciseId}/mark_solution_match/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to undo solution match:', error);
-    throw error;
-  }
+  return undoSolutionMatched('exercise', exerciseId);
 }
 
 /**
@@ -203,37 +193,7 @@ export async function undoExerciseSolutionMatched(
 export async function undoExamSolutionMatched(
   examId: string
 ): Promise<SolutionViewTrackingResponse> {
-  try {
-    const response = await api.delete(`/exams/${examId}/mark_solution_match/`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to undo solution match:', error);
-    throw error;
-  }
-}
-
-/**
- * Generic function to mark solution match for any content type
- */
-export async function markSolutionMatched(
-  contentType: 'exercise' | 'exam',
-  contentId: string
-): Promise<SolutionViewTrackingResponse> {
-  return contentType === 'exercise'
-    ? markExerciseSolutionMatched(contentId)
-    : markExamSolutionMatched(contentId);
-}
-
-/**
- * Generic function to remove solution match flag for any content type
- */
-export async function undoSolutionMatched(
-  contentType: 'exercise' | 'exam',
-  contentId: string
-): Promise<SolutionViewTrackingResponse> {
-  return contentType === 'exercise'
-    ? undoExerciseSolutionMatched(contentId)
-    : undoExamSolutionMatched(contentId);
+  return undoSolutionMatched('exam', examId);
 }
 
 /**

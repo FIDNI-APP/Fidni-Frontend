@@ -1,7 +1,9 @@
-// src/components/navbar/NavbarDropdown.tsx - Version complète avec support des examens
+// src/components/navbar/NavbarDropdown.tsx - Mega menu with hover for fewer clicks
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Layers, BookOpen, GraduationCap, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, BookOpen, Loader2 } from 'lucide-react';
+import { APlusIcon } from '@/components/icons/APlusIcon';
+import { LessonIcon } from '@/components/icons/LessonIcon';
 import { getClassLevels, getSubjects } from '@/lib/api';
 import { useFilters } from './FilterContext';
 
@@ -10,24 +12,41 @@ interface NavDropdownProps {
   onClose: () => void;
 }
 
+interface ClassLevel {
+  id: string;
+  name: string;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+}
+
 export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
-  const [classLevels, setClassLevels] = useState<any[]>([]);
-  const [subjectsByClassLevel, setSubjectsByClassLevel] = useState<Record<string, any[]>>({});
+  const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
+  const [subjectsByClassLevel, setSubjectsByClassLevel] = useState<Record<string, Subject[]>>({});
   const [loadingClassLevels, setLoadingClassLevels] = useState(true);
   const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
-  const [expandedClassLevel, setExpandedClassLevel] = useState<string | null>(null);
+  const [hoveredClassLevel, setHoveredClassLevel] = useState<string | null>(null);
   const { setSelectedClassLevel, setSelectedSubject } = useFilters();
-  
+
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load class levels on component mount
+  // Load all class levels on mount
   useEffect(() => {
-    const fetchClassLevels = async () => {
+    const fetchData = async () => {
       try {
         setLoadingClassLevels(true);
         const data = await getClassLevels();
         setClassLevels(data);
+
+        // Auto-select first class level
+        if (data.length > 0) {
+          setHoveredClassLevel(data[0].id);
+          fetchSubjectsForLevel(data[0].id);
+        }
       } catch (error) {
         console.error('Failed to load class levels:', error);
       } finally {
@@ -35,34 +54,39 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
       }
     };
 
-    fetchClassLevels();
+    fetchData();
   }, []);
 
-  // Fetch subjects when a class level is expanded
-  useEffect(() => {
-    if (!expandedClassLevel) return;
+  const fetchSubjectsForLevel = async (classLevelId: string) => {
+    if (subjectsByClassLevel[classLevelId]) return;
 
-    const fetchSubjects = async () => {
-      if (subjectsByClassLevel[expandedClassLevel]) return;
+    try {
+      setLoadingSubjects(prev => ({ ...prev, [classLevelId]: true }));
+      const data = await getSubjects([classLevelId]);
+      setSubjectsByClassLevel(prev => ({
+        ...prev,
+        [classLevelId]: data
+      }));
+    } catch (error) {
+      console.error('Failed to load subjects:', error);
+    } finally {
+      setLoadingSubjects(prev => ({ ...prev, [classLevelId]: false }));
+    }
+  };
 
-      try {
-        setLoadingSubjects(prev => ({ ...prev, [expandedClassLevel]: true }));
-        const data = await getSubjects([expandedClassLevel]);
-        setSubjectsByClassLevel(prev => ({
-          ...prev,
-          [expandedClassLevel]: data
-        }));
-      } catch (error) {
-        console.error('Failed to load subjects:', error);
-      } finally {
-        setLoadingSubjects(prev => ({ ...prev, [expandedClassLevel]: false }));
-      }
-    };
+  // Prefetch subjects on hover
+  const handleClassLevelHover = (classLevelId: string) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
 
-    fetchSubjects();
-  }, [expandedClassLevel, subjectsByClassLevel]);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredClassLevel(classLevelId);
+      fetchSubjectsForLevel(classLevelId);
+    }, 50);
+  };
 
-  // Handle click outside to close the dropdown
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -73,158 +97,156 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
     };
   }, [onClose]);
 
-  const handleClassLevelClick = (classLevelId: string) => {
-    setExpandedClassLevel(expandedClassLevel === classLevelId ? null : classLevelId);
-  };
-
   const handleSubjectClick = (classLevelId: string, subjectId: string) => {
-    // Set filters in context BEFORE navigation
     setSelectedClassLevel(classLevelId);
     setSelectedSubject(subjectId);
-    
-    // Small delay to ensure state is updated before navigation
+
     setTimeout(() => {
       navigate(`/${type}?classLevels=${classLevelId}&subjects=${subjectId}`);
       onClose();
     }, 0);
   };
-  
-  const handleViewAll = (classLevelId: string) => {
-    // Set filter in context before navigation
+
+  const handleViewAllForLevel = (classLevelId: string) => {
     setSelectedClassLevel(classLevelId);
-    setSelectedSubject(null); // Clear subject filter
-    
+    setSelectedSubject(null);
+
     setTimeout(() => {
       navigate(`/${type}?classLevels=${classLevelId}`);
       onClose();
     }, 0);
   };
 
-  // Get icon based on type
-  const getTypeIcon = () => {
+  const handleViewAll = () => {
+    setSelectedClassLevel(null);
+    setSelectedSubject(null);
+    navigate(`/${type}`);
+    onClose();
+  };
+
+  const getTypeConfig = () => {
     switch (type) {
       case 'exercises':
-        return <BookOpen className="h-4 w-4 mr-2 text-gray-400" />;
+        return {
+          icon: BookOpen,
+          title: 'Tous les exercices'
+        };
       case 'lessons':
-        return <GraduationCap className="h-4 w-4 mr-2 text-gray-400" />;
+        return {
+          icon: LessonIcon,
+          title: 'Toutes les leçons'
+        };
       case 'exams':
-        return <Award className="h-4 w-4 mr-2 text-gray-400" />;
-      default:
-        return null;
+        return {
+          icon: APlusIcon,
+          title: 'Tous les examens'
+        };
     }
   };
 
-  // Get special options for exams
-  const renderExamSpecialOptions = () => {
-    if (type !== 'exams') return null;
+  const config = getTypeConfig();
+  const Icon = config.icon;
+  const currentSubjects = hoveredClassLevel ? subjectsByClassLevel[hoveredClassLevel] || [] : [];
+  const isLoadingCurrentSubjects = hoveredClassLevel ? loadingSubjects[hoveredClassLevel] : false;
 
-    return (
-      <>
-        <div className="px-4 py-2 border-b border-gray-700/50">
+  return (
+    <div
+      ref={dropdownRef}
+      className="absolute top-full left-0 mt-1 bg-[#1f1f1f] rounded-xl shadow-2xl border border-gray-700/50 overflow-hidden z-50"
+      style={{ minWidth: '380px' }}
+    >
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-700/50 bg-[#252525]">
+        <button
+          onClick={handleViewAll}
+          className="flex items-center gap-2 text-gray-200 hover:text-white transition-colors group"
+        >
+          <Icon className="w-4 h-4 text-gray-400 group-hover:text-white" />
+          <span className="font-medium text-sm">{config.title}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
+
+      {/* Exams special option */}
+      {type === 'exams' && (
+        <div className="px-3 py-2 border-b border-gray-700/50">
           <button
             onClick={() => {
               navigate('/exams?isNational=true');
               onClose();
             }}
-            className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-white/10 transition-colors flex items-center text-gray-200"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-colors"
           >
-            <Award className="h-4 w-4 mr-2 text-purple-400" />
-            Examens Nationaux
+            <APlusIcon className="w-4 h-4 text-indigo-400" />
+            <span className="font-medium">Examens Nationaux</span>
           </button>
         </div>
-        <div className="px-2 py-1">
-          <div className="text-xs text-gray-400 uppercase tracking-wide px-4 py-1">
-            Par niveau
-          </div>
+      )}
+
+      {loadingClassLevels ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
         </div>
-      </>
-    );
-  };
-
-  return (
-    <div
-      ref={dropdownRef}
-      className="absolute top-full left-0 mt-1 w-64 bg-gray-800/95 backdrop-blur-lg rounded-lg shadow-xl border border-gray-700/50 overflow-hidden z-50"
-    >
-      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-        {/* Special exam option */}
-        {type === 'exams' && (
-          <>
-            <div className="px-2 pt-2 pb-1">
-              <button
-                onClick={() => {
-                  navigate('/exams?isNational=true');
-                  onClose();
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-colors"
-              >
-                <Award className="h-3.5 w-3.5 text-purple-400" />
-                <span className="font-medium">Examens Nationaux</span>
-              </button>
-            </div>
-            <div className="h-px bg-gray-700/50 mx-2 my-1"></div>
-          </>
-        )}
-
-        {loadingClassLevels ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-600 border-t-gray-400"></div>
-          </div>
-        ) : (
-          <div className="py-1">
+      ) : (
+        <div className="flex">
+          {/* Class levels column */}
+          <div className="w-36 border-r border-gray-700/50 py-2 bg-[#1a1a1a]">
             {classLevels.map((classLevel) => (
-              <div key={classLevel.id}>
-                <button
-                  onClick={() => handleClassLevelClick(classLevel.id)}
-                  className="flex items-center justify-between w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-colors"
-                >
-                  <span className="font-medium">{classLevel.name}</span>
-                  <ChevronRight className={`h-3.5 w-3.5 text-gray-500 transition-transform ${
-                    expandedClassLevel === classLevel.id ? 'rotate-90' : ''
-                  }`} />
-                </button>
-
-                {expandedClassLevel === classLevel.id && (
-                  <div className="bg-gray-900/50 py-1">
-                    {loadingSubjects[classLevel.id] ? (
-                      <div className="flex justify-center py-3">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-gray-400"></div>
-                      </div>
-                    ) : subjectsByClassLevel[classLevel.id]?.length > 0 ? (
-                      <>
-                        {subjectsByClassLevel[classLevel.id].map((subject) => (
-                          <button
-                            key={subject.id}
-                            onClick={() => handleSubjectClick(classLevel.id, subject.id)}
-                            className="w-full text-left px-6 py-1.5 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-700/30 transition-colors"
-                          >
-                            {subject.name}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => handleViewAll(classLevel.id)}
-                          className="w-full text-left px-6 py-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
-                        >
-                          Voir tout →
-                        </button>
-                      </>
-                    ) : (
-                      <p className="px-6 py-2 text-xs text-gray-500 italic">
-                        Aucune matière
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+              <button
+                key={classLevel.id}
+                onMouseEnter={() => handleClassLevelHover(classLevel.id)}
+                onClick={() => handleViewAllForLevel(classLevel.id)}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-all flex items-center justify-between group ${
+                  hoveredClassLevel === classLevel.id
+                    ? 'bg-gray-700/50 text-white'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                }`}
+              >
+                <span className="font-medium">{classLevel.name}</span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-all ${
+                  hoveredClassLevel === classLevel.id
+                    ? 'text-gray-300 translate-x-0.5'
+                    : 'text-gray-600 group-hover:text-gray-400'
+                }`} />
+              </button>
             ))}
           </div>
-        )}
-      </div>
 
-      <style jsx>{`
+          {/* Subjects column */}
+          <div className="flex-1 py-2 min-h-[180px] max-h-[280px] overflow-y-auto custom-scrollbar">
+            {isLoadingCurrentSubjects ? (
+              <div className="flex items-center justify-center h-full py-8">
+                <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+              </div>
+            ) : currentSubjects.length > 0 ? (
+              <div className="px-2">
+                {currentSubjects.map((subject) => (
+                  <button
+                    key={subject.id}
+                    onClick={() => handleSubjectClick(hoveredClassLevel!, subject.id)}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700/40 hover:text-white transition-all group flex items-center justify-between"
+                  >
+                    <span>{subject.name}</span>
+                    <ChevronRight className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                Aucune matière
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
@@ -237,10 +259,6 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({ type, onClose }) => {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: rgba(107, 114, 128, 0.5);
-        }
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(107, 114, 128, 0.3) transparent;
         }
       `}</style>
     </div>

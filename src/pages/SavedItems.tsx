@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getUserSavedExercises, getUserSavedLessons, getUserSavedExams } from '@/lib/api/userApi';
 import { Star, BookOpen, AlertCircle, PenTool, FileCheck, Search } from 'lucide-react';
+import { LessonIcon } from '@/components/icons/LessonIcon';
 import { motion } from 'framer-motion';
 
 interface SavedItem {
@@ -23,7 +24,7 @@ interface SavedItem {
 }
 
 export const SavedItems = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +33,12 @@ export const SavedItems = () => {
   const [filterType, setFilterType] = useState<'all' | 'exercise' | 'lesson' | 'exam'>('all');
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/login');
+      return;
+    }
+
+    if (!isAuthenticated) {
       return;
     }
 
@@ -71,7 +76,7 @@ export const SavedItems = () => {
     };
 
     fetchSavedItems();
-  }, [user, isAuthenticated, navigate]);
+  }, [user, isAuthenticated, authLoading, navigate]);
 
   const filteredItems = savedItems.filter(item => {
     const matchesType = filterType === 'all' || item.content_type === filterType;
@@ -92,7 +97,7 @@ export const SavedItems = () => {
         };
       case 'lesson':
         return {
-          icon: BookOpen,
+          icon: LessonIcon,
           label: 'Leçon',
           color: 'text-green-600',
           bg: 'bg-green-50',
@@ -124,22 +129,23 @@ export const SavedItems = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
       {/* Header Section */}
-      <section className="relative bg-gradient-to-r from-gray-900 to-purple-800 text-white py-12 md:py-16 mb-8 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-20 -left-20 w-60 h-60 bg-purple-300/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        </div>
+      <section className="relative bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white py-12 md:py-16 mb-8 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }}></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <Star className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold">Éléments Enregistrés</h1>
-              <p className="text-white/80 mt-2">Tous vos contenus favoris en un seul endroit</p>
+            <div className="inline-block px-4 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold uppercase tracking-widest" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+              Collection
             </div>
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mt-4 mb-3 tracking-tight" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+            Éléments Enregistrés
+          </h1>
+          <div className="w-24 h-1 bg-blue-500 mb-3"></div>
+          <p className="text-slate-200 text-lg font-light">Tous vos contenus favoris en un seul endroit</p>
         </div>
       </section>
 

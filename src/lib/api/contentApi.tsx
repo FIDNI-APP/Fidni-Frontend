@@ -13,15 +13,16 @@ export const getContents = async (params: {
   type?: string;
   per_page?: number;
 }) => {
-  const response = await api.get('/exercises/', { 
+  const response = await api.get('/contents/', {
     params: {
+      type: params.type,
       class_levels: params.classLevels,
       subjects: params.subjects,
       chapters: params.chapters,
       difficulties: params.difficulties,
       subfields: params.subfields,
       theorems: params.theorems
-    } 
+    }
   });
   return {
     results: response.data.results || [],
@@ -41,12 +42,12 @@ export const createContent = async (data: {
   difficulty: string;
   solution_content?: string;
 }) => {
-  const response = await api.post('/exercises/', data);
+  const response = await api.post('/contents/', data);
   return response.data;
 };
 
 export const getContentById = async (id: string) => {
-  const response = await api.get(`/exercises/${id}/`);
+  const response = await api.get(`/contents/${id}/`);
   return response.data;
 };
 
@@ -59,37 +60,37 @@ export const updateContent = async (id: string, data: {
   difficulty: string;
   solution_content?: string;
 }) => {
-  const response = await api.put(`/exercises/${id}/`, data);
+  const response = await api.put(`/contents/${id}/`, data);
   return response.data;
 };
 
 export const deleteContent = async (id: string) => {
-  await api.delete(`/exercises/${id}/`);
+  await api.delete(`/contents/${id}/`);
 };
 
 // Content Tracking
 export const markContentViewed = async (contentId: string) => {
-  const response = await api.post(`/exercises/${contentId}/view/`);
+  const response = await api.post(`/contents/${contentId}/view/`);
   return response.data;
 };
 
 
 export const markExerciseProgress = async (exerciseId: string, status: 'success' | 'review') => {
-  const response = await api.post(`/exercises/${exerciseId}/mark_progress/`, { status });
+  const response = await api.post(`/contents/${exerciseId}/mark_progress/`, { status });
   return response.data;
 };
 
 export const removeExerciseProgress = async (exerciseId: string) => {
-  await api.delete(`/exercises/${exerciseId}/remove_progress/`);
+  await api.delete(`/contents/${exerciseId}/remove_progress/`);
 };
 
 export const saveExercise = async (exerciseId: string) => {
-  const response = await api.post(`/exercises/${exerciseId}/save_exercise/`);
+  const response = await api.post(`/contents/${exerciseId}/save/`);
   return response.data;
 };
 
 export const unsaveExercise = async (exerciseId: string) => {
-  await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
+  await api.delete(`/contents/${exerciseId}/unsave/`);
 };
 
 // Image Upload
@@ -115,8 +116,9 @@ export const getLessons = async (params: {
   page?: number;
   per_page?: number;
 }) => {
-  const response = await api.get('/lessons/', { 
+  const response = await api.get('/contents/', {
     params: {
+      type: 'lesson',
       class_levels: params.classLevels,
       subjects: params.subjects,
       chapters: params.chapters,
@@ -125,9 +127,9 @@ export const getLessons = async (params: {
       sort: params.sort,
       page: params.page,
       per_page: params.per_page
-    } 
+    }
   });
-  
+
   return {
     results: response.data.results || [],
     count: response.data.count || 0,
@@ -146,13 +148,13 @@ export const createLesson = async (data: {
   subfields: string[];
   theorems?: string[];
 }) => {
-  const response = await api.post('/lessons/', data);
+  const response = await api.post('/contents/', { ...data, type: 'lesson' });
   return response.data;
 };
 
 // Get a specific lesson by ID
 export const getLessonById = async (id: string) => {
-  const response = await api.get(`/lessons/${id}/`);
+  const response = await api.get(`/contents/${id}/`);
   return response.data;
 };
 
@@ -166,19 +168,19 @@ export const updateLesson = async (id: string, data: {
   subfields: string[];
   theorems?: string[];
 }) => {
-  const response = await api.put(`/lessons/${id}/`, data);
+  const response = await api.put(`/contents/${id}/`, data);
   return response.data;
 };
 
 // Delete a lesson
 export const deleteLesson = async (id: string) => {
-  await api.delete(`/lessons/${id}/`);
+  await api.delete(`/contents/${id}/`);
 };
 
 // Vote on a lesson
 export const voteLesson = async (id: string, value: 1 | -1) => {
   try {
-    const response = await api.post(`/lessons/${id}/vote/`, { value });
+    const response = await api.post(`/contents/${id}/vote/`, { value });
     return response.data.item; // Return the updated lesson
   } catch (error) {
     console.error('Vote error:', error);
@@ -188,7 +190,7 @@ export const voteLesson = async (id: string, value: 1 | -1) => {
 
 // Comment on a lesson
 export const addLessonComment = async (lessonId: string, content: string, parentId?: string) => {
-  const response = await api.post(`/lessons/${lessonId}/comment/`, { 
+  const response = await api.post(`/contents/${lessonId}/comment/`, {
     content,
     parent: parentId
   });
@@ -197,7 +199,7 @@ export const addLessonComment = async (lessonId: string, content: string, parent
 
 // Track lesson view
 export const markLessonViewed = async (lessonId: string) => {
-  const response = await api.post(`/lessons/${lessonId}/view/`);
+  const response = await api.post(`/contents/${lessonId}/view/`);
   return response.data;
 };
 
@@ -212,14 +214,12 @@ export const getFilterCounts = async (params: {
   filterType: 'classLevels' | 'subjects' | 'subfields' | 'chapters' | 'theorems' | 'difficulties';
   contentType?: 'exercise' | 'lesson' | 'exam';
 }) => {
-  // Determine endpoint based on content type
-  const endpoint = params.contentType === 'lesson' ? '/lessons/'
-                 : params.contentType === 'exam' ? '/exams/'
-                 : '/exercises/';
+  const endpoint = '/contents/';
 
   // Make a request with current filters to get counts for the specified filter type
   const response = await api.get(endpoint, {
     params: {
+      type: params.contentType,
       class_levels: params.classLevels,
       subjects: params.subjects,
       chapters: params.chapters,
@@ -238,7 +238,7 @@ export const getFilterCounts = async (params: {
 
 // Get similar exercises based on same chapters
 export const getSimilarExercises = async (exerciseId: string) => {
-  const response = await api.get(`/exercises/${exerciseId}/similar/`);
+  const response = await api.get(`/contents/${exerciseId}/similar/`);
   return {
     results: response.data.results || [],
     count: response.data.count || 0

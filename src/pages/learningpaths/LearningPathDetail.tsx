@@ -36,7 +36,7 @@ import {
 import { LearningPath, PathChapter } from '@/types/index';
 import { useLearningPathStore } from '@/stores/LearningPathStore';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/AuthController';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Progress Ring Component

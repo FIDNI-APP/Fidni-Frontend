@@ -266,57 +266,53 @@ const SectionContent: React.FC<SectionContentProps> = ({
   const totalPages = section.lesson_entries.length;
 
   return (
-    <div className="p-8 flex-1 relative bg-gradient-to-br from-gray-50 to-white">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-2xl shadow-xl mb-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">
-                  {currentLessonEntry.lesson.title}
-                </h2>
-                <p className="text-indigo-100 text-lg">
-                  Chapitre: {section.chapter.name}
-                </p>
-              </div>
-              
-              {/* Page Navigation */}
-              {totalPages > 1 && (
-                <div className="flex items-center space-x-4">
-                  <Button
-                    onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
-                    disabled={currentPageIndex === 0}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/20 disabled:opacity-50"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  
-                  <span className="text-indigo-100 font-medium">
-                    Page {currentPageIndex + 1} / {totalPages}
-                  </span>
-                  
-                  <Button
-                    onClick={() => setCurrentPageIndex(Math.min(totalPages - 1, currentPageIndex + 1))}
-                    disabled={currentPageIndex === totalPages - 1}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/20 disabled:opacity-50"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="flex flex-col h-full">
+      {/* Compact top bar */}
+      <div className="flex-shrink-0 flex items-center justify-between bg-white border-b border-indigo-100 px-4 py-1.5 gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex-shrink-0">
+            {section.chapter.name}
+          </span>
+          <span className="text-slate-300 flex-shrink-0">/</span>
+          <h2 className="text-sm font-semibold text-slate-800 truncate">
+            {currentLessonEntry.lesson.title}
+          </h2>
         </div>
-        {/* Lesson Content - Clickable for adding notes */}
-        <div
-          ref={contentContainerRef}
-          className={`prose max-w-none mb-8 bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/50 relative transition-all duration-300 hover:shadow-2xl ${addingNote ? 'cursor-crosshair ring-2 ring-indigo-300' : ''}`}
-          onClick={addingNote ? addModularNote : undefined}
-        >
+
+        {/* Page Navigation */}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
+              disabled={currentPageIndex === 0}
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-indigo-600 hover:bg-indigo-50 disabled:opacity-40"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-xs font-medium text-slate-500">
+              {currentPageIndex + 1} / {totalPages}
+            </span>
+            <Button
+              onClick={() => setCurrentPageIndex(Math.min(totalPages - 1, currentPageIndex + 1))}
+              disabled={currentPageIndex === totalPages - 1}
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-indigo-600 hover:bg-indigo-50 disabled:opacity-40"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Notebook paper — fills all remaining space */}
+      <div
+        ref={contentContainerRef}
+        className={`flex-1 overflow-auto relative ${addingNote ? 'cursor-crosshair ring-2 ring-indigo-300' : ''}`}
+        onClick={addingNote ? addModularNote : undefined}
+      >
           {/* Loading state - skeleton loader - Toujours visible jusqu'à ce que le contenu soit prêt */}
           {contentLoading && (
             <div className="absolute inset-0 bg-white z-30 flex flex-col space-y-4 p-4">
@@ -432,14 +428,15 @@ const SectionContent: React.FC<SectionContentProps> = ({
           {/* Content wrapper with hidden visibility until completely ready */}
           <div 
             ref={contentRef}
-            className={`h-full w-full transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
+            className={`w-full transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
           >
             
 
             <NotebookContent
               content={currentLessonEntry.lesson.content}
+              structure={currentLessonEntry.lesson.structure}
               lessonId={currentLessonEntry.lesson.id}
-              className="p-6 w-full h-full"
+              className="p-6 w-full"
               notebookTheme={{
                 bgColor: '#fefefe',
                 lineColor: '#e8e9f3',
@@ -456,9 +453,6 @@ const SectionContent: React.FC<SectionContentProps> = ({
            
           </div>
         </div>
-        
-       
-      </div>
 
       {/* Add a style tag for CSS animations */}
       <style jsx>{`

@@ -49,9 +49,7 @@ export const useAdvancedTimeTracker = ({
     
     try {
       setLoading(true);
-      const endpoint = contentType === 'exercise' 
-        ? `/exercises/${contentId}/session_stats/`
-        : `/exams/${contentId}/session_stats/`;
+      const endpoint = `/contents/${contentId}/session_stats/`;
         
       const response = await api.get(endpoint);
       
@@ -103,9 +101,7 @@ export const useAdvancedTimeTracker = ({
     try {
       setSaving(true);
       
-      const endpoint = contentType === 'exercise' 
-        ? `/exercises/${contentId}/save_session/`
-        : `/exams/${contentId}/save_session/`;
+      const endpoint = `/contents/${contentId}/save_session/`;
         
       const response = await api.post(endpoint, {
         duration_seconds: currentTime,
@@ -133,9 +129,7 @@ export const useAdvancedTimeTracker = ({
     if (!isAuthenticated || !enabled || !contentId) return;
     
     try {
-      const endpoint = contentType === 'exercise' 
-        ? `/exercises/${contentId}/delete_session/${sessionId}/`
-        : `/exams/${contentId}/delete_session/${sessionId}/`;
+      const endpoint = `/contents/${contentId}/delete_session/${sessionId}/`;
         
       await api.delete(endpoint);
       

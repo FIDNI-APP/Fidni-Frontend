@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { voteExercise, voteSolution } from '@/lib/api';
 import { VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/AuthController';
+import { useAuthModal } from '@/components/auth/AuthController';
 
 interface UseContentVotingProps {
   contentId: string;

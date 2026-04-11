@@ -78,6 +78,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
      */
     getList: async (params: BaseContentQueryParams): Promise<ContentListResponse<T>> => {
       const queryParams: Record<string, any> = {
+        type: resourceName,
         class_levels: params.classLevels,
         subjects: params.subjects,
         chapters: params.chapters,
@@ -179,7 +180,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
      * Save content for later review
      */
     save: async (id: string) => {
-      const url = `/${resourcePath}/${id}/save_${resourceName}/`;
+      const url = `/${resourcePath}/${id}/save/`;
 
       try {
         const response = await api.post(url);
@@ -198,7 +199,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
      * Remove content from saved items
      */
     unsave: async (id: string): Promise<void> => {
-      await api.delete(`/${resourcePath}/${id}/unsave_${resourceName}/`);
+      await api.delete(`/${resourcePath}/${id}/unsave/`);
     },
 
     // ============ COMMENTS ============
@@ -300,7 +301,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
  * Exercise API - all exercise-related operations
  */
 export const exerciseAPI = createContentAPI({
-  resourcePath: 'exercises',
+  resourcePath: 'contents',
   resourceName: 'exercise',
 });
 
@@ -308,7 +309,7 @@ export const exerciseAPI = createContentAPI({
  * Exam API - all exam-related operations
  */
 export const examAPI = createContentAPI({
-  resourcePath: 'exams',
+  resourcePath: 'contents',
   resourceName: 'exam',
 });
 
@@ -316,7 +317,7 @@ export const examAPI = createContentAPI({
  * Lesson API - all lesson-related operations
  */
 export const lessonAPI = createContentAPI({
-  resourcePath: 'lessons',
+  resourcePath: 'contents',
   resourceName: 'lesson',
 });
 

@@ -2,18 +2,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import { 
-  Highlighter, 
-  Pen, 
-  Type, 
-  Eraser, 
-  Trash2, 
+import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
+import {
+  Highlighter,
+  Pen,
+  Type,
+  Eraser,
+  Trash2,
   Settings,
   Palette,
   MousePointer,
   Undo2,
   Redo2,
-  Save
+  Save,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 
 interface NotebookTheme {
@@ -27,6 +30,7 @@ interface NotebookTheme {
 
 interface NotebookContentProps {
   content: string;
+  structure?: any;
   lessonId?: string;
   className?: string;
   notebookTheme?: NotebookTheme;
@@ -64,8 +68,19 @@ const notebookThemes = {
   }
 };
 
+// Wrapper that renders LessonRenderer and calls onReady after mount
+const StructuredLessonContent: React.FC<{ structure: any; onReady?: () => void }> = ({ structure, onReady }) => {
+  useEffect(() => {
+    const id = requestAnimationFrame(() => { onReady?.(); });
+    return () => cancelAnimationFrame(id);
+  }, [structure, onReady]);
+
+  return <LessonRenderer structure={structure} />;
+};
+
 const NotebookContent: React.FC<NotebookContentProps> = ({
   content,
+  structure,
   lessonId,
   className = '',
   notebookTheme = notebookThemes.ruled,
@@ -73,6 +88,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   onSaveAnnotations,
   initialAnnotations = []
 }) => {
+  const hasStructure = structure && structure.sections && structure.sections.length > 0;
   const navigate = useNavigate();
   const [contentLoaded, setContentLoaded] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'highlight' | 'note' | 'pen' | 'eraser' | null>('select');
@@ -84,18 +100,42 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   const [startPoint, setStartPoint] = useState<{x: number, y: number} | null>(null);
   const [highlightSize, setHighlightSize] = useState<{width: number, height: number} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [zoom, setZoom] = useState(0.9);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [history, setHistory] = useState<Annotation[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  
+  const [holeCount, setHoleCount] = useState(20);
+
   // Update annotations when initialAnnotations prop changes
   useEffect(() => {
     setAnnotations(initialAnnotations);
   }, [initialAnnotations]);
-  
+
+  // Calculate hole count based on content height
+  useEffect(() => {
+    if (!paperRef.current) return;
+
+    const updateHoleCount = () => {
+      if (paperRef.current) {
+        const height = paperRef.current.scrollHeight;
+        // Each hole + gap = 8px (hole height) + 32px (gap) = 40px total
+        const holesNeeded = Math.ceil(height / 40) + 2; // +2 buffer
+        setHoleCount(holesNeeded);
+      }
+    };
+
+    updateHoleCount();
+
+    const resizeObserver = new ResizeObserver(updateHoleCount);
+    resizeObserver.observe(paperRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [contentLoaded, content, structure]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const annotationLayerRef = useRef<HTMLDivElement>(null);
+  const paperRef = useRef<HTMLDivElement>(null);
   
   const colorPalette = [
     { name: 'Yellow', value: '#ffeb3b' },
@@ -285,17 +325,9 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   const getNotebookStyle = (): React.CSSProperties => {
     return {
       backgroundColor: notebookTheme.bgColor,
-      backgroundImage: `
-        repeating-linear-gradient(
-          transparent,
-          transparent ${notebookTheme.lineSpacing - 0.05}rem,
-          ${notebookTheme.lineColor} ${notebookTheme.lineSpacing - 0.05}rem,
-          ${notebookTheme.lineColor} ${notebookTheme.lineSpacing}rem
-        ),
-        linear-gradient(90deg, ${notebookTheme.marginLineColor} 1px, transparent 1px)
-      `,
-      backgroundSize: `100% ${notebookTheme.lineSpacing}rem, 100% 100%`,
-      backgroundPosition: `0 0.5rem, ${notebookTheme.marginLeft}rem 0`,
+      backgroundImage: `linear-gradient(90deg, ${notebookTheme.marginLineColor} 1px, transparent 1px)`,
+      backgroundSize: `100% 100%`,
+      backgroundPosition: `${notebookTheme.marginLeft}rem 0`,
       position: 'relative' as const,
     };
   };
@@ -313,10 +345,10 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   };
 
   return (
-    <div className="notebook-content-wrapper relative bg-gray-50" ref={containerRef}>
+    <div className="notebook-content-wrapper flex flex-col bg-gray-50" ref={containerRef}>
       {/* Professional Annotation Toolbar */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center justify-between px-3 py-1">
           {/* Left: Tools */}
           <div className="flex items-center space-x-1">
             {tools.map((tool) => {
@@ -327,7 +359,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
                   key={tool.name}
                   onClick={() => selectTool(tool.name as typeof activeTool)}
                   className={`
-                    relative p-2 rounded-md transition-all duration-200 group
+                    relative p-1.5 rounded-md transition-all duration-200 group
                     ${isActive 
                       ? 'bg-blue-100 text-blue-700 shadow-sm' 
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
@@ -349,7 +381,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowColorPicker(!showColorPicker)}
-                className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+                className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
                 title="Couleurs"
               >
                 <div className="flex items-center space-x-1">
@@ -407,7 +439,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             <button
               onClick={undo}
               disabled={historyIndex <= 0}
-              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Annuler"
             >
               <Undo2 className="w-4 h-4" />
@@ -415,7 +447,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             <button
               onClick={redo}
               disabled={historyIndex >= history.length - 1}
-              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Refaire"
             >
               <Redo2 className="w-4 h-4" />
@@ -426,13 +458,35 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
                 <div className="h-4 w-px bg-gray-300 mx-2" />
                 <button
                   onClick={() => setAnnotations([])}
-                  className="p-2 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                  className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors"
                   title="Effacer tout"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </>
             )}
+
+            {/* Zoom controls */}
+            <div className="h-4 w-px bg-gray-300 mx-2" />
+            <button
+              onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+              disabled={zoom <= 0.5}
+              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Dézoomer"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-medium text-gray-600 min-w-[3rem] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
+              disabled={zoom >= 2.0}
+              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Zoomer"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
           </div>
           
           {/* Right: Status */}
@@ -465,9 +519,10 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
         </div>
       </div>
       
-      {/* Paper with enhanced notebook styling */}
-      <div 
-        className="relative min-h-[calc(100vh-120px)]"
+      {/* Paper with enhanced notebook styling — fills remaining height */}
+      <div
+        ref={paperRef}
+        className="relative"
         style={getNotebookStyle()}
       >
         {/* Paper texture overlay */}
@@ -479,9 +534,9 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
         />
         
         {/* Holes for spiral binding */}
-        <div className="absolute left-3 top-0 bottom-0 flex flex-col justify-start pt-6 gap-8 pointer-events-none">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div 
+        <div className="absolute left-3 top-0 flex flex-col justify-start pt-6 gap-8 pointer-events-none">
+          {Array.from({ length: holeCount }).map((_, i) => (
+            <div
               key={i}
               className="w-2 h-2 bg-white border border-gray-300 rounded-full shadow-inner"
               style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)' }}
@@ -489,20 +544,31 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
           ))}
         </div>
 
-        <div className={`${className} h-full relative z-10`} ref={contentRef}>
+        <div
+          className={`${className} relative z-10 transition-transform duration-200`}
+          ref={contentRef}
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top left'
+          }}
+        >
           {/* Content with proper margins - FIXED SPACING */}
           <div 
-            className="py-8 pr-8 min-h-full"
+            className="py-8 pr-8"
             style={{ 
               marginLeft: `${notebookTheme.marginLeft + 0.5}rem`, // Fixed: reduced gap
               paddingLeft: '1rem', // Fixed: reduced padding
               lineHeight: `${notebookTheme.lineSpacing}rem`
             }}
           >
-            <TipTapRenderer
-              content={content}
-              onReady={handleContentReady}
-            />
+            {hasStructure ? (
+              <StructuredLessonContent structure={structure} onReady={handleContentReady} />
+            ) : (
+              <TipTapRenderer
+                content={content}
+                onReady={handleContentReady}
+              />
+            )}
           </div>
         </div>
         

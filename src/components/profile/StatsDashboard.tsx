@@ -1,15 +1,42 @@
-// src/components/profile/StatsDashboard.tsx - Version améliorée
-import React, { useState } from 'react';
+// src/components/profile/StatsDashboard.tsx - Version corrigée
+import React, { useState, useEffect } from 'react';
 import { 
-  Activity, BookOpen, ChevronUp, MessageSquare, Eye, 
-  CheckCircle, XCircle, Bookmark, Brain, Award,
-  Target, Zap, Star, Clock, BarChart3, Users,
-  ArrowUp, ArrowDown, Minus, Trophy,
+  Clock, Target, BookOpen, CheckCircle, Eye, MessageSquare, 
+  TrendingUp, Award, GraduationCap, PenTool, FileCheck,
+  Search, Layers, FileText, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ProgressRing } from '@/components/ui/ProgressRing';
+import { api } from '@/lib/api/apiClient';
+import { getTaxonomyTimeStats, type TaxonomyTimeItem } from '@/lib/api';
+
+// Types pour les données de l'API
+interface TimeTrackingData {
+  exercise_stats: {
+    total_time_seconds: number;
+    total_time_formatted: string;
+    unique_content_studied: number;
+  };
+  lesson_stats: {
+    total_time_seconds: number;
+    total_time_formatted: string;
+    unique_content_studied: number;
+  };
+  exam_stats: {
+    total_time_seconds: number;
+    total_time_formatted: string;
+    unique_content_studied: number;
+  };
+  overall_stats: {
+    total_time_all_content: number;
+    total_time_formatted: string;
+    current_study_streak: number;
+  };
+}
 
 interface StatsDashboardProps {
-  contributionStats: {
+  username: string;
+  contributionStats?: {
     exercises: number;
     solutions: number;
     comments: number;
@@ -26,681 +53,568 @@ interface StatsDashboardProps {
   };
 }
 
-export const StatsDashboard: React.FC<StatsDashboardProps> = ({ 
-  contributionStats, 
-  learningStats 
+// Configuration pour les types de taxonomie
+const TAXONOMY_CONFIG = {
+  subject: {
+    icon: GraduationCap,
+    label: 'Matières',
+    singularLabel: 'Matière',
+    borderColor: 'border-l-blue-500',
+  },
+  subfield: {
+    icon: Layers,
+    label: 'Sous-domaines',
+    singularLabel: 'Sous-domaine',
+    borderColor: 'border-l-violet-500',
+  },
+  chapter: {
+    icon: FileText,
+    label: 'Chapitres',
+    singularLabel: 'Chapitre',
+    borderColor: 'border-l-emerald-500',
+  },
+  theorem: {
+    icon: Award,
+    label: 'Théorèmes',
+    singularLabel: 'Théorème',
+    borderColor: 'border-l-amber-500',
+  },
+};
+
+export const StatsDashboard: React.FC<StatsDashboardProps> = ({
+  username,
+  contributionStats,
+  learningStats
 }) => {
-  const [activeSection, setActiveSection] = useState<'contribution' | 'learning'>('contribution');
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('month');
+  const [activeTab, setActiveTab] = useState<'time' | 'subjects' | 'learning' | 'contributions'>('time');
   
-  // Calcul des tendances (simulation pour la démo)
-  const getTrend = (value: number) => {
-    const random = Math.random();
-    if (random > 0.7) return { direction: 'up', percentage: Math.floor(Math.random() * 20) + 5 };
-    if (random < 0.3) return { direction: 'down', percentage: Math.floor(Math.random() * 10) + 1 };
-    return { direction: 'stable', percentage: 0 };
+  // États pour les données de temps
+  const [timeData, setTimeData] = useState<TimeTrackingData | null>(null);
+  const [timeLoading, setTimeLoading] = useState(true);
+  const [timeError, setTimeError] = useState<string | null>(null);
+
+  // États pour les données taxonomiques
+  const [taxonomyData, setTaxonomyData] = useState<TaxonomyTimeItem[]>([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
+  const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
+  const [taxonomyFilter, setTaxonomyFilter] = useState<'all' | 'subject' | 'subfield' | 'chapter' | 'theorem'>('all');
+  const [taxonomySearch, setTaxonomySearch] = useState('');
+
+  // Charger les stats de temps
+  useEffect(() => {
+    const fetchTimeStats = async () => {
+      try {
+        setTimeLoading(true);
+        setTimeError(null);
+        const response = await api.get(`/users/${username}/study-stats/`);
+        setTimeData(response.data);
+      } catch (err: any) {
+        console.error('Error fetching time stats:', err);
+        setTimeError(err.response?.data?.error || 'Échec du chargement des statistiques');
+      } finally {
+        setTimeLoading(false);
+      }
+    };
+
+    if (username && activeTab === 'time') {
+      fetchTimeStats();
+    }
+  }, [username, activeTab]);
+
+  // Charger les données taxonomiques quand l'onglet est actif
+  useEffect(() => {
+    if (activeTab === 'subjects') {
+      loadTaxonomyData();
+    }
+  }, [activeTab, taxonomyFilter]);
+
+  const loadTaxonomyData = async () => {
+    try {
+      setTaxonomyLoading(true);
+      setTaxonomyError(null);
+      const params = taxonomyFilter !== 'all' ? { taxonomy_type: taxonomyFilter as any } : undefined;
+      const response = await getTaxonomyTimeStats(params);
+      setTaxonomyData(response.results || []);
+    } catch (error: any) {
+      console.error('Failed to load taxonomy time stats:', error);
+      setTaxonomyError('Échec du chargement des données');
+      setTaxonomyData([]);
+    } finally {
+      setTaxonomyLoading(false);
+    }
   };
-  
-  // Stats de contribution avec métadonnées enrichies
-  const contributionItems = [
-    {
-      id: 'exercises',
-      icon: BookOpen,
-      label: 'Exercices créés',
-      value: contributionStats.exercises,
-      color: 'indigo',
-      gradient: 'from-indigo-500 to-indigo-600',
-      bgLight: 'bg-indigo-50',
-      textColor: 'text-indigo-600',
-      borderColor: 'border-indigo-200',
-      description: 'Exercices partagés avec la communauté',
-      trend: getTrend(contributionStats.exercises)
-    },
-    {
-      id: 'comments',
-      icon: MessageSquare,
-      label: 'Commentaires',
-      value: contributionStats.comments,
-      color: 'purple',
-      gradient: 'from-purple-500 to-purple-600',
-      bgLight: 'bg-purple-50',
-      textColor: 'text-purple-600',
-      borderColor: 'border-purple-200',
-      description: 'Participations aux discussions',
-      trend: getTrend(contributionStats.comments)
-    },
-    {
-      id: 'upvotes',
-      icon: ChevronUp,
-      label: 'Points de réputation',
-      value: contributionStats.upvotes_received,
-      color: 'emerald',
-      gradient: 'from-emerald-500 to-emerald-600',
-      bgLight: 'bg-emerald-50',
-      textColor: 'text-emerald-600',
-      borderColor: 'border-emerald-200',
-      description: 'Votes positifs reçus',
-      trend: getTrend(contributionStats.upvotes_received)
-    },
-    {
-      id: 'views',
-      icon: Eye,
-      label: 'Vues totales',
-      value: contributionStats.view_count,
-      color: 'blue',
-      gradient: 'from-blue-500 to-blue-600',
-      bgLight: 'bg-blue-50',
-      textColor: 'text-blue-600',
-      borderColor: 'border-blue-200',
-      description: 'Impact de vos contributions',
-      trend: getTrend(contributionStats.view_count)
-    },
-    {
-      id: 'solutions',
-      icon: Award,
-      label: 'Solutions fournies',
-      value: contributionStats.solutions,
-      color: 'amber',
-      gradient: 'from-amber-500 to-amber-600',
-      bgLight: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      borderColor: 'border-amber-200',
-      description: 'Aide apportée aux autres',
-      trend: getTrend(contributionStats.solutions)
-    },
-    {
-      id: 'total',
-      icon: Activity,
-      label: 'Total contributions',
-      value: contributionStats.total_contributions,
-      color: 'rose',
-      gradient: 'from-rose-500 to-rose-600',
-      bgLight: 'bg-rose-50',
-      textColor: 'text-rose-600',
-      borderColor: 'border-rose-200',
-      description: 'Engagement global',
-      trend: getTrend(contributionStats.total_contributions)
-    }
-  ];
-  
-  // Stats d'apprentissage
-  const learningItems = learningStats ? [
-    {
-      id: 'completed',
-      icon: CheckCircle,
-      label: 'Exercices complétés',
-      value: learningStats.exercises_completed,
-      color: 'green',
-      gradient: 'from-green-500 to-green-600',
-      bgLight: 'bg-green-50',
-      textColor: 'text-green-600',
-      borderColor: 'border-green-200',
-      description: 'Réussis avec succès',
-      trend: getTrend(learningStats.exercises_completed)
-    },
-    {
-      id: 'review',
-      icon: XCircle,
-      label: 'À revoir',
-      value: learningStats.exercises_in_review,
-      color: 'amber',
-      gradient: 'from-amber-500 to-amber-600',
-      bgLight: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      borderColor: 'border-amber-200',
-      description: 'Nécessitent plus de pratique',
-      trend: getTrend(learningStats.exercises_in_review)
-    },
-    {
-      id: 'saved',
-      icon: Bookmark,
-      label: 'Exercices sauvegardés',
-      value: learningStats.exercises_saved,
-      color: 'indigo',
-      gradient: 'from-indigo-500 to-indigo-600',
-      bgLight: 'bg-indigo-50',
-      textColor: 'text-indigo-600',
-      borderColor: 'border-indigo-200',
-      description: 'Pour plus tard',
-      trend: getTrend(learningStats.exercises_saved)
-    },
-    {
-      id: 'viewed',
-      icon: Eye,
-      label: 'Exercices consultés',
-      value: learningStats.total_viewed,
-      color: 'blue',
-      gradient: 'from-blue-500 to-blue-600',
-      bgLight: 'bg-blue-50',
-      textColor: 'text-blue-600',
-      borderColor: 'border-blue-200',
-      description: 'Exploration totale',
-      trend: getTrend(learningStats.total_viewed)
-    },
-    {
-      id: 'subjects',
-      icon: Brain,
-      label: 'Matières étudiées',
-      value: learningStats.subjects_studied.length,
-      color: 'violet',
-      gradient: 'from-violet-500 to-violet-600',
-      bgLight: 'bg-violet-50',
-      textColor: 'text-violet-600',
-      borderColor: 'border-violet-200',
-      description: 'Diversité d\'apprentissage',
-      trend: getTrend(learningStats.subjects_studied.length)
-    }
-  ] : [];
-  
-  const currentItems = activeSection === 'contribution' ? contributionItems : learningItems;
-  
+
+  const formatTime = (seconds: number): string => {
+    if (!seconds || seconds === 0) return '0m';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return `${seconds}s`;
+  };
+
+  const totalExercises = (learningStats?.exercises_completed || 0) + 
+                         (learningStats?.exercises_in_review || 0);
+  const successRate = totalExercises > 0 
+    ? Math.round((learningStats?.exercises_completed || 0) / totalExercises * 100) 
+    : 0;
+
+  // Filtrer les données taxonomiques
+  const filteredTaxonomyData = taxonomyData.filter(item =>
+    item.name.toLowerCase().includes(taxonomySearch.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header avec sélecteur de section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="bg-white rounded-2xl shadow-sm p-1.5 inline-flex">
-          <button
-            onClick={() => setActiveSection('contribution')}
-            className={`
-              relative px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300
-              ${activeSection === 'contribution' 
-                ? 'text-white' 
-                : 'text-gray-600 hover:text-gray-900'
-              }
-            `}
-          >
-            {activeSection === 'contribution' && (
-              <motion.div
-                layoutId="activeSection"
-                className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
-            <span className="relative z-10 flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              Contributions
-            </span>
-          </button>
-          
-          {learningStats && (
+    <div className="space-y-6 max-w-6xl">
+      {/* Segmented Tab Bar */}
+      <div className="flex bg-slate-100 rounded-xl p-1 w-fit">
+        {[
+          { id: 'time', label: 'Temps d\'étude', icon: Clock },
+          { id: 'subjects', label: 'Par sujet', icon: GraduationCap },
+          { id: 'learning', label: 'Apprentissage', icon: Target },
+          { id: 'contributions', label: 'Contributions', icon: Award }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
             <button
-              onClick={() => setActiveSection('learning')}
-              className={`
-                relative px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300
-                ${activeSection === 'learning' 
-                  ? 'text-white' 
-                  : 'text-gray-600 hover:text-gray-900'
-                }
-              `}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                activeTab === tab.id
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
-              {activeSection === 'learning' && (
-                <motion.div
-                  layoutId="activeSection"
-                  className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <Brain className="w-4 h-4" />
-                Apprentissage
-              </span>
+              <Icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
-          )}
-        </div>
-        
-        {/* Sélecteur de période */}
-        <div className="flex gap-2 bg-white rounded-xl p-1 shadow-sm">
-          {(['week', 'month', 'year'] as const).map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedTimeframe(period)}
-              className={`
-                px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                ${selectedTimeframe === period
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-                }
-              `}
-            >
-              {period === 'week' ? 'Semaine' : period === 'month' ? 'Mois' : 'Année'}
-            </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
-      
-      {/* Grille de cartes statistiques */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <AnimatePresence mode="wait">
-          {currentItems.map((item, index) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ delay: index * 0.05 }}
-              onMouseEnter={() => setHoveredCard(item.id)}
-              onMouseLeave={() => setHoveredCard(null)}
-              className="relative"
-            >
-              <div className={`
-                relative bg-white rounded-2xl shadow-sm hover:shadow-lg 
-                transition-all duration-300 overflow-hidden group
-                border ${item.borderColor}
-                ${hoveredCard === item.id ? 'scale-[1.02]' : ''}
-              `}>
-                {/* Effet de gradient au survol */}
-                <div className={`
-                  absolute inset-0 opacity-0 group-hover:opacity-5 
-                  bg-gradient-to-br ${item.gradient} 
-                  transition-opacity duration-300
-                `} />
-                
-                {/* Contenu de la carte */}
-                <div className="relative p-6">
-                  {/* En-tête avec icône et tendance */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`
-                      w-14 h-14 rounded-2xl ${item.bgLight} 
-                      flex items-center justify-center
-                      group-hover:scale-110 transition-transform duration-300
-                    `}>
-                      <item.icon className={`w-7 h-7 ${item.textColor}`} />
+
+      <AnimatePresence mode="wait">
+        {/* TAB: Temps d'étude */}
+        {activeTab === 'time' && (
+          <motion.div
+            key="time"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            {timeLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
+              </div>
+            ) : timeError ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+                <Clock className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <p className="text-slate-500">{timeError}</p>
+                <button 
+                  onClick={() => setActiveTab('time')}
+                  className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm"
+                >
+                  Réessayer
+                </button>
+              </div>
+            ) : timeData ? (
+              <>
+                {/* Stats principales */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-900 text-white rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <span className="text-xs text-slate-400 font-medium">Temps total</span>
                     </div>
-                    
-                    {/* Indicateur de tendance */}
-                    <div className="flex items-center gap-1">
-                      {item.trend.direction === 'up' && (
-                        <>
-                          <ArrowUp className="w-4 h-4 text-green-500" />
-                          <span className="text-xs font-medium text-green-600">
-                            +{item.trend.percentage}%
-                          </span>
-                        </>
-                      )}
-                      {item.trend.direction === 'down' && (
-                        <>
-                          <ArrowDown className="w-4 h-4 text-red-500" />
-                          <span className="text-xs font-medium text-red-600">
-                            -{item.trend.percentage}%
-                          </span>
-                        </>
-                      )}
-                      {item.trend.direction === 'stable' && (
-                        <>
-                          <Minus className="w-4 h-4 text-gray-400" />
-                          <span className="text-xs font-medium text-gray-500">
-                            Stable
-                          </span>
-                        </>
-                      )}
+                    <div className="text-2xl font-bold">{timeData.overall_stats.total_time_formatted}</div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <span className="text-xs text-slate-500 font-medium">Série d'étude</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900">
+                      {timeData.overall_stats.current_study_streak} <span className="text-base font-normal text-slate-500">jours</span>
                     </div>
                   </div>
-                  
-                  {/* Valeur principale avec animation */}
-                  <div className="mb-2">
-                    <motion.div 
-                      className="text-3xl font-bold text-gray-800"
-                      initial={{ scale: 1 }}
-                      animate={{ scale: hoveredCard === item.id ? 1.05 : 1 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      {item.value.toLocaleString()}
-                    </motion.div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PenTool className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs text-slate-500 font-medium">Exercices</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900">{timeData.exercise_stats.unique_content_studied}</div>
+                    <div className="text-xs text-slate-500 mt-1">{timeData.exercise_stats.total_time_formatted}</div>
                   </div>
-                  
-                  {/* Label */}
-                  <div className="text-sm font-medium text-gray-600 mb-1">
-                    {item.label}
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-slate-500 font-medium">Leçons</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900">{timeData.lesson_stats.unique_content_studied}</div>
+                    <div className="text-xs text-slate-500 mt-1">{timeData.lesson_stats.total_time_formatted}</div>
                   </div>
-                  
-                  {/* Description au survol */}
-                  <AnimatePresence>
-                    {hoveredCard === item.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="text-xs text-gray-500 mt-2"
-                      >
-                        {item.description}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
-                
-                {/* Barre de progression en bas */}
-                <div className="h-1 bg-gray-100">
+
+                {/* Répartition par type de contenu */}
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100">
+                    <h3 className="font-semibold text-slate-900">Répartition par type de contenu</h3>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    {[
+                      { label: 'Exercices', icon: PenTool, color: 'bg-blue-500', time: timeData.exercise_stats.total_time_seconds, formatted: timeData.exercise_stats.total_time_formatted, count: timeData.exercise_stats.unique_content_studied },
+                      { label: 'Leçons', icon: BookOpen, color: 'bg-indigo-500', time: timeData.lesson_stats.total_time_seconds, formatted: timeData.lesson_stats.total_time_formatted, count: timeData.lesson_stats.unique_content_studied },
+                      { label: 'Examens', icon: FileCheck, color: 'bg-violet-500', time: timeData.exam_stats.total_time_seconds, formatted: timeData.exam_stats.total_time_formatted, count: timeData.exam_stats.unique_content_studied },
+                    ].map((row) => {
+                      const Icon = row.icon;
+                      const maxTime = Math.max(timeData.exercise_stats.total_time_seconds, timeData.lesson_stats.total_time_seconds, timeData.exam_stats.total_time_seconds, 1);
+                      const barPercent = Math.round((row.time / maxTime) * 100);
+                      return (
+                        <div key={row.label} className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 w-28 flex-shrink-0">
+                            <Icon className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600">{row.label}</span>
+                          </div>
+                          <div className="flex-1 h-7 bg-slate-100 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${barPercent}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut' }}
+                              className={`h-full ${row.color} rounded-full`}
+                            />
+                          </div>
+                          <div className="text-right w-20 flex-shrink-0">
+                            <span className="text-sm font-bold text-slate-900">{row.formatted}</span>
+                            <span className="text-[11px] text-slate-400 ml-1">({row.count})</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Message si pas de données */}
+                {timeData.overall_stats.total_time_all_content === 0 && (
+                  <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
+                    <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-600 font-medium mb-1">Aucune donnée de temps d'étude</p>
+                    <p className="text-sm text-slate-500">
+                      Commencez à étudier des exercices, leçons ou examens pour voir vos statistiques !
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </motion.div>
+        )}
+
+        {/* TAB: Par sujet */}
+        {activeTab === 'subjects' && (
+          <motion.div
+            key="subjects"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-4"
+          >
+            {/* Filtres de taxonomie */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setTaxonomyFilter('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  taxonomyFilter === 'all'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                }`}
+              >
+                Tous
+              </button>
+              {Object.entries(TAXONOMY_CONFIG).map(([key, config]) => {
+                const Icon = config.icon;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setTaxonomyFilter(key as any)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      taxonomyFilter === key
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {config.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Recherche */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={taxonomySearch}
+                onChange={(e) => setTaxonomySearch(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Liste */}
+            {taxonomyLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
+              </div>
+            ) : taxonomyError ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+                <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">{taxonomyError}</p>
+                <button 
+                  onClick={loadTaxonomyData}
+                  className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm"
+                >
+                  Réessayer
+                </button>
+              </div>
+            ) : filteredTaxonomyData.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+                <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">
+                  {taxonomySearch ? 'Aucun résultat trouvé' : 'Aucune donnée disponible'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredTaxonomyData.map((item) => {
+                  const config = TAXONOMY_CONFIG[item.taxonomy_type];
+                  const Icon = config.icon;
+                  const hasBreakdown = item.exercise_time_seconds > 0 || item.lesson_time_seconds > 0 || item.exam_time_seconds > 0;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`bg-white p-5 rounded-xl border border-slate-200 border-l-4 ${config.borderColor} hover:border-slate-300 transition-colors`}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="p-2.5 rounded-lg bg-slate-900">
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-slate-900 truncate">{item.name}</h4>
+                          <p className="text-xs text-slate-500">{config.singularLabel}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-slate-900">
+                            {item.total_time_formatted}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Breakdown par type de contenu */}
+                      {hasBreakdown && (
+                        <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+                          {item.exercise_time_seconds > 0 && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50">
+                              <PenTool className="w-3.5 h-3.5 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-900">
+                                {formatTime(item.exercise_time_seconds)}
+                              </span>
+                              <span className="text-xs text-blue-600">exercices</span>
+                            </div>
+                          )}
+                          {item.lesson_time_seconds > 0 && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50">
+                              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-sm font-medium text-emerald-900">
+                                {formatTime(item.lesson_time_seconds)}
+                              </span>
+                              <span className="text-xs text-emerald-600">leçons</span>
+                            </div>
+                          )}
+                          {item.exam_time_seconds > 0 && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50">
+                              <FileCheck className="w-3.5 h-3.5 text-violet-600" />
+                              <span className="text-sm font-medium text-violet-900">
+                                {formatTime(item.exam_time_seconds)}
+                              </span>
+                              <span className="text-xs text-violet-600">examens</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB: Apprentissage */}
+        {activeTab === 'learning' && (
+          <motion.div
+            key="learning"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-6 gap-4">
+              {/* Featured: Success Rate with ProgressRing */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="col-span-6 sm:col-span-3 lg:col-span-2 bg-blue-600 text-white rounded-2xl p-6 flex items-center gap-6"
+              >
+                <ProgressRing percentage={successRate} size={80} strokeWidth={6} trackColor="rgba(255,255,255,0.2)" progressColor="#ffffff">
+                  <span className="text-lg font-bold text-white">{successRate}%</span>
+                </ProgressRing>
+                <div>
+                  <div className="text-2xl font-bold">{totalExercises}</div>
+                  <div className="text-sm text-blue-200">exercices au total</div>
+                  <div className="mt-2 h-1.5 w-24 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-white rounded-full" style={{ width: `${successRate}%` }} />
+                  </div>
+                </div>
+              </motion.div>
+              {/* Smaller stat cards */}
+              {[
+                { label: 'Validés', value: learningStats?.exercises_completed || 0, icon: CheckCircle, dot: 'bg-emerald-500' },
+                { label: 'Échoués', value: learningStats?.exercises_in_review || 0, icon: Clock, dot: 'bg-red-500' },
+                { label: 'Sauvegardés', value: learningStats?.exercises_saved || 0, icon: Target, dot: 'bg-blue-500' },
+                { label: 'Consultés', value: learningStats?.total_viewed || 0, icon: Eye, dot: 'bg-slate-400' }
+              ].map((stat) => {
+                const Icon = stat.icon;
+                return (
                   <motion.div
-                    className={`h-full bg-gradient-to-r ${item.gradient}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((item.value / 100) * 100, 100)}%` }}
-                    transition={{ duration: 1, delay: index * 0.1 }}
-                  />
+                    key={stat.label}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="col-span-3 sm:col-span-3 lg:col-span-1 bg-white rounded-xl border border-slate-200 p-5"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`w-2 h-2 rounded-full ${stat.dot}`} />
+                      <span className="text-xs text-slate-500 font-medium">{stat.label}</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h3 className="font-semibold text-slate-900 mb-4">Progression globale</h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-600">Taux de complétion</span>
+                    <span className="font-semibold text-slate-900">{successRate}%</span>
+                  </div>
+                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${successRate}%` }}
+                      transition={{ duration: 1 }}
+                      className="h-full bg-emerald-500 rounded-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+                  <div className="text-center p-3 bg-emerald-50 rounded-lg">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {learningStats?.exercises_completed || 0}
+                    </div>
+                    <div className="text-xs text-emerald-700">Validés</div>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded-lg">
+                    <div className="text-2xl font-bold text-red-600">
+                      {learningStats?.exercises_in_review || 0}
+                    </div>
+                    <div className="text-xs text-red-700">Échoués</div>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {learningStats?.exercises_saved || 0}
+                    </div>
+                    <div className="text-xs text-blue-700">Sauvegardés</div>
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-      
-      {/* Section des sujets étudiés pour l'apprentissage */}
-      {activeSection === 'learning' && learningStats && learningStats.subjects_studied.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-6 border border-indigo-100"
-        >
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-indigo-600" />
-            Matières étudiées
-          </h3>
-          
-          <div className="flex flex-wrap gap-3">
-            {learningStats.subjects_studied.map((subject, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 + index * 0.05 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                className="group relative"
-              >
-                <div className="px-4 py-2 bg-white rounded-xl shadow-sm border border-indigo-100 
-                            hover:shadow-md transition-all duration-300 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400"></div>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition-colors">
+            </div>
+
+            {learningStats?.subjects_studied && learningStats.subjects_studied.length > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <h3 className="font-semibold text-slate-900 mb-4">Matières étudiées</h3>
+                <div className="flex flex-wrap gap-2">
+                  {learningStats.subjects_studied.map((subject, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
+                    >
                       {subject}
                     </span>
-                  </div>
+                  ))}
                 </div>
-                
-                {/* Effet de brillance au survol */}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white to-transparent 
-                              opacity-0 group-hover:opacity-30 transition-opacity duration-300 
-                              transform -skew-x-12 group-hover:animate-shimmer pointer-events-none"></div>
-              </motion.div>
-            ))}
-          </div>
-          
-          {/* Indicateur de progression globale */}
-          <div className="mt-6 bg-white/50 rounded-xl p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">Taux de complétion global</span>
-              <span className="text-sm font-bold text-indigo-600">
-                {calculateCompletionRate(learningStats)}%
-              </span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${calculateCompletionRate(learningStats)}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-              />
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {/* Carte récapitulative des achievements */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 text-white relative overflow-hidden"
-      >
-        {/* Motif de fond */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl transform translate-x-32 -translate-y-32"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl transform -translate-x-32 translate-y-32"></div>
-        </div>
-        
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              Récapitulatif des performances
-            </h3>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-400">Période: {
-                selectedTimeframe === 'week' ? 'Cette semaine' :
-                selectedTimeframe === 'month' ? 'Ce mois' : 'Cette année'
-              }</span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Metric cards */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="w-4 h-4 text-yellow-400" />
-                <span className="text-xs text-gray-300">Score total</span>
               </div>
-              <div className="text-2xl font-bold">
-                {contributionStats.upvotes_received * 10 + contributionStats.total_contributions * 5}
-              </div>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-blue-400" />
-                <span className="text-xs text-gray-300">Impact</span>
-              </div>
-              <div className="text-2xl font-bold">
-                {formatNumber(contributionStats.view_count)}
-              </div>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="w-4 h-4 text-green-400" />
-                <span className="text-xs text-gray-300">Taux de succès</span>
-              </div>
-              <div className="text-2xl font-bold">
-                {learningStats ? `${calculateSuccessRate(learningStats)}%` : 'N/A'}
-              </div>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 text-purple-400" />
-                <span className="text-xs text-gray-300">Objectif</span>
-              </div>
-              <div className="text-2xl font-bold">
-                {getNextMilestone(contributionStats.total_contributions)}
-              </div>
-            </div>
-          </div>
-          
-          {/* Badges et récompenses */}
-          <div className="mt-6 pt-6 border-t border-white/10">
-            <h4 className="text-sm font-medium text-gray-300 mb-3">Badges débloqués</h4>
-            <div className="flex gap-3">
-              {getBadges(contributionStats, learningStats).map((badge, index) => (
-                <motion.div
-                  key={badge.id}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: badge.earned ? 1 : 0.3, scale: 1 }}
-                  transition={{ delay: 0.6 + index * 0.1 }}
-                  className={`relative group ${!badge.earned && 'grayscale'}`}
-                >
-                  <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 
-                                flex items-center justify-center text-2xl cursor-pointer
-                                hover:scale-110 transition-transform">
-                    {badge.icon}
-                  </div>
-                  
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 
-                                opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <div className="bg-gray-900 text-white text-xs rounded-lg py-1 px-2 whitespace-nowrap">
-                      {badge.name}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                        <div className="border-4 border-transparent border-t-gray-900"></div>
-                      </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB: Contributions */}
+        {activeTab === 'contributions' && (
+          <motion.div
+            key="contributions"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Exercices créés', value: contributionStats?.exercises || 0, icon: BookOpen },
+                { label: 'Commentaires', value: contributionStats?.comments || 0, icon: MessageSquare },
+                { label: 'Votes reçus', value: contributionStats?.upvotes_received || 0, icon: TrendingUp },
+                { label: 'Vues totales', value: contributionStats?.view_count || 0, icon: Eye }
+              ].map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="bg-white rounded-xl border border-slate-200 p-5"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon className="w-4 h-4 text-slate-400" />
+                      <span className="text-xs text-slate-500 font-medium">{stat.label}</span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="text-2xl font-bold text-slate-900">{(stat.value || 0).toLocaleString()}</div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
-        </div>
-      </motion.div>
-      
-      {/* Graphique d'activité (simulation) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-indigo-600" />
-            Activité récente
-          </h3>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-              <span className="text-gray-600">Contributions</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-              <span className="text-gray-600">Apprentissage</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Graphique simple avec barres */}
-        <div className="flex items-end justify-between gap-2 h-32">
-          {Array.from({ length: 7 }, (_, i) => {
-            const contributionHeight = Math.random() * 100;
-            const learningHeight = Math.random() * 100;
-            return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex gap-1 items-end h-24">
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${contributionHeight}%` }}
-                    transition={{ duration: 0.5, delay: i * 0.05 }}
-                    className="flex-1 bg-indigo-500 rounded-t"
-                  />
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${learningHeight}%` }}
-                    transition={{ duration: 0.5, delay: i * 0.05 + 0.1 }}
-                    className="flex-1 bg-emerald-500 rounded-t"
-                  />
+
+            <div className="bg-slate-900 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold mb-1">Score d'impact</h3>
+                  <p className="text-sm text-slate-400">Votre contribution à la communauté</p>
                 </div>
-                <span className="text-xs text-gray-500">
-                  {['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}
-                </span>
+                <div className="text-4xl font-bold">
+                  {(contributionStats?.upvotes_received || 0) * 10 + (contributionStats?.exercises || 0) * 50}
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-
-// Helper function to calculate completion rate
-const calculateCompletionRate = (stats: any) => {
-  const completed = stats.exercises_completed || 0;
-  const reviewing = stats.exercises_in_review || 0;
-  const total = completed + reviewing;
-  
-  if (total === 0) return 0;
-  return Math.round((completed / total) * 100);
-};
-const calculateSuccessRate = (stats: any) => {
-  if (!stats) return 0;
-  const completed = stats.exercises_completed || 0;
-  const total = stats.exercises_completed + stats.exercises_in_review || 0;
-  if (total === 0) return 0;
-  return Math.round((completed / total) * 100);
-};
-
-const formatNumber = (num: number) => {
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
-  return num.toString();
-};
-
-const getNextMilestone = (current: number) => {
-  const milestones = [10, 25, 50, 100, 250, 500, 1000];
-  for (const milestone of milestones) {
-    if (current < milestone) return milestone;
-  }
-  return '∞';
-};
-
-const getBadges = (contributionStats: any, learningStats: any) => {
-  return [
-    {
-      id: 'starter',
-      name: 'Débutant',
-      icon: '🌱',
-      earned: true,
-      requirement: 'Premier exercice'
-    },
-    {
-      id: 'contributor',
-      name: 'Contributeur',
-      icon: '✍️',
-      earned: contributionStats.total_contributions >= 10,
-      requirement: '10 contributions'
-    },
-    {
-      id: 'helper',
-      name: 'Entraide',
-      icon: '🤝',
-      earned: contributionStats.solutions >= 5,
-      requirement: '5 solutions'
-    },
-    {
-      id: 'popular',
-      name: 'Populaire',
-      icon: '⭐',
-      earned: contributionStats.upvotes_received >= 50,
-      requirement: '50 votes positifs'
-    },
-    {
-      id: 'scholar',
-      name: 'Érudit',
-      icon: '🎓',
-      earned: learningStats?.exercises_completed >= 50,
-      requirement: '50 exercices complétés'
-    },]}
-
-// Enhanced stat card with color gradient and animation
-const StatCard = ({ 
-  icon, 
-  label, 
-  value, 
-  bgColor, 
-  textColor 
-}: { 
-  icon: React.ReactNode, 
-  label: string, 
-  value: number,
-  bgColor: string,
-  textColor: string
-}) => (
-  <div className={`bg-gradient-to-br ${bgColor} rounded-lg shadow-md hover:shadow-lg transition-all p-5 hover:-translate-y-1 duration-300`}>
-    <div className="flex items-center justify-between">
-      <div className={`w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ${textColor}`}>
-        {icon}
-      </div>
-      <span className={`text-2xl font-bold ${textColor}`}>{value.toLocaleString()}</span>
-    </div>
-    <div className={`mt-2 ${textColor} text-sm font-medium`}>{label}</div>
-  </div>
-);
 
 export default StatsDashboard;

@@ -13,7 +13,7 @@ export interface SaveResponse {
 // Exercise saves
 export async function saveExercise(exerciseId: number): Promise<SaveResponse> {
   try {
-    const response = await api.post(`/exercises/${exerciseId}/save_exercise/`);
+    const response = await api.post(`/contents/${exerciseId}/save/`);
     return response.data;
   } catch (error) {
     console.error('Failed to save exercise:', error);
@@ -23,7 +23,7 @@ export async function saveExercise(exerciseId: number): Promise<SaveResponse> {
 
 export async function unsaveExercise(exerciseId: number): Promise<void> {
   try {
-    await api.delete(`/exercises/${exerciseId}/unsave_exercise/`);
+    await api.delete(`/contents/${exerciseId}/unsave/`);
   } catch (error) {
     console.error('Failed to unsave exercise:', error);
     throw error;
@@ -33,7 +33,7 @@ export async function unsaveExercise(exerciseId: number): Promise<void> {
 // Lesson saves
 export async function saveLesson(lessonId: number): Promise<SaveResponse> {
   try {
-    const response = await api.post(`/lessons/${lessonId}/save_lesson/`);
+    const response = await api.post(`/contents/${lessonId}/save/`);
     return response.data;
   } catch (error) {
     console.error('Failed to save lesson:', error);
@@ -43,7 +43,7 @@ export async function saveLesson(lessonId: number): Promise<SaveResponse> {
 
 export async function unsaveLesson(lessonId: number): Promise<void> {
   try {
-    await api.delete(`/lessons/${lessonId}/unsave_lesson/`);
+    await api.delete(`/contents/${lessonId}/unsave/`);
   } catch (error) {
     console.error('Failed to unsave lesson:', error);
     throw error;
@@ -53,7 +53,7 @@ export async function unsaveLesson(lessonId: number): Promise<void> {
 // Exam saves
 export async function saveExam(examId: number): Promise<SaveResponse> {
   try {
-    const response = await api.post(`/exams/${examId}/save_exam/`);
+    const response = await api.post(`/contents/${examId}/save/`);
     return response.data;
   } catch (error) {
     console.error('Failed to save exam:', error);
@@ -63,7 +63,7 @@ export async function saveExam(examId: number): Promise<SaveResponse> {
 
 export async function unsaveExam(examId: number): Promise<void> {
   try {
-    await api.delete(`/exams/${examId}/unsave_exam/`);
+    await api.delete(`/contents/${examId}/unsave/`);
   } catch (error) {
     console.error('Failed to unsave exam:', error);
     throw error;

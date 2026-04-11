@@ -34,20 +34,24 @@ api.interceptors.request.use(
 // Handle response errors - especially for invalid tokens
 api.interceptors.response.use(
   response => response,
-  error => {
-    // Check if error is due to invalid token
-    if (error.response && 
-        error.response.status === 403 && 
-        error.response.data?.code === 'token_not_valid') {
-      
-      // Clear invalid tokens
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response &&
+        (error.response.status === 401 || error.response.status === 403) &&
+        originalRequest?.headers?.Authorization &&
+        !originalRequest._retry) {
+      // Token was sent but rejected — clear it
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
-      
-      // Remove Authorization header
       delete api.defaults.headers.common['Authorization'];
+
+      // Retry the request without the token (allows anonymous read access)
+      originalRequest._retry = true;
+      delete originalRequest.headers.Authorization;
+      return api(originalRequest);
     }
-    
+
     return Promise.reject(error);
   }
 );

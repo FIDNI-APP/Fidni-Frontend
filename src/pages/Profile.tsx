@@ -1,459 +1,340 @@
-// src/pages/Profile.tsx - Version améliorée et affinée
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+// src/pages/ProfilePage.tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getUserProfile,
   getUserStats,
-  getUserContributions,
   getUserSavedExercises,
-  getUserProgressExercises,
-  getUserHistory,
-  updateUserProfile
-} from '@/lib/api'; // Vos fonctions API
-import { Content, User, ViewHistoryItem } from '@/types'; // Vos types
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  LayoutDashboard,
-  FileText,
-  Activity,
-  Edit2,
-  BookOpen,
-  Target,
-  Share2,
-  Flag,
-  UserPlus,
-  ListChecks,
-  TrendingUp,
-  Star
-} from 'lucide-react';
+  getUserSavedLessons,
+  getUserSavedExams,
+  getUserProgressExercises
+} from '@/lib/api/userApi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
+import {
+  User, Target, BarChart3, Bookmark, NotebookPen,
+  ListChecks, Settings, Loader2, Menu, Brain, X, Users
+} from 'lucide-react';
 
-// Import des composants de profil
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { ProfileInfoCard } from '@/components/profile/ProfileInfoCard';
-import { SavedContentSection } from '@/components/profile/SavedContentSection';
-import { ViewHistorySection } from '@/components/profile/ViewHistorySection';
+// Import des sections
+import { ProfileOverviewSection } from '@/components/profile/ProfileOverviewSection';
+import { StatsDashboard } from '@/components/profile/StatsDashboard';
 import { ProgressSection } from '@/components/profile/ProgressSection';
-import { ContributionsSection } from '@/components/profile/ContributionsSection';
-import { ProgressCharts } from '@/components/profile/ProgressCharts';
-import { TimeTrackingStatsRevised } from '@/components/profile/TimeTrackingStatsRevised';
-import StudentNotebook from '@/components/profile/StudentNotebook'; // Renommé pour correspondre au nom de fichier
+import { SavedContentSection } from '@/components/profile/SavedContentSection';
 import { RevisionListsSection } from '@/components/profile/RevisionListsSection';
-import { StatsOverviewCard } from '@/components/profile/StatsOverviewCard';
-import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap';
+import StudentNotebook from '@/components/profile/StudentNotebook';
+import { SettingsSection } from '@/components/profile/SettingsSection';
+import { SkillIQSection } from '@/components/profile/SkillIQSection';
+import TeacherStudentsPanel from '@/components/profile/TeacherStudentsPanel';
 
-// TabNavigation: Clean professional design matching homepage style
-const TabNavigation: React.FC<{
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  isOwner: boolean;
-  userType: 'student' | 'teacher';
-}> = ({ activeTab, onTabChange, isOwner, userType }) => {
-  const tabs = [
-    { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard, available: true },
-    { id: 'informations', label: 'Informations', icon: UserPlus, available: isOwner },
-    { id: 'progress', label: 'Progression', icon: Target, available: isOwner },
-    { id: 'contributions', label: 'Contributions', icon: FileText, available: userType === 'teacher' },
-    { id: 'timetracking', label: 'Statistiques', icon: TrendingUp, available: isOwner },
-    { id: 'notebook', label: 'Notes', icon: BookOpen, available: isOwner }
-  ].filter(tab => tab.available);
+interface FeatureConfig {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  forUserType: ('student' | 'teacher')[];
+  ownerOnly?: boolean;
+}
 
-  const tabContainerRef = useRef<HTMLDivElement>(null);
+const FEATURES_CONFIG: FeatureConfig[] = [
+  { id: 'overview', title: 'Vue d\'ensemble', icon: User, forUserType: ['student', 'teacher'] },
+  { id: 'statistics', title: 'Statistiques', icon: BarChart3, forUserType: ['student', 'teacher'] },
+  { id: 'progress', title: 'Progression', icon: Target, forUserType: ['student'] },
+  { id: 'skilliq', title: 'Skill IQ', icon: Brain, forUserType: ['student'] },
+  { id: 'notebooks', title: 'Cahiers', icon: NotebookPen, forUserType: ['student'] },
+  { id: 'revisionlists', title: 'Révisions', icon: ListChecks, forUserType: ['student'] },
+  { id: 'saved', title: 'Favoris', icon: Bookmark, forUserType: ['student', 'teacher'] },
+  { id: 'students', title: 'Mes élèves', icon: Users, forUserType: ['teacher'], ownerOnly: true },
+  { id: 'settings', title: 'Paramètres', icon: Settings, forUserType: ['student', 'teacher'], ownerOnly: true },
+];
+
+interface SavedData {
+  exercises: any[];
+  lessons: any[];
+  exams: any[];
+}
+
+interface ProgressData {
+  successExercises: any[];
+  reviewExercises: any[];
+}
+
+export const ProfilePage: React.FC = () => {
+  const { username } = useParams<{ username: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user: currentUser } = useAuth();
+
+  const [activeSection, setActiveSection] = useState<string>(searchParams.get('tab') || 'overview');
+  const [profileData, setProfileData] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [savedData, setSavedData] = useState<SavedData>({ exercises: [], lessons: [], exams: [] });
+  const [progressData, setProgressData] = useState<ProgressData>({ successExercises: [], reviewExercises: [] });
+  const [loading, setLoading] = useState(true);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isOwner = currentUser?.username === username;
+  const userType = profileData?.profile?.user_type || 'student';
+
+  const availableFeatures = FEATURES_CONFIG.filter(f => {
+    const matchesUserType = f.forUserType.includes(userType as 'student' | 'teacher');
+    const matchesOwner = f.ownerOnly ? isOwner : true;
+    return matchesUserType && matchesOwner;
+  });
+
+  useEffect(() => {
+    if (username) loadProfileData();
+  }, [username]);
+
+  useEffect(() => {
+    if (activeSection === 'saved' && username && savedData.exercises.length === 0) loadSavedData();
+  }, [activeSection, username]);
+
+  useEffect(() => {
+    if (activeSection === 'progress' && username) loadProgressData();
+  }, [activeSection, username]);
+
+  useEffect(() => {
+    if (activeSection === 'overview' && username) {
+      loadProgressData();
+      loadSavedData();
+    }
+  }, [activeSection, username]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && availableFeatures.some(f => f.id === tab)) setActiveSection(tab);
+  }, [searchParams, availableFeatures]);
+
+  const loadProfileData = async () => {
+    try {
+      setLoading(true);
+      const [profile, userStats] = await Promise.all([
+        getUserProfile(username!),
+        getUserStats(username!).catch(() => null)
+      ]);
+      setProfileData(profile);
+      setStats(userStats);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSavedData = async () => {
+    if (!username) return;
+    try {
+      setSavedLoading(true);
+      const [exercisesData, lessonsData, examsData] = await Promise.all([
+        getUserSavedExercises(username).catch(() => []),
+        getUserSavedLessons(username).catch(() => []),
+        getUserSavedExams(username).catch(() => [])
+      ]);
+      setSavedData({
+        exercises: Array.isArray(exercisesData) ? exercisesData : [],
+        lessons: Array.isArray(lessonsData) ? lessonsData : [],
+        exams: Array.isArray(examsData) ? examsData : []
+      });
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+      setSavedData({ exercises: [], lessons: [], exams: [] });
+    } finally {
+      setSavedLoading(false);
+    }
+  };
+
+  const loadProgressData = async () => {
+    if (!username) return;
+    try {
+      setProgressLoading(true);
+      const [successData, reviewData] = await Promise.all([
+        getUserProgressExercises(username, 'success').catch(() => []),
+        getUserProgressExercises(username, 'review').catch(() => [])
+      ]);
+      setProgressData({
+        successExercises: Array.isArray(successData) ? successData : [],
+        reviewExercises: Array.isArray(reviewData) ? reviewData : []
+      });
+    } catch (error) {
+      console.error('Error loading progress data:', error);
+      setProgressData({ successExercises: [], reviewExercises: [] });
+    } finally {
+      setProgressLoading(false);
+    }
+  };
+
+  const handleSectionChange = (sectionId: string) => {
+    setActiveSection(sectionId);
+    setSearchParams({ tab: sectionId });
+    setSidebarOpen(false);
+  };
+
+  const currentFeature = FEATURES_CONFIG.find(f => f.id === activeSection);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          </div>
+          <p className="text-slate-500 text-sm">Chargement du profil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white/80 backdrop-blur-md sticky top-0 md:top-16 z-30 border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div ref={tabContainerRef} className="flex gap-2 py-3 overflow-x-auto hide-scrollbar">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-gray-700 to-purple-800 text-white shadow-md'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            );
-          })}
+    <div className="min-h-screen bg-slate-50">
+      {/* Mobile Header */}
+      <div className="lg:hidden sticky top-0 z-40 bg-white border-b border-slate-200">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -ml-2 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <Menu className="w-5 h-5 text-slate-700" />
+          </button>
+
+          {currentFeature && (
+            <div className="flex items-center gap-2">
+              <currentFeature.icon className="w-4 h-4 text-slate-500" />
+              <span className="font-semibold text-sm text-slate-900">{currentFeature.title}</span>
+            </div>
+          )}
+
+          <div className="w-9" />
         </div>
       </div>
 
-      <style jsx>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200
+          transform transition-transform duration-300 ease-in-out
+          lg:translate-x-0 lg:static lg:z-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100"
+          >
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+
+          {/* Profile Card */}
+          <div className="p-6 pb-4 bg-gradient-to-b from-slate-50 to-white">
+            <div className="w-16 h-16 mx-auto rounded-xl bg-slate-200 flex items-center justify-center text-slate-600 text-xl font-bold overflow-hidden">
+              {profileData?.profile?.avatar ? (
+                <img src={profileData.profile.avatar} alt={username} className="w-full h-full object-cover" />
+              ) : (
+                username?.charAt(0).toUpperCase()
+              )}
+            </div>
+            <div className="text-center mt-3">
+              <h2 className="text-base font-bold text-slate-900">
+                {profileData?.username || username}
+              </h2>
+              <span className="inline-block mt-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                {userType === 'teacher' ? 'Enseignant' : 'Étudiant'}
+              </span>
+              {profileData?.email && (
+                <p className="text-xs text-slate-400 mt-1.5 truncate">{profileData.email}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="px-3 pb-6">
+            <div className="space-y-0.5">
+              {availableFeatures.map((feature) => {
+                const Icon = feature.icon;
+                const isActive = activeSection === feature.id;
+
+                return (
+                  <button
+                    key={feature.id}
+                    onClick={() => handleSectionChange(feature.id)}
+                    className={`
+                      w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm
+                      ${isActive
+                        ? 'bg-blue-50 text-blue-700 font-semibold border-l-[3px] border-blue-600'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }
+                    `}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span>{feature.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        </aside>
+
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 min-w-0 lg:min-h-screen">
+          {/* Desktop Header */}
+          <header className="hidden lg:block sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+            <div className="px-8 py-4">
+              {currentFeature && (
+                <div className="flex items-center gap-3">
+                  <currentFeature.icon className="w-5 h-5 text-slate-400" />
+                  <h1 className="text-lg font-semibold text-slate-900">{currentFeature.title}</h1>
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <div className="p-4 lg:p-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {activeSection === 'overview' && (
+                  <ProfileOverviewSection
+                    user={profileData}
+                    stats={stats}
+                    progressData={progressData}
+                    savedData={savedData}
+                    onNavigate={handleSectionChange}
+                  />
+                )}
+                {activeSection === 'statistics' && (
+                  <StatsDashboard username={username!} contributionStats={stats?.contribution_stats} learningStats={stats?.learning_stats} />
+                )}
+                {activeSection === 'progress' && (
+                  <ProgressSection successExercises={progressData.successExercises} reviewExercises={progressData.reviewExercises} isLoading={progressLoading} />
+                )}
+                {activeSection === 'skilliq' && <SkillIQSection />}
+                {activeSection === 'notebooks' && <StudentNotebook />}
+                {activeSection === 'revisionlists' && <RevisionListsSection />}
+                {activeSection === 'saved' && (
+                  <SavedContentSection exercises={savedData.exercises} lessons={savedData.lessons} exams={savedData.exams} isLoading={savedLoading} />
+                )}
+                {activeSection === 'students' && <TeacherStudentsPanel />}
+                {activeSection === 'settings' && <SettingsSection />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
 
-
-export function UserProfile() {
-  const { username } = useParams<{ username: string }>();
-  const { user: currentUser, isLoading: authLoading } = useAuth(); // Added authLoading
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<User | null>(null);
-  const [stats, setStats] = useState<any>(null); // Define specific type for stats
-  const [contributions, setContributions] = useState<Content[]>([]);
-  const [savedExercises, setSavedExercises] = useState<Content[]>([]);
-  const [history, setHistory] = useState<ViewHistoryItem[]>([]);
-  const [successExercises, setSuccessExercises] = useState<Content[]>([]);
-  const [reviewExercises, setReviewExercises] = useState<Content[]>([]);
-  const [dailyActivity, setDailyActivity] = useState<any[]>([]);
-
-  // Initialize activeTab from URL query parameter or default to 'overview'
-  const [activeTab, setActiveTab] = useState(() => {
-    return searchParams.get('tab') || 'overview';
-  });
-
-  // More granular data loading states
-  const [dataLoaded, setDataLoaded] = useState({
-    profile: false, stats: false, contributions: false,
-    savedExercises: false, history: false, progressExercises: false, dailyActivity: false
-  });
-
-  const isOwner = !authLoading && currentUser?.username === username;
-
-  // Handler to change tab and update URL
-  const handleTabChange = (newTab: string) => {
-    setActiveTab(newTab);
-    setSearchParams({ tab: newTab });
-  };
-
-  // Sync tab from URL changes (browser back/forward)
-  useEffect(() => {
-    const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (authLoading) return; // Wait for auth context to load
-
-    const loadInitialData = async () => {
-      if (!username) return;
-      setIsLoadingProfile(true);
-      setError(null);
-      setDataLoaded(prev => ({ ...prev, profile: false, stats: false, contributions: false, savedExercises: false, dailyActivity: false }));
-
-      try {
-        const [profileData, statsData, contributionsData] = await Promise.all([
-          getUserProfile(username),
-          getUserStats(username),
-          getUserContributions(username) // Assuming it returns { results: Content[] }
-        ]);
-
-        setUserProfile(profileData);
-        setStats(statsData);
-        setContributions(contributionsData?.results || []);
-        setDataLoaded(prev => ({ ...prev, profile: true, stats: true, contributions: true }));
-
-        if (isOwner) {
-          // Load saved exercises
-          getUserSavedExercises(username).then(data => {
-            setSavedExercises(data);
-            setDataLoaded(prev => ({ ...prev, savedExercises: true }));
-          });
-
-          // Load daily activity for heatmap
-          import('@/lib/api/apiClient').then(({ api }) => {
-            api.get(`/users/${username}/study-stats/`).then(response => {
-              setDailyActivity(response.data.daily_activity || []);
-              setDataLoaded(prev => ({ ...prev, dailyActivity: true }));
-            }).catch(err => {
-              console.error('Failed to load daily activity:', err);
-              setDataLoaded(prev => ({ ...prev, dailyActivity: true })); // Mark as loaded even on error
-            });
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load initial profile data:', err);
-        setError('Impossible de charger les données initiales du profil.');
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
-    loadInitialData();
-  }, [username, isOwner, authLoading]);
-
-  useEffect(() => {
-    if (authLoading || !isOwner || !username) return;
-
-    const loadTabData = async () => {
-      try {
-        if (activeTab === 'progress' && !dataLoaded.progressExercises) {
-          setIsLoadingProfile(true); // Show loader for tab data if significant
-          const [successData, reviewData] = await Promise.all([
-            getUserProgressExercises(username, 'success'),
-            getUserProgressExercises(username, 'review')
-          ]);
-          setSuccessExercises(successData);
-  setReviewExercises(reviewData);
-          setDataLoaded(prev => ({ ...prev, progressExercises: true }));
-          setIsLoadingProfile(false);
-        }
-        if (activeTab === 'activity' && !dataLoaded.history) {
-          setIsLoadingProfile(true);
-          const historyData = await getUserHistory(username);
-          setHistory(historyData);
-          setDataLoaded(prev => ({ ...prev, history: true }));
-          setIsLoadingProfile(false);
-        }
-      } catch (err) {
-        console.error(`Failed to load ${activeTab} data:`, err);
-        setError(`Impossible de charger les données pour l'onglet ${activeTab}.`);
-        setIsLoadingProfile(false);
-      }
-    };
-    loadTabData();
-  }, [activeTab, username, isOwner, dataLoaded.progressExercises, dataLoaded.history, authLoading]);
-
-
-  const handleEditProfile = () => {
-    // Navigate to dedicated edit page instead of modal
-    navigate(`/profile/${username}/edit`);
-  };
-
-
-  if (isLoadingProfile && !dataLoaded.profile) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <div className="relative">
-            <div className="w-12 h-12 border-3 border-slate-200 rounded-full"></div>
-            <div className="absolute inset-0 w-12 h-12 border-3 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
-          </div>
-          <p className="text-slate-700 font-medium">Chargement...</p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (error || !userProfile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-xl p-8 sm:p-12 text-center max-w-md w-full"
-        >
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6 ring-4 ring-red-200/50">
-            <Flag className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">Oops! Profil Introuvable</h2>
-          <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">{error || 'Le profil que vous cherchez n\'existe pas ou une erreur est survenue.'}</p>
-          <Button
-            onClick={() => navigate(-1)} // Go back or to home
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition-all"
-            size="lg"
-          >
-            Retourner en arrière
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
-      {/* Header Section with gradient matching homepage */}
-      <section className="relative bg-gradient-to-r from-gray-900 to-purple-800 text-white py-12 md:py-16 mb-8 overflow-hidden">
-        {/* Animated background elements - matching homepage */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-20 -left-20 w-60 h-60 bg-purple-300/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute -bottom-20 right-1/3 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-
-          {/* Geometric patterns */}
-          <div className="absolute inset-0 opacity-10">
-            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          {/* Action buttons */}
-          <div className="flex justify-end gap-2 mb-6">
-            {isOwner ? (
-              <Button
-                onClick={handleEditProfile}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md text-sm"
-                size="sm"
-              >
-                <Edit2 className="w-4 h-4 mr-1" /> Modifier le profil
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
-                  <UserPlus className="w-4 h-4 mr-1" />Suivre
-                </Button>
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-md">
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* Simplified ProfileHeader - only user identity info */}
-          <ProfileHeader
-            user={userProfile}
-            stats={stats}
-            isOwner={isOwner}
-            onEditProfile={handleEditProfile}
-          />
-        </div>
-      </section>
-
-      <TabNavigation
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        isOwner={isOwner}
-        userType={userProfile.profile.user_type}
-      />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        <AnimatePresence mode="wait">
-          {activeTab === 'overview' && (
-            <motion.div
-              key="overview-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
-            >
-              {/* Main Stats Overview */}
-              <StatsOverviewCard
-                contributionStats={stats?.contribution_stats || {}}
-                learningStats={stats?.learning_stats}
-                isLoading={!dataLoaded.stats}
-                userType={userProfile.profile.user_type}
-              />
-
-              {/* Activity Heatmap - only for owner */}
-              {isOwner && dailyActivity.length > 0 && (
-                <ActivityHeatmap daily_activity={dailyActivity} />
-              )}
-            </motion.div>
-          )}
-
-          {/* New Informations Tab */}
-          {activeTab === 'informations' && isOwner && (
-            <motion.div
-              key="informations-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ProfileInfoCard user={userProfile} />
-            </motion.div>
-          )}
-
-          {activeTab === 'progress' && isOwner && (
-            <motion.div
-              key="progress-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6 md:space-y-8"
-            >
-              <ProgressCharts
-                stats={stats}
-                successExercises={successExercises}
-                reviewExercises={reviewExercises}
-              />
-              <ProgressSection
-                successExercises={successExercises}
-                reviewExercises={reviewExercises}
-                isLoading={!dataLoaded.progressExercises}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === 'contributions' && (
-            <motion.div
-              key="contributions-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ContributionsSection
-                success_exercises={{ exercises: contributions }}
-                review_exercises={{ exercises: [] }}
-                isLoading={!dataLoaded.contributions}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === 'timetracking' && isOwner && (
-            <motion.div
-              key="timetracking-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <TimeTrackingStatsRevised username={username!} />
-            </motion.div>
-          )}
-
-          {activeTab === 'activity' && isOwner && (
-            <motion.div
-              key="activity-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ViewHistorySection
-                items={history}
-                isLoading={!dataLoaded.history}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === 'notebook' && isOwner && (
-            <motion.div
-              key="notebook-content"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <StudentNotebook />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
-  );
-}
+export default ProfilePage;

@@ -2,7 +2,7 @@ import React from 'react';
 import { User, LogOut, LogIn, Bookmark, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/AuthController';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { useNavigate } from 'react-router-dom';
 
 export const AuthButton = ({ isMobile = false, isScrolled = false }) => {
@@ -15,24 +15,14 @@ export const AuthButton = ({ isMobile = false, isScrolled = false }) => {
       // Desktop authenticated user dropdown
       return (
         <div className="relative group">
-          <button className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 ${
-            isScrolled
-              ? 'bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100'
-              : 'bg-white/10 backdrop-blur-md hover:bg-white/20'
-          }`}>
+          <button className="flex items-center space-x-1 xl:space-x-2 px-1.5 xl:px-4 py-2 transition-all duration-200">
             <img
-              src={user?.avatar || '/avatar-placeholder.jpg'}
+              src={user?.profile?.avatar || '/avatar-placeholder.jpg'}
               alt="Profile"
-              className={`w-8 h-8 rounded-full transition-all duration-300 ${
-                isScrolled ? 'border-2 border-purple-300' : 'border-2 border-white/50'
-              }`}
+              className="w-8 h-8 rounded-full border-2 border-gray-600 object-cover"
             />
-            <span className={`font-semibold transition-colors duration-300 ${
-              isScrolled ? 'text-gray-900' : 'text-white'
-            }`}>{user.username}</span>
-            <div className={`w-4 h-4 transition-colors duration-300 ${
-              isScrolled ? 'text-purple-600' : 'text-white/80'
-            }`}>
+            <span className="font-medium text-white hidden xl:inline">{user.username}</span>
+            <div className="w-4 h-4 text-gray-300 hidden xl:block">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </div>
           </button>
@@ -119,25 +109,18 @@ export const AuthButton = ({ isMobile = false, isScrolled = false }) => {
     <>
       <button
         onClick={() => openModal()}
-        className={`flex items-center px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
-          isScrolled
-            ? 'text-gray-700 hover:text-purple-600 hover:bg-purple-50'
-            : 'text-white hover:text-white hover:bg-white/10'
-        }`}
+        className="flex items-center px-1.5 xl:px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-all duration-200"
       >
-        <User className="w-4 h-4 mr-2" />
-        <span>S'inscrire</span>
+        <User className="w-4 h-4 mr-1 xl:mr-2" />
+        <span className="hidden xl:inline">S'inscrire</span>
+        <span className="xl:hidden">Inscr.</span>
       </button>
 
       <button
         onClick={() => openModal()}
-        className={`flex items-center px-5 py-2 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
-          isScrolled
-            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-            : 'bg-white text-purple-600 hover:bg-white/90'
-        }`}
+        className="flex items-center px-2 xl:px-6 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold rounded-lg transition-all duration-200 text-sm uppercase tracking-wide shadow-lg whitespace-nowrap"
       >
-        <LogIn className="w-4 h-4 mr-2" />
+        <LogIn className="w-4 h-4 mr-1 xl:mr-2" />
         <span>Connexion</span>
       </button>
     </>

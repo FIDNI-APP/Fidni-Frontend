@@ -173,3 +173,83 @@ export const saveOnboardingProfile = async (data: {
     throw error;
   }
 };
+
+export const uploadAvatar = async (file: File): Promise<{ avatar_url: string }> => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  
+  const response = await api.post('/users/avatar/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// Remove avatar
+export const removeAvatar = async (): Promise<void> => {
+  await api.delete('/users/avatar/');
+};
+
+// Change password
+export const changePassword = async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+  const response = await api.post('/auth/password/change/', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+  return response.data;
+};
+
+// Update user info (first_name, last_name, email)
+export const updateUserInfo = async (data: {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}): Promise<any> => {
+  const response = await api.patch('/auth/user/update/', data);
+  return response.data;
+};
+
+// Get onboarding state
+export const getOnboardingState = async () => {
+  const response = await api.get('/onboarding/');
+  return response.data;
+};
+
+// Update onboarding step (partial save)
+export const updateOnboardingStep = async (data: any) => {
+  const response = await api.patch('/onboarding/', data);
+  return response.data;
+};
+
+// Complete onboarding
+export const completeOnboarding = async (data: any) => {
+  const response = await api.post('/onboarding/', data);
+  return response.data;
+};
+
+// ============ TEACHER INVITATIONS ============
+
+export const getTeacherStudents = async () => {
+  const response = await api.get('/teacher-invitations/');
+  return response.data; // { students: [], invitations: [] }
+};
+
+export const sendTeacherInvitation = async (identifier: string) => {
+  const response = await api.post('/teacher-invitations/', { identifier });
+  return response.data;
+};
+
+export const deleteTeacherInvitation = async (invitationId: number) => {
+  await api.delete(`/teacher-invitations/${invitationId}/`);
+};
+
+export const getStudentInvitations = async () => {
+  const response = await api.get('/student-invitations/');
+  return response.data; // array of pending invitations
+};
+
+export const respondToInvitation = async (invitationId: number, action: 'accept' | 'decline') => {
+  const response = await api.patch(`/teacher-invitations/${invitationId}/respond/`, { action });
+  return response.data;
+};

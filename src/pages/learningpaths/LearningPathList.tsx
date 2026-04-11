@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getLearningPaths, startLearningPath, deleteLearningPath } from '@/lib/api/LearningPathApi';
 import { LearningPath, ProgressFilter, LearningPathSortOption } from '@/types/index';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/AuthController';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { cn } from '@/lib/utils';
 
 export const LearningPathList: React.FC = () => {

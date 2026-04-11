@@ -1,20 +1,14 @@
-// src/components/profile/ProgressSection.tsx - Version améliorée
-import React, { useState } from 'react';
-import { Content } from '@/types';
+// src/components/profile/ProgressSection.tsx
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  CheckCircle, 
-  XCircle, 
-  BookOpen, 
-  ChevronRight, 
-  Trophy,
-  Target,
-  Calendar,
-  Grid,
-  List
+import { Content } from '@/types';
+import {
+  CheckCircle, Clock, Target, ChevronRight, BookOpen,
+  Search, TrendingUp, ChevronDown, Layers, FileText,
+  BarChart3, PenTool, X
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ProgressRing } from '@/components/ui/ProgressRing';
 
 interface ProgressSectionProps {
   successExercises: Content[];
@@ -22,373 +16,478 @@ interface ProgressSectionProps {
   isLoading: boolean;
 }
 
-export const ProgressSection: React.FC<ProgressSectionProps> = ({ 
-  successExercises, 
-  reviewExercises, 
-  isLoading 
+type ViewMode = 'list' | 'by-subject' | 'by-chapter';
+
+interface ExerciseWithStatus extends Content {
+  status: 'success' | 'review';
+}
+
+interface TaxonomyStats {
+  name: string;
+  id: string | number;
+  success: number;
+  review: number;
+  total: number;
+  successRate: number;
+  totalTime: number;
+  exercises: ExerciseWithStatus[];
+}
+
+export const ProgressSection: React.FC<ProgressSectionProps> = ({
+  successExercises = [],
+  reviewExercises = [],
+  isLoading
 }) => {
-  const [activeTab, setActiveTab] = useState<'success' | 'review'>('success');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<'date' | 'difficulty' | 'subject'>('date');
-  
+  const [activeTab, setActiveTab] = useState<'all' | 'success' | 'review'>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'time' | 'subject'>('date');
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const safeSuccessExercises = Array.isArray(successExercises) ? successExercises : [];
+  const safeReviewExercises = Array.isArray(reviewExercises) ? reviewExercises : [];
+
+  const totalExercises = safeSuccessExercises.length + safeReviewExercises.length;
+  const successRate = totalExercises > 0
+    ? Math.round((safeSuccessExercises.length / totalExercises) * 100)
+    : 0;
+
+  const totalTimeSpent = [...safeSuccessExercises, ...safeReviewExercises].reduce(
+    (sum, ex) => sum + (ex.user_timespent || 0), 0
+  );
+
+  const allExercises = useMemo(() => [
+    ...safeSuccessExercises.map(ex => ({ ...ex, status: 'success' as const })),
+    ...safeReviewExercises.map(ex => ({ ...ex, status: 'review' as const }))
+  ], [safeSuccessExercises, safeReviewExercises]);
+
+  const subjectStats = useMemo((): TaxonomyStats[] => {
+    const subjectMap = new Map<string, TaxonomyStats>();
+    allExercises.forEach(ex => {
+      const subjectName = ex.subject?.name || 'Sans matière';
+      const subjectId = ex.subject?.id || 'none';
+      if (!subjectMap.has(subjectName)) {
+        subjectMap.set(subjectName, {
+          name: subjectName, id: subjectId,
+          success: 0, review: 0, total: 0, successRate: 0, totalTime: 0, exercises: []
+        });
+      }
+      const stats = subjectMap.get(subjectName)!;
+      stats.total++;
+      stats.totalTime += ex.user_timespent || 0;
+      stats.exercises.push(ex);
+      if (ex.status === 'success') stats.success++;
+      else stats.review++;
+    });
+    subjectMap.forEach(stats => {
+      stats.successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
+    });
+    return Array.from(subjectMap.values()).sort((a, b) => b.total - a.total);
+  }, [allExercises]);
+
+  const chapterStats = useMemo((): TaxonomyStats[] => {
+    const chapterMap = new Map<string, TaxonomyStats>();
+    allExercises.forEach(ex => {
+      const chapters = ex.chapters || [];
+      if (chapters.length === 0) {
+        const key = 'no-chapter';
+        if (!chapterMap.has(key)) {
+          chapterMap.set(key, {
+            name: 'Sans chapitre', id: 'none',
+            success: 0, review: 0, total: 0, successRate: 0, totalTime: 0, exercises: []
+          });
+        }
+        const stats = chapterMap.get(key)!;
+        stats.total++;
+        stats.totalTime += ex.user_timespent || 0;
+        stats.exercises.push(ex);
+        if (ex.status === 'success') stats.success++;
+        else stats.review++;
+      } else {
+        chapters.forEach((chapter: any) => {
+          const chapterName = chapter.name || chapter;
+          const chapterId = chapter.id || chapter;
+          const key = `${chapterId}`;
+          if (!chapterMap.has(key)) {
+            chapterMap.set(key, {
+              name: chapterName, id: chapterId,
+              success: 0, review: 0, total: 0, successRate: 0, totalTime: 0, exercises: []
+            });
+          }
+          const stats = chapterMap.get(key)!;
+          stats.total++;
+          stats.totalTime += ex.user_timespent || 0;
+          stats.exercises.push(ex);
+          if (ex.status === 'success') stats.success++;
+          else stats.review++;
+        });
+      }
+    });
+    chapterMap.forEach(stats => {
+      stats.successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
+    });
+    return Array.from(chapterMap.values()).sort((a, b) => b.total - a.total);
+  }, [allExercises]);
+
+  const filteredExercises = allExercises
+    .filter(ex => {
+      if (activeTab === 'success') return ex.status === 'success';
+      if (activeTab === 'review') return ex.status === 'review';
+      return true;
+    })
+    .filter(ex => {
+      if (!searchQuery) return true;
+      return ex.title.toLowerCase().includes(searchQuery.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (sortBy === 'time') return (b.user_timespent || 0) - (a.user_timespent || 0);
+      if (sortBy === 'subject') return (a.subject?.name || '').localeCompare(b.subject?.name || '');
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+  const formatTime = (seconds: number): string => {
+    if (!seconds || seconds === 0) return '-';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  const toggleExpanded = (id: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(id)) newExpanded.delete(id);
+    else newExpanded.add(id);
+    setExpandedItems(newExpanded);
+  };
+
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded-lg w-48"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-gray-100 rounded-xl"></div>
-            ))}
-          </div>
-        </div>
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
+        ))}
       </div>
     );
   }
-
-  if (successExercises.length === 0 && reviewExercises.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Target className="w-6 h-6" />
-            Ma Progression
-          </h2>
-          <p className="text-indigo-100 mt-1">Suivez votre parcours d'apprentissage</p>
-        </div>
-        
-        <div className="p-12 text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="w-24 h-24 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 
-                       rounded-full flex items-center justify-center mb-6"
-          >
-            <Trophy className="w-12 h-12 text-indigo-600" />
-          </motion.div>
-          
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
-            Commencez votre parcours
-          </h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            Complétez des exercices pour suivre votre progression et identifier les domaines à améliorer
-          </p>
-          
-          <Link to="/exercises">
-            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Explorer les exercices
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const exercises = activeTab === 'success' ? successExercises : reviewExercises;
-  const totalCount = successExercises.length + reviewExercises.length;
-  const successPercentage = totalCount > 0 ? Math.round((successExercises.length / totalCount) * 100) : 0;
-  
-  // Tri des exercices
-  const sortedExercises = [...exercises].sort((a, b) => {
-    switch (sortBy) {
-      case 'date':
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      case 'difficulty':
-        const diffOrder = { easy: 0, medium: 1, hard: 2 };
-        return diffOrder[b.difficulty] - diffOrder[a.difficulty];
-      case 'subject':
-        return a.subject.name.localeCompare(b.subject.name);
-      default:
-        return 0;
-    }
-  });
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-      {/* Header avec gradient */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-6xl">
+      {/* Asymmetric Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        {/* Featured card */}
+        <div className="col-span-2 bg-blue-600 rounded-2xl p-6 text-white flex items-center gap-5">
+          <ProgressRing
+            percentage={successRate}
+            size={80}
+            strokeWidth={6}
+            trackColor="rgba(255,255,255,0.2)"
+            progressColor="#ffffff"
+          >
+            <span className="text-lg font-bold text-white">{successRate}%</span>
+          </ProgressRing>
           <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Target className="w-6 h-6" />
-              Ma Progression
-            </h2>
-            <p className="text-indigo-100 mt-1">
-              {totalCount} exercices • {successPercentage}% de réussite
-            </p>
-          </div>
-          
-          {/* Quick stats */}
-          <div className="flex gap-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold">{successExercises.length}</div>
-              <div className="text-xs text-indigo-200">Complétés</div>
-            </div>
-            <div className="w-px bg-white/20"></div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">{reviewExercises.length}</div>
-              <div className="text-xs text-indigo-200">À revoir</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Barre de progression visuelle */}
-      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Progression globale</span>
-          <span className="text-sm font-bold text-indigo-600">{successPercentage}%</span>
-        </div>
-        <div className="relative h-3 bg-white rounded-full overflow-hidden shadow-inner">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${successPercentage}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full"
-          />
-          {/* Marqueurs de progression */}
-          <div className="absolute inset-0 flex items-center justify-around">
-            {[25, 50, 75].map((milestone) => (
+            <div className="text-3xl font-bold">{totalExercises}</div>
+            <div className="text-blue-200 text-sm">exercices au total</div>
+            <div className="mt-2 h-1.5 w-32 bg-blue-500/40 rounded-full overflow-hidden">
               <div
-                key={milestone}
-                className={`w-0.5 h-full ${
-                  successPercentage >= milestone ? 'bg-white/50' : 'bg-gray-300'
-                }`}
+                className="h-full bg-white rounded-full transition-all"
+                style={{ width: `${successRate}%` }}
               />
-            ))}
-          </div>
-        </div>
-        
-        {/* Badges de progression */}
-        <div className="flex justify-between mt-3">
-          {[
-            { threshold: 0, label: 'Débutant', icon: '🌱' },
-            { threshold: 25, label: 'Apprenti', icon: '📚' },
-            { threshold: 50, label: 'Confirmé', icon: '🎯' },
-            { threshold: 75, label: 'Expert', icon: '🏆' },
-          ].map((badge) => (
-            <div
-              key={badge.threshold}
-              className={`text-center transition-all ${
-                successPercentage >= badge.threshold
-                  ? 'opacity-100 transform scale-100'
-                  : 'opacity-40 transform scale-90'
-              }`}
-            >
-              <div className="text-2xl mb-1">{badge.icon}</div>
-              <div className="text-xs font-medium text-gray-600">{badge.label}</div>
             </div>
-          ))}
-        </div>
-      </div>
-      
-      <div className="p-6">
-        {/* Contrôles de navigation et tri */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          {/* Tabs */}
-          <div className="bg-gray-100 rounded-xl p-1 inline-flex">
-            <button
-              onClick={() => setActiveTab('success')}
-              className={`
-                relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300
-                ${activeTab === 'success' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}
-              `}
-            >
-              {activeTab === 'success' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <CheckCircle className="w-4 h-4" />
-                Complétés ({successExercises.length})
-              </span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('review')}
-              className={`
-                relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300
-                ${activeTab === 'review' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}
-              `}
-            >
-              {activeTab === 'review' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <XCircle className="w-4 h-4" />
-                À revoir ({reviewExercises.length})
-              </span>
-            </button>
-          </div>
-          
-          {/* Contrôles de vue et tri */}
-          <div className="flex items-center gap-2">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="date">Plus récents</option>
-              <option value="difficulty">Par difficulté</option>
-              <option value="subject">Par matière</option>
-            </select>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              className="p-2"
-            >
-              {viewMode === 'grid' ? <List className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
-            </Button>
           </div>
         </div>
 
-        {exercises.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <div className={`
-              w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center
-              ${activeTab === 'success' ? 'bg-emerald-100' : 'bg-amber-100'}
-            `}>
-              {activeTab === 'success' ? (
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
-              ) : (
-                <XCircle className="w-8 h-8 text-amber-600" />
-              )}
-            </div>
-            <h3 className="text-lg font-medium text-gray-800 mb-2">
-              Aucun exercice {activeTab === 'success' ? 'complété' : 'à revoir'}
-            </h3>
-            <p className="text-gray-600">
-              {activeTab === 'success' 
-                ? 'Les exercices que vous complétez avec succès apparaîtront ici' 
-                : 'Les exercices nécessitant plus de pratique apparaîtront ici'}
-            </p>
+        {/* Smaller stat cards */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-xs text-slate-500 font-medium">Validés</span>
           </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${activeTab}-${viewMode}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}
-            >
-              {sortedExercises.map((exercise, index) => (
-                <ExerciseCard
-                  key={exercise.id}
-                  exercise={exercise}
-                  type={activeTab}
-                  viewMode={viewMode}
-                  index={index}
-                />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        )}
-        
-        {exercises.length > 6 && (
-          <div className="mt-8 text-center">
-            <Button variant="ghost" className="group">
-              Voir tous les exercices ({exercises.length})
-              <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
+          <div className="text-2xl font-bold text-slate-900">{safeSuccessExercises.length}</div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="text-xs text-slate-500 font-medium">Échoués</span>
           </div>
-        )}
+          <div className="text-2xl font-bold text-slate-900">{safeReviewExercises.length}</div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-xs text-slate-500 font-medium">Réussite</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{successRate}%</div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-slate-400" />
+            <span className="text-xs text-slate-500 font-medium">Temps total</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{formatTime(totalTimeSpent)}</div>
+        </div>
       </div>
+
+      {/* Filter Toolbar */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        {/* View mode pills */}
+        <div className="flex bg-slate-100 rounded-full p-1">
+          {[
+            { id: 'list', label: 'Liste', icon: FileText },
+            { id: 'by-subject', label: 'Par matière', icon: BookOpen },
+            { id: 'by-chapter', label: 'Par chapitre', icon: Layers }
+          ].map((mode) => {
+            const Icon = mode.icon;
+            return (
+              <button
+                key={mode.id}
+                onClick={() => setViewMode(mode.id as ViewMode)}
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                  viewMode === mode.id
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{mode.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Status + search */}
+        <div className="flex items-center gap-2">
+          {viewMode === 'list' && (
+            <>
+              <div className="flex bg-slate-100 rounded-full p-1">
+                {[
+                  { id: 'all', label: 'Tous', count: totalExercises },
+                  { id: 'success', label: 'Validés', count: safeSuccessExercises.length },
+                  { id: 'review', label: 'Échoués', count: safeReviewExercises.length }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {tab.label}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-40"
+                />
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="date">Récents</option>
+                <option value="time">Temps</option>
+                <option value="subject">Matière</option>
+              </select>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Taxonomy View */}
+      {(viewMode === 'by-subject' || viewMode === 'by-chapter') && (
+        <div className="space-y-3">
+          {(viewMode === 'by-subject' ? subjectStats : chapterStats).map((stat) => (
+            <div
+              key={`${stat.id}`}
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+            >
+              <button
+                onClick={() => toggleExpanded(`${stat.id}`)}
+                className="w-full flex items-center gap-4 p-5 hover:bg-slate-50 transition-colors"
+              >
+                <ProgressRing percentage={stat.successRate} size={44} strokeWidth={3}>
+                  <span className="text-xs font-bold text-slate-700">{stat.successRate}%</span>
+                </ProgressRing>
+                <div className="flex-1 min-w-0 text-left">
+                  <h3 className="font-semibold text-slate-900 truncate">{stat.name}</h3>
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                    <span>{stat.total} exercice{stat.total > 1 ? 's' : ''}</span>
+                    <span className="text-emerald-600 font-medium">{stat.success} validés</span>
+                  </div>
+                </div>
+
+                <div className="hidden md:block w-24">
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600 rounded-full transition-all"
+                      style={{ width: `${stat.successRate}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm font-semibold text-slate-900">{formatTime(stat.totalTime)}</div>
+                </div>
+
+                <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${
+                  expandedItems.has(`${stat.id}`) ? 'rotate-180' : ''
+                }`} />
+              </button>
+
+              <AnimatePresence>
+                {expandedItems.has(`${stat.id}`) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-slate-100"
+                  >
+                    <div className="p-2">
+                      {stat.exercises.map((exercise) => (
+                        <Link
+                          key={exercise.id}
+                          to={`/exercises/${exercise.id}`}
+                          className={`flex items-center gap-3 p-3 rounded-lg border-l-4 hover:bg-slate-50 transition-colors group ${
+                            exercise.status === 'success'
+                              ? 'border-l-emerald-400 bg-emerald-50/30'
+                              : 'border-l-red-400 bg-red-50/30'
+                          }`}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                            exercise.status === 'success' ? 'bg-emerald-100' : 'bg-red-100'
+                          }`}>
+                            {exercise.status === 'success'
+                              ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                              : <X className="w-3.5 h-3.5 text-red-600" />
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-slate-900 group-hover:text-blue-600 truncate transition-colors">
+                              {exercise.title}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            {formatTime(exercise.user_timespent || 0)}
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-300" />
+                        </Link>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+
+          {(viewMode === 'by-subject' ? subjectStats : chapterStats).length === 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <BarChart3 className="w-7 h-7 text-slate-400" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Aucune donnée</h3>
+              <p className="text-slate-500 text-sm">
+                Commencez à faire des exercices pour voir votre progression
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* List View — Card Grid */}
+      {viewMode === 'list' && (
+        <>
+          {filteredExercises.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <Target className="w-7 h-7 text-slate-400" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Aucun exercice trouvé</h3>
+              <p className="text-slate-500 text-sm mb-5">
+                {searchQuery ? 'Essayez une autre recherche' : 'Commencez à faire des exercices'}
+              </p>
+              <Link
+                to="/exercises"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                Explorer les exercices
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredExercises.map((exercise) => (
+                <Link
+                  key={exercise.id}
+                  to={`/exercises/${exercise.id}`}
+                  className="bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-medium text-slate-900 text-sm leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {exercise.title}
+                    </h4>
+                    <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        {exercise.subject?.name || 'Sans matière'}
+                      </span>
+                      <span className="text-xs text-slate-400">{formatTime(exercise.user_timespent || 0)}</span>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      exercise.status === 'success'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-red-50 text-red-700'
+                    }`}>
+                      {exercise.status === 'success' ? 'Validé' : 'Échoué'}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Summary */}
+          {filteredExercises.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-sm text-slate-600">
+                  <TrendingUp className="w-4 h-4 text-blue-500" />
+                  <span>
+                    Temps total sur <span className="font-semibold text-slate-900">{filteredExercises.length}</span> exercice{filteredExercises.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <span className="font-bold text-lg text-slate-900">
+                  {formatTime(filteredExercises.reduce((sum, ex) => sum + (ex.user_timespent || 0), 0))}
+                </span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
 
-// Composant pour les cartes d'exercices
-const ExerciseCard = ({ 
-  exercise, 
-  type, 
-  viewMode, 
-  index 
-}: { 
-  exercise: Content; 
-  type: 'success' | 'review';
-  viewMode: 'grid' | 'list';
-  index: number;
-}) => {
-  const difficultyConfig = {
-    easy: { label: 'Facile', color: 'emerald', icon: '🌱' },
-    medium: { label: 'Moyen', color: 'amber', icon: '🎯' },
-    hard: { label: 'Difficile', color: 'red', icon: '🔥' }
-  };
-  
-  const diff = difficultyConfig[exercise.difficulty];
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ scale: 1.02 }}
-      className="group"
-    >
-      <Link to={`/exercises/${exercise.id}`}>
-        <div className={`
-          bg-white border rounded-xl p-5 hover:shadow-md transition-all duration-300
-          ${type === 'success' ? 'border-emerald-200 hover:border-emerald-300' : 'border-amber-200 hover:border-amber-300'}
-          ${viewMode === 'list' ? 'flex items-center justify-between' : ''}
-        `}>
-          <div className={viewMode === 'list' ? 'flex-1' : ''}>
-            {/* En-tête avec titre et badge de statut */}
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 flex-1">
-                {exercise.title}
-              </h3>
-              <div className={`
-                ml-2 px-2 py-1 rounded-full text-xs font-medium
-                ${type === 'success' 
-                  ? 'bg-emerald-100 text-emerald-700' 
-                  : 'bg-amber-100 text-amber-700'}
-              `}>
-                {type === 'success' ? 'Réussi' : 'À revoir'}
-              </div>
-            </div>
-            
-            {/* Métadonnées */}
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              {/* Matière */}
-              <div className="flex items-center gap-1.5 text-gray-600">
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>{exercise.subject.name}</span>
-              </div>
-              
-              {/* Difficulté */}
-              <div className={`flex items-center gap-1.5 text-${diff.color}-600`}>
-                <span>{diff.icon}</span>
-                <span>{diff.label}</span>
-              </div>
-              
-              {/* Date */}
-              <div className="flex items-center gap-1.5 text-gray-500">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{new Date(exercise.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Flèche indicatrice */}
-          <ChevronRight className={`
-            w-5 h-5 text-gray-400 group-hover:text-indigo-600 
-            transition-all group-hover:translate-x-1
-            ${viewMode === 'list' ? 'ml-4' : 'hidden'}
-          `} />
-        </div>
-      </Link>
-    </motion.div>
-  );
-};
+export default ProgressSection;

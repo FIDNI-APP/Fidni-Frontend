@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search as SearchIcon, BookOpen, GraduationCap, Award, Loader2, X } from 'lucide-react';
-import { HomeContentCard } from '@/components/HomeContentCard';
+import { Search as SearchIcon, BookOpen, Loader2, X } from 'lucide-react';
+import { APlusIcon } from '@/components/icons/APlusIcon';
+import { LessonIcon } from '@/components/icons/LessonIcon';
+import { HomeContentCard } from '@/components/content/HomeContentCard';
 import { getExercises, getLessons, getExams, voteExercise } from '@/lib/api';
 import { Content, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { SEO } from '@/components/SEO';
+import { SEO } from '@/components/layout/SEO';
 
 export function Search() {
   const [searchParams] = useSearchParams();
@@ -109,6 +111,38 @@ export function Search() {
 
   const filteredResults = getFilteredResults();
 
+  // Dynamic header colors based on active tab
+  const getHeaderColors = () => {
+    switch (activeTab) {
+      case 'exam':
+        return {
+          gradient: 'from-violet-600 via-violet-700 to-purple-700',
+          badge: 'bg-violet-500/20 border-violet-400/30 text-violet-200',
+          underline: 'bg-violet-500',
+        };
+      case 'lesson':
+        return {
+          gradient: 'from-emerald-600 via-emerald-700 to-teal-700',
+          badge: 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200',
+          underline: 'bg-emerald-500',
+        };
+      case 'exercise':
+        return {
+          gradient: 'from-blue-600 via-blue-700 to-indigo-700',
+          badge: 'bg-blue-500/20 border-blue-400/30 text-blue-200',
+          underline: 'bg-blue-500',
+        };
+      default: // 'all'
+        return {
+          gradient: 'from-blue-900 via-indigo-900 to-slate-900',
+          badge: 'bg-blue-500/20 border-blue-400/30 text-blue-200',
+          underline: 'bg-blue-500',
+        };
+    }
+  };
+
+  const headerColors = getHeaderColors();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <SEO
@@ -117,27 +151,39 @@ export function Search() {
       />
 
       {/* Search Header */}
-      <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-violet-900 py-12 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-6 text-center">
-            Recherche intelligente
-          </h1>
+      <div className={`relative bg-gradient-to-br ${headerColors.gradient} py-16 px-4 overflow-hidden transition-all duration-500`}>
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }}></div>
+
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="text-center mb-8">
+            <div className={`inline-block px-4 py-1 ${headerColors.badge} border text-xs font-bold uppercase tracking-widest mb-4 transition-all duration-500`} style={{ fontFamily: '"DM Sans", sans-serif' }}>
+              Recherche
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+              Recherche intelligente
+            </h1>
+            <div className={`w-24 h-1 ${headerColors.underline} mx-auto transition-all duration-500`}></div>
+          </div>
 
           <form onSubmit={handleSearch} className="relative max-w-3xl mx-auto">
             <div className="relative">
               <input
                 type="text"
                 placeholder="Rechercher un exercice, une leçon, un théorème..."
-                className="w-full px-6 py-4 pr-24 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-base"
+                className="w-full px-6 py-4 pr-24 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base shadow-lg"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus
+                style={{ fontFamily: '"DM Sans", sans-serif' }}
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute right-16 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                  className="absolute right-16 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   aria-label="Clear search"
                 >
                   <X className="w-5 h-5" />
@@ -145,8 +191,9 @@ export function Search() {
               )}
               <button
                 type="submit"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 font-semibold transition-colors duration-200 shadow-md uppercase tracking-wide text-sm"
                 aria-label="Search"
+                style={{ fontFamily: '"DM Sans", sans-serif' }}
               >
                 <SearchIcon className="w-5 h-5" />
               </button>
@@ -164,46 +211,50 @@ export function Search() {
               <div className="flex items-center gap-4 border-b border-gray-200 overflow-x-auto">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-semibold transition-colors whitespace-nowrap uppercase tracking-wide text-sm ${
                     activeTab === 'all'
-                      ? 'border-violet-600 text-violet-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
+                  style={{ fontFamily: '"DM Sans", sans-serif' }}
                 >
                   <SearchIcon className="w-5 h-5" />
                   Tout ({totalResults})
                 </button>
                 <button
                   onClick={() => setActiveTab('exercise')}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-semibold transition-colors whitespace-nowrap uppercase tracking-wide text-sm ${
                     activeTab === 'exercise'
-                      ? 'border-violet-600 text-violet-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
+                  style={{ fontFamily: '"DM Sans", sans-serif' }}
                 >
                   <BookOpen className="w-5 h-5" />
                   Exercices ({exercises.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('lesson')}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-semibold transition-colors whitespace-nowrap uppercase tracking-wide text-sm ${
                     activeTab === 'lesson'
-                      ? 'border-violet-600 text-violet-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
+                  style={{ fontFamily: '"DM Sans", sans-serif' }}
                 >
-                  <GraduationCap className="w-5 h-5" />
+                  <LessonIcon className="w-5 h-5" />
                   Leçons ({lessons.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('exam')}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-4 py-3 border-b-2 font-semibold transition-colors whitespace-nowrap uppercase tracking-wide text-sm ${
                     activeTab === 'exam'
                       ? 'border-violet-600 text-violet-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
+                  style={{ fontFamily: '"DM Sans", sans-serif' }}
                 >
-                  <Award className="w-5 h-5" />
+                  <APlusIcon className="w-5 h-5" />
                   Examens ({exams.length})
                 </button>
               </div>

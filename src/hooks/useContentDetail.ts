@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/AuthController';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { getContentAPI, type ContentType, type ProgressStatus } from '@/lib/api';
 
 interface UseContentDetailProps<T> {

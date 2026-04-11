@@ -35,7 +35,14 @@ export default defineConfig(({ mode }) => ({
     },
   },
  server: {
-    allowedHosts: ['fidni.fr'], // 👈 add your custom host
+    port: 3000,
+    allowedHosts: ['fidni.fr'],
+    hmr: {
+      overlay: true
+    },
+    watch: {
+      usePolling: true,
+    },
   },
   build: {
      minify: 'terser', // Enable minification

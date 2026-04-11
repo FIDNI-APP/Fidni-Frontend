@@ -29,6 +29,7 @@ interface ExamQueryParams {
 export const getExams = async (params: ExamQueryParams): Promise<ExamResponse> => {
   // Build the query parameters
   const queryParams: Record<string, any> = {
+    type: 'exam',
     class_levels: params.classLevels,
     subjects: params.subjects,
     chapters: params.chapters,
@@ -48,21 +49,21 @@ export const getExams = async (params: ExamQueryParams): Promise<ExamResponse> =
   // Add year range filter if provided
   if (params.dateRange?.start) {
     // Ensure we're sending year format
-    const startYear = params.dateRange.start.length === 4 ? 
-      params.dateRange.start : 
+    const startYear = params.dateRange.start.length === 4 ?
+      params.dateRange.start :
       new Date(params.dateRange.start).getFullYear().toString();
     queryParams.year_from = startYear;
   }
   if (params.dateRange?.end) {
-    // Ensure we're sending year format  
-    const endYear = params.dateRange.end.length === 4 ? 
-      params.dateRange.end : 
+    // Ensure we're sending year format
+    const endYear = params.dateRange.end.length === 4 ?
+      params.dateRange.end :
       new Date(params.dateRange.end).getFullYear().toString();
     queryParams.year_to = endYear;
   }
 
-  const response = await api.get('/exams/', { params: queryParams });
-  
+  const response = await api.get('/contents/', { params: queryParams });
+
   return {
     results: response.data.results || [],
     count: response.data.count || 0,
@@ -73,7 +74,7 @@ export const getExams = async (params: ExamQueryParams): Promise<ExamResponse> =
 
 // Get a specific exam by ID
 export const getExamById = async (id: string): Promise<Exam> => {
-  const response = await api.get(`/exams/${id}/`);
+  const response = await api.get(`/contents/${id}/`);
   return response.data;
 };
 
@@ -90,10 +91,9 @@ export const createExam = async (data: {
   is_national_exam: boolean;
   national_date?: string | null;
 }): Promise<Exam> => {
-  // Send national_date as-is (should be in YYYY format from frontend)
-  const examData = { ...data };
-  
-  const response = await api.post('/exams/', examData);
+  const examData = { ...data, type: 'exam' };
+
+  const response = await api.post('/contents/', examData);
   return response.data;
 };
 
@@ -110,22 +110,21 @@ export const updateExam = async (id: string, data: {
   is_national_exam?: boolean;
   national_date?: string | null;
 }): Promise<Exam> => {
-  // Send national_date as-is (should be in YYYY format from frontend)
   const examData = { ...data };
-  
-  const response = await api.put(`/exams/${id}/`, examData);
+
+  const response = await api.put(`/contents/${id}/`, examData);
   return response.data;
 };
 
 // Delete an exam
 export const deleteExam = async (id: string): Promise<void> => {
-  await api.delete(`/exams/${id}/`);
+  await api.delete(`/contents/${id}/`);
 };
 
 // Vote on an exam
 export const voteExam = async (id: string, value: VoteValue): Promise<Exam> => {
   try {
-    const response = await api.post(`/exams/${id}/vote/`, { value });
+    const response = await api.post(`/contents/${id}/vote/`, { value });
     return response.data.item; // Return the updated exam
   } catch (error) {
     console.error('Vote error:', error);
@@ -135,7 +134,7 @@ export const voteExam = async (id: string, value: VoteValue): Promise<Exam> => {
 
 // Comment on an exam
 export const addExamComment = async (examId: string, content: string, parentId?: string): Promise<any> => {
-  const response = await api.post(`/exams/${examId}/comment/`, { 
+  const response = await api.post(`/contents/${examId}/comment/`, {
     content,
     parent: parentId
   });
@@ -144,28 +143,28 @@ export const addExamComment = async (examId: string, content: string, parentId?:
 
 // Mark exam as viewed
 export const markExamViewed = async (examId: string): Promise<any> => {
-  const response = await api.post(`/exams/${examId}/view/`);
+  const response = await api.post(`/contents/${examId}/view/`);
   return response.data;
 };
 
 // Mark exam progress (success/review)
 export const markExamProgress = async (examId: string, status: 'success' | 'review'): Promise<any> => {
-  const response = await api.post(`/exams/${examId}/mark_progress/`, { status });
+  const response = await api.post(`/contents/${examId}/mark_progress/`, { status });
   return response.data;
 };
 
 // Remove exam progress
 export const removeExamProgress = async (examId: string): Promise<void> => {
-  await api.delete(`/exams/${examId}/remove_progress/`);
+  await api.delete(`/contents/${examId}/remove_progress/`);
 };
 
 // Save exam for later
 export const saveExam = async (examId: string): Promise<any> => {
-  const response = await api.post(`/exams/${examId}/save_exam/`);
+  const response = await api.post(`/contents/${examId}/save/`);
   return response.data;
 };
 
 // Unsave exam
 export const unsaveExam = async (examId: string): Promise<void> => {
-  await api.delete(`/exams/${examId}/unsave_exam/`);
+  await api.delete(`/contents/${examId}/unsave/`);
 };

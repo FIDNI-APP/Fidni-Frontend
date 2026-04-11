@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, BookOpen, GraduationCap, Award, Sparkles, TrendingUp, CheckCircle } from 'lucide-react';
-import { HomeContentCard } from '@/components/HomeContentCard';
-import { QuickStatsDashboard } from '@/components/QuickStatsDashboard';
-import { Button } from '@/components/ui/button';
-
+import { ArrowRight, BookOpen } from 'lucide-react';
+import { HomeContentCard } from '@/components/content/HomeContentCard';
+import { StudyTimeBreakdown } from '@/components/dashboard/StudyTimeBreakdown';
+import { ContentCarousel } from '@/components/ui/ContentCarousel';
+// Assurez-vous d'importer votre image ici
+import backgroundImage from '@/assets/background_homepage.png';
+import { Search } from 'lucide-react';
+import { SearchAutocomplete } from '@/components/search/SearchAutocomplete';
+import { Sparkles } from 'lucide-react';
 import {
   voteExercise,
   voteLesson,
@@ -15,8 +19,8 @@ import {
 } from '@/lib/api';
 import { Content, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { SEO } from '@/components/SEO';
-import { SearchAutocomplete } from '@/components/SearchAutocomplete';
+import { SEO } from '@/components/layout/SEO';
+// SearchAutocomplete retiré du Hero comme demandé
 
 export function Home() {
   const [featuredExercises, setFeaturedExercises] = useState<Content[]>([]);
@@ -25,20 +29,15 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
-
-  // Real data from API
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
-
   useEffect(() => {
-    // Wait for auth to finish loading before fetching content
     if (!authLoading) {
       fetchFeaturedContent();
     }
   }, [isAuthenticated, authLoading]);
 
   useEffect(() => {
-    // Fetch dashboard data only when authenticated
     if (isAuthenticated) {
       fetchDashboardData();
     }
@@ -47,15 +46,12 @@ export function Home() {
   const fetchFeaturedContent = async () => {
     try {
       setLoading(true);
-
       if (isAuthenticated) {
-        // Use recommendation API for authenticated users
         const recommendedData = await getRecommendedContent();
         setFeaturedExercises(recommendedData.exercises || []);
         setFeaturedLessons(recommendedData.lessons || []);
         setFeaturedExams(recommendedData.exams || []);
       } else {
-        // Fallback to most upvoted for non-authenticated users
         const { getExercises, getLessons, getExams } = await import('@/lib/api');
         const [exercisesData, lessonsData, examsData] = await Promise.all([
           getExercises({ sort: 'most_upvoted', per_page: 8 }),
@@ -68,7 +64,6 @@ export function Home() {
       }
     } catch (err) {
       console.error('[Home] ERROR fetching featured content:', err);
-      // Set empty arrays on error to show the empty state
       setFeaturedExercises([]);
       setFeaturedLessons([]);
       setFeaturedExams([]);
@@ -93,26 +88,21 @@ export function Home() {
     }
     try {
       let updatedContent: Content;
-
-      // Determine content type by checking which array contains the item if not provided
-      if (!contentType) {
-        if (featuredExercises.some(item => item.id.toString()=== id)) {
-          contentType = 'exercise';
-        } else if (featuredLessons.some(item => item.id.toString() === id)) {
-          contentType = 'lesson';
-        } else if (featuredExams.some(item => item.id.toString() === id)) {
-          contentType = 'exam';
-        }
+      // Logique de détection du type si non fourni
+      let type = contentType;
+      if (!type) {
+         if (featuredExercises.some(item => item.id.toString() === id)) type = 'exercise';
+         else if (featuredLessons.some(item => item.id.toString() === id)) type = 'lesson';
+         else if (featuredExams.some(item => item.id.toString() === id)) type = 'exam';
       }
 
-      // Call the appropriate vote function
-      if (contentType === 'exercise') {
+      if (type === 'exercise') {
         updatedContent = await voteExercise(id, value);
         setFeaturedExercises(prev => prev.map(item => item.id.toString() === id ? updatedContent : item));
-      } else if (contentType === 'lesson') {
+      } else if (type === 'lesson') {
         updatedContent = await voteLesson(id, value);
         setFeaturedLessons(prev => prev.map(item => item.id.toString() === id ? updatedContent : item));
-      } else if (contentType === 'exam') {
+      } else if (type === 'exam') {
         updatedContent = await voteExam(id, value);
         setFeaturedExams(prev => prev.map(item => item.id.toString() === id ? updatedContent : item));
       }
@@ -121,125 +111,82 @@ export function Home() {
     }
   };
 
-  return (     
-
-    <div className="md:p_26px_36px min-h_100vh p_16px bg-gradient-to-b from-gray-50 via-white to-gray-50">
+  return (
+    <div className="min-h-screen bg-[#F8FAFC]">
       <SEO
-        title="Fidni - Plateforme d'apprentissage en mathématiques"
-        description="Accédez à des exercices, leçons et examens de mathématiques adaptés à votre niveau."
-        keywords={['mathématiques', 'exercices', 'leçons', 'examens', 'bac', 'terminale']}
+        title="Fidni - Excellence en Mathématiques"
+        description="Plateforme moderne d'apprentissage en mathématiques."
+        keywords={['mathématiques', 'bac', 'exercices']}
         ogType="website"
         canonicalUrl="/"
       />
 
-      {/* Modern Hero Section with Glassmorphism */}
-      <section className="relative px-4 pt-20 pb-32 bg-gradient-to-br from-gray-900 to-purple-800">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-20 -left-20 w-60 h-60 bg-purple-300/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute -bottom-20 right-1/3 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-
-          {/* Geometric patterns */}
-          <div className="absolute inset-0 opacity-10">
-            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-          </div>
+      {/* --- HERO SECTION --- */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+        {/* Background avec Overlay Progressif */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 scale-105"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-900/60 to-[#F8FAFC]"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center max-w-4xl mx-auto">
-            {/* Personalized Greeting with better animation */}
-            {isAuthenticated && user ? (
-              <div className="mb-8 space-y-4">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-white/90 text-sm font-medium animate-fade-in">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  Connecté
-                </div>
-                <h1 className="text-3xl md:text-6xl lg:text-6xl font-extrabold text-white mb-4 animate-fade-in leading-tight">
-                  Bonjour, <span className="bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 bg-clip-text text-transparent">{user.username}</span> 👋
-                </h1>
-                <p className="text-xl md:text-2xl text-white/90 font-medium animate-fade-in-up animation-delay-100">
-                  Continuons votre parcours d'apprentissage
-                </p>
-              </div>
-            ) : (
-              <div className="mb-8 space-y-6">
-                <h1 className="text-4xl md:text-6xl lg:text-6xl font-extrabold text-white mb-4 animate-fade-in leading-tight">
-                  Maîtrisez les <span className="bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 bg-clip-text text-transparent">mathématiques</span>
-                </h1>
-                <p className="text-xl md:text-2xl text-white/90 font-medium animate-fade-in-up animation-delay-100 max-w-2xl mx-auto">
-                  Des exercices personnalisés, des leçons détaillées et des examens pour réussir
-                </p>
-              </div>
-            )}
+        {/* Formes décoratives animées */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[20%] -right-[5%] w-[30%] h-[30%] bg-indigo-600/20 rounded-full blur-[100px] animation-delay-2000"></div>
+        </div>
 
-            {/* Enhanced Search Bar with Glassmorphism */}
-            <div className="relative mb-8 animate-fade-in-up animation-delay-200 z-50">
-              <SearchAutocomplete
-                placeholder="Rechercher un exercice, une leçon ou un concept..."
-                className="max-w-3xl mx-auto"
-                inputClassName="w-full px-6 py-5 pr-16 bg-white/95 backdrop-blur-xl border-2 border-white/60 rounded-2xl text-gray-900 placeholder-gray-500 text-lg focus:outline-none focus:ring-4 focus:ring-white/50 focus:border-white transition-all shadow-2xl shadow-black/10 hover:shadow-black/20"
-              />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center space-y-10">
+            
+            {/* Badge Status */}
+            <div className="flex justify-center animate-fade-in">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-100 text-xs font-bold tracking-widest uppercase">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                {isAuthenticated ? "Session Active" : "Plateforme d'élite"}
+              </span>
             </div>
 
-            {/* Dual CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-300">
+            {/* Title Section */}
+            <div className="space-y-6">
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white leading-[1.1] tracking-tight">
+                {isAuthenticated && user ? (
+                  <>Bienvenue, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">{user.username}</span></>
+                ) : (
+                  <>L'Excellence en <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Mathématiques</span></>
+                )}
+              </h1>
+              <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
+                Maîtrisez chaque concept avec une approche structurée et des outils de suivi avancés.
+              </p>
+            </div>
+
+            {/* Actions Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-4">
               <Link to="/exercises" className="w-full sm:w-auto">
-                <Button 
-                className="liquid-glass group w-full bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 hover:from-yellow-300 hover:via-pink-300 hover:to-purple-300 text-purple-900 rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3"
-                variant="ghost">
-                  <Sparkles className="w-5 h-5" />
-                  Commencer un exercice
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
+                <button className="w-full px-12 py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow-xl shadow-blue-900/20 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                  ACCÉDER AUX EXERCICES
+                  <ArrowRight className="w-5 h-5" />
+                </button>
               </Link>
               {!isAuthenticated && (
                 <Link to="/register" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white rounded-xl font-semibold text-lg hover:bg-white/20 transition-all inline-flex items-center justify-center gap-2">
-                    Créer un compte gratuit
+                  <button className="w-full px-12 py-5 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-white font-bold rounded-2xl transition-all flex items-center justify-center">
+                    CRÉER UN COMPTE
                   </button>
                 </Link>
               )}
             </div>
-
-            {/* Trust indicators */}
-            {!isAuthenticated && (
-              <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-white/80 text-sm animate-fade-in-up animation-delay-400">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-300" />
-                  <span>100% Gratuit</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-300" />
-                  <span>Sans engagement</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-300" />
-                  <span>Accès illimité</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
 
-      {/* Quick Stats Dashboard with Overlap Effect - Only show for authenticated users */}
-      {isAuthenticated && dashboardStats && (
-        <section className="px-4 -mt-20 relative z-20">
-          <div className="max-w-7xl mx-auto">
-            <QuickStatsDashboard
-              exercisesStarted={dashboardStats.exercises_started}
-              studyTime={dashboardStats.study_time}
-              perfectCompletions={dashboardStats.perfect_completions}
-              totalExercises={dashboardStats.total_exercises}
-              streakDays={dashboardStats.streak_days}
+      {/* --- DASHBOARD STATS --- */}
+      {isAuthenticated && dashboardStats?.time_breakdown && (
+        <section className="relative -mt-20 px-4 pb-12 z-20">
+          <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-2xl shadow-slate-200/50 border border-white/50">
+            <StudyTimeBreakdown
               timeBreakdown={dashboardStats.time_breakdown}
               insights={dashboardStats.insights}
             />
@@ -247,305 +194,144 @@ export function Home() {
         </section>
       )}
 
-      {/* Featured Exercises - Modern Design */}
-      <section className={`py-12 px-4 ${isAuthenticated ? 'mt-8' : 'mt-0'}`}>
+      {/* --- SECTION 1: EXERCICES (Fond Blanc) --- */}
+      <section className="py-20 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
-          {/* Section Header with Badge */}
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-full mb-4">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-semibold text-purple-900">Recommandé pour vous</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
-                  Exercices personnalisés
-                </h2>
-                <p className="text-base md:text-lg text-gray-600">
-                  Sélectionnés selon votre niveau et vos objectifs
-                </p>
-              </div>
-              <Link
-                to="/exercises"
-                className="hidden md:inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-purple-200 transition-all hover:scale-105 flex-shrink-0"
-              >
-                Voir tout
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+          <ContentSectionHeader 
+            title="Exercices" 
+            subtitle="Bibliothèque" 
+            description="Sélection d'exercices adaptés à votre niveau."
+            link="/exercises"
+            color="blue"
+          />
 
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, idx) => (
-                <div key={idx} className="animate-pulse">
-                  <div className="bg-gray-200 rounded-2xl h-64"></div>
+          {loading ? ( <SkeletonLoader /> ) : (
+            <ContentCarousel itemsPerView={4}>
+              {featuredExercises.map((exercise, idx) => (
+                <div key={exercise.id} className="p-2 animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <HomeContentCard content={exercise} onVote={handleVote} />
                 </div>
               ))}
-            </div>
-          ) : featuredExercises.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-6 text-center bg-gradient-to-br from-purple-50 to-indigo-50 rounded-3xl border-2 border-dashed border-purple-200">
-              <div className="relative">
-                <div className="absolute inset-0 bg-purple-400 rounded-full blur-2xl opacity-20"></div>
-                <div className="relative w-20 h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-10 h-10 text-purple-600" />
-                </div>
-              </div>
-              <div>
-                <p className="text-xl font-semibold text-gray-900 mb-2">Aucun exercice pour le moment</p>
-                <p className="text-gray-600 max-w-md mx-auto">
-                  Revenez bientôt pour découvrir de nouveaux contenus adaptés à votre profil
-                </p>
-              </div>
-              <Link to="/exercises">
-                <button className="mt-4 px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-all hover:scale-105">
-                  Explorer tous les exercices
-                </button>
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {featuredExercises.slice(0, 8).map((exercise, idx) => (
-                  <div
-                    key={exercise.id}
-                    className="animate-fade-in-up hover:scale-[1.02] transition-transform duration-300"
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    <HomeContentCard content={exercise} onVote={handleVote} />
-                  </div>
-                ))}
-              </div>
-
-              {/* Mobile CTA */}
-              <div className="md:hidden mt-8 text-center">
-                <Link to="/exercises">
-                  <button className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all hover:scale-105 shadow-lg">
-                    Voir tous les exercices
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </Link>
-              </div>
-            </>
+            </ContentCarousel>
           )}
+           <MobileSeeAllLink link="/exercises" label="tous les exercices" />
         </div>
       </section>
 
-      {/* Featured Lessons - Modern Design */}
+      {/* --- SECTION 2: LEÇONS (Fond légèrement grisé pour casser le blanc) --- */}
       {!loading && featuredLessons.length > 0 && (
-        <section className="py-12 px-4 bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+        <section className="py-20 px-4 bg-slate-50 border-y border-slate-100">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full mb-4">
-                <GraduationCap className="w-4 h-4 text-indigo-600" />
-                <span className="text-sm font-semibold text-indigo-900">Apprentissage</span>
-              </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
-                    Leçons populaires
-                  </h2>
-                  <p className="text-base md:text-lg text-gray-600">
-                    Maîtrisez les concepts clés pas à pas
-                  </p>
-                </div>
-                <Link
-                  to="/lessons"
-                  className="hidden md:inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-blue-700 hover:shadow-lg hover:shadow-indigo-200 transition-all hover:scale-105 flex-shrink-0"
-                >
-                  Voir tout
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {featuredLessons.slice(0, 8).map((lesson, idx) => (
-                <div
-                  key={lesson.id}
-                  className="animate-fade-in-up hover:scale-[1.02] transition-transform duration-300"
-                  style={{ animationDelay: `${idx * 50}ms` }}
-                >
+            <ContentSectionHeader 
+                title="Leçons" 
+                subtitle="Cours théoriques" 
+                description="Cours détaillés et structurés pour maîtriser les concepts."
+                link="/lessons"
+                color="indigo"
+            />
+            <ContentCarousel itemsPerView={4}>
+              {featuredLessons.map((lesson, idx) => (
+                <div key={lesson.id} className="p-2 animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms` }}>
                   <HomeContentCard content={lesson} onVote={handleVote} />
                 </div>
               ))}
-            </div>
-
-            <div className="md:hidden mt-8 text-center">
-              <Link to="/lessons">
-                <button className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-blue-700 transition-all hover:scale-105 shadow-lg">
-                  Voir toutes les leçons
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </Link>
-            </div>
+            </ContentCarousel>
+            <MobileSeeAllLink link="/lessons" label="toutes les leçons" />
           </div>
         </section>
       )}
 
-      {/* Featured Exams - Modern Design */}
+      {/* --- SECTION 3: EXAMENS (Retour au fond Blanc) --- */}
       {!loading && featuredExams.length > 0 && (
-        <section className="py-12 px-4">
+        <section className="py-20 px-4 bg-white">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-100 to-rose-100 rounded-full mb-4">
-                <Award className="w-4 h-4 text-pink-600" />
-                <span className="text-sm font-semibold text-pink-900">Validation</span>
-              </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
-                    Examens blancs
-                  </h2>
-                  <p className="text-base md:text-lg text-gray-600">
-                    Évaluez votre niveau et identifiez vos lacunes
-                  </p>
-                </div>
-                <Link
-                  to="/exams"
-                  className="hidden md:inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl font-semibold hover:from-pink-700 hover:to-rose-700 hover:shadow-lg hover:shadow-pink-200 transition-all hover:scale-105 flex-shrink-0"
-                >
-                  Voir tout
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {featuredExams.slice(0, 8).map((exam, idx) => (
-                <div
-                  key={exam.id}
-                  className="animate-fade-in-up hover:scale-[1.02] transition-transform duration-300"
-                  style={{ animationDelay: `${idx * 50}ms` }}
-                >
+            <ContentSectionHeader 
+                title="Examens" 
+                subtitle="Évaluation" 
+                description="Entraînez-vous en conditions réelles d'examen."
+                link="/exams"
+                color="violet"
+            />
+            <ContentCarousel itemsPerView={4}>
+              {featuredExams.map((exam, idx) => (
+                <div key={exam.id} className="p-2 animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms` }}>
                   <HomeContentCard content={exam} onVote={handleVote} />
                 </div>
               ))}
-            </div>
-
-            <div className="md:hidden mt-8 text-center">
-              <Link to="/exams">
-                <button className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl font-semibold hover:from-pink-700 hover:to-rose-700 transition-all hover:scale-105 shadow-lg">
-                  Voir tous les examens
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </Link>
-            </div>
+            </ContentCarousel>
+            <MobileSeeAllLink link="/exams" label="tous les examens" />
           </div>
         </section>
       )}
+      
+      {/* Section CTA finale supprimée comme demandé */}
 
-      {/* CTA Section - Modern */}
-      <section className="relative py-24 px-4 overflow-hidden bg-gradient-to-br from-gray-900 to-purple-600 mt-16">
-        {/* Animated background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
-
-        <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-white/90 text-sm font-medium mb-6">
-              <TrendingUp className="w-4 h-4" />
-              Rejoignez des milliers d'étudiants
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-              Prêt à exceller en <span className="bg-gradient-to-r from-yellow-200 to-pink-200 bg-clip-text text-transparent">mathématiques</span> ?
-            </h2>
-            <p className="text-xl md:text-2xl text-white/90 font-medium mb-10 max-w-3xl mx-auto">
-              Accédez à des centaines d'exercices, de leçons détaillées et d'examens blancs
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            {isAuthenticated ? (
-              <Link to="/exercises" className="w-full sm:w-auto">
-                <Button 
-                className="liquid-glass group w-full bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 hover:from-yellow-300 hover:via-pink-300 hover:to-purple-300 text-purple-900 rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3"
-                variant='ghost'>
-                  Continuer l'apprentissage
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/register" className="w-full sm:w-auto">
-                  <button className="group w-full sm:w-auto px-10 py-5 bg-white text-purple-600 rounded-xl font-bold text-xl hover:bg-gray-50 transition-all hover:scale-105 hover:shadow-2xl shadow-xl inline-flex items-center justify-center gap-3">
-                    Commencer gratuitement
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </Link>
-                <Link to="/exercises" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto px-10 py-5 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white rounded-xl font-semibold text-lg hover:bg-white/20 transition-all inline-flex items-center justify-center gap-2">
-                    Explorer sans compte
-                  </button>
-                </Link>
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-8 text-white/90 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-3 h-3 text-green-900" />
-              </div>
-              <span className="font-medium">Contenu gratuit</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-3 h-3 text-green-900" />
-              </div>
-              <span className="font-medium">Accès illimité</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-3 h-3 text-green-900" />
-              </div>
-              <span className="font-medium">Aucune carte bancaire</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
+      <style jsx global>{`
         @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(1.05); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.8s ease-out backwards;
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow 4s ease-in-out infinite;
-        }
-        .animation-delay-200 {
-          animation-delay: 200ms;
-        }
-        .animation-delay-400 {
-          animation-delay: 400ms;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
+        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out backwards; }
       `}</style>
     </div>
   );
+}
+
+// --- Petits composants pour éviter la répétition du code ---
+
+// Header des sections (Exercices, Leçons...)
+function ContentSectionHeader({ title, subtitle, description, link, color }: any) {
+    const colors: any = {
+        blue: { bg: 'bg-blue-100', text: 'text-blue-900', bar: 'bg-blue-600', btn: 'text-blue-600 border-blue-600 hover:bg-blue-600' },
+        indigo: { bg: 'bg-indigo-100', text: 'text-indigo-900', bar: 'bg-indigo-600', btn: 'text-indigo-600 border-indigo-600 hover:bg-indigo-600' },
+        violet: { bg: 'bg-violet-100', text: 'text-violet-900', bar: 'bg-violet-600', btn: 'text-violet-600 border-violet-600 hover:bg-violet-600' },
+    };
+    const c = colors[color];
+
+    return (
+        <div className="mb-12 flex items-end justify-between">
+            <div>
+                <div className={`inline-block px-4 py-1 ${c.bg} ${c.text} text-xs font-bold uppercase tracking-widest mb-4 rounded-md`}>
+                    {subtitle}
+                </div>
+                <h2 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight">
+                    {title}
+                </h2>
+                <div className={`w-16 h-1.5 ${c.bar} mb-4 rounded-full`}></div>
+                <p className="text-base text-slate-600 font-medium max-w-md">
+                    {description}
+                </p>
+            </div>
+            <Link
+                to={link}
+                className={`hidden md:inline-flex items-center gap-2 px-6 py-3 border-2 ${c.btn} hover:text-white font-bold text-sm uppercase tracking-wide transition-all rounded-xl`}
+            >
+                Voir tout <ArrowRight className="w-4 h-4" />
+            </Link>
+        </div>
+    );
+}
+
+// Loader
+function SkeletonLoader() {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, idx) => (
+                <div key={idx} className="bg-slate-100 animate-pulse rounded-2xl h-72 border border-slate-200"></div>
+            ))}
+        </div>
+    );
+}
+
+// Lien mobile "Voir tout"
+function MobileSeeAllLink({ link, label }: any) {
+    return (
+        <div className="md:hidden mt-8 text-center">
+            <Link to={link}>
+                <button className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all uppercase">
+                    Voir {label} <ArrowRight className="w-4 h-4" />
+                </button>
+            </Link>
+        </div>
+    );
 }

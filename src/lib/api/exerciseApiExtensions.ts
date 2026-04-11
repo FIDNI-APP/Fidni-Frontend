@@ -51,7 +51,7 @@ export async function updateExercise(id: string, data: Partial<ExerciseData>) {
  * Add a solution to an exercise
  */
 export async function addSolution(exerciseId: string, content: string): Promise<Solution> {
-  const response = await api.post(`/exercises/${exerciseId}/solution/`, { content });
+  const response = await api.post(`/contents/${exerciseId}/solution/`, { content });
   return response.data;
 }
 
