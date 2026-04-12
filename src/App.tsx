@@ -14,8 +14,8 @@ import OnboardingProfile from '@/pages/OnboardingProfile';
 import { FilterProvider } from './components/navbar/FilterContext';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import LegalRedirector from './components/LegalRedirector';
-import Footer from './components/Footer';
+import LegalRedirector from './components/layout/LegalRedirector';
+import Footer from './components/layout/Footer';
 import { Search } from './pages/Search';
 
 // Learning paths

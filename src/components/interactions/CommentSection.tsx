@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import {
   MessageSquare,
   X,
@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { Comment, User, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { VoteButtonsComment } from './VoteButtonsComment';
-import { FileUpload } from './common/FileUpload';
+import { VoteButtonsComment } from '@/components/interactions/VoteButtonsComment';
+import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/structuredApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 
