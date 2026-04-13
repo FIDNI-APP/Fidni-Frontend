@@ -19,13 +19,13 @@ import { LessonIcon } from '@/components/icons/LessonIcon';
 import { ExerciseRenderer } from './viewer/ExerciseRenderer';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import type { Difficulty, VoteValue } from '@/types';
-import type { StructuredExerciseListItem, StructuredExamListItem, StructuredLessonListItem } from '@/types/structured';
+import type { ExerciseListItem, ExamListItem, LessonListItem } from '@/types/content';
 import type { FlexibleExerciseStructure } from './editor/FlexibleExerciseEditor';
-import { structuredExerciseAPI, structuredExamAPI, structuredLessonAPI } from '@/lib/api';
+import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 
-type StructuredListItem = StructuredExerciseListItem | StructuredExamListItem | StructuredLessonListItem;
+type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
 interface ContentCardProps {
   item: StructuredListItem;
@@ -49,9 +49,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   const getAPI = () => {
     switch (contentType) {
-      case 'exercise': return structuredExerciseAPI;
-      case 'exam': return structuredExamAPI;
-      case 'lesson': return structuredLessonAPI;
+      case 'exercise': return exerciseContentAPI;
+      case 'exam': return examContentAPI;
+      case 'lesson': return lessonContentAPI;
     }
   };
 

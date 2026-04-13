@@ -438,14 +438,14 @@ export const RevisionListDetail: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <Button
-                onClick={() => navigate('/structured/exercises')}
+                onClick={() => navigate('/exercises')}
                 className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
               >
                 <BookOpen className="w-3.5 h-3.5 mr-1.5" />
                 Exercices
               </Button>
               <Button
-                onClick={() => navigate('/structured/exams')}
+                onClick={() => navigate('/exams')}
                 variant="ghost"
                 className="border-slate-200 text-slate-600 hover:bg-slate-50 text-sm"
               >
@@ -490,8 +490,8 @@ export const RevisionListDetail: React.FC = () => {
           .revision-exercise-card > div:first-child { height: 4px !important; }
 
           /* When solutions are hidden, mask solution areas and solution toggle buttons */
-          .revision-solutions-hidden .structured-compact-view .border-l-2.border-green-400 { display: none !important; }
-          .revision-solutions-hidden .structured-compact-view button { display: none !important; }
+          .revision-solutions-hidden .content-compact-view .border-l-2.border-green-400 { display: none !important; }
+          .revision-solutions-hidden .content-compact-view button { display: none !important; }
         }
       `}</style>
     </div>

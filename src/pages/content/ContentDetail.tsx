@@ -7,9 +7,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Loader2, Sparkles } from 'lucide-react';
 import {
-  structuredExerciseAPI,
-  structuredExamAPI,
-  structuredLessonAPI,
+  exerciseContentAPI,
+  examContentAPI,
+  lessonContentAPI,
   getContentStatistics,
   undoSolutionViewed,
   voteComment,
@@ -18,7 +18,7 @@ import {
   type ContentStatistics
 } from '@/lib/api';
 import type { VoteValue, Comment } from '@/types';
-import type { StructuredExercise, StructuredExam, StructuredLesson, AssessmentStatus } from '@/types/structured';
+import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { ContentHeader } from '@/components/content/viewer/ContentHeader';
@@ -30,11 +30,11 @@ import { AICorrectionPanel } from '@/components/ai/AICorrectionPanel';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
 import { Button } from '@/components/ui/button';
 
-type StructuredContent = StructuredExercise | StructuredExam | StructuredLesson;
+type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
 type ContentType = 'exercise' | 'exam' | 'lesson';
 
-type ContentAPI = typeof structuredExerciseAPI | typeof structuredExamAPI | typeof structuredLessonAPI;
+type ContentAPI = typeof exerciseContentAPI | typeof examContentAPI | typeof lessonContentAPI;
 
 const CONTENT_TYPE_CONFIG: Record<ContentType, {
   title: string;
@@ -48,21 +48,21 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     backLabel: 'Retour aux exercices',
     deleteConfirm: 'Etes-vous sur de vouloir supprimer cet exercice ?',
     basePath: '/exercises',
-    api: structuredExerciseAPI,
+    api: exerciseContentAPI,
   },
   exam: {
     title: 'Examen',
     backLabel: 'Retour aux examens',
     deleteConfirm: 'Etes-vous sur de vouloir supprimer cet examen ?',
     basePath: '/exams',
-    api: structuredExamAPI,
+    api: examContentAPI,
   },
   lesson: {
     title: 'Lecon',
     backLabel: 'Retour aux lecons',
     deleteConfirm: 'Etes-vous sur de vouloir supprimer cette lecon ?',
     basePath: '/lessons',
-    api: structuredLessonAPI,
+    api: lessonContentAPI,
   },
 };
 
@@ -175,7 +175,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const { user, isAuthenticated } = useAuth();
   const { openModal } = useAuthModal();
 
-  const [content, setContent] = useState<StructuredContent | null>(null);
+  const [content, setContent] = useState<ContentItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSolution, setShowSolution] = useState(false);
@@ -219,7 +219,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
       try {
         const data = await config.api.get(id);
-        setContent(data as StructuredContent);
+        setContent(data as ContentItem);
         if ('vote_count' in data && typeof data.vote_count === 'number') setVoteCount(data.vote_count);
         if ('user_vote' in data) setUserVote((data.user_vote as 1 | -1 | 0) ?? 0);
         if ('user_save' in data) setIsSaved(Boolean(data.user_save));

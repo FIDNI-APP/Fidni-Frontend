@@ -8,6 +8,19 @@
 import { api } from './apiClient';
 import { Difficulty, SortOption } from '@/types';
 
+/** Normalize API response: rename json_content → structure */
+function normalize<T>(data: T): T {
+  if (Array.isArray(data)) return data.map(normalize) as unknown as T;
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    if ('json_content' in d) {
+      const { json_content, ...rest } = d;
+      return { ...rest, structure: json_content } as unknown as T;
+    }
+  }
+  return data;
+}
+
 export type VoteValue = 1 | -1 | 0;
 export type ProgressStatus = 'success' | 'review';
 export type ContentType = 'exercise' | 'exam' | 'lesson';
@@ -93,8 +106,9 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
 
       const response = await api.get(`/${resourcePath}/`, { params: queryParams });
 
+      const raw = response.data.results || response.data || [];
       return {
-        results: response.data.results || [],
+        results: normalize(Array.isArray(raw) ? raw : []),
         count: response.data.count || 0,
         next: response.data.next,
         previous: response.data.previous,
@@ -106,7 +120,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
      */
     getById: async (id: string): Promise<T> => {
       const response = await api.get(`/${resourcePath}/${id}/`);
-      return response.data;
+      return normalize(response.data);
     },
 
     // ============ CREATE, UPDATE, DELETE ============

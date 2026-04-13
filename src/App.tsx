@@ -34,7 +34,6 @@ import { LogsConsole } from './pages/admin/LogsConsole';
 
 // Content pages (unified system)
 import { ContentList, ContentDetail, ContentCreate } from './pages/content';
-import { LessonCreate } from './pages/content/LessonCreate';
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -65,13 +64,13 @@ const NavbarWrapper = ({ children, showNavbar = true, showFooter = true }: { chi
   );
 };
 
-// Redirect helpers for legacy /structured routes
-const RedirectStructuredExercise = () => {
+// Redirect helpers for legacy /structured/* routes
+const RedirectToExercise = () => {
   const { id } = useParams();
   return <Navigate to={`/exercises/${id}`} replace />;
 };
 
-const RedirectStructuredExerciseEdit = () => {
+const RedirectToExerciseEdit = () => {
   const { id } = useParams();
   return <Navigate to={`/exercises/${id}/edit`} replace />;
 };
@@ -247,7 +246,7 @@ function App() {
                     } />
                     <Route path="/lessons/new" element={
                       <NavbarWrapper showFooter={false}>
-                        <LessonCreate />
+                        <ContentCreate contentType="lesson" />
                       </NavbarWrapper>
                     } />
                     <Route path="/lessons/:id" element={
@@ -257,7 +256,7 @@ function App() {
                     } />
                     <Route path="/lessons/:id/edit" element={
                       <NavbarWrapper showFooter={false}>
-                        <LessonCreate />
+                        <ContentCreate contentType="lesson" />
                       </NavbarWrapper>
                     } />
                     {/* Legacy redirect */}
@@ -303,11 +302,15 @@ function App() {
                       </NavbarWrapper>
                     } />
 
-                    {/* Legacy /structured routes - redirect to main routes */}
+                    {/* Legacy /structured/* routes */}
                     <Route path="/structured/exercises" element={<Navigate to="/exercises" replace />} />
                     <Route path="/structured/exercises/new" element={<Navigate to="/exercises/new" replace />} />
-                    <Route path="/structured/exercises/:id" element={<RedirectStructuredExercise />} />
-                    <Route path="/structured/exercises/:id/edit" element={<RedirectStructuredExerciseEdit />} />
+                    <Route path="/structured/exercises/:id" element={<RedirectToExercise />} />
+                    <Route path="/structured/exercises/:id/edit" element={<RedirectToExerciseEdit />} />
+                    <Route path="/structured/exams" element={<Navigate to="/exams" replace />} />
+                    <Route path="/structured/exams/:id" element={<Navigate to="/exams/:id" replace />} />
+                    <Route path="/structured/lessons" element={<Navigate to="/lessons" replace />} />
+                    <Route path="/structured/lessons/:id" element={<Navigate to="/lessons/:id" replace />} />
 
                   </Routes>
                 </div>

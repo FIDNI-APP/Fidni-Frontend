@@ -18,7 +18,7 @@ import { Comment, User, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { VoteButtonsComment } from '@/components/interactions/VoteButtonsComment';
 import { FileUpload } from '@/components/common/FileUpload';
-import { fileAPI } from '@/lib/api/structuredApi';
+import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 
 interface CommentSectionProps {

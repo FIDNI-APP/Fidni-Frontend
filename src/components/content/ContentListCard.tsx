@@ -19,19 +19,19 @@ import {
   BookOpen,
 } from 'lucide-react';
 import type { Difficulty, VoteValue } from '@/types';
-import type { StructuredExerciseListItem, StructuredExamListItem, StructuredLessonListItem } from '@/types/structured';
+import type { ExerciseListItem, ExamListItem, LessonListItem } from '@/types/content';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { ExerciseRenderer } from './viewer/ExerciseRenderer';
 import { LessonRenderer } from './viewer/LessonRenderer';
 import { useAuthModal } from '@/components/auth/AuthController';
-import { structuredExerciseAPI, structuredExamAPI, structuredLessonAPI } from '@/lib/api';
+import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
 import type { FlexibleExerciseStructure } from './editor/FlexibleExerciseEditor';
 import type { FlexibleLessonStructure } from './editor/FlexibleLessonEditor';
 import '@/lib/styles.css';
 
-type StructuredListItem = StructuredExerciseListItem | StructuredExamListItem | StructuredLessonListItem;
+type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
 // Difficulty indicator component
 const DifficultyIndicator = ({ level }: { level: Difficulty }) => {
@@ -170,9 +170,9 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
 
   const getAPI = () => {
     switch (contentType) {
-      case 'exercise': return structuredExerciseAPI;
-      case 'exam': return structuredExamAPI;
-      case 'lesson': return structuredLessonAPI;
+      case 'exercise': return exerciseContentAPI;
+      case 'exam': return examContentAPI;
+      case 'lesson': return lessonContentAPI;
     }
   };
 

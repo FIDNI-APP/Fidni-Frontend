@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Upload, X, File, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
-import { fileAPI } from '@/lib/api/structuredApi';
+import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 
 interface FileUploadProps {

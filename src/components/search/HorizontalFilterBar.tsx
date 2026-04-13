@@ -283,7 +283,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   };
 
   const renderChip = (label: string, onRemove: () => void) => (
-    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${colorClasses.chip} rounded-lg text-sm font-medium`}>
+    <div key={label} className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${colorClasses.chip} rounded-lg text-sm font-medium`}>
       <span>{label}</span>
       <button
         onClick={onRemove}

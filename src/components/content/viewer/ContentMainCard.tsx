@@ -4,17 +4,18 @@ import {
   Play, Pause, RotateCcw, Save, Hash, PlayCircle
 } from 'lucide-react';
 import type { Difficulty } from '@/types';
-import type { StructuredExercise, StructuredExam, StructuredLesson, AssessmentStatus } from '@/types/structured';
+import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
-import { ExerciseRenderer, countQuestionsWithSolutions } from './ExerciseRenderer';
+import ExerciseRenderer from './ExerciseRenderer';
+import { countQuestionsWithSolutions } from '@/lib/utils/contentHelpers';
 import { LessonRenderer } from './LessonRenderer';
 import type { FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
 import type { FlexibleLessonStructure } from '../editor/FlexibleLessonEditor';
 
-type StructuredContent = StructuredExercise | StructuredExam | StructuredLesson;
+type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
 interface ContentMainCardProps {
-  content: StructuredContent;
+  content: ContentItem;
   contentType: 'exercise' | 'exam' | 'lesson';
   voteCount: number;
   userVote: 1 | -1 | 0;

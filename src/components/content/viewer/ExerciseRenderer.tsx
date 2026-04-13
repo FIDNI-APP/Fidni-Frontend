@@ -9,7 +9,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Check, X, RotateCcw, HelpCircle, Eye, EyeOff, ThumbsUp, GitCompare, AlertCircle, ClipboardCheck } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import type { ContentBlock, AssessmentStatus } from '@/types/structured';
+import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
 
 // =====================
@@ -40,22 +40,22 @@ interface ExerciseRendererProps {
 // Global styles for compact rendering - injected once
 const CompactStyles = () => (
   <style>{`
-    .structured-compact-view .tiptap-full-renderer,
-    .structured-compact-view .tiptap-full-renderer .ProseMirror {
+    .content-compact-view .tiptap-full-renderer,
+    .content-compact-view .tiptap-full-renderer .ProseMirror {
       min-height: 0 !important;
       padding: 0 !important;
     }
-    .structured-compact-view .tiptap-full-renderer .ProseMirror p {
+    .content-compact-view .tiptap-full-renderer .ProseMirror p {
       margin: 0 !important;
     }
-    .structured-compact-view .tiptap-full-renderer .ProseMirror h1,
-    .structured-compact-view .tiptap-full-renderer .ProseMirror h2 {
+    .content-compact-view .tiptap-full-renderer .ProseMirror h1,
+    .content-compact-view .tiptap-full-renderer .ProseMirror h2 {
       margin: 0 0 0.25rem 0 !important;
     }
-    .structured-compact-view .tiptap-full-renderer .ProseMirror .math-display {
+    .content-compact-view .tiptap-full-renderer .ProseMirror .math-display {
       margin: 0.25em 0 !important;
     }
-    .structured-compact-view .tiptap-full-renderer .ProseMirror > *:last-child {
+    .content-compact-view .tiptap-full-renderer .ProseMirror > *:last-child {
       margin-bottom: 0 !important;
     }
   `}</style>
@@ -343,6 +343,8 @@ const InlineSolution: React.FC<InlineSolutionProps> = ({
 
 interface SubQuestionRendererProps {
   subQuestion: SubQuestionBlock;
+  questionIndex: number;
+  sqIndex: number;
   questionPath: string;
   globalShowSolutions: boolean;
   progress?: ProgressData;
@@ -353,6 +355,8 @@ interface SubQuestionRendererProps {
 
 const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   subQuestion,
+  questionIndex,
+  sqIndex,
   questionPath,
   globalShowSolutions,
   progress,
@@ -368,36 +372,36 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   const showSolution = globalShowSolutions || localShowSolution;
 
   return (
-    <div className="ml-5 mt-1">
-      <div className="flex items-start gap-2 flex-1 min-w-0">
-        <span className="font-medium text-indigo-600 shrink-0 text-sm">{subQuestion.label}</span>
-        <div className="flex-1 min-w-0">
-          <RenderContent content={subQuestion.content} className="prose-sm" />
-        </div>
-      </div>
-      <div className="flex items-center gap-1 mt-1 ml-6">
-        {subQuestion.points && (
-          <span className="text-xs text-slate-400">({subQuestion.points}pts)</span>
-        )}
-        <SolutionToggle
-          isOpen={showSolution}
-          onToggle={() => setLocalShowSolution(!localShowSolution)}
-          hasSolution={hasSolution}
-        />
-        {interactive && onAssess && (
-          <AssessmentButtons
-            path={path}
-            currentStatus={currentStatus}
-            onAssess={(status) => onAssess(path, status)}
+    <div className="ml-5 mt-1 flex items-start gap-2">
+      <span className="font-mono font-semibold text-indigo-500 shrink-0">
+        {questionIndex}.{sqIndex + 1}.
+      </span>
+      <div className="flex-1 min-w-0">
+        <RenderContent content={subQuestion.content} className="prose-sm" />
+        <div className="flex items-center gap-1 mt-1">
+          {subQuestion.points && (
+            <span className="text-xs text-slate-400">({subQuestion.points}pts)</span>
+          )}
+          <SolutionToggle
+            isOpen={showSolution}
+            onToggle={() => setLocalShowSolution(v => !v)}
+            hasSolution={hasSolution}
           />
-        )}
+          {interactive && onAssess && (
+            <AssessmentButtons
+              path={path}
+              currentStatus={currentStatus}
+              onAssess={(status) => onAssess(path, status)}
+            />
+          )}
+        </div>
+        <InlineSolution
+          solution={subQuestion.solution}
+          isVisible={showSolution}
+          validationStatus={validationStatus}
+          onValidate={onValidateSolution ? (status) => onValidateSolution(path, status) : undefined}
+        />
       </div>
-      <InlineSolution
-        solution={subQuestion.solution}
-        isVisible={showSolution}
-        validationStatus={validationStatus}
-        onValidate={onValidateSolution ? (status) => onValidateSolution(path, status) : undefined}
-      />
     </div>
   );
 };
@@ -408,6 +412,7 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
 
 interface QuestionRendererProps {
   block: ExerciseBlock;
+  questionIndex: number;
   globalShowSolutions: boolean;
   progress?: ProgressData;
   onAssess?: (path: string, status: AssessmentStatus) => void;
@@ -418,6 +423,7 @@ interface QuestionRendererProps {
 
 const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   block,
+  questionIndex,
   globalShowSolutions,
   progress,
   onAssess,
@@ -437,13 +443,12 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     <div className={isFirst ? '' : 'mt-2'}>
       {/* Question header */}
       <div className="flex items-start gap-2 flex-1 min-w-0">
-        {block.label && (
-          <span className="font-semibold text-blue-700 shrink-0">{block.label}</span>
-        )}
+        <span className="font-mono font-semibold text-blue-600 shrink-0">{questionIndex}.</span>
         <div className="flex-1 min-w-0">
-          <RenderContent content={block.questionContent} />
+          <RenderContent content={block.content} />
         </div>
       </div>
+      {/* Points + actions — only when no sub-questions */}
       {!hasSubQuestions && (
         <div className="flex items-center gap-1 mt-1 ml-6">
           {block.points && (
@@ -451,7 +456,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
           )}
           <SolutionToggle
             isOpen={showSolution}
-            onToggle={() => setLocalShowSolution(!localShowSolution)}
+            onToggle={() => setLocalShowSolution(v => !v)}
             hasSolution={hasSolution}
           />
           {interactive && onAssess && (
@@ -464,7 +469,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
         </div>
       )}
 
-      {/* Solution (si pas de sous-questions) */}
+      {/* Solution — only for questions without sub-questions */}
       {!hasSubQuestions && (
         <InlineSolution
           solution={block.solution}
@@ -477,10 +482,12 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       {/* Sub-questions */}
       {hasSubQuestions && (
         <div>
-          {block.subQuestions!.map((sq) => (
+          {block.subQuestions!.map((sq, sqIdx) => (
             <SubQuestionRenderer
               key={sq.id}
               subQuestion={sq}
+              questionIndex={questionIndex}
+              sqIndex={sqIdx}
               questionPath={path}
               globalShowSolutions={globalShowSolutions}
               progress={progress}
@@ -516,43 +523,39 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   }
 
   return (
-    <div className="structured-compact-view bg-white rounded-xl border border-slate-200 shadow-sm">
+    <div className="content-compact-view bg-white rounded-xl border border-slate-200 shadow-sm">
       <CompactStyles />
       {/* Content */}
       <div className="p-4">
-        {structure.blocks.map((block, index) => {
-          if (block.type === 'context') {
+        {(() => {
+          let qCount = 0;
+          return structure.blocks.map((block, index) => {
+            if (block.type === 'context') {
+              return (
+                <div key={block.id} className={index > 0 ? 'mt-2' : ''}>
+                  <RenderContent content={block.content} />
+                </div>
+              );
+            }
+            qCount++;
             return (
-              <div key={block.id} className={index > 0 ? 'mt-2' : ''}>
-                <RenderContent content={block.content} />
-              </div>
+              <QuestionRenderer
+                key={block.id}
+                block={block}
+                questionIndex={qCount}
+                globalShowSolutions={showAllSolutions}
+                progress={progress}
+                onAssess={onAssess}
+                onValidateSolution={onValidateSolution}
+                interactive={interactive}
+                isFirst={index === 0}
+              />
             );
-          }
-
-          return (
-            <QuestionRenderer
-              key={block.id}
-              block={block}
-              globalShowSolutions={showAllSolutions}
-              progress={progress}
-              onAssess={onAssess}
-              onValidateSolution={onValidateSolution}
-              interactive={interactive}
-              isFirst={index === 0}
-            />
-          );
-        })}
+          });
+        })()}
       </div>
     </div>
   );
-};
-
-/** Helper to count questions with solutions in a structure */
-export const countQuestionsWithSolutions = (structure: FlexibleExerciseStructure | null | undefined): number => {
-  if (!structure || !structure.blocks) return 0;
-  return structure.blocks.filter(
-    (b) => b.type === 'question' && (b.solution?.html || b.subQuestions?.some((sq) => sq.solution?.html))
-  ).length;
 };
 
 export default ExerciseRenderer;

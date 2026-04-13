@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
-import { structuredExerciseAPI, structuredExamAPI, structuredLessonAPI } from '@/lib/api';
+import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
 import { ContentListCard } from '@/components/content/ContentListCard';
 import { HorizontalFilterBar } from '@/components/search/HorizontalFilterBar';
 import { ExerciseRenderer } from '@/components/content/viewer/ExerciseRenderer';
@@ -25,10 +25,10 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import type { Difficulty, SortOption } from '@/types';
-import type { StructuredExerciseListItem, StructuredExamListItem, StructuredLessonListItem, StructuredContentFilters, AssessmentStatus } from '@/types/structured';
+import type { ExerciseListItem, ExamListItem, LessonListItem, ContentFilters, AssessmentStatus } from '@/types/content';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 
-type StructuredListItem = StructuredExerciseListItem | StructuredExamListItem | StructuredLessonListItem;
+type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
 type ContentType = 'exercise' | 'exam' | 'lesson';
 
@@ -40,7 +40,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   icon: React.ReactNode;
   accentColor: string;
   basePath: string;
-  api: typeof structuredExerciseAPI;
+  api: typeof exerciseContentAPI;
 }> = {
   exercise: {
     title: 'Exercices',
@@ -50,7 +50,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     icon: <BookOpen className="w-5 h-5" />,
     accentColor: 'blue',
     basePath: '/exercises',
-    api: structuredExerciseAPI,
+    api: exerciseContentAPI,
   },
   exam: {
     title: 'Examens',
@@ -60,7 +60,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     icon: <APlusIcon className="w-5 h-5" />,
     accentColor: 'purple',
     basePath: '/exams',
-    api: structuredExamAPI,
+    api: examContentAPI,
   },
   lesson: {
     title: 'Leçons',
@@ -70,7 +70,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     icon: <LessonIcon className="w-5 h-5" />,
     accentColor: 'emerald',
     basePath: '/lessons',
-    api: structuredLessonAPI,
+    api: lessonContentAPI,
   },
 };
 
@@ -172,8 +172,8 @@ export const ContentList: React.FC<ContentListProps> = ({
   });
 
   // Build query params for API
-  const queryParams = useMemo((): StructuredContentFilters => {
-    const params: StructuredContentFilters = {};
+  const queryParams = useMemo((): ContentFilters => {
+    const params: ContentFilters = {};
 
     // Pass arrays for multi-select filters
     if (filters.classLevels.length > 0) {

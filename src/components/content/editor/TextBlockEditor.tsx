@@ -7,7 +7,7 @@
 
 import React from 'react';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
-import type { ContentBlock } from '@/types/structured';
+import type { ContentBlock } from '@/types/content';
 
 interface TextBlockEditorProps {
   value: ContentBlock | undefined;

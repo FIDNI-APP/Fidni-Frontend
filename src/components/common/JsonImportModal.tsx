@@ -5,57 +5,106 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileJson, Copy, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Upload, FileJson, Copy, AlertCircle, CheckCircle, FileText, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api/apiClient';
 
 interface JsonImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (data: any) => void;
-  contentType: 'exercise' | 'lesson' | 'exam' | 'structured-exercise';
+  contentType: 'exercise' | 'lesson' | 'exam' | 'content-exercise';
 }
 
 // Exemples SIMPLIFIÉS - pas besoin d'IDs, ils sont générés automatiquement
 const EXAMPLE_STRUCTURES = {
   'exercise': {
-    title: "Équations du second degré",
-    difficulty: "medium",
-    content: "<p>Résoudre l'équation $x^2 - 5x + 6 = 0$</p>",
-    solution: "<p>On factorise: $(x-2)(x-3)=0$, donc $x=2$ ou $x=3$</p>"
-  },
-  'lesson': {
-    title: "Introduction aux dérivées",
-    content: "<p>La dérivée d'une fonction $f$ en un point $a$...</p>"
-  },
-  'exam': {
-    title: "Bac S 2024 - Mathématiques",
-    year: 2024,
-    session: "Normale",
-    exercises: [
-      { title: "Exercice 1", content: "<p>Énoncé...</p>", points: 5 }
-    ]
-  },
-  'structured-exercise': {
     title: "Étude de fonction",
     difficulty: "medium",
     blocks: [
       {
         type: "context",
-        label: "Contexte",
-        content: "<p>Soit $f(x) = x^2 - 4x + 3$</p>"
+        content: "<p>Soit $f(x) = x^2 - 4x + 3$ définie sur $\\mathbb{R}$.</p>"
       },
       {
         type: "question",
-        label: "1)",
-        content: "<p>Calculer $f'(x)$</p>",
+        content: "<p>Calculer $f'(x)$.</p>",
         solution: "<p>$f'(x) = 2x - 4$</p>",
         points: 2
       },
       {
         type: "question",
-        label: "2)",
-        content: "<p>Étudier les variations de $f$</p>",
-        solution: "<p>$f'(x) = 0 \\Leftrightarrow x = 2$. Tableau de variations...</p>",
-        points: 3
+        content: "<p>Étudier les variations de $f$.</p>",
+        solution: "<p>$f'(x) = 0 \\Leftrightarrow x = 2$. $f$ est décroissante sur $(-\\infty, 2)$ et croissante sur $(2, +\\infty)$.</p>",
+        points: 3,
+        subQuestions: [
+          {
+            content: "<p>Trouver les zéros de $f'$.</p>",
+            solution: "<p>$x = 2$</p>",
+            points: 1
+          },
+          {
+            content: "<p>Dresser le tableau de variations.</p>",
+            points: 2
+          }
+        ]
+      }
+    ]
+  },
+  'lesson': {
+    title: "Les nombres dérivés",
+    sections: [
+      {
+        title: "Définition",
+        content: "<p>La dérivée de $f$ en $a$ est la limite $\\lim_{h \\to 0} \\frac{f(a+h)-f(a)}{h}$.</p>",
+        subSections: [
+          {
+            title: "Interprétation géométrique",
+            content: "<p>La dérivée représente le coefficient directeur de la tangente à la courbe en ce point.</p>"
+          }
+        ]
+      },
+      {
+        title: "Règles de dérivation",
+        content: "<p>$(u+v)' = u'+v'$, $(uv)' = u'v + uv'$, $\\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}$</p>"
+      }
+    ]
+  },
+  'exam': {
+    title: "Bac 2024 — Mathématiques",
+    difficulty: "hard",
+    duration_minutes: 180,
+    is_national_exam: true,
+    national_year: 2024,
+    blocks: [
+      {
+        type: "context",
+        content: "<p>Dans tout l'exercice, on pose $f(x) = e^x - x - 1$.</p>"
+      },
+      {
+        type: "question",
+        content: "<p>Étudier les variations de $f$ sur $\\mathbb{R}$.</p>",
+        points: 5
+      },
+      {
+        type: "question",
+        content: "<p>Montrer que $f(x) \\geq 0$ pour tout $x \\in \\mathbb{R}$.</p>",
+        points: 5
+      }
+    ]
+  },
+  'content-exercise': {
+    title: "Étude de fonction",
+    difficulty: "medium",
+    blocks: [
+      {
+        type: "context",
+        content: "<p>Soit $f(x) = x^2 - 4x + 3$</p>"
+      },
+      {
+        type: "question",
+        content: "<p>Calculer $f'(x)$</p>",
+        solution: "<p>$f'(x) = 2x - 4$</p>",
+        points: 2
       }
     ]
   }
@@ -65,47 +114,63 @@ const CONTENT_TYPE_LABELS = {
   'exercise': 'Exercice',
   'lesson': 'Leçon',
   'exam': 'Examen',
-  'structured-exercise': 'Exercice structuré'
+  'content-exercise': 'Exercice structuré'
 };
 
 // Génère un ID unique
 const generateId = () => `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+const toContentBlock = (html: string | undefined) =>
+  html ? { type: 'text' as const, html } : undefined;
+
 // Transforme le JSON simplifié en structure complète avec IDs
 const transformJsonData = (data: any, contentType: string) => {
-  if (contentType === 'structured-exercise') {
-    // Générer les IDs pour chaque block
+  // Exercise and exam share the same block structure
+  if (contentType === 'exercise' || contentType === 'exam' || contentType === 'content-exercise') {
     const blocks = (data.blocks || []).map((block: any, index: number) => {
       const blockType = block.type || 'question';
-      const isContext = blockType === 'context';
-
-      // Pour context: utilise "content"
-      // Pour question: utilise "questionContent" pour l'énoncé
       return {
         id: generateId(),
         type: blockType,
-        label: block.label || (isContext ? 'Contexte' : `Question ${index + 1}`),
-        // Context utilise content, Question utilise questionContent
-        ...(isContext
-          ? { content: block.content ? { type: 'text', html: block.content } : undefined }
-          : { questionContent: block.content ? { type: 'text', html: block.content } : undefined }
-        ),
-        solution: block.solution ? { type: 'text', html: block.solution } : undefined,
-        points: block.points, // Points pour la question
-        subQuestions: block.subQuestions?.map((sq: any, sqIdx: number) => ({
+        content: toContentBlock(block.content),
+        solution: toContentBlock(block.solution),
+        points: block.points,
+        subQuestions: (block.subQuestions || []).map((sq: any) => ({
           id: generateId(),
-          label: sq.label || `${index + 1}.${sqIdx + 1})`,
-          content: sq.content ? { type: 'text', html: sq.content } : undefined,
-          solution: sq.solution ? { type: 'text', html: sq.solution } : undefined,
-          points: sq.points, // Points pour la sous-question
-        }))
+          content: toContentBlock(sq.content),
+          solution: toContentBlock(sq.solution),
+          points: sq.points,
+        })),
       };
     });
 
     return {
       title: data.title || '',
-      difficulty: data.difficulty || 'medium',
-      structure: { blocks }
+      difficulty: data.difficulty,
+      structure: { version: '2.0', blocks },
+      ...(contentType === 'exam' && {
+        isNationalExam: data.is_national_exam || false,
+        nationalYear: data.national_year,
+        durationMinutes: data.duration_minutes,
+      }),
+    };
+  }
+
+  if (contentType === 'lesson') {
+    const sections = (data.sections || []).map((s: any) => ({
+      id: generateId(),
+      title: s.title || '',
+      content: toContentBlock(s.content) || { type: 'text', html: '' },
+      subSections: (s.subSections || []).map((ss: any) => ({
+        id: generateId(),
+        title: ss.title || '',
+        content: toContentBlock(ss.content) || { type: 'text', html: '' },
+      })),
+    }));
+
+    return {
+      title: data.title || '',
+      structure: { version: '1.0', sections },
     };
   }
 
@@ -121,7 +186,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   const [jsonInput, setJsonInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -139,6 +206,29 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       setError('Erreur lors de la lecture du fichier');
     };
     reader.readAsText(file);
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    setIsParsing(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('content_type', contentType === 'content-exercise' ? 'exercise' : contentType);
+      const response = await api.post('/parse-pdf/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setJsonInput(JSON.stringify(response.data, null, 2));
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Erreur lors du parsing PDF';
+      setError(msg);
+    } finally {
+      setIsParsing(false);
+    }
   };
 
   const validateAndImport = () => {
@@ -164,8 +254,11 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         throw new Error('Le champ "title" est requis');
       }
 
-      if (contentType === 'structured-exercise' && !parsed.blocks) {
+      if (['exercise', 'exam', 'content-exercise'].includes(contentType) && !parsed.blocks) {
         throw new Error('Le champ "blocks" est requis (liste de questions/contextes)');
+      }
+      if (contentType === 'lesson' && !parsed.sections) {
+        throw new Error('Le champ "sections" est requis');
       }
 
       // Transformer les données et générer les IDs
@@ -221,6 +314,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     setJsonInput('');
     setError(null);
     setSuccess(false);
+    setIsParsing(false);
     onClose();
   };
 
@@ -255,7 +349,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* File upload */}
-          <div>
+          <div className="flex gap-3">
             <input
               ref={fileRef}
               type="file"
@@ -263,13 +357,35 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               onChange={handleFileUpload}
               className="hidden"
             />
+            <input
+              ref={pdfRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handlePdfUpload}
+              className="hidden"
+            />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full p-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-3"
+              className="flex-1 p-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
             >
-              <Upload className="w-5 h-5 text-slate-400" />
-              <span className="text-sm text-slate-600">Charger un fichier .json</span>
+              <Upload className="w-4 h-4 text-slate-400" />
+              <span className="text-sm text-slate-600">Charger un .json</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => pdfRef.current?.click()}
+              disabled={isParsing}
+              className="flex-1 p-3 border-2 border-dashed border-red-200 rounded-lg hover:border-red-400 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {isParsing ? (
+                <Loader2 className="w-4 h-4 text-red-400 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4 text-red-400" />
+              )}
+              <span className="text-sm text-red-600">
+                {isParsing ? 'Parsing PDF...' : 'Importer un PDF'}
+              </span>
             </button>
           </div>
 

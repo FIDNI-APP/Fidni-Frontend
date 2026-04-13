@@ -3,6 +3,7 @@
  * Import all utilities from a single location
  */
 
+export * from './contentHelpers';
 export * from './difficultyHelpers';
 export * from './dateHelpers';
 export * from './textHelpers';

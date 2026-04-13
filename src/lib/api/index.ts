@@ -231,15 +231,22 @@ export {
   type TaxonomyTimeStatsParams,
 } from './statisticsApi';
 
-// ============ STRUCTURED CONTENT API ============
+// ============ CONTENT ITEM API ============
 export {
+  contentItemAPI,
+  exerciseContentAPI,
+  examContentAPI,
+  lessonContentAPI,
+  progressAPI,
+  fileAPI,
+  type PaginatedResponse,
+  // backwards-compat aliases
   structuredAPI,
   structuredExerciseAPI,
   structuredExamAPI,
   structuredLessonAPI,
   structuredProgressAPI,
-  type PaginatedResponse,
-} from './structuredApi';
+} from './contentItemApi';
 
 // ============ LEGACY ALIASES (for backwards compatibility) ============
 // Remove these gradually as you update imports throughout the app

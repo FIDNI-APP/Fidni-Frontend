@@ -7,11 +7,11 @@ import {
   Pencil, Trash2, BookMarked, CheckCircle2, Circle, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { StructuredExercise, StructuredExam, StructuredLesson } from '@/types/structured';
+import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
 
-type StructuredContent = StructuredExercise | StructuredExam | StructuredLesson;
+type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
 const getContentTypeColors = (contentType: 'exercise' | 'exam' | 'lesson') => {
   switch (contentType) {
@@ -55,7 +55,7 @@ const getContentTypeColors = (contentType: 'exercise' | 'exam' | 'lesson') => {
 };
 
 interface ContentHeaderProps {
-  content: StructuredContent;
+  content: ContentItem;
   contentType: 'exercise' | 'exam' | 'lesson';
   isSaved: boolean;
   isSaving: boolean;

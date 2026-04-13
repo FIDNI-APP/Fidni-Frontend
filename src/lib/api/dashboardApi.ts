@@ -75,7 +75,22 @@ export async function getLearningPathProgress(): Promise<LearningPathProgress> {
 /**
  * Get recommended content (exercises, lessons, exams)
  */
+function normalizeList(items: any[]): any[] {
+  return items.map(item => {
+    if ('json_content' in item) {
+      const { json_content, ...rest } = item;
+      return { ...rest, structure: json_content };
+    }
+    return item;
+  });
+}
+
 export async function getRecommendedContent(): Promise<RecommendedContent> {
   const response = await api.get('/dashboard/recommended/');
-  return response.data;
+  const data = response.data;
+  return {
+    exercises: normalizeList(data.exercises || []),
+    lessons: normalizeList(data.lessons || []),
+    exams: normalizeList(data.exams || []),
+  };
 }

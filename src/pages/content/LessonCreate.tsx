@@ -9,9 +9,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Loader2, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 import { FlexibleLessonEditor, FlexibleLessonEditorState, FlexibleLessonStructure, SectionBlock } from '@/components/content/editor/FlexibleLessonEditor';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
-import { structuredLessonAPI, getClassLevels, getSubjects, getSubfields, getChapters, getTheorems } from '@/lib/api';
+import { lessonContentAPI, getClassLevels, getSubjects, getSubfields, getChapters, getTheorems } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { StructuredLesson } from '@/types/structured';
+import type { ContentLesson } from '@/types/content';
 import type { ClassLevelModel, SubjectModel, ChapterModel, Subfield, Theorem } from '@/types';
 
 // Template for prefilling lesson structure
@@ -290,7 +290,7 @@ export const LessonCreate: React.FC = () => {
   const loadLesson = async (id: string) => {
     try {
       setIsLoading(true);
-      const lesson: StructuredLesson = await structuredLessonAPI.get(id);
+      const lesson: ContentLesson = await lessonContentAPI.get(id);
 
       // Set editor data
       setEditorData({
@@ -374,10 +374,10 @@ export const LessonCreate: React.FC = () => {
 
       if (isEditMode && lessonId) {
         // Update existing lesson
-        lessonResponse = await structuredLessonAPI.update(lessonId, payload);
+        lessonResponse = await lessonContentAPI.update(lessonId, payload);
       } else {
         // Create new lesson
-        lessonResponse = await structuredLessonAPI.create(payload);
+        lessonResponse = await lessonContentAPI.create(payload);
       }
 
       // Navigate to lesson detail page

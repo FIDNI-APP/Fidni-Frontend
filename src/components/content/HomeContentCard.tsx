@@ -13,7 +13,7 @@ import {
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { Content, VoteValue, Difficulty } from '@/types';
-import type { StructuredExerciseListItem, StructuredExamListItem, StructuredLessonListItem } from '@/types/structured';
+import type { ExerciseListItem, ExamListItem, LessonListItem } from '@/types/content';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { ContentPreview } from '@/components/editor';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +29,7 @@ import {
   saveExam, unsaveExam
 } from '@/lib/api';
 
-type StructuredListItem = StructuredExerciseListItem | StructuredExamListItem | StructuredLessonListItem;
+type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
 interface HomeContentCardProps {
   content: Content | StructuredListItem;
@@ -59,17 +59,20 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
   }, [content]);
 
   const getContentType = (): 'exercise' | 'lesson' | 'exam' => {
-    if ('is_national_exam' in content) return 'exam';
-    if ('difficulty' in content && content.difficulty) return 'exercise';
+    const t = (content as any).type;
+    if (t === 'exam' || t === 'exercise' || t === 'lesson') return t;
+    // fallback heuristics
+    if ('is_national_exam' in content && (content as any).is_national_exam !== undefined && (content as any).difficulty !== undefined) return 'exam';
+    if ('difficulty' in content && (content as any).difficulty) return 'exercise';
     return 'lesson';
   };
 
   const getNavigationPath = () => {
     const contentType = getContentType();
     const basePaths = {
-      exercise: '/structured/exercises',
-      lesson: '/structured/lessons',
-      exam: '/structured/exams'
+      exercise: '/exercises',
+      lesson: '/lessons',
+      exam: '/exams'
     };
     return `${basePaths[contentType]}/${content.id}`;
   };
@@ -245,26 +248,23 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
               </span>
             </div>
 
-            {/* Bookmark button - Only show for old format with user_save */}
-            {!hasStructure && (
-              <button
-                onClick={handleSaveClick}
-                className={`
-                  flex-shrink-0 p-2 rounded-xl transition-all duration-200
-                  ${isSaved 
-                    ? 'bg-slate-900 text-white shadow-md' 
-                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
-                  }
-                `}
-                aria-label={isSaved ? "Retirer" : "Sauvegarder"}
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-                )}
-              </button>
-            )}
+            <button
+              onClick={handleSaveClick}
+              className={`
+                flex-shrink-0 p-2 rounded-xl transition-all duration-200
+                ${isSaved
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                }
+              `}
+              aria-label={isSaved ? "Retirer" : "Sauvegarder"}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+              )}
+            </button>
           </div>
 
           {/* Title */}
@@ -339,17 +339,16 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
           <div className="flex items-center justify-between">
             {/* Left: Stats */}
             <div className="flex items-center gap-3">
-              {/* Vote buttons - only for old format */}
-              {!hasStructure && 'vote_count' in content && (
+              {'vote_count' in content && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <VoteButtons
-                    initialVotes={content.vote_count}
+                    initialVotes={(content as any).vote_count}
                     onVote={(value) => {
-                      const contentType = getContentType();
-                      onVote(content.id.toString(), value, contentType);
+                      const ct = getContentType();
+                      onVote(content.id.toString(), value, ct);
                     }}
                     vertical={false}
-                    userVote={'user_vote' in content ? content.user_vote : 0}
+                    userVote={'user_vote' in content ? (content as any).user_vote : 0}
                     size="sm"
                   />
                 </div>

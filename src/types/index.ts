@@ -2,18 +2,11 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 export type SortOption = 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
 export type VoteValue = 1 | -1 | 0;
 export type CompleteValue = 'success' | 'review';
+export type ContentKind = 'exercise' | 'lesson' | 'exam';
 
-export interface ExamFilters {
-  classLevels: string[];
-  subjects: string[];
-  subfields: string[];
-  chapters: string[];
-  theorems: string[];
-  difficulties: Difficulty[];
-  isNationalExam: boolean | null;
-  dateRange: { start: string | null; end: string | null } | null;
-}
-
+// =====================
+// HIERARCHY
+// =====================
 
 export interface ClassLevelModel {
   id: string;
@@ -28,12 +21,11 @@ export interface SubjectModel {
   content_count?: number | null;
 }
 
-
-export interface Subfield{
-  id : string;
-  name : string;
-  subject : SubjectModel ;
-  class_level : ClassLevelModel[];
+export interface Subfield {
+  id: string;
+  name: string;
+  subject: SubjectModel;
+  class_level: ClassLevelModel[];
   content_count?: number | null;
 }
 
@@ -42,77 +34,25 @@ export interface ChapterModel {
   name: string;
   subject: SubjectModel;
   class_level: ClassLevelModel[];
-  subfield : Subfield[];
+  subfield: Subfield[];
   order: number;
   content_count?: number | null;
 }
-export interface Theorem{
+
+export interface Theorem {
   id: string;
   name: string;
   subject: SubjectModel;
   class_level: ClassLevelModel[];
-  chapter : ChapterModel[];
-  subfield : Subfield[];
+  chapter: ChapterModel[];
+  subfield: Subfield[];
   content_count?: number | null;
 }
 
-export interface Solution {
-  id: string;
-  content: Content & string;
-  author: User;
-  created_at: string;
-  updated_at: string;
-  upvotes_count: number;
-  downvotes_count: number;
-  user_vote: VoteValue;
-  vote_count: number;
-}
+// =====================
+// USER
+// =====================
 
-
-
-
-export interface Content {
-  id: number;
-  exercise_id?: number;
-  lesson_id?: number;
-  exam_id?: number;
-  title: string;
-  content: string;
-  class_levels: ClassLevelModel[];
-  subject: SubjectModel;
-  chapters: ChapterModel[];
-  difficulty: Difficulty;
-  author: User;
-  created_at: string;
-  updated_at: string;
-  user_vote: VoteValue;
-  vote_count: number;
-  solution?:  Solution;
-  comments: Comment[];
-  view_count: number;
-  theorems : Theorem[];
-  subfields : Subfield[];
-  user_save: boolean;
-  user_complete: CompleteValue;
-  user_timespent?: number;
-}
-
-// src/types/index.ts
-
-// Update the User interface
-// src/types/index.ts - Update User interface
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  joinedAt: string;
-  profile: UserProfile;
-  is_self?: boolean;
-  isAuthenticated: boolean;
-  is_superuser: boolean; // Add this field
-}
-
-// Create or update the UserProfile interface
 export interface SubjectGrade {
   id: string;
   subject: string;
@@ -120,7 +60,6 @@ export interface SubjectGrade {
   max_grade: number;
 }
 
-// Updated UserProfile interface with subject_grades
 export interface UserProfile {
   bio: string;
   avatar: string;
@@ -128,24 +67,15 @@ export interface UserProfile {
   location: string;
   last_activity_date: string;
   joined_at: string;
-  class_level: {
-    id: string;
-    name: string;
-  } | null;
+  class_level: { id: string; name: string } | null;
   user_type: 'student' | 'teacher';
   onboarding_completed: boolean;
-  
-  // Subject grades for tracking academic performance
   subject_grades: SubjectGrade[];
-  
-  // Settings
   display_email: boolean;
   display_stats: boolean;
   email_notifications: boolean;
   comment_notifications: boolean;
   solution_notifications: boolean;
-  
-  // Stats (may be conditionally available)
   contribution_stats?: {
     exercises: number;
     solutions: number;
@@ -163,31 +93,27 @@ export interface UserProfile {
   };
 }
 
-// Define GradePrediction type for future ML implementations
-export interface GradePrediction {
-  subjectId: string;
-  subjectName: string;
-  currentAverage: number;
-  predictedGrade: number;
-  confidence: number;
-  trend: 'up' | 'down' | 'stable';
-  recommendedExercises?: string[];
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  joinedAt: string;
+  profile: UserProfile;
+  is_self?: boolean;
+  isAuthenticated: boolean;
+  is_superuser: boolean;
 }
 
-// Add types for user history
-export interface ViewHistoryItem {
-  content_type: string;
-  content: Content;
-  viewed_at: string;
-  time_spent?: number;
-}
+// =====================
+// CONTENT
+// =====================
 
 export interface Comment {
   id: string;
   content: string;
   author: User;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   user_vote: VoteValue;
   parent_id?: string;
   replies?: Comment[];
@@ -200,94 +126,88 @@ export interface Comment {
   }>;
 }
 
-export interface UserProfile {
-  bio: string;
-  avatar: string;
-  favorite_subjects: string[];
-  location: string;
-  last_activity_at: string;
-  joined_at: string;
-  
-  // New fields
-  user_type: 'student' | 'teacher';
-  class_level_id: string; 
-  interested_subjects: string[];
-  subject_marks: Record<string, { highest: number; lowest: number }>;
-  
-  // Settings
-  display_email: boolean;
-  display_stats: boolean;
-  email_notifications: boolean;
-  comment_notifications: boolean;
-  solution_notifications: boolean;
-  
-  // Stats (may be conditionally available)
-  contribution_stats?: {
-    exercises: number;
-    solutions: number;
-    comments: number;
-    total_contributions: number;
-    upvotes_received: number;
-    view_count: number;
-  };
-  learning_stats?: {
-    exercises_completed: number;
-    exercises_in_review: number;
-    exercises_saved: number;
-    subjects_studied: string[];
-    total_viewed: number;
-  };
-}
-
-
-export interface Lesson {
+export interface Solution {
   id: string;
-  lesson_id?: number;
-  title: string;
   content: string;
-  class_levels: ClassLevelModel[];
-  subject: SubjectModel;
-  chapters: ChapterModel[];
   author: User;
   created_at: string;
   updated_at: string;
+  upvotes_count?: number;
+  downvotes_count?: number;
   user_vote: VoteValue;
   vote_count: number;
-  comments: Comment[];
-  view_count: number;
-  theorems : Theorem[];
-  subfields : Subfield[];
 }
 
-// Types
-export interface Notebook {
-  id: string;
+/**
+ * Unified Content type — matches backend ContentSerializer / ContentListSerializer output
+ * after normalize() maps json_content → structure.
+ */
+export interface Content {
+  id: number;
+  display_id?: number;
+  type: ContentKind;
   title: string;
-  subject: {
-    id: string;
-    name: string;
-  };
-  class_level: {
-    id: string;
-    name: string;
-  };
-  sections: Section[];
+  // Legacy text content (old items)
+  content?: string;
+  // Structured JSON content (new items, after normalize())
+  structure?: any;
+  difficulty?: Difficulty;
+  class_levels: ClassLevelModel[];
+  subject: SubjectModel;
+  chapters: ChapterModel[];
+  theorems?: Theorem[];
+  subfields?: Subfield[];
+  author: User;
+  created_at: string;
+  updated_at?: string;
+  view_count: number;
+  vote_count: number;
+  user_vote?: VoteValue;
+  solution?: Solution;
+  comments?: Comment[];
+  comment_count?: number;
+  user_save?: boolean;
+  user_complete?: CompleteValue | null;
+  user_timespent?: number;
+  total_points?: number;
+  item_count?: number;
+  section_count?: number;
+  // Exam-specific
+  is_national_exam?: boolean;
+  national_year?: number | null;
+  duration_minutes?: number | null;
 }
+
+/** @deprecated Use Content instead */
+export type Lesson = Content;
+/** @deprecated Use Content instead */
+export type Exam = Content;
+
+// =====================
+// FILTER TYPES
+// =====================
+
+export interface ExamFilters {
+  classLevels: string[];
+  subjects: string[];
+  subfields: string[];
+  chapters: string[];
+  theorems: string[];
+  difficulties: Difficulty[];
+  isNationalExam: boolean | null;
+  dateRange: { start: string | null; end: string | null } | null;
+}
+
+// =====================
+// NOTEBOOK
+// =====================
 
 export interface Section {
   id: string;
-  chapter: {
-    id: string;
-    name: string;
-  };
+  chapter: { id: string; name: string };
   lesson_entries: {
     id: string;
-    lesson: {
-      id: string;
-      title: string;
-      content: string;
-      structure?: any;
-    };
+    lesson: { id: string; title: string; content?: string; structure?: any };
     page_order: number;
     content_start: number;
     content_end: number | null;
@@ -298,17 +218,22 @@ export interface Section {
   order: number;
 }
 
+export interface Notebook {
+  id: string;
+  title: string;
+  subject: { id: string; name: string };
+  class_level: { id: string; name: string };
+  sections: Section[];
+}
 
-// Single lesson entry in a notebook chapter
 export interface NotebookLessonEntry {
   id: string;
-  lesson: Lesson;
+  lesson: Content;
   added_at: string;
   notes?: string;
   highlighted: boolean;
 }
 
-// Chapter in a notebook
 export interface NotebookChapter {
   id: string;
   chapter: ChapterModel;
@@ -318,44 +243,15 @@ export interface NotebookChapter {
   updated_at: string;
 }
 
-// Response type for getting all notebooks
 export interface NotebookResponse {
   notebooks: Notebook[];
   count: number;
 }
 
+// =====================
+// LEARNING PATH
+// =====================
 
-// src/types/exam.ts
-export interface Exam {
-  id: string;
-  exam_id?: number;
-  title: string;
-  content: string;
-  difficulty: Difficulty;
-  chapters: ChapterModel[];
-  class_levels: ClassLevelModel[];
-  author: User;
-  created_at: string;
-  updated_at: string;
-  view_count: number;
-  subject: SubjectModel;
-  theorems: Theorem[];
-  subfields: Subfield[];
-  comments: Comment[];
-  vote_count: number;
-  user_vote: VoteValue;
-  user_save?: boolean;
-  user_complete?: 'success' | 'review' | null;
-  user_timespent?: number;
-  solution?: Solution;
-
-  // Champs spécifiques aux examens
-  is_national_exam: boolean;
-  national_exam_date: string | null;
-}
-
-
-// Main Learning Path structure
 export interface LearningPath {
   id: string;
   subject: SubjectModel;
@@ -372,7 +268,6 @@ export interface LearningPath {
   total_videos?: number;
 }
 
-// Path Chapter (lessons within a learning path)
 export interface PathChapter {
   id: string;
   learning_path: LearningPath;
@@ -388,7 +283,8 @@ export interface PathChapter {
   updated_at: string;
 }
 
-// Video content within chapters
+export type VideoType = 'lesson' | 'introduction' | 'explanation' | 'demo' | 'tips' | 'summary';
+
 export interface Video {
   id: string;
   path_chapter: string;
@@ -405,9 +301,6 @@ export interface Video {
   updated_at: string;
 }
 
-export type VideoType = 'lesson' | 'introduction' | 'explanation' | 'demo' | 'tips' | 'summary';
-
-// Quiz structures
 export interface ChapterQuiz {
   id: string;
   path_chapter: string;
@@ -424,6 +317,8 @@ export interface ChapterQuiz {
   updated_at: string;
 }
 
+export type QuestionType = 'multiple_choice' | 'true_false' | 'multiple_select';
+
 export interface QuizQuestion {
   id: string;
   quiz: string;
@@ -438,9 +333,6 @@ export interface QuizQuestion {
   order: number;
 }
 
-export type QuestionType = 'multiple_choice' | 'true_false' | 'multiple_select';
-
-// User Progress tracking
 export interface UserLearningPathProgress {
   started_at: string;
   progress_percentage: number;
@@ -465,7 +357,6 @@ export interface UserVideoProgress {
   notes?: string;
 }
 
-// Additional types
 export interface VideoResource {
   id: string;
   title: string;
@@ -482,7 +373,6 @@ export interface QuizAttemptSummary {
   time_spent_seconds: number;
 }
 
-// Add these type definitions if they don't exist
 export type LearningPathSortOption = 'newest' | 'popular' | 'duration' | 'difficulty';
 export type ProgressFilter = 'all' | 'not_started' | 'in_progress' | 'completed';
 
@@ -502,7 +392,6 @@ export interface QuizResult {
   passing_score: number;
 }
 
-// Also add these interfaces if they're missing:
 export interface QuizSubmission {
   attempt_id: string;
   answers: {
@@ -519,5 +408,23 @@ export interface StartQuizResponse {
   total_questions: number;
 }
 
+export interface ViewHistoryItem {
+  content_type: string;
+  content: Content;
+  viewed_at: string;
+  time_spent?: number;
+}
+
+export interface GradePrediction {
+  subjectId: string;
+  subjectName: string;
+  currentAverage: number;
+  predictedGrade: number;
+  confidence: number;
+  trend: 'up' | 'down' | 'stable';
+  recommendedExercises?: string[];
+}
+
 export interface ResourceType {
-  id: string;}
+  id: string;
+}
