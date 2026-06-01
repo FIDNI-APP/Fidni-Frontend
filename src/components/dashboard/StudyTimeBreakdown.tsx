@@ -9,167 +9,184 @@ interface StudyTimeBreakdownProps {
   insights?: LearningInsights;
 }
 
+interface TypeDef {
+  key: 'exercises' | 'lessons' | 'exams';
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  from: string;
+  to: string;
+  light: string;
+  text: string;
+}
+
+const TYPES: TypeDef[] = [
+  { key: 'exercises', label: 'Exercices', icon: BookOpen,   from: '#4f46e5', to: '#818cf8', light: '#eef2ff', text: '#4338ca' },
+  { key: 'lessons',   label: 'Leçons',    icon: LessonIcon, from: '#7c3aed', to: '#a78bfa', light: '#f5f3ff', text: '#5b21b6' },
+  { key: 'exams',     label: 'Examens',   icon: APlusIcon,  from: '#0891b2', to: '#22d3ee', light: '#ecfeff', text: '#0e7490' },
+];
+
 export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBreakdown, insights }) => {
-  const contentTypes = [
-    {
-      key: 'exercises',
-      label: 'Exercices',
-      icon: BookOpen,
-      color: 'blue',
-      gradient: 'from-blue-700 to-blue-800',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700',
-      borderColor: 'border-blue-200',
-      data: timeBreakdown.exercises
-    },
-    {
-      key: 'lessons',
-      label: 'Leçons',
-      icon: LessonIcon,
-      color: 'violet',
-      gradient: 'from-violet-500 to-violet-600',
-      bgColor: 'bg-violet-50',
-      textColor: 'text-violet-700',
-      borderColor: 'border-violet-200',
-      data: timeBreakdown.lessons
-    },
-    {
-      key: 'exams',
-      label: 'Examens',
-      icon: APlusIcon,
-      color: 'purple',
-      gradient: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-700',
-      borderColor: 'border-purple-200',
-      data: timeBreakdown.exams
-    }
-  ];
-
-  const getInsightMessage = () => {
+  const insightData = (() => {
     if (!insights) return null;
-
     if (insights.balanced_study) {
       return {
-        type: 'success',
         icon: CheckCircle,
-        message: 'Excellent ! Votre temps d\'étude est bien équilibré entre les différents types de contenu.',
-        color: 'text-green-700',
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200'
+        message: "Excellent ! Ton temps d'étude est bien équilibré entre les différents types de contenu.",
+        bg: '#ecfdf5', border: '#bbf7d0', color: '#047857',
       };
     }
-
     if (insights.needs_more_lessons) {
       return {
-        type: 'warning',
         icon: AlertCircle,
-        message: 'Conseil : Passez plus de temps sur les leçons. Les leçons sont essentielles pour construire une base solide !',
-        color: 'text-amber-700',
-        bgColor: 'bg-amber-50',
-        borderColor: 'border-amber-200'
+        message: 'Conseil : passe plus de temps sur les leçons. Elles sont essentielles pour construire une base solide.',
+        bg: '#fffbeb', border: '#fde68a', color: '#a16207',
       };
     }
-
-    const mostStudied = contentTypes.find(ct => ct.key === insights.most_studied_type);
-    const leastStudied = contentTypes.find(ct => ct.key === insights.least_studied_type);
-
+    const most = TYPES.find(t => t.key === insights.most_studied_type);
+    const least = TYPES.find(t => t.key === insights.least_studied_type);
     return {
-      type: 'info',
       icon: TrendingUp,
-      message: `Vous passez le plus de temps sur les ${mostStudied?.label.toLowerCase()}. Pensez aussi à travailler les ${leastStudied?.label.toLowerCase()} !`,
-      color: 'text-blue-700',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
+      message: `Tu passes le plus de temps sur les ${most?.label.toLowerCase()}. Pense aussi aux ${least?.label.toLowerCase()} !`,
+      bg: '#eef2ff', border: '#c7d2fe', color: '#4338ca',
     };
-  };
-
-  const insightData = getInsightMessage();
+  })();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Clock className="w-5 h-5 text-gray-700" />
-        <h3 className="text-lg font-semibold text-gray-800">Temps d'étude par type de contenu</h3>
-        <span className="text-sm text-gray-500 ml-auto">Cette semaine</span>
+        <div
+          className="inline-flex items-center justify-center"
+          style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+          }}
+        >
+          <Clock className="w-3.5 h-3.5" />
+        </div>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>
+          Temps d'étude par type
+        </h3>
+        <span
+          style={{
+            marginLeft: 'auto', fontSize: 10, color: '#9391b8',
+            fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase',
+          }}
+        >
+          Cette semaine
+        </span>
       </div>
 
-      {/* Content Type Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {contentTypes.map((type) => {
-          const Icon = type.icon;
-          const hasTime = type.data.total_seconds > 0;
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {TYPES.map(t => {
+          const data = timeBreakdown[t.key];
+          const hasTime = data.total_seconds > 0;
+          const isMost = insights?.most_studied_type === t.key && hasTime;
+          const Icon = t.icon;
 
           return (
             <div
-              key={type.key}
-              className={`relative overflow-hidden rounded-xl border-2 ${type.borderColor} ${type.bgColor} p-4 transition-all duration-300 hover:shadow-lg ${
-                hasTime ? 'hover:scale-105' : ''
-              }`}
+              key={t.key}
+              className="relative"
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                border: '1px solid #ede9fe',
+                padding: 16,
+                transition: 'all .22s',
+              }}
             >
-              {/* Icon and Label */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg bg-gradient-to-br ${type.gradient} text-white`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className={`font-semibold ${type.textColor}`}>{type.label}</span>
-                </div>
-              </div>
-
-              {/* Time Display */}
-              <div className="space-y-2">
-                <div>
-                  <div className="text-3xl font-bold text-gray-800">
-                    {type.data.formatted || '0s'}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {type.data.percentage.toFixed(1)}% du temps total
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-full bg-gradient-to-r ${type.gradient} transition-all duration-500`}
-                    style={{ width: `${type.data.percentage}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Highlight most studied */}
-              {insights && insights.most_studied_type === type.key && hasTime && (
-                <div className="absolute top-2 right-2">
-                  <div className={`px-2 py-1 rounded-full text-xs font-bold ${type.textColor} bg-white/80 border ${type.borderColor}`}>
-                    Le plus étudié
-                  </div>
-                </div>
+              {isMost && (
+                <span
+                  style={{
+                    position: 'absolute', top: 10, right: 10,
+                    fontSize: 9, fontWeight: 700, letterSpacing: '.04em',
+                    background: t.light, color: t.text,
+                    padding: '3px 8px', borderRadius: 99,
+                  }}
+                >
+                  LE PLUS ÉTUDIÉ
+                </span>
               )}
+
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  className="inline-flex items-center justify-center"
+                  style={{
+                    width: 30, height: 30, borderRadius: 9,
+                    background: `linear-gradient(135deg,${t.from},${t.to})`, color: '#fff',
+                  }}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>{t.label}</span>
+              </div>
+
+              <div
+                style={{
+                  fontSize: 26, fontWeight: 700, fontFamily: 'DM Mono',
+                  color: '#1e1b4b', letterSpacing: '.02em',
+                }}
+              >
+                {data.formatted || '0s'}
+              </div>
+              <div style={{ fontSize: 11, color: '#7068a8', marginTop: 2 }}>
+                {data.percentage.toFixed(1)}% du temps total
+              </div>
+
+              {/* Progress bar */}
+              <div
+                style={{
+                  height: 6, borderRadius: 99, background: '#f0effe',
+                  marginTop: 10, overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${data.percentage}%`,
+                    background: `linear-gradient(90deg,${t.from},${t.to})`,
+                    transition: 'width .5s ease',
+                  }}
+                />
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Insight Message */}
+      {/* Insight */}
       {insightData && (
-        <div className={`rounded-lg border-2 ${insightData.borderColor} ${insightData.bgColor} p-4`}>
-          <div className="flex items-start gap-3">
-            <insightData.icon className={`w-5 h-5 ${insightData.color} flex-shrink-0 mt-0.5`} />
-            <p className={`text-sm font-medium ${insightData.color}`}>
-              {insightData.message}
-            </p>
-          </div>
+        <div
+          className="flex items-start gap-3"
+          style={{
+            background: insightData.bg,
+            border: `1px solid ${insightData.border}`,
+            borderRadius: 12,
+            padding: '12px 14px',
+          }}
+        >
+          <insightData.icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: insightData.color }} />
+          <p style={{ fontSize: 12, fontWeight: 500, color: insightData.color, lineHeight: 1.5 }}>
+            {insightData.message}
+          </p>
         </div>
       )}
 
-      {/* No Data State */}
+      {/* Empty state */}
       {timeBreakdown.total_seconds === 0 && (
-        <div className="text-center py-8 px-4 bg-gray-50 rounded-xl border-2 border-gray-200 border-dashed">
-          <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-medium mb-1">Aucune donnée de temps d'étude</p>
-          <p className="text-sm text-gray-500">
-            Commencez à étudier des exercices, leçons ou examens pour voir vos statistiques !
+        <div
+          className="text-center"
+          style={{
+            background: '#f9f8ff', border: '1.5px dashed #ede9fe',
+            borderRadius: 14, padding: 24,
+          }}
+        >
+          <Clock className="w-10 h-10 mx-auto mb-2" style={{ color: '#b0adcd' }} />
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#4b4880' }}>Aucune donnée d'étude pour le moment</p>
+          <p style={{ fontSize: 11, color: '#9391b8', marginTop: 4 }}>
+            Commence un exercice, une leçon ou un examen pour voir tes statistiques.
           </p>
         </div>
       )}

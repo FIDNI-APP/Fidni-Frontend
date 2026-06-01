@@ -1,503 +1,436 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { User, LogOut, BookOpen, Home, Settings, BookmarkIcon, ChevronDown, Menu, X, Route, Shield, List } from 'lucide-react';
+import {
+  User, LogOut, BookOpen, Home, Settings, Bookmark as BookmarkIcon,
+  Menu, X, Route, Shield, List, Search as SearchIcon, ChevronDown,
+  GraduationCap, Trophy,
+} from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { AuthButton } from '@/components/ui/AuthButton';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { NavDropdown } from './NavbarDropdown';
-import { getClassLevels} from '@/lib/api';
-import { SearchAutocomplete } from '@/components/search/SearchAutocomplete';
+import Logo2 from '@/assets/logo2.svg';
+import Logo3 from '@/assets/logo3.svg';
 import '@/lib/styles.css';
-import Logo2 from "@/assets/logo2.svg";
-import Logo3 from "@/assets/logo3.svg";
+
+interface NavTab {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  dropdown?: 'exercises' | 'lessons' | 'exams';
+  matchPrefix?: string[];
+}
+
+const TABS: NavTab[] = [
+  { to: '/',              label: 'Accueil',   icon: Home },
+  { to: '/exercises',     label: 'Exercices', icon: BookOpen,   dropdown: 'exercises', matchPrefix: ['/exercises', '/exercise', '/new', '/edit'] },
+  { to: '/lessons',       label: 'Leçons',    icon: LessonIcon, dropdown: 'lessons',   matchPrefix: ['/lessons', '/lesson'] },
+  { to: '/exams',         label: 'Examens',   icon: APlusIcon,  dropdown: 'exams',     matchPrefix: ['/exams', '/exam'] },
+  { to: '/learning-path', label: 'Parcours',  icon: Route,      matchPrefix: ['/learning-path'] },
+  { to: '/classrooms',    label: 'Classes',   icon: GraduationCap, matchPrefix: ['/classrooms'] },
+  { to: '/concours',      label: 'Concours',  icon: Trophy,     matchPrefix: ['/concours'] },
+];
+
+const FidniLogo = () => {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ display: 'flex', alignItems: 'center', transition: 'transform .25s' }}
+    >
+      <img
+        src={hover ? Logo2 : Logo3}
+        alt="Fidni"
+        style={{ height: 44, width: 'auto', objectFit: 'contain', transform: hover ? 'scale(1.04)' : 'none', transition: 'transform .25s' }}
+      />
+    </div>
+  );
+};
 
 export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
-  const [isHovered, setIsHovered] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchExpanded, setSearchExpanded] = useState(false);
-  // Add new state for dropdowns
+  const { openModal, setInitialTab } = useAuthModal();
+
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<'exercises' | 'lessons' | 'exams' | null>(null);
-  
-  // Fonction pour déterminer le type de contenu basé sur l'URL
-  const getContentType = () => {
-    const path = location.pathname;
-    // Check for lesson routes (list, detail, edit)
-    if (path.includes('/lessons') || path.includes('/lesson') || path.includes('/edit-lesson') || path.includes('/new-lesson')) {
-      return 'lesson';
-    }
-    // Check for exam routes (list, detail, edit)
-    if (path.includes('/exams') || path.includes('/exam') || path.includes('/edit-exam') || path.includes('/new-exam')) {
-      return 'exam';
-    }
-    // Check for exercise routes, /new route, and /edit route (defaults to exercise)
-    if (path.includes('/exercises') || path.includes('/exercise') || path === '/new' || path.startsWith('/edit/')) {
-      return 'exercise';
-    }
-    // Default to exercise
-    return 'exercise';
-  };
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // Adjust body padding when navbar height changes
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+    const update = () => {
+      const nav = document.querySelector('nav.fidni-navbar') as HTMLElement | null;
+      if (nav) document.body.style.paddingTop = `${nav.offsetHeight}px`;
     };
+    update();
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      document.body.style.paddingTop = '';
+    };
+  }, [mobileOpen]);
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-  const updateBodyPadding = () => {
-    const navbar = document.querySelector('nav');
-    if (navbar) {
-      document.body.style.paddingTop = `${navbar.offsetHeight}px`;
-    }
-  };
-
-  // Initial update
-  updateBodyPadding();
-  
-  // Mettre à jour quand la navbar change (menu mobile, scroll, etc.)
-  const observer = new MutationObserver(updateBodyPadding);
-  const navbar = document.querySelector('nav');
-  if (navbar) {
-    observer.observe(navbar, { 
-      attributes: true, 
-      attributeFilter: ['class'],
-      childList: true,
-      subtree: true 
-    });
-  }
-
-  // Nettoyage
-  return () => {
-    observer.disconnect();
-    document.body.style.paddingTop = '';
-  };
-}, []);
-
-  // Close dropdowns when location changes
+  // Close dropdowns on route change
   useEffect(() => {
     setActiveDropdown(null);
+    setUserMenuOpen(false);
+    setMobileOpen(false);
   }, [location.pathname]);
 
+  // Close user menu on outside click
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [userMenuOpen]);
+
+  const isTabActive = (tab: NavTab) => {
+    if (tab.to === '/') return location.pathname === '/';
+    return tab.matchPrefix?.some(p => location.pathname === p || location.pathname.startsWith(p + '/')) ?? false;
+  };
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+    try { await logout(); navigate('/'); }
+    catch (err) { console.error('Logout failed:', err); }
   };
 
-  interface PathCheck {
-    (path: string): boolean;
-  }
-
-  const isActive: PathCheck = (path: string): boolean => {
-    return location.pathname === path;
-  };
-  
-  // Add this helper function
-  const toggleDropdown = (dropdown: 'exercises' | 'lessons' | 'exams') => {
-    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
-  };
-
-  const closeDropdowns = () => {
-    setActiveDropdown(null);
-  };
-  
-  // Handler for when auth modal is used from mobile menu
-  const handleMobileMenuClose = () => {
-    setMobileMenuOpen(false); // Close mobile menu if open
-    setActiveDropdown(null); // Also close any active dropdowns
-  };
-
-  // Desktop Nav Link Component
-  interface NavLinkProps {
-    to: string;
-    isActive: boolean;
-    children: React.ReactNode;
-    hasDropdown?: boolean;
-    dropdown?: 'exercises' | 'lessons' | 'exams';
-  }
-
-  const NavLink = ({ to, isActive, children, hasDropdown, dropdown }: NavLinkProps) => (
-    <div className="relative">
-      {hasDropdown ? (
-        <button
-          onClick={() => toggleDropdown(dropdown!)}
-          className={`flex items-center text-sm font-medium transition-all duration-200 px-1.5 xl:px-4 py-3 relative group ${
-            isActive || activeDropdown === dropdown
-              ? 'text-white'
-              : 'text-gray-300 hover:text-white'
-          }`}
-        >
-          <div className="flex items-center">
-            {children}
-          </div>
-          <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === dropdown ? 'rotate-180' : ''}`} />
-        </button>
-      ) : (
-        <Link
-          to={to}
-          className={`flex items-center text-sm font-medium transition-all duration-200 px-1.5 xl:px-4 py-3 relative group ${
-            isActive
-              ? 'text-white'
-              : 'text-gray-300 hover:text-white'
-          }`}
-          onClick={closeDropdowns}
-        >
-          <div className="flex items-center">
-            {children}
-          </div>
-        </Link>
-      )}
-
-      {hasDropdown && activeDropdown === dropdown && (
-        <NavDropdown type={dropdown!} onClose={closeDropdowns} />
-      )}
-    </div>
-  );
-
-  // Mobile Nav Link Component with Dropdown Support
-  const NavLinkMobile = ({ to, isActive, children, hasDropdown, dropdown }: NavLinkProps) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [mobileSubItems, setMobileSubItems] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    
-    useEffect(() => {
-      // If dropdown is expanded, fetch class levels
-      if (hasDropdown && isExpanded && mobileSubItems.length === 0) {
-        const fetchClassLevels = async () => {
-          try {
-            setIsLoading(true);
-            const data = await getClassLevels();
-            setMobileSubItems(data);
-          } catch (error) {
-            console.error('Failed to load class levels:', error);
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        
-        fetchClassLevels();
-      }
-    }, [isExpanded, hasDropdown, mobileSubItems.length]);
-    
-    if (hasDropdown) {
-      return (
-        <div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className={`flex items-center w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-              isActive
-                ? 'text-white bg-[#2a2a2a]'
-                : 'text-gray-300 hover:text-white hover:bg-[#2a2a2a]'
-            }`}
-          >
-            {children}
-            <ChevronDown className={`w-4 h-4 ml-auto transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isExpanded && (
-            <div className="ml-6 mt-2 space-y-1 border-l-2 border-gray-700 pl-3">
-              {isLoading ? (
-                <div className="py-3 px-4 flex items-center text-gray-400">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
-                  Chargement...
-                </div>
-              ) : (
-                <>
-                  <Link
-                    to={`/${dropdown}`}
-                    className="block w-full px-4 py-2.5 text-sm rounded-lg hover:bg-[#2a2a2a] transition-all duration-150 font-medium text-white"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Tous les {dropdown === 'exercises' ? 'exercices' : dropdown === 'lessons' ? 'leçons' : 'examens'}
-                  </Link>
-
-                  {mobileSubItems.map((item) => (
-                    <Link
-                      key={item.id}
-                      to={`/${dropdown}?classLevels=${item.id}`}
-                      className="block w-full px-4 py-2.5 text-sm rounded-lg hover:bg-[#2a2a2a] transition-all duration-150 text-gray-300"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <Link
-        to={to}
-        className={`flex items-center w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-          isActive
-            ? 'text-white bg-[#2a2a2a]'
-            : 'text-gray-300 hover:text-white hover:bg-[#2a2a2a]'
-        }`}
-        onClick={() => setMobileMenuOpen(false)}
-      >
-        {children}
-      </Link>
-    );
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchValue.trim();
+    if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1a1a1a] border-b border-gray-800 overflow-visible">
-
-      <div className="max-w-7xl mx-auto px-5 md:px-10 lg:px-16">
-        <div className="flex items-center justify-between gap-2 md:gap-4">
-          {/* Logo - far left */}
-          <Link to="/" className="flex-shrink-0 group">
-            <div
-              className="transition-all duration-300 transform group-hover:scale-105"
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              <img
-                src={isHovered ? Logo2 : Logo3}
-                alt="Fidni Logo"
-                className="h-16 md:h-18 w-auto object-contain"
-              />
-            </div>
+    <nav
+      className="fidni-navbar fixed top-0 left-0 right-0 z-50"
+      style={{
+        background: 'rgba(255,255,255,.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid #ede9fe',
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="flex items-center gap-4 h-[60px]">
+          {/* Logo */}
+          <Link to="/" className="flex-shrink-0">
+            <FidniLogo />
           </Link>
-          {/* Desktop navigation */}
-          <div className={`hidden md:flex items-center space-x-0.5 xl:space-x-2 transition-all duration-300 ${
-            searchExpanded ? 'opacity-0 pointer-events-none w-0 overflow-hidden' : 'opacity-100'
-          }`}>
-              <NavLink to="/" isActive={isActive('/')}>
-                <Home className="w-4 h-4 mr-1 xl:mr-2" />
-                <span className="hidden xl:inline">Accueil</span>
-              </NavLink>
 
-              <NavLink
-                to="/exercises"
-                isActive={isActive('/exercises')}
-                hasDropdown={true}
-                dropdown="exercises"
-              >
-                <BookOpen className="w-4 h-4 mr-1 xl:mr-2" />
-                Exercices
-              </NavLink>
+          {/* Desktop nav tabs (pills) */}
+          <div className="hidden md:flex items-center gap-1 ml-2">
+            {TABS.map((tab) => {
+              const active = isTabActive(tab);
+              const Icon = tab.icon;
+              return (
+                <div key={tab.to} className="relative">
+                  <button
+                    onClick={() => {
+                      if (tab.dropdown) {
+                        setActiveDropdown(activeDropdown === tab.dropdown ? null : tab.dropdown);
+                      } else {
+                        navigate(tab.to);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 99,
+                      border: 'none',
+                      background: active ? '#4f46e5' : 'transparent',
+                      color: active ? '#fff' : '#7068a8',
+                      fontSize: 13,
+                      fontWeight: active ? 600 : 500,
+                      fontFamily: 'DM Sans',
+                      cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      transition: 'all .18s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        (e.currentTarget as HTMLButtonElement).style.background = '#f0effe';
+                        (e.currentTarget as HTMLButtonElement).style.color = '#4f46e5';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                        (e.currentTarget as HTMLButtonElement).style.color = '#7068a8';
+                      }
+                    }}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                    {tab.dropdown && <ChevronDown className={`w-3 h-3 transition-transform ${activeDropdown === tab.dropdown ? 'rotate-180' : ''}`} />}
+                  </button>
 
-              <NavLink
-                to="/lessons"
-                isActive={isActive('/lessons')}
-                hasDropdown={true}
-                dropdown="lessons"
-              >
-                <LessonIcon className="w-4 h-4 mr-1 xl:mr-2" />
-                Leçons
-              </NavLink>
+                  {tab.dropdown && activeDropdown === tab.dropdown && (
+                    <NavDropdown type={tab.dropdown} onClose={() => setActiveDropdown(null)} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-              <NavLink
-                to="/exams"
-                isActive={isActive('/exams')}
-                hasDropdown={true}
-                dropdown="exams"
-              >
-                <APlusIcon className="w-4 h-4 mr-1 xl:mr-2" />
-                Examens
-              </NavLink>
-
-              <NavLink to="/learning-path" isActive={isActive('/learning-path')}>
-                <Route className="w-4 h-4 mr-1 xl:mr-2" />
-                <span className="hidden xl:inline">Parcours</span>
-              </NavLink>
-
-            </div>
-
-          {/* Search bar - desktop */}
-          <div
-            className={`hidden md:block relative z-50 transition-all duration-300 ${
-              searchExpanded ? 'flex-1 mx-2' : 'w-full max-w-[180px] xl:max-w-sm mx-2 xl:mx-4'
-            }`}
+          {/* Search bar (desktop) */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="hidden lg:flex items-center flex-1 max-w-sm ml-auto"
+            style={{
+              background: '#f5f4ff',
+              border: '1.5px solid #ede9fe',
+              borderRadius: 10,
+              padding: '6px 12px',
+              gap: 8,
+            }}
           >
-            <div
-              onFocus={() => setSearchExpanded(true)}
-              onBlur={(e) => {
-                // Only collapse if focus is leaving the container entirely
-                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                  setSearchExpanded(false);
-                }
+            <SearchIcon className="w-4 h-4" style={{ color: '#9391b8' }} />
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Rechercher…"
+              style={{
+                flex: 1, border: 'none', outline: 'none',
+                background: 'transparent', fontSize: 13, fontFamily: 'DM Sans',
+                color: '#1e1b4b',
               }}
-            >
-              <SearchAutocomplete
-                placeholder="Rechercher un exercice de maths, physique..."
-                type={getContentType()}
-                inputClassName="w-full px-4 py-2 pr-20 rounded-lg focus:outline-none transition-all duration-200 bg-[#2a2a2a] text-white border border-gray-700 focus:border-gray-600 placeholder-gray-500"
-              />
-            </div>
+            />
+          </form>
+
+          {/* Spacer when search hidden */}
+          <div className="flex-1 lg:hidden" />
+
+          {/* Auth area */}
+          <div className="hidden md:flex items-center gap-2">
+            {isAuthenticated && user ? (
+              <div ref={userMenuRef} className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(v => !v)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '4px 10px 4px 4px',
+                    borderRadius: 99,
+                    border: '1.5px solid #ede9fe',
+                    background: userMenuOpen ? '#f0effe' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'all .15s',
+                  }}
+                >
+                  <img
+                    src={user.profile?.avatar || '/avatar-placeholder.jpg'}
+                    alt=""
+                    style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1e1b4b' }}>{user.username}</span>
+                  <ChevronDown className="w-3 h-3" style={{ color: '#7068a8' }} />
+                </button>
+
+                {userMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2"
+                    style={{
+                      width: 240,
+                      background: '#fff',
+                      borderRadius: 14,
+                      boxShadow: '0 14px 40px rgba(90,70,200,.18)',
+                      border: '1px solid #ede9fe',
+                      padding: 6,
+                      animation: 'fadeUp .2s ease',
+                    }}
+                  >
+                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #f0effe', marginBottom: 4 }}>
+                      <div style={{ fontSize: 10, color: '#9391b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Connecté</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1e1b4b', marginTop: 2 }}>{user.email}</div>
+                    </div>
+                    <UserMenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => navigate(`/profile/${user.username}`)} />
+                    <UserMenuItem icon={<GraduationCap className="w-4 h-4" />} label="Mes classes" onClick={() => navigate('/classrooms')} />
+                    <UserMenuItem icon={<BookmarkIcon className="w-4 h-4" />} label="Sauvegardés" onClick={() => navigate('/saved')} />
+                    <UserMenuItem icon={<List className="w-4 h-4" />} label="Listes de révision" onClick={() => navigate('/revision-lists')} />
+                    <UserMenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => navigate('/settings')} />
+                    {user.is_superuser && (
+                      <>
+                        <UserMenuItem icon={<Shield className="w-4 h-4" />} label="Admin parcours" onClick={() => navigate('/admin/learning-paths')} />
+                        <UserMenuItem icon={<Trophy className="w-4 h-4" />} label="Admin concours" onClick={() => navigate('/concours/admin')} />
+                      </>
+                    )}
+                    <div style={{ height: 1, background: '#f0effe', margin: '4px 0' }} />
+                    <UserMenuItem
+                      icon={<LogOut className="w-4 h-4" />}
+                      label="Se déconnecter"
+                      onClick={handleLogout}
+                      danger
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button
+                  className="fd-btn-ghost"
+                  onClick={() => { setInitialTab('login'); openModal(); }}
+                >
+                  Connexion
+                </button>
+                <button
+                  className="fd-btn-primary"
+                  onClick={() => { setInitialTab('signup'); openModal(); }}
+                >
+                  S'inscrire
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Auth buttons - desktop */}
-          <div className={`hidden md:flex items-center space-x-2 transition-all duration-300 ${
-            searchExpanded ? 'opacity-0 pointer-events-none w-0 overflow-hidden' : 'opacity-100'
-          }`}>
-            <AuthButton isScrolled={isScrolled} />
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-white hover:text-gray-300 transition-all duration-200"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
+          {/* Mobile burger */}
+          <button
+            className="md:hidden p-2"
+            onClick={() => setMobileOpen(v => !v)}
+            aria-label="Menu"
+            style={{ background: 'transparent', border: 'none', color: '#1e1b4b', cursor: 'pointer' }}
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
       {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            {/* Mobile search */}
-            <SearchAutocomplete
-              placeholder="Rechercher..."
-              inputClassName="w-full px-4 py-3 pr-20 rounded-lg focus:outline-none transition-all duration-200 bg-[#2a2a2a] text-white border border-gray-700 focus:border-gray-600 placeholder-gray-500"
+      {mobileOpen && (
+        <div
+          className="md:hidden"
+          style={{ background: '#fff', borderTop: '1px solid #ede9fe', padding: '16px 16px 20px' }}
+        >
+          {/* Mobile search */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex items-center mb-4"
+            style={{
+              background: '#f5f4ff', border: '1.5px solid #ede9fe',
+              borderRadius: 10, padding: '8px 12px', gap: 8,
+            }}
+          >
+            <SearchIcon className="w-4 h-4" style={{ color: '#9391b8' }} />
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Rechercher…"
+              style={{
+                flex: 1, border: 'none', outline: 'none',
+                background: 'transparent', fontSize: 13, fontFamily: 'DM Sans', color: '#1e1b4b'
+              }}
             />
+          </form>
 
-          {/* Mobile navigation */}
-          <div className="flex flex-col space-y-2">
-            <NavLinkMobile to="/" isActive={isActive('/')}>
-              <Home className="w-5 h-5 mr-3" />
-              Accueil
-            </NavLinkMobile>
-
-            <NavLinkMobile
-              to="/exercises"
-              isActive={isActive('/exercises')}
-              hasDropdown={true}
-              dropdown="exercises"
-            >
-              <BookOpen className="w-5 h-5 mr-3" />
-              Exercices
-            </NavLinkMobile>
-
-            <NavLinkMobile
-              to="/lessons"
-              isActive={isActive('/lessons')}
-              hasDropdown={true}
-              dropdown="lessons"
-            >
-              <LessonIcon className="w-5 h-5 mr-3" />
-              Leçons
-            </NavLinkMobile>
-
-            <NavLinkMobile
-              to="/exams"
-              isActive={isActive('/exams')}
-              hasDropdown={true}
-              dropdown="exams"
-            >
-              <APlusIcon className="w-5 h-5 mr-3" />
-              Examens
-            </NavLinkMobile>
-
-            <NavLinkMobile to="/learning-path" isActive={isActive('/learning-path')}>
-              <Route className="w-5 h-5 mr-3" />
-              Parcours
-            </NavLinkMobile>
-
-            {user?.is_superuser && (
-              <NavLinkMobile to="/admin/learning-paths" isActive={isActive('/admin/learning-paths')}>
-                <Shield className="w-5 h-5 mr-3" />
-                Admin Panel
-              </NavLinkMobile>
-            )}
-          </div>
-
-          {/* Mobile auth */}
-          <div className="pt-6 border-t border-gray-800">
-            {isAuthenticated ? (
-              <div className="flex flex-col space-y-3">
-                <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-[#2a2a2a]">
-                  <img
-                    src={user?.profile?.avatar || '/avatar-placeholder.jpg'}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-full border-2 border-gray-600 object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-base truncate text-white">{user?.username}</div>
-                    <div className="text-sm truncate text-gray-400">{user?.email}</div>
-                  </div>
-                </div>
-
-                <Link to={`/profile/${user?.username}`} className="flex items-center w-full px-4 py-3 rounded-lg transition-all duration-200 font-medium text-gray-300 hover:text-white hover:bg-[#2a2a2a]" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg mr-3 bg-[#2a2a2a]">
-                    <User className="w-5 h-5" />
-                  </div>
-                  Mon profil
-                </Link>
-
-                <Link to="/saved" className="flex items-center w-full px-4 py-3 rounded-lg transition-all duration-200 font-medium text-gray-300 hover:text-white hover:bg-[#2a2a2a]" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg mr-3 bg-[#2a2a2a]">
-                    <BookmarkIcon className="w-5 h-5" />
-                  </div>
-                  Enregistrés
-                </Link>
-
-                <Link to="/revision-lists" className="flex items-center w-full px-4 py-3 rounded-lg transition-all duration-200 font-medium text-gray-300 hover:text-white hover:bg-[#2a2a2a]" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg mr-3 bg-[#2a2a2a]">
-                    <List className="w-5 h-5" />
-                  </div>
-                  Listes de révision
-                </Link>
-
-                <Link to="/settings" className="flex items-center w-full px-4 py-3 rounded-lg transition-all duration-200 font-medium text-gray-300 hover:text-white hover:bg-[#2a2a2a]" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="p-2 rounded-lg mr-3 bg-[#2a2a2a]">
-                    <Settings className="w-5 h-5" />
-                  </div>
-                  Paramètres
-                </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center w-full px-4 py-3 rounded-lg transition-all duration-200 font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          <div className="flex flex-col gap-1">
+            {TABS.map(tab => {
+              const active = isTabActive(tab);
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.to}
+                  to={tab.to}
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 14px', borderRadius: 12,
+                    background: active ? '#eef2ff' : 'transparent',
+                    color: active ? '#4338ca' : '#4b4880',
+                    fontSize: 13, fontWeight: active ? 700 : 500,
+                    textDecoration: 'none',
+                  }}
                 >
-                  <div className="p-2 rounded-lg mr-3 bg-red-500/10">
-                    <LogOut className="w-5 h-5" />
-                  </div>
-                  Se déconnecter
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col space-y-3" onClick={handleMobileMenuClose}>
-                <div className="w-full">
-                  <AuthButton isMobile={true} />
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div style={{ height: 1, background: '#f0effe', margin: '14px 0' }} />
+
+          {isAuthenticated && user ? (
+            <div className="flex flex-col gap-1">
+              <div
+                className="flex items-center gap-3 mb-2"
+                style={{
+                  padding: '10px 12px', borderRadius: 12, background: '#f5f4ff'
+                }}
+              >
+                <img
+                  src={user.profile?.avatar || '/avatar-placeholder.jpg'}
+                  alt=""
+                  style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>{user.username}</div>
+                  <div style={{ fontSize: 11, color: '#7068a8' }} className="truncate">{user.email}</div>
                 </div>
               </div>
-            )}
-          </div>
+              <MobileLink icon={<User className="w-4 h-4" />} label="Mon profil" to={`/profile/${user.username}`} onNav={() => setMobileOpen(false)} />
+              <MobileLink icon={<GraduationCap className="w-4 h-4" />} label="Mes classes" to="/classrooms" onNav={() => setMobileOpen(false)} />
+              <MobileLink icon={<BookmarkIcon className="w-4 h-4" />} label="Sauvegardés" to="/saved" onNav={() => setMobileOpen(false)} />
+              <MobileLink icon={<List className="w-4 h-4" />} label="Listes de révision" to="/revision-lists" onNav={() => setMobileOpen(false)} />
+              <MobileLink icon={<Settings className="w-4 h-4" />} label="Paramètres" to="/settings" onNav={() => setMobileOpen(false)} />
+              <button
+                onClick={handleLogout}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                  borderRadius: 12, border: 'none', background: '#fef2f2', color: '#b91c1c',
+                  fontSize: 13, fontWeight: 600, fontFamily: 'DM Sans', cursor: 'pointer',
+                }}
+              >
+                <LogOut className="w-4 h-4" /> Se déconnecter
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button className="fd-btn-ghost" onClick={() => { setInitialTab('login'); openModal(); setMobileOpen(false); }}>Connexion</button>
+              <button className="fd-btn-primary" onClick={() => { setInitialTab('signup'); openModal(); setMobileOpen(false); }}>S'inscrire</button>
+            </div>
+          )}
         </div>
-      </div>
       )}
     </nav>
   );
 };
+
+const UserMenuItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }> = ({ icon, label, onClick, danger }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+      padding: '8px 12px', borderRadius: 9, border: 'none',
+      background: 'transparent', color: danger ? '#b91c1c' : '#4b4880',
+      fontSize: 12, fontWeight: 500, fontFamily: 'DM Sans', cursor: 'pointer',
+      textAlign: 'left', transition: 'background .12s',
+    }}
+    onMouseEnter={(e) => (e.currentTarget.style.background = danger ? '#fef2f2' : '#f5f4ff')}
+    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+  >
+    {icon}
+    {label}
+  </button>
+);
+
+const MobileLink: React.FC<{ icon: React.ReactNode; label: string; to: string; onNav: () => void }> = ({ icon, label, to, onNav }) => (
+  <Link
+    to={to}
+    onClick={onNav}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+      borderRadius: 12, color: '#4b4880', fontSize: 13, fontWeight: 500,
+      textDecoration: 'none',
+    }}
+  >
+    {icon}
+    {label}
+  </Link>
+);

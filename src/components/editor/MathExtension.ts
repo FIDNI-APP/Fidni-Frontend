@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from 'prosemirror-state';
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -245,6 +245,15 @@ function findMathFormulas(
   return formulas;
 }
 
+// Quick string fingerprint of all formulas in a doc (latex + display flag).
+// Used to detect whether anything actually changed and avoid rebuilding the
+// widget DOM on every keystroke (which would steal the caret).
+function fingerprintFormulas(
+  formulas: Array<{ from: number; to: number; latex: string; isDisplay: boolean }>
+): string {
+  return formulas.map(f => `${f.isDisplay ? 'D' : 'I'}|${f.latex}`).join('\x1f');
+}
+
 // Create decorations for math formulas
 function createMathDecorations(
   doc: any,
@@ -255,13 +264,16 @@ function createMathDecorations(
   const decorations: Decoration[] = [];
   const formulas = findMathFormulas(doc, delimiters);
 
-  formulas.forEach(({ from, to, latex, isDisplay }) => {
-    // Widget decoration for rendered math
+  formulas.forEach(({ from, to, latex, isDisplay }, idx) => {
+    // Widget decoration for rendered math.
+    // The key must NOT depend on `from`, otherwise typing text before the
+    // formula changes the key, ProseMirror sees a "different" widget and
+    // recreates the DOM — which steals the caret.
     decorations.push(
       Decoration.widget(
         from,
         () => new MathView(latex, isDisplay, from, onEditMath, onDeleteMath).dom,
-        { side: 0, key: `math-${from}-${latex}` }
+        { side: 0, key: `math-${idx}-${isDisplay ? 'D' : 'I'}-${latex}` }
       )
     );
 
@@ -410,33 +422,94 @@ export const RealTimeMathExtension = Extension.create({
   addProseMirrorPlugins() {
     const options = this.options as MathRenderOptions;
 
+    // We track the fingerprint (set of formulas) alongside the decoration set
+    // so we can skip the heavy rebuild when only positions shifted.
+    interface MathPluginState {
+      decorations: DecorationSet;
+      fingerprint: string;
+    }
+
+    const buildState = (doc: any): MathPluginState => {
+      const formulas = findMathFormulas(doc, options.delimiters);
+      const fp = fingerprintFormulas(formulas);
+      const decorations = createMathDecorations(
+        doc,
+        options.delimiters,
+        options.onEditMath,
+        options.onDeleteMath
+      );
+      return { decorations, fingerprint: fp };
+    };
+
     return [
-      new Plugin({
+      new Plugin<MathPluginState>({
         key: new PluginKey('realTimeMath'),
         state: {
           init(_, { doc }) {
-            return createMathDecorations(
-              doc,
-              options.delimiters,
-              options.onEditMath,
-              options.onDeleteMath
-            );
+            return buildState(doc);
           },
-          apply(tr, decorationSet) {
-            if (tr.docChanged) {
-              return createMathDecorations(
+          apply(tr, prev) {
+            if (!tr.docChanged) {
+              return prev;
+            }
+            // Cheap diff: check whether the formula set actually changed.
+            const formulas = findMathFormulas(tr.doc, options.delimiters);
+            const nextFp = fingerprintFormulas(formulas);
+            if (nextFp === prev.fingerprint) {
+              // No formula added/removed/modified — just shift decorations.
+              return {
+                decorations: prev.decorations.map(tr.mapping, tr.doc),
+                fingerprint: prev.fingerprint,
+              };
+            }
+            // Real change — rebuild widget DOM.
+            return {
+              decorations: createMathDecorations(
                 tr.doc,
                 options.delimiters,
                 options.onEditMath,
                 options.onDeleteMath
-              );
-            }
-            return decorationSet.map(tr.mapping, tr.doc);
+              ),
+              fingerprint: nextFp,
+            };
           },
+        },
+        // If the cursor ends up *inside* a formula's hidden source range, push
+        // it just past the formula. Without this, when the editor regains
+        // focus with a stored selection inside hidden text, the caret is
+        // invisible and the next keystroke goes nowhere visible.
+        appendTransaction(_transactions, _oldState, newState) {
+          const sel = newState.selection;
+          if (!sel.empty) return null;
+          const formulas = findMathFormulas(newState.doc, options.delimiters);
+          if (formulas.length === 0) return null;
+
+          const pos = sel.from;
+          // Inside a formula range = strictly between `from` and `to`.
+          // Treat the boundaries (pos === from, pos === to) as outside.
+          const inside = formulas.find(f => pos > f.from && pos < f.to);
+          if (!inside) return null;
+
+          const tr = newState.tr;
+          // Place the caret just after the formula's closing delimiter.
+          const $to = tr.doc.resolve(inside.to);
+          tr.setSelection(TextSelection.near($to, 1));
+          tr.setMeta('addToHistory', false);
+          return tr;
         },
         props: {
           decorations(state) {
-            return this.getState(state);
+            return this.getState(state)?.decorations;
+          },
+          // Block clicks that would land inside the hidden formula source —
+          // route them to the position just after the formula instead.
+          handleClick(view, pos) {
+            const formulas = findMathFormulas(view.state.doc, options.delimiters);
+            const inside = formulas.find(f => pos > f.from && pos < f.to);
+            if (!inside) return false;
+            const $pos = view.state.doc.resolve(inside.to);
+            view.dispatch(view.state.tr.setSelection(TextSelection.near($pos, 1)));
+            return true;
           },
         },
       }),

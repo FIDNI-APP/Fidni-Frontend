@@ -571,18 +571,20 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#4f46e5' }} />
       </div>
     );
   }
 
   if (error || !content) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error || 'Contenu non trouve'}</p>
-          <Link to={config.basePath} className="text-blue-600 hover:underline">
+      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+        <div className="fd-card p-8 text-center max-w-md">
+          <p style={{ color: '#b91c1c', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
+            {error || 'Contenu non trouvé'}
+          </p>
+          <Link to={config.basePath} className="fd-btn-primary inline-flex">
             {config.backLabel}
           </Link>
         </div>
@@ -593,7 +595,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const isAuthor = user && content.author?.id === user.id;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
       {/* Header */}
       <ContentHeader
         content={content}
@@ -646,27 +648,63 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
             {/* AI Help Card - trigger to open panel */}
             {contentType !== 'lesson' && (
-              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl border border-indigo-200 p-6 hover:shadow-lg transition-all cursor-pointer group" onClick={() => isAuthenticated ? setShowAiPanel(true) : openModal()}>
+              <div
+                className="fd-card cursor-pointer group"
+                style={{
+                  background: 'linear-gradient(135deg,#eef2ff,#f5f3ff)',
+                  border: '1px solid #ddd6fe',
+                  padding: 22,
+                }}
+                onClick={() => isAuthenticated ? setShowAiPanel(true) : openModal()}
+              >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
-                    <Sparkles className="w-6 h-6 text-indigo-600" />
+                  <div
+                    className="inline-flex items-center justify-center"
+                    style={{
+                      width: 40, height: 40, borderRadius: 12,
+                      background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff',
+                      boxShadow: '0 6px 16px rgba(124,58,237,.25)',
+                    }}
+                  >
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Assistant IA Pédagogique</h3>
+                  <div>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>Assistant IA pédagogique</h3>
+                    <p style={{ fontSize: 11, color: '#7068a8', marginTop: 1 }}>Indices, correction, explications</p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Obtenez de l'aide personnalisée, des indices progressifs et une correction détaillée de vos solutions.
+                <p style={{ fontSize: 12, color: '#4b4880', lineHeight: 1.55, marginBottom: 12 }}>
+                  Obtiens de l'aide personnalisée, des indices progressifs et une correction détaillée de tes réponses.
                 </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-indigo-600 shadow-sm">Indices progressifs</span>
-                    <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-purple-600 shadow-sm">Correction IA</span>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    <span style={{
+                      background: '#fff', color: '#5b21b6',
+                      padding: '3px 10px', borderRadius: 99,
+                      fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
+                      border: '1px solid #ddd6fe',
+                    }}>
+                      INDICES
+                    </span>
+                    <span style={{
+                      background: '#fff', color: '#7c3aed',
+                      padding: '3px 10px', borderRadius: 99,
+                      fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
+                      border: '1px solid #ddd6fe',
+                    }}>
+                      CORRECTION
+                    </span>
                   </div>
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg"
+                  <button
+                    className="fd-btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
+                      padding: '7px 16px', fontSize: 12,
+                    }}
+                    onClick={(e) => { e.stopPropagation(); isAuthenticated ? setShowAiPanel(true) : openModal(); }}
                   >
                     {isAuthenticated ? 'Ouvrir' : 'Se connecter'}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
@@ -674,7 +712,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         )}
 
         {activeTab === 'discussions' && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="fd-card" style={{ padding: 22 }}>
             <CommentSection
               comments={comments}
               onAddComment={handleAddComment}
@@ -686,9 +724,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         )}
 
         {activeTab === 'proposals' && contentType !== 'lesson' && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Solutions proposees</h2>
-            <p className="text-gray-500 text-center py-8">Aucune solution proposee pour le moment</p>
+          <div className="fd-card" style={{ padding: 22 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', marginBottom: 12 }}>
+              Solutions proposées
+            </h2>
+            <p style={{ fontSize: 13, color: '#7068a8', textAlign: 'center', padding: '32px 0' }}>
+              Aucune solution proposée pour le moment.
+            </p>
           </div>
         )}
 
@@ -702,9 +744,11 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         )}
 
         {activeTab === 'activity' && contentType === 'lesson' && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Activite</h2>
-            <p className="text-gray-500 text-center py-8">Statistiques non disponibles pour les lecons</p>
+          <div className="fd-card" style={{ padding: 22 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', marginBottom: 12 }}>Activité</h2>
+            <p style={{ fontSize: 13, color: '#7068a8', textAlign: 'center', padding: '32px 0' }}>
+              Statistiques non disponibles pour les leçons.
+            </p>
           </div>
         )}
       </div>

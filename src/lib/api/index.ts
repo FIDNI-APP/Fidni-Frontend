@@ -248,6 +248,46 @@ export {
   structuredProgressAPI,
 } from './contentItemApi';
 
+// ============ CLASSROOM API ============
+export {
+  listClassrooms,
+  getClassroom,
+  createClassroom,
+  updateClassroom,
+  deleteClassroom,
+  regenerateJoinCode,
+  getMembers,
+  removeMember,
+  addSubject,
+  removeSubject,
+  joinClassroom,
+  leaveClassroom,
+  getWeeklyProgress,
+  type Classroom,
+  type ClassroomSubject,
+  type ClassroomMember,
+  type WeeklyProgress,
+  // TD lists
+  listTDLists,
+  createTDList,
+  updateTDList,
+  deleteTDList,
+  addTDListItem,
+  removeTDListItem,
+  type TDList,
+  type TDListItem,
+  // Skill stats
+  getStudentStats,
+  getRosterStats,
+  type SkillAxes,
+  type StudentSkillStats,
+  type RosterStudentCard,
+  type RosterStats,
+} from './classroomApi';
+
+// ============ CONCOURS ============
+export * from './concoursApi';
+
 // ============ LEGACY ALIASES (for backwards compatibility) ============
 // Remove these gradually as you update imports throughout the app
 

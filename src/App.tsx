@@ -17,6 +17,17 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import LegalRedirector from './components/layout/LegalRedirector';
 import Footer from './components/layout/Footer';
 import { Search } from './pages/Search';
+import { ClassroomsPage } from './pages/Classrooms';
+import ClassroomDetailPage from './pages/ClassroomDetail';
+import ConcoursListPage from './pages/concours/ConcoursList';
+import ConcoursExamDetailPage from './pages/concours/ConcoursExamDetail';
+import ConcoursSimulatePage from './pages/concours/ConcoursSimulate';
+import ConcoursRecapPage from './pages/concours/ConcoursRecap';
+import ConcoursHistoryPage from './pages/concours/ConcoursHistory';
+import { ConcoursTipsListPage, ConcoursTipDetailPage } from './pages/concours/ConcoursTips';
+import ConcoursAdminPage from './pages/concours/ConcoursAdmin';
+import ConcoursExamQuestionsPage from './pages/concours/ConcoursExamQuestions';
+import EditorTestPage from './pages/concours/EditorTest';
 
 // Learning paths
 import { LearningPathList } from './pages/learningpaths/LearningPathList';
@@ -174,6 +185,47 @@ function App() {
                       <NavbarWrapper>
                         <SavedItems />
                       </NavbarWrapper>
+                    } />
+                    <Route path="/classrooms" element={
+                      <NavbarWrapper>
+                        <ClassroomsPage />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/classrooms/:id" element={
+                      <NavbarWrapper>
+                        <ClassroomDetailPage />
+                      </NavbarWrapper>
+                    } />
+                    {/* Concours */}
+                    <Route path="/concours" element={
+                      <NavbarWrapper><ConcoursListPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/exams/:id" element={
+                      <NavbarWrapper><ConcoursExamDetailPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/simulate/:sessionId" element={
+                      <NavbarWrapper showFooter={false}><ConcoursSimulatePage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/sessions" element={
+                      <NavbarWrapper><ConcoursHistoryPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/sessions/:sessionId/recap" element={
+                      <NavbarWrapper showFooter={false}><ConcoursRecapPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/tips" element={
+                      <NavbarWrapper><ConcoursTipsListPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/tips/:id" element={
+                      <NavbarWrapper><ConcoursTipDetailPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/admin" element={
+                      <NavbarWrapper><ConcoursAdminPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/admin/exams/:id/questions" element={
+                      <NavbarWrapper><ConcoursExamQuestionsPage /></NavbarWrapper>
+                    } />
+                    <Route path="/concours/editor-test" element={
+                      <NavbarWrapper><EditorTestPage /></NavbarWrapper>
                     } />
                     <Route path="/revision-lists" element={
                       <NavbarWrapper>

@@ -78,6 +78,37 @@ export const getTheorems = async (subjectId: string, classLevelIds: string[], su
   return response.data.results || [];
 };
 
+/**
+ * Lighter-weight wrappers — no class_level required (used by concours admin
+ * where questions are not bound to a specific class level).
+ */
+export const getAllSubjects = async (): Promise<SubjectModel[]> => {
+  const response = await api.get('/subjects/');
+  return Array.isArray(response.data) ? response.data : (response.data.results || []);
+};
+
+export const getSubfieldsForSubject = async (subjectId: number | string): Promise<Subfield[]> => {
+  const response = await api.get('/subfields/', { params: { subject: subjectId } });
+  return Array.isArray(response.data) ? response.data : (response.data.results || []);
+};
+
+export const getChaptersForSubfield = async (
+  subjectId: number | string,
+  subfieldId: number | string,
+): Promise<ChapterModel[]> => {
+  // ChapterViewSet expects `subject[]` and `subfields[]`
+  const params: any = { 'subject[]': subjectId, 'subfields[]': subfieldId };
+  const response = await api.get('/chapters/', { params });
+  return Array.isArray(response.data) ? response.data : (response.data.results || []);
+};
+
+export const getChaptersForSubject = async (
+  subjectId: number | string,
+): Promise<ChapterModel[]> => {
+  const response = await api.get('/chapters/', { params: { 'subject[]': subjectId } });
+  return Array.isArray(response.data) ? response.data : (response.data.results || []);
+};
+
 export const getDifficultyCounts = async (
   contentType: string,
   filters: {

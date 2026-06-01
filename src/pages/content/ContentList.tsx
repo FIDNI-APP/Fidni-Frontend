@@ -15,6 +15,9 @@ import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
 import { ContentListCard } from '@/components/content/ContentListCard';
+import {
+  ContentCardBanner, getSubjectTheme, DIFFICULTY_CFG,
+} from '@/components/content/ContentCardBanner';
 import { HorizontalFilterBar } from '@/components/search/HorizontalFilterBar';
 import { ExerciseRenderer } from '@/components/content/viewer/ExerciseRenderer';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
@@ -663,59 +666,44 @@ export const ContentList: React.FC<ContentListProps> = ({
   const colors = getContentColors();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
-      {/* Header Section */}
-      <div className={`relative bg-gradient-to-r ${colors.gradient} text-white py-16 md:py-20 mb-8 overflow-hidden`}>
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="hexPattern" width="40" height="34.64" patternUnits="userSpaceOnUse">
-                <path
-                  d="M20 0 L40 11.55 L40 23.09 L20 34.64 L0 23.09 L0 11.55 Z"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="0.5"
-                />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#hexPattern)" />
-          </svg>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-center md:text-left flex-1">
-              <div className="inline-flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full mb-4 border border-white/20">
-                {config.icon}
-                <span className="text-sm font-semibold ml-2">
-                  {contentType === 'exercise' ? 'Pratique' : contentType === 'exam' ? 'Examens' : 'Cours'}
-                </span>
-              </div>
-
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 leading-tight">
-                <span className={`bg-gradient-to-r ${colors.titleGradient} bg-clip-text text-transparent`}>
-                  {config.title}
-                </span>
-              </h1>
-              <p className="text-gray-300 text-lg md:text-xl max-w-2xl">
-                {config.subtitle} - <span className="font-bold text-white">{totalCount}</span> disponibles
-              </p>
-            </div>
-
-            <Button
-              onClick={handleNewContentClick}
-              variant="ghost"
-              className={`liquid-glass rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3 bg-gradient-to-r ${colors.buttonGradient} ${colors.buttonText} group relative px-4 py-3`}
+    <div style={{ minHeight: '100vh', background: '#f0effe', paddingBottom: 64 }}>
+      {/* Header Section — lavender pill style */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span
+              className="inline-flex items-center gap-1.5"
+              style={{
+                background: '#eef2ff', color: '#4338ca',
+                padding: '4px 12px', borderRadius: 99,
+                fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
+              }}
             >
-              <Plus className="w-5 h-5 relative z-10" />
-              <span className="relative z-10">{config.createLabel}</span>
-            </Button>
+              {config.icon}
+              <span>{contentType === 'exercise' ? 'PRATIQUE' : contentType === 'exam' ? 'EXAMENS' : 'COURS'}</span>
+            </span>
+            <h1 style={{ fontSize: 30, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em', marginTop: 10, lineHeight: 1.1 }}>
+              {config.title}
+              <span style={{ color: '#9391b8', fontSize: 16, fontWeight: 500, marginLeft: 10, fontFamily: 'DM Mono' }}>
+                · {totalCount}
+              </span>
+            </h1>
+            <p style={{ fontSize: 13, color: '#7068a8', marginTop: 4 }}>{config.subtitle}</p>
           </div>
+
+          <button
+            onClick={handleNewContentClick}
+            className="fd-btn-primary"
+            style={{ padding: '10px 18px' }}
+          >
+            <Plus className="w-4 h-4" />
+            {config.createLabel}
+          </button>
         </div>
       </div>
 
       {/* Main layout */}
-      <div className="container mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
         {/* Horizontal Filter Bar */}
         <HorizontalFilterBar
           contentType={contentType}
@@ -727,29 +715,41 @@ export const ContentList: React.FC<ContentListProps> = ({
         />
 
         {/* View Toggle */}
-        <div className="flex items-center justify-end gap-2 mb-6">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+        <div className="flex items-center justify-end gap-2 mb-5 mt-4">
+          <div
+            className="inline-flex"
+            style={{
+              background: '#fff', border: '1px solid #ede9fe',
+              borderRadius: 10, padding: 3,
+            }}
+          >
             <button
               onClick={() => setViewMode('full')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'full'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 8, border: 'none',
+                background: viewMode === 'full' ? '#4f46e5' : 'transparent',
+                color: viewMode === 'full' ? '#fff' : '#7068a8',
+                fontSize: 12, fontWeight: viewMode === 'full' ? 600 : 500,
+                fontFamily: 'DM Sans', cursor: 'pointer', transition: 'all .15s',
+              }}
             >
-              <ListIcon className="w-4 h-4" />
-              <span>Vue complète</span>
+              <ListIcon className="w-3.5 h-3.5" />
+              Vue complète
             </button>
             <button
               onClick={() => setViewMode('card')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'card'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 8, border: 'none',
+                background: viewMode === 'card' ? '#4f46e5' : 'transparent',
+                color: viewMode === 'card' ? '#fff' : '#7068a8',
+                fontSize: 12, fontWeight: viewMode === 'card' ? 600 : 500,
+                fontFamily: 'DM Sans', cursor: 'pointer', transition: 'all .15s',
+              }}
             >
-              <LayoutGrid className="w-4 h-4" />
-              <span>Vue cartes</span>
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Vue cartes
             </button>
           </div>
         </div>
@@ -772,13 +772,10 @@ export const ContentList: React.FC<ContentListProps> = ({
 
           {/* Content Grid/List */}
           {isLoading ? (
-            <div className="flex justify-center items-center h-96">
+            <div className="flex justify-center items-center" style={{ height: 320 }}>
               <div className="text-center">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gray-400 rounded-full blur-2xl opacity-10 animate-pulse"></div>
-                  <Loader2 className="relative w-12 h-12 animate-spin text-gray-600 mx-auto mb-4" />
-                </div>
-                <p className="text-gray-600 font-medium">Chargement...</p>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#4f46e5' }} />
+                <p style={{ fontSize: 13, color: '#7068a8', fontWeight: 500 }}>Chargement…</p>
               </div>
             </div>
           ) : items.length > 0 ? (
@@ -807,7 +804,20 @@ export const ContentList: React.FC<ContentListProps> = ({
               <div className="flex flex-col gap-8 max-w-4xl mx-auto">
                 {items.map((item, index) => {
                   const hasStructure = item.structure && typeof item.structure === 'object' && ('blocks' in item.structure || 'sections' in item.structure);
-                  const accentColor = contentType === 'exam' ? 'bg-violet-600' : contentType === 'lesson' ? 'bg-emerald-600' : 'bg-blue-600';
+
+                  // Subject theme + difficulty config for the banner
+                  const subjectName = item.subject
+                    ? (typeof item.subject === 'string' ? item.subject : item.subject.name)
+                    : '';
+                  const itemTheme = getSubjectTheme(subjectName);
+                  const itemTypeLabel = contentType === 'exam' ? 'Examen' : contentType === 'lesson' ? 'Leçon' : 'Exercice';
+                  const itemDifficulty = ('difficulty' in item && item.difficulty
+                    && item.difficulty in DIFFICULTY_CFG)
+                    ? DIFFICULTY_CFG[item.difficulty as 'easy' | 'medium' | 'hard']
+                    : null;
+                  const itemIsNational = 'is_national_exam' in item && (item as any).is_national_exam;
+                  const itemNationalYear = 'national_year' in item ? (item as any).national_year : undefined;
+                  const itemIsSolved = itemCompletions[item.id] === 'success';
 
                   // Convert progress for ExerciseRenderer — merge assessments + validations
                   const progressEntries = itemProgress[item.id] || {};
@@ -829,44 +839,62 @@ export const ContentList: React.FC<ContentListProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className="bg-white rounded-2xl border border-slate-200 shadow-sm"
+                      className="fd-card"
+                      style={{ overflow: 'hidden' }}
                     >
-                      {/* Top accent */}
-                      <div className={`h-1 ${accentColor}`} />
+                      {/* Gradient banner — same as card view, taller for full layout */}
+                      <ContentCardBanner
+                        title={item.title}
+                        subjectName={subjectName}
+                        typeLabel={itemTypeLabel}
+                        theme={itemTheme}
+                        difficulty={itemDifficulty}
+                        isSolved={itemIsSolved}
+                        isNationalExam={!!itemIsNational}
+                        nationalYear={itemNationalYear}
+                        isSaved={!!itemBookmarks[item.id]}
+                        onSave={(e) => { e.stopPropagation(); handleBookmark(item.id); }}
+                        height={120}
+                      />
 
-                      {/* Header */}
-                      <div className="px-6 pt-5 pb-3">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                {contentType === 'exam' ? 'Examen' : contentType === 'lesson' ? 'Leçon' : 'Exercice'} #{item.id}
-                              </span>
-                              {('difficulty' in item) && item.difficulty && (() => {
-                                const d = item.difficulty;
-                                const cfg = d === 'easy'
-                                  ? { label: 'Facile', bg: 'bg-emerald-500/10', text: 'text-emerald-700', border: 'border-emerald-500/20', dot: 'bg-emerald-500' }
-                                  : d === 'medium'
-                                  ? { label: 'Moyen', bg: 'bg-amber-500/10', text: 'text-amber-700', border: 'border-amber-500/20', dot: 'bg-amber-500' }
-                                  : { label: 'Difficile', bg: 'bg-rose-500/10', text: 'text-rose-700', border: 'border-rose-500/20', dot: 'bg-rose-500' };
-                                return (
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                    {cfg.label}
-                                  </span>
-                                );
-                              })()}
-                            </div>
-                            <Link
-                              to={`${config.basePath}/${item.id}`}
-                              className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors leading-snug block"
-                            >
-                              {item.title}
-                            </Link>
-                          </div>
+                      {/* Controls strip below banner: type label + tags on left,
+                          interactive widgets (timer, completion, revision) on right */}
+                      <div className="px-6 pt-4 pb-3 flex flex-wrap items-center gap-3 justify-between">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <span style={{
+                            fontSize: 10, fontWeight: 700,
+                            color: '#9391b8', letterSpacing: '.08em', textTransform: 'uppercase',
+                            fontFamily: 'DM Mono',
+                          }}>
+                            {itemTypeLabel} #{item.id}
+                          </span>
+                          {item.chapters && item.chapters.length > 0 && (
+                            <span style={{
+                              background: '#f5f4ff', color: '#7068a8',
+                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                            }}>
+                              <BookOpen className="w-3 h-3" />
+                              {typeof item.chapters[0] === 'string' ? item.chapters[0] : item.chapters[0].name}
+                            </span>
+                          )}
+                          {item.theorems && item.theorems.length > 0 && (
+                            <span style={{
+                              background: '#f5f3ff', color: '#5b21b6',
+                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                            }}>
+                              {typeof item.theorems[0] === 'string' ? item.theorems[0] : item.theorems[0].name}
+                            </span>
+                          )}
+                          {item.class_levels && item.class_levels.length > 0 && (
+                            <span style={{ fontSize: 11, color: '#9391b8' }}>
+                              {typeof item.class_levels[0] === 'string' ? item.class_levels[0] : item.class_levels[0].name}
+                            </span>
+                          )}
+                        </div>
 
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Interactive widgets */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             {/* Timer Widget - only for exercises/exams */}
                             {contentType !== 'lesson' && (
                               <div className={`
@@ -1014,19 +1042,6 @@ export const ContentList: React.FC<ContentListProps> = ({
                               )}
                             </div>
 
-                            {/* Bookmark */}
-                            <button
-                              onClick={() => handleBookmark(item.id)}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                itemBookmarks[item.id]
-                                  ? 'bg-amber-100 text-amber-600'
-                                  : 'bg-slate-50 text-slate-400 hover:text-amber-600 hover:bg-amber-50'
-                              }`}
-                              title="Enregistrer"
-                            >
-                              <Bookmark className={`w-4 h-4 ${itemBookmarks[item.id] ? 'fill-current' : ''}`} />
-                            </button>
-
                             {/* Add to revision list - only for exercises/exams */}
                             {contentType !== 'lesson' && (
                               <button
@@ -1041,44 +1056,20 @@ export const ContentList: React.FC<ContentListProps> = ({
                                     itemTitle: item.title
                                   });
                                 }}
-                                className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                className="p-1.5 rounded-lg transition-colors"
+                                style={{
+                                  background: '#f5f4ff', color: '#7068a8', border: '1px solid #ede9fe',
+                                }}
                                 title="Ajouter à une liste de révision"
                               >
                                 <ListPlus className="w-4 h-4" />
                               </button>
                             )}
                           </div>
-                        </div>
-
-                        {/* Metadata */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          {item.subject && (
-                            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                              {typeof item.subject === 'string' ? item.subject : item.subject.name}
-                            </span>
-                          )}
-                          
-                          {item.chapters && item.chapters.length > 0 && (
-                            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                              <BookOpen className="w-3 h-3 inline-block mr-1" />
-                              {typeof item.chapters[0] === 'string' ? item.chapters[0] : item.chapters[0].name}
-                            </span>
-                          )}
-                          {item.theorems && item.theorems.length > 0 && (
-                            <span className="text-xs font-semibold text-violet-600 bg-violet-100 px-2.5 py-0.5 rounded-full">
-                              {typeof item.theorems[0] === 'string' ? item.theorems[0] : item.theorems[0].name}
-                            </span>
-                          )}
-                          {item.class_levels && item.class_levels.length > 0 && (
-                            <span className="text-xs text-slate-400">
-                              {typeof item.class_levels[0] === 'string' ? item.class_levels[0] : item.class_levels[0].name}
-                            </span>
-                          )}
-                        </div>
                       </div>
 
                       {/* Divider */}
-                      <div className="mx-6 border-t border-slate-100" />
+                      <div className="mx-6" style={{ borderTop: '1px solid #f0effe' }} />
 
                       {/* Content */}
                       <div className="px-6 py-4">
@@ -1098,13 +1089,15 @@ export const ContentList: React.FC<ContentListProps> = ({
                             />
                           )
                         ) : (
-                          <p className="text-sm text-slate-400 italic">Ancien format - cliquez pour voir le détail</p>
+                          <p style={{ fontSize: 13, color: '#9391b8', fontStyle: 'italic' }}>Ancien format — clique pour voir le détail.</p>
                         )}
                       </div>
 
                       {/* Footer */}
-                      <div className="border-t border-slate-100 px-6 py-3 bg-slate-50/50 space-y-2">
-                        {/* Stats row */}
+                      <div
+                        className="px-6 py-3"
+                        style={{ borderTop: '1px solid #f0effe', background: '#faf9ff' }}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <VoteButtons
@@ -1114,17 +1107,25 @@ export const ContentList: React.FC<ContentListProps> = ({
                               userVote={itemVotes[item.id]?.vote || 0}
                               size="sm"
                             />
-                            <div className="flex items-center gap-1.5 text-slate-500">
+                            <div className="flex items-center gap-1.5" style={{ color: '#7068a8' }}>
                               <Eye className="w-4 h-4" />
-                              <span className="text-sm font-medium">{item.view_count}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono' }}>{item.view_count}</span>
                             </div>
                             {'comment_count' in item && (item as any).comment_count > 0 && (
-                              <div className="flex items-center gap-1.5 text-slate-500">
+                              <div className="flex items-center gap-1.5" style={{ color: '#7068a8' }}>
                                 <MessageSquare className="w-4 h-4" />
-                                <span className="text-sm font-medium">{(item as any).comment_count}</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono' }}>{(item as any).comment_count}</span>
                               </div>
                             )}
                           </div>
+
+                          <Link
+                            to={`${config.basePath}/${item.id}`}
+                            className="fd-btn-primary"
+                            style={{ padding: '6px 14px', fontSize: 12, borderRadius: 9, textDecoration: 'none' }}
+                          >
+                            {contentType === 'lesson' ? 'Lire' : 'Commencer'} →
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -1133,25 +1134,29 @@ export const ContentList: React.FC<ContentListProps> = ({
               </div>
             )
           ) : (
-            <div className="text-center py-20 px-6 bg-white rounded-2xl shadow-sm">
-              <div className="relative inline-block mb-6">
-                <div className="absolute inset-0 bg-gray-400 rounded-full blur-2xl opacity-10"></div>
-                <div className="relative w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                  {React.cloneElement(config.icon as React.ReactElement, { className: 'w-10 h-10 text-gray-600' })}
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">{config.emptyMessage}</h3>
-              <p className="text-gray-600 max-w-md mx-auto mb-6">
-                Essayez d'ajuster vos filtres ou créez un nouveau contenu
-              </p>
-              <Button
-                className="liquid-glass group bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 hover:from-yellow-300 hover:via-pink-300 hover:to-purple-300 text-purple-900 rounded-xl font-bold text-xl hover:text-white inline-flex items-center justify-center gap-3"
-                variant="ghost"
-                onClick={handleNewContentClick}
+            <div className="fd-card text-center" style={{ padding: 48 }}>
+              <div
+                className="inline-flex items-center justify-center mx-auto mb-4"
+                style={{
+                  width: 64, height: 64, borderRadius: 16,
+                  background: 'linear-gradient(135deg,#eef2ff,#f0effe)',
+                  color: '#7068a8',
+                }}
               >
-                <Plus className="w-5 h-5" />
+                {React.cloneElement(config.icon as React.ReactElement, { className: 'w-7 h-7' })}
+              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b' }}>{config.emptyMessage}</h3>
+              <p style={{ fontSize: 13, color: '#7068a8', marginTop: 6, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                Essaie d'ajuster les filtres ou crée un nouveau contenu.
+              </p>
+              <button
+                onClick={handleNewContentClick}
+                className="fd-btn-primary"
+                style={{ marginTop: 18 }}
+              >
+                <Plus className="w-4 h-4" />
                 {config.createLabel}
-              </Button>
+              </button>
             </div>
           )}
 
@@ -1161,20 +1166,13 @@ export const ContentList: React.FC<ContentListProps> = ({
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="group relative px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
+                className="fd-btn-ghost"
+                style={{ padding: '10px 22px', fontSize: 13 }}
               >
                 {loadingMore ? (
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Chargement...</span>
-                  </div>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Chargement…</>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    <span>Charger plus</span>
-                    <svg className="w-5 h-5 group-hover:translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
+                  <>Charger plus <ChevronRight className="w-3 h-3" /></>
                 )}
               </button>
             </div>
@@ -1183,8 +1181,8 @@ export const ContentList: React.FC<ContentListProps> = ({
           {/* Pagination info */}
           {totalPages > 1 && !hasMore && (
             <div className="flex items-center justify-center gap-2 mt-8">
-              <span className="px-4 py-2 text-sm text-gray-600">
-                Affichage de {items.length} sur {totalCount} résultats
+              <span style={{ fontSize: 12, color: '#9391b8', fontFamily: 'DM Mono' }}>
+                {items.length} / {totalCount} résultats
               </span>
             </div>
           )}

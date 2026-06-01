@@ -656,8 +656,12 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
 
   if (!editor) return null;
 
+  // Append a non-breaking space after every inserted formula so the caret has
+  // a real glyph to land on outside the `math-source-hidden` zone — without
+  // it the caret falls inside the absolutely-positioned source text and
+  // disappears (no `|` is rendered).
   const insertFormula = (latex: string) => {
-    editor.chain().focus().insertContent(`$${latex}$`).run();
+    editor.chain().focus().insertContent(`$${latex}$ `).run();
   };
 
   const handleFormulaModalInsert = (latex: string, isDisplay: boolean) => {
@@ -671,7 +675,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       );
     } else {
       // Inserting new formula
-      const formulaText = isDisplay ? `$$${latex}$$` : `$${latex}$`;
+      const formulaText = isDisplay ? `$$${latex}$$ ` : `$${latex}$ `;
       editor.chain().focus().insertContent(formulaText).run();
     }
     setEditingFormula(null);
@@ -866,8 +870,40 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
         />
       )}
 
-      {/* Editor Content */}
-      <EditorContent editor={editor} className="compact-editor" />
+      {/* Editor Content
+          We catch the click ourselves so we can guarantee the caret lands on
+          a visible position. Without this, clicking on the editor when the
+          last selection was inside a hidden math source range gives no
+          visible caret and the next keystroke goes nowhere.
+
+          On mouseup we ask ProseMirror's `posAtCoords` for the document
+          position under the user's pointer, then focus the editor at THAT
+          position — so the caret lands where the user actually clicked,
+          even if the previous selection was stuck inside hidden text. */}
+      <div
+        onMouseUp={(e) => {
+          if (!editor) return;
+          const clientX = e.clientX;
+          const clientY = e.clientY;
+          // Wait for ProseMirror's own click handler to finish first.
+          requestAnimationFrame(() => {
+            if (!editor || editor.isDestroyed) return;
+            if (editor.isFocused) return;  // PM placed the caret correctly
+            // Translate click coords → doc position via PM's view API.
+            const result = (editor.view as any).posAtCoords?.({
+              left: clientX, top: clientY,
+            });
+            if (result && typeof result.pos === 'number') {
+              editor.chain().focus().setTextSelection(result.pos).run();
+            } else {
+              // Fallback if coords don't resolve (e.g. clicked outside content)
+              editor.commands.focus();
+            }
+          });
+        }}
+      >
+        <EditorContent editor={editor} className="compact-editor" />
+      </div>
 
       {/* Modals */}
       <ImageModal
@@ -903,15 +939,16 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
         .compact-editor .ProseMirror:focus {
           outline: none;
         }
+        /* Hide the raw dollar-delimited source so only the rendered widget is
+           visible. We deliberately keep the source text in the document flow
+           (no position: absolute), otherwise the caret cannot find a visible
+           position around the formula and the cursor disappears. */
         .compact-editor .math-source-hidden {
           font-size: 0 !important;
           line-height: 0 !important;
-          width: 0 !important;
-          height: 0 !important;
           opacity: 0 !important;
-          pointer-events: none !important;
-          position: absolute !important;
-          overflow: hidden !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
         }
         .compact-editor .math-inline {
           display: inline-block;

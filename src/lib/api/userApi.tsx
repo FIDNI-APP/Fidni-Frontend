@@ -1,9 +1,9 @@
 import {api} from './apiClient';
 import { getCurrentUser } from './authApi';
 
-export const updateUserProfile = async (username: string, userData: any) => {
+export const updateUserProfile = async (_username: string, userData: any) => {
   try {
-    const response = await api.patch(`/users/${encodeURIComponent(username)}/`, userData);
+    const response = await api.patch('/users/me/', userData);
     return response.data;
   } catch (error) {
     console.error("Error updating user profile:", error);

@@ -174,33 +174,39 @@ export const ProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-          </div>
-          <p className="text-slate-500 text-sm">Chargement du profil...</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#4f46e5' }} />
+          <p style={{ fontSize: 13, color: '#7068a8' }}>Chargement du profil…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
       {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-40 bg-white border-b border-slate-200">
+      <div
+        className="lg:hidden sticky top-0 z-40"
+        style={{
+          background: 'rgba(255,255,255,.92)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid #ede9fe',
+        }}
+      >
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-2 -ml-2 rounded-lg"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
           >
-            <Menu className="w-5 h-5 text-slate-700" />
+            <Menu className="w-5 h-5" style={{ color: '#1e1b4b' }} />
           </button>
 
           {currentFeature && (
             <div className="flex items-center gap-2">
-              <currentFeature.icon className="w-4 h-4 text-slate-500" />
-              <span className="font-semibold text-sm text-slate-900">{currentFeature.title}</span>
+              <currentFeature.icon className="w-4 h-4" style={{ color: '#7068a8' }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>{currentFeature.title}</span>
             </div>
           )}
 
@@ -208,63 +214,96 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex max-w-7xl mx-auto">
         {/* Sidebar */}
-        <aside className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200
-          transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0 lg:static lg:z-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
+        <aside
+          className={`
+            fixed inset-y-0 left-0 z-50 w-72 lg:w-64
+            transform transition-transform duration-300 ease-in-out
+            lg:translate-x-0 lg:static lg:z-0
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}
+          style={{
+            background: '#fff',
+            borderRight: '1px solid #ede9fe',
+          }}
+        >
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100"
+            className="lg:hidden absolute top-4 right-4 p-2"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5" style={{ color: '#7068a8' }} />
           </button>
 
           {/* Profile Card */}
-          <div className="p-6 pb-4 bg-gradient-to-b from-slate-50 to-white">
-            <div className="w-16 h-16 mx-auto rounded-xl bg-slate-200 flex items-center justify-center text-slate-600 text-xl font-bold overflow-hidden">
+          <div
+            className="p-6 pb-5 text-center"
+            style={{ background: 'linear-gradient(180deg,#f5f4ff,#fff)' }}
+          >
+            <div
+              className="mx-auto"
+              style={{
+                width: 72, height: 72, borderRadius: 18,
+                background: 'linear-gradient(135deg,#4f46e5,#818cf8)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 26, fontWeight: 800, overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(79,70,229,.25)',
+              }}
+            >
               {profileData?.profile?.avatar ? (
                 <img src={profileData.profile.avatar} alt={username} className="w-full h-full object-cover" />
               ) : (
                 username?.charAt(0).toUpperCase()
               )}
             </div>
-            <div className="text-center mt-3">
-              <h2 className="text-base font-bold text-slate-900">
-                {profileData?.username || username}
-              </h2>
-              <span className="inline-block mt-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                {userType === 'teacher' ? 'Enseignant' : 'Étudiant'}
-              </span>
-              {profileData?.email && (
-                <p className="text-xs text-slate-400 mt-1.5 truncate">{profileData.email}</p>
-              )}
-            </div>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b', marginTop: 12, letterSpacing: '-0.02em' }}>
+              {profileData?.username || username}
+            </h2>
+            <span
+              className="inline-block mt-2"
+              style={{
+                background: '#eef2ff', color: '#4338ca',
+                padding: '3px 10px', borderRadius: 99,
+                fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {userType === 'teacher' ? 'Enseignant' : 'Étudiant'}
+            </span>
+            {profileData?.email && (
+              <p
+                className="truncate"
+                style={{ fontSize: 11, color: '#9391b8', marginTop: 6 }}
+              >
+                {profileData.email}
+              </p>
+            )}
           </div>
 
           {/* Navigation */}
           <nav className="px-3 pb-6">
-            <div className="space-y-0.5">
+            <div className="flex flex-col gap-1">
               {availableFeatures.map((feature) => {
                 const Icon = feature.icon;
                 const isActive = activeSection === feature.id;
-
                 return (
                   <button
                     key={feature.id}
                     onClick={() => handleSectionChange(feature.id)}
-                    className={`
-                      w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm
-                      ${isActive
-                        ? 'bg-blue-50 text-blue-700 font-semibold border-l-[3px] border-blue-600'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                      }
-                    `}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 12px', borderRadius: 10,
+                      background: isActive ? '#eef2ff' : 'transparent',
+                      color: isActive ? '#4338ca' : '#4b4880',
+                      fontSize: 13, fontWeight: isActive ? 700 : 500,
+                      fontFamily: 'DM Sans', cursor: 'pointer',
+                      border: 'none', textAlign: 'left',
+                      borderLeft: isActive ? '3px solid #4f46e5' : '3px solid transparent',
+                      transition: 'all .15s',
+                    }}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <Icon className="w-4 h-4" style={{ color: isActive ? '#4f46e5' : '#9391b8' }} />
                     <span>{feature.title}</span>
                   </button>
                 );
@@ -276,7 +315,8 @@ export const ProfilePage: React.FC = () => {
         {/* Mobile Overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+            className="fixed inset-0 z-40 lg:hidden"
+            style={{ background: 'rgba(30,27,75,.4)', backdropFilter: 'blur(2px)' }}
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -284,12 +324,30 @@ export const ProfilePage: React.FC = () => {
         {/* Main Content */}
         <main className="flex-1 min-w-0 lg:min-h-screen">
           {/* Desktop Header */}
-          <header className="hidden lg:block sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+          <header
+            className="hidden lg:block sticky z-30"
+            style={{
+              top: 60, // navbar height
+              background: 'rgba(240,239,254,.85)',
+              backdropFilter: 'blur(12px)',
+              borderBottom: '1px solid #ede9fe',
+            }}
+          >
             <div className="px-8 py-4">
               {currentFeature && (
                 <div className="flex items-center gap-3">
-                  <currentFeature.icon className="w-5 h-5 text-slate-400" />
-                  <h1 className="text-lg font-semibold text-slate-900">{currentFeature.title}</h1>
+                  <div
+                    className="inline-flex items-center justify-center"
+                    style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: '#eef2ff', color: '#4338ca',
+                    }}
+                  >
+                    <currentFeature.icon className="w-3.5 h-3.5" />
+                  </div>
+                  <h1 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>
+                    {currentFeature.title}
+                  </h1>
                 </div>
               )}
             </div>

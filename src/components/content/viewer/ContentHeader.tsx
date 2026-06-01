@@ -14,41 +14,43 @@ import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
 const getContentTypeColors = (contentType: 'exercise' | 'exam' | 'lesson') => {
+  // All three use the same lavender/indigo gradient now (matches new design system).
+  // Subject color comes through the card itself, not the page chrome.
   switch (contentType) {
     case 'exam':
       return {
-        gradient: 'from-violet-600 via-violet-700 to-purple-700',
+        gradient: 'from-indigo-600 via-violet-600 to-purple-600',
         text: 'text-white',
-        textMuted: 'text-white/70',
+        textMuted: 'text-white/75',
         hoverBg: 'hover:bg-white/10',
         activeBg: 'bg-white/20',
-        tabActive: 'bg-white text-violet-700',
-        tabInactive: 'text-white/70 hover:text-white hover:bg-white/10',
-        badge: 'bg-violet-100 text-violet-700',
+        tabActive: 'bg-white text-indigo-700',
+        tabInactive: 'text-white/75 hover:text-white hover:bg-white/10',
+        badge: 'bg-indigo-100 text-indigo-700',
         badgeInactive: 'bg-white/20 text-white',
       };
     case 'lesson':
       return {
-        gradient: 'from-emerald-600 via-emerald-700 to-teal-700',
+        gradient: 'from-violet-600 via-indigo-600 to-indigo-700',
         text: 'text-white',
-        textMuted: 'text-white/70',
+        textMuted: 'text-white/75',
         hoverBg: 'hover:bg-white/10',
         activeBg: 'bg-white/20',
-        tabActive: 'bg-white text-emerald-700',
-        tabInactive: 'text-white/70 hover:text-white hover:bg-white/10',
-        badge: 'bg-emerald-100 text-emerald-700',
+        tabActive: 'bg-white text-indigo-700',
+        tabInactive: 'text-white/75 hover:text-white hover:bg-white/10',
+        badge: 'bg-indigo-100 text-indigo-700',
         badgeInactive: 'bg-white/20 text-white',
       };
     default: // exercise
       return {
-        gradient: 'from-blue-600 via-blue-700 to-indigo-700',
+        gradient: 'from-indigo-600 via-indigo-600 to-violet-600',
         text: 'text-white',
-        textMuted: 'text-white/70',
+        textMuted: 'text-white/75',
         hoverBg: 'hover:bg-white/10',
         activeBg: 'bg-white/20',
-        tabActive: 'bg-white text-blue-700',
-        tabInactive: 'text-white/70 hover:text-white hover:bg-white/10',
-        badge: 'bg-blue-100 text-blue-700',
+        tabActive: 'bg-white text-indigo-700',
+        tabInactive: 'text-white/75 hover:text-white hover:bg-white/10',
+        badge: 'bg-indigo-100 text-indigo-700',
         badgeInactive: 'bg-white/20 text-white',
       };
   }
