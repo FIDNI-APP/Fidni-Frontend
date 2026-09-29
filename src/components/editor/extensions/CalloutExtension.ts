@@ -4,7 +4,6 @@
  */
 
 import { Node, mergeAttributes } from '@tiptap/core';
-import { ReactNodeViewRenderer } from '@tiptap/react';
 import { CalloutType } from '@/types/callout';
 
 export interface CalloutOptions {
@@ -87,8 +86,8 @@ export const CalloutExtension = Node.create<CalloutOptions>({
     return {
       setCallout:
         (options) =>
-        ({ commands, state, tr, dispatch }) => {
-          const { from, to, empty } = state.selection;
+        ({ commands, state }) => {
+          const { empty } = state.selection;
 
           // Get callout type label from CALLOUT_CONFIGS
           const CALLOUT_CONFIGS = (window as any).__CALLOUT_CONFIGS;

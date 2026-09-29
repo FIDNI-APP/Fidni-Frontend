@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X, Clock, Calendar, TrendingUp, TrendingDown, Trash2 } from 'lucide-react';
 
 interface SessionData {
@@ -25,12 +25,12 @@ const formatDuration = (seconds: number): string => {
   const secs = seconds % 60;
 
   if (hours > 0) {
-    return `${hours}h ${minutes}m ${secs}s`;
+    return `${hours} h ${String(minutes).padStart(2, '0')} min`;
   }
   if (minutes > 0) {
-    return `${minutes}m ${secs}s`;
+    return `${minutes} min ${String(secs).padStart(2, '0')} s`;
   }
-  return `${secs}s`;
+  return `${secs} s`;
 };
 
 const formatDate = (dateString: string): string => {
@@ -52,27 +52,25 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
   isLoading = false,
   onDeleteSession
 }) => {
-  const [stats, setStats] = useState({
-    total: 0,
-    average: 0,
-    best: 0,
-    worst: 0,
-    totalTime: 0
-  });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (sessions.length > 0) {
-      const durations = sessions.map(s => s.session_duration);
-      const total = sessions.length;
-      const totalTime = durations.reduce((sum, d) => sum + d, 0);
-      const average = Math.floor(totalTime / total);
-      const best = Math.min(...durations);
-      const worst = Math.max(...durations);
-
-      setStats({ total, average, best, worst, totalTime });
-    }
+  const stats = useMemo(() => {
+    const durations = sessions.map(s => s.session_duration);
+    const totalTime = durations.reduce((sum, d) => sum + d, 0);
+    return {
+      total: sessions.length,
+      totalTime,
+      average: sessions.length ? Math.floor(totalTime / sessions.length) : 0,
+      best: sessions.length ? Math.min(...durations) : 0,
+    };
   }, [sessions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   const handleDelete = async (sessionId: string) => {
     if (!onDeleteSession) return;
@@ -88,116 +86,118 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Ne pas utiliser de dégradé Tailwind ici : index.css les force en noir (bandeau noir, texte illisible).
+  const tiles = [
+    { label: 'Sessions', value: String(stats.total) },
+    { label: 'Temps total', value: formatDuration(stats.totalTime) },
+    { label: 'Moyenne', value: formatDuration(stats.average) },
+    { label: 'Plus rapide', value: formatDuration(stats.best), highlight: true },
+  ];
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-900">Historique des sessions</h2>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="session-history-title"
+        className="bg-white rounded-2xl border border-line shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* En-tête */}
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
+          <div>
+            <h2 id="session-history-title" className="fd-display text-xl font-bold text-ink">Temps enregistrés</h2>
+            <p className="text-sm text-ink-faint mt-0.5">Tes sessions sur ce contenu, de la plus récente à la plus ancienne.</p>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Fermer"
+            className="p-2 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee] transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Stats Summary */}
+        {/* Résumé */}
         {sessions.length > 0 && (
-          <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Total sessions</div>
-                <div className="text-2xl font-bold text-slate-900">{stats.total}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Temps total</div>
-                <div className="text-2xl font-bold text-slate-900">{formatDuration(stats.totalTime)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Moyenne</div>
-                <div className="text-2xl font-bold text-blue-600">{formatDuration(stats.average)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Meilleur temps</div>
-                <div className="text-2xl font-bold text-green-600">{formatDuration(stats.best)}</div>
-              </div>
+          <div className="px-6 py-4 border-b border-line bg-[#faf9f7]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {tiles.map((t) => (
+                <div key={t.label} className="rounded-xl border border-line bg-white px-3 py-2.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{t.label}</div>
+                  <div className={`fd-nums text-lg font-bold mt-0.5 ${t.highlight ? 'text-brand' : 'text-ink'}`}>{t.value}</div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Sessions List */}
-        <div className="overflow-y-auto max-h-[calc(80vh-200px)]">
+        {/* Liste des sessions */}
+        <div className="overflow-y-auto flex-1">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+              <div className="w-7 h-7 border-[3px] border-brand-line border-t-brand rounded-full animate-spin" />
             </div>
           ) : sessions.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              Aucune session enregistrée
+            <div className="text-center py-12 px-6">
+              <Clock className="w-8 h-8 text-ink-faint mx-auto mb-3" />
+              <p className="font-medium text-ink">Aucune session enregistrée</p>
+              <p className="text-sm text-ink-faint mt-1">Lance le chronomètre puis enregistre ton temps pour suivre tes progrès.</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <ul className="divide-y divide-line">
               {sessions.map((session, index) => {
-                const isImproved = index < sessions.length - 1 && session.session_duration < sessions[index + 1].session_duration;
-                const isRegressed = index < sessions.length - 1 && session.session_duration > sessions[index + 1].session_duration;
+                const previous = sessions[index + 1];
+                const faster = previous && session.session_duration < previous.session_duration;
+                const slower = previous && session.session_duration > previous.session_duration;
 
                 return (
-                  <div key={session.id} className="px-6 py-4 hover:bg-slate-50 transition-colors group">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Clock className="w-4 h-4 text-slate-400" />
-                          <span className="font-semibold text-slate-900">
-                            {formatDuration(session.session_duration)}
-                          </span>
-                          {isImproved && (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                              <TrendingUp className="w-3 h-3" />
-                              Amélioration
+                  <li key={session.id} className="px-6 py-3.5 hover:bg-[#faf9f7] transition-colors">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="fd-nums font-semibold text-ink">{formatDuration(session.session_duration)}</span>
+                          {faster && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-hover bg-brand-soft border border-brand-line px-2 py-0.5 rounded-full">
+                              <TrendingUp className="w-3 h-3" /> Plus rapide
                             </span>
                           )}
-                          {isRegressed && (
-                            <span className="inline-flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                              <TrendingDown className="w-3 h-3" />
-                              Régression
+                          {slower && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-faint bg-[#f2f1ee] px-2 py-0.5 rounded-full">
+                              <TrendingDown className="w-3 h-3" /> Plus lent
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <div className="flex items-center gap-1.5 text-sm text-ink-faint mt-0.5">
                           <Calendar className="w-3.5 h-3.5" />
                           {formatDate(session.created_at)}
-                        </div>
-                        {session.notes && (
-                          <div className="mt-2 text-sm text-slate-600 italic">
-                            "{session.notes}"
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">
+                          <span aria-hidden>·</span>
                           {session.session_type === 'exam' ? 'Examen' : 'Étude'}
                         </div>
-                        {onDeleteSession && (
-                          <button
-                            onClick={() => handleDelete(session.id)}
-                            disabled={deletingId === session.id}
-                            className="p-1.5 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                            title="Supprimer"
-                          >
-                            {deletingId === session.id ? (
-                              <div className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            )}
-                          </button>
+                        {session.notes && (
+                          <p className="mt-1.5 text-sm text-ink-soft italic">« {session.notes} »</p>
                         )}
                       </div>
+                      {onDeleteSession && (
+                        <button
+                          onClick={() => handleDelete(session.id)}
+                          disabled={deletingId === session.id}
+                          className="p-2 rounded-lg text-ink-faint hover:text-[#a23b34] hover:bg-[#fbecea] transition-colors disabled:opacity-50 flex-shrink-0"
+                          title="Supprimer cette session"
+                          aria-label="Supprimer cette session"
+                        >
+                          {deletingId === session.id ? (
+                            <div className="w-4 h-4 border-2 border-[#e8c4c0] border-t-[#a23b34] rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </div>
       </div>

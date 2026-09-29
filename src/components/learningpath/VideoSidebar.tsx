@@ -1,16 +1,7 @@
 // src/components/learningpath/VideoSidebar.tsx
 import React from 'react';
-import { 
-  ChevronRight,
-  CheckCircle,
-  Lock,
-  FileText,
-  Video as VideoIcon,
-  Download,
-  ExternalLink
-} from 'lucide-react';
-import { PathChapter, Video } from '@/types/index';
-import { Button } from '@/components/ui/button';
+import { ChevronRight, CheckCircle, Lock, FileText, Video as VideoIcon } from 'lucide-react';
+import { PathChapter } from '@/types/index';
 import { cn } from '@/lib/utils';
 
 interface VideoSidebarProps {
@@ -28,7 +19,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
   onVideoSelect,
   onQuizSelect
 }) => {
-  const isVideoAccessible = (chapterIndex: number, videoIndex: number) => {
+  const isVideoAccessible = (_chapterIndex: number, _videoIndex: number) => {
     // Logic to determine if video is accessible based on progress
     // For now, we'll make all videos accessible
     return true;
@@ -155,7 +146,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                   
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      Chapter Quiz
+                      Quiz du chapitre
                     </div>
                     <div className="text-xs text-gray-500">
                       {chapter.quiz.questions.length} questions

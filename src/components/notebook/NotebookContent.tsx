@@ -1,7 +1,9 @@
 // NotebookContent.tsx - Fixed spacing and better annotation toolbar
 import React, { useState, useRef, useEffect } from 'react';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { useNavigate } from 'react-router-dom';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { NotebookPaper, paperTextStyle, type NotebookTheme } from './NotebookPaper';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
 import {
   Highlighter,
@@ -9,24 +11,14 @@ import {
   Type,
   Eraser,
   Trash2,
-  Settings,
   Palette,
   MousePointer,
   Undo2,
   Redo2,
   Save,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
 } from 'lucide-react';
-
-interface NotebookTheme {
-  bgColor: string;
-  lineColor: string;
-  marginLineColor: string;
-  isGrid: boolean;
-  lineSpacing: number;
-  marginLeft: number;
-}
 
 interface NotebookContentProps {
   content: string;
@@ -60,12 +52,27 @@ const notebookThemes = {
   },
   college: {
     bgColor: '#fffef7',
-    lineColor: '#c7d2fe',
+    lineColor: '#d8d4cc',
     marginLineColor: '#fca5a5',
     isGrid: false,
     lineSpacing: 1.8,
     marginLeft: 3
   }
+};
+
+// Shown when a lesson entry carries no body at all. Still reports ready, so
+// the caller's loading skeleton clears instead of hanging over an empty sheet.
+const EmptyLessonBody: React.FC<{ onReady?: () => void }> = ({ onReady }) => {
+  useEffect(() => {
+    const id = requestAnimationFrame(() => { onReady?.(); });
+    return () => cancelAnimationFrame(id);
+  }, [onReady]);
+
+  return (
+    <div className="text-center py-12" style={{ color: '#9a958c', fontSize: 13.5 }}>
+      <p>Cette leçon n'a pas encore de contenu à afficher.</p>
+    </div>
+  );
 };
 
 // Wrapper that renders LessonRenderer and calls onReady after mount
@@ -90,7 +97,6 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
 }) => {
   const hasStructure = structure && structure.sections && structure.sections.length > 0;
   const navigate = useNavigate();
-  const [contentLoaded, setContentLoaded] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'highlight' | 'note' | 'pen' | 'eraser' | null>('select');
   const [activeColor, setActiveColor] = useState('#ffeb3b');
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -102,40 +108,18 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [zoom, setZoom] = useState(0.9);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const colorBtnRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<Annotation[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [holeCount, setHoleCount] = useState(20);
 
   // Update annotations when initialAnnotations prop changes
   useEffect(() => {
     setAnnotations(initialAnnotations);
   }, [initialAnnotations]);
 
-  // Calculate hole count based on content height
-  useEffect(() => {
-    if (!paperRef.current) return;
-
-    const updateHoleCount = () => {
-      if (paperRef.current) {
-        const height = paperRef.current.scrollHeight;
-        // Each hole + gap = 8px (hole height) + 32px (gap) = 40px total
-        const holesNeeded = Math.ceil(height / 40) + 2; // +2 buffer
-        setHoleCount(holesNeeded);
-      }
-    };
-
-    updateHoleCount();
-
-    const resizeObserver = new ResizeObserver(updateHoleCount);
-    resizeObserver.observe(paperRef.current);
-
-    return () => resizeObserver.disconnect();
-  }, [contentLoaded, content, structure]);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const annotationLayerRef = useRef<HTMLDivElement>(null);
-  const paperRef = useRef<HTMLDivElement>(null);
   
   const colorPalette = [
     { name: 'Yellow', value: '#ffeb3b' },
@@ -186,7 +170,6 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   }, [annotations, onSaveAnnotations, initialAnnotations]);
 
   const handleContentReady = () => {
-    setContentLoaded(true);
     setupClickableHeadings();
     if (onReady) onReady();
   };
@@ -194,7 +177,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   const setupClickableHeadings = () => {
     if (!contentRef.current || !lessonId) return;
     
-    const headings = contentRef.current.querySelectorAll('h1, h2, h3');
+    const headings = contentRef.current.querySelectorAll<HTMLElement>('h1, h2, h3');
     
     headings.forEach(heading => {
       heading.style.cursor = 'pointer';
@@ -322,16 +305,6 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     );
   };
   
-  const getNotebookStyle = (): React.CSSProperties => {
-    return {
-      backgroundColor: notebookTheme.bgColor,
-      backgroundImage: `linear-gradient(90deg, ${notebookTheme.marginLineColor} 1px, transparent 1px)`,
-      backgroundSize: `100% 100%`,
-      backgroundPosition: `${notebookTheme.marginLeft}rem 0`,
-      position: 'relative' as const,
-    };
-  };
-  
   const getCursorClass = () => {
     if (!activeTool || activeTool === 'select') return '';
     
@@ -378,7 +351,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             <div className="h-4 w-px bg-gray-300 mx-2" />
             
             {/* Color Picker */}
-            <div className="relative">
+            <div className="relative" ref={colorBtnRef}>
               <button
                 onClick={() => setShowColorPicker(!showColorPicker)}
                 className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
@@ -393,8 +366,8 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
                 </div>
               </button>
               
-              {showColorPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-10">
+              <FloatingPanel anchorRef={colorBtnRef} open={showColorPicker} onClose={() => setShowColorPicker(false)}
+                className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
                   <div className="grid grid-cols-4 gap-2">
                     {colorPalette.map((color) => (
                       <button
@@ -429,8 +402,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+              </FloatingPanel>
             </div>
           </div>
           
@@ -520,30 +492,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
       </div>
       
       {/* Paper with enhanced notebook styling — fills remaining height */}
-      <div
-        ref={paperRef}
-        className="relative"
-        style={getNotebookStyle()}
-      >
-        {/* Paper texture overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.02] pointer-events-none"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='53' cy='53' r='1'/%3E%3Ccircle cx='23' cy='45' r='1'/%3E%3Ccircle cx='37' cy='15' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-        
-        {/* Holes for spiral binding */}
-        <div className="absolute left-3 top-0 flex flex-col justify-start pt-6 gap-8 pointer-events-none">
-          {Array.from({ length: holeCount }).map((_, i) => (
-            <div
-              key={i}
-              className="w-2 h-2 bg-white border border-gray-300 rounded-full shadow-inner"
-              style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)' }}
-            />
-          ))}
-        </div>
-
+      <NotebookPaper theme={notebookTheme}>
         <div
           className={`${className} relative z-10 transition-transform duration-200`}
           ref={contentRef}
@@ -555,19 +504,19 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
           {/* Content with proper margins - FIXED SPACING */}
           <div 
             className="py-8 pr-8"
-            style={{ 
-              marginLeft: `${notebookTheme.marginLeft + 0.5}rem`, // Fixed: reduced gap
-              paddingLeft: '1rem', // Fixed: reduced padding
-              lineHeight: `${notebookTheme.lineSpacing}rem`
-            }}
+            style={paperTextStyle(notebookTheme)}
           >
             {hasStructure ? (
               <StructuredLessonContent structure={structure} onReady={handleContentReady} />
-            ) : (
+            ) : content ? (
               <TipTapRenderer
                 content={content}
                 onReady={handleContentReady}
               />
+            ) : (
+              // Neither form of body: say so, instead of leaving a blank sheet
+              // that reads as a broken page.
+              <EmptyLessonBody onReady={handleContentReady} />
             )}
           </div>
         </div>
@@ -679,7 +628,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
             />
           )}
         </div>
-      </div>
+      </NotebookPaper>
     </div>
   );
 };

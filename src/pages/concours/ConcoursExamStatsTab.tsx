@@ -47,16 +47,16 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
 
       {/* ── Distribution ── */}
       <section style={{
-        background: '#fff', borderRadius: 18, border: '1px solid #ece9fb', padding: '24px 28px',
+        background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
       }}>
         <div className="flex items-center gap-2 mb-1">
           <BarChart3 className="w-5 h-5" style={{ color: theme.from }} />
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             Répartition des questions
           </h2>
         </div>
-        <p style={{ fontSize: 13, color: '#7068a8', marginBottom: 18 }}>
-          Comment les <strong style={{ color: '#1e1b4b' }}>{stats.total_questions}</strong> questions de cet examen
+        <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 18 }}>
+          Comment les <strong style={{ color: '#1a1a1a' }}>{stats.total_questions}</strong> questions de cet examen
           se répartissent.
         </p>
 
@@ -73,7 +73,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                 style={{
                   padding: '7px 16px', borderRadius: 8, cursor: 'pointer', border: 'none',
                   fontSize: 13, fontWeight: active ? 700 : 500,
-                  color: active ? theme.from : '#7068a8',
+                  color: active ? theme.from : '#6b6862',
                   background: active ? '#fff' : 'transparent',
                   boxShadow: active ? '0 1px 3px rgba(0,0,0,.08)' : 'none',
                   transition: 'all .15s',
@@ -86,7 +86,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
         </div>
 
         {rows.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#9391b8', fontStyle: 'italic' }}>
+          <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
             Aucune donnée — les questions ne sont pas encore taguées par {LEVEL_LABEL[level].toLowerCase()}.
           </p>
         ) : (
@@ -98,12 +98,12 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                   <div className="flex items-center justify-between" style={{ marginBottom: 5 }}>
                     <span style={{
                       fontSize: 13, fontWeight: 600,
-                      color: untagged ? '#9391b8' : '#1e1b4b',
+                      color: untagged ? '#6b6862' : '#1a1a1a',
                       fontStyle: untagged ? 'italic' : 'normal',
                     }}>
                       {r.name}
                     </span>
-                    <span style={{ fontSize: 12, color: '#7068a8', fontFamily: 'DM Mono', fontWeight: 600 }}>
+                    <span style={{ fontSize: 12, color: '#6b6862', fontFamily: 'DM Mono', fontWeight: 600 }}>
                       {r.count} Q · {r.pct}%
                     </span>
                   </div>
@@ -126,11 +126,11 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
       {/* ── Comparison (admin curated) ── */}
       {hasComparison ? (
         <section style={{
-          background: '#fff', borderRadius: 18, border: '1px solid #ece9fb', padding: '24px 28px',
+          background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
         }}>
           <div className="flex items-center gap-2 mb-4">
             <Layers className="w-5 h-5" style={{ color: theme.from }} />
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
               Analyse & tendances
             </h2>
           </div>
@@ -146,7 +146,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                   <div style={{ fontSize: 14, fontWeight: 700, color: theme.text, marginBottom: 4 }}>
                     {c.title}
                   </div>
-                  <div style={{ fontSize: 13, color: '#4b4880', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 13, color: '#33302b', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                     {c.text}
                   </div>
                 </div>
@@ -164,11 +164,11 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
         </section>
       ) : (
         <section style={{
-          background: '#faf9ff', borderRadius: 18, border: '1px dashed #d9d4f5',
+          background: '#faf9f7', borderRadius: 18, border: '1px dashed #d9d4f5',
           padding: '32px 28px', textAlign: 'center',
         }}>
           <Layers className="w-8 h-8 mx-auto mb-3" style={{ color: '#c4c0e8' }} />
-          <p style={{ fontSize: 14, color: '#9391b8' }}>
+          <p style={{ fontSize: 14, color: '#6b6862' }}>
             L'analyse comparative de cet examen sera bientôt disponible.
           </p>
         </section>

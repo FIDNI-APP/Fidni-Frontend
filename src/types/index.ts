@@ -55,19 +55,36 @@ export interface Theorem {
 
 export interface SubjectGrade {
   id: string;
-  subject: string;
+  /** Identifiant de la matière (l'API renvoie un nombre). */
+  subject: string | number;
   min_grade: number;
   max_grade: number;
+  /** Renvoyés par l'API (SubjectGradeSerializer). */
+  current_grade?: number;
+  target_grade?: number;
 }
 
 export interface UserProfile {
   bio: string;
+  /** Établissement choisi dans la liste du ministère (absent si saisi librement). Visible du seul propriétaire. */
+  school?: { id: number; name: string; city: string; kind: string } | null;
+  /** Nom affiché de l'établissement (toujours rempli une fois l'identité complétée). */
+  school_name?: string;
+  /** Sexe (« M », « F » ou « N » = préfère ne pas le dire), visible du seul propriétaire. */
+  gender?: 'M' | 'F' | 'N' | '';
+  birth_date?: string | null; // AAAA-MM-JJ, privé (propriétaire seulement)
+  /** Faux si le compte doit accepter la version en vigueur des CGU / de la confidentialité. */
+  terms_up_to_date?: boolean;
   avatar: string;
   favorite_subjects: string[];
   location: string;
   last_activity_date: string;
   joined_at: string;
-  class_level: { id: string; name: string } | null;
+  /** L'API renvoie l'identifiant (nombre) ; certains écrans reçoivent encore l'objet. */
+  class_level: number | string | { id: string; name: string } | null;
+  class_level_name?: string | null;
+  target_subjects?: string[];
+  target_subject_names?: string[];
   user_type: 'student' | 'teacher';
   onboarding_completed: boolean;
   subject_grades: SubjectGrade[];
@@ -97,6 +114,11 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  /** Auteur d'une contribution dont le compte a été supprimé (« Compte supprimé »). */
+  is_deleted?: boolean;
+  /** Renvoyés au seul propriétaire du compte. */
+  first_name?: string;
+  last_name?: string;
   joinedAt: string;
   profile: UserProfile;
   is_self?: boolean;
@@ -147,9 +169,7 @@ export interface Content {
   display_id?: number;
   type: ContentKind;
   title: string;
-  // Legacy text content (old items)
-  content?: string;
-  // Structured JSON content (new items, after normalize())
+  // Énoncé structuré (json_content côté API, renommé par normalize())
   structure?: any;
   difficulty?: Difficulty;
   class_levels: ClassLevelModel[];
@@ -182,21 +202,6 @@ export interface Content {
 export type Lesson = Content;
 /** @deprecated Use Content instead */
 export type Exam = Content;
-
-// =====================
-// FILTER TYPES
-// =====================
-
-export interface ExamFilters {
-  classLevels: string[];
-  subjects: string[];
-  subfields: string[];
-  chapters: string[];
-  theorems: string[];
-  difficulties: Difficulty[];
-  isNationalExam: boolean | null;
-  dateRange: { start: string | null; end: string | null } | null;
-}
 
 // =====================
 // NOTEBOOK
@@ -241,11 +246,6 @@ export interface NotebookChapter {
   notes?: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface NotebookResponse {
-  notebooks: Notebook[];
-  count: number;
 }
 
 // =====================
@@ -346,6 +346,7 @@ export interface UserChapterProgress {
   progress_percentage: number;
   quiz_score?: number;
   quiz_passed?: boolean;
+  quiz_attempts?: number;
   started_at: string;
   completed_at?: string;
 }
@@ -392,39 +393,3 @@ export interface QuizResult {
   passing_score: number;
 }
 
-export interface QuizSubmission {
-  attempt_id: string;
-  answers: {
-    question_id: string;
-    answer_index?: number;
-    answer_indices?: number[];
-  }[];
-}
-
-export interface StartQuizResponse {
-  attempt_id: string;
-  questions: QuizQuestion[];
-  time_limit_minutes?: number;
-  total_questions: number;
-}
-
-export interface ViewHistoryItem {
-  content_type: string;
-  content: Content;
-  viewed_at: string;
-  time_spent?: number;
-}
-
-export interface GradePrediction {
-  subjectId: string;
-  subjectName: string;
-  currentAverage: number;
-  predictedGrade: number;
-  confidence: number;
-  trend: 'up' | 'down' | 'stable';
-  recommendedExercises?: string[];
-}
-
-export interface ResourceType {
-  id: string;
-}

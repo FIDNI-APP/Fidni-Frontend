@@ -40,44 +40,18 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   onFilterChange,
   sortBy,
   onSortChange,
-  accentColor = 'indigo',
 }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const getColorClasses = () => {
-    switch (accentColor) {
-      case 'violet':
-        return {
-          chip: 'bg-violet-100 text-violet-700',
-          chipHover: 'hover:bg-violet-200',
-          selected: 'bg-violet-600 text-white',
-          button: 'bg-violet-600 hover:bg-violet-700',
-        };
-      case 'emerald':
-        return {
-          chip: 'bg-emerald-100 text-emerald-700',
-          chipHover: 'hover:bg-emerald-200',
-          selected: 'bg-emerald-600 text-white',
-          button: 'bg-emerald-600 hover:bg-emerald-700',
-        };
-      case 'blue':
-        return {
-          chip: 'bg-blue-100 text-blue-700',
-          chipHover: 'hover:bg-blue-200',
-          selected: 'bg-blue-600 text-white',
-          button: 'bg-blue-600 hover:bg-blue-700',
-        };
-      default:
-        return {
-          chip: 'bg-indigo-100 text-indigo-700',
-          chipHover: 'hover:bg-indigo-200',
-          selected: 'bg-indigo-600 text-white',
-          button: 'bg-indigo-600 hover:bg-indigo-700',
-        };
-    }
+  // Single app-wide accent (indigo) — the filter bar no longer recolours
+  // itself per content type, so exercises/lessons/exams stay visually
+  // consistent with the navbar, cards and dashboard.
+  const colorClasses = {
+    chip: 'bg-indigo-100 text-indigo-700',
+    chipHover: 'hover:bg-indigo-200',
+    selected: 'bg-indigo-600 text-white',
+    button: 'bg-indigo-600 hover:bg-indigo-700',
   };
-
-  const colorClasses = getColorClasses();
   const [classLevels, setClassLevels] = useState<Option[]>([]);
   const [subjects, setSubjects] = useState<Option[]>([]);
   const [subfields, setSubfields] = useState<Option[]>([]);
@@ -302,14 +276,16 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   const activeFilterCount = getActiveFilterCount();
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 mb-6">
+    <div className="bg-white rounded-2xl border border-[#e7e3dc] mb-6">
       {/* Toolbar */}
       <div className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        {/* Une seule ligne, y compris sur téléphone : filtres à gauche, tri à droite. */}
+        <div className="flex flex-row items-center gap-3">
           {/* Left: Filter toggle + chips */}
           <div className="flex flex-wrap items-center gap-2.5 flex-1">
             <button
               onClick={() => setIsPanelOpen(!isPanelOpen)}
+              data-tour="liste-filtres"
               className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
                 isPanelOpen
                   ? `${colorClasses.button} text-white shadow-md`
@@ -407,8 +383,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
           </div>
 
           {/* Right: Sort */}
-          <div className="flex items-center gap-2.5 border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-3 flex-shrink-0">
-            <ArrowUpDown className="w-4 h-4 text-slate-400" />
+          <div data-tour="liste-tri" className="flex items-center gap-2 border-l border-slate-200 pl-3 flex-shrink-0 self-start sm:self-center">
+            <ArrowUpDown className="w-4 h-4 text-slate-400 hidden sm:block" />
             <SortDropdown value={sortBy} onChange={onSortChange} />
           </div>
         </div>

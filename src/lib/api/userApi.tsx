@@ -1,4 +1,4 @@
-import {api} from './apiClient';
+import {api, storeTokens} from './apiClient';
 import { getCurrentUser } from './authApi';
 
 export const updateUserProfile = async (_username: string, userData: any) => {
@@ -64,7 +64,6 @@ export const getUserContributions = async (username: string) => {
 export const getUserSavedExercises = async (username: string) => {
   try {
     const response = await api.get(`/users/${username}/saved_exercises/`);
-    console.log("Saved exercises response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching saved exercises:", error);
@@ -75,7 +74,6 @@ export const getUserSavedExercises = async (username: string) => {
 export const getUserSavedLessons = async (username: string) => {
   try {
     const response = await api.get(`/users/${username}/saved_lessons/`);
-    console.log("Saved lessons response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching saved lessons:", error);
@@ -86,7 +84,6 @@ export const getUserSavedLessons = async (username: string) => {
 export const getUserSavedExams = async (username: string) => {
   try {
     const response = await api.get(`/users/${username}/saved_exams/`);
-    console.log("Saved exams response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching saved exams:", error);
@@ -97,7 +94,6 @@ export const getUserSavedExams = async (username: string) => {
 export const getUserProgressExercises = async (username: string, progress: string) => {
   try {
     const response = await api.get(`/users/${username}/${progress}_thing/`);
-    console.log("Progress exercises response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching progress exercises:", error);
@@ -108,7 +104,6 @@ export const getUserProgressExercises = async (username: string, progress: strin
 export const getUserHistory = async (username: string) => {
   try {
     const response = await api.get(`/users/${username}/history/`);
-    console.log("User history response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching user history:", error);
@@ -197,6 +192,8 @@ export const changePassword = async (currentPassword: string, newPassword: strin
     current_password: currentPassword,
     new_password: newPassword,
   });
+  // Les autres appareils sont déconnectés ; le serveur renvoie de nouveaux jetons pour celui-ci.
+  if (response.data?.access) storeTokens(response.data.access, response.data.refresh);
   return response.data;
 };
 
@@ -205,6 +202,16 @@ export const updateUserInfo = async (data: {
   first_name?: string;
   last_name?: string;
   email?: string;
+  /** Obligatoire quand l'e-mail change. */
+  current_password?: string;
+  /** Établissement de la liste officielle, ou nom libre (school_id vide). */
+  school_id?: number | '';
+  school_name?: string;
+  gender?: 'M' | 'F' | 'N';
+  /** AAAA-MM-JJ */
+  birth_date?: string;
+  /** Acceptation des CGU et de la politique de confidentialité en vigueur. */
+  accept_terms?: boolean;
 }): Promise<any> => {
   const response = await api.patch('/auth/user/update/', data);
   return response.data;
@@ -223,6 +230,46 @@ export const updateOnboardingStep = async (data: any) => {
 };
 
 // Complete onboarding
+/** Télécharge toutes ses données au format JSON (RGPD : accès et portabilité). */
+export const downloadMyData = async (username: string) => {
+  const response = await api.get('/auth/my-data/', { responseType: 'blob' });
+  const url = URL.createObjectURL(response.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fidni-mes-donnees-${username}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+/** Supprime son propre compte (mot de passe exigé). Les contributions restent sous « Compte supprimé ». */
+export const deleteMyAccount = async (password: string) => {
+  await api.post('/auth/delete-account/', { password });
+};
+
+/** Modération (admin) : supprime un compte ET son contenu. `confirm` = nom du compte recopié. */
+export const moderationDeleteAccount = async (username: string, confirm: string) => {
+  const response = await api.post(`/moderation/users/${encodeURIComponent(username)}/delete/`, { confirm });
+  return response.data;
+};
+
+export interface SchoolOption {
+  id: number;
+  name: string;
+  name_ar: string;
+  city: string;
+  region: string;
+  kind: 'lycee' | 'college' | 'cpge' | 'prive';
+  kind_label: string;
+}
+
+/** Établissements marocains (listes du ministère, data.gov.ma) correspondant à la recherche. */
+export const searchSchools = async (q: string, signal?: AbortSignal): Promise<SchoolOption[]> => {
+  const response = await api.get('/schools/', { params: { q }, signal });
+  return Array.isArray(response.data) ? response.data : [];
+};
+
 export const completeOnboarding = async (data: any) => {
   const response = await api.post('/onboarding/', data);
   return response.data;

@@ -15,6 +15,7 @@ import {
   type ConcoursExam, type ConcoursComment,
 } from '@/lib/api/concoursApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { isModerator } from '@/lib/features';
 import { SEO } from '@/components/layout/SEO';
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
 import { ConcoursExamStatsTab } from './ConcoursExamStatsTab';
@@ -23,9 +24,9 @@ import { ConcoursExamActivityTab } from './ConcoursExamActivityTab';
 type ExamTab = 'navigation' | 'stats' | 'activity';
 
 const CONCOURS_COLOR: Record<string, { from: string; to: string; light: string; text: string; headerVia: string }> = {
-  ensa:     { from: '#4f46e5', to: '#818cf8', light: '#eef2ff', text: '#4338ca', headerVia: '#6d28d9' },
-  ensam:    { from: '#0891b2', to: '#22d3ee', light: '#ecfeff', text: '#0e7490', headerVia: '#0e7490' },
-  medecine: { from: '#be185d', to: '#f472b6', light: '#fdf2f8', text: '#9d174d', headerVia: '#db2777' },
+  ensa:     { from: '#33302b', to: '#6b6862', light: '#f2f1ee', text: '#1a1a1a', headerVia: '#000000' },
+  ensam:    { from: '#15633c', to: '#3d8f64', light: '#eaf3ed', text: '#15633c', headerVia: '#0e7490' },
+  medecine: { from: '#9a6e1c', to: '#c0892f', light: '#faf3e2', text: '#9a6e1c', headerVia: '#db2777' },
 };
 
 export default function ConcoursExamDetailPage() {
@@ -73,15 +74,15 @@ export default function ConcoursExamDetailPage() {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }} className="flex items-center justify-center">
-      <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#4f46e5' }} />
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+      <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
     </div>
   );
 
   if (!exam) return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }} className="flex items-center justify-center">
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
       <div className="fd-card p-8 text-center">
-        <p style={{ color: '#7068a8' }}>Examen introuvable.</p>
+        <p style={{ color: '#6b6862' }}>Examen introuvable.</p>
         <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
       </div>
     </div>
@@ -198,7 +199,7 @@ export default function ConcoursExamDetailPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 mt-5 -mb-px overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1 mt-5 -mb-px overflow-x-auto scrollbar-hide" data-tour="concours-sujet-onglets">
             {([
               { id: 'navigation', label: 'Navigation', icon: BookOpen },
               { id: 'stats',      label: 'Statistiques', icon: BarChart3 },
@@ -239,14 +240,14 @@ export default function ConcoursExamDetailPage() {
         {/* ═════ TAB: Navigation (révision) ═════ */}
         {activeTab === 'navigation' && (
         <div className="max-w-3xl mx-auto">
-        <p style={{ fontSize: 13, color: '#9391b8', marginBottom: 20, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 20, lineHeight: 1.5 }}>
           📖 Mode révision — les réponses sont masquées. Réfléchis à chaque question, puis révèle le corrigé.
         </p>
 
         {/* Questions */}
         {questions.length === 0 ? (
           <div className="fd-card text-center" style={{ padding: 56 }}>
-            <p style={{ color: '#9391b8', fontSize: 14 }}>Aucune question disponible pour cet examen.</p>
+            <p style={{ color: '#6b6862', fontSize: 14 }}>Aucune question disponible pour cet examen.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
@@ -259,8 +260,8 @@ export default function ConcoursExamDetailPage() {
                   className="concours-question-card animate-fade-up"
                   style={{
                     background: '#fff', borderRadius: 18,
-                    border: '1px solid #ece9fb',
-                    boxShadow: '0 1px 3px rgba(90,70,200,.05)',
+                    border: '1px solid #e7e3dc',
+                    boxShadow: '0 1px 3px rgba(20,18,16,.05)',
                     padding: '26px 28px',
                   }}
                 >
@@ -274,7 +275,7 @@ export default function ConcoursExamDetailPage() {
                     </span>
                     <span style={{ flex: 1, height: 1, background: '#f0eefb' }} />
                     {q.points && (
-                      <span style={{ fontSize: 11, color: '#9391b8', fontFamily: 'DM Mono', fontWeight: 600 }}>
+                      <span style={{ fontSize: 11, color: '#6b6862', fontFamily: 'DM Mono', fontWeight: 600 }}>
                         {q.points} pt{q.points > 1 ? 's' : ''}
                       </span>
                     )}
@@ -291,7 +292,7 @@ export default function ConcoursExamDetailPage() {
 
                   {/* Statement */}
                   <div className="concours-question-text"
-                       style={{ fontSize: 17, color: '#1e1b4b', lineHeight: 1.8, marginBottom: 22 }}>
+                       style={{ fontSize: 17, color: '#1a1a1a', lineHeight: 1.8, marginBottom: 22 }}>
                     <ConcoursContentRenderer html={q.statement} />
                   </div>
 
@@ -306,22 +307,22 @@ export default function ConcoursExamDetailPage() {
                           className="opt-row flex items-start gap-3"
                           style={{
                             padding: '13px 16px', borderRadius: 12,
-                            background: showCorrect ? '#f0fdf4' : '#faf9ff',
-                            border: `1.5px solid ${showCorrect ? '#86efac' : '#efedf9'}`,
+                            background: showCorrect ? '#f0fdf4' : '#faf9f7',
+                            border: `1.5px solid ${showCorrect ? '#86efac' : '#efece6'}`,
                           }}
                         >
                           <span style={{
                             width: 28, height: 28, borderRadius: 8, flexShrink: 0,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: showCorrect ? '#16a34a' : '#fff',
-                            color: showCorrect ? '#fff' : '#9391b8',
+                            color: showCorrect ? '#fff' : '#6b6862',
                             fontSize: 13, fontWeight: 800, fontFamily: 'DM Mono',
-                            border: `1.5px solid ${showCorrect ? '#16a34a' : '#e4e2f5'}`,
+                            border: `1.5px solid ${showCorrect ? '#16a34a' : '#e7e3dc'}`,
                           }}>
                             {opt.key}
                           </span>
                           <div className="flex-1 concours-option-text"
-                               style={{ fontSize: 15, color: showCorrect ? '#166534' : '#1e1b4b', lineHeight: 1.6, paddingTop: 3, fontWeight: showCorrect ? 600 : 400 }}>
+                               style={{ fontSize: 15, color: showCorrect ? '#166534' : '#1a1a1a', lineHeight: 1.6, paddingTop: 3, fontWeight: showCorrect ? 600 : 400 }}>
                             <ConcoursContentRenderer html={opt.text} />
                           </div>
                           {showCorrect && (
@@ -334,6 +335,7 @@ export default function ConcoursExamDetailPage() {
 
                   {/* Reveal button */}
                   <button
+                    data-tour="concours-reponse"
                     className="reveal-btn"
                     onClick={() => setRevealed(prev => ({ ...prev, [idx]: !prev[idx] }))}
                     style={{
@@ -341,8 +343,8 @@ export default function ConcoursExamDetailPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       padding: '12px 18px', borderRadius: 11, cursor: 'pointer',
                       background: open ? '#fff' : theme.from,
-                      color: open ? '#9391b8' : '#fff',
-                      border: open ? '1.5px solid #e4e2f5' : 'none',
+                      color: open ? '#6b6862' : '#fff',
+                      border: open ? '1.5px solid #e7e3dc' : 'none',
                       fontSize: 14, fontWeight: 700,
                     }}
                   >
@@ -395,13 +397,13 @@ export default function ConcoursExamDetailPage() {
 
         {/* Comments */}
         <div className="mt-10" style={{
-          background: '#fff', borderRadius: 18, border: '1px solid #ece9fb', padding: '24px 28px',
+          background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
         }}>
           <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="w-4 h-4" style={{ color: '#4338ca' }} />
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1e1b4b' }}>Commentaires</h3>
+            <MessageSquare className="w-4 h-4" style={{ color: '#000000' }} />
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>
           </div>
-          <CommentsBlock examId={exam.id} currentUserId={user?.id} />
+          <CommentsBlock examId={exam.id} currentUserId={user?.id} canModerate={isModerator(user)} />
         </div>
         </div>
         )}
@@ -426,7 +428,7 @@ export default function ConcoursExamDetailPage() {
             {/* Progress */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#7068a8' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#6b6862' }}>
                   {revealedCount}/{questions.length} corrigés révélés
                 </span>
                 <button
@@ -439,7 +441,7 @@ export default function ConcoursExamDetailPage() {
                   {allRevealed ? 'Tout masquer' : 'Tout révéler'}
                 </button>
               </div>
-              <div style={{ height: 6, borderRadius: 99, background: '#efedf9', overflow: 'hidden' }}>
+              <div style={{ height: 6, borderRadius: 99, background: '#efece6', overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', width: `${pct}%`, borderRadius: 99,
                   background: `linear-gradient(90deg,${theme.from},${theme.to})`,
@@ -473,7 +475,7 @@ export default function ConcoursExamDetailPage() {
 
 /* ────────── Comments ────────── */
 
-function CommentsBlock({ examId, currentUserId }: { examId: number; currentUserId?: number | string }) {
+function CommentsBlock({ examId, currentUserId, canModerate = false }: { examId: number; currentUserId?: number | string; canModerate?: boolean }) {
   const [comments, setComments] = useState<ConcoursComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -507,8 +509,8 @@ function CommentsBlock({ examId, currentUserId }: { examId: number; currentUserI
           rows={2}
           style={{
             flex: 1, padding: '10px 14px', borderRadius: 10,
-            border: '1.5px solid #e4e2f5', background: '#f9f8ff',
-            fontSize: 13, color: '#1e1b4b',
+            border: '1.5px solid #e7e3dc', background: '#f9f8ff',
+            fontSize: 13, color: '#1a1a1a',
             outline: 'none', resize: 'vertical', minHeight: 64,
           }}
         />
@@ -524,36 +526,36 @@ function CommentsBlock({ examId, currentUserId }: { examId: number; currentUserI
 
       {loading ? (
         <div className="text-center" style={{ padding: 16 }}>
-          <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: '#4f46e5' }} />
+          <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
         </div>
       ) : comments.length === 0 ? (
-        <p style={{ fontSize: 13, color: '#9391b8', fontStyle: 'italic' }}>Aucun commentaire pour le moment.</p>
+        <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>Aucun commentaire pour le moment.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {comments.map(c => (
             <div key={c.id} className="flex gap-3" style={{
-              background: '#f9f8ff', border: '1px solid #ede9fe', borderRadius: 10, padding: '12px 14px',
+              background: '#f9f8ff', border: '1px solid #e7e3dc', borderRadius: 10, padding: '12px 14px',
             }}>
               {c.author.avatar
                 ? <img src={c.author.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />
                 : (
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+                    background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 700,
                   }}>{c.author.username[0]?.toUpperCase()}</div>
                 )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1e1b4b' }}>{c.author.username}</span>
-                  <span style={{ fontSize: 10, color: '#9391b8' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.author.username}</span>
+                  <span style={{ fontSize: 10, color: '#6b6862' }}>
                     {new Date(c.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
-                <p style={{ fontSize: 13, color: '#4b4880', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.content}</p>
+                <p style={{ fontSize: 13, color: '#33302b', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.content}</p>
               </div>
-              {currentUserId !== undefined && Number(currentUserId) === c.author.id && (
+              {(canModerate || (currentUserId !== undefined && Number(currentUserId) === c.author.id)) && (
                 <button onClick={() => remove(c.id)}
                         style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer', flexShrink: 0 }}>
                   <Trash2 className="w-4 h-4" />

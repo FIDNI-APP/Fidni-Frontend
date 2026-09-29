@@ -65,9 +65,9 @@ export function Search() {
     if (!isAuthenticated) { navigate('/login'); return; }
     try {
       const updated = await voteExercise(id, value);
-      setExercises(p => p.map(i => i.id === id ? updated : i));
-      setLessons(p => p.map(i => i.id === id ? updated : i));
-      setExams(p => p.map(i => i.id === id ? updated : i));
+      setExercises(p => p.map(i => String(i.id) === id ? updated : i));
+      setLessons(p => p.map(i => String(i.id) === id ? updated : i));
+      setExams(p => p.map(i => String(i.id) === id ? updated : i));
     } catch (err) { console.error('Failed to vote:', err); }
   };
 
@@ -93,7 +93,7 @@ export function Search() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO
         title={`Recherche: ${searchTerm} - Fidni`}
         description={`Résultats de recherche pour "${searchTerm}"`}
@@ -105,17 +105,17 @@ export function Search() {
           <span
             className="inline-flex items-center gap-1.5"
             style={{
-              background: '#eef2ff', color: '#4338ca',
+              background: '#f2f1ee', color: '#000000',
               padding: '4px 12px', borderRadius: 99,
               fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
             }}
           >
             <SearchIcon className="w-3 h-3" /> RECHERCHE
           </span>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em', marginTop: 10 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
             Recherche intelligente
           </h1>
-          <p style={{ fontSize: 13, color: '#7068a8', marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
             Trouve un exercice, une leçon ou un examen.
           </p>
         </div>
@@ -123,10 +123,11 @@ export function Search() {
         {/* Search bar */}
         <form
           onSubmit={handleSearch}
+          data-tour="recherche-barre"
           className="fd-card flex items-center mb-5"
           style={{ padding: 6, paddingLeft: 16, gap: 8 }}
         >
-          <SearchIcon className="w-4 h-4" style={{ color: '#9391b8' }} />
+          <SearchIcon className="w-4 h-4" style={{ color: '#6b6862' }} />
           <input
             type="text"
             placeholder="Rechercher un exercice, une leçon, un théorème…"
@@ -136,7 +137,7 @@ export function Search() {
             style={{
               flex: 1, border: 'none', outline: 'none',
               background: 'transparent', fontSize: 14, fontFamily: 'DM Sans',
-              color: '#1e1b4b', padding: '10px 0',
+              color: '#1a1a1a', padding: '10px 0',
             }}
           />
           {searchTerm && (
@@ -145,7 +146,7 @@ export function Search() {
               onClick={clearSearch}
               aria-label="Effacer"
               style={{
-                background: 'transparent', border: 'none', color: '#9391b8',
+                background: 'transparent', border: 'none', color: '#6b6862',
                 cursor: 'pointer', padding: 6,
               }}
             >
@@ -160,7 +161,7 @@ export function Search() {
         {searchTerm && (
           <>
             {/* Tabs as filter pills */}
-            <div className="flex items-center gap-2 flex-wrap mb-5">
+            <div className="flex items-center gap-2 flex-wrap mb-5" data-tour="recherche-onglets">
               {TABS.map(t => {
                 const Icon = t.icon;
                 return (
@@ -191,8 +192,8 @@ export function Search() {
             {/* Loading */}
             {loading && (
               <div className="flex flex-col items-center justify-center" style={{ padding: '60px 0' }}>
-                <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#4f46e5' }} />
-                <p style={{ fontSize: 13, color: '#7068a8' }}>Recherche en cours…</p>
+                <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#1a1a1a' }} />
+                <p style={{ fontSize: 13, color: '#6b6862' }}>Recherche en cours…</p>
               </div>
             )}
 
@@ -216,12 +217,12 @@ export function Search() {
               filteredResults.length > 0 ? (
                 <>
                   <div className="mb-4">
-                    <p style={{ fontSize: 12, color: '#7068a8' }}>
-                      <span style={{ fontFamily: 'DM Mono', color: '#1e1b4b', fontWeight: 600 }}>
+                    <p style={{ fontSize: 12, color: '#6b6862' }}>
+                      <span style={{ fontFamily: 'DM Mono', color: '#1a1a1a', fontWeight: 600 }}>
                         {filteredResults.length}
                       </span>{' '}
                       résultat{filteredResults.length > 1 ? 's' : ''} pour "
-                      <span style={{ color: '#4338ca', fontWeight: 600 }}>{searchTerm}</span>"
+                      <span style={{ color: '#000000', fontWeight: 600 }}>{searchTerm}</span>"
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -238,18 +239,18 @@ export function Search() {
                     className="inline-flex items-center justify-center mx-auto mb-4"
                     style={{
                       width: 64, height: 64, borderRadius: 16,
-                      background: 'linear-gradient(135deg,#eef2ff,#f0effe)', color: '#7068a8',
+                      background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)', color: '#6b6862',
                     }}
                   >
                     <SearchIcon className="w-7 h-7" />
                   </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b' }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
                     Aucun résultat trouvé
                   </h3>
-                  <p style={{ fontSize: 13, color: '#7068a8', marginTop: 6, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                  <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
                     Aucun résultat pour "{searchTerm}". Essaie d'autres mots-clés.
                   </p>
-                  <div style={{ fontSize: 12, color: '#9391b8', marginTop: 16 }}>
+                  <div style={{ fontSize: 12, color: '#6b6862', marginTop: 16 }}>
                     <p style={{ fontWeight: 600, marginBottom: 6 }}>Suggestions :</p>
                     <ul style={{ listStyle: 'none', padding: 0, lineHeight: 1.8 }}>
                       <li>· Vérifie l'orthographe</li>
@@ -270,15 +271,15 @@ export function Search() {
               className="inline-flex items-center justify-center mx-auto mb-4"
               style={{
                 width: 64, height: 64, borderRadius: 16,
-                background: 'linear-gradient(135deg,#eef2ff,#f0effe)', color: '#7068a8',
+                background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)', color: '#6b6862',
               }}
             >
               <SearchIcon className="w-7 h-7" />
             </div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
               Commence ta recherche
             </h3>
-            <p style={{ fontSize: 13, color: '#7068a8', marginTop: 6 }}>
+            <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>
               Entre un mot-clé pour rechercher des exercices, leçons ou examens.
             </p>
           </div>

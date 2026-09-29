@@ -93,7 +93,7 @@ export const RevisionListsSection: React.FC = () => {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-all"
           >
             <Plus className="w-4 h-4" />
             Nouvelle liste
@@ -103,7 +103,7 @@ export const RevisionListsSection: React.FC = () => {
 
       {/* Liste */}
       {lists.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+        <div className="fd-card p-12 text-center">
           <ListChecks className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <h3 className="font-semibold text-slate-900 mb-2">Aucune liste</h3>
           <p className="text-slate-500 text-sm mb-4">
@@ -126,15 +126,15 @@ export const RevisionListsSection: React.FC = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.05 }}
               onClick={() => navigate(`/profile/revision-lists/${list.id}`)}
-              className="group relative bg-white rounded-2xl border border-slate-200/80 overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-slate-900/10 hover:-translate-y-1 hover:border-slate-300 transition-all duration-300"
+              className="group relative fd-card/80 overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-slate-900/10 hover:-translate-y-1 hover:border-slate-300 transition-all duration-300"
             >
               {/* Top accent line */}
-              <div className="h-1 bg-gradient-to-r from-blue-600 to-indigo-600" />
+              <div className="h-1 bg-gradient-to-r from-indigo-600 to-indigo-700" />
 
               <div className="p-5">
                 {/* Badge row */}
                 <div className="flex items-center justify-between mb-3">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold tracking-wide">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-semibold tracking-wide">
                     <ListChecks className="w-3.5 h-3.5" />
                     <span>Liste</span>
                   </div>
@@ -164,8 +164,8 @@ export const RevisionListsSection: React.FC = () => {
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end">
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-semibold text-white bg-blue-600 group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+              <div className="px-5 py-3 border-t border-[#faf9f7] bg-slate-50/50 flex items-center justify-end">
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
                   <span>Ouvrir</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </div>
@@ -207,7 +207,7 @@ export const RevisionListsSection: React.FC = () => {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Ex: Révision Bac"
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e7e3dc] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     autoFocus
                   />
                 </div>
@@ -218,14 +218,14 @@ export const RevisionListsSection: React.FC = () => {
                     onChange={(e) => setNewDescription(e.target.value)}
                     placeholder="Description optionnelle..."
                     rows={3}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="w-full px-4 py-2.5 border border-[#e7e3dc] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex-1 px-4 py-2.5 border border-[#e7e3dc] text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
                   >
                     Annuler
                   </button>

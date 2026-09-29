@@ -23,11 +23,11 @@ import { TaxonomyPicker, type TaxonomySelection } from './TaxonomyPicker';
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
-  border: '1.5px solid #e4e2f5',
+  border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
   fontFamily: 'DM Sans',
-  color: '#1e1b4b',
+  color: '#1a1a1a',
   background: '#f9f8ff',
   outline: 'none',
 };
@@ -35,7 +35,7 @@ const inputStyle: React.CSSProperties = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-      <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>{label}</span>
       {children}
     </label>
   );
@@ -108,7 +108,7 @@ const OptionsEditor = memo(function OptionsEditor({
 }: OptionsEditorProps) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: '#7068a8', fontWeight: 600, marginBottom: 4 }}>Options</div>
+      <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 600, marginBottom: 4 }}>Options</div>
       {options.map((opt, oi) => (
         <div key={`${activeIdx}-${oi}`} className="flex items-start gap-2 mb-3">
           <input
@@ -227,9 +227,9 @@ export default function ConcoursExamQuestionsPage() {
 
   if (!user?.is_superuser) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#7068a8' }}>Accès réservé aux administrateurs.</p>
+          <p style={{ color: '#6b6862' }}>Accès réservé aux administrateurs.</p>
           <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
         </div>
       </div>
@@ -238,17 +238,17 @@ export default function ConcoursExamQuestionsPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#4f46e5' }} />
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
       </div>
     );
   }
 
   if (!exam) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#7068a8' }}>{err || 'Examen introuvable.'}</p>
+          <p style={{ color: '#6b6862' }}>{err || 'Examen introuvable.'}</p>
           <Link to="/concours/admin" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
         </div>
       </div>
@@ -316,7 +316,7 @@ export default function ConcoursExamQuestionsPage() {
   } : { subjectId: null, subfieldId: null, chapterId: null, tipId: null };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title={`Questions — ${exam.title} - Fidni`} description="Édition des questions" />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
@@ -329,16 +329,16 @@ export default function ConcoursExamQuestionsPage() {
         <div className="fd-card p-5 mb-4 flex items-center justify-between flex-wrap gap-3">
           <div>
             <span style={{
-              background: '#eef2ff', color: '#4338ca',
+              background: '#f2f1ee', color: '#000000',
               padding: '3px 10px', borderRadius: 99,
               fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
             }}>
               {exam.concours_type_display.toUpperCase()} · {exam.year}
             </span>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em', marginTop: 8 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em', marginTop: 8 }}>
               {exam.title}
             </h1>
-            <p style={{ fontSize: 12, color: '#7068a8', marginTop: 4 }}>
+            <p style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>
               {structure.questions.length} question{structure.questions.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -382,9 +382,9 @@ export default function ConcoursExamQuestionsPage() {
                 onClick={() => setActiveIdx(i)}
                 style={{
                   padding: '8px 12px', borderRadius: 8,
-                  background: i === activeIdx ? '#eef2ff' : '#f9f8ff',
-                  border: `1px solid ${i === activeIdx ? '#a5b4fc' : '#ede9fe'}`,
-                  color: i === activeIdx ? '#4338ca' : '#4b4880',
+                  background: i === activeIdx ? '#f2f1ee' : '#f9f8ff',
+                  border: `1px solid ${i === activeIdx ? '#b8b4ac' : '#e7e3dc'}`,
+                  color: i === activeIdx ? '#000000' : '#33302b',
                   fontSize: 13, fontWeight: i === activeIdx ? 700 : 500,
                   textAlign: 'left', cursor: 'pointer',
                 }}
@@ -400,13 +400,13 @@ export default function ConcoursExamQuestionsPage() {
           {/* Editor */}
           <div className="fd-card p-5">
             {!active ? (
-              <p style={{ color: '#9391b8', fontSize: 13, padding: 24, textAlign: 'center' }}>
+              <p style={{ color: '#6b6862', fontSize: 13, padding: 24, textAlign: 'center' }}>
                 Aucune question. Clique sur "Ajouter" pour créer la première.
               </p>
             ) : (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <span style={{ fontSize: 12, color: '#9391b8', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 12, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
                     Question {activeIdx + 1} / {structure.questions.length}
                   </span>
                   <div className="flex items-center gap-1">
@@ -747,7 +747,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(30,27,75,.45)', backdropFilter: 'blur(4px)',
+        background: 'rgba(20,18,16,.45)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       }}
       onClick={onClose}
@@ -761,21 +761,21 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>
             Importer un JSON
           </h3>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7068a8' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <p style={{ fontSize: 13, color: '#7068a8', marginBottom: 12, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 12, lineHeight: 1.6 }}>
           Colle un JSON respectant le schéma ci-dessous. Tu peux aussi
           <button
             type="button"
             onClick={() => setShowPrompt(s => !s)}
             style={{
-              background: 'none', border: 'none', color: '#4338ca',
+              background: 'none', border: 'none', color: '#000000',
               cursor: 'pointer', textDecoration: 'underline',
               padding: 0, margin: '0 4px', fontSize: 13, fontWeight: 600,
             }}
@@ -788,12 +788,12 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
         {showPrompt && (
           <div
             style={{
-              background: '#f9f8ff', border: '1.5px solid #ede9fe',
+              background: '#f9f8ff', border: '1.5px solid #e7e3dc',
               borderRadius: 10, padding: 12, marginBottom: 12,
             }}
           >
             <div className="flex items-center justify-between mb-2">
-              <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
                 Prompt à coller dans le LLM
               </span>
               <button
@@ -812,8 +812,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
               style={{
                 width: '100%', minHeight: 220,
                 padding: '10px 12px', borderRadius: 8,
-                border: '1px solid #e4e2f5', background: '#fff',
-                fontFamily: 'DM Mono', fontSize: 11, color: '#4b4880',
+                border: '1px solid #e7e3dc', background: '#fff',
+                fontFamily: 'DM Mono', fontSize: 11, color: '#33302b',
                 outline: 'none', resize: 'vertical', whiteSpace: 'pre-wrap',
               }}
             />
@@ -827,8 +827,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
           style={{
             width: '100%', minHeight: 240,
             padding: '12px 14px', borderRadius: 10,
-            border: '1.5px solid #e4e2f5', background: '#f9f8ff',
-            fontFamily: 'DM Mono', fontSize: 12, color: '#1e1b4b',
+            border: '1.5px solid #e7e3dc', background: '#f9f8ff',
+            fontFamily: 'DM Mono', fontSize: 12, color: '#1a1a1a',
             outline: 'none', resize: 'vertical',
           }}
         />
@@ -868,11 +868,11 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
 
         {parsed && (
           <div style={{ marginTop: 14 }}>
-            <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginRight: 10 }}>
+            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginRight: 10 }}>
               Mode :
             </span>
             <div className="inline-flex" style={{
-              background: '#f5f4ff', border: '1px solid #ede9fe',
+              background: '#f7f6f3', border: '1px solid #e7e3dc',
               borderRadius: 99, padding: 3,
             }}>
               <button
@@ -880,8 +880,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                 onClick={() => setMode('append')}
                 style={{
                   padding: '5px 12px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                  background: mode === 'append' ? '#4f46e5' : 'transparent',
-                  color: mode === 'append' ? '#fff' : '#7068a8',
+                  background: mode === 'append' ? '#1a1a1a' : 'transparent',
+                  color: mode === 'append' ? '#fff' : '#6b6862',
                   fontSize: 11, fontWeight: 600,
                 }}
               >
@@ -893,7 +893,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                 style={{
                   padding: '5px 12px', borderRadius: 99, border: 'none', cursor: 'pointer',
                   background: mode === 'replace' ? '#dc2626' : 'transparent',
-                  color: mode === 'replace' ? '#fff' : '#7068a8',
+                  color: mode === 'replace' ? '#fff' : '#6b6862',
                   fontSize: 11, fontWeight: 600,
                 }}
               >
@@ -915,7 +915,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
           </button>
         </div>
 
-        <p style={{ fontSize: 11, color: '#9391b8', marginTop: 10, fontStyle: 'italic' }}>
+        <p style={{ fontSize: 11, color: '#6b6862', marginTop: 10, fontStyle: 'italic' }}>
           Note : l'import met à jour l'éditeur localement. N'oublie pas de cliquer sur <strong>Enregistrer</strong> pour sauvegarder côté serveur.
         </p>
       </div>

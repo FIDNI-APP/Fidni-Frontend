@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useRef, memo } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface ContentPreviewProps {
   content: string;
@@ -20,7 +21,6 @@ const ContentPreview: React.FC<ContentPreviewProps> = memo(({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [processedHtml, setProcessedHtml] = useState<string>('');
-  const [isOverflowing, setIsOverflowing] = useState(false);
 
   useEffect(() => {
     if (!content) {
@@ -50,18 +50,12 @@ const ContentPreview: React.FC<ContentPreviewProps> = memo(({
       html = html.replace(/<p>\s*<\/p>/g, '');
       html = html.replace(/<p>&nbsp;<\/p>/g, '');
 
-      setProcessedHtml(html);
+      setProcessedHtml(sanitizeHtml(html));
     } catch (error) {
       console.error('ContentPreview error:', error);
       setProcessedHtml('<p class="text-slate-400 italic">Aperçu non disponible</p>');
     }
   }, [content]);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      setIsOverflowing(containerRef.current.scrollHeight > containerRef.current.clientHeight);
-    }
-  }, [processedHtml, maxHeight]);
 
   if (!processedHtml) {
     return (
@@ -198,11 +192,24 @@ const ContentPreview: React.FC<ContentPreviewProps> = memo(({
 /**
  * Process LaTeX formulas
  */
+// Stored HTML escapes `<`, `>`, `&` as entities; KaTeX needs the real
+// characters (inequalities use `<`/`>`). Decode before rendering.
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&'); // must be last
+}
+
 function processLatex(html: string): string {
   // Display math: $$...$$
   html = html.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
+    const tex = decodeEntities(latex.trim());
     try {
-      const rendered = katex.renderToString(latex.trim(), {
+      const rendered = katex.renderToString(tex, {
         displayMode: true,
         throwOnError: false,
         errorColor: '#94a3b8',
@@ -210,14 +217,15 @@ function processLatex(html: string): string {
       });
       return `<span class="math-block">${rendered}</span>`;
     } catch {
-      return `<span class="math-block text-slate-400">[${latex.trim().substring(0, 20)}...]</span>`;
+      return `<span class="math-block text-slate-400">[${tex.substring(0, 20)}...]</span>`;
     }
   });
 
   // Inline math: $...$
   html = html.replace(/\$(?!\$)([^\$\n]+?)\$(?!\$)/g, (_, latex) => {
+    const tex = decodeEntities(latex.trim());
     try {
-      const rendered = katex.renderToString(latex.trim(), {
+      const rendered = katex.renderToString(tex, {
         displayMode: false,
         throwOnError: false,
         errorColor: '#94a3b8',
@@ -225,7 +233,7 @@ function processLatex(html: string): string {
       });
       return `<span class="math-inline">${rendered}</span>`;
     } catch {
-      return `<span class="math-inline text-slate-400">[${latex.trim().substring(0, 15)}]</span>`;
+      return `<span class="math-inline text-slate-400">[${tex.substring(0, 15)}]</span>`;
     }
   });
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getUserSavedExercises, getUserSavedLessons, getUserSavedExams } from '@/lib/api/userApi';
-import { Star, BookOpen, AlertCircle, PenTool, FileCheck, Search } from 'lucide-react';
+import { Bookmark, BookOpen, AlertCircle, PenTool, FileCheck, Search, Loader2, ArrowRight } from 'lucide-react';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { motion } from 'framer-motion';
 
@@ -23,6 +23,20 @@ interface SavedItem {
   } | string;
 }
 
+type FilterType = 'all' | 'exercise' | 'lesson' | 'exam';
+
+const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; route: string }> = {
+  exercise: { icon: PenTool, label: 'Exercice', route: 'exercises' },
+  lesson: { icon: LessonIcon, label: 'Leçon', route: 'lessons' },
+  exam: { icon: FileCheck, label: 'Examen', route: 'exams' },
+};
+
+const DIFFICULTY_DOT: Record<string, string> = {
+  facile: '#1a7a4a',
+  moyen: '#b7791f',
+  difficile: '#b91c1c',
+};
+
 export const SavedItems = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -30,7 +44,7 @@ export const SavedItems = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'exercise' | 'lesson' | 'exam'>('all');
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -85,228 +99,206 @@ export const SavedItems = () => {
     return matchesType && matchesSearch;
   });
 
-  const getContentTypeConfig = (type: string) => {
-    switch (type) {
-      case 'exercise':
-        return {
-          icon: PenTool,
-          label: 'Exercice',
-          color: 'text-blue-600',
-          bg: 'bg-blue-50',
-          hoverBg: 'hover:border-blue-200'
-        };
-      case 'lesson':
-        return {
-          icon: LessonIcon,
-          label: 'Leçon',
-          color: 'text-green-600',
-          bg: 'bg-green-50',
-          hoverBg: 'hover:border-green-200'
-        };
-      case 'exam':
-        return {
-          icon: FileCheck,
-          label: 'Examen',
-          color: 'text-purple-600',
-          bg: 'bg-purple-50',
-          hoverBg: 'hover:border-purple-200'
-        };
-      default:
-        return {
-          icon: BookOpen,
-          label: 'Contenu',
-          color: 'text-gray-600',
-          bg: 'bg-gray-50',
-          hoverBg: 'hover:border-gray-200'
-        };
-    }
+  const counts = {
+    all: savedItems.length,
+    exercise: savedItems.filter(i => i.content_type === 'exercise').length,
+    lesson: savedItems.filter(i => i.content_type === 'lesson').length,
+    exam: savedItems.filter(i => i.content_type === 'exam').length,
   };
+
+  const FILTERS: { key: FilterType; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
+    { key: 'all', label: 'Tous' },
+    { key: 'exercise', label: 'Exercices', icon: PenTool },
+    { key: 'lesson', label: 'Leçons', icon: LessonIcon },
+    { key: 'exam', label: 'Examens', icon: FileCheck },
+  ];
 
   if (!isAuthenticated) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
-      {/* Header Section */}
-      <section className="relative bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white py-12 md:py-16 mb-8 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
-          backgroundSize: '40px 40px'
-        }}></div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="inline-block px-4 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold uppercase tracking-widest" style={{ fontFamily: '"DM Sans", sans-serif' }}>
-              Collection
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mt-4 mb-3 tracking-tight" style={{ fontFamily: '"DM Sans", sans-serif' }}>
-            Éléments Enregistrés
-          </h1>
-          <div className="w-24 h-1 bg-blue-500 mb-3"></div>
-          <p className="text-slate-200 text-lg font-light">Tous vos contenus favoris en un seul endroit</p>
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
+      {/* Header */}
+      <header className="flex items-center gap-3.5 mb-7">
+        <div
+          className="flex items-center justify-center flex-shrink-0"
+          style={{ width: 44, height: 44, borderRadius: 12, background: '#f2f1ee', border: '1px solid #e7e3dc' }}
+        >
+          <Bookmark className="w-5 h-5" style={{ color: '#1a1a1a' }} />
         </div>
-      </section>
+        <div className="min-w-0">
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>Favoris</h1>
+          <p style={{ fontSize: 13.5, color: '#6b6862', marginTop: 1 }}>
+            Tous vos contenus sauvegardés, réunis au même endroit
+          </p>
+        </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {/* Filters and Search */}
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'all'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border-2 border-gray-200'
-              }`}
-            >
-              Tous ({savedItems.length})
-            </button>
-            <button
-              onClick={() => setFilterType('exercise')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'exercise'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border-2 border-gray-200'
-              }`}
-            >
-              <PenTool className="w-4 h-4" />
-              Exercices ({savedItems.filter(i => i.content_type === 'exercise').length})
-            </button>
-            <button
-              onClick={() => setFilterType('lesson')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'lesson'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border-2 border-gray-200'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              Leçons ({savedItems.filter(i => i.content_type === 'lesson').length})
-            </button>
-            <button
-              onClick={() => setFilterType('exam')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'exam'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border-2 border-gray-200'
-              }`}
-            >
-              <FileCheck className="w-4 h-4" />
-              Examens ({savedItems.filter(i => i.content_type === 'exam').length})
-            </button>
-          </div>
-
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher dans vos favoris..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all"
-            />
-          </div>
+      {/* Controls */}
+      <div className="mb-6 flex flex-col gap-3.5">
+        <div className="relative" data-tour="favoris-recherche">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9a958c' }} />
+          <input
+            type="text"
+            placeholder="Rechercher dans vos favoris…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%', paddingLeft: 42, paddingRight: 16, height: 44,
+              borderRadius: 12, border: '1px solid #e7e3dc', background: '#fff',
+              fontSize: 14, color: '#1a1a1a', outline: 'none', transition: 'border-color .15s',
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = '#1a7a4a'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = '#e7e3dc'; }}
+          />
         </div>
 
-        {/* Content */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 flex items-center gap-3">
-            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
-            <span className="text-red-800">{error}</span>
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="bg-white rounded-xl border-2 border-gray-100 p-12 text-center">
-            <Star className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {searchQuery ? 'Aucun résultat' : 'Aucun élément enregistré'}
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {searchQuery
-                ? 'Essayez avec d\'autres mots-clés'
-                : 'Explorez les exercices, leçons et examens pour commencer'}
-            </p>
-            {!searchQuery && (
-              <button
-                onClick={() => navigate('/exercises')}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-700 to-purple-800 text-white rounded-lg hover:shadow-lg transition-all font-medium"
-              >
-                <BookOpen className="w-5 h-5 mr-2" />
-                Découvrir les contenus
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems.map((item) => {
-              const config = getContentTypeConfig(item.content_type || 'exercise');
-              const Icon = config.icon;
-
-              return (
-                <motion.div
-                  key={`${item.content_type}-${item.id}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  onClick={() => {
-                    const route = item.content_type === 'exam' ? 'exams' : item.content_type === 'lesson' ? 'lessons' : 'exercises';
-                    navigate(`/${route}/${item.id}`);
-                  }}
-                  className={`bg-white rounded-xl border-2 border-gray-100 ${config.hoverBg} hover:shadow-md transition-all cursor-pointer overflow-hidden group`}
-                >
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${config.bg}`}>
-                        <Icon className={`w-4 h-4 ${config.color}`} />
-                        <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
-                      </div>
-                      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                    </div>
-
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-700 transition-colors">
-                      {item.title || item.name || 'Sans titre'}
-                    </h3>
-
-                    {item.description && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap gap-2">
-                      {item.subject && (
-                        <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md font-medium">
-                          {typeof item.subject === 'string' ? item.subject : item.subject?.name || 'Matière'}
-                        </span>
-                      )}
-                      {item.difficulty && (
-                        <span className={`text-xs px-2.5 py-1 rounded-md font-medium ${
-                          item.difficulty === 'facile'
-                            ? 'bg-green-100 text-green-700'
-                            : item.difficulty === 'moyen'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1)}
-                        </span>
-                      )}
-                      {item.class_level && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md font-medium">
-                          {typeof item.class_level === 'string' ? item.class_level : item.class_level?.name || 'Niveau'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2" data-tour="favoris-filtres">
+          {FILTERS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setFilterType(key)}
+              className={`fd-pill ${filterType === key ? 'is-active' : ''}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              {Icon && <Icon className="w-3.5 h-3.5" />}
+              {label}
+              <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{counts[key]}</span>
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#9a958c' }} />
+        </div>
+      ) : error ? (
+        <div
+          className="flex items-center gap-3 p-4"
+          style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}
+        >
+          <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#b91c1c' }} />
+          <span style={{ color: '#991b1b', fontSize: 14 }}>{error}</span>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div
+          className="text-center py-16 px-6"
+          style={{ background: '#fff', border: '1px solid #e7e3dc', borderRadius: 16 }}
+        >
+          <div
+            className="mx-auto mb-4 flex items-center justify-center"
+            style={{ width: 56, height: 56, borderRadius: 16, background: '#f7f6f3' }}
+          >
+            <Bookmark className="w-7 h-7" style={{ color: '#cfcdc8' }} />
+          </div>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>
+            {searchQuery ? 'Aucun résultat' : 'Aucun favori pour le moment'}
+          </h3>
+          <p style={{ fontSize: 13.5, color: '#6b6862', marginBottom: 20, maxWidth: 360, marginInline: 'auto' }}>
+            {searchQuery
+              ? 'Essayez avec d\'autres mots-clés.'
+              : 'Enregistrez des exercices, leçons et examens pour les retrouver ici en un clin d\'œil.'}
+          </p>
+          {!searchQuery && (
+            <button className="fd-btn-primary" style={{ margin: '0 auto' }} onClick={() => navigate('/exercises')}>
+              <BookOpen className="w-4 h-4" />
+              Découvrir les contenus
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {filteredItems.map((item, i) => {
+            const meta = TYPE_META[item.content_type || 'exercise'] || TYPE_META.exercise;
+            const Icon = meta.icon;
+            const diffKey = item.difficulty?.toLowerCase() || '';
+
+            return (
+              <motion.button
+                key={`${item.content_type}-${item.id}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: Math.min(i * 0.02, 0.2) }}
+                onClick={() => navigate(`/${meta.route}/${item.id}`)}
+                className="text-left group"
+                style={{
+                  background: '#fff', border: '1px solid #e7e3dc', borderRadius: 14,
+                  padding: 18, cursor: 'pointer', transition: 'border-color .16s, box-shadow .16s, transform .16s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#d8d4cc';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(20,18,16,.08)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e7e3dc';
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{ fontSize: 11, fontWeight: 600, color: '#6b6862', textTransform: 'uppercase', letterSpacing: '.04em' }}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {meta.label}
+                  </span>
+                  <Bookmark className="w-4 h-4" style={{ color: '#1a1a1a', fill: '#1a1a1a' }} />
+                </div>
+
+                <h3
+                  className="line-clamp-2"
+                  style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.35, marginBottom: item.description ? 6 : 12, transition: 'color .15s' }}
+                >
+                  {item.title || item.name || 'Sans titre'}
+                </h3>
+
+                {item.description && (
+                  <p className="line-clamp-2" style={{ fontSize: 13, color: '#6b6862', marginBottom: 12, lineHeight: 1.5 }}>
+                    {item.description}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-1.5">
+                  {item.subject && (
+                    <span style={chipStyle}>
+                      {typeof item.subject === 'string' ? item.subject : item.subject?.name || 'Matière'}
+                    </span>
+                  )}
+                  {item.class_level && (
+                    <span style={chipStyle}>
+                      {typeof item.class_level === 'string' ? item.class_level : item.class_level?.name || 'Niveau'}
+                    </span>
+                  )}
+                  {item.difficulty && (
+                    <span style={{ ...chipStyle, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: DIFFICULTY_DOT[diffKey] || '#9a958c' }} />
+                      {item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1)}
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100"
+                  style={{ fontSize: 12, fontWeight: 600, color: '#15633c', transition: 'opacity .16s' }}
+                >
+                  Ouvrir <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
+};
+
+const chipStyle: React.CSSProperties = {
+  fontSize: 11.5, fontWeight: 500, color: '#6b6862',
+  background: '#f7f6f3', border: '1px solid #f2f1ee',
+  padding: '3px 9px', borderRadius: 99,
 };

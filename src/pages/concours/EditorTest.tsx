@@ -12,9 +12,9 @@ export default function EditorTestPage() {
   const [content, setContent] = useState('<p>Tape ici...</p>');
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe', padding: 40 }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7', padding: 40 }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1b4b', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a1a', marginBottom: 16 }}>
           Editor test (no modal, no taxonomy, no nothing)
         </h1>
 
@@ -28,7 +28,7 @@ export default function EditorTestPage() {
         </div>
 
         <pre style={{
-          marginTop: 20, padding: 12, background: '#1e1b4b', color: '#a5b4fc',
+          marginTop: 20, padding: 12, background: '#1a1a1a', color: '#b8b4ac',
           fontSize: 11, borderRadius: 8, overflow: 'auto',
         }}>
           {content}

@@ -5,15 +5,30 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
-  Plus, BookOpen, ChevronRight, ChevronLeft,
-  Loader2, LayoutGrid, List as ListIcon,
-  Bookmark, Clock, Play, Pause, RotateCcw, ListPlus, Save,
-  Eye, MessageSquare, CheckCircle2, Circle, X
+  Plus,
+  BookOpen,
+  ChevronRight,
+  Loader2,
+  LayoutGrid,
+  List as ListIcon,
+  Clock,
+  Play,
+  Pause,
+  RotateCcw,
+  ListPlus,
+  Save,
+  Eye,
+  MessageSquare,
+  CheckCircle2,
+  Circle,
+  X,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
+import type { PaginatedResponse } from '@/lib/api/contentItemApi';
 import { ContentListCard } from '@/components/content/ContentListCard';
 import {
   ContentCardBanner, getSubjectTheme, DIFFICULTY_CFG,
@@ -24,16 +39,26 @@ import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
 import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import type { Difficulty, SortOption } from '@/types';
 import type { ExerciseListItem, ExamListItem, LessonListItem, ContentFilters, AssessmentStatus } from '@/types/content';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
+import { AdSlot } from '@/components/ads/AdSlot';
+import { ClampedPreview } from '@/components/content/ClampedPreview';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
 type ContentType = 'exercise' | 'exam' | 'lesson';
+
+/** Ce que la page attend des trois API (les leçons n'ont ni solution ni sessions chronométrées). */
+type ListPageAPI = Pick<typeof exerciseContentAPI,
+  'assess' | 'complete' | 'delete' | 'getProgress' | 'removeAssessment' | 'removeComplete'
+  | 'save' | 'saveTimerSession' | 'unsave' | 'validateSolution' | 'vote'> & {
+  list: (filters?: ContentFilters, page?: number) => Promise<PaginatedResponse<StructuredListItem>>;
+  getSolution?: typeof exerciseContentAPI.getSolution;
+  getSessionStats?: typeof exerciseContentAPI.getSessionStats;
+};
 
 const CONTENT_TYPE_CONFIG: Record<ContentType, {
   title: string;
@@ -43,7 +68,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   icon: React.ReactNode;
   accentColor: string;
   basePath: string;
-  api: typeof exerciseContentAPI;
+  api: ListPageAPI;
 }> = {
   exercise: {
     title: 'Exercices',
@@ -157,17 +182,38 @@ export const ContentList: React.FC<ContentListProps> = ({
     (searchParams.get('sort') as SortOption) || 'newest'
   );
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'card' | 'full'>('full'); // Default: full view
-  const [showAllSolutions, setShowAllSolutions] = useState(false);
+
+  // Re-sync filters + sort from the URL whenever it changes externally
+  // (e.g. class-level links in the sidebar), not only on first mount.
+  // Seulement si l'URL dit autre chose que l'état actuel : sinon un nouvel objet identique
+  // relançait un second chargement pour rien.
+  useEffect(() => {
+    const next = getInitialFilters();
+    setFilters(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    setSortBy((searchParams.get('sort') as SortOption) || 'newest');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Vue complète par défaut ; le choix de l'élève est retenu d'une visite à l'autre.
+  const [viewMode, setViewModeState] = useState<'card' | 'full'>(() => {
+    try { return localStorage.getItem('fidni:list-view') === 'card' ? 'card' : 'full'; } catch { return 'full'; }
+  });
+  const setViewMode = (mode: 'card' | 'full') => {
+    setViewModeState(mode);
+    try { localStorage.setItem('fidni:list-view', mode); } catch { /* stockage indisponible */ }
+  };
+  const [showAllSolutions] = useState(false);
   const [itemProgress, setItemProgress] = useState<Record<string, Record<string, AssessmentStatus>>>({});
   const [itemValidations, setItemValidations] = useState<Record<string, Record<string, string | null>>>({});
-  const [itemVotes, setItemVotes] = useState<Record<string, { vote: 1 | -1 | 0; count: number }>>({});
+  const [itemVotes, setItemVotes] = useState<Record<string, { vote: number; count: number }>>({});
   const [itemBookmarks, setItemBookmarks] = useState<Record<string, boolean>>({});
   const [itemTimers, setItemTimers] = useState<Record<string, { isRunning: boolean; elapsed: number }>>({});
   const [savingTimer, setSavingTimer] = useState<Record<string, boolean>>({});
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [itemCompletions, setItemCompletions] = useState<Record<string, 'success' | 'review' | null>>({});
-  const [completionDropdown, setCompletionDropdown] = useState<{ itemId: string | null; pos: { top: number; left: number } }>({ itemId: null, pos: { top: 0, left: 0 } });
+  const [completionDropdown, setCompletionDropdown] = useState<{ itemId: string | number | null; pos: { top: number; left: number } }>({ itemId: null, pos: { top: 0, left: 0 } });
+  // Bouton du menu ouvert : le menu s'y accroche (et suit la page quand elle défile).
+  const completionAnchor = useRef<HTMLElement | null>(null);
   const [revisionListModal, setRevisionListModal] = useState<{ isOpen: boolean; itemId: string | null; itemTitle: string | null }>({
     isOpen: false,
     itemId: null,
@@ -210,15 +256,24 @@ export const ContentList: React.FC<ContentListProps> = ({
     return params;
   }, [filters, sortBy]);
 
+  // Filtres + tri de la dernière liste demandée : une réponse pour d'AUTRES filtres (ex. la liste
+  // complète, encore en cours quand on clique sur « 1ère Bac SM ») est ignorée au lieu d'écraser
+  // la liste filtrée. Charger la page suivante (mêmes filtres) reste valable.
+  const currentQuery = useRef('');
+
   // Load content
   const loadContent = useCallback(async (isLoadMore = false) => {
     const setLoadingState = isLoadMore ? setLoadingMore : setIsLoading;
+    const query = JSON.stringify(queryParams);
+    currentQuery.current = query;
+    const stale = () => currentQuery.current !== query;
 
     try {
       setLoadingState(true);
       setError(null);
 
       const response = await config.api.list(queryParams, page);
+      if (stale()) return;
 
       const loadedItems = response.results || [];
 
@@ -227,9 +282,12 @@ export const ContentList: React.FC<ContentListProps> = ({
       } else {
         setItems(loadedItems);
       }
+      // Le total suit la liste affichée tout de suite (et non après la progression, plus lente).
+      setTotalCount(response.count || 0);
+      setHasMore(!!response.next);
 
       // Initialize vote and bookmark states from loaded items
-      const newVoteState: Record<string, { vote: 1 | -1 | 0; count: number }> = {};
+      const newVoteState: Record<string, { vote: number; count: number }> = {};
       const newBookmarkState: Record<string, boolean> = {};
 
       loadedItems.forEach(item => {
@@ -262,6 +320,7 @@ export const ContentList: React.FC<ContentListProps> = ({
           }
         });
         const results = await Promise.all(progressPromises);
+        if (stale()) return;
         const newProgress: Record<string, Record<string, AssessmentStatus>> = {};
         const newValidations: Record<string, Record<string, string | null>> = {};
         results.forEach(result => {
@@ -278,10 +337,8 @@ export const ContentList: React.FC<ContentListProps> = ({
         setItemProgress(prev => ({ ...prev, ...newProgress }));
         setItemValidations(prev => ({ ...prev, ...newValidations }));
       }
-
-      setTotalCount(response.count || 0);
-      setHasMore(!!response.next);
     } catch (err) {
+      if (stale()) return;
       console.error('Failed to load content:', err);
       setError('Échec du chargement. Veuillez réessayer.');
       if (!isLoadMore) {
@@ -289,7 +346,9 @@ export const ContentList: React.FC<ContentListProps> = ({
         setTotalCount(0);
       }
     } finally {
-      setLoadingState(false);
+      // Chargement devenu obsolète : le nouveau gère l'indicateur principal ; celui de « page
+      // suivante » n'appartient qu'à nous, on le libère.
+      if (!stale() || isLoadMore) setLoadingState(false);
     }
   }, [queryParams, page, config, isAuthenticated, contentType]);
 
@@ -475,13 +534,13 @@ export const ContentList: React.FC<ContentListProps> = ({
 
     try {
       const response = await config.api.vote(itemId, voteValue);
-      // Update with actual values from server
-      if (response && response.item) {
+      // Valeurs réelles du serveur (avant, on lisait un champ inexistant : elles n'étaient jamais appliquées)
+      if (response) {
         setItemVotes(prev => ({
           ...prev,
           [itemId]: {
-            vote: response.item.user_vote || 0,
-            count: response.item.vote_count || 0
+            vote: response.user_vote || 0,
+            count: response.vote_count || 0
           }
         }));
       }
@@ -578,7 +637,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   useEffect(() => {
     if (isAuthenticated && contentType !== 'lesson' && items.length > 0) {
       items.forEach(item => {
-        loadSessionCount(item.id);
+        loadSessionCount(String(item.id));
       });
     }
   }, [items, isAuthenticated, contentType, loadSessionCount]);
@@ -636,37 +695,8 @@ export const ContentList: React.FC<ContentListProps> = ({
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   // Dynamic colors based on content type
-  const getContentColors = () => {
-    switch (contentType) {
-      case 'exam':
-        return {
-          gradient: 'from-violet-600 via-violet-700 to-purple-700',
-          titleGradient: 'from-violet-200 to-purple-200',
-          buttonGradient: 'from-violet-200 via-purple-200 to-pink-200',
-          buttonText: 'text-violet-900',
-        };
-      case 'lesson':
-        return {
-          gradient: 'from-emerald-600 via-emerald-700 to-teal-700',
-          titleGradient: 'from-emerald-200 to-teal-200',
-          buttonGradient: 'from-emerald-200 via-teal-200 to-cyan-200',
-          buttonText: 'text-emerald-900',
-        };
-      case 'exercise':
-      default:
-        return {
-          gradient: 'from-blue-600 via-blue-700 to-indigo-700',
-          titleGradient: 'from-blue-200 to-indigo-200',
-          buttonGradient: 'from-blue-200 via-indigo-200 to-purple-200',
-          buttonText: 'text-blue-900',
-        };
-    }
-  };
-
-  const colors = getContentColors();
-
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe', paddingBottom: 64 }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7', paddingBottom: 64 }}>
       {/* Header Section — lavender pill style */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -674,7 +704,7 @@ export const ContentList: React.FC<ContentListProps> = ({
             <span
               className="inline-flex items-center gap-1.5"
               style={{
-                background: '#eef2ff', color: '#4338ca',
+                background: '#f2f1ee', color: '#000000',
                 padding: '4px 12px', borderRadius: 99,
                 fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
               }}
@@ -682,23 +712,27 @@ export const ContentList: React.FC<ContentListProps> = ({
               {config.icon}
               <span>{contentType === 'exercise' ? 'PRATIQUE' : contentType === 'exam' ? 'EXAMENS' : 'COURS'}</span>
             </span>
-            <h1 style={{ fontSize: 30, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em', marginTop: 10, lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10, lineHeight: 1.1 }}>
               {config.title}
-              <span style={{ color: '#9391b8', fontSize: 16, fontWeight: 500, marginLeft: 10, fontFamily: 'DM Mono' }}>
+              <span style={{ color: '#6b6862', fontSize: 16, fontWeight: 500, marginLeft: 10, fontFamily: 'DM Mono' }}>
                 · {totalCount}
               </span>
             </h1>
-            <p style={{ fontSize: 13, color: '#7068a8', marginTop: 4 }}>{config.subtitle}</p>
+            <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>{config.subtitle}</p>
           </div>
 
-          <button
-            onClick={handleNewContentClick}
-            className="fd-btn-primary"
-            style={{ padding: '10px 18px' }}
-          >
-            <Plus className="w-4 h-4" />
-            {config.createLabel}
-          </button>
+          {/* Publier est réservé aux comptes : pour un visiteur, la page commence par le contenu. */}
+          {isAuthenticated && (
+            <button
+              onClick={handleNewContentClick}
+              data-tour="liste-creer"
+              className="fd-btn-primary"
+              style={{ padding: '10px 18px' }}
+            >
+              <Plus className="w-4 h-4" />
+              {config.createLabel}
+            </button>
+          )}
         </div>
       </div>
 
@@ -717,9 +751,10 @@ export const ContentList: React.FC<ContentListProps> = ({
         {/* View Toggle */}
         <div className="flex items-center justify-end gap-2 mb-5 mt-4">
           <div
+            data-tour="liste-vue"
             className="inline-flex"
             style={{
-              background: '#fff', border: '1px solid #ede9fe',
+              background: '#fff', border: '1px solid #e7e3dc',
               borderRadius: 10, padding: 3,
             }}
           >
@@ -728,8 +763,8 @@ export const ContentList: React.FC<ContentListProps> = ({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 14px', borderRadius: 8, border: 'none',
-                background: viewMode === 'full' ? '#4f46e5' : 'transparent',
-                color: viewMode === 'full' ? '#fff' : '#7068a8',
+                background: viewMode === 'full' ? '#1a1a1a' : 'transparent',
+                color: viewMode === 'full' ? '#fff' : '#6b6862',
                 fontSize: 12, fontWeight: viewMode === 'full' ? 600 : 500,
                 fontFamily: 'DM Sans', cursor: 'pointer', transition: 'all .15s',
               }}
@@ -742,8 +777,8 @@ export const ContentList: React.FC<ContentListProps> = ({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 14px', borderRadius: 8, border: 'none',
-                background: viewMode === 'card' ? '#4f46e5' : 'transparent',
-                color: viewMode === 'card' ? '#fff' : '#7068a8',
+                background: viewMode === 'card' ? '#1a1a1a' : 'transparent',
+                color: viewMode === 'card' ? '#fff' : '#6b6862',
                 fontSize: 12, fontWeight: viewMode === 'card' ? 600 : 500,
                 fontFamily: 'DM Sans', cursor: 'pointer', transition: 'all .15s',
               }}
@@ -774,8 +809,8 @@ export const ContentList: React.FC<ContentListProps> = ({
           {isLoading ? (
             <div className="flex justify-center items-center" style={{ height: 320 }}>
               <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#4f46e5' }} />
-                <p style={{ fontSize: 13, color: '#7068a8', fontWeight: 500 }}>Chargement…</p>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#1a1a1a' }} />
+                <p style={{ fontSize: 13, color: '#6b6862', fontWeight: 500 }}>Chargement…</p>
               </div>
             </div>
           ) : items.length > 0 ? (
@@ -802,7 +837,7 @@ export const ContentList: React.FC<ContentListProps> = ({
               </div>
             ) : (
               <div className="flex flex-col gap-8 max-w-4xl mx-auto">
-                {items.map((item, index) => {
+                {items.map((item) => {
                   const hasStructure = item.structure && typeof item.structure === 'object' && ('blocks' in item.structure || 'sections' in item.structure);
 
                   // Subject theme + difficulty config for the banner
@@ -853,7 +888,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                         isNationalExam={!!itemIsNational}
                         nationalYear={itemNationalYear}
                         isSaved={!!itemBookmarks[item.id]}
-                        onSave={(e) => { e.stopPropagation(); handleBookmark(item.id); }}
+                        onSave={(e) => { e.stopPropagation(); handleBookmark(String(item.id)); }}
                         height={120}
                       />
 
@@ -863,14 +898,14 @@ export const ContentList: React.FC<ContentListProps> = ({
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
                           <span style={{
                             fontSize: 10, fontWeight: 700,
-                            color: '#9391b8', letterSpacing: '.08em', textTransform: 'uppercase',
+                            color: '#6b6862', letterSpacing: '.08em', textTransform: 'uppercase',
                             fontFamily: 'DM Mono',
                           }}>
                             {itemTypeLabel} #{item.id}
                           </span>
                           {item.chapters && item.chapters.length > 0 && (
                             <span style={{
-                              background: '#f5f4ff', color: '#7068a8',
+                              background: '#f7f6f3', color: '#6b6862',
                               fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
                               display: 'inline-flex', alignItems: 'center', gap: 4,
                             }}>
@@ -880,14 +915,14 @@ export const ContentList: React.FC<ContentListProps> = ({
                           )}
                           {item.theorems && item.theorems.length > 0 && (
                             <span style={{
-                              background: '#f5f3ff', color: '#5b21b6',
+                              background: '#f7f6f3', color: '#1a1a1a',
                               fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
                             }}>
                               {typeof item.theorems[0] === 'string' ? item.theorems[0] : item.theorems[0].name}
                             </span>
                           )}
                           {item.class_levels && item.class_levels.length > 0 && (
-                            <span style={{ fontSize: 11, color: '#9391b8' }}>
+                            <span style={{ fontSize: 11, color: '#6b6862' }}>
                               {typeof item.class_levels[0] === 'string' ? item.class_levels[0] : item.class_levels[0].name}
                             </span>
                           )}
@@ -897,7 +932,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {/* Timer Widget - only for exercises/exams */}
                             {contentType !== 'lesson' && (
-                              <div className={`
+                              <div data-tour="liste-chrono" className={`
                                 flex items-center gap-1.5 px-2 py-1.5 rounded-lg border transition-all
                                 ${itemTimers[item.id]?.isRunning
                                   ? 'bg-emerald-50 border-emerald-200'
@@ -918,7 +953,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                                 </span>
 
                                 <button
-                                  onClick={() => handleToggleTimer(item.id)}
+                                  onClick={() => handleToggleTimer(String(item.id))}
                                   className={`p-1 rounded transition-colors ${
                                     itemTimers[item.id]?.isRunning
                                       ? 'bg-emerald-200 text-emerald-700 hover:bg-emerald-300'
@@ -934,7 +969,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                                 </button>
 
                                 <button
-                                  onClick={() => handleResetTimer(item.id)}
+                                  onClick={() => handleResetTimer(String(item.id))}
                                   disabled={(itemTimers[item.id]?.elapsed || 0) === 0 || itemTimers[item.id]?.isRunning}
                                   className="p-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                   title="Réinitialiser"
@@ -945,7 +980,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                                 {/* Save button - appears when timer > 0 */}
                                 {(itemTimers[item.id]?.elapsed || 0) > 0 && (
                                   <button
-                                    onClick={() => handleSaveTimerSession(item.id)}
+                                    onClick={() => handleSaveTimerSession(String(item.id))}
                                     disabled={savingTimer[item.id] || itemTimers[item.id]?.isRunning}
                                     className="p-1 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors disabled:opacity-40"
                                     title="Enregistrer le temps"
@@ -977,6 +1012,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                               <button
                                 onClick={(e) => {
                                   const rect = e.currentTarget.getBoundingClientRect();
+                                  completionAnchor.current = e.currentTarget;
                                   setCompletionDropdown(prev =>
                                     prev.itemId === item.id
                                       ? { itemId: null, pos: { top: 0, left: 0 } }
@@ -991,6 +1027,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                                       : 'bg-slate-50 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
                                 }`}
                                 title={itemCompletions[item.id] === 'success' ? 'Validé' : itemCompletions[item.id] === 'review' ? 'Échoué' : 'Terminer'}
+                                data-tour="liste-terminer"
                               >
                                 {itemCompletions[item.id] === 'success' ? (
                                   <CheckCircle2 className="w-4 h-4" />
@@ -1002,14 +1039,12 @@ export const ContentList: React.FC<ContentListProps> = ({
                               </button>
 
                               {completionDropdown.itemId === item.id && (
-                                <>
-                                  <div
-                                    className="fixed z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[130px]"
-                                    style={{ top: completionDropdown.pos.top, left: completionDropdown.pos.left }}
-                                  >
+                                <FloatingPanel anchorRef={completionAnchor} open
+                                  onClose={() => setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } })}
+                                  className="bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[130px]">
                                     <button
                                       onClick={() => {
-                                        handleSetCompletion(item.id, itemCompletions[item.id] === 'success' ? null : 'success');
+                                        handleSetCompletion(String(item.id), itemCompletions[item.id] === 'success' ? null : 'success');
                                         setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } });
                                       }}
                                       className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
@@ -1023,7 +1058,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                                     </button>
                                     <button
                                       onClick={() => {
-                                        handleSetCompletion(item.id, itemCompletions[item.id] === 'review' ? null : 'review');
+                                        handleSetCompletion(String(item.id), itemCompletions[item.id] === 'review' ? null : 'review');
                                         setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } });
                                       }}
                                       className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
@@ -1035,10 +1070,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                                       <X className="w-3.5 h-3.5" />
                                       <span>Échoué</span>
                                     </button>
-                                  </div>
-                                  {/* Click-outside backdrop — AFTER dropdown per CLAUDE.md */}
-                                  <div className="fixed inset-0 z-40" onClick={() => setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } })} />
-                                </>
+                                </FloatingPanel>
                               )}
                             </div>
 
@@ -1052,15 +1084,16 @@ export const ContentList: React.FC<ContentListProps> = ({
                                   }
                                   setRevisionListModal({
                                     isOpen: true,
-                                    itemId: item.id,
+                                    itemId: String(item.id),
                                     itemTitle: item.title
                                   });
                                 }}
                                 className="p-1.5 rounded-lg transition-colors"
                                 style={{
-                                  background: '#f5f4ff', color: '#7068a8', border: '1px solid #ede9fe',
+                                  background: '#f7f6f3', color: '#6b6862', border: '1px solid #e7e3dc',
                                 }}
                                 title="Ajouter à une liste de révision"
+                                data-tour="liste-revision"
                               >
                                 <ListPlus className="w-4 h-4" />
                               </button>
@@ -1069,10 +1102,11 @@ export const ContentList: React.FC<ContentListProps> = ({
                       </div>
 
                       {/* Divider */}
-                      <div className="mx-6" style={{ borderTop: '1px solid #f0effe' }} />
+                      <div className="mx-6" style={{ borderTop: '1px solid #faf9f7' }} />
 
                       {/* Content */}
                       <div className="px-6 py-4">
+                        <ClampedPreview>
                         {hasStructure ? (
                           contentType === 'lesson' ? (
                             <LessonRenderer
@@ -1082,37 +1116,41 @@ export const ContentList: React.FC<ContentListProps> = ({
                             <ExerciseRenderer
                               structure={item.structure as unknown as FlexibleExerciseStructure}
                               progress={progressData}
-                              onAssess={(path, status) => handleAssess(item.id, path, status)}
-                              onValidateSolution={(path, validation) => handleValidateSolution(item.id, path, validation)}
+                              onAssess={(path, status) => handleAssess(String(item.id), path, status)}
+                              onValidateSolution={(path, validation) => handleValidateSolution(String(item.id), path, validation)}
                               interactive={isAuthenticated}
                               showAllSolutions={showAllSolutions}
+                              compact={false}
                             />
                           )
                         ) : (
-                          <p style={{ fontSize: 13, color: '#9391b8', fontStyle: 'italic' }}>Ancien format — clique pour voir le détail.</p>
+                          <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>Ancien format — clique pour voir le détail.</p>
                         )}
+                        </ClampedPreview>
                       </div>
 
                       {/* Footer */}
                       <div
                         className="px-6 py-3"
-                        style={{ borderTop: '1px solid #f0effe', background: '#faf9ff' }}
+                        style={{ borderTop: '1px solid #faf9f7', background: '#faf9ff' }}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
+                            <div data-tour="vote">
                             <VoteButtons
                               initialVotes={itemVotes[item.id]?.count || 0}
-                              onVote={(value) => handleVote(item.id, value)}
+                              onVote={(value) => handleVote(String(item.id), value)}
                               vertical={false}
-                              userVote={itemVotes[item.id]?.vote || 0}
+                              userVote={(itemVotes[item.id]?.vote || 0) as 1 | -1 | 0}
                               size="sm"
                             />
-                            <div className="flex items-center gap-1.5" style={{ color: '#7068a8' }}>
+                            </div>
+                            <div className="flex items-center gap-1.5" style={{ color: '#6b6862' }}>
                               <Eye className="w-4 h-4" />
                               <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono' }}>{item.view_count}</span>
                             </div>
                             {'comment_count' in item && (item as any).comment_count > 0 && (
-                              <div className="flex items-center gap-1.5" style={{ color: '#7068a8' }}>
+                              <div className="flex items-center gap-1.5" style={{ color: '#6b6862' }}>
                                 <MessageSquare className="w-4 h-4" />
                                 <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono' }}>{(item as any).comment_count}</span>
                               </div>
@@ -1121,6 +1159,7 @@ export const ContentList: React.FC<ContentListProps> = ({
 
                           <Link
                             to={`${config.basePath}/${item.id}`}
+                            data-tour="liste-ouvrir"
                             className="fd-btn-primary"
                             style={{ padding: '6px 14px', fontSize: 12, borderRadius: 9, textDecoration: 'none' }}
                           >
@@ -1139,16 +1178,28 @@ export const ContentList: React.FC<ContentListProps> = ({
                 className="inline-flex items-center justify-center mx-auto mb-4"
                 style={{
                   width: 64, height: 64, borderRadius: 16,
-                  background: 'linear-gradient(135deg,#eef2ff,#f0effe)',
-                  color: '#7068a8',
+                  background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)',
+                  color: '#6b6862',
                 }}
               >
                 {React.cloneElement(config.icon as React.ReactElement, { className: 'w-7 h-7' })}
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b' }}>{config.emptyMessage}</h3>
-              <p style={{ fontSize: 13, color: '#7068a8', marginTop: 6, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
-                Essaie d'ajuster les filtres ou crée un nouveau contenu.
-              </p>
+              {/* Liste vide « pour de vrai » ou vide à cause des filtres : deux messages différents. */}
+              {(() => {
+                const filtered = Object.values(filters).some(v => (Array.isArray(v) ? v.length > 0 : !!v));
+                return (
+                  <>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+                      {filtered ? config.emptyMessage : 'Rien de publié ici pour le moment'}
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                      {filtered
+                        ? 'Aucun résultat avec ces filtres : essaie d’en retirer un.'
+                        : 'Les premiers contenus arrivent bientôt. Tu peux aussi proposer le tien.'}
+                    </p>
+                  </>
+                );
+              })()}
               <button
                 onClick={handleNewContentClick}
                 className="fd-btn-primary"
@@ -1178,10 +1229,12 @@ export const ContentList: React.FC<ContentListProps> = ({
             </div>
           )}
 
+          {items.length > 0 && <AdSlot className="mt-10" />}
+
           {/* Pagination info */}
           {totalPages > 1 && !hasMore && (
             <div className="flex items-center justify-center gap-2 mt-8">
-              <span style={{ fontSize: 12, color: '#9391b8', fontFamily: 'DM Mono' }}>
+              <span style={{ fontSize: 12, color: '#6b6862', fontFamily: 'DM Mono' }}>
                 {items.length} / {totalCount} résultats
               </span>
             </div>

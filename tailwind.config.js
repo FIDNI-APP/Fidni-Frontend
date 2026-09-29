@@ -4,42 +4,66 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Lavender / indigo palette from new design
+        // "Ink & paper" warm-neutral scale (replaces the old lavender ramp)
         lavender: {
-          50: '#f8f7ff',
-          100: '#f0effe',
-          200: '#e4e2f5',
-          300: '#d0ceec',
-          400: '#b0adcd',
-          500: '#9391b8',
-          600: '#7068a8',
-          700: '#4b4880',
-          800: '#1e1b4b',
-          900: '#1a1635',
+          50:  '#faf9f7',
+          100: '#f7f6f3',
+          200: '#f2f1ee',
+          300: '#e7e3dc',
+          400: '#cfcdc8',
+          500: '#9a958c',
+          600: '#6b6862',
+          700: '#33302b',
+          800: '#1a1a1a',
+          900: '#141414',
         },
+        // ── Canonical palette. Direct hex (NOT var()) so Tailwind utilities
+        //    always render regardless of CSS-var resolution. These mirror the
+        //    :root values in src/index.css (kept in sync; :root drives the
+        //    inline `var(--…)` styles in Landing/Home).
+        paper:   '#faf9f7',
+        surface: '#ffffff',
+        line:    '#e7e3dc',
         ink: {
-          DEFAULT: '#1e1b4b',
-          soft: '#4b4880',
-          muted: '#7068a8',
-          faint: '#9391b8',
+          DEFAULT: '#1a1a1a',
+          soft:    '#33302b',
+          muted:   '#4b4843',
+          faint:   '#6b6862',
+        },
+        // Brand green — marks action / progress only. Prefer this over the
+        // legacy `accent` token below (which is INK BLACK, kept for back-compat).
+        brand: {
+          DEFAULT: '#1a7a4a',
+          hover:   '#15633c',
+          soft:    '#eaf3ed',
+          line:    '#cfe6d8',
+        },
+        // Gold — BRAND IDENTITY only (logo echo): active tab, section/structure
+        // labels, title accent bar, brand badges. NOT for actions (use brand
+        // green) or success. Refined deeper than the bright logo so it reads.
+        gold: {
+          DEFAULT: '#c0892f',
+          strong:  '#9a6e1c',
+          soft:    '#faf3e2',
+          line:    '#ecdcb4',
         },
         accent: {
-          DEFAULT: '#4f46e5',
-          hover: '#4338ca',
-          soft: '#eef2ff',
-          softer: '#f5f4ff',
-          border: '#c7d2fe',
+          DEFAULT: '#1a1a1a', // ⚠ black, not the brand — use `brand` for green
+          hover: '#000000',
+          soft: '#f2f1ee',
+          softer: '#f7f6f3',
+          border: '#e7e3dc',
         },
-        // Subject themes
+        // Subject themes — monochrome (identified by label, not colour)
         subject: {
-          analyse: { from: '#4f46e5', to: '#818cf8', light: '#eef2ff', text: '#4338ca' },
-          algebre: { from: '#0891b2', to: '#22d3ee', light: '#ecfeff', text: '#0e7490' },
-          proba:   { from: '#059669', to: '#34d399', light: '#ecfdf5', text: '#047857' },
-          physics: { from: '#d97706', to: '#fbbf24', light: '#fffbeb', text: '#a16207' },
-          svt:     { from: '#059669', to: '#34d399', light: '#ecfdf5', text: '#047857' },
-          fr:      { from: '#be185d', to: '#f472b6', light: '#fdf2f8', text: '#9d174d' },
-          philo:   { from: '#6d28d9', to: '#a78bfa', light: '#f5f3ff', text: '#5b21b6' },
-          en:      { from: '#0891b2', to: '#22d3ee', light: '#ecfeff', text: '#0e7490' },
+          analyse: { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          algebre: { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          proba:   { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          physics: { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          svt:     { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          fr:      { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          philo:   { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+          en:      { from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
         },
       },
       backdropBlur: {
@@ -67,13 +91,13 @@ export default {
         nunito: ['Nunito', 'sans-serif'],
       },
       borderRadius: {
-        'card': '20px',
+        'card': '16px',
         'pill': '99px',
       },
       boxShadow: {
-        'card': '0 2px 12px rgba(90,70,200,.06)',
-        'card-hover': '0 10px 36px rgba(90,70,200,.13)',
-        'glow': '0 14px 40px rgba(79,70,229,.2)',
+        'card': '0 1px 2px rgba(20,18,16,.05)',
+        'card-hover': '0 4px 14px rgba(20,18,16,.08)',
+        'glow': '0 4px 14px rgba(20,18,16,.10)',
       },
       gridTemplateColumns: {
         '5': 'repeat(5, minmax(0, 1fr))',

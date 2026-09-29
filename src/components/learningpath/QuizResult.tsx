@@ -1,18 +1,8 @@
 // src/components/learningpath/QuizResult.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Trophy,
-  XCircle,
-  CheckCircle,
-  RotateCcw,
-  ChevronRight,
-  Award,
-  TrendingUp,
-  Clock
-} from 'lucide-react';
+import { Trophy, XCircle, CheckCircle, RotateCcw, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { QuizQuestion } from './QuizQuestion';
 import { 
   ChapterQuiz,
@@ -51,13 +41,17 @@ export const QuizResult: React.FC<QuizResultProps> = ({
     return 'text-red-600';
   };
 
+  // Le message suit le vrai verdict (seuil du quiz) : avant, 70 % affichait « réussi »
+  // même quand le seuil était plus haut.
   const getScoreMessage = () => {
-    if (scorePercentage === 100) return 'Perfect Score! Outstanding work!';
-    if (scorePercentage >= 90) return 'Excellent! You\'ve mastered this material!';
-    if (scorePercentage >= 80) return 'Great job! You have a solid understanding!';
-    if (scorePercentage >= 70) return 'Good work! You passed the quiz!';
-    if (scorePercentage >= 60) return 'Almost there! Review the material and try again.';
-    return 'Keep practicing! Review the lessons and give it another shot.';
+    if (!isPassed) {
+      return scorePercentage >= 50
+        ? 'Presque ! Revois les vidéos du chapitre et retente le quiz.'
+        : 'Revois les vidéos du chapitre, puis retente le quiz.';
+    }
+    if (scorePercentage === 100) return 'Sans faute, bravo !';
+    if (scorePercentage >= 85) return 'Très bien, tu maîtrises ce chapitre.';
+    return 'Quiz réussi, beau travail.';
   };
 
   const formatTime = (seconds: number) => {
@@ -73,10 +67,10 @@ export const QuizResult: React.FC<QuizResultProps> = ({
           {/* Back Button */}
           <Button
             variant="ghost"
-            onClick={() => navigate(`/learning-paths/${pathId}`)}
+            onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mb-6"
           >
-            Back to Learning Path
+            Retour au parcours
           </Button>
 
           {/* Result Summary Card */}
@@ -96,11 +90,11 @@ export const QuizResult: React.FC<QuizResultProps> = ({
               </div>
               
               <h1 className="text-3xl font-bold text-white mb-2">
-                {isPassed ? 'Congratulations!' : 'Not Quite There'}
+                {isPassed ? 'Quiz réussi !' : 'Pas encore'}
               </h1>
               
               <p className="text-xl text-white/90 mb-6">
-                {isPassed ? 'You passed the quiz!' : 'You didn\'t pass this time'}
+                {isPassed ? 'Tu as atteint le seuil de réussite.' : 'Pas tout à fait cette fois'}
               </p>
               
               <div className={cn(
@@ -122,28 +116,28 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                 <div className="text-2xl font-bold text-gray-900">
                   {result.correct_answers}/{result.total_questions}
                 </div>
-                <div className="text-sm text-gray-600">Correct Answers</div>
+                <div className="text-sm text-gray-600">Bonnes réponses</div>
               </div>
               <div className="p-4 text-center">
                 <div className="text-2xl font-bold text-gray-900">
                   {quiz.passing_score}%
                 </div>
-                <div className="text-sm text-gray-600">Passing Score</div>
+                <div className="text-sm text-gray-600">Seuil de réussite</div>
               </div>
               <div className="p-4 text-center">
                 <div className="text-2xl font-bold text-gray-900">
                   {formatTime(result.time_spent_seconds)}
                 </div>
-                <div className="text-sm text-gray-600">Time Taken</div>
+                <div className="text-sm text-gray-600">Temps</div>
               </div>
               <div className="p-4 text-center">
                 <div className={cn(
                   "text-2xl font-bold",
                   isPassed ? "text-green-600" : "text-red-600"
                 )}>
-                  {isPassed ? 'PASSED' : 'FAILED'}
+                  {isPassed ? 'RÉUSSI' : 'À RETENTER'}
                 </div>
-                <div className="text-sm text-gray-600">Result</div>
+                <div className="text-sm text-gray-600">Résultat</div>
               </div>
             </div>
           </div>
@@ -157,7 +151,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
               className="min-w-[200px]"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
-              Retry Quiz
+              Retenter le quiz
             </Button>
             {isPassed && (
               <Button
@@ -165,7 +159,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                 onClick={onContinue}
                 className="min-w-[200px] bg-indigo-600 hover:bg-indigo-700"
               >
-                Continue Learning
+                Continuer
                 <ChevronRight className="w-5 h-5 ml-2" />
               </Button>
             )}
@@ -174,7 +168,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
           {/* Review Section */}
           {result.results && (
             <div className="space-y-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Review Your Answers</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Revoir tes réponses</h2>
               
               {questions.map((question, index) => {
                 const questionResult = result.results?.find(r => r.question_id === question.id);
@@ -188,7 +182,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                         <XCircle className="w-6 h-6 text-red-600" />
                       )}
                       <h3 className="text-lg font-medium">
-                        Question {index + 1}: {questionResult?.is_correct ? 'Correct' : 'Incorrect'}
+                        Question {index + 1}: {questionResult?.is_correct ? 'Juste' : 'Faux'}
                       </h3>
                     </div>
                     

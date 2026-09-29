@@ -1,18 +1,9 @@
 // src/pages/learningpaths/ChapterQuiz.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft,
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  RotateCcw,
-  ChevronRight,
-  Trophy,
-  Target
-} from 'lucide-react';
+import { ArrowLeft, Clock, AlertCircle, CheckCircle, ChevronRight, Trophy, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { QuizQuestion } from '@/components/learningpath/QuizQuestion';
 import { QuizResult } from '@/components/learningpath/QuizResult';
 import { Progress } from '@/components/ui/progress';
@@ -53,21 +44,27 @@ export const ChapterQuiz: React.FC = () => {
     }
   }, [pathId, chapterId]);
 
+  // Minuterie calculée depuis l'heure de fin : un onglet en arrière-plan ralentit les
+  // minuteries du navigateur, un « -1 par seconde » dérivait. L'envoi automatique a lieu à 0
+  // (et non plus à 1 s restante) et passe par une référence pour utiliser les dernières réponses.
+  const deadlineRef = useRef<number | null>(null);
+  const submitRef = useRef<() => void>(() => {});
+  const timerRunning = timeRemaining !== null && !showResults;
+
   useEffect(() => {
-    // Timer countdown
-    if (timeRemaining !== null && timeRemaining > 0 && !showResults) {
-      const timer = setTimeout(() => {
-        setTimeRemaining(timeRemaining - 1);
-      }, 1000);
-      
-      // Auto-submit when time runs out
-      if (timeRemaining === 1) {
-        handleSubmitQuiz();
+    if (!timerRunning || deadlineRef.current === null) return;
+    const tick = () => {
+      const left = Math.max(0, Math.round((deadlineRef.current! - Date.now()) / 1000));
+      setTimeRemaining(left);
+      if (left === 0) {
+        clearInterval(timer);
+        submitRef.current();
       }
-      
-      return () => clearTimeout(timer);
-    }
-  }, [timeRemaining, showResults]);
+    };
+    const timer = setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick); };
+  }, [timerRunning]);
 
   const fetchQuizData = async () => {
     try {
@@ -96,6 +93,7 @@ export const ChapterQuiz: React.FC = () => {
       setQuestions(response.questions);
       
       if (response.time_limit_minutes) {
+        deadlineRef.current = Date.now() + response.time_limit_minutes * 60 * 1000;
         setTimeRemaining(response.time_limit_minutes * 60);
       }
     } catch (err) {
@@ -122,9 +120,12 @@ export const ChapterQuiz: React.FC = () => {
     }
   };
 
+  const submittingRef = useRef(false);
   const handleSubmitQuiz = async () => {
-    if (!quiz || !attemptId) return;
-    
+    // Un seul envoi : le bouton « Valider » et la fin du temps peuvent tomber en même temps.
+    if (!quiz || !attemptId || submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       const formattedAnswers = Object.entries(answers).map(([questionId, answer]) => ({
         question_id: questionId,
@@ -143,10 +144,14 @@ export const ChapterQuiz: React.FC = () => {
       setShowResults(true);
     } catch (err) {
       console.error('Failed to submit quiz:', err);
+      submittingRef.current = false;
     }
   };
+  submitRef.current = handleSubmitQuiz;
 
   const handleRetryQuiz = () => {
+    submittingRef.current = false;
+    deadlineRef.current = null;
     setAttemptId(null);
     setQuestions([]);
     setCurrentQuestionIndex(0);
@@ -164,10 +169,10 @@ export const ChapterQuiz: React.FC = () => {
     if (currentChapterIndex < learningPath.path_chapters.length - 1) {
       const nextChapter = learningPath.path_chapters[currentChapterIndex + 1];
       if (nextChapter.videos.length > 0) {
-        navigate(`/learning-paths/${pathId}/chapters/${nextChapter.id}/videos/${nextChapter.videos[0].id}`);
+        navigate(`/learning-path/${pathId}/chapters/${nextChapter.id}/videos/${nextChapter.videos[0].id}`);
       }
     } else {
-      navigate(`/learning-paths/${pathId}`);
+      navigate(`/learning-path/${pathId}`);
     }
   };
 
@@ -189,12 +194,12 @@ export const ChapterQuiz: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-gray-600">Quiz not found</p>
+          <p className="text-gray-600">Quiz introuvable</p>
           <Button 
-            onClick={() => navigate(`/learning-paths/${pathId}`)}
+            onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mt-4"
           >
-            Back to Learning Path
+            Retour au parcours
           </Button>
         </div>
       </div>
@@ -223,11 +228,11 @@ export const ChapterQuiz: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/learning-paths/${pathId}`)}
+            onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mb-6"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Learning Path
+            Retour au parcours
           </Button>
           
           <div className="max-w-2xl mx-auto">
@@ -247,7 +252,7 @@ export const ChapterQuiz: React.FC = () => {
                   <span className="text-sm text-gray-600">
                     {quiz.time_limit_minutes 
                       ? `${quiz.time_limit_minutes} minutes`
-                      : 'No time limit'
+                      : 'Sans limite de temps'
                     }
                   </span>
                 </div>
@@ -260,13 +265,13 @@ export const ChapterQuiz: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    Pass: {quiz.passing_score}%
+                    Réussite : {quiz.passing_score} %
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    {currentChapter?.user_progress?.quiz_attempts || 0} attempts
+                    {currentChapter?.user_progress?.quiz_attempts || 0} tentative(s)
                   </span>
                 </div>
               </div>
@@ -274,7 +279,7 @@ export const ChapterQuiz: React.FC = () => {
               {currentChapter?.user_progress?.quiz_score && (
                 <div className="mb-6 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-700">
-                    Your best score: <strong>{currentChapter.user_progress.quiz_score}%</strong>
+                    Ton meilleur score : <strong>{currentChapter.user_progress.quiz_score}%</strong>
                   </p>
                 </div>
               )}
@@ -284,7 +289,7 @@ export const ChapterQuiz: React.FC = () => {
                 onClick={startQuiz}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                Start Quiz
+                Commencer le quiz
               </Button>
             </div>
           </div>
@@ -336,7 +341,7 @@ export const ChapterQuiz: React.FC = () => {
               disabled={currentQuestionIndex === 0}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Previous
+              Précédent
             </Button>
 
             <span className="text-sm text-gray-600">
@@ -349,14 +354,14 @@ export const ChapterQuiz: React.FC = () => {
                 className="bg-green-600 hover:bg-green-700"
                 disabled={Object.keys(answers).length < questions.length}
               >
-                Submit Quiz
+                Valider le quiz
                 <CheckCircle className="w-4 h-4 ml-2" />
               </Button>
             ) : (
               <Button
                 onClick={handleNextQuestion}
               >
-                Next
+                Suivant
                 <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             )}
@@ -364,7 +369,7 @@ export const ChapterQuiz: React.FC = () => {
 
           {/* Question Navigation Grid */}
           <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Question Navigation</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Questions</h3>
             <div className="grid grid-cols-10 gap-2">
               {questions.map((q, index) => (
                 <button

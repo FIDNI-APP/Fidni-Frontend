@@ -1,67 +1,71 @@
-import {api} from './apiClient';
+import {api, clearTokens, storeTokens} from './apiClient';
 
 
-
+/** Connexion par e-mail OU nom d'utilisateur. Renvoie { access, refresh, user }. */
 export const login = async (identifier : string, password : string) => {
-  try {
-    const response = await api.post('/token/', { 
-      username: identifier,
-      password 
-    });
-    
-    console.log('Login response:', response.data);
-    
-    if (response.data.access) {
-      // Store tokens
-      localStorage.setItem('token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      
-      console.log('Token saved to localStorage:', response.data.access);
-      
-      // Ensure proper format with space after "Bearer"
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-    } else {
-      console.error('No access token in response:', response.data);
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
-  }
-};
-
-export const logout = async () => {
-  const response = await api.post('/auth/logout/');
-  localStorage.removeItem('token');
-  localStorage.removeItem('refresh_token');
+  const response = await api.post('/auth/login/', {
+    identifier: identifier.trim(),
+    password,
+  });
+  storeTokens(response.data.access, response.data.refresh);
   return response.data;
 };
 
+export const logout = async () => {
+  // Les jetons sont effacés même si le serveur ne répond pas : se déconnecter doit toujours marcher.
+  try {
+    // Le serveur révoque ce jeton : il ne pourra plus rouvrir de session.
+    await api.post('/auth/logout/', { refresh: localStorage.getItem('refresh_token') || undefined });
+  } finally {
+    clearTokens();
+  }
+};
+
 // In src/lib/api/authApi.tsx
-export const register = async (username: string, email: string, password: string) => {
+/** Cases de l'inscription (RGPD) : conditions acceptées, et 15 ans ou plus / accord d'un parent. */
+export interface SignupConsents { accept_terms: boolean; age_ok: boolean }
+
+export const register = async (username: string, email: string, password: string, consents: SignupConsents) => {
   try {
     // Remove any existing Authorization header for registration
     delete api.defaults.headers.common['Authorization'];
     
-    const response = await api.post('/auth/register/', { 
-      username, 
-      email, 
-      password 
+    const response = await api.post('/auth/register/', {
+      username,
+      email,
+      password,
+      ...consents,
     });
-    
-    // Si la connexion automatique est incluse dans la réponse d'inscription
-    if (response.data.access) {
-      localStorage.setItem('token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-    }
     
     return response.data;
   } catch (error) {
     console.error('Erreur d\'inscription détaillée:', error);
     throw error;
   }
+};
+
+// Confirm an email address from the link sent on signup.
+export const verifyEmail = async (token: string) => {
+  const response = await api.post('/auth/verify-email/', { token });
+  return response.data;
+};
+
+// « Mot de passe oublié » : le serveur répond pareil que l'adresse existe ou non.
+export const requestPasswordReset = async (email: string) => {
+  const response = await api.post('/auth/password-reset/', { email: email.trim() });
+  return response.data;
+};
+
+// Nouveau mot de passe depuis le lien reçu par e-mail (uid + token dans l'URL).
+export const confirmPasswordReset = async (uid: string, token: string, password: string) => {
+  const response = await api.post('/auth/password-reset/confirm/', { uid, token, password });
+  return response.data;
+};
+
+// Re-send the verification email. Backend always responds generically.
+export const resendVerification = async (email: string) => {
+  const response = await api.post('/auth/resend-verification/', { email });
+  return response.data;
 };
 
 export const getCurrentUser = async () => {
@@ -77,14 +81,7 @@ export const getCurrentUser = async () => {
     const response = await api.get('/auth/user/');
     return response.data;
   } catch (error: any) {
-    // If token is invalid, clear it
-    if (error.response?.status === 403 && 
-        error.response?.data?.code === 'token_not_valid') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      // Also remove the Authorization header
-      delete api.defaults.headers.common['Authorization'];
-    }
+    // Jeton refusé et non renouvelable : l'intercepteur de apiClient a déjà vidé la session.
     console.error("Error getting current user:", error);
     return null;
   }

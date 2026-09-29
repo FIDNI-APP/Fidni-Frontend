@@ -90,16 +90,16 @@ export default function ClassroomDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#4f46e5' }} />
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1a1a1a' }} />
       </div>
     );
   }
   if (!classroom) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center">
-          <p style={{ color: '#7068a8', fontSize: 14 }}>{error || 'Classe introuvable.'}</p>
+          <p style={{ color: '#6b6862', fontSize: 14 }}>{error || 'Classe introuvable.'}</p>
           <Link to="/classrooms" className="fd-btn-primary mt-4 inline-flex"><ArrowLeft className="w-4 h-4" /> Retour</Link>
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function ClassroomDetailPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title={`${classroom.name} - Fidni`} description="Détails de la classe" />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
@@ -148,17 +148,17 @@ export default function ClassroomDetailPage() {
                 className="inline-flex items-center justify-center"
                 style={{
                   width: 56, height: 56, borderRadius: 14,
-                  background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
-                  boxShadow: '0 8px 24px rgba(79,70,229,.25)',
+                  background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
+                  boxShadow: '0 8px 24px rgba(20,18,16,.25)',
                 }}
               >
                 <GraduationCap className="w-6 h-6" />
               </div>
               <div>
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
                   {classroom.name}
                 </h1>
-                <div className="flex items-center gap-3 mt-1" style={{ fontSize: 12, color: '#7068a8' }}>
+                <div className="flex items-center gap-3 mt-1" style={{ fontSize: 12, color: '#6b6862' }}>
                   {classroom.class_level_name && <span>{classroom.class_level_name}</span>}
                   <span>·</span>
                   <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" /> {classroom.student_count}</span>
@@ -169,14 +169,15 @@ export default function ClassroomDetailPage() {
             </div>
 
             <div
+              data-tour="classe-code"
               className="flex items-center gap-3"
               style={{
-                background: 'linear-gradient(135deg,#eef2ff,#f0effe)',
-                border: '1px solid #e4e2f5', borderRadius: 12, padding: '10px 14px',
+                background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)',
+                border: '1px solid #e7e3dc', borderRadius: 12, padding: '10px 14px',
               }}
             >
-              <Hash className="w-4 h-4" style={{ color: '#4338ca' }} />
-              <span style={{ fontFamily: 'DM Mono', fontSize: 18, fontWeight: 800, color: '#4338ca', letterSpacing: '.12em' }}>
+              <Hash className="w-4 h-4" style={{ color: '#000000' }} />
+              <span style={{ fontFamily: 'DM Mono', fontSize: 18, fontWeight: 800, color: '#000000', letterSpacing: '.12em' }}>
                 {code}
               </span>
               <button onClick={copyCode} className="fd-btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}>
@@ -192,7 +193,7 @@ export default function ClassroomDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 flex-wrap mb-5">
+        <div className="flex items-center gap-2 flex-wrap mb-5" data-tour="classe-onglets">
           <TabButton active={tab === 'students'} onClick={() => setTab('students')} icon={<Users className="w-3 h-3" />}>
             Élèves
           </TabButton>
@@ -207,7 +208,7 @@ export default function ClassroomDetailPage() {
         {/* Subject filter (visible on Students + TDs tabs) */}
         {tab !== 'subjects' && classroomSubjectOptions.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap mb-4">
-            <span style={{ fontSize: 11, color: '#9391b8', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
               Matière :
             </span>
             <button
@@ -293,11 +294,11 @@ function TabButton({ active, onClick, icon, children }: any) {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '8px 16px', borderRadius: 99, border: 'none',
-        background: active ? '#4f46e5' : '#fff',
-        color: active ? '#fff' : '#7068a8',
+        background: active ? '#1a1a1a' : '#fff',
+        color: active ? '#fff' : '#6b6862',
         fontSize: 12, fontWeight: active ? 700 : 500,
         fontFamily: 'DM Sans', cursor: 'pointer',
-        boxShadow: active ? '0 6px 20px rgba(79,70,229,.25)' : '0 2px 6px rgba(90,70,200,.05)',
+        boxShadow: active ? '0 6px 20px rgba(20,18,16,.25)' : '0 2px 6px rgba(20,18,16,.05)',
         transition: 'all .18s',
       }}
     >
@@ -315,8 +316,8 @@ function StudentsTab({ roster, onOpen, isOwner }: {
   if (roster.length === 0) {
     return (
       <div className="fd-card text-center" style={{ padding: 48 }}>
-        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: '#b0adcd' }} />
-        <p style={{ fontSize: 13, color: '#7068a8' }}>
+        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: '#6b6862' }} />
+        <p style={{ fontSize: 13, color: '#6b6862' }}>
           {isOwner ? "Partage le code de la classe pour que tes élèves la rejoignent." : "Aucun élève dans cette classe."}
         </p>
       </div>
@@ -392,10 +393,10 @@ function FifaCard({ card, onClick }: { card: RosterStudentCard; onClick: () => v
         <div className="grid grid-cols-3 gap-y-2 gap-x-3">
           {AXIS_LABELS.map(a => (
             <div key={a.key} className="flex items-center gap-1.5">
-              <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'DM Mono', color: '#1e1b4b', minWidth: 18 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a', minWidth: 18 }}>
                 {card.axes[a.key]}
               </span>
-              <span style={{ fontSize: 9, color: '#9391b8', fontWeight: 600, letterSpacing: '.04em' }}>{a.short}</span>
+              <span style={{ fontSize: 9, color: '#6b6862', fontWeight: 600, letterSpacing: '.04em' }}>{a.short}</span>
             </div>
           ))}
         </div>
@@ -428,7 +429,7 @@ function StudentStatsModal({ classroomId, student, subjectOptions, initialSubjec
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(30,27,75,.45)', backdropFilter: 'blur(4px)',
+        background: 'rgba(20,18,16,.45)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
         animation: 'fadeIn .15s ease',
       }}
@@ -448,7 +449,7 @@ function StudentStatsModal({ classroomId, student, subjectOptions, initialSubjec
                 className="inline-flex items-center justify-center"
                 style={{
                   width: 40, height: 40, borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#4f46e5,#818cf8)',
+                  background: 'linear-gradient(135deg,#1a1a1a,#9a958c)',
                   color: '#fff', fontSize: 14, fontWeight: 700,
                 }}
               >
@@ -456,11 +457,11 @@ function StudentStatsModal({ classroomId, student, subjectOptions, initialSubjec
               </div>
             )}
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b' }}>{student.student.username}</h3>
-              <p style={{ fontSize: 11, color: '#7068a8' }}>Statistiques de compétences</p>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>{student.student.username}</h3>
+              <p style={{ fontSize: 11, color: '#6b6862' }}>Statistiques de compétences</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7068a8' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -486,21 +487,21 @@ function StudentStatsModal({ classroomId, student, subjectOptions, initialSubjec
 
         {loading || !data ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#4f46e5' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
           </div>
         ) : (
           <>
             <div
               className="text-center mb-4"
               style={{
-                background: 'linear-gradient(135deg,#eef2ff,#f0effe)',
-                borderRadius: 14, border: '1px solid #e4e2f5', padding: 14,
+                background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)',
+                borderRadius: 14, border: '1px solid #e7e3dc', padding: 14,
               }}
             >
-              <div style={{ fontSize: 11, color: '#7068a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
                 Note globale {data.subject ? `· ${data.subject.name}` : ''}
               </div>
-              <div style={{ fontSize: 44, fontWeight: 900, fontFamily: 'DM Mono', color: '#4338ca', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
+              <div style={{ fontSize: 44, fontWeight: 900, fontFamily: 'DM Mono', color: '#000000', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
                 {data.overall}
               </div>
             </div>
@@ -513,12 +514,12 @@ function StudentStatsModal({ classroomId, student, subjectOptions, initialSubjec
                   key={a.key}
                   className="flex items-center justify-between"
                   style={{
-                    background: '#f9f8ff', border: '1px solid #ede9fe',
+                    background: '#f9f8ff', border: '1px solid #e7e3dc',
                     borderRadius: 10, padding: '8px 12px',
                   }}
                 >
-                  <span style={{ fontSize: 12, color: '#4b4880', fontWeight: 600 }}>{a.label}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'DM Mono', color: '#4338ca' }}>
+                  <span style={{ fontSize: 12, color: '#33302b', fontWeight: 600 }}>{a.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'DM Mono', color: '#000000' }}>
                     {data.axes[a.key]}
                   </span>
                 </div>
@@ -561,8 +562,8 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
     <svg viewBox={`0 0 ${size} ${size}`} style={{ width: '100%', height: 'auto' }}>
       <defs>
         <radialGradient id="radarFill">
-          <stop offset="0%" stopColor="#818cf8" stopOpacity=".5" />
-          <stop offset="100%" stopColor="#4f46e5" stopOpacity=".15" />
+          <stop offset="0%" stopColor="#9a958c" stopOpacity=".5" />
+          <stop offset="100%" stopColor="#1a1a1a" stopOpacity=".15" />
         </radialGradient>
       </defs>
       {[0.25, 0.5, 0.75, 1].map((f, idx) => (
@@ -575,14 +576,14 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
             key={i}
             x1={cx} y1={cy}
             x2={cx + radius * Math.cos(a)} y2={cy + radius * Math.sin(a)}
-            stroke="#ede9fe" strokeWidth="1"
+            stroke="#e7e3dc" strokeWidth="1"
           />
         );
       })}
-      <path d={polygon} fill="url(#radarFill)" stroke="#4f46e5" strokeWidth="2" strokeLinejoin="round" />
+      <path d={polygon} fill="url(#radarFill)" stroke="#1a1a1a" strokeWidth="2" strokeLinejoin="round" />
       {AXIS_LABELS.map((label, i) => {
         const [x, y] = point(i, axes[label.key]);
-        return <circle key={label.key} cx={x} cy={y} r="3.5" fill="#4f46e5" stroke="#fff" strokeWidth="2" />;
+        return <circle key={label.key} cx={x} cy={y} r="3.5" fill="#1a1a1a" stroke="#fff" strokeWidth="2" />;
       })}
       {AXIS_LABELS.map((label, i) => {
         const a = angleFor(i);
@@ -593,7 +594,7 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
           <text
             key={label.key}
             x={tx} y={ty} textAnchor="middle" dominantBaseline="middle"
-            fontSize="10" fontWeight="700" fontFamily="DM Sans" fill="#4b4880"
+            fontSize="10" fontWeight="700" fontFamily="DM Sans" fill="#33302b"
           >
             {label.short}
           </text>
@@ -618,10 +619,10 @@ function TDListsTab({
     <>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b' }}>
-            TD listes <span style={{ color: '#9391b8', fontFamily: 'DM Mono', fontSize: 14, fontWeight: 500, marginLeft: 6 }}>· {tdLists.length}</span>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>
+            TD listes <span style={{ color: '#6b6862', fontFamily: 'DM Mono', fontSize: 14, fontWeight: 500, marginLeft: 6 }}>· {tdLists.length}</span>
           </h2>
-          <p style={{ fontSize: 12, color: '#7068a8' }}>Listes d'exercices à compléter</p>
+          <p style={{ fontSize: 12, color: '#6b6862' }}>Listes d'exercices à compléter</p>
         </div>
         {isOwner && (
           <button onClick={onCreateClick} className="fd-btn-primary">
@@ -632,8 +633,8 @@ function TDListsTab({
 
       {tdLists.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 48 }}>
-          <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: '#b0adcd' }} />
-          <p style={{ fontSize: 13, color: '#7068a8' }}>
+          <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: '#6b6862' }} />
+          <p style={{ fontSize: 13, color: '#6b6862' }}>
             {isOwner ? "Crée un TD pour assigner des exercices à tes élèves." : "Aucun TD pour le moment."}
           </p>
         </div>
@@ -675,42 +676,42 @@ function TDListCard({ td, onOpen }: { td: TDList; onOpen: () => void }) {
             className="inline-flex items-center justify-center"
             style={{
               width: 32, height: 32, borderRadius: 9,
-              background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+              background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
             }}
           >
             <ClipboardList className="w-4 h-4" />
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>{td.title}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>{td.title}</div>
             {td.subject_name && (
-              <div style={{ fontSize: 10, color: '#9391b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              <div style={{ fontSize: 10, color: '#6b6862', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
                 {td.subject_name}
               </div>
             )}
           </div>
         </div>
-        <ChevronRight className="w-4 h-4" style={{ color: '#b0adcd' }} />
+        <ChevronRight className="w-4 h-4" style={{ color: '#6b6862' }} />
       </div>
 
-      <div className="flex items-center gap-3 mt-3" style={{ fontSize: 11, color: '#7068a8' }}>
+      <div className="flex items-center gap-3 mt-3" style={{ fontSize: 11, color: '#6b6862' }}>
         <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />{td.item_count} ex.</span>
         {due && <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />{due.toLocaleDateString('fr-FR')}</span>}
       </div>
 
       {td.progress && (
         <div className="mt-3">
-          <div className="flex items-center justify-between mb-1" style={{ fontSize: 11, color: '#7068a8' }}>
+          <div className="flex items-center justify-between mb-1" style={{ fontSize: 11, color: '#6b6862' }}>
             <span>Progression</span>
-            <span style={{ fontFamily: 'DM Mono', fontWeight: 700, color: pct === 100 ? '#15803d' : '#4338ca' }}>
+            <span style={{ fontFamily: 'DM Mono', fontWeight: 700, color: pct === 100 ? '#15803d' : '#000000' }}>
               {td.progress.completed}/{td.progress.total}
             </span>
           </div>
-          <div style={{ height: 6, borderRadius: 99, background: '#f0effe', overflow: 'hidden' }}>
+          <div style={{ height: 6, borderRadius: 99, background: '#faf9f7', overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
                 width: `${pct}%`,
-                background: pct === 100 ? 'linear-gradient(90deg,#16a34a,#34d399)' : 'linear-gradient(90deg,#4f46e5,#818cf8)',
+                background: pct === 100 ? 'linear-gradient(90deg,#16a34a,#34d399)' : 'linear-gradient(90deg,#1a1a1a,#9a958c)',
                 transition: 'width .4s ease',
               }}
             />
@@ -758,7 +759,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(30,27,75,.45)', backdropFilter: 'blur(4px)',
+        background: 'rgba(20,18,16,.45)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       }}
       onClick={onClose}
@@ -770,11 +771,11 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
       >
         <div className="flex items-start justify-between mb-2">
           <div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
               {td.title}
             </h3>
-            {td.description && <p style={{ fontSize: 12, color: '#7068a8', marginTop: 4 }}>{td.description}</p>}
-            <div className="flex items-center gap-2 mt-2" style={{ fontSize: 11, color: '#9391b8' }}>
+            {td.description && <p style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>{td.description}</p>}
+            <div className="flex items-center gap-2 mt-2" style={{ fontSize: 11, color: '#6b6862' }}>
               {td.subject_name && <span>{td.subject_name}</span>}
               {td.due_date && <><span>·</span><span>échéance {new Date(td.due_date).toLocaleDateString('fr-FR')}</span></>}
               {td.created_by_username && <><span>·</span><span>par {td.created_by_username}</span></>}
@@ -795,7 +796,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
-            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7068a8' }}>
+            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -803,11 +804,11 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
 
         {/* Items */}
         <div className="mb-4 mt-4">
-          <h4 style={{ fontSize: 12, fontWeight: 700, color: '#9391b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+          <h4 style={{ fontSize: 12, fontWeight: 700, color: '#6b6862', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
             Exercices ({td.items.length})
           </h4>
           {td.items.length === 0 ? (
-            <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>Aucun exercice.</p>
+            <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun exercice.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {td.items.map(item => (
@@ -815,7 +816,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                   key={item.id}
                   className="flex items-center justify-between"
                   style={{
-                    background: '#f9f8ff', border: '1px solid #ede9fe',
+                    background: '#f9f8ff', border: '1px solid #e7e3dc',
                     borderRadius: 10, padding: '10px 12px',
                   }}
                 >
@@ -824,10 +825,10 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     className="flex-1 min-w-0"
                     style={{ textDecoration: 'none' }}
                   >
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e1b4b' }} className="truncate">
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }} className="truncate">
                       {item.content_title}
                     </div>
-                    <div style={{ fontSize: 10, color: '#9391b8', marginTop: 2 }}>
+                    <div style={{ fontSize: 10, color: '#6b6862', marginTop: 2 }}>
                       #{item.content_display_id}{item.content_subject ? ` · ${item.content_subject}` : ''}
                       {item.content_difficulty ? ` · ${item.content_difficulty}` : ''}
                     </div>
@@ -850,7 +851,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
         {/* Add exercises (owner only) */}
         {isOwner && (
           <div>
-            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#9391b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#6b6862', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
               Ajouter un exercice
             </h4>
             <input
@@ -859,12 +860,12 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
               placeholder="Rechercher un exercice…"
               style={{
                 width: '100%', padding: '10px 12px',
-                border: '1.5px solid #e4e2f5', borderRadius: 10,
-                fontSize: 13, fontFamily: 'DM Sans', color: '#1e1b4b',
+                border: '1.5px solid #e7e3dc', borderRadius: 10,
+                fontSize: 13, fontFamily: 'DM Sans', color: '#1a1a1a',
                 background: '#f9f8ff', outline: 'none',
               }}
             />
-            {searching && <p style={{ fontSize: 11, color: '#9391b8', marginTop: 6 }}>Recherche…</p>}
+            {searching && <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>Recherche…</p>}
             {results.length > 0 && (
               <div className="flex flex-col gap-1 mt-3">
                 {results.map(r => {
@@ -876,13 +877,13 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                       disabled={already || busy}
                       style={{
                         background: already ? '#f0fdf4' : '#fff',
-                        border: '1px solid ' + (already ? '#bbf7d0' : '#ede9fe'),
+                        border: '1px solid ' + (already ? '#bbf7d0' : '#e7e3dc'),
                         borderRadius: 10, padding: '8px 12px', cursor: already ? 'default' : 'pointer',
                         textAlign: 'left',
                         opacity: already ? .7 : 1,
                       }}
                     >
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e1b4b' }} className="truncate">
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }} className="truncate">
                         {r.title}
                         {already && <span style={{ marginLeft: 8, fontSize: 10, color: '#15803d' }}>· déjà ajouté</span>}
                       </div>
@@ -931,15 +932,15 @@ function CreateTDModal({ classroomId, subjects, onClose, onCreated }: {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(30,27,75,.45)', backdropFilter: 'blur(4px)',
+        background: 'rgba(20,18,16,.45)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       }}
       onClick={onClose}
     >
       <div className="fd-card animate-fade-up" style={{ width: '100%', maxWidth: 480, padding: 22 }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b' }}>Nouveau TD</h3>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7068a8' }}><X className="w-5 h-5" /></button>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>Nouveau TD</h3>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="flex flex-col gap-3">
           <Field label="Titre">
@@ -994,19 +995,19 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="fd-card p-5">
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', marginBottom: 10 }}>Matières</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>Matières</h3>
         {classroom.subjects.length === 0 ? (
-          <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>Aucune matière.</p>
+          <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucune matière.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {classroom.subjects.map(cs => (
               <div key={cs.id}
                    className="flex items-center justify-between"
-                   style={{ background: '#f9f8ff', border: '1px solid #ede9fe', borderRadius: 10, padding: '8px 12px' }}>
+                   style={{ background: '#f9f8ff', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
                 <div className="flex items-center gap-2">
-                  <BookOpen className="w-3.5 h-3.5" style={{ color: '#4338ca' }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1e1b4b' }}>{cs.subject_name}</span>
-                  <span style={{ fontSize: 11, color: '#9391b8' }}>· {cs.teacher_username}</span>
+                  <BookOpen className="w-3.5 h-3.5" style={{ color: '#000000' }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{cs.subject_name}</span>
+                  <span style={{ fontSize: 11, color: '#6b6862' }}>· {cs.teacher_username}</span>
                 </div>
                 {isOwner && (
                   <button onClick={async () => { await removeSubject(classroom.id, cs.id); await onChanged(); }}
@@ -1032,32 +1033,32 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
       </div>
 
       <div className="fd-card p-5">
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', marginBottom: 10 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>
           Élèves ({members.length})
         </h3>
         {members.length === 0 ? (
-          <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>Aucun élève n'a rejoint.</p>
+          <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun élève n'a rejoint.</p>
         ) : (
           <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
             {members.map(m => (
               <div key={m.id}
                    className="flex items-center gap-3"
-                   style={{ background: '#f9f8ff', border: '1px solid #ede9fe', borderRadius: 10, padding: '8px 12px' }}>
+                   style={{ background: '#f9f8ff', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
                 {m.student.avatar ? (
                   <img src={m.student.avatar} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
                 ) : (
                   <div className="inline-flex items-center justify-center"
                        style={{
                          width: 28, height: 28, borderRadius: '50%',
-                         background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+                         background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
                          fontSize: 11, fontWeight: 700,
                        }}>
                     {m.student.username[0]?.toUpperCase()}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1e1b4b' }}>{m.student.username}</div>
-                  {m.student.email && <div className="truncate" style={{ fontSize: 10, color: '#9391b8' }}>{m.student.email}</div>}
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{m.student.username}</div>
+                  {m.student.email && <div className="truncate" style={{ fontSize: 10, color: '#6b6862' }}>{m.student.email}</div>}
                 </div>
                 {isOwner && (
                   <button onClick={() => onRemoveMember(m.student.id)}
@@ -1078,11 +1079,11 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
-  border: '1.5px solid #e4e2f5',
+  border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
   fontFamily: 'DM Sans',
-  color: '#1e1b4b',
+  color: '#1a1a1a',
   background: '#f9f8ff',
   outline: 'none',
 };
@@ -1090,7 +1091,7 @@ const inputStyle: React.CSSProperties = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>{label}</span>
       {children}
     </label>
   );

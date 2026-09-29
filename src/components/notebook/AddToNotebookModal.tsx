@@ -152,7 +152,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-[#faf9f7]">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {selectedNotebook && (
                   <button

@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { QuizQuestion as QuizQuestionType } from '@/types/index';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface QuizQuestionProps {
@@ -50,7 +49,6 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
     
     if (question.question_type === 'multiple_select') {
       const correctIndices = question.correct_answer_indices || [];
-      const userIndices = userAnswer as number[] || [];
       return correctIndices.includes(index);
     } else {
       return index === question.correct_answer_index;
@@ -103,7 +101,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       {question.question_type === 'multiple_select' && (
         <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
-          Select all that apply
+          Plusieurs réponses possibles
         </p>
       )}
 
@@ -181,7 +179,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       {/* Explanation (shown after answer) */}
       {showResult && question.explanation && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Explanation</h4>
+          <h4 className="font-medium text-blue-900 mb-2">Explication</h4>
           <p className="text-sm text-blue-800">{question.explanation}</p>
         </div>
       )}

@@ -6,7 +6,9 @@ import {
   TrendingUp, 
   Play,
   CheckCircle,
-  ChevronRight
+  ChevronRight,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { LearningPath } from '@/types/index';
 import { ProgressBadge } from './ProgressBadge';
@@ -16,12 +18,19 @@ import { cn } from '@/lib/utils';
 interface LearningPathCardProps {
   learningPath: LearningPath;
   onStart?: (pathId: string) => void;
+  /** Actions réservées aux admins (la liste les passait déjà, la carte les ignorait). */
+  onEdit?: (pathId: string) => void;
+  onDelete?: (pathId: string) => void;
+  isAdmin?: boolean;
   className?: string;
 }
 
 export const LearningPathCard: React.FC<LearningPathCardProps> = ({ 
-  learningPath, 
+  learningPath,
   onStart,
+  onEdit,
+  onDelete,
+  isAdmin = false,
   className
 }) => {
   const navigate = useNavigate();
@@ -30,26 +39,28 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
   const isCompleted = progress === 100;
 
   const handleCardClick = () => {
-    navigate(`/learning-paths/${learningPath.id}`);
+    navigate(`/learning-path/${learningPath.id}`);
   };
 
   const handleStartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onStart?.(learningPath.id) ?? navigate(`/learning-paths/${learningPath.id}`);
+    // Avant : `onStart?.(id) ?? navigate(…)` naviguait aussi quand onStart existait (il renvoie undefined).
+    if (onStart) onStart(learningPath.id);
+    else navigate(`/learning-path/${learningPath.id}`);
   };
 
   const difficulty = (() => {
     if (learningPath.estimated_hours < 10) return {
       color: 'text-emerald-600 bg-emerald-50',
-      label: 'Beginner'
+      label: 'Débutant'
     };
     if (learningPath.estimated_hours < 30) return {
       color: 'text-amber-600 bg-amber-50',
-      label: 'Intermediate'
+      label: 'Intermédiaire'
     };
     return {
       color: 'text-rose-600 bg-rose-50',
-      label: 'Advanced'
+      label: 'Avancé'
     };
   })();
 
@@ -81,12 +92,41 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
             {learningPath.subject.name}
           </span>
           
-          {isCompleted && (
-            <span className="inline-flex items-center px-2.5 py-1 bg-emerald-500 rounded-full text-white text-xs font-medium">
-              <CheckCircle className="w-3 h-3 mr-1.5" />
-              Completed
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {isCompleted && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-emerald-500 rounded-full text-white text-xs font-medium">
+                <CheckCircle className="w-3 h-3 mr-1.5" />
+                Terminé
+              </span>
+            )}
+            {isAdmin && onEdit && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onEdit(learningPath.id); }}
+                className="p-1.5 rounded-full bg-white/15 text-white hover:bg-white/30 transition-colors"
+                title="Modifier le parcours"
+                aria-label={`Modifier le parcours ${learningPath.title}`}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {isAdmin && onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Supprimer le parcours « ${learningPath.title} » ? Cette action est définitive.`)) {
+                    onDelete(learningPath.id);
+                  }
+                }}
+                className="p-1.5 rounded-full bg-white/15 text-white hover:bg-red-500/80 transition-colors"
+                title="Supprimer le parcours"
+                aria-label={`Supprimer le parcours ${learningPath.title}`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         <h3 className="mt-auto text-lg font-semibold text-white line-clamp-2">
@@ -97,7 +137,7 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
       {/* Content */}
       <div className="p-4 flex flex-col flex-grow">
         <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-          {learningPath.description || 'Master the fundamentals and advanced concepts in this comprehensive learning path.'}
+          {learningPath.description || 'Un parcours guidé, chapitre par chapitre.'}
         </p>
 
         {/* Metadata */}
@@ -161,17 +201,17 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
           {isCompleted ? (
             <>
               <CheckCircle className="w-4 h-4 mr-2" />
-              Review
+              Revoir
             </>
           ) : isStarted ? (
             <>
               <Play className="w-4 h-4 mr-2" />
-              Continue
+              Continuer
             </>
           ) : (
             <>
               <Play className="w-4 h-4 mr-2" />
-              Start
+              Commencer
             </>
           )}
           <ChevronRight className="w-4 h-4 ml-1 opacity-70" />

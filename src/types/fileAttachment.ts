@@ -1,4 +1,6 @@
 export interface FileAttachment {
+  /** Stable URL (redirects to fresh presigned S3) — safe to embed in content */
+  download_url?: string;
   id: string;
   file: string;
   file_name: string;
@@ -13,6 +15,7 @@ export interface FileAttachment {
 }
 
 export interface FileUploadResponse {
+  download_url?: string;
   id: string;
   url: string;
   file_name: string;

@@ -34,8 +34,6 @@ export const deleteLearningPath = async (id: string): Promise<void> => {
 export const createPathChapter = async (data: any): Promise<any> => {
   try {
     const response = await api.post('/path-chapters/', data);
-    console.log('Raw API response:', response); // Debug the full response
-    console.log('Response data:', response.data); // Debug the response data
     return response.data; // This should include the ID
   } catch (error) {
     console.error('API Error:', error);
@@ -82,7 +80,7 @@ export const createVideo = async (data: any): Promise<any> => {
   return response.data;
 };
 
-export const updateVideoProgress = async (id: string, data: { watched_seconds: number; is_completed?: boolean }): Promise<any> => {
+export const updateVideoProgress = async (id: string, data: { watched_seconds: number; is_completed?: boolean; notes?: string }): Promise<any> => {
   const response = await api.post(`/videos/${id}/update_progress/`, data);
   return response.data;
 };

@@ -1,37 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
+import {
   ArrowLeft,
   Clock,
   BookOpen,
-  Users,
   Play,
   ChevronRight,
   CheckCircle,
-  Lock,
   TrendingUp,
   Award,
   Plus,
   Star,
   Trophy,
-  Trash2, 
-  Edit, 
-  MoreVertical,
-  AlertTriangle,
+  Edit,
   GraduationCap,
   Sparkles,
   Timer,
   Brain,
   Video,
   FileText,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   getLearningPath, 
   startLearningPath,
-  deleteLearningPath, 
-  deletePathChapter 
 } from '@/lib/api/LearningPathApi';
 import { LearningPath, PathChapter } from '@/types/index';
 import { useLearningPathStore } from '@/stores/LearningPathStore';
@@ -73,7 +66,7 @@ const ProgressRing: React.FC<{ progress: number; size?: number }> = ({ progress,
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-bold text-gray-900">{progress}%</div>
-          <div className="text-xs text-gray-500">Complete</div>
+          <div className="text-xs text-gray-500">terminé</div>
         </div>
       </div>
     </div>
@@ -117,56 +110,13 @@ const ChapterCard: React.FC<{
   onStart: () => void;
   isLocked: boolean;
   isCurrent: boolean;
-}> = ({ chapter, index, isExpanded, onToggle, onStart, isLocked, isCurrent }) => {
+}> = ({ chapter, index, isExpanded, onToggle, onStart, isCurrent }) => {
   const progress = chapter.user_progress?.progress_percentage || 0;
   const isCompleted = chapter.user_progress?.is_completed || false;
   const videosCompleted = chapter.videos.filter(v => v.user_progress?.is_completed).length;
-  const navigate = useNavigate();
-  const [videos, setVideos] = useState(chapter.videos || []);
-
-
-// load learning path data 
-  useEffect(() => {
-    if (chapter.videos.length > 0) {
-      setVideos(chapter.videos);
-    }
-  }, [chapter.videos]);
-  
-
-  // function loadlearning path data
-  const loadLearningPath = async () => {
-    try {
-      const pathData = await getLearningPath(chapter.learning_path.id);
-      setVideos(pathData.path_chapters.find(ch => ch.id === chapter.id)?.videos || []);
-    } catch (error) {
-      console.error('Failed to load learning path:', error);
-    }
-  };
 
 
   // Handle chapter deletion
-const handleDeletePath = async (id: string | null) => {
-  if (window.confirm('Are you sure you want to delete this entire learning path? This action cannot be undone.')) {
-    try {
-      await deleteLearningPath(id!);
-      navigate('/learning-paths');
-    } catch (error) {
-      console.error('Failed to delete learning path:', error);
-    }
-  }
-};
-
-const handleDeleteChapter = async (chapterId: string) => {
-  if (window.confirm('Are you sure you want to delete this chapter? This action cannot be undone.')) {
-    try {
-      await deletePathChapter(chapterId);
-      // Refresh the learning path data
-      loadLearningPath();
-    } catch (error) {
-      console.error('Failed to delete chapter:', error);
-    }
-  }
-};
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -212,7 +162,7 @@ const handleDeleteChapter = async (chapterId: string) => {
               {chapter.quiz && (
                 <div className="flex items-center gap-1">
                   <FileText className="w-4 h-4" />
-                  <span>Quiz included</span>
+                  <span>Quiz inclus</span>
                 </div>
               )}
             </div>
@@ -220,7 +170,7 @@ const handleDeleteChapter = async (chapterId: string) => {
             {progress > 0 && (
               <div className="mt-4 ml-13">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">Progress</span>
+                  <span className="text-sm font-medium text-gray-700">Progression</span>
                   <span className="text-sm text-gray-600">{progress}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -250,7 +200,7 @@ const handleDeleteChapter = async (chapterId: string) => {
           >
             <div className="p-6 bg-gray-50">
               <div className="space-y-3">
-                {chapter.videos.map((video, vIndex) => (
+                {chapter.videos.map((video) => (
                   <div
                     key={video.id}
                     className="flex items-center justify-between p-3 bg-white rounded-lg"
@@ -306,7 +256,7 @@ const handleDeleteChapter = async (chapterId: string) => {
                 onClick={onStart}
                 className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
               >
-                {progress > 0 ? 'Continue Chapter' : 'Start Chapter'}
+                {progress > 0 ? 'Reprendre le chapitre' : 'Commencer le chapitre'}
                 <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -325,7 +275,7 @@ export const LearningPathDetail: React.FC = () => {
   const { setCurrentPath } = useLearningPathStore();
   
   const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
-  const [stats, setStats] = useState<any>(null);
+  const [stats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
@@ -345,7 +295,7 @@ export const LearningPathDetail: React.FC = () => {
       
       
     } catch (err) {
-      setError('Failed to load learning path. Please try again.');
+      setError('Impossible de charger le parcours. Réessaie.');
     } finally {
       setLoading(false);
     }
@@ -361,7 +311,7 @@ export const LearningPathDetail: React.FC = () => {
       await startLearningPath(id!);
       const firstChapter = learningPath?.path_chapters[0];
       if (firstChapter && firstChapter.videos.length > 0) {
-        navigate(`/learning-paths/${id}/chapters/${firstChapter.id}/videos/${firstChapter.videos[0].id}`);
+        navigate(`/learning-path/${id}/chapters/${firstChapter.id}/videos/${firstChapter.videos[0].id}`);
       }
     } catch (err) {
       console.error('Failed to start learning path:', err);
@@ -376,7 +326,7 @@ export const LearningPathDetail: React.FC = () => {
 
     const chapter = learningPath?.path_chapters.find(ch => ch.id === chapterId);
     if (chapter && chapter.videos.length > 0) {
-      navigate(`/learning-paths/${id}/chapters/${chapterId}/videos/${chapter.videos[0].id}`);
+      navigate(`/learning-path/${id}/chapters/${chapterId}/videos/${chapter.videos[0].id}`);
     }
   };
 
@@ -392,7 +342,7 @@ export const LearningPathDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -402,7 +352,7 @@ export const LearningPathDetail: React.FC = () => {
             <div className="w-20 h-20 border-4 border-indigo-200 rounded-full animate-pulse"></div>
             <div className="absolute inset-0 w-20 h-20 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
           </div>
-          <p className="text-gray-600 mt-4 font-medium">Loading your learning journey...</p>
+          <p className="text-gray-600 mt-4 font-medium">Chargement du parcours…</p>
         </motion.div>
       </div>
     );
@@ -410,22 +360,22 @@ export const LearningPathDetail: React.FC = () => {
 
   if (error || !learningPath) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
+      <div className="min-h-screen bg-[#faf9f7] p-8">
         <div className="max-w-4xl mx-auto">
           <Button
-            onClick={() => navigate('/learning-paths')}
+            onClick={() => navigate('/learning-path')}
             variant="ghost"
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Learning Paths
+            Retour aux parcours
           </Button>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl"
           >
-            {error || 'Learning path not found'}
+            {error || 'Parcours introuvable'}
           </motion.div>
         </div>
       </div>
@@ -439,7 +389,7 @@ export const LearningPathDetail: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-[#faf9f7]">
       {/* Enhanced Header */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700"></div>
@@ -451,12 +401,12 @@ export const LearningPathDetail: React.FC = () => {
         
         <div className="relative container mx-auto px-4 py-12">
           <Button
-            onClick={() => navigate('/learning-paths')}
+            onClick={() => navigate('/learning-path')}
             variant="ghost"
             className="mb-6 text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Learning Paths
+            Retour aux parcours
           </Button>
 
           <div className="max-w-5xl mx-auto">
@@ -505,17 +455,17 @@ export const LearningPathDetail: React.FC = () => {
                   className="bg-white text-indigo-600 hover:bg-gray-100 font-semibold px-8 shadow-xl"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Start Learning Journey
+                  Commencer le parcours
                 </Button>
               ) : (
                 <div className="flex items-center gap-6">
                   <ProgressRing progress={progress} />
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-2">
-                      You're making great progress!
+                      Tu avances bien !
                     </h3>
                     <p className="text-white/80">
-                      Keep going to unlock new achievements
+                      Continue, chapitre après chapitre.
                     </p>
                   </div>
                 </div>
@@ -535,17 +485,17 @@ export const LearningPathDetail: React.FC = () => {
           >
             <Button
               variant="outline"
-              onClick={() => navigate(`/learning-paths/${id}/edit`)}
+              onClick={() => navigate(`/learning-path/${id}/edit`)}
             >
               <Edit className="w-4 h-4 mr-2" />
-              Edit Path
+              Modifier le parcours
             </Button>
             <Button
-              onClick={() => navigate(`/learning-paths/${id}/chapters/create`)}
+              onClick={() => navigate(`/learning-path/${id}/chapters/create`)}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Chapter
+              Ajouter un chapitre
             </Button>
           </motion.div>
         </div>
@@ -561,33 +511,33 @@ export const LearningPathDetail: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-12"
             >
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Learning Analytics</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Ta progression</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatsCard
                   icon={GraduationCap}
                   value={`${stats.completed_chapters}/${stats.total_chapters}`}
-                  label="Chapters Mastered"
+                  label="Chapitres terminés"
                   color="bg-gradient-to-br from-indigo-500 to-indigo-600"
                   trend={10}
                 />
                 <StatsCard
                   icon={Video}
                   value={`${stats.videos_watched}/${stats.total_videos}`}
-                  label="Videos Watched"
+                  label="Vidéos regardées"
                   color="bg-gradient-to-br from-purple-500 to-purple-600"
                 />
                 <StatsCard
                   icon={Brain}
                   value={`${Math.round(stats.quiz_average || 0)}%`}
-                  label="Quiz Performance"
+                  label="Résultats aux quiz"
                   color="bg-gradient-to-br from-green-500 to-green-600"
                   trend={5}
                 />
                 <StatsCard
                   icon={Timer}
                   value={`${Math.round(stats.total_time_spent / 3600)}h`}
-                  label="Time Invested"
+                  label="Temps passé"
                   color="bg-gradient-to-br from-orange-500 to-orange-600"
                 />
               </div>
@@ -596,7 +546,7 @@ export const LearningPathDetail: React.FC = () => {
               <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-semibold mb-2">Next Milestone</h3>
+                    <h3 className="text-xl font-semibold mb-2">Prochaine étape</h3>
                     <p className="text-white/80">
                       Complete {5 - (stats.completed_chapters % 5)} more chapters to earn your next badge!
                     </p>
@@ -646,10 +596,10 @@ export const LearningPathDetail: React.FC = () => {
                   </motion.div>
                   
                   <Award className="w-20 h-20 mx-auto mb-6 text-yellow-300" />
-                  <h3 className="text-3xl font-bold mb-4">Congratulations, Champion! 🎉</h3>
+                  <h3 className="text-3xl font-bold mb-4">Parcours terminé, bravo !</h3>
                   <p className="text-xl mb-8 max-w-2xl mx-auto">
-                    You've successfully completed this learning path and mastered all the concepts. 
-                    Your dedication and hard work have paid off!
+                    Tu as terminé tous les chapitres de ce parcours. 
+                    Ton travail régulier a payé.
                   </p>
                   <Button
                     size="lg"

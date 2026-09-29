@@ -1,50 +1,79 @@
 // src/App.tsx - Structured Content System
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, generatePath } from 'react-router-dom';
 import { Home } from './pages/Home';
-import { Login } from './pages/Login';
-import { Navbar } from './components/navbar/Navbar';
+import { NotFound } from './pages/NotFound';
+import { useAuth } from './contexts/AuthContext';
+import { canSeeParcours } from './lib/features';
+import { AppShell } from './components/layout/AppShell';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/auth/AuthController';
-import { ProfilePage } from '@/pages/Profile';
-import { EditProfile } from '@/pages/EditProfile';
-import OnboardingProfile from '@/pages/OnboardingProfile';
 import { FilterProvider } from './components/navbar/FilterContext';
-import TermsOfService from './pages/TermsOfService';
-import PrivacyPolicy from './pages/PrivacyPolicy';
 import LegalRedirector from './components/layout/LegalRedirector';
+import ConsentBanner from './components/ads/ConsentBanner';
+import { TourProvider } from '@/components/tour/TourProvider';
 import Footer from './components/layout/Footer';
-import { Search } from './pages/Search';
-import { ClassroomsPage } from './pages/Classrooms';
-import ClassroomDetailPage from './pages/ClassroomDetail';
-import ConcoursListPage from './pages/concours/ConcoursList';
-import ConcoursExamDetailPage from './pages/concours/ConcoursExamDetail';
-import ConcoursSimulatePage from './pages/concours/ConcoursSimulate';
-import ConcoursRecapPage from './pages/concours/ConcoursRecap';
-import ConcoursHistoryPage from './pages/concours/ConcoursHistory';
-import { ConcoursTipsListPage, ConcoursTipDetailPage } from './pages/concours/ConcoursTips';
-import ConcoursAdminPage from './pages/concours/ConcoursAdmin';
-import ConcoursExamQuestionsPage from './pages/concours/ConcoursExamQuestions';
-import EditorTestPage from './pages/concours/EditorTest';
 
 // Learning paths
-import { LearningPathList } from './pages/learningpaths/LearningPathList';
-import { LearningPathDetail } from './pages/learningpaths/LearningPathDetail';
-import { ChapterVideo } from './pages/learningpaths/ChapterVideo';
-import { ChapterQuiz } from './pages/learningpaths/ChapterQuiz';
-import { CreatePathChapter } from './pages/learningpaths/CreatePathChapter';
-import { CreateLearningPath } from './pages/learningpaths/CreateLearningPath';
 
 // User pages
-import { RevisionListDetail } from './pages/RevisionListDetail';
-import { SavedItems } from './pages/SavedItems';
-import { RevisionLists } from './pages/RevisionLists';
-import { LogsConsole } from './pages/admin/LogsConsole';
 
 // Content pages (unified system)
-import { ContentList, ContentDetail, ContentCreate } from './pages/content';
+
+
+// Pages chargées à la demande : l'accueil s'affiche sans télécharger l'éditeur, l'admin,
+// les concours… (avant, tout arrivait d'un bloc : ~2 Mo de JavaScript avant la première page).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const page = <M,>(loader: () => Promise<M>, name: keyof M) =>
+  lazy(async () => ({ default: (await loader())[name] as unknown as React.ComponentType<any> }));
+
+const VerifyEmail = page(() => import('./pages/VerifyEmail'), 'VerifyEmail');
+const ResetPassword = page(() => import('./pages/ResetPassword'), 'ResetPassword');
+const ProfilePage = page(() => import('@/pages/Profile'), 'ProfilePage');
+const EditProfile = page(() => import('@/pages/EditProfile'), 'EditProfile');
+const OnboardingProfile = page(() => import('@/pages/OnboardingProfile'), 'default');
+const TermsOfService = page(() => import('./pages/TermsOfService'), 'default');
+const PrivacyPolicy = page(() => import('./pages/PrivacyPolicy'), 'default');
+const MentionsLegales = page(() => import('./pages/MentionsLegales'), 'default');
+const ImportPreview = page(() => import('./pages/ImportPreview'), 'default');
+const Search = page(() => import('./pages/Search'), 'Search');
+const ClassroomsPage = page(() => import('./pages/Classrooms'), 'ClassroomsPage');
+const ClassroomDetailPage = page(() => import('./pages/ClassroomDetail'), 'default');
+const ConcoursListPage = page(() => import('./pages/concours/ConcoursList'), 'default');
+const ConcoursExamDetailPage = page(() => import('./pages/concours/ConcoursExamDetail'), 'default');
+const ConcoursSimulatePage = page(() => import('./pages/concours/ConcoursSimulate'), 'default');
+const ConcoursRecapPage = page(() => import('./pages/concours/ConcoursRecap'), 'default');
+const ConcoursHistoryPage = page(() => import('./pages/concours/ConcoursHistory'), 'default');
+const ConcoursTipsListPage = page(() => import('./pages/concours/ConcoursTips'), 'ConcoursTipsListPage');
+const ConcoursTipDetailPage = page(() => import('./pages/concours/ConcoursTips'), 'ConcoursTipDetailPage');
+const ConcoursAdminPage = page(() => import('./pages/concours/ConcoursAdmin'), 'default');
+const ConcoursExamQuestionsPage = page(() => import('./pages/concours/ConcoursExamQuestions'), 'default');
+const EditorTestPage = page(() => import('./pages/concours/EditorTest'), 'default');
+const LearningPathList = page(() => import('./pages/learningpaths/LearningPathList'), 'LearningPathList');
+const LearningPathDetail = page(() => import('./pages/learningpaths/LearningPathDetail'), 'LearningPathDetail');
+const ChapterVideo = page(() => import('./pages/learningpaths/ChapterVideo'), 'ChapterVideo');
+const ChapterQuiz = page(() => import('./pages/learningpaths/ChapterQuiz'), 'ChapterQuiz');
+const CreatePathChapter = page(() => import('./pages/learningpaths/CreatePathChapter'), 'CreatePathChapter');
+const CreateLearningPath = page(() => import('./pages/learningpaths/CreateLearningPath'), 'CreateLearningPath');
+const RevisionListDetail = page(() => import('./pages/RevisionListDetail'), 'RevisionListDetail');
+const PaperExport = page(() => import('./pages/PaperExport'), 'PaperExport');
+const SavedItems = page(() => import('./pages/SavedItems'), 'SavedItems');
+const RevisionLists = page(() => import('./pages/RevisionLists'), 'RevisionLists');
+const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'), 'default');
+const SkillIQSection = page(() => import('@/components/profile/SkillIQSection'), 'SkillIQSection');
+const LogsConsole = page(() => import('./pages/admin/LogsConsole'), 'LogsConsole');
+const ContentList = page(() => import('./pages/content/ContentList'), 'ContentList');
+const ContentDetail = page(() => import('./pages/content/ContentDetail'), 'ContentDetail');
+const ContentCreate = page(() => import('./pages/content/ContentCreate'), 'ContentCreate');
+
+/** Pendant le chargement d'une page : un repère discret, la barre latérale reste en place. */
+const PageLoader = () => (
+  <div className="flex items-center justify-center py-24" role="status" aria-label="Chargement de la page">
+    <div className="h-6 w-6 rounded-full border-2 border-line border-t-brand animate-spin" />
+  </div>
+);
 
 // Composant pour rediriger vers la home avec modal ouvert
 const SignUpRedirect = () => {
@@ -62,17 +91,34 @@ const SignUpRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
-// Composant pour afficher la navbar conditionnellement
+// /login mirrors /signup: open the shared auth modal instead of a separate page.
+const LoginRedirect = () => {
+  const { openModal, setInitialTab } = useAuthModal();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialTab('login');
+      openModal();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [openModal, setInitialTab]);
+
+  return <Navigate to="/" replace />;
+};
+
+// Layout wrapper: the app shell (sidebar + top bar) for normal pages,
+// or a bare full-width frame for chrome-less pages (legal, etc.).
 const NavbarWrapper = ({ children, showNavbar = true, showFooter = true }: { children: React.ReactNode, showNavbar?: boolean, showFooter?: boolean }) => {
-  return (
-    <div className="flex flex-col min-h-screen">
-      {showNavbar && <Navbar />}
-      <main className="flex-grow">
-        {children}
-      </main>
-      {showFooter && <Footer />}
-    </div>
-  );
+  if (!showNavbar) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-grow"><Suspense fallback={<PageLoader />}>{children}</Suspense></main>
+        {showFooter && <Footer />}
+      </div>
+    );
+  }
+  return <AppShell showFooter={showFooter}><Suspense fallback={<PageLoader />}>{children}</Suspense></AppShell>;
 };
 
 // Redirect helpers for legacy /structured/* routes
@@ -81,9 +127,28 @@ const RedirectToExercise = () => {
   return <Navigate to={`/exercises/${id}`} replace />;
 };
 
+/** Redirection qui recopie les paramètres (`<Navigate to="/exams/:id">` envoyait vers « /exams/:id » tel quel). */
+const RedirectWithParams: React.FC<{ to: string }> = ({ to }) => {
+  const params = useParams();
+  return <Navigate to={generatePath(to, params)} replace />;
+};
+
 const RedirectToExerciseEdit = () => {
   const { id } = useParams();
   return <Navigate to={`/exercises/${id}/edit`} replace />;
+};
+
+/** Parcours pas encore publié : pour un élève, ces adresses n'existent pas (page introuvable). */
+const ParcoursGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  return canSeeParcours(user) ? <>{children}</> : <NotFound />;
+};
+
+/** /learning-paths/… → /learning-path/… (liens déjà partagés ou en favoris). */
+const RedirectLearningPaths = () => {
+  const { '*': rest } = useParams();
+  return <Navigate to={`/learning-path${rest ? `/${rest}` : ''}`} replace />;
 };
 
 function App() {
@@ -113,11 +178,14 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <LegalRedirector />
+        <ConsentBanner />
         <ThemeProvider>
           <AuthProvider>
             <AuthModalProvider>
               <FilterProvider>
+                <TourProvider>
                 <div className="min-h-screen bg-gray-100">
+                  <Suspense fallback={<PageLoader />}>
                   <Routes>
                     {/* Legal pages without navbar */}
                     <Route path="/terms-of-service" element={
@@ -128,6 +196,17 @@ function App() {
                     <Route path="/privacy-policy" element={
                       <NavbarWrapper showNavbar={false}>
                         <PrivacyPolicy />
+                      </NavbarWrapper>
+                    } />
+                    {/* Aperçu local d'une fiche avant import (outil éditorial, sans appel à l'API) */}
+                    <Route path="/apercu-import" element={
+                      <NavbarWrapper showNavbar={false} showFooter={false}>
+                        <ImportPreview />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/mentions-legales" element={
+                      <NavbarWrapper showNavbar={false}>
+                        <MentionsLegales />
                       </NavbarWrapper>
                     } />
 
@@ -151,12 +230,22 @@ function App() {
                     } />
                     <Route path="/login" element={
                       <NavbarWrapper>
-                        <Login />
+                        <LoginRedirect />
                       </NavbarWrapper>
                     } />
                     <Route path="/signup" element={
                       <NavbarWrapper>
                         <SignUpRedirect />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/verify-email" element={
+                      <NavbarWrapper>
+                        <VerifyEmail />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/reset-password" element={
+                      <NavbarWrapper>
+                        <ResetPassword />
                       </NavbarWrapper>
                     } />
 
@@ -232,6 +321,19 @@ function App() {
                         <RevisionLists />
                       </NavbarWrapper>
                     } />
+                    {/* Mon espace — features moved out of the profile page */}
+                    <Route path="/notebooks" element={
+                      <NavbarWrapper showFooter={false}>
+                        <StudentNotebook />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/skill-iq" element={
+                      <NavbarWrapper>
+                        <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
+                          <SkillIQSection />
+                        </div>
+                      </NavbarWrapper>
+                    } />
 
                     {/* ================================
                         EXERCISES - Structured Format
@@ -246,6 +348,10 @@ function App() {
                         <ContentCreate />
                       </NavbarWrapper>
                     } />
+                    {/* Feuilles A4 à exporter en PDF : pleine page, sans la barre latérale */}
+                    <Route path="/exercises/:id/pdf" element={<PaperExport source="content" />} />
+                    <Route path="/exams/:id/pdf" element={<PaperExport source="content" />} />
+                    <Route path="/revision-lists/:id/pdf" element={<PaperExport source="revision-list" />} />
                     <Route path="/exercises/:id" element={
                       <NavbarWrapper>
                         <ContentDetail />
@@ -258,7 +364,7 @@ function App() {
                     } />
                     {/* Legacy redirect */}
                     <Route path="/new" element={<Navigate to="/exercises/new" replace />} />
-                    <Route path="/edit/:id" element={<Navigate to="/exercises/:id/edit" replace />} />
+                    <Route path="/edit/:id" element={<RedirectWithParams to="/exercises/:id/edit" />} />
 
                     {/* ================================
                         EXAMS - Structured Format
@@ -286,7 +392,7 @@ function App() {
                     } />
                     {/* Legacy redirect */}
                     <Route path="/new-exam" element={<Navigate to="/exams/new" replace />} />
-                    <Route path="/edit-exam/:id" element={<Navigate to="/exams/:id/edit" replace />} />
+                    <Route path="/edit-exam/:id" element={<RedirectWithParams to="/exams/:id/edit" />} />
 
                     {/* ================================
                         LESSONS - Structured Format (Section-based)
@@ -313,44 +419,44 @@ function App() {
                     } />
                     {/* Legacy redirect */}
                     <Route path="/new-lesson" element={<Navigate to="/lessons/new" replace />} />
-                    <Route path="/edit-lesson/:id" element={<Navigate to="/lessons/:id/edit" replace />} />
+                    <Route path="/edit-lesson/:id" element={<RedirectWithParams to="/lessons/:id/edit" />} />
 
                     {/* ================================
                         LEARNING PATHS
                     ================================ */}
                     <Route path="/learning-path" element={
                       <NavbarWrapper>
-                        <LearningPathList />
+                        <ParcoursGate><LearningPathList /></ParcoursGate>
                       </NavbarWrapper>
                     } />
                     <Route path="/learning-path/:id" element={
                       <NavbarWrapper>
-                        <LearningPathDetail />
+                        <ParcoursGate><LearningPathDetail /></ParcoursGate>
                       </NavbarWrapper>
                     } />
                     <Route path="/learning-path/:pathId/chapters/:chapterId/videos/:videoId" element={
                       <NavbarWrapper showFooter={false}>
-                        <ChapterVideo />
+                        <ParcoursGate><ChapterVideo /></ParcoursGate>
                       </NavbarWrapper>
                     } />
                     <Route path="/learning-path/:pathId/chapters/:chapterId/quiz" element={
                       <NavbarWrapper showFooter={false}>
-                        <ChapterQuiz />
+                        <ParcoursGate><ChapterQuiz /></ParcoursGate>
                       </NavbarWrapper>
                     } />
                     <Route path="/learning-path/create" element={
                       <NavbarWrapper>
-                        <CreateLearningPath />
+                        <ParcoursGate><CreateLearningPath /></ParcoursGate>
                       </NavbarWrapper>
                     } />
                     <Route path="/learning-path/:id/edit" element={
                       <NavbarWrapper>
-                        <CreateLearningPath />
+                        <ParcoursGate><CreateLearningPath /></ParcoursGate>
                       </NavbarWrapper>
                     } />
                     <Route path="/learning-path/:id/chapters/create" element={
                       <NavbarWrapper>
-                        <CreatePathChapter />
+                        <ParcoursGate><CreatePathChapter /></ParcoursGate>
                       </NavbarWrapper>
                     } />
 
@@ -360,12 +466,21 @@ function App() {
                     <Route path="/structured/exercises/:id" element={<RedirectToExercise />} />
                     <Route path="/structured/exercises/:id/edit" element={<RedirectToExerciseEdit />} />
                     <Route path="/structured/exams" element={<Navigate to="/exams" replace />} />
-                    <Route path="/structured/exams/:id" element={<Navigate to="/exams/:id" replace />} />
+                    <Route path="/structured/exams/:id" element={<RedirectWithParams to="/exams/:id" />} />
                     <Route path="/structured/lessons" element={<Navigate to="/lessons" replace />} />
-                    <Route path="/structured/lessons/:id" element={<Navigate to="/lessons/:id" replace />} />
+                    <Route path="/structured/lessons/:id" element={<RedirectWithParams to="/lessons/:id" />} />
+                    {/* Anciennes adresses des parcours (au pluriel) */}
+                    <Route path="/learning-paths/*" element={<RedirectLearningPaths />} />
 
+                    <Route path="*" element={
+                      <NavbarWrapper>
+                        <NotFound />
+                      </NavbarWrapper>
+                    } />
                   </Routes>
+                  </Suspense>
                 </div>
+                </TourProvider>
               </FilterProvider>
             </AuthModalProvider>
           </AuthProvider>

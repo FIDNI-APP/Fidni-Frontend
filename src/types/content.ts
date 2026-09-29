@@ -102,7 +102,7 @@ export interface ContentBase {
   title: string;
   difficulty?: Difficulty;
   structure?: ExerciseStructure | LessonStructure;
-  author: Pick<User, 'id' | 'username'>;
+  author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   created_at: string;
   updated_at?: string;
   chapters: ChapterModel[];
@@ -150,7 +150,7 @@ export interface ExerciseListItem {
   title: string;
   difficulty?: Difficulty;
   structure?: ExerciseStructure;
-  author: Pick<User, 'id' | 'username'>;
+  author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   subject: SubjectModel;
   class_levels: ClassLevelModel[];
   chapters?: { id: number; name: string }[];
@@ -173,7 +173,7 @@ export interface ExamListItem {
   title: string;
   difficulty?: Difficulty;
   structure?: ExerciseStructure;
-  author: Pick<User, 'id' | 'username'>;
+  author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   subject: SubjectModel;
   class_levels: ClassLevelModel[];
   chapters?: { id: number; name: string }[];
@@ -198,7 +198,7 @@ export interface LessonListItem {
   type: 'lesson';
   title: string;
   structure?: LessonStructure;
-  author: Pick<User, 'id' | 'username'>;
+  author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   subject: SubjectModel;
   class_levels: ClassLevelModel[];
   chapters?: { id: number; name: string }[];
@@ -213,8 +213,6 @@ export interface LessonListItem {
   section_count?: number;
 }
 
-export type ContentListItem = ExerciseListItem | ExamListItem | LessonListItem;
-
 // =====================
 // SOLUTION
 // =====================
@@ -225,7 +223,7 @@ export interface ContentSolution {
   object_id: string;
   content_type_name: string;
   structure: SolutionStructure;
-  author: Pick<User, 'id' | 'username'>;
+  author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   created_at: string;
   updated_at: string;
 }
@@ -343,19 +341,6 @@ export interface CreateLessonRequest {
   subfield_ids?: number[];
 }
 
-export interface AssessItemRequest {
-  item_path: string;
-  assessment: AssessmentStatus;
-  notes?: string;
-  time_spent_seconds?: number;
-  handwriting_image?: string;
-}
-
-export interface AssessItemResponse {
-  assessment: ItemAssessment;
-  progress: ContentProgress;
-}
-
 // =====================
 // FILTER TYPES
 // =====================
@@ -392,79 +377,3 @@ export interface ContentExamFilters extends ContentFilters {
 
 export type ContentKind = 'exercise' | 'exam' | 'lesson';
 
-export interface EditorState {
-  title: string;
-  difficulty?: Difficulty;
-  structure: ExerciseStructure | LessonStructure;
-  classLevelIds: number[];
-  subjectId: number | null;
-  chapterIds: number[];
-  theoremIds: number[];
-  subfieldIds: number[];
-  isNationalExam?: boolean;
-  nationalYear?: number;
-  durationMinutes?: number;
-}
-
-// =====================
-// BACKWARDS-COMPAT ALIASES (remove gradually)
-// =====================
-
-/** @deprecated Use ContentBase */
-export type StructuredContentBase = ContentBase;
-/** @deprecated Use ContentExercise */
-export type StructuredExercise = ContentExercise;
-/** @deprecated Use ContentExam */
-export type StructuredExam = ContentExam;
-/** @deprecated Use ContentLesson */
-export type StructuredLesson = ContentLesson;
-/** @deprecated Use ExerciseListItem */
-export type StructuredExerciseListItem = ExerciseListItem;
-/** @deprecated Use ExamListItem */
-export type StructuredExamListItem = ExamListItem;
-/** @deprecated Use LessonListItem */
-export type StructuredLessonListItem = LessonListItem;
-/** @deprecated Use ContentSolution */
-export type StructuredSolution = ContentSolution;
-/** @deprecated Use ContentProgress */
-export type StructuredContentProgress = ContentProgress;
-/** @deprecated Use ContentProgressListItem */
-export type StructuredContentProgressListItem = ContentProgressListItem;
-/** @deprecated Use ContentStatistics */
-export type StructuredContentStatistics = ContentStatistics;
-/** @deprecated Use CreateExerciseRequest */
-export type CreateStructuredExerciseRequest = CreateExerciseRequest;
-/** @deprecated Use CreateExamRequest */
-export type CreateStructuredExamRequest = CreateExamRequest;
-/** @deprecated Use CreateLessonRequest */
-export type CreateStructuredLessonRequest = CreateLessonRequest;
-/** @deprecated Use ContentFilters */
-export type StructuredContentFilters = ContentFilters;
-/** @deprecated Use ContentExamFilters */
-export type StructuredExamFilters = ContentExamFilters;
-
-// =====================
-// HELPERS
-// =====================
-
-export function getItemPath(questionId: string, subQuestionId?: string, partId?: string): string {
-  if (partId && subQuestionId) return `${questionId}.${subQuestionId}.${partId}`;
-  if (subQuestionId) return `${questionId}.${subQuestionId}`;
-  return questionId;
-}
-
-export function parseItemPath(path: string): { questionId: string; subQuestionId?: string; partId?: string } {
-  const parts = path.split('.');
-  return { questionId: parts[0], subQuestionId: parts[1], partId: parts[2] };
-}
-
-export function generateQuestionId(index: number): string { return `q${index + 1}`; }
-export function generateSubQuestionId(index: number): string { return String.fromCharCode(97 + index); }
-export function generatePartId(index: number): string {
-  const numerals = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
-  return numerals[index] || `${index + 1}`;
-}
-export function generateSectionId(index: number): string { return `s${index + 1}`; }
-export function generateSubSectionId(sectionIndex: number, subIndex: number): string {
-  return `ss${sectionIndex + 1}_${subIndex + 1}`;
-}

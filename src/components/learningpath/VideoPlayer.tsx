@@ -1,17 +1,7 @@
 // src/components/learningpath/VideoPlayer.tsx
 import React, { useRef, useEffect, useState } from 'react';
 import ReactPlayer from 'react-player';
-import { 
-  Play, 
-  Pause, 
-  SkipForward, 
-  SkipBack,
-  Volume2,
-  VolumeX,
-  Maximize,
-  Settings,
-  FileText
-} from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -24,6 +14,12 @@ interface VideoPlayerProps {
   autoPlay?: boolean;
 }
 
+/** Lecteur YouTube sur le domaine sans cookie publicitaire (RGPD). */
+const toNoCookie = (url: string) => {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
+  return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : url;
+};
+
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   url,
   onProgress,
@@ -31,7 +27,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   initialTime = 0,
   autoPlay = false
 }) => {
-  const playerRef = useRef<ReactPlayer>(null);
+  // react-player v3 : le ref est l'élément vidéo lui-même (currentTime, duration…).
+  // Ce composant utilisait l'API v2 (url, seekTo, onDuration, onProgress) : la vidéo ne recevait
+  // aucune source, la progression n'était jamais enregistrée et la reprise ne marchait pas.
+  const playerRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const resumedRef = useRef(false);
   const [playing, setPlaying] = useState(autoPlay);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
@@ -40,14 +41,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  useEffect(() => {
-    // Seek to initial time when component mounts
-    if (playerRef.current && initialTime > 0) {
-      playerRef.current.seekTo(initialTime);
+  // Nouvelle vidéo : on pourra de nouveau reprendre là où l'élève s'était arrêté.
+  useEffect(() => { resumedRef.current = false; }, [url]);
+
+  const seekTo = (seconds: number) => {
+    if (playerRef.current) playerRef.current.currentTime = seconds;
+  };
+
+  // Reprise à la dernière position connue, dès que la durée de la vidéo est connue.
+  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const d = e.currentTarget.duration;
+    if (Number.isFinite(d)) setDuration(d);
+    if (!resumedRef.current && initialTime > 0 && (!Number.isFinite(d) || initialTime < d - 5)) {
+      seekTo(initialTime);
     }
-  }, [initialTime]);
+    resumedRef.current = true;
+  };
 
   useEffect(() => {
     // Auto-hide controls
@@ -70,13 +81,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleSeek = (value: number[]) => {
     const seekTime = (value[0] / 100) * duration;
-    playerRef.current?.seekTo(seekTime);
+    seekTo(seekTime);
     setCurrentTime(seekTime);
   };
 
   const handleSkip = (seconds: number) => {
     const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
-    playerRef.current?.seekTo(newTime);
+    seekTo(newTime);
     setCurrentTime(newTime);
   };
 
@@ -85,11 +96,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setMuted(value[0] === 0);
   };
 
-  const handleProgress = (state: any) => {
-    setCurrentTime(state.playedSeconds);
-    if (onProgress) {
-      onProgress(state);
-    }
+  // Même forme qu'avant ({ playedSeconds, played }) : ChapterVideo n'a rien à changer.
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const el = e.currentTarget;
+    const d = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : duration;
+    setCurrentTime(el.currentTime);
+    onProgress?.({ playedSeconds: el.currentTime, played: d > 0 ? el.currentTime / d : 0 });
   };
 
   const formatTime = (seconds: number) => {
@@ -116,7 +128,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const toggleFullscreen = () => {
-    const container = document.querySelector('.video-player-container');
+    const container = containerRef.current;
     if (container) {
       if (!document.fullscreenElement) {
         container.requestFullscreen();
@@ -127,32 +139,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   return (
-    <div 
+    <div
+      ref={containerRef}
       className="video-player-container relative bg-black rounded-lg overflow-hidden group"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => playing && setShowControls(false)}
     >
       <ReactPlayer
         ref={playerRef}
-        url={url}
+        src={toNoCookie(url)}
         playing={playing}
         volume={volume}
         muted={muted}
         playbackRate={playbackRate}
-        onDuration={setDuration}
-        onProgress={handleProgress}
-        onEnded={onEnded}
+        onLoadedMetadata={handleLoadedMetadata}
+        onDurationChange={(e) => { const d = e.currentTarget.duration; if (Number.isFinite(d)) setDuration(d); }}
+        onTimeUpdate={handleTimeUpdate}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); onEnded?.(); }}
         width="100%"
         height="100%"
         className="react-player"
-        config={{
-          youtube: {
-            playerVars: {
-              modestbranding: 1,
-              rel: 0
-            }
-          }
-        }}
+        config={{ youtube: { rel: 0 } }}
       />
 
       {/* Controls Overlay */}
@@ -267,7 +276,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 
                 {showSettings && (
                   <div className="absolute bottom-full right-0 mb-2 bg-gray-900 rounded-lg p-2 min-w-[150px]">
-                    <div className="text-white text-sm mb-1">Playback Speed</div>
+                    <div className="text-white text-sm mb-1">Vitesse de lecture</div>
                     {[0.5, 0.75, 1, 1.25, 1.5, 2].map(rate => (
                       <button
                         key={rate}

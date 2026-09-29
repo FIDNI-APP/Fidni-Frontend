@@ -1,396 +1,289 @@
 // src/components/profile/SkillIQSection.tsx
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// Skill IQ : des quiz courts par chapitre, corrigés tout de suite. Vue principale = tous les
+// chapitres du niveau d'un coup d'œil (plus d'accordéons imbriqués) ; les quiz qui n'existent pas
+// encore sont annoncés comme tels au lieu d'échouer au clic.
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  Brain, ChevronRight, ChevronDown, CheckCircle,
-  Target, Play, ArrowLeft, Loader2, XCircle,
-  Trophy, BookOpen, Layers, Award
+  Brain, CheckCircle2, XCircle, Play, RotateCcw, ArrowLeft, Loader2, Clock, Award, Hourglass,
 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 
 interface Chapter { id: number; name: string; }
 interface Subject { id: number; name: string; chapters: Chapter[]; }
 interface ClassLevel { id: number; name: string; subjects: Subject[]; }
 
 interface SkillAssessment {
-  id: number;
-  chapter: number;
-  chapter_name: string;
-  subject_name: string;
-  score: number;
-  max_score: number;
-  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  completed_at: string;
+  id: number; chapter: number; chapter_name: string; subject_name: string;
+  score: number; max_score: number; level: Level; completed_at: string;
+  correction?: { id: number; your_answer: number | null; correct_answer: number; is_correct: boolean; explanation: string }[];
 }
+type Level = 'beginner' | 'intermediate' | 'advanced' | 'expert';
+interface QuizQuestion { id: number; question: string; options: string[]; difficulty: 'easy' | 'medium' | 'hard'; }
+interface QuizState { questions: QuizQuestion[]; currentIndex: number; answers: Record<number, number>; startedAt: Date; }
 
-interface QuizQuestion {
-  id: number;
-  question: string;
-  options: string[];
-  difficulty: 'easy' | 'medium' | 'hard';
-}
+const LEVEL: Record<Level, { label: string; className: string }> = {
+  beginner:     { label: 'Débutant',      className: 'bg-[#f2f1ee] text-ink-faint' },
+  intermediate: { label: 'Intermédiaire', className: 'bg-brand-soft text-brand-hover' },
+  advanced:     { label: 'Avancé',        className: 'bg-gold-soft text-gold-strong' },
+  expert:       { label: 'Expert',        className: 'bg-ink text-white' },
+};
+const DIFFICULTY = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' } as const;
 
-interface QuizState {
-  questions: QuizQuestion[];
-  currentIndex: number;
-  answers: Record<number, number>;
-  startedAt: Date;
-}
+const pct = (a: SkillAssessment) => (a.max_score ? Math.round((a.score / a.max_score) * 100) : 0);
+// Texte d'un quiz (écrit à la main, peut contenir $…$) : échappé puis rendu avec KaTeX et filtré.
+const mathHtml = (s: string) => renderContentHtml(s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+const MathText: React.FC<{ text: string; className?: string }> = ({ text, className }) => (
+  <span className={className} dangerouslySetInnerHTML={{ __html: mathHtml(text) }} />
+);
+const frDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
 export const SkillIQSection: React.FC = () => {
+  const { user } = useAuth();
   const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
   const [assessments, setAssessments] = useState<SkillAssessment[]>([]);
+  const [available, setAvailable] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [expandedClass, setExpandedClass] = useState<number | null>(null);
-  const [expandedSubject, setExpandedSubject] = useState<number | null>(null);
+  const [levelId, setLevelId] = useState<number | null>(null);
 
-  const [activeQuiz, setActiveQuiz] = useState<{
-    chapterId: number;
-    chapterName: string;
-    subjectName: string;
-  } | null>(null);
+  const [activeQuiz, setActiveQuiz] = useState<{ chapterId: number; chapterName: string } | null>(null);
   const [quizState, setQuizState] = useState<QuizState | null>(null);
+  const [lastQuestions, setLastQuestions] = useState<QuizQuestion[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizResult, setQuizResult] = useState<SkillAssessment | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const [tax, mine, avail] = await Promise.all([
+          api.get('/class-levels/?include_taxonomy=true'),
+          api.get('/skill-assessments/my/').catch(() => ({ data: [] })),
+          api.get('/skill-assessments/available/').catch(() => ({ data: {} })),
+        ]);
+        const levels: ClassLevel[] = tax.data || [];
+        setClassLevels(levels);
+        setAssessments(mine.data || []);
+        setAvailable(avail.data || {});
+        // Niveau de l'élève par défaut, sinon le premier.
+        const own = user?.profile?.class_level;
+        const ownId = typeof own === 'object' && own ? Number(own.id) : own ? Number(own) : null;
+        setLevelId(levels.find((l) => l.id === ownId)?.id ?? levels[0]?.id ?? null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user]);
 
-  const loadData = async () => {
+  const byChapter = useMemo(() => new Map(assessments.map((a) => [a.chapter, a])), [assessments]);
+  const level = classLevels.find((l) => l.id === levelId);
+  const chapters = useMemo(() => {
+    const all = (level?.subjects ?? []).flatMap((s) => s.chapters);
+    const seen = new Set<number>();
+    return all.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)))
+      .sort((a, b) => Number(!available[b.id]) - Number(!available[a.id]) || a.name.localeCompare(b.name, 'fr'));
+  }, [level, available]);
+  const availableHere = chapters.filter((c) => available[c.id]).length;
+  const average = assessments.length ? Math.round(assessments.reduce((s, a) => s + pct(a), 0) / assessments.length) : null;
+
+  const startQuiz = async (chapterId: number, chapterName: string) => {
+    setActiveQuiz({ chapterId, chapterName });
+    setQuizResult(null);
+    setQuizLoading(true);
     try {
-      setLoading(true);
-      const [taxonomyRes, assessmentsRes] = await Promise.all([
-        api.get('/class-levels/?include_taxonomy=true'),
-        api.get('/skill-assessments/my/').catch(() => ({ data: [] }))
-      ]);
-      setClassLevels(taxonomyRes.data || []);
-      setAssessments(assessmentsRes.data || []);
-    } catch (error) {
-      console.error('Failed to load skill IQ data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getChapterAssessment = (chapterId: number): SkillAssessment | undefined =>
-    assessments.find(a => a.chapter === chapterId);
-
-  const getLevelLabel = (level: string) => {
-    switch (level) {
-      case 'expert': return 'Expert';
-      case 'advanced': return 'Avancé';
-      case 'intermediate': return 'Intermédiaire';
-      default: return 'Débutant';
-    }
-  };
-
-  const getLevelBadgeColor = (level: string) => {
-    switch (level) {
-      case 'expert': return 'bg-violet-50 text-violet-700';
-      case 'advanced': return 'bg-blue-50 text-blue-700';
-      case 'intermediate': return 'bg-emerald-50 text-emerald-700';
-      default: return 'bg-amber-50 text-amber-700';
-    }
-  };
-
-  const getLevelRingColor = (level: string) => {
-    switch (level) {
-      case 'expert': return '#8b5cf6';
-      case 'advanced': return '#2563eb';
-      case 'intermediate': return '#10b981';
-      default: return '#f59e0b';
-    }
-  };
-
-  const startQuiz = async (chapterId: number, chapterName: string, subjectName: string) => {
-    try {
-      setActiveQuiz({ chapterId, chapterName, subjectName });
-      setQuizLoading(true);
-      setQuizResult(null);
-      const response = await api.get(`/skill-assessments/quiz/${chapterId}/`);
-      setQuizState({
-        questions: response.data.questions,
-        currentIndex: 0,
-        answers: {},
-        startedAt: new Date()
-      });
-    } catch (error) {
-      console.error('Failed to load quiz:', error);
-      setActiveQuiz(null);
+      const r = await api.get(`/skill-assessments/quiz/${chapterId}/`);
+      setQuizState({ questions: r.data.questions, currentIndex: 0, answers: {}, startedAt: new Date() });
+      setLastQuestions(r.data.questions);
+    } catch {
+      setQuizState({ questions: [], currentIndex: 0, answers: {}, startedAt: new Date() });
     } finally {
       setQuizLoading(false);
     }
   };
 
-  const answerQuestion = (questionId: number, optionIndex: number) => {
-    if (!quizState) return;
-    setQuizState({ ...quizState, answers: { ...quizState.answers, [questionId]: optionIndex } });
-  };
-
-  const nextQuestion = () => {
-    if (!quizState || quizState.currentIndex >= quizState.questions.length - 1) return;
-    setQuizState({ ...quizState, currentIndex: quizState.currentIndex + 1 });
-  };
-
-  const previousQuestion = () => {
-    if (!quizState || quizState.currentIndex === 0) return;
-    setQuizState({ ...quizState, currentIndex: quizState.currentIndex - 1 });
-  };
-
   const submitQuiz = async () => {
     if (!quizState || !activeQuiz) return;
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-      const response = await api.post(`/skill-assessments/submit/${activeQuiz.chapterId}/`, {
+      const r = await api.post(`/skill-assessments/submit/${activeQuiz.chapterId}/`, {
         answers: quizState.answers,
-        time_spent: Math.floor((new Date().getTime() - quizState.startedAt.getTime()) / 1000)
+        time_spent: Math.floor((Date.now() - quizState.startedAt.getTime()) / 1000),
       });
-      setQuizResult(response.data);
+      setQuizResult(r.data);
       setQuizState(null);
-      const assessmentsRes = await api.get('/skill-assessments/my/');
-      setAssessments(assessmentsRes.data || []);
-    } catch (error) {
-      console.error('Failed to submit quiz:', error);
+      const mine = await api.get('/skill-assessments/my/');
+      setAssessments(mine.data || []);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const closeQuiz = () => {
-    setActiveQuiz(null);
-    setQuizState(null);
-    setQuizResult(null);
-  };
-
-  const totalAssessments = assessments.length;
-  const averageScore = totalAssessments > 0
-    ? Math.round(assessments.reduce((sum, a) => sum + (a.score / a.max_score) * 100, 0) / totalAssessments)
-    : 0;
-  const expertCount = assessments.filter(a => a.level === 'expert').length;
-  const advancedCount = assessments.filter(a => a.level === 'advanced').length;
-  const intermediateCount = assessments.filter(a => a.level === 'intermediate').length;
-
-  const getSubjectCompletion = (subject: Subject) => {
-    const assessed = subject.chapters.filter(c => getChapterAssessment(c.id)).length;
-    return { assessed, total: subject.chapters.length };
-  };
+  const closeQuiz = () => { setActiveQuiz(null); setQuizState(null); setQuizResult(null); };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-slate-400 mx-auto mb-4" />
-          <p className="text-slate-500">Chargement...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-24 text-ink-faint">
+        <Loader2 className="w-7 h-7 animate-spin mb-3" />
+        <p className="text-sm">Chargement…</p>
       </div>
     );
   }
 
-  // Quiz View — Result
+  /* ─────────────── Résultat + correction ─────────────── */
   if (activeQuiz && quizResult) {
-    const scorePercent = Math.round((quizResult.score / quizResult.max_score) * 100);
+    const score = pct(quizResult);
+    const lv = LEVEL[quizResult.level] ?? LEVEL.beginner;
+    const byId = new Map(lastQuestions.map((q) => [q.id, q]));
+    const correction = (quizResult.correction ?? []).filter((c) => byId.has(c.id));
     return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <button onClick={closeQuiz} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Retour</span>
-        </button>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
-        >
-          <div className="bg-gradient-to-br from-violet-600 to-blue-600 p-8 text-center text-white">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring' }}
-            >
-              <ProgressRing
-                percentage={scorePercent}
-                size={96}
-                strokeWidth={7}
-                trackColor="rgba(255,255,255,0.2)"
-                progressColor="#ffffff"
-                className="mx-auto mb-4"
-              >
-                <Trophy className="w-8 h-8 text-white" />
-              </ProgressRing>
-            </motion.div>
-            <h2 className="text-2xl font-bold mb-1">Quiz terminé !</h2>
-            <p className="text-blue-200 text-sm">
-              {activeQuiz.subjectName} - {activeQuiz.chapterName}
-            </p>
-          </div>
-
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <div className="text-5xl font-bold text-slate-900 mb-2">{scorePercent}%</div>
-              <p className="text-slate-500">{quizResult.score} / {quizResult.max_score} points</p>
-            </div>
-
-            <div className="flex justify-center mb-8">
-              <span className={`px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 ${getLevelBadgeColor(quizResult.level)}`}>
-                <Award className="w-4 h-4" />
-                Niveau : {getLevelLabel(quizResult.level)}
+      <div className="max-w-2xl mx-auto flex flex-col gap-5">
+        <BackButton onClick={closeQuiz} label="Tous les chapitres" />
+        <section className="rounded-2xl border border-line bg-white overflow-hidden">
+          <div className="px-6 py-7 bg-[#faf9f7] border-b border-line flex flex-col sm:flex-row items-center gap-6">
+            <ProgressRing percentage={score} size={104} strokeWidth={8} trackColor="#e7e3dc" progressColor="#1a7a4a">
+              <span className="text-[26px] font-bold text-ink fd-nums">{score}%</span>
+            </ProgressRing>
+            <div className="text-center sm:text-left">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-faint">Quiz terminé</p>
+              <h2 className="fd-display text-[22px] font-semibold text-ink mt-1">{activeQuiz.chapterName}</h2>
+              <p className="text-[13.5px] text-ink-faint mt-1 fd-nums">{quizResult.score} / {quizResult.max_score} points (facile 1, moyen 2, difficile 3)</p>
+              <span className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-[12.5px] font-semibold ${lv.className}`}>
+                <Award className="w-3.5 h-3.5" /> {lv.label}
               </span>
             </div>
+          </div>
 
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => startQuiz(activeQuiz.chapterId, activeQuiz.chapterName, activeQuiz.subjectName)}
-                className="px-5 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 transition-colors"
-              >
-                Refaire le quiz
-              </button>
-              <button
-                onClick={closeQuiz}
-                className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
-              >
-                Continuer
-              </button>
+          {correction.length > 0 && (
+            <div className="px-6 py-5">
+              <h3 className="text-[14.5px] font-bold text-ink mb-3">
+                Correction · {correction.filter((c) => c.is_correct).length} bonne{correction.filter((c) => c.is_correct).length > 1 ? 's' : ''} réponse{correction.filter((c) => c.is_correct).length > 1 ? 's' : ''} sur {correction.length}
+              </h3>
+              <ol className="flex flex-col gap-3">
+                {correction.map((c, i) => {
+                  const q = byId.get(c.id)!;
+                  return (
+                    <li key={c.id} className={`rounded-xl border px-4 py-3 ${c.is_correct ? 'border-brand-line bg-brand-soft/40' : 'border-[#f1d3cf] bg-[#fbecea]/50'}`}>
+                      <div className="flex items-start gap-2.5">
+                        {c.is_correct
+                          ? <CheckCircle2 className="w-[18px] h-[18px] mt-0.5 text-brand flex-shrink-0" aria-label="Bonne réponse" />
+                          : <XCircle className="w-[18px] h-[18px] mt-0.5 text-[#a23b34] flex-shrink-0" aria-label="Mauvaise réponse" />}
+                        <div className="min-w-0 text-[13.5px] text-ink-soft">
+                          <p className="font-semibold text-ink"><span className="fd-nums">{i + 1}.</span> <MathText text={q.question} /></p>
+                          {!c.is_correct && c.your_answer !== null && q.options[c.your_answer] !== undefined && (
+                            <p className="mt-1">Ta réponse : <MathText text={q.options[c.your_answer]} className="line-through decoration-[#a23b34]/60" /></p>
+                          )}
+                          <p className="mt-1">Bonne réponse : <b className="text-ink"><MathText text={q.options[c.correct_answer] ?? ''} /></b></p>
+                          {c.explanation && <p className="mt-1.5 text-ink-faint"><MathText text={c.explanation} /></p>}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
+          )}
+
+          <div className="px-6 py-4 border-t border-line flex flex-wrap gap-2.5 justify-end">
+            <button className="fd-btn-ghost" onClick={() => startQuiz(activeQuiz.chapterId, activeQuiz.chapterName)}>
+              <RotateCcw className="w-4 h-4" /> Refaire (nouvelles questions)
+            </button>
+            <button className="fd-btn-primary" onClick={closeQuiz}>Autres chapitres</button>
           </div>
-        </motion.div>
+        </section>
       </div>
     );
   }
 
-  // Quiz View — Loading
-  if (activeQuiz && quizLoading) {
+  /* ─────────────── Chargement / quiz vide ─────────────── */
+  if (activeQuiz && (quizLoading || !quizState)) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-          <Loader2 className="w-7 h-7 animate-spin text-slate-500" />
-        </div>
-        <p className="text-slate-600 font-medium">Chargement du quiz...</p>
+      <div className="flex flex-col items-center justify-center py-24 text-ink-faint">
+        <Loader2 className="w-7 h-7 animate-spin mb-3" />
+        <p className="text-sm">Préparation du quiz…</p>
+      </div>
+    );
+  }
+  if (activeQuiz && quizState && quizState.questions.length === 0) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16">
+        <Hourglass className="w-8 h-8 text-gold mx-auto mb-3" />
+        <h3 className="text-[16px] font-bold text-ink">Quiz en préparation</h3>
+        <p className="text-[13.5px] text-ink-faint mt-1.5 mb-5">Les questions de « {activeQuiz.chapterName} » ne sont pas encore prêtes.</p>
+        <button className="fd-btn-primary mx-auto" onClick={closeQuiz}>Retour aux chapitres</button>
       </div>
     );
   }
 
-  // Quiz View — In progress
-  if (activeQuiz && quizState && quizState.questions.length > 0) {
-    const currentQuestion = quizState.questions[quizState.currentIndex];
-    const currentAnswer = quizState.answers[currentQuestion.id];
-    const answeredCount = Object.keys(quizState.answers).length;
-    const isLastQuestion = quizState.currentIndex === quizState.questions.length - 1;
-    const allAnswered = answeredCount === quizState.questions.length;
-
+  /* ─────────────── Quiz en cours ─────────────── */
+  if (activeQuiz && quizState) {
+    const q = quizState.questions[quizState.currentIndex];
+    const answer = quizState.answers[q.id];
+    const total = quizState.questions.length;
+    const answered = Object.keys(quizState.answers).length;
+    const isLast = quizState.currentIndex === total - 1;
+    const go = (i: number) => setQuizState({ ...quizState, currentIndex: i });
     return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between">
-          <button onClick={closeQuiz} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Quitter</span>
-          </button>
-          <div className="text-sm text-slate-500 font-medium">{activeQuiz.chapterName}</div>
+      <div className="max-w-2xl mx-auto flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3">
+          <BackButton onClick={closeQuiz} label="Quitter" />
+          <span className="text-[13px] font-medium text-ink-faint truncate">{activeQuiz.chapterName}</span>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-slate-600">Progression</span>
-            <span className="text-sm font-bold text-slate-900">
-              {quizState.currentIndex + 1} / {quizState.questions.length}
-            </span>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-2 rounded-full bg-[#f2f1ee] overflow-hidden" role="progressbar"
+            aria-valuenow={quizState.currentIndex + 1} aria-valuemin={1} aria-valuemax={total} aria-label="Question en cours">
+            <div className="h-full rounded-full bg-brand transition-[width] duration-200" style={{ width: `${((quizState.currentIndex + 1) / total) * 100}%` }} />
           </div>
-          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-blue-600 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${((quizState.currentIndex + 1) / quizState.questions.length) * 100}%` }}
-            />
-          </div>
+          <span className="text-[13px] font-bold text-ink fd-nums">{quizState.currentIndex + 1} / {total}</span>
         </div>
 
-        <motion.div
-          key={currentQuestion.id}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="bg-white rounded-2xl border border-slate-200 p-6"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
-              currentQuestion.difficulty === 'hard' ? 'bg-rose-50 text-rose-700' :
-              currentQuestion.difficulty === 'medium' ? 'bg-amber-50 text-amber-700' :
-              'bg-emerald-50 text-emerald-700'
-            }`}>
-              {currentQuestion.difficulty === 'hard' ? 'Difficile' :
-               currentQuestion.difficulty === 'medium' ? 'Moyen' : 'Facile'}
-            </span>
-          </div>
-
-          <h3 className="text-lg font-semibold text-slate-900 mb-6">{currentQuestion.question}</h3>
-
-          <div className="space-y-3">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => answerQuestion(currentQuestion.id, index)}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  currentAnswer === index
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                    currentAnswer === index
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-slate-300'
-                  }`}>
-                    {currentAnswer === index && <CheckCircle className="w-4 h-4 text-white" />}
-                  </div>
-                  <span className={currentAnswer === index ? 'text-blue-900 font-medium' : 'text-slate-700'}>
-                    {option}
+        <section className="rounded-2xl border border-line bg-white p-6">
+          <span className="inline-block text-[11.5px] font-semibold text-ink-faint bg-[#f7f6f3] px-2.5 py-1 rounded-full">
+            {DIFFICULTY[q.difficulty] ?? 'Facile'}
+          </span>
+          <h3 className="mt-3 mb-5 text-[17px] font-semibold text-ink leading-relaxed"><MathText text={q.question} /></h3>
+          <div role="radiogroup" aria-label="Réponses" className="flex flex-col gap-2.5">
+            {q.options.map((opt, i) => {
+              const selected = answer === i;
+              return (
+                <button key={i} type="button" role="radio" aria-checked={selected}
+                  onClick={() => setQuizState({ ...quizState, answers: { ...quizState.answers, [q.id]: i } })}
+                  className={`w-full text-left flex items-center gap-3 min-h-[48px] px-4 py-3 rounded-xl border-[1.5px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${
+                    selected ? 'border-brand bg-brand-soft' : 'border-line bg-white hover:border-[#cfcdc8]'}`}>
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0 ${
+                    selected ? 'bg-brand text-white' : 'border-2 border-[#cfcdc8] text-ink-faint'}`}>
+                    {String.fromCharCode(65 + i)}
                   </span>
-                </div>
-              </button>
-            ))}
+                  <MathText text={opt} className={`text-[14.5px] ${selected ? 'text-brand-hover font-semibold' : 'text-ink-soft'}`} />
+                </button>
+              );
+            })}
           </div>
-        </motion.div>
+        </section>
 
-        <div className="flex items-center justify-between">
-          <button
-            onClick={previousQuestion}
-            disabled={quizState.currentIndex === 0}
-            className="px-4 py-2 text-slate-600 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-          >
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => go(quizState.currentIndex - 1)} disabled={quizState.currentIndex === 0}
+            className="px-3.5 py-2 rounded-lg text-[13.5px] font-medium text-ink-faint hover:text-ink disabled:opacity-40">
             Précédent
           </button>
-
-          <div className="flex gap-1.5">
-            {quizState.questions.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setQuizState({ ...quizState, currentIndex: idx })}
-                className={`h-2.5 rounded-full transition-all ${
-                  idx === quizState.currentIndex
-                    ? 'bg-blue-600 w-7'
-                    : quizState.answers[quizState.questions[idx].id] !== undefined
-                      ? 'bg-blue-300 w-2.5'
-                      : 'bg-slate-200 w-2.5'
-                }`}
-              />
+          <div className="flex gap-1.5" aria-label={`${answered} réponse${answered > 1 ? 's' : ''} sur ${total}`}>
+            {quizState.questions.map((qq, i) => (
+              <button key={qq.id} type="button" onClick={() => go(i)} aria-label={`Question ${i + 1}`}
+                className={`h-2 rounded-full transition-all ${i === quizState.currentIndex ? 'w-6 bg-brand'
+                  : quizState.answers[qq.id] !== undefined ? 'w-2 bg-[#9fcdb1]' : 'w-2 bg-line'}`} />
             ))}
           </div>
-
-          {isLastQuestion ? (
-            <button
-              onClick={submitQuiz}
-              disabled={!allAnswered || submitting}
-              className="px-5 py-2.5 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Envoi...</> : 'Terminer'}
+          {isLast ? (
+            <button className="fd-btn-primary" onClick={submitQuiz} disabled={answered < total || submitting}
+              style={{ opacity: answered < total || submitting ? 0.5 : 1 }}>
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Envoi…</> : 'Terminer'}
             </button>
           ) : (
-            <button
-              onClick={nextQuestion}
-              disabled={currentAnswer === undefined}
-              className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            <button className="fd-btn-primary" onClick={() => go(quizState.currentIndex + 1)} disabled={answer === undefined}
+              style={{ opacity: answer === undefined ? 0.5 : 1 }}>
               Suivant
             </button>
           )}
@@ -399,243 +292,122 @@ export const SkillIQSection: React.FC = () => {
     );
   }
 
-  // Quiz View — No questions
-  if (activeQuiz) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
-          <XCircle className="w-7 h-7 text-slate-400" />
-        </div>
-        <h3 className="font-semibold text-slate-900 mb-2">Quiz non disponible</h3>
-        <p className="text-slate-500 text-sm mb-5">Aucune question n'est disponible pour ce chapitre.</p>
-        <button onClick={closeQuiz} className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
-          Retour
-        </button>
-      </div>
-    );
-  }
-
-  // Main view
+  /* ─────────────── Vue principale ─────────────── */
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Asymmetric Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Featured gradient card */}
-        <div className="col-span-2 bg-gradient-to-br from-violet-600 to-blue-600 rounded-2xl p-6 text-white">
-          <div className="flex items-center gap-6">
-            <ProgressRing
-              percentage={averageScore}
-              size={96}
-              strokeWidth={7}
-              trackColor="rgba(255,255,255,0.2)"
-              progressColor="#ffffff"
-            >
-              <div className="text-center">
-                <div className="text-2xl font-bold">{averageScore}%</div>
-                <div className="text-[10px] text-blue-200">score</div>
-              </div>
-            </ProgressRing>
-            <div>
-              <div className="text-sm text-blue-200 font-medium">Score moyen</div>
-              <div className="text-lg font-bold mt-0.5">{totalAssessments} quiz passés</div>
-            </div>
-          </div>
-          {totalAssessments > 0 && (
-            <div className="flex gap-2 mt-4">
-              {expertCount > 0 && (
-                <span className="px-2.5 py-1 bg-white/15 rounded-full text-xs font-medium">{expertCount} Expert</span>
-              )}
-              {advancedCount > 0 && (
-                <span className="px-2.5 py-1 bg-white/15 rounded-full text-xs font-medium">{advancedCount} Avancé</span>
-              )}
-              {intermediateCount > 0 && (
-                <span className="px-2.5 py-1 bg-white/15 rounded-full text-xs font-medium">{intermediateCount} Inter.</span>
-              )}
-            </div>
-          )}
+    <div className="flex flex-col gap-6">
+      <header data-tour="skilliq-hero" className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+        <div className="max-w-xl">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.1em] text-gold-strong">
+            <Brain className="w-3.5 h-3.5" /> Skill IQ
+          </p>
+          <h1 className="fd-display text-ink mt-2" style={{ fontSize: 'clamp(26px,3vw,34px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            Mesure ta maîtrise, chapitre par chapitre
+          </h1>
+          <p className="text-[14px] text-ink-faint mt-2 leading-relaxed">
+            Jusqu’à 10 questions tirées au hasard, corrigées tout de suite avec les explications.
+            Ton score s’affiche aussi sur ton tableau de bord.
+          </p>
         </div>
+        <dl className="grid grid-cols-3 gap-3 lg:w-[420px]">
+          <Stat label="Quiz passés" value={assessments.length} />
+          <Stat label="Score moyen" value={average !== null ? `${average} %` : '—'} />
+          <Stat label="Quiz disponibles" value={`${availableHere} / ${chapters.length}`} />
+        </dl>
+      </header>
 
-        {/* Smaller stat cards */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-violet-500" />
-            <span className="text-xs text-slate-500 font-medium">Expert</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{expertCount}</div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-xs text-slate-500 font-medium">Avancé</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{advancedCount}</div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-xs text-slate-500 font-medium">Quiz passés</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{totalAssessments}</div>
-        </div>
-      </div>
-
-      {/* Class levels accordion */}
-      <div className="space-y-3">
-        {classLevels.map((classLevel) => (
-          <div key={classLevel.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <button
-              onClick={() => setExpandedClass(expandedClass === classLevel.id ? null : classLevel.id)}
-              className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-slate-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-slate-900">{classLevel.name}</h3>
-                  <p className="text-sm text-slate-500">
-                    {classLevel.subjects.length} matière{classLevel.subjects.length > 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${
-                expandedClass === classLevel.id ? 'rotate-180' : ''
-              }`} />
+      {classLevels.length > 1 && (
+        <div role="tablist" aria-label="Niveau" className="flex flex-wrap gap-2">
+          {classLevels.map((l) => (
+            <button key={l.id} type="button" role="tab" aria-selected={l.id === levelId} onClick={() => setLevelId(l.id)}
+              className={`min-h-[40px] px-4 rounded-full text-[13px] font-semibold border transition-colors ${
+                l.id === levelId ? 'bg-ink text-white border-ink' : 'bg-white text-ink-soft border-line hover:border-ink'}`}>
+              {l.name}
             </button>
+          ))}
+        </div>
+      )}
 
-            <AnimatePresence>
-              {expandedClass === classLevel.id && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="border-t border-slate-100"
-                >
-                  {classLevel.subjects.map((subject) => {
-                    const completion = getSubjectCompletion(subject);
-                    const completionPct = completion.total > 0 ? Math.round((completion.assessed / completion.total) * 100) : 0;
+      {chapters.length > 0 && availableHere === 0 && (
+        <div className="rounded-2xl border border-gold-line bg-gold-soft px-5 py-4 flex items-start gap-3">
+          <Hourglass className="w-5 h-5 text-gold-strong flex-shrink-0 mt-0.5" />
+          <p className="text-[13.5px] text-ink-soft leading-relaxed">
+            <b className="text-ink">Les quiz de ce niveau sont en préparation.</b> Chaque chapitre ci-dessous s’activera
+            dès que ses questions seront prêtes. En attendant, entraîne-toi sur les{' '}
+            <Link to={`/exercises${levelId ? `?classLevels=${levelId}` : ''}`} className="font-semibold text-brand-hover underline">exercices</Link>.
+          </p>
+        </div>
+      )}
 
-                    return (
-                      <div key={subject.id} className="border-b border-slate-50 last:border-b-0">
-                        <button
-                          onClick={() => setExpandedSubject(expandedSubject === subject.id ? null : subject.id)}
-                          className="w-full flex items-center justify-between p-4 pl-8 hover:bg-slate-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                              <Layers className="w-4 h-4 text-blue-600" />
-                            </div>
-                            <div className="text-left">
-                              <h4 className="font-medium text-slate-900">{subject.name}</h4>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs text-slate-500">
-                                  {completion.assessed}/{completion.total} chapitres
-                                </span>
-                                <div className="w-12 h-1 bg-slate-200 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-blue-500 rounded-full"
-                                    style={{ width: `${completionPct}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
-                            expandedSubject === subject.id ? 'rotate-180' : ''
-                          }`} />
-                        </button>
+      <div data-tour="skilliq-niveaux" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {chapters.map((c) => {
+          const a = byChapter.get(c.id);
+          const n = available[c.id] ?? 0;
+          const score = a ? pct(a) : null;
+          const lv = a ? LEVEL[a.level] ?? LEVEL.beginner : null;
+          return (
+            <article key={c.id} className={`rounded-2xl border bg-white p-4 flex flex-col gap-3 ${n ? 'border-line' : 'border-dashed border-line opacity-75'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-[14.5px] font-semibold text-ink leading-snug">{c.name}</h2>
+                {a && lv && <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${lv.className}`}>{lv.label}</span>}
+              </div>
 
-                        <AnimatePresence>
-                          {expandedSubject === subject.id && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.15 }}
-                              className="bg-slate-50/50"
-                            >
-                              <div className="p-2 pl-10 space-y-1">
-                                {subject.chapters.map((chapter) => {
-                                  const assessment = getChapterAssessment(chapter.id);
-                                  const scorePercent = assessment
-                                    ? Math.round((assessment.score / assessment.max_score) * 100)
-                                    : 0;
-
-                                  return (
-                                    <div
-                                      key={chapter.id}
-                                      className="flex items-center justify-between p-3 rounded-lg hover:bg-white transition-colors"
-                                    >
-                                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        {assessment ? (
-                                          <ProgressRing
-                                            percentage={scorePercent}
-                                            size={32}
-                                            strokeWidth={3}
-                                            progressColor={getLevelRingColor(assessment.level)}
-                                          >
-                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                                          </ProgressRing>
-                                        ) : (
-                                          <div className="w-8 h-8 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
-                                            <Target className="w-3.5 h-3.5 text-slate-400" />
-                                          </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <h5 className="text-sm font-medium text-slate-900 truncate">{chapter.name}</h5>
-                                          {assessment && (
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${getLevelBadgeColor(assessment.level)}`}>
-                                                {getLevelLabel(assessment.level)}
-                                              </span>
-                                              <span className="text-xs text-slate-400">{scorePercent}%</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <button
-                                        onClick={() => startQuiz(chapter.id, chapter.name, subject.name)}
-                                        className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-xl transition-colors ${
-                                          assessment
-                                            ? 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                        }`}
-                                      >
-                                        <Play className="w-3.5 h-3.5" />
-                                        {assessment ? 'Refaire' : 'Passer'}
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    );
-                  })}
-                </motion.div>
+              {a && score !== null ? (
+                <div>
+                  <div className="flex items-baseline justify-between text-[12px] text-ink-faint">
+                    <span><b className="text-[18px] text-ink fd-nums">{score} %</b> au dernier quiz</span>
+                    <span>{frDate(a.completed_at)}</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 rounded-full bg-[#f2f1ee] overflow-hidden">
+                    <div className={`h-full rounded-full ${score >= 50 ? 'bg-brand' : 'bg-gold'}`} style={{ width: `${Math.max(score, 3)}%` }} />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[12.5px] text-ink-faint inline-flex items-center gap-1.5">
+                  {n ? <><Clock className="w-3.5 h-3.5" /> {Math.min(n, 10)} questions · environ {Math.max(2, Math.round(Math.min(n, 10) * 0.75))} min</>
+                    : <><Hourglass className="w-3.5 h-3.5" /> En préparation</>}
+                </p>
               )}
-            </AnimatePresence>
-          </div>
-        ))}
 
-        {classLevels.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <Brain className="w-7 h-7 text-slate-400" />
-            </div>
-            <h3 className="font-semibold text-slate-900 mb-2">Aucun niveau disponible</h3>
-            <p className="text-slate-500 text-sm">Les quiz Skill IQ seront bientôt disponibles.</p>
-          </div>
-        )}
+              <div className="mt-auto">
+                {n ? (
+                  <button type="button" onClick={() => startQuiz(c.id, c.name)}
+                    className={`${a ? 'fd-btn-ghost' : 'fd-btn-primary'} w-full justify-center`} style={{ minHeight: 40 }}>
+                    {a ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4" />} {a ? 'Refaire le quiz' : 'Passer le quiz'}
+                  </button>
+                ) : (
+                  <span className="block text-center text-[12.5px] font-medium text-ink-faint py-2 rounded-lg bg-[#faf9f7]">Bientôt disponible</span>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
+
+      {classLevels.length === 0 && (
+        <div className="text-center py-16 rounded-2xl border border-line bg-white">
+          <Brain className="w-8 h-8 text-[#cfcdc8] mx-auto mb-3" />
+          <p className="text-[14px] text-ink-faint">Aucun niveau disponible pour l’instant.</p>
+        </div>
+      )}
     </div>
   );
 };
+
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-line bg-white px-3 py-2.5">
+      <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint">{label}</dt>
+      <dd className="mt-0.5 text-[18px] font-bold text-ink fd-nums">{value}</dd>
+    </div>
+  );
+}
+
+function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-2 text-[13.5px] font-medium text-ink-faint hover:text-ink self-start min-h-[36px]">
+      <ArrowLeft className="w-4 h-4" /> {label}
+    </button>
+  );
+}
 
 export default SkillIQSection;

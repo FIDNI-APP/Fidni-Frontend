@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Info,
   CheckCircle,
-  Clock,
   TrendingUp,
   Filter,
   Search,
@@ -12,7 +11,7 @@ import {
   XCircle,
   Eye,
   AlertOctagon,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { AnalyticsTab } from './AnalyticsTab';

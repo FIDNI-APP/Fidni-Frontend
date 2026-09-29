@@ -7,6 +7,27 @@
 
 import { api } from './apiClient';
 
+export interface PerQuestionStat {
+  path: string;
+  label: string;
+  total: number;
+  success_pct: number;
+  user_status: 'success' | 'partial' | 'review' | 'failed' | null;
+}
+
+export interface TimeHistogram {
+  buckets: number[];
+  bucket_width_seconds: number;
+  user_bucket: number | null;
+}
+
+export interface SkillMastery {
+  label?: string;
+  skill: string;
+  assessed: number;
+  mastery_pct: number;
+}
+
 export interface ContentStatistics {
   total_participants: number;
   success_count: number;
@@ -15,12 +36,24 @@ export interface ContentStatistics {
   average_time_seconds: number;
   best_time_seconds: number;
   solution_views_before_success: number;
+  solution_view_percentage?: number;
   user_time_percentile: number | null;
   user_completed: 'success' | 'review' | null;
   user_viewed_solution: boolean;
   user_time_seconds: number | null;
   solution_match_count: number;
   user_solution_matched: boolean;
+  successful_users_study_stats?: {
+    exercises_avg_seconds: number;
+    lessons_avg_seconds: number;
+    exams_avg_seconds: number;
+    chapters: string[];
+  };
+  time_histogram: TimeHistogram | null;
+  per_question: PerQuestionStat[];
+  trap_question: PerQuestionStat | null;
+  per_skill: SkillMastery[];
+  user_assessed: boolean;
 }
 
 export interface SolutionViewTrackingResponse {
@@ -32,7 +65,7 @@ export interface SolutionViewTrackingResponse {
  * Get statistics for any content item
  */
 export async function getContentStatistics(
-  contentType: 'exercise' | 'exam',
+  _contentType: 'exercise' | 'exam',
   contentId: string
 ): Promise<ContentStatistics> {
   try {
@@ -64,7 +97,7 @@ export async function getExamStatistics(examId: string): Promise<ContentStatisti
  * Mark that current user viewed the solution
  */
 export async function markSolutionViewed(
-  contentType: 'exercise' | 'exam',
+  _contentType: 'exercise' | 'exam',
   contentId: string
 ): Promise<SolutionViewTrackingResponse> {
   try {
@@ -98,7 +131,7 @@ export async function markExamSolutionViewed(
  * Remove/undo solution viewed flag
  */
 export async function undoSolutionViewed(
-  contentType: 'exercise' | 'exam',
+  _contentType: 'exercise' | 'exam',
   contentId: string
 ): Promise<SolutionViewTrackingResponse> {
   try {
@@ -132,7 +165,7 @@ export async function undoExamSolutionViewed(
  * Mark that current user's solution matches the proposed solution
  */
 export async function markSolutionMatched(
-  contentType: 'exercise' | 'exam',
+  _contentType: 'exercise' | 'exam',
   contentId: string
 ): Promise<SolutionViewTrackingResponse> {
   try {
@@ -166,7 +199,7 @@ export async function markExamSolutionMatched(
  * Remove/undo solution match flag
  */
 export async function undoSolutionMatched(
-  contentType: 'exercise' | 'exam',
+  _contentType: 'exercise' | 'exam',
   contentId: string
 ): Promise<SolutionViewTrackingResponse> {
   try {

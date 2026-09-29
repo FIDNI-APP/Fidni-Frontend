@@ -236,13 +236,4 @@ export const getFilterCounts = async (params: {
   };
 };
 
-// Get similar exercises based on same chapters
-export const getSimilarExercises = async (exerciseId: string) => {
-  const response = await api.get(`/contents/${exerciseId}/similar/`);
-  return {
-    results: response.data.results || [],
-    count: response.data.count || 0
-  };
-};
-
 

@@ -1,22 +1,50 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
-  Plus, Save, Eye, EyeOff, ArrowLeft, Trash2,
-  FileText, MessageSquare, Copy, ArrowUp, ArrowDown, GripVertical
+  Plus,
+  Save,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  Trash2,
+  FileText,
+  MessageSquare,
+  Copy,
+  ArrowUp,
+  ArrowDown,
+  X as XIcon,
+  ChevronDown,
+  SlidersHorizontal,
+  Heading,
 } from 'lucide-react';
 import { TextBlockEditor } from './TextBlockEditor';
-import type { ContentBlock, Difficulty } from '@/types/content';
+import { api } from '@/lib/api/apiClient';
+import type { ContentBlock } from '@/types/content';
+import type { Difficulty } from '@/types';
 
 // =====================
 // TYPES
 // =====================
 
-export type BlockType = 'context' | 'question';
+// « section » : une partie d'examen (Exercice 1, Problème…) ; la numérotation des questions repart à 1.
+export type BlockType = 'context' | 'question' | 'section';
+
+// Schéma v2.1 — métadonnées pédagogiques par question (toutes optionnelles,
+// rétro-compatible v2.0). `skills` alimente le diagnostic « maîtrise par notion ».
+export interface QuestionMeta {
+  skills?: string[];
+  difficulty?: Difficulty;
+  expected_seconds?: number;
+  common_mistakes?: string[];
+  hint?: string;
+}
 
 export interface SubQuestionBlock {
   id: string;
   content: ContentBlock;
   points?: number;
   solution?: ContentBlock;
+  meta?: QuestionMeta;
 }
 
 export interface ExerciseBlock {
@@ -26,6 +54,7 @@ export interface ExerciseBlock {
   points?: number;
   solution?: ContentBlock;
   subQuestions?: SubQuestionBlock[];
+  meta?: QuestionMeta;
 }
 
 export interface FlexibleExerciseStructure {
@@ -60,7 +89,7 @@ interface FlexibleExerciseEditorProps {
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 const createEmptyStructure = (): FlexibleExerciseStructure => ({
-  version: '2.0',
+  version: '2.1',
   blocks: [],
 });
 
@@ -69,6 +98,171 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; active: string }[]
   { value: 'medium', label: 'Moyen',     active: 'bg-amber-100 text-amber-700 border-amber-300' },
   { value: 'hard',   label: 'Difficile', active: 'bg-red-100 text-red-700 border-red-300' },
 ];
+
+// =====================
+// META EDITOR (v2.1 — notions/difficulté/temps par question)
+// =====================
+
+const slugify = (s: string) =>
+  s.trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+// Référentiel des notions (liste fermée côté serveur, apps/caracteristics/notions.py) — chargé une
+// fois, partagé par tous les MetaEditor. On ne crée pas de notion ici : même notion = même
+// identifiant partout, sinon les statistiques se dispersent.
+interface NotionRef { slug: string; label: string; chapter: string | null; count: number }
+let SKILL_CACHE: NotionRef[] | null = null;
+const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) => void }> = ({ meta, onChange }) => {
+  const skills = meta?.skills || [];
+  const count = skills.length + (meta?.difficulty ? 1 : 0) + (meta?.expected_seconds ? 1 : 0);
+  // Ouvert d'emblée si des métadonnées existent déjà (à l'édition d'un exercice existant).
+  const [open, setOpen] = useState(count > 0);
+  const [draft, setDraft] = useState('');
+  const [vocab, setVocab] = useState<NotionRef[]>(SKILL_CACHE || []);
+  const [focused, setFocused] = useState(false);
+  const skillInputRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || SKILL_CACHE) return;
+    api.get('/skills/').then(r => { SKILL_CACHE = r.data || []; setVocab(SKILL_CACHE ?? []); }).catch(() => {});
+  }, [open]);
+
+  const addSkill = (slug: string) => {
+    if (slug && !skills.includes(slug)) onChange({ ...meta, skills: [...skills, slug] });
+    setDraft('');
+  };
+  const removeSkill = (s: string) => onChange({ ...meta, skills: skills.filter(x => x !== s) });
+  const labelOf = (slug: string) => vocab.find(v => v.slug === slug)?.label ?? slug;
+
+  const q = fold(draft.trim());
+  const qSlug = slugify(draft);
+  const suggestions = vocab
+    .filter(v => !skills.includes(v.slug) && (!q || fold(v.label).includes(q) || v.slug.includes(qSlug)))
+    .slice(0, 8);
+
+  return (
+    <div className="mt-2" style={{ background: '#faf9f7', border: '1px solid #f0efea', borderRadius: 8, overflow: 'hidden' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2"
+        style={{ padding: '7px 11px', background: 'transparent', border: 'none', cursor: 'pointer' }}
+      >
+        <SlidersHorizontal className="w-3.5 h-3.5" style={{ color: '#6b6862' }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#33302b' }}>Métadonnées pédagogiques</span>
+        <span style={{ fontSize: 11, color: '#9a958c' }}>notions · difficulté · temps</span>
+        {count > 0 && (
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#15633c', background: '#eaf3ed', padding: '1px 7px', borderRadius: 99 }}>{count}</span>
+        )}
+        <ChevronDown className="w-4 h-4" style={{ color: '#9a958c', marginLeft: 'auto', transition: 'transform .18s', transform: open ? 'rotate(180deg)' : 'none' }} />
+      </button>
+
+      {open && (
+        <div className="flex flex-col gap-2.5" style={{ padding: '4px 11px 12px' }}>
+          {/* Notions — autocomplete sur le vocabulaire existant */}
+          <div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {skills.map(s => (
+                <span key={s} className="inline-flex items-center gap-1" style={chipStyle}>
+                  {labelOf(s)}
+                  <button type="button" onClick={() => removeSkill(s)} aria-label={`Retirer ${labelOf(s)}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#6b6862' }}>
+                    <XIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              <div className="relative" ref={skillInputRef}>
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setTimeout(() => setFocused(false), 150)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (suggestions[0]) addSkill(suggestions[0].slug); } }}
+                  placeholder="+ notion (cherche dans la liste)"
+                  style={{ fontSize: 12, border: '1px solid #e7e3dc', borderRadius: 8, padding: '4px 9px', outline: 'none', minWidth: 210 }}
+                />
+                {focused && (suggestions.length > 0 || q) && (
+                  <FloatingPanel anchorRef={skillInputRef} open offset={4}
+                    style={{ minWidth: 220, background: '#fff', border: '1px solid #e7e3dc', borderRadius: 10, boxShadow: '0 8px 24px rgba(20,18,16,.12)', padding: 4, maxHeight: 220, overflowY: 'auto' }}
+                  >
+                    {suggestions.map(v => (
+                      <button
+                        key={v.slug}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); addSkill(v.slug); }}
+                        className="w-full flex items-center justify-between gap-3 text-left"
+                        style={{ padding: '6px 9px', borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#33302b' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f7f6f3'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <span>{v.label}</span>
+                        <span style={{ fontSize: 10.5, color: '#9a958c', whiteSpace: 'nowrap' }}>{v.chapter ?? 'Transversal'}</span>
+                      </button>
+                    ))}
+                    {q && suggestions.length === 0 && (
+                      <p style={{ padding: '6px 9px', fontSize: 12, color: '#6b6862', margin: 0 }}>
+                        Aucune notion ne correspond. Choisis la plus proche, ou signale-la pour qu’on l’ajoute.
+                      </p>
+                    )}
+                  </FloatingPanel>
+                )}
+              </div>
+            </div>
+            <p style={{ fontSize: 10.5, color: '#9a958c', marginTop: 4 }}>
+              Notions tirées d’une liste commune à tout le site : les statistiques restent cohérentes d’un exercice à l’autre.
+            </p>
+          </div>
+
+          {/* Difficulté + temps estimé */}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              {DIFFICULTY_OPTIONS.map(d => {
+                const active = meta?.difficulty === d.value;
+                return (
+                  <button
+                    key={d.value}
+                    type="button"
+                    onClick={() => onChange({ ...meta, difficulty: active ? undefined : d.value })}
+                    style={{
+                      fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, cursor: 'pointer',
+                      border: `1px solid ${active ? '#1a7a4a' : '#e7e3dc'}`,
+                      background: active ? '#eaf3ed' : '#fff',
+                      color: active ? '#15633c' : '#6b6862',
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, color: '#6b6862' }}>
+              Temps cible
+              <input
+                type="number" min="0"
+                value={meta?.expected_seconds ? Math.round(meta.expected_seconds / 60) : ''}
+                onChange={(e) => {
+                  const min = parseInt(e.target.value);
+                  onChange({ ...meta, expected_seconds: min > 0 ? min * 60 : undefined });
+                }}
+                placeholder="min"
+                style={{ width: 52, fontSize: 12, textAlign: 'center', border: '1px solid #e7e3dc', borderRadius: 8, padding: '3px 6px', outline: 'none' }}
+              />
+              min
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const chipStyle: React.CSSProperties = {
+  fontSize: 11.5, fontWeight: 500, color: '#33302b',
+  background: '#f2f1ee', border: '1px solid #e7e3dc',
+  padding: '3px 8px', borderRadius: 99, fontFamily: 'DM Mono, monospace',
+};
 
 // =====================
 // ADD BLOCK BUTTON (between blocks)
@@ -81,20 +275,13 @@ interface AddBlockRowProps {
 const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div ref={ref} className="relative flex items-center gap-2 group/add py-1">
       <div className="flex-1 h-px bg-slate-100 group-hover/add:bg-slate-200 transition-colors" />
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1 px-2 py-0.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors opacity-0 group-hover/add:opacity-100"
@@ -104,8 +291,8 @@ const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
       </button>
       <div className="flex-1 h-px bg-slate-100 group-hover/add:bg-slate-200 transition-colors" />
 
-      {open && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 rounded-xl shadow-lg p-1 flex gap-1">
+      <FloatingPanel anchorRef={buttonRef} open={open} onClose={() => setOpen(false)} placement="bottom" offset={4}
+        className="bg-white border border-slate-200 rounded-xl shadow-lg p-1 flex gap-1">
           <button
             type="button"
             onClick={() => { onAdd('context'); setOpen(false); }}
@@ -122,8 +309,15 @@ const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
             <MessageSquare className="w-4 h-4 text-blue-500" />
             Question
           </button>
-        </div>
-      )}
+          <button
+            type="button"
+            onClick={() => { onAdd('section'); setOpen(false); }}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <Heading className="w-4 h-4 text-slate-500" />
+            Partie
+          </button>
+      </FloatingPanel>
     </div>
   );
 };
@@ -170,13 +364,15 @@ const SubQuestionRow: React.FC<SubQuestionRowProps> = ({
             />
           </div>
         )}
+        <MetaEditor meta={sq.meta} onChange={(meta) => onChange({ ...sq, meta })} />
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         <input
           type="number"
           min="0"
+          step="0.25"
           value={sq.points ?? ''}
-          onChange={(e) => onChange({ ...sq, points: parseInt(e.target.value) || undefined })}
+          onChange={(e) => onChange({ ...sq, points: parseFloat(e.target.value) || undefined })}
           placeholder="pts"
           className="w-12 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none"
         />
@@ -222,7 +418,9 @@ interface BlockRowProps {
 const BlockRow: React.FC<BlockRowProps> = ({
   block, index, questionIndex, totalBlocks, onChange, onDelete, onDuplicate, onMoveUp, onMoveDown, showSolutions,
 }) => {
-  const isContext = block.type === 'context';
+  // Une « partie » n'a ni énoncé riche ni solution : on la traite comme un contexte pour le reste.
+  const isSection = block.type === 'section';
+  const isContext = block.type === 'context' || isSection;
   const [perBlockSolution, setPerBlockSolution] = useState(false);
   const [sqSolutionVisible, setSqSolutionVisible] = useState<Record<string, boolean>>({});
 
@@ -255,7 +453,33 @@ const BlockRow: React.FC<BlockRowProps> = ({
       <div className="flex-1 min-w-0 py-2">
         {/* Type badge + number row */}
         <div className="flex items-center gap-2 mb-2">
-          {isContext ? (
+          {isSection ? (
+            <>
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded text-slate-600 bg-slate-100 shrink-0">
+                Partie
+              </span>
+              <input
+                type="text"
+                value={(block.content?.html || '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')}
+                onChange={(e) => onChange({
+                  ...block,
+                  content: { type: 'text', html: e.target.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') },
+                })}
+                placeholder="Exercice 1, Problème…"
+                className="flex-1 min-w-0 px-2 py-1 text-sm font-semibold border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none"
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={block.points ?? ''}
+                onChange={(e) => onChange({ ...block, points: parseFloat(e.target.value) || undefined })}
+                placeholder="pts"
+                title="Barème de la partie (affichage)"
+                className="w-16 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none"
+              />
+            </>
+          ) : isContext ? (
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded text-slate-500 bg-slate-100">
               Contexte
             </span>
@@ -267,8 +491,9 @@ const BlockRow: React.FC<BlockRowProps> = ({
               <input
                 type="number"
                 min="0"
+                step="0.25"
                 value={block.points ?? ''}
-                onChange={(e) => onChange({ ...block, points: parseInt(e.target.value) || undefined })}
+                onChange={(e) => onChange({ ...block, points: parseFloat(e.target.value) || undefined })}
                 placeholder="pts"
                 className="w-14 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none ml-auto"
               />
@@ -277,12 +502,14 @@ const BlockRow: React.FC<BlockRowProps> = ({
         </div>
 
         {/* Content editor */}
-        <TextBlockEditor
-          value={block.content}
-          onChange={(content) => onChange({ ...block, content })}
-          placeholder={isContext ? 'Contexte, données, introduction...' : 'Énoncé de la question...'}
-          minHeight={isContext ? '80px' : '60px'}
-        />
+        {!isSection && (
+          <TextBlockEditor
+            value={block.content}
+            onChange={(content) => onChange({ ...block, content })}
+            placeholder={isContext ? 'Contexte, données, introduction...' : 'Énoncé de la question...'}
+            minHeight={isContext ? '80px' : '60px'}
+          />
+        )}
 
         {/* Solution (question level) — only when no sub-questions */}
         {!isContext && !(block.subQuestions?.length) && showSol && (
@@ -296,6 +523,11 @@ const BlockRow: React.FC<BlockRowProps> = ({
               showToolbar={false}
             />
           </div>
+        )}
+
+        {/* Métadonnées v2.1 — au niveau question quand pas de sous-questions */}
+        {!isContext && !(block.subQuestions?.length) && (
+          <MetaEditor meta={block.meta} onChange={(meta) => onChange({ ...block, meta })} />
         )}
 
         {/* Sub-questions */}
@@ -498,14 +730,14 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
             {showSolutions ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             Solutions
           </button>
-          <button type="button" onClick={onTogglePreview}
+          <button type="button" onClick={onTogglePreview} data-tour="creer-apercu"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
               showPreview ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
             }`}>
             <Eye className="w-4 h-4" />
             Aperçu
           </button>
-          <button type="button" onClick={handleSave} disabled={isSaving || isLoading}
+          <button type="button" onClick={handleSave} data-tour="creer-enregistrer" disabled={isSaving || isLoading}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors">
             <Save className="w-4 h-4" />
             {isSaving ? 'Enregistrement...' : 'Enregistrer'}
@@ -519,6 +751,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
 
           {/* Title */}
           <input
+            data-tour="creer-titre"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -566,7 +799,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
           </div>
 
           {/* Blocks */}
-          <div className="pt-4 space-y-0">
+          <div className="pt-4 space-y-0" data-tour="creer-blocs">
             {structure.blocks.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-slate-400 text-sm mb-4">Commencez à construire votre {isExam ? 'examen' : 'exercice'}</p>
@@ -586,6 +819,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
                 {(() => {
                   let qCount = 0;
                   return structure.blocks.map((block, index) => {
+                    if (block.type === 'section') qCount = 0;
                     if (block.type === 'question') qCount++;
                     const qi = qCount;
                     return (

@@ -224,11 +224,6 @@ export async function postTipComment(tipId: number | string, content: string, pa
   return r.data;
 }
 
-export async function updateConcoursComment(commentId: number, content: string): Promise<ConcoursComment> {
-  const r = await api.patch(`${BASE}comments/${commentId}/`, { content });
-  return r.data;
-}
-
 export async function deleteConcoursComment(commentId: number): Promise<void> {
   await api.delete(`${BASE}comments/${commentId}/`);
 }

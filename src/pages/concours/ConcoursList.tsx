@@ -13,9 +13,10 @@ import { SEO } from '@/components/layout/SEO';
 import { ConcoursHero } from './ConcoursHero';
 
 const CONCOURS_THEME: Record<ConcoursType, { from: string; to: string; light: string; text: string; emoji: string; sub: string }> = {
-  ensa:     { from: '#4f46e5', to: '#818cf8', light: '#eef2ff', text: '#4338ca', emoji: '⚙️', sub: 'École Nationale des Sciences Appliquées' },
-  ensam:    { from: '#0891b2', to: '#22d3ee', light: '#ecfeff', text: '#0e7490', emoji: '🛠️', sub: "École Nationale Supérieure d'Arts et Métiers" },
-  medecine: { from: '#be185d', to: '#f472b6', light: '#fdf2f8', text: '#9d174d', emoji: '🩺', sub: 'Concours commun de médecine' },
+  // Couleurs tirées de la palette du site (encre, vert, or) : plus de turquoise ni de rose vif.
+  ensa:     { from: '#33302b', to: '#6b6862', light: '#f2f1ee', text: '#1a1a1a', emoji: '⚙️', sub: 'École Nationale des Sciences Appliquées' },
+  ensam:    { from: '#15633c', to: '#3d8f64', light: '#eaf3ed', text: '#15633c', emoji: '🛠️', sub: "École Nationale Supérieure d'Arts et Métiers" },
+  medecine: { from: '#9a6e1c', to: '#c0892f', light: '#faf3e2', text: '#9a6e1c', emoji: '🩺', sub: 'Concours commun de médecine' },
 };
 
 export default function ConcoursListPage() {
@@ -70,10 +71,10 @@ export default function ConcoursListPage() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title="Concours - Fidni" description="Préparation aux concours d'entrée des grandes écoles" />
       <style>{`
-        .exam-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(90,70,200,.14) !important; }
+        .exam-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(20,18,16,.14) !important; }
         .concours-card:hover { transform: translateY(-2px); }
       `}</style>
 
@@ -90,28 +91,28 @@ export default function ConcoursListPage() {
         {!loading && totalExams > 0 && (
           <div className="flex items-center gap-3 mb-7 flex-wrap animate-fade-up">
             <div className="inline-flex items-center gap-2.5" style={{
-              background: '#fff', borderRadius: 12, border: '1px solid #ece9fb',
-              padding: '10px 16px', boxShadow: '0 1px 4px rgba(90,70,200,.05)',
+              background: '#fff', borderRadius: 12, border: '1px solid #e7e3dc',
+              padding: '10px 16px', boxShadow: '0 1px 4px rgba(20,18,16,.05)',
             }}>
-              <BookOpen className="w-4 h-4" style={{ color: '#4f46e5' }} />
-              <span style={{ fontSize: 13, color: '#7068a8' }}>
-                <strong style={{ color: '#1e1b4b', fontWeight: 800, fontFamily: 'DM Mono' }}>{totalExams}</strong> annales
+              <BookOpen className="w-4 h-4" style={{ color: '#1a1a1a' }} />
+              <span style={{ fontSize: 13, color: '#6b6862' }}>
+                <strong style={{ color: '#1a1a1a', fontWeight: 800, fontFamily: 'DM Mono' }}>{totalExams}</strong> annales
               </span>
             </div>
             <div className="inline-flex items-center gap-2.5" style={{
-              background: '#fff', borderRadius: 12, border: '1px solid #ece9fb',
-              padding: '10px 16px', boxShadow: '0 1px 4px rgba(90,70,200,.05)',
+              background: '#fff', borderRadius: 12, border: '1px solid #e7e3dc',
+              padding: '10px 16px', boxShadow: '0 1px 4px rgba(20,18,16,.05)',
             }}>
-              <ListChecks className="w-4 h-4" style={{ color: '#4f46e5' }} />
-              <span style={{ fontSize: 13, color: '#7068a8' }}>
-                <strong style={{ color: '#1e1b4b', fontWeight: 800, fontFamily: 'DM Mono' }}>{totalQuestions}</strong> questions
+              <ListChecks className="w-4 h-4" style={{ color: '#1a1a1a' }} />
+              <span style={{ fontSize: 13, color: '#6b6862' }}>
+                <strong style={{ color: '#1a1a1a', fontWeight: 800, fontFamily: 'DM Mono' }}>{totalQuestions}</strong> questions
               </span>
             </div>
           </div>
         )}
 
         {/* Concours type picker */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-9">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-9" data-tour="concours-types">
           {CONCOURS_TYPES.map((c) => {
             const t = CONCOURS_THEME[c.id];
             const isActive = concoursParam === c.id;
@@ -122,11 +123,11 @@ export default function ConcoursListPage() {
                 className="concours-card animate-fade-up"
                 style={{
                   borderRadius: 20, overflow: 'hidden', position: 'relative',
-                  border: `1.5px solid ${isActive ? t.from : '#e8e6f8'}`,
+                  border: `1.5px solid ${isActive ? t.from : '#e7e3dc'}`,
                   background: '#fff',
                   boxShadow: isActive
                     ? `0 8px 28px ${t.from}28`
-                    : '0 2px 10px rgba(90,70,200,.06)',
+                    : '0 2px 10px rgba(20,18,16,.06)',
                   transition: 'box-shadow .2s, border-color .2s, transform .2s',
                 }}
               >
@@ -156,7 +157,7 @@ export default function ConcoursListPage() {
 
                   <div style={{ padding: '30px 20px 16px' }}>
                     <div className="flex items-center justify-between">
-                      <div style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
                         {c.label}
                       </div>
                       {count !== null && (
@@ -168,12 +169,12 @@ export default function ConcoursListPage() {
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 12, color: '#9391b8', marginTop: 4, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 12, color: '#6b6862', marginTop: 4, lineHeight: 1.5 }}>
                       {t.sub}
                     </div>
                     <div style={{
                       fontSize: 12, fontWeight: 700, marginTop: 12,
-                      color: isActive ? t.from : '#a5a1c9',
+                      color: isActive ? t.from : '#9a958c',
                       display: 'flex', alignItems: 'center', gap: 5,
                     }}>
                       {isActive ? 'Filtre actif' : 'Voir les annales'}
@@ -184,6 +185,7 @@ export default function ConcoursListPage() {
 
                 {/* Bottom zone — lancer simulation */}
                 <button
+                  data-tour="concours-simulation"
                   onClick={() => isAuthenticated ? setShowSimModal(c.id) : navigate('/login')}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -205,19 +207,19 @@ export default function ConcoursListPage() {
 
         {/* Section title + filters */}
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <h2 style={{ fontSize: 19, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em' }}>
+          <h2 style={{ fontSize: 19, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
             {concoursParam
               ? `Annales ${CONCOURS_TYPES.find(c => c.id === concoursParam)?.label}`
               : 'Tous les examens'}
             {!loading && (
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#9391b8', fontFamily: 'DM Mono', marginLeft: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#6b6862', fontFamily: 'DM Mono', marginLeft: 10 }}>
                 {exams.length} résultat{exams.length !== 1 ? 's' : ''}
               </span>
             )}
           </h2>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap" data-tour="concours-filtres">
             {concoursParam && (
               <button
                 className="fd-btn-ghost"
@@ -227,28 +229,28 @@ export default function ConcoursListPage() {
                 ✕ {CONCOURS_TYPES.find(c => c.id === concoursParam)?.label}
               </button>
             )}
-            <span style={{ fontSize: 11, color: '#b0adcd', fontWeight: 600 }}>Année</span>
+            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>Année</span>
             <input
               type="number"
               placeholder="Depuis"
               value={yearMin}
               onChange={(e) => setFilter('year_min', e.target.value || null)}
               style={{
-                width: 78, padding: '7px 10px', borderRadius: 10,
-                border: '1.5px solid #e4e2f5', background: '#fff',
-                fontSize: 12, fontFamily: 'DM Mono', color: '#1e1b4b', outline: 'none',
+                width: 92, padding: '7px 10px', borderRadius: 10,
+                border: '1.5px solid #e7e3dc', background: '#fff',
+                fontSize: 12, fontFamily: 'DM Mono', color: '#1a1a1a', outline: 'none',
               }}
             />
-            <span style={{ color: '#b0adcd', fontSize: 13 }}>–</span>
+            <span style={{ color: '#6b6862', fontSize: 13 }}>–</span>
             <input
               type="number"
               placeholder="Jusqu'à"
               value={yearMax}
               onChange={(e) => setFilter('year_max', e.target.value || null)}
               style={{
-                width: 78, padding: '7px 10px', borderRadius: 10,
-                border: '1.5px solid #e4e2f5', background: '#fff',
-                fontSize: 12, fontFamily: 'DM Mono', color: '#1e1b4b', outline: 'none',
+                width: 92, padding: '7px 10px', borderRadius: 10,
+                border: '1.5px solid #e7e3dc', background: '#fff',
+                fontSize: 12, fontFamily: 'DM Mono', color: '#1a1a1a', outline: 'none',
               }}
             />
             {(yearMin || yearMax) && (
@@ -266,15 +268,15 @@ export default function ConcoursListPage() {
         {/* Exams grid */}
         {loading ? (
           <div className="flex justify-center" style={{ padding: '80px 0' }}>
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#4f46e5' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
           </div>
         ) : exams.length === 0 ? (
           <div className="fd-card text-center" style={{ padding: 56 }}>
-            <BookOpen className="w-9 h-9 mx-auto mb-3" style={{ color: '#b0adcd' }} />
-            <p style={{ fontSize: 14, color: '#7068a8' }}>Aucun examen pour le moment.</p>
+            <BookOpen className="w-9 h-9 mx-auto mb-3" style={{ color: '#6b6862' }} />
+            <p style={{ fontSize: 14, color: '#6b6862' }}>Aucun examen pour le moment.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="concours-annales">
             {exams.map((e) => {
               const t = CONCOURS_THEME[e.concours_type];
               return (
@@ -284,8 +286,8 @@ export default function ConcoursListPage() {
                   className="exam-card animate-fade-up"
                   style={{
                     overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column',
-                    background: '#fff', borderRadius: 18, border: '1px solid #ece9fb',
-                    boxShadow: '0 2px 10px rgba(90,70,200,.05)',
+                    background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc',
+                    boxShadow: '0 2px 10px rgba(20,18,16,.05)',
                     transition: 'transform .2s, box-shadow .2s',
                   }}
                 >
@@ -317,15 +319,15 @@ export default function ConcoursListPage() {
                   </div>
 
                   <div className="p-4 flex flex-col gap-2 flex-1">
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', lineHeight: 1.35 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.35 }}>
                       {e.title}
                     </h3>
                     {e.description && (
-                      <p style={{ fontSize: 12, color: '#7068a8', lineHeight: 1.5 }} className="line-clamp-2">
+                      <p style={{ fontSize: 12, color: '#6b6862', lineHeight: 1.5 }} className="line-clamp-2">
                         {e.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-3 mt-auto pt-3" style={{ fontSize: 11, color: '#9391b8', borderTop: '1px solid #f0effe' }}>
+                    <div className="flex items-center gap-3 mt-auto pt-3" style={{ fontSize: 11, color: '#6b6862', borderTop: '1px solid #faf9f7' }}>
                       <span className="inline-flex items-center gap-1">
                         <ListChecks className="w-3.5 h-3.5" /> {e.question_count} Q
                       </span>
@@ -406,16 +408,16 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
             {CONCOURS_TYPES.find(c => c.id === concoursType) && t.emoji}
           </div>
           <div>
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
               Lancer une simulation
             </h3>
-            <p style={{ fontSize: 12, color: '#7068a8', marginTop: 1 }}>
+            <p style={{ fontSize: 12, color: '#6b6862', marginTop: 1 }}>
               {CONCOURS_TYPES.find(c => c.id === concoursType)?.label}
             </p>
           </div>
         </div>
 
-        <p style={{ fontSize: 12, color: '#7068a8', marginBottom: 14 }}>
+        <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 14 }}>
           Les solutions sont masquées pendant la session.
         </p>
 
@@ -430,22 +432,22 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '13px 16px', borderRadius: 12,
-                border: `1.5px solid ${mode === id ? t.from : '#ede9fe'}`,
-                background: mode === id ? t.light : '#faf9ff',
-                color: '#1e1b4b', cursor: 'pointer', textAlign: 'left', transition: 'all .15s',
+                border: `1.5px solid ${mode === id ? t.from : '#e7e3dc'}`,
+                background: mode === id ? t.light : '#faf9f7',
+                color: '#1a1a1a', cursor: 'pointer', textAlign: 'left', transition: 'all .15s',
               }}
             >
               <div style={{
                 width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                background: mode === id ? t.from : '#ede9fe',
-                color: mode === id ? '#fff' : '#7068a8',
+                background: mode === id ? t.from : '#e7e3dc',
+                color: mode === id ? '#fff' : '#6b6862',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Icon className="w-4 h-4" />
               </div>
               <div className="flex-1">
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{label}</div>
-                <div style={{ fontSize: 11, color: '#7068a8', marginTop: 1 }}>{desc}</div>
+                <div style={{ fontSize: 11, color: '#6b6862', marginTop: 1 }}>{desc}</div>
               </div>
               {mode === id && (
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.from, flexShrink: 0 }} />
@@ -455,9 +457,9 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
         </div>
 
         {mode === 'random_mix' && (
-          <div className="mt-4" style={{ background: '#faf9ff', borderRadius: 12, padding: '14px 16px' }}>
+          <div className="mt-4" style={{ background: '#faf9f7', borderRadius: 12, padding: '14px 16px' }}>
             <div className="flex items-center justify-between mb-2">
-              <label style={{ fontSize: 12, color: '#7068a8', fontWeight: 600 }}>Nombre de questions</label>
+              <label style={{ fontSize: 12, color: '#6b6862', fontWeight: 600 }}>Nombre de questions</label>
               <span style={{ fontFamily: 'DM Mono', fontSize: 14, fontWeight: 800, color: t.from }}>{nQuestions}</span>
             </div>
             <input
@@ -466,7 +468,7 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
               onChange={(e) => setNQuestions(Number(e.target.value))}
               style={{ width: '100%', accentColor: t.from }}
             />
-            <div className="flex items-center justify-between" style={{ fontSize: 10, color: '#9391b8', marginTop: 4 }}>
+            <div className="flex items-center justify-between" style={{ fontSize: 10, color: '#6b6862', marginTop: 4 }}>
               <span>5 q</span>
               <span>~{Math.round(nQuestions * 1.5)} min estimées</span>
               <span>200 q</span>

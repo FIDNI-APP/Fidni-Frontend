@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { useAuthModal } from '@/components/auth/AuthController';
 
 // Define vote values as 1 or -1 only
@@ -28,7 +27,6 @@ export function VoteButtons({
   const [userVote, setUserVote] = useState<1 | -1 | 0>(initialUserVote);
   const [score, setScore] = useState(initialVotes);
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const { openModal } = useAuthModal();
 
   // Update internal state when props change
@@ -100,57 +98,49 @@ export function VoteButtons({
 
   const sizeClasses = getSizeClasses();
 
-  // Container styles based on vote state
+  // Container — flat, bordered, no gradient (gradients get force-darkened by
+  // the global ink&paper layer, which made the voted state unreadable).
   const getContainerClasses = () => {
-    const orientation = vertical 
-      ? 'flex-col space-y-1' 
-      : 'flex-row space-x-2 items-center';
-    
-    const baseClasses = `transition-transform duration-300 group-hover:scale-100 inline-flex ${orientation} rounded-xl transition-all duration-300 ${sizeClasses.container}`;
-    
-    // Background colors based on vote state
-    if (userVote === 1) {
-      return `${baseClasses} liquid-effect bg-gradient-to-r from-purple-100 to-indigo-100 border border-indigo-200 rounded-xl`;
-    } else if (userVote === -1) {
-      return `${baseClasses} liquid-effect bg-gradient-to-r from-red-50 to-orange-100 border border-orange-200 rounded-xl`;
-    }
-    
-    return `${baseClasses}  liquid-effect shadow-sm hover:border-indigo-400 rounded-xl`;
+    const orientation = vertical
+      ? 'flex-col space-y-1'
+      : 'flex-row space-x-1.5 items-center';
+
+    return `inline-flex ${orientation} rounded-xl border border-line bg-white ${sizeClasses.container}`;
   };
 
-  // Upvote button styles
+  // Upvote — green when active (positive), neutral otherwise.
   const getUpvoteClasses = () => {
-    const baseClasses = `liquid-glass liquid-effect rounded-full flex items-center justify-center ${sizeClasses.button} transition-all duration-200`;
-    
+    const baseClasses = `rounded-full flex items-center justify-center ${sizeClasses.button} transition-colors`;
+
     if (userVote === 1) {
-      return `${baseClasses} liquid-glass liquid-effect bg-gradient-to-r from-indigo-600 to-purple-600 text-white transform scale-105 shadow-md`;
+      return `${baseClasses} bg-brand-soft text-brand`;
     }
-    
-    return `${baseClasses} liquid-glass liquid-effect bg-white text-black font-semibold hover:bg-indigo-50 hover:text-indigo-600`;
+
+    return `${baseClasses} bg-transparent text-ink-faint hover:bg-brand-soft hover:text-brand`;
   };
 
-  // Downvote button styles
+  // Downvote — muted red when active, neutral otherwise.
   const getDownvoteClasses = () => {
-    const baseClasses = `liquid-glass liquid-effect rounded-full flex items-center justify-center ${sizeClasses.button} transition-all duration-200`;
-    
+    const baseClasses = `rounded-full flex items-center justify-center ${sizeClasses.button} transition-colors`;
+
     if (userVote === -1) {
-      return `${baseClasses} liquid-glass liquid-effect bg-gradient-to-r from-red-900 to-red-600 text-white transform scale-105 shadow-md`;
+      return `${baseClasses} bg-[#fdeceb] text-[#c2564f]`;
     }
-    
-    return `${baseClasses} liquid-glass liquid-effect bg-white text-black font-semibold hover:bg-red-50 hover:text-red-600`;
+
+    return `${baseClasses} bg-transparent text-ink-faint hover:bg-[#fdeceb] hover:text-[#c2564f]`;
   };
 
-  // Vote count styles
+  // Score — coloured by state but always on the light pill, so it stays legible.
   const getScoreClasses = () => {
-    const baseClasses = `font-medium ${sizeClasses.text}`;
-    
+    const baseClasses = `font-semibold fd-nums ${sizeClasses.text}`;
+
     if (userVote === 1) {
-      return `${baseClasses} text-indigo-700`;
+      return `${baseClasses} text-brand-hover`;
     } else if (userVote === -1) {
-      return `${baseClasses} text-red-700`;
+      return `${baseClasses} text-[#c2564f]`;
     }
-    
-    return `${baseClasses} text-gray-700`;
+
+    return `${baseClasses} text-ink-soft`;
   };
 
   return (

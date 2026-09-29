@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   exerciseContentAPI,
   examContentAPI,
@@ -21,14 +21,17 @@ import type { VoteValue, Comment } from '@/types';
 import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
+import { isModerator } from '@/lib/features';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { ContentHeader } from '@/components/content/viewer/ContentHeader';
 import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ActivitySection } from '@/components/activity/ActivitySection';
+import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
 import { CommentSection } from '@/components/interactions/CommentSection';
-import { AICorrectionPanel } from '@/components/ai/AICorrectionPanel';
+import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
+import { listProposedSolutions, type ProposedSolution } from '@/lib/api/proposedSolutionsApi';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
-import { Button } from '@/components/ui/button';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -187,7 +190,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const [questionProgress, setQuestionProgress] = useState<Record<string, AssessmentStatus>>({});
   const [solutionValidations, setSolutionValidations] = useState<Record<string, string | null>>({});
   const [savingSession, setSavingSession] = useState(false);
-  const [showAiPanel, setShowAiPanel] = useState(false);
   const [completionStatus, setCompletionStatus] = useState<'success' | 'review' | null>(null);
 
   // Statistics state
@@ -281,6 +283,18 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
     loadStatistics();
   }, [activeTab, id, contentType]);
+
+  // Solutions des élèves : chargées tout de suite pour la pastille de l'onglet.
+  const [proposedSolutions, setProposedSolutions] = useState<ProposedSolution[] | null>(null);
+  const loadProposedSolutions = useCallback(async () => {
+    if (!id || contentType === 'lesson') return;
+    try {
+      setProposedSolutions(await listProposedSolutions(id));
+    } catch {
+      setProposedSolutions([]);
+    }
+  }, [id, contentType]);
+  useEffect(() => { loadProposedSolutions(); }, [loadProposedSolutions]);
 
   // Load comments on mount to show count in tab
   useEffect(() => {
@@ -569,17 +583,46 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
   };
 
+  // Feed the rich breadcrumb (Section › Niveau › Matière › Chapitre) up to the
+  // app TopBar; cleared on unmount so other pages fall back to the route label.
+  const { setCrumbs } = useBreadcrumb();
+  useEffect(() => {
+    if (!content) { setCrumbs(null); return; }
+    const cl = content.class_levels?.[0];
+    const subj = content.subject;
+    const subf = content.subfields?.[0];
+    const chap = content.chapters?.[0];
+    const buildUrl = (f: { classLevel?: string; subject?: string; subfield?: string; chapter?: string }) => {
+      const p = new URLSearchParams();
+      if (f.classLevel) p.set('classLevels', f.classLevel);
+      if (f.subject) p.set('subjects', f.subject);
+      if (f.subfield) p.set('subfields', f.subfield);
+      if (f.chapter) p.set('chapters', f.chapter);
+      return `${config.basePath}?${p.toString()}`;
+    };
+    const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Examens' : 'Leçons';
+    const cid = cl ? String(cl.id) : undefined;
+    const sid = subj ? String(subj.id) : undefined;
+    const fid = subf ? String(subf.id) : undefined;
+    const crumbs: { label: string; to?: string }[] = [{ label: sectionLabel, to: config.basePath }];
+    if (cl) crumbs.push({ label: cl.name, to: buildUrl({ classLevel: cid }) });
+    if (subj) crumbs.push({ label: subj.name, to: buildUrl({ classLevel: cid, subject: sid }) });
+    if (chap) crumbs.push({ label: chap.name, to: buildUrl({ classLevel: cid, subject: sid, subfield: fid, chapter: String(chap.id) }) });
+    setCrumbs(crumbs);
+    return () => setCrumbs(null);
+  }, [content, contentType, config.basePath, setCrumbs]);
+
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#4f46e5' }} />
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1a1a1a' }} />
       </div>
     );
   }
 
   if (error || !content) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
           <p style={{ color: '#b91c1c', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
             {error || 'Contenu non trouvé'}
@@ -595,7 +638,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const isAuthor = user && content.author?.id === user.id;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       {/* Header */}
       <ContentHeader
         content={content}
@@ -603,18 +646,20 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         isSaved={isSaved}
         isSaving={isSaving}
         onToggleSave={handleSave}
-        isAuthor={!!isAuthor}
+        isAuthor={!!isAuthor || isModerator(user)}
         onDelete={handleDelete}
+        onPrint={contentType === 'lesson' ? undefined : () => navigate(`${config.basePath}/${content.id}/pdf`)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         basePath={config.basePath}
         commentCount={comments.length}
+        solutionCount={proposedSolutions?.length ?? 0}
         completionStatus={completionStatus}
         onSetCompletion={handleSetCompletion}
       />
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'exercise' && (
           <div className="space-y-6">
             {/* Main content */}
@@ -645,69 +690,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               />
 
             </div>
-
-            {/* AI Help Card - trigger to open panel */}
-            {contentType !== 'lesson' && (
-              <div
-                className="fd-card cursor-pointer group"
-                style={{
-                  background: 'linear-gradient(135deg,#eef2ff,#f5f3ff)',
-                  border: '1px solid #ddd6fe',
-                  padding: 22,
-                }}
-                onClick={() => isAuthenticated ? setShowAiPanel(true) : openModal()}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="inline-flex items-center justify-center"
-                    style={{
-                      width: 40, height: 40, borderRadius: 12,
-                      background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff',
-                      boxShadow: '0 6px 16px rgba(124,58,237,.25)',
-                    }}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>Assistant IA pédagogique</h3>
-                    <p style={{ fontSize: 11, color: '#7068a8', marginTop: 1 }}>Indices, correction, explications</p>
-                  </div>
-                </div>
-                <p style={{ fontSize: 12, color: '#4b4880', lineHeight: 1.55, marginBottom: 12 }}>
-                  Obtiens de l'aide personnalisée, des indices progressifs et une correction détaillée de tes réponses.
-                </p>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex gap-2 flex-wrap">
-                    <span style={{
-                      background: '#fff', color: '#5b21b6',
-                      padding: '3px 10px', borderRadius: 99,
-                      fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
-                      border: '1px solid #ddd6fe',
-                    }}>
-                      INDICES
-                    </span>
-                    <span style={{
-                      background: '#fff', color: '#7c3aed',
-                      padding: '3px 10px', borderRadius: 99,
-                      fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
-                      border: '1px solid #ddd6fe',
-                    }}>
-                      CORRECTION
-                    </span>
-                  </div>
-                  <button
-                    className="fd-btn-primary"
-                    style={{
-                      background: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
-                      padding: '7px 16px', fontSize: 12,
-                    }}
-                    onClick={(e) => { e.stopPropagation(); isAuthenticated ? setShowAiPanel(true) : openModal(); }}
-                  >
-                    {isAuthenticated ? 'Ouvrir' : 'Se connecter'}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -723,30 +705,33 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           </div>
         )}
 
-        {activeTab === 'proposals' && contentType !== 'lesson' && (
-          <div className="fd-card" style={{ padding: 22 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', marginBottom: 12 }}>
-              Solutions proposées
-            </h2>
-            <p style={{ fontSize: 13, color: '#7068a8', textAlign: 'center', padding: '32px 0' }}>
-              Aucune solution proposée pour le moment.
-            </p>
-          </div>
+        {activeTab === 'proposals' && contentType !== 'lesson' && id && (
+          <ProposedSolutions
+            contentId={id}
+            solutions={proposedSolutions}
+            isAuthenticated={isAuthenticated}
+            onRequireLogin={openModal}
+            onChanged={loadProposedSolutions}
+          />
         )}
 
         {activeTab === 'activity' && contentType !== 'lesson' && (
-          <ActivitySection
-            statistics={statistics}
-            loading={loadingStatistics}
-            contentType={contentType}
-            onRemoveSolutionFlag={handleRemoveSolutionFlag}
-          />
+          <>
+            <ActivitySection
+              statistics={statistics}
+              loading={loadingStatistics}
+              contentType={contentType}
+              onRemoveSolutionFlag={handleRemoveSolutionFlag}
+              onGoToQuestions={() => { setActiveTab('exercise'); window.scrollTo({ top: 0 }); }}
+            />
+            {user?.is_superuser && id && <AIVerdictPanel contentId={id} />}
+          </>
         )}
 
         {activeTab === 'activity' && contentType === 'lesson' && (
           <div className="fd-card" style={{ padding: 22 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', marginBottom: 12 }}>Activité</h2>
-            <p style={{ fontSize: 13, color: '#7068a8', textAlign: 'center', padding: '32px 0' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 12 }}>Activité</h2>
+            <p style={{ fontSize: 13, color: '#6b6862', textAlign: 'center', padding: '32px 0' }}>
               Statistiques non disponibles pour les leçons.
             </p>
           </div>
@@ -761,20 +746,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         isLoading={loadingHistory}
         onDeleteSession={handleDeleteSession}
       />
-
-      {/* AI Correction Panel - Floating */}
-      {showAiPanel && contentType !== 'lesson' && isAuthenticated && (
-        <AICorrectionPanel
-          contentType={contentType}
-          contentId={id || ''}
-          solution={'solution' in content && content.solution ? (content.solution as any).content : undefined}
-          totalPoints={'total_points' in content ? (content.total_points || 20) : 20}
-          structure={content.structure as any}
-          onExpandToggle={(expanded) => {
-            if (!expanded) setShowAiPanel(false);
-          }}
-        />
-      )}
     </div>
   );
 };

@@ -1,60 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Share2, Bookmark, MoreHorizontal, BookOpen, Printer,
-  ListPlus, ChevronRight, MessageSquare,
+  ListPlus, MessageSquare,
   GitPullRequest, Activity, ArrowLeft, Loader2,
-  Pencil, Trash2, BookMarked, CheckCircle2, Circle, X
-} from 'lucide-react';
+  Pencil, Trash2, BookMarked, CheckCircle2, Circle, X, User, Calendar, Eye, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
-
-const getContentTypeColors = (contentType: 'exercise' | 'exam' | 'lesson') => {
-  // All three use the same lavender/indigo gradient now (matches new design system).
-  // Subject color comes through the card itself, not the page chrome.
-  switch (contentType) {
-    case 'exam':
-      return {
-        gradient: 'from-indigo-600 via-violet-600 to-purple-600',
-        text: 'text-white',
-        textMuted: 'text-white/75',
-        hoverBg: 'hover:bg-white/10',
-        activeBg: 'bg-white/20',
-        tabActive: 'bg-white text-indigo-700',
-        tabInactive: 'text-white/75 hover:text-white hover:bg-white/10',
-        badge: 'bg-indigo-100 text-indigo-700',
-        badgeInactive: 'bg-white/20 text-white',
-      };
-    case 'lesson':
-      return {
-        gradient: 'from-violet-600 via-indigo-600 to-indigo-700',
-        text: 'text-white',
-        textMuted: 'text-white/75',
-        hoverBg: 'hover:bg-white/10',
-        activeBg: 'bg-white/20',
-        tabActive: 'bg-white text-indigo-700',
-        tabInactive: 'text-white/75 hover:text-white hover:bg-white/10',
-        badge: 'bg-indigo-100 text-indigo-700',
-        badgeInactive: 'bg-white/20 text-white',
-      };
-    default: // exercise
-      return {
-        gradient: 'from-indigo-600 via-indigo-600 to-violet-600',
-        text: 'text-white',
-        textMuted: 'text-white/75',
-        hoverBg: 'hover:bg-white/10',
-        activeBg: 'bg-white/20',
-        tabActive: 'bg-white text-indigo-700',
-        tabInactive: 'text-white/75 hover:text-white hover:bg-white/10',
-        badge: 'bg-indigo-100 text-indigo-700',
-        badgeInactive: 'bg-white/20 text-white',
-      };
-  }
-};
 
 interface ContentHeaderProps {
   content: ContentItem;
@@ -69,9 +26,37 @@ interface ContentHeaderProps {
   onTabChange: (tab: 'exercise' | 'discussions' | 'proposals' | 'activity') => void;
   basePath: string;
   commentCount?: number;
+  /** Nombre de solutions proposées par les élèves (pastille de l'onglet). */
+  solutionCount?: number;
   completionStatus?: 'success' | 'review' | null;
   onSetCompletion?: (status: 'success' | 'review' | null) => void;
 }
+
+// Light, focus-first header chrome. Shared ghost-button styling (ink on white).
+const ghostBtn = 'rounded-xl gap-2 text-[#33302b] hover:bg-[#f7f6f3]';
+
+const DIFFICULTY: Record<string, { label: string; bg: string; text: string }> = {
+  easy:   { label: 'Facile',    bg: '#eaf3ed', text: '#15633c' },
+  medium: { label: 'Moyen',     bg: '#faf3e2', text: '#9a6e1c' },
+  hard:   { label: 'Difficile', bg: '#fbecea', text: '#a23b34' },
+};
+
+const chipStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
+  padding: '3px 10px', borderRadius: 99, whiteSpace: 'nowrap',
+};
+
+const timeAgo = (iso?: string) => {
+  if (!iso) return '';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return "Aujourd'hui";
+  if (days === 1) return 'Hier';
+  if (days < 7) return `Il y a ${days} jours`;
+  if (days < 30) return `Il y a ${Math.floor(days / 7)} semaine${days >= 14 ? 's' : ''}`;
+  if (days < 365) return `Il y a ${Math.floor(days / 30)} mois`;
+  const years = Math.floor(days / 365);
+  return `Il y a ${years} an${years > 1 ? 's' : ''}`;
+};
 
 export const ContentHeader: React.FC<ContentHeaderProps> = ({
   content,
@@ -86,6 +71,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   onTabChange,
   basePath,
   commentCount = 0,
+  solutionCount = 0,
   completionStatus,
   onSetCompletion,
 }) => {
@@ -95,18 +81,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const [showNotebookModal, setShowNotebookModal] = useState(false);
   const [showCompletionDropdown, setShowCompletionDropdown] = useState(false);
   const completionBtnRef = useRef<HTMLButtonElement>(null);
-  const [completionPos, setCompletionPos] = useState({ top: 0, left: 0 });
-  const colors = getContentTypeColors(contentType);
-
-  const buildFilterUrl = (filters: { classLevel?: string; subject?: string; subfield?: string; chapter?: string; theorem?: string }) => {
-    const params = new URLSearchParams();
-    if (filters.classLevel) params.set('classLevels', filters.classLevel);
-    if (filters.subject) params.set('subjects', filters.subject);
-    if (filters.subfield) params.set('subfields', filters.subfield);
-    if (filters.chapter) params.set('chapters', filters.chapter);
-    if (filters.theorem) params.set('theorems', filters.theorem);
-    return `${basePath}?${params.toString()}`;
-  };
+  const moreRef = useRef<HTMLDivElement>(null);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -125,320 +100,227 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const tabs = [
     { id: 'exercise', label: contentType === 'lesson' ? 'Leçon' : 'Exercice', icon: BookOpen },
     { id: 'discussions', label: 'Discussions', icon: MessageSquare, count: commentCount },
-    { id: 'proposals', label: 'Solutions', icon: GitPullRequest },
+    { id: 'proposals', label: 'Solutions', icon: GitPullRequest, count: solutionCount },
     { id: 'activity', label: 'Activité', icon: Activity }
   ];
-
-  // Hide proposals tab for lessons
-  const filteredTabs = contentType === 'lesson'
-    ? tabs.filter(t => t.id !== 'proposals')
-    : tabs;
+  const filteredTabs = contentType === 'lesson' ? tabs.filter(t => t.id !== 'proposals') : tabs;
 
   return (
-    <div className={`relative bg-gradient-to-r ${colors.gradient}`}>
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="headerGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#headerGrid)" />
-        </svg>
-      </div>
-
-      {/* Glow effect */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-      <div className="relative px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+    <div style={{ background: '#fff', borderBottom: '1px solid #e7e3dc' }}>
+      {/* Même largeur que le contenu en dessous (l'en-tête était plus étroit, donc décalé). */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        {/* Retour nommé + actions */}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center min-w-0">
             <button
               onClick={() => navigate(basePath)}
-              className={`p-2 -ml-2 rounded-xl ${colors.textMuted} hover:text-white ${colors.hoverBg} transition-colors`}
+              className="inline-flex items-center gap-1.5 py-1.5 -ml-1 pr-2 rounded-lg text-sm text-[#6b6862] hover:text-[#1a1a1a] transition-colors flex-shrink-0"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
+              {contentType === 'lesson' ? 'Leçons' : contentType === 'exam' ? 'Examens' : 'Exercices'}
             </button>
-
-            <nav className="hidden md:flex items-center gap-1.5 text-sm">
-              <button
-                onClick={() => navigate(basePath)}
-                className={`${colors.textMuted} hover:text-white transition-colors`}
-              >
-                {contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Examens' : 'Leçons'}
-              </button>
-
-              {content.class_levels && content.class_levels.length > 0 && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
-                  <button
-                    onClick={() => navigate(buildFilterUrl({ classLevel: content.class_levels[0].id.toString() }))}
-                    className={`${colors.textMuted} hover:text-white transition-colors`}
-                  >
-                    {content.class_levels[0].name}
-                  </button>
-                </>
-              )}
-
-              {content.subject && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
-                  <button
-                    onClick={() => navigate(buildFilterUrl({
-                      ...(content.class_levels?.[0] && { classLevel: content.class_levels[0].id.toString() }),
-                      subject: content.subject.id.toString(),
-                    }))}
-                    className={`${colors.textMuted} hover:text-white transition-colors`}
-                  >
-                    {content.subject.name}
-                  </button>
-                </>
-              )}
-
-              {content.subfields && content.subfields.length > 0 && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
-                  <button
-                    onClick={() => navigate(buildFilterUrl({
-                      ...(content.class_levels?.[0] && { classLevel: content.class_levels[0].id.toString() }),
-                      ...(content.subject && { subject: content.subject.id.toString() }),
-                      subfield: content.subfields[0].id.toString(),
-                    }))}
-                    className={`${colors.textMuted} hover:text-white transition-colors`}
-                  >
-                    {content.subfields[0].name}
-                  </button>
-                </>
-              )}
-
-              {content.chapters && content.chapters.length > 0 && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
-                  <button
-                    onClick={() => navigate(buildFilterUrl({
-                      ...(content.class_levels?.[0] && { classLevel: content.class_levels[0].id.toString() }),
-                      ...(content.subject && { subject: content.subject.id.toString() }),
-                      ...(content.subfields?.[0] && { subfield: content.subfields[0].id.toString() }),
-                      chapter: content.chapters[0].id.toString(),
-                    }))}
-                    className={`${colors.textMuted} hover:text-white transition-colors truncate max-w-[150px]`}
-                  >
-                    {content.chapters[0].name}
-                  </button>
-                </>
-              )}
-
-              {content.theorems && content.theorems.length > 0 && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
-                  <button
-                    onClick={() => navigate(buildFilterUrl({
-                      ...(content.class_levels?.[0] && { classLevel: content.class_levels[0].id.toString() }),
-                      ...(content.subject && { subject: content.subject.id.toString() }),
-                      ...(content.subfields?.[0] && { subfield: content.subfields[0].id.toString() }),
-                      ...(content.chapters?.[0] && { chapter: content.chapters[0].id.toString() }),
-                      theorem: content.theorems[0].id.toString(),
-                    }))}
-                    className={`${colors.textMuted} hover:text-white transition-colors truncate max-w-[150px]`}
-                  >
-                    {content.theorems[0].name}
-                  </button>
-                </>
-              )}
-            </nav>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Completion dropdown */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Completion */}
             {onSetCompletion && (
               <div className="relative">
                 <Button
                   ref={completionBtnRef}
-                  onClick={() => {
-                    if (completionBtnRef.current) {
-                      const rect = completionBtnRef.current.getBoundingClientRect();
-                      setCompletionPos({ top: rect.bottom + 4, left: rect.left });
-                    }
-                    setShowCompletionDropdown(!showCompletionDropdown);
-                  }}
+                  data-tour="detail-terminer"
+                  onClick={() => setShowCompletionDropdown(!showCompletionDropdown)}
                   variant="ghost"
                   size="sm"
                   className={`rounded-xl gap-2 ${
                     completionStatus === 'success'
-                      ? 'bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30'
+                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                       : completionStatus === 'review'
-                        ? 'bg-red-500/20 text-red-200 hover:bg-red-500/30'
-                        : `${colors.textMuted} hover:text-white ${colors.hoverBg}`
+                        ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                        : ghostBtn
                   }`}
                 >
-                  {completionStatus === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : completionStatus === 'review' ? (
-                    <X className="w-4 h-4" />
-                  ) : (
-                    <Circle className="w-4 h-4" />
-                  )}
+                  {completionStatus === 'success' ? <CheckCircle2 className="w-4 h-4" />
+                    : completionStatus === 'review' ? <X className="w-4 h-4" />
+                    : <Circle className="w-4 h-4" />}
                   <span className="hidden sm:inline">
                     {completionStatus === 'success' ? 'Validé' : completionStatus === 'review' ? 'Échoué' : 'Terminer'}
                   </span>
                 </Button>
 
-                {showCompletionDropdown && (
-                  <>
-                    <div
-                      className="fixed z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[140px]"
-                      style={{ top: completionPos.top, left: completionPos.left }}
-                    >
+                <FloatingPanel anchorRef={completionBtnRef} open={showCompletionDropdown}
+                  onClose={() => setShowCompletionDropdown(false)} offset={4}
+                  className="bg-white rounded-lg shadow-lg border border-[#e7e3dc] py-1 min-w-[140px]">
                       <button
-                        onClick={() => {
-                          onSetCompletion(completionStatus === 'success' ? null : 'success');
-                          setShowCompletionDropdown(false);
-                        }}
+                        onClick={() => { onSetCompletion(completionStatus === 'success' ? null : 'success'); setShowCompletionDropdown(false); }}
                         className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                          completionStatus === 'success'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'text-slate-600 hover:bg-slate-50 text-emerald-600'
+                          completionStatus === 'success' ? 'bg-emerald-100 text-emerald-700' : 'text-emerald-600 hover:bg-[#f7f6f3]'
                         }`}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Validé</span>
+                        <CheckCircle2 className="w-3.5 h-3.5" /> <span>Validé</span>
                       </button>
                       <button
-                        onClick={() => {
-                          onSetCompletion(completionStatus === 'review' ? null : 'review');
-                          setShowCompletionDropdown(false);
-                        }}
+                        onClick={() => { onSetCompletion(completionStatus === 'review' ? null : 'review'); setShowCompletionDropdown(false); }}
                         className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                          completionStatus === 'review'
-                            ? 'bg-red-100 text-red-700'
-                            : 'text-slate-600 hover:bg-slate-50 text-red-600'
+                          completionStatus === 'review' ? 'bg-red-100 text-red-700' : 'text-red-600 hover:bg-[#f7f6f3]'
                         }`}
                       >
-                        <X className="w-3.5 h-3.5" />
-                        <span>Échoué</span>
+                        <X className="w-3.5 h-3.5" /> <span>Échoué</span>
                       </button>
-                    </div>
-                    {/* Click-outside backdrop — AFTER dropdown per CLAUDE.md */}
-                    <div className="fixed inset-0 z-40" onClick={() => setShowCompletionDropdown(false)} />
-                  </>
-                )}
+                </FloatingPanel>
               </div>
             )}
 
+            {/* Save */}
             <Button
               onClick={onToggleSave}
+              data-tour="detail-enregistrer"
               variant="ghost"
               size="sm"
-              className={`rounded-xl gap-2 ${colors.textMuted} hover:text-white ${colors.hoverBg} ${
-                isSaved ? colors.activeBg : ''
-              }`}
+              className={`rounded-xl gap-2 ${isSaved ? 'bg-[#f2f1ee] text-[#000000]' : ghostBtn}`}
               disabled={isSaving}
             >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-white' : ''}`} />
-              )}
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />}
               <span className="hidden sm:inline">{isSaved ? 'Enregistré' : 'Enregistrer'}</span>
             </Button>
 
+            {/* List / notebook */}
             {contentType === 'lesson' ? (
-              <Button
-                onClick={() => setShowNotebookModal(true)}
-                variant="ghost"
-                size="sm"
-                className={`rounded-xl gap-2 ${colors.textMuted} hover:text-white ${colors.hoverBg}`}
-              >
+              <Button onClick={() => setShowNotebookModal(true)} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-cahier">
                 <BookMarked className="w-4 h-4" />
                 <span className="hidden sm:inline">Cahier</span>
               </Button>
             ) : (
-              <Button
-                onClick={() => setShowRevisionListModal(true)}
-                variant="ghost"
-                size="sm"
-                className={`rounded-xl gap-2 ${colors.textMuted} hover:text-white ${colors.hoverBg}`}
-              >
+              <Button onClick={() => setShowRevisionListModal(true)} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-liste">
                 <ListPlus className="w-4 h-4" />
                 <span className="hidden sm:inline">Liste</span>
               </Button>
             )}
 
-            <div className="relative">
-              <Button
-                onClick={() => setShowDropdown(!showDropdown)}
-                variant="ghost"
-                size="sm"
-                className={`rounded-xl ${colors.textMuted} hover:text-white ${colors.hoverBg} px-2`}
-              >
+            {/* More */}
+            <div className="relative" ref={moreRef}>
+              <Button onClick={() => setShowDropdown(!showDropdown)} variant="ghost" size="sm" className={`rounded-xl px-2 ${ghostBtn}`} data-tour="detail-plus" aria-label="Plus d'options">
                 <MoreHorizontal className="w-5 h-5" />
               </Button>
 
-              {showDropdown && (
-                <>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 py-2 border border-slate-200 overflow-hidden">
+              <FloatingPanel anchorRef={moreRef} open={showDropdown} onClose={() => setShowDropdown(false)} placement="bottom-end"
+                className="w-48 bg-white rounded-xl shadow-xl py-2 border border-[#e7e3dc] overflow-hidden">
                     <button
                       onClick={() => { handleShare(); setShowDropdown(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
                     >
-                      <Share2 className="w-4 h-4 text-slate-400" />
-                      Partager
+                      <Share2 className="w-4 h-4 text-ink-faint" /> Partager
                     </button>
                     {onPrint && (
                       <button
                         onClick={() => { onPrint(); setShowDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
                       >
-                        <Printer className="w-4 h-4 text-slate-400" />
-                        Imprimer
+                        <Printer className="w-4 h-4 text-ink-faint" /> Exporter en PDF
                       </button>
                     )}
                     {isAuthor && (
                       <>
-                        <div className="border-t border-slate-100 my-1" />
+                        <div className="border-t border-line my-1" />
                         <button
                           onClick={() => { navigate(`${basePath}/${content.id}/edit`); setShowDropdown(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
                         >
-                          <Pencil className="w-4 h-4 text-slate-400" />
-                          Modifier
+                          <Pencil className="w-4 h-4 text-ink-faint" /> Modifier
                         </button>
                         <button
                           onClick={() => { setShowDropdown(false); onDelete?.(); }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors text-sm"
                         >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                          Supprimer
+                          <Trash2 className="w-4 h-4 text-red-400" /> Supprimer
                         </button>
                       </>
                     )}
-                  </div>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
-                </>
-              )}
+              </FloatingPanel>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 -mb-4 overflow-x-auto scrollbar-hide">
+        {/* Étiquettes, titre et infos : l'identité de la page, au-dessus des onglets. */}
+        {(() => {
+          const c = content as any;
+          const credit: string | undefined = c.structure?.credit;
+          const diff = c.difficulty ? DIFFICULTY[c.difficulty] : null;
+          const chapters: { id: string | number; name: string }[] = c.chapters || [];
+          const level = c.class_levels?.[0];
+          const levelName = level ? (typeof level === 'string' ? level : level.name) : null;
+          return (
+            <div className="mb-4">
+              <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                {diff && (
+                  <span style={{ ...chipStyle, background: diff.bg, color: diff.text }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 99, background: 'currentColor' }} />
+                    {diff.label}
+                  </span>
+                )}
+                {c.is_national_exam && (
+                  <span style={{ ...chipStyle, background: '#faf3e2', color: '#9a6e1c' }}>
+                    Examen national{c.national_year ? ` ${c.national_year}` : ''}
+                  </span>
+                )}
+                {chapters.slice(0, 2).map((ch) => (
+                  <span key={ch.id} style={{ ...chipStyle, background: '#f2f1ee', color: '#4b4843' }}>{ch.name}</span>
+                ))}
+                {chapters.length > 2 && (
+                  <span style={{ ...chipStyle, background: '#f2f1ee', color: '#6b6862' }}>+{chapters.length - 2}</span>
+                )}
+                {levelName && <span style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</span>}
+              </div>
+              <h1 className="fd-display" style={{ fontSize: 'clamp(26px, 3.6vw, 36px)', lineHeight: 1.15, color: '#1a1a1a' }}>
+                {content.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 text-sm" style={{ color: '#6b6862' }}>
+                {content.author?.username && (content.author.is_deleted ? (
+                  <span className="inline-flex items-center gap-1.5 italic">
+                    <User className="w-4 h-4" /> Compte supprimé
+                  </span>
+                ) : (
+                  <Link to={`/profile/${content.author.username}`} className="inline-flex items-center gap-1.5 hover:text-[#1a1a1a]">
+                    <User className="w-4 h-4" /> {content.author.username}
+                  </Link>
+                ))}
+                {credit && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4" /> Proposé par {credit}
+                  </span>
+                )}
+                {c.created_at && (
+                  <span className="inline-flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {timeAgo(c.created_at)}</span>
+                )}
+                {typeof c.view_count === 'number' && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Eye className="w-4 h-4" /> {c.view_count} vue{c.view_count > 1 ? 's' : ''}
+                  </span>
+                )}
+                <span className="fd-nums" style={{ color: '#9a958c' }}>#{content.id}</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Tabs — underline style */}
+        <div className="flex items-center gap-5 overflow-x-auto scrollbar-hide" style={{ marginBottom: -1 }} data-tour="detail-onglets">
           {filteredTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id as any)}
-                className={`
-                  flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl transition-all whitespace-nowrap
-                  ${isActive ? colors.tabActive : colors.tabInactive}
-                `}
+                className={`flex items-center gap-2 py-2.5 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                  isActive
+                    ? 'text-[#15633c] border-[#1a7a4a] font-semibold'
+                    : 'text-[#6b6862] border-transparent hover:text-ink font-medium'
+                }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded-md ${isActive ? colors.badge : colors.badgeInactive}`}>
+                  <span className={`px-1.5 py-0.5 text-xs rounded-md fd-nums ${isActive ? 'bg-[#eaf3ed] text-[#15633c]' : 'bg-[#f2f1ee] text-[#6b6862]'}`}>
                     {tab.count}
                   </span>
                 )}

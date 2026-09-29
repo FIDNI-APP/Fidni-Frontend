@@ -14,15 +14,11 @@ import type {
   ContentLesson,
   LessonListItem,
   ContentSolution,
-  ContentProgress,
   ContentProgressListItem,
   ProgressSummary,
-  ContentStatistics,
   CreateExerciseRequest,
   CreateExamRequest,
   CreateLessonRequest,
-  AssessItemRequest,
-  AssessItemResponse,
   ContentFilters,
   ContentExamFilters,
 } from '@/types/content';
@@ -172,6 +168,11 @@ export const exerciseContentAPI = {
       return response.data.solution || null;
     } catch { return null; }
   },
+  getComments: async (id: string): Promise<unknown[]> => {
+    // Comments are embedded in the content detail payload.
+    const response = await api.get(`/contents/${id}/`);
+    return response.data.comments || [];
+  },
   addComment: async (id: string, content: string, parentId?: string, fileIds?: string[]): Promise<unknown> => {
     const response = await api.post(`/contents/${id}/comment/`, { content, parent_id: parentId, file_ids: fileIds });
     return response.data;
@@ -281,6 +282,10 @@ export const examContentAPI = {
   getSolution: async (id: string): Promise<ContentSolution | null> => {
     try { const r = await api.get(`/contents/${id}/`); return r.data.solution || null; } catch { return null; }
   },
+  getComments: async (id: string): Promise<unknown[]> => {
+    const r = await api.get(`/contents/${id}/`);
+    return r.data.comments || [];
+  },
   addComment: async (id: string, content: string, parentId?: string, fileIds?: string[]) => {
     const r = await api.post(`/contents/${id}/comment/`, { content, parent_id: parentId, file_ids: fileIds });
     return r.data;
@@ -367,11 +372,17 @@ export const lessonContentAPI = {
   complete: async (id: string, status: 'success' | 'review') => { const r = await api.post(`/contents/${id}/complete/`, { status }); return r.data; },
   removeComplete: async (id: string) => { const r = await api.delete(`/contents/${id}/remove_progress/`); return r.data; },
   trackTime: async (id: string, s: number) => { const r = await api.post(`/contents/${id}/track_time/`, { time_spent_seconds: s }); return r.data; },
+  getComments: async (id: string): Promise<unknown[]> => {
+    const r = await api.get(`/contents/${id}/`);
+    return r.data.comments || [];
+  },
   addComment: async (id: string, content: string, parentId?: string, fileIds?: string[]) => {
     const r = await api.post(`/contents/${id}/comment/`, { content, parent_id: parentId, file_ids: fileIds });
     return r.data;
   },
   assess: async (_id: string, _data: { item_path: string; assessment: string }) => ({}),
+  // Manquait : décocher une auto-évaluation sur une leçon appelait une fonction inexistante.
+  removeAssessment: async (_id: string, _data: { item_path: string }) => ({}),
   validateSolution: async (_id: string, _data: { item_path: string; validation: string | null }) => ({}),
   getProgress: async (_id: string) => ({ item_progress: {} as Record<string, { status: string; solution_validation?: string; assessed_at: string }> }),
   saveTimerSession: async (_id: string, _d: number, _t = 'study', _n = '') => ({}),

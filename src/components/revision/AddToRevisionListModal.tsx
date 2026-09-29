@@ -6,8 +6,7 @@ import {
   addItemToRevisionList,
   type RevisionList
 } from '@/lib/api';
-import { X, Plus, Check, ListChecks } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { X, Plus, Check, ListChecks, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AddToRevisionListModalProps {
@@ -17,6 +16,16 @@ interface AddToRevisionListModalProps {
   contentId: number;
   contentTitle?: string;
 }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '10px 14px', borderRadius: 10,
+  border: '1px solid #e7e3dc', background: '#fff', fontSize: 14,
+  color: '#1a1a1a', outline: 'none', transition: 'border-color .15s',
+  fontFamily: 'inherit',
+};
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 12.5, fontWeight: 600, color: '#33302b', marginBottom: 6,
+};
 
 export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
   isOpen,
@@ -30,7 +39,7 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [newListDescription, setNewListDescription] = useState('');
-  const [selectedListId, setSelectedListId] = useState<number | null>(null);
+  const [, setSelectedListId] = useState<number | null>(null);
   const [addedToLists, setAddedToLists] = useState<Set<number>>(new Set());
   const [processingListId, setProcessingListId] = useState<number | null>(null);
 
@@ -109,6 +118,9 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
     onClose();
   };
 
+  const focusGreen = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => { e.currentTarget.style.borderColor = '#1a7a4a'; };
+  const blurGrey = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => { e.currentTarget.style.borderColor = '#e7e3dc'; };
+
   return createPortal(
     <AnimatePresence mode="wait">
       {isOpen && (
@@ -118,108 +130,114 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
+          className="fixed inset-0 flex items-center justify-center p-4 z-[9999]"
+          style={{ background: 'rgba(20,18,16,.45)', backdropFilter: 'blur(2px)' }}
           onClick={handleClose}
         >
           <motion.div
             key="modal-content"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col"
+            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+            transition={{ duration: 0.18 }}
+            className="w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+            style={{ background: '#fff', borderRadius: 16, border: '1px solid #e7e3dc', boxShadow: '0 20px 50px rgba(20,18,16,.25)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <ListChecks className="w-7 h-7 text-indigo-600" />
-                  Ajouter à une liste
-                </h2>
-                {contentTitle && (
-                  <p className="text-sm text-gray-600 mt-2 ml-9 line-clamp-1">{contentTitle}</p>
-                )}
-              </div>
+            {/* Header — ink band, same language as the auth modal */}
+            <div className="relative flex-shrink-0 p-5" style={{ background: '#1a1a1a' }}>
               <button
                 onClick={handleClose}
-                className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-md flex-shrink-0"
                 aria-label="Fermer"
+                className="absolute top-4 right-4"
+                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', transition: 'color .15s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.7)'; }}
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5" />
               </button>
+              <h2 className="flex items-center gap-2.5" style={{ fontSize: 18, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
+                <ListChecks className="w-5 h-5" />
+                Ajouter à une liste de révision
+              </h2>
+              {contentTitle && (
+                <p className="line-clamp-1 mt-1" style={{ fontSize: 13, color: '#b8b4ac' }}>{contentTitle}</p>
+              )}
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-5">
               {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                <div className="flex justify-center items-center py-14">
+                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#9a958c' }} />
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="flex flex-col gap-5">
                   {/* Create New List Section */}
-                  <div className="border-b border-gray-200 pb-5">
+                  <div style={{ borderBottom: '1px solid #f2f1ee', paddingBottom: 18 }}>
                     {!showCreateForm ? (
-                      <Button
+                      <button
                         onClick={() => setShowCreateForm(true)}
-                        variant="ghost"
-                        className="w-full justify-center h-12 border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-600 font-semibold transition-all"
+                        className="w-full flex items-center justify-center gap-2"
+                        style={{
+                          height: 44, borderRadius: 12, border: '1.5px dashed #d8d4cc',
+                          background: 'transparent', color: '#33302b', fontSize: 13.5, fontWeight: 600,
+                          cursor: 'pointer', transition: 'border-color .16s, background .16s, color .16s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1a7a4a'; e.currentTarget.style.color = '#15633c'; e.currentTarget.style.background = 'rgba(26,122,74,.04)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#d8d4cc'; e.currentTarget.style.color = '#33302b'; e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <Plus className="w-5 h-5 mr-2" />
+                        <Plus className="w-4 h-4" />
                         Créer une nouvelle liste
-                      </Button>
+                      </button>
                     ) : (
                       <form
                         onSubmit={handleCreateList}
-                        className="space-y-4 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-100"
+                        className="flex flex-col gap-3.5"
+                        style={{ background: '#faf9f7', padding: 16, borderRadius: 12, border: '1px solid #f2f1ee' }}
                       >
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Nom de la liste *
-                          </label>
+                          <label style={labelStyle}>Nom de la liste *</label>
                           <input
                             type="text"
                             value={newListName}
                             onChange={(e) => setNewListName(e.target.value)}
-                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                            placeholder="Ex: Révision Bac 2024..."
+                            style={inputStyle}
+                            placeholder="Ex : Révision Bac 2026…"
                             required
                             autoFocus
+                            onFocus={focusGreen}
+                            onBlur={blurGrey}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Description (optionnel)
-                          </label>
+                          <label style={labelStyle}>Description (optionnel)</label>
                           <textarea
                             value={newListDescription}
                             onChange={(e) => setNewListDescription(e.target.value)}
-                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
-                            placeholder="Ajoutez une description..."
+                            style={{ ...inputStyle, resize: 'none' }}
+                            placeholder="Ajoutez une description…"
                             rows={2}
+                            onFocus={focusGreen}
+                            onBlur={blurGrey}
                           />
                         </div>
-                        <div className="flex gap-3">
-                          <Button
-                            type="submit"
-                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-11 shadow-md hover:shadow-lg transition-all"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
+                        <div className="flex gap-2.5">
+                          <button type="submit" className="fd-btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                            <Plus className="w-4 h-4" />
                             Créer
-                          </Button>
-                          <Button
+                          </button>
+                          <button
                             type="button"
+                            className="fd-btn-ghost"
                             onClick={() => {
                               setShowCreateForm(false);
                               setNewListName('');
                               setNewListDescription('');
                             }}
-                            variant="ghost"
-                            className="px-6 h-11 border-2 hover:bg-gray-100"
                           >
                             Annuler
-                          </Button>
+                          </button>
                         </div>
                       </form>
                     )}
@@ -227,16 +245,16 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
 
                   {/* Existing Lists */}
                   {lists.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <ListChecks className="w-10 h-10 text-gray-400" />
+                    <div className="text-center py-10">
+                      <div className="mx-auto mb-4 flex items-center justify-center" style={{ width: 52, height: 52, borderRadius: 14, background: '#f7f6f3' }}>
+                        <ListChecks className="w-6 h-6" style={{ color: '#cfcdc8' }} />
                       </div>
-                      <p className="text-gray-700 font-semibold text-lg">Aucune liste de révision</p>
-                      <p className="text-sm text-gray-500 mt-2">Créez votre première liste ci-dessus</p>
+                      <p style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>Aucune liste de révision</p>
+                      <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>Créez votre première liste ci-dessus</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
+                    <div className="flex flex-col gap-2.5">
+                      <h3 style={{ fontSize: 10.5, fontWeight: 700, color: '#9a958c', textTransform: 'uppercase', letterSpacing: '.08em' }}>
                         Vos listes de révision
                       </h3>
                       {lists.map((list) => {
@@ -244,54 +262,50 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                         const isProcessing = processingListId === list.id;
 
                         return (
-                          <motion.div
+                          <div
                             key={list.id}
-                            whileHover={!isAdded ? { scale: 1.02 } : {}}
-                            whileTap={!isAdded ? { scale: 0.98 } : {}}
-                            className={`
-                              p-5 border-2 rounded-xl transition-all duration-200
-                              ${
-                                isAdded
-                                  ? 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 cursor-default shadow-sm'
-                                  : 'border-gray-200 hover:border-indigo-400 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 cursor-pointer shadow-sm hover:shadow-md'
-                              }
-                            `}
                             onClick={() => !isAdded && !isProcessing && handleAddToList(list.id)}
+                            className="flex items-center justify-between gap-3"
+                            style={{
+                              padding: '13px 16px', borderRadius: 12,
+                              border: `1px solid ${isAdded ? '#c4ddce' : '#e7e3dc'}`,
+                              background: isAdded ? '#eaf3ed' : '#fff',
+                              cursor: isAdded ? 'default' : 'pointer',
+                              transition: 'border-color .15s, background .15s',
+                            }}
+                            onMouseEnter={(e) => { if (!isAdded) { e.currentTarget.style.borderColor = '#1a7a4a'; e.currentTarget.style.background = '#faf9f7'; } }}
+                            onMouseLeave={(e) => { if (!isAdded) { e.currentTarget.style.borderColor = '#e7e3dc'; e.currentTarget.style.background = '#fff'; } }}
                           >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-gray-900 text-lg mb-1 line-clamp-1">
-                                  {list.name}
-                                </h4>
-                                {list.description && (
-                                  <p className="text-sm text-gray-600 mt-1.5 line-clamp-2">
-                                    {list.description}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 mt-3">
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
-                                    {list.item_count} exercice{list.item_count !== 1 ? 's' : ''}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex-shrink-0">
-                                {isProcessing ? (
-                                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
-                                ) : isAdded ? (
-                                  <div className="flex flex-col items-center gap-1 text-green-600">
-                                    <div className="bg-green-500 rounded-full p-1.5">
-                                      <Check className="w-5 h-5 text-white" strokeWidth={3} />
-                                    </div>
-                                    <span className="text-xs font-bold">Ajouté</span>
-                                  </div>
-                                ) : (
-                                  <div className="bg-indigo-100 hover:bg-indigo-200 rounded-full p-2 transition-colors">
-                                    <Plus className="w-6 h-6 text-indigo-600" strokeWidth={2.5} />
-                                  </div>
-                                )}
-                              </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="line-clamp-1" style={{ fontSize: 14.5, fontWeight: 600, color: isAdded ? '#15633c' : '#1a1a1a' }}>
+                                {list.name}
+                              </h4>
+                              {list.description && (
+                                <p className="line-clamp-1 mt-0.5" style={{ fontSize: 12.5, color: '#6b6862' }}>
+                                  {list.description}
+                                </p>
+                              )}
+                              <span style={{ fontSize: 11.5, color: '#9a958c' }}>
+                                {list.item_count} élément{list.item_count !== 1 ? 's' : ''}
+                              </span>
                             </div>
-                          </motion.div>
+                            <div className="flex-shrink-0">
+                              {isProcessing ? (
+                                <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#1a7a4a' }} />
+                              ) : isAdded ? (
+                                <span className="inline-flex items-center gap-1.5" style={{ fontSize: 12, fontWeight: 600, color: '#15633c' }}>
+                                  <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: 99, background: '#1a7a4a' }}>
+                                    <Check className="w-3.5 h-3.5" style={{ color: '#fff' }} strokeWidth={3} />
+                                  </span>
+                                  Ajouté
+                                </span>
+                              ) : (
+                                <span className="flex items-center justify-center" style={{ width: 30, height: 30, borderRadius: 99, background: '#f2f1ee', transition: 'background .15s' }}>
+                                  <Plus className="w-4.5 h-4.5" style={{ width: 18, height: 18, color: '#33302b' }} strokeWidth={2.5} />
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -301,13 +315,10 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-indigo-50">
-              <Button
-                onClick={handleClose}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold h-12 shadow-md hover:shadow-lg transition-all"
-              >
+            <div className="flex-shrink-0 p-4" style={{ borderTop: '1px solid #f2f1ee' }}>
+              <button className="fd-btn-ghost w-full" style={{ justifyContent: 'center', padding: '10px 14px' }} onClick={handleClose}>
                 Fermer
-              </Button>
+              </button>
             </div>
           </motion.div>
         </motion.div>

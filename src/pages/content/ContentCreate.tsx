@@ -1,5 +1,9 @@
 /**
  * ContentCreate — unified creation/edit page for exercise, exam, lesson.
+ *
+ * Chrome design — "ink & paper": flat + bordered, warm neutrals (no cool
+ * slate), green only for selection / primary action, Fraunces for the page
+ * title. The editor pane is a separate component and keeps its own toolbar.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -16,16 +20,16 @@ import { JsonImportModal } from '@/components/common/JsonImportModal';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ClassLevelModel, SubjectModel, ChapterModel, Subfield, Theorem } from '@/types';
 import {
-  ChevronDown, ChevronRight, FileJson, CheckSquare, AlertCircle,
+  ChevronDown, ChevronRight, FileJson, Check, AlertCircle,
   GraduationCap, BookOpen, Tag, FolderOpen, Layers,
 } from 'lucide-react';
 
 type ContentType = 'exercise' | 'exam' | 'lesson';
 
-const TYPE_CONFIG: Record<ContentType, { label: string; color: string; basePath: string }> = {
-  exercise: { label: 'Exercice',  color: 'indigo', basePath: '/exercises' },
-  exam:     { label: 'Examen',    color: 'violet', basePath: '/exams' },
-  lesson:   { label: 'Leçon',    color: 'emerald', basePath: '/lessons' },
+const TYPE_CONFIG: Record<ContentType, { label: string; basePath: string; newTitle: string; editTitle: string }> = {
+  exercise: { label: 'Exercice', basePath: '/exercises', newTitle: 'Nouvel exercice', editTitle: "Modifier l'exercice" },
+  exam:     { label: 'Examen',   basePath: '/exams',     newTitle: 'Nouvel examen',   editTitle: "Modifier l'examen" },
+  lesson:   { label: 'Leçon',    basePath: '/lessons',   newTitle: 'Nouvelle leçon',  editTitle: 'Modifier la leçon' },
 };
 
 const getAPI = (t: ContentType) => {
@@ -51,27 +55,27 @@ interface SidebarSectionProps {
 const SidebarSection: React.FC<SidebarSectionProps> = ({
   icon, label, badge, required, open, onToggle, children,
 }) => (
-  <div className="rounded-xl border border-slate-200 overflow-hidden">
+  <div className="rounded-xl border border-line overflow-hidden">
     <button
       type="button"
       onClick={onToggle}
-      className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+      className="w-full flex items-center gap-3 px-4 py-3 bg-paper hover:bg-[#f2f1ee] transition-colors text-left"
     >
-      <span className="text-slate-400 shrink-0">{icon}</span>
-      <span className="flex-1 text-sm font-medium text-slate-700">
+      <span className="text-[#9a958c] shrink-0">{icon}</span>
+      <span className="flex-1 text-sm font-medium text-ink-soft">
         {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
+        {required && <span className="text-[#c2564f] ml-0.5">*</span>}
       </span>
       {badge !== undefined && badge > 0 && (
-        <span className="px-1.5 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
+        <span className="px-1.5 py-0.5 text-xs font-semibold bg-brand-soft text-brand-hover rounded-full">
           {badge}
         </span>
       )}
       {open
-        ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-        : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
+        ? <ChevronDown className="w-4 h-4 text-[#9a958c] shrink-0" />
+        : <ChevronRight className="w-4 h-4 text-[#9a958c] shrink-0" />}
     </button>
-    {open && <div className="p-3 bg-white">{children}</div>}
+    {open && <div className="p-3 bg-white border-t border-line">{children}</div>}
   </div>
 );
 
@@ -82,7 +86,7 @@ interface CheckboxListProps {
 }
 
 const CheckboxList: React.FC<CheckboxListProps> = ({ items, selected, onToggle }) => (
-  <div className="space-y-1.5 max-h-44 overflow-y-auto">
+  <div className="space-y-1 max-h-44 overflow-y-auto">
     {items.map((item) => {
       const checked = selected.includes(item.id);
       return (
@@ -90,15 +94,15 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ items, selected, onToggle }
           key={item.id}
           onClick={() => onToggle(item.id)}
           className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
-            checked ? 'bg-indigo-50' : 'hover:bg-slate-50'
+            checked ? 'bg-brand-soft' : 'hover:bg-paper'
           }`}
         >
-          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-            checked ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'
+          <span className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+            checked ? 'bg-brand border-brand' : 'border-[#cfcdc8] bg-white'
           }`}>
-            {checked && <CheckSquare className="w-3 h-3 text-white" strokeWidth={3} />}
-          </div>
-          <span className={`text-sm ${checked ? 'text-indigo-700 font-medium' : 'text-slate-600'}`}>
+            {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+          </span>
+          <span className={`text-sm ${checked ? 'text-brand-hover font-medium' : 'text-ink-muted'}`}>
             {item.name}
           </span>
         </label>
@@ -300,16 +304,16 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
 
   // ─── Guards ───────────────────────────────────────────────────────────────
   if (authLoading || isLoading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
+    <div className="min-h-screen bg-paper flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
     </div>
   );
 
   if (!user) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+    <div className="min-h-screen bg-paper flex items-center justify-center">
       <div className="text-center">
-        <p className="text-slate-600 mb-4">Vous devez être connecté</p>
-        <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <p className="text-ink-muted mb-4">Vous devez être connecté pour créer du contenu.</p>
+        <button onClick={() => navigate('/login')} className="fd-btn-primary">
           Se connecter
         </button>
       </div>
@@ -330,30 +334,41 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
     selectedTheorems.length;
 
   const sidebar = (
-    <div className="w-72 shrink-0 bg-white border-r border-slate-200 flex flex-col h-full">
-      {/* Sidebar header */}
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+    <div className="w-72 shrink-0 bg-white border-r border-line flex flex-col h-full">
+      {/* Identity — what am I creating? */}
+      <div className="px-5 pt-5 pb-4 border-b border-line">
+        <span className="inline-block text-[11px] font-medium tracking-wide uppercase px-2 py-0.5 rounded-full bg-[#f2f1ee] text-ink-faint" style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
+          {config.label}
+        </span>
+        <h1 className="fd-display mt-2.5" style={{ fontSize: 21, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.015em' }}>
+          {isEditing ? config.editTitle : config.newTitle}
+        </h1>
+      </div>
+
+      {/* Classification meta + import */}
+      <div className="px-5 py-3.5 border-b border-line flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Classification</p>
-          <p className="text-xs text-slate-500">
-            {selectionCount === 0 ? 'Rien de sélectionné' : `${selectionCount} sélection(s)`}
+          <p className="text-[11px] font-semibold text-[#9a958c] uppercase tracking-widest mb-0.5">Classification</p>
+          <p className="text-xs text-ink-faint">
+            {selectionCount === 0 ? 'Rien de sélectionné' : `${selectionCount} sélection${selectionCount > 1 ? 's' : ''}`}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setShowJsonImport(true)}
-          title="Importer JSON / PDF"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+          data-tour="creer-importer"
+          title="Importer depuis un JSON ou un PDF"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-ink-soft bg-white border border-[#d8d4cc] hover:border-[#1a1a1a] hover:bg-[#f7f6f3] rounded-lg transition-colors"
         >
           <FileJson className="w-3.5 h-3.5" />
-          Import
+          Importer
         </button>
       </div>
 
       {/* Sections */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2" data-tour="creer-classement">
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <div className="flex items-start gap-2 p-3 bg-[#fdeceb] border border-[#f3c9c5] rounded-xl text-sm text-[#a23b34]">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             {error}
           </div>
@@ -381,7 +396,7 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent text-sm bg-white text-slate-700"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:border-brand focus:outline-none text-sm bg-white text-ink-soft"
           >
             <option value="">— Sélectionner —</option>
             {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -435,22 +450,22 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
       </div>
 
       {/* Summary footer */}
-      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500">
-          <span>{selectedClassLevels.length} niveau(x)</span>
-          <span>{selectedSubfields.length} sous-dom.</span>
-          <span className="col-span-2 truncate">
+      <div className="px-5 py-3 border-t border-line bg-paper">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-ink-faint">
+          <span><span className="fd-nums font-semibold text-ink">{selectedClassLevels.length}</span> niveau(x)</span>
+          <span><span className="fd-nums font-semibold text-ink">{selectedSubfields.length}</span> sous-dom.</span>
+          <span className="col-span-2 truncate text-ink-soft">
             {subjects.find(s => String(s.id) === selectedSubject)?.name || '—'}
           </span>
-          <span>{selectedChapters.length} chapitre(s)</span>
-          <span>{selectedTheorems.length} théorème(s)</span>
+          <span><span className="fd-nums font-semibold text-ink">{selectedChapters.length}</span> chapitre(s)</span>
+          <span><span className="fd-nums font-semibold text-ink">{selectedTheorems.length}</span> théorème(s)</span>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-paper overflow-hidden">
       <JsonImportModal
         isOpen={showJsonImport}
         onClose={() => setShowJsonImport(false)}
@@ -489,13 +504,13 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
 
       {/* Preview panel */}
       {showPreview && (
-        <div className="w-1/2 border-l border-slate-200 bg-slate-50 flex flex-col overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
-            <span className="text-sm font-semibold text-slate-700">Aperçu</span>
+        <div className="w-1/2 border-l border-line bg-paper flex flex-col overflow-hidden">
+          <div className="px-5 py-3 border-b border-line bg-white flex items-center justify-between shrink-0">
+            <span className="fd-display" style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>Aperçu</span>
             <button
               type="button"
               onClick={() => setShowPreview(false)}
-              className="text-xs text-slate-400 hover:text-slate-600"
+              className="text-xs font-medium text-ink-faint hover:text-ink transition-colors"
             >
               Fermer
             </button>
@@ -505,13 +520,13 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
               liveLesson?.structure ? (
                 <LessonRenderer structure={liveLesson.structure} />
               ) : (
-                <p className="text-slate-400 text-sm text-center mt-12">Ajoutez des sections pour voir l'aperçu</p>
+                <p className="text-[#9a958c] text-sm text-center mt-12">Ajoutez des sections pour voir l'aperçu.</p>
               )
             ) : (
               liveExercise?.structure?.blocks?.length ? (
                 <ExerciseRenderer structure={liveExercise.structure} interactive={false} showAllSolutions={false} />
               ) : (
-                <p className="text-slate-400 text-sm text-center mt-12">Ajoutez des blocs pour voir l'aperçu</p>
+                <p className="text-[#9a958c] text-sm text-center mt-12">Ajoutez des blocs pour voir l'aperçu.</p>
               )
             )}
           </div>

@@ -20,9 +20,9 @@ interface TypeDef {
 }
 
 const TYPES: TypeDef[] = [
-  { key: 'exercises', label: 'Exercices', icon: BookOpen,   from: '#4f46e5', to: '#818cf8', light: '#eef2ff', text: '#4338ca' },
-  { key: 'lessons',   label: 'Leçons',    icon: LessonIcon, from: '#7c3aed', to: '#a78bfa', light: '#f5f3ff', text: '#5b21b6' },
-  { key: 'exams',     label: 'Examens',   icon: APlusIcon,  from: '#0891b2', to: '#22d3ee', light: '#ecfeff', text: '#0e7490' },
+  { key: 'exercises', label: 'Exercices', icon: BookOpen,   from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+  { key: 'lessons',   label: 'Leçons',    icon: LessonIcon, from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
+  { key: 'exams',     label: 'Examens',   icon: APlusIcon,  from: '#1a1a1a', to: '#33302b', light: '#f2f1ee', text: '#1a1a1a' },
 ];
 
 export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBreakdown, insights }) => {
@@ -32,14 +32,14 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
       return {
         icon: CheckCircle,
         message: "Excellent ! Ton temps d'étude est bien équilibré entre les différents types de contenu.",
-        bg: '#ecfdf5', border: '#bbf7d0', color: '#047857',
+        bg: '#f7f6f3', border: '#e7e3dc', color: '#33302b',
       };
     }
     if (insights.needs_more_lessons) {
       return {
         icon: AlertCircle,
         message: 'Conseil : passe plus de temps sur les leçons. Elles sont essentielles pour construire une base solide.',
-        bg: '#fffbeb', border: '#fde68a', color: '#a16207',
+        bg: '#f7f6f3', border: '#e7e3dc', color: '#33302b',
       };
     }
     const most = TYPES.find(t => t.key === insights.most_studied_type);
@@ -47,7 +47,7 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
     return {
       icon: TrendingUp,
       message: `Tu passes le plus de temps sur les ${most?.label.toLowerCase()}. Pense aussi aux ${least?.label.toLowerCase()} !`,
-      bg: '#eef2ff', border: '#c7d2fe', color: '#4338ca',
+      bg: '#f7f6f3', border: '#e7e3dc', color: '#33302b',
     };
   })();
 
@@ -59,17 +59,17 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
           className="inline-flex items-center justify-center"
           style={{
             width: 28, height: 28, borderRadius: 8,
-            background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+            background: '#f2f1ee', color: '#1a1a1a',
           }}
         >
           <Clock className="w-3.5 h-3.5" />
         </div>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>
           Temps d'étude par type
         </h3>
         <span
           style={{
-            marginLeft: 'auto', fontSize: 10, color: '#9391b8',
+            marginLeft: 'auto', fontSize: 10, color: '#6b6862',
             fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase',
           }}
         >
@@ -92,7 +92,7 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
               style={{
                 background: '#fff',
                 borderRadius: 16,
-                border: '1px solid #ede9fe',
+                border: '1px solid #e7e3dc',
                 padding: 16,
                 transition: 'all .22s',
               }}
@@ -102,7 +102,7 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
                   style={{
                     position: 'absolute', top: 10, right: 10,
                     fontSize: 9, fontWeight: 700, letterSpacing: '.04em',
-                    background: t.light, color: t.text,
+                    background: '#eaf3ed', color: '#15633c',
                     padding: '3px 8px', borderRadius: 99,
                   }}
                 >
@@ -115,7 +115,7 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
                   className="inline-flex items-center justify-center"
                   style={{
                     width: 30, height: 30, borderRadius: 9,
-                    background: `linear-gradient(135deg,${t.from},${t.to})`, color: '#fff',
+                    background: '#f2f1ee', color: '#1a1a1a',
                   }}
                 >
                   <Icon className="w-4 h-4" />
@@ -126,19 +126,19 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
               <div
                 style={{
                   fontSize: 26, fontWeight: 700, fontFamily: 'DM Mono',
-                  color: '#1e1b4b', letterSpacing: '.02em',
+                  color: '#1a1a1a', letterSpacing: '.02em',
                 }}
               >
                 {data.formatted || '0s'}
               </div>
-              <div style={{ fontSize: 11, color: '#7068a8', marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: '#6b6862', marginTop: 2 }}>
                 {data.percentage.toFixed(1)}% du temps total
               </div>
 
               {/* Progress bar */}
               <div
                 style={{
-                  height: 6, borderRadius: 99, background: '#f0effe',
+                  height: 6, borderRadius: 99, background: '#faf9f7',
                   marginTop: 10, overflow: 'hidden',
                 }}
               >
@@ -146,7 +146,7 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
                   style={{
                     height: '100%',
                     width: `${data.percentage}%`,
-                    background: `linear-gradient(90deg,${t.from},${t.to})`,
+                    background: '#1a7a4a',
                     transition: 'width .5s ease',
                   }}
                 />
@@ -179,13 +179,13 @@ export const StudyTimeBreakdown: React.FC<StudyTimeBreakdownProps> = ({ timeBrea
         <div
           className="text-center"
           style={{
-            background: '#f9f8ff', border: '1.5px dashed #ede9fe',
+            background: '#f7f6f3', border: '1.5px dashed #e7e3dc',
             borderRadius: 14, padding: 24,
           }}
         >
-          <Clock className="w-10 h-10 mx-auto mb-2" style={{ color: '#b0adcd' }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#4b4880' }}>Aucune donnée d'étude pour le moment</p>
-          <p style={{ fontSize: 11, color: '#9391b8', marginTop: 4 }}>
+          <Clock className="w-10 h-10 mx-auto mb-2" style={{ color: '#6b6862' }} />
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#33302b' }}>Aucune donnée d'étude pour le moment</p>
+          <p style={{ fontSize: 11, color: '#6b6862', marginTop: 4 }}>
             Commence un exercice, une leçon ou un examen pour voir tes statistiques.
           </p>
         </div>

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, X, File, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
+import { Upload, File, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 
@@ -162,7 +162,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               <FileIcon className="w-10 h-10 text-slate-400" />
               <div className="text-center">
                 <p className="text-sm font-medium text-slate-700">
-                  Drop file here or click to browse
+                  Dépose un fichier ici ou clique pour parcourir
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
                   Max {maxSizeMB}MB

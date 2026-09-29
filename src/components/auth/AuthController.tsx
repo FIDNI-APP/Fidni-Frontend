@@ -1,6 +1,8 @@
 // src/components/AuthController.tsx
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { AuthModal } from './AuthModal';
+import React, { Suspense, createContext, lazy, useState, useContext, useEffect } from 'react';
+
+// La fenêtre de connexion (et framer-motion qu'elle utilise) n'est téléchargée qu'à son ouverture.
+const AuthModal = lazy(() => import('./AuthModal').then((m) => ({ default: m.AuthModal })));
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -59,7 +61,11 @@ export const AuthModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     <AuthModalContext.Provider value={{ isOpen, openModal, closeModal, initialTab, setInitialTab }}>
       {children}
       {/* Render modal conditionally to avoid DOM manipulation issues */}
-      {isOpen && <AuthModal isOpen={isOpen} onClose={closeModal} initialTab={initialTab} />}
+      {isOpen && (
+        <Suspense fallback={null}>
+          <AuthModal isOpen={isOpen} onClose={closeModal} initialTab={initialTab} />
+        </Suspense>
+      )}
     </AuthModalContext.Provider>
   );
 };

@@ -127,7 +127,7 @@ const toContentBlock = (html: string | undefined) =>
 const transformJsonData = (data: any, contentType: string) => {
   // Exercise and exam share the same block structure
   if (contentType === 'exercise' || contentType === 'exam' || contentType === 'content-exercise') {
-    const blocks = (data.blocks || []).map((block: any, index: number) => {
+    const blocks = (data.blocks || []).map((block: any) => {
       const blockType = block.type || 'question';
       return {
         id: generateId(),
@@ -135,11 +135,13 @@ const transformJsonData = (data: any, contentType: string) => {
         content: toContentBlock(block.content),
         solution: toContentBlock(block.solution),
         points: block.points,
+        ...(block.meta ? { meta: block.meta } : {}),
         subQuestions: (block.subQuestions || []).map((sq: any) => ({
           id: generateId(),
           content: toContentBlock(sq.content),
           solution: toContentBlock(sq.solution),
           points: sq.points,
+          ...(sq.meta ? { meta: sq.meta } : {}),
         })),
       };
     });
@@ -147,7 +149,7 @@ const transformJsonData = (data: any, contentType: string) => {
     return {
       title: data.title || '',
       difficulty: data.difficulty,
-      structure: { version: '2.0', blocks },
+      structure: { version: '2.1', blocks },
       ...(contentType === 'exam' && {
         isNationalExam: data.is_national_exam || false,
         nationalYear: data.national_year,

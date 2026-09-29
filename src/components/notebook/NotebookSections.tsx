@@ -15,65 +15,82 @@ const NotebookSections: React.FC<NotebookSectionsProps> = ({
   sections,
   activeSectionId,
   onSelectSection,
-  onRemoveLesson,
   onGoBack,
   notebookTitle
 }) => {
   return (
-    <div className="w-56 flex-shrink-0 bg-white border-r border-indigo-100 overflow-y-auto flex flex-col">
+    <div
+      className="flex-shrink-0 overflow-y-auto flex flex-col"
+      style={{ width: 240, background: '#fff', borderRight: '1px solid #e7e3dc' }}
+    >
       {/* Back button + notebook title */}
       {onGoBack && (
-        <div className="px-2 pt-2 pb-1 border-b border-indigo-100">
-          <button onClick={onGoBack} className="flex items-center gap-1 text-indigo-500 hover:text-indigo-700 text-xs font-medium transition-colors w-full">
-            <ChevronLeft className="w-3.5 h-3.5" />
-            {notebookTitle || 'Retour'}
-          </button>
-        </div>
+        <button
+          onClick={onGoBack}
+          className="flex items-center gap-1.5 w-full text-left"
+          style={{ padding: '12px 14px', borderBottom: '1px solid #faf9f7', background: 'transparent', border: 'none', borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: '#faf9f7', color: '#33302b', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'color .14s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#15633c'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#33302b'; }}
+        >
+          <ChevronLeft className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">{notebookTitle || 'Retour'}</span>
+        </button>
       )}
-      <div className="py-2">
-      <h3 className="px-3 mb-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center">
-        <BookOpen className="w-3.5 h-3.5 mr-1.5" />
-        Chapitres
-      </h3>
-      
-      {!sections || sections.length === 0 ? (
-        <div className="px-3 py-6 text-center">
-          <p className="text-gray-400 text-xs">Aucun chapitre</p>
-        </div>
-      ) : (
-        <div className="space-y-0.5 px-2">
-          {sections.map((section) => {
-            const hasLessons = section.lesson_entries && section.lesson_entries.length > 0;
-            const lessonCount = section.lesson_entries ? section.lesson_entries.length : 0;
-            const isActive = activeSectionId === section.id;
 
-            return (
-              <button
-                key={section.id}
-                onClick={() => hasLessons && onSelectSection(section.id)}
-                disabled={!hasLessons}
-                className={`w-full text-left rounded-lg py-2 px-3 flex items-center justify-between transition-colors
-                  ${isActive
-                    ? 'bg-indigo-50 border-l-3 border-indigo-600'
-                    : hasLessons
-                      ? 'text-slate-700 hover:bg-indigo-50 border-l-3 border-transparent'
-                      : 'text-slate-400 border-l-3 border-transparent cursor-default'}
-                `}
-                style={{ borderLeftWidth: '3px' }}
-              >
-                <span className={`text-sm truncate ${isActive ? 'font-semibold text-indigo-800' : 'font-medium'}`}>
-                  {section.chapter.name}
-                </span>
-                {hasLessons && (
-                  <span className={`text-xs flex-shrink-0 ml-2 px-1.5 py-0.5 rounded-full ${isActive ? 'bg-indigo-200 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {lessonCount}
+      <div className="py-3">
+        <h3 className="flex items-center gap-1.5" style={{ padding: '0 14px 8px', fontSize: 10.5, fontWeight: 700, color: '#9a958c', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+          <BookOpen className="w-3.5 h-3.5" />
+          Chapitres
+        </h3>
+
+        {!sections || sections.length === 0 ? (
+          <div className="px-3 py-6 text-center">
+            <p style={{ color: '#9a958c', fontSize: 12.5 }}>Aucun chapitre</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-0.5 px-2">
+            {sections.map((section) => {
+              const hasLessons = section.lesson_entries && section.lesson_entries.length > 0;
+              const lessonCount = section.lesson_entries ? section.lesson_entries.length : 0;
+              const isActive = activeSectionId === section.id;
+
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => hasLessons && onSelectSection(section.id)}
+                  disabled={!hasLessons}
+                  className="w-full text-left flex items-center justify-between"
+                  style={{
+                    padding: '9px 11px', borderRadius: 9,
+                    borderLeft: `3px solid ${isActive ? '#1a7a4a' : 'transparent'}`,
+                    background: isActive ? '#eaf3ed' : 'transparent',
+                    color: isActive ? '#15633c' : hasLessons ? '#33302b' : '#cfcdc8',
+                    cursor: hasLessons ? 'pointer' : 'default',
+                    transition: 'background .14s, color .14s',
+                  }}
+                  onMouseEnter={(e) => { if (hasLessons && !isActive) e.currentTarget.style.background = '#f7f6f3'; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span className="truncate" style={{ fontSize: 13.5, fontWeight: isActive ? 600 : 500 }}>
+                    {section.chapter.name}
                   </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+                  {hasLessons && (
+                    <span
+                      className="flex-shrink-0 ml-2"
+                      style={{
+                        fontSize: 11, fontWeight: 600, padding: '1px 7px', borderRadius: 99,
+                        background: isActive ? '#d3e7db' : '#f2f1ee',
+                        color: isActive ? '#15633c' : '#6b6862',
+                      }}
+                    >
+                      {lessonCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

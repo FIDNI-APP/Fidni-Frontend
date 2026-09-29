@@ -1,12 +1,37 @@
 // src/lib/api/notebookApi.ts
 import {api} from './apiClient';
-import { Notebook, NotebookResponse, NotebookChapter, NotebookLessonEntry } from '@/types/index'
+import { Notebook, NotebookChapter } from '@/types/index';
+
+/**
+ * Normalize API responses: rename `json_content` → `structure`.
+ *
+ * The other content APIs normalize at the top level only, because they return
+ * a lesson directly. Notebook payloads bury the lesson three levels down
+ * (notebook → sections → lesson_entries → lesson), so the rename has to walk
+ * the whole tree — otherwise `lesson.structure` is undefined and the reader
+ * renders a blank page.
+ */
+export function normalizeNotebookPayload<T>(data: T): T {
+  return normalize(data);
+}
+
+function normalize<T>(data: T): T {
+  if (Array.isArray(data)) return data.map(normalize) as unknown as T;
+  if (data && typeof data === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+      out[key === 'json_content' ? 'structure' : key] = normalize(value);
+    }
+    return out as unknown as T;
+  }
+  return data;
+}
 
 // Get all notebooks for a user
 export const getUserNotebooks = async (username: string): Promise<Notebook[]> => {
   try {
     const response = await api.get(`/users/${username}/notebooks/`);
-    return response.data.notebooks || [];
+    return normalize(response.data.notebooks || []);
   } catch (error) {
     console.error('Error fetching user notebooks:', error);
     throw error;
@@ -17,7 +42,7 @@ export const getUserNotebooks = async (username: string): Promise<Notebook[]> =>
 export const getNotebookById = async (notebookId: string): Promise<Notebook> => {
   try {
     const response = await api.get(`/notebooks/${notebookId}/`);
-    return response.data;
+    return normalize(response.data);
   } catch (error) {
     console.error('Error fetching notebook:', error);
     throw error;
@@ -73,7 +98,7 @@ export const addChapterToNotebook = async (
       chapter_id: chapterId,
       notes
     });
-    return response.data;
+    return normalize(response.data);
   } catch (error) {
     console.error('Error adding chapter to notebook:', error);
     throw error;
@@ -85,14 +110,14 @@ export const addLessonToNotebook = async (
   notebookId: string,
   chapterId: string,
   lessonId: string,
-  notes?: string,
-  highlighted: boolean = false
+  _notes?: string,
+  _highlighted: boolean = false
 ): Promise<NotebookChapter> => {
   try {
     const response = await api.post(`/notebooks/${notebookId}/chapters/${chapterId}/add_lesson/`, {
       lesson_id: lessonId
     });
-    return response.data;
+    return normalize(response.data);
   } catch (error) {
     console.error('Error adding lesson to notebook:', error);
     throw error;
@@ -109,7 +134,7 @@ export const removeFromNotebook = async (
     const response = await api.post(`/notebooks/${notebookId}/chapters/${chapterId}/remove_lesson_page/`, {
       lesson_entry_id: lessonEntryId
     });
-    return response.data;
+    return normalize(response.data);
   } catch (error) {
     console.error('Error removing lesson from notebook:', error);
     throw error;
@@ -127,7 +152,7 @@ export const updateChapterNotes = async (
       `/notebooks/${notebookId}/chapters/${chapterId}/update_notes/`,
       { user_notes: notes }
     );
-    return response.data;
+    return normalize(response.data);
   } catch (error) {
     console.error('Error updating chapter notes:', error);
     throw error;

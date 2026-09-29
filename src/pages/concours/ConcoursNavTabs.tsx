@@ -10,23 +10,22 @@ const TABS = [
 /**
  * Concours section nav.
  *  - "card"  (default): standalone white pill bar on a light page.
- *  - "hero":  sits at the bottom of a dark gradient hero — white tabs that
- *             merge into the page below (ContentDetail-style).
+ *  - "hero":  onglets soulignés sous l'en-tête de page (comme le profil).
  */
 export function ConcoursNavTabs({ variant = 'card' }: { variant?: 'card' | 'hero' }) {
   const { pathname } = useLocation();
 
   if (variant === 'hero') {
     return (
-      <div className="flex items-center gap-1 -mb-px overflow-x-auto scrollbar-hide">
+      <div className="flex items-center gap-1 -mb-px overflow-x-auto scrollbar-hide" data-tour="concours-onglets">
         {TABS.map(({ to, label, icon: Icon, exact }) => {
           const active = exact ? pathname === to : pathname.startsWith(to);
           return (
             <Link
               key={to}
               to={to}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl transition-all whitespace-nowrap ${
-                active ? 'bg-[#f8f7ff] text-indigo-700' : 'text-white/75 hover:text-white hover:bg-white/10'
+              className={`flex items-center gap-2 px-1 mr-5 py-2.5 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                active ? 'border-[#1a7a4a] text-[#15633c] font-bold' : 'border-transparent text-[#6b6862] font-medium hover:text-[#1a1a1a]'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -55,8 +54,8 @@ export function ConcoursNavTabs({ variant = 'card' }: { variant?: 'card' | 'hero
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '9px 18px', borderRadius: 10,
               fontSize: 14, fontWeight: active ? 700 : 500,
-              color: active ? '#4f46e5' : '#6b7280',
-              background: active ? '#eef2ff' : 'transparent',
+              color: active ? '#1a1a1a' : '#6b7280',
+              background: active ? '#f2f1ee' : 'transparent',
               textDecoration: 'none',
               transition: 'all .15s',
               flex: '0 0 auto',
@@ -67,7 +66,7 @@ export function ConcoursNavTabs({ variant = 'card' }: { variant?: 'card' | 'hero
             {active && (
               <span style={{
                 marginLeft: 4, width: 6, height: 6, borderRadius: '50%',
-                background: '#4f46e5', display: 'inline-block',
+                background: '#1a1a1a', display: 'inline-block',
               }} />
             )}
           </Link>

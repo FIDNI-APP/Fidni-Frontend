@@ -1,0 +1,86 @@
+/* Campus de l'accueil, parties communes (cadre, cartable, boutons) — classes préfixées fdc- pour ne rien affecter ailleurs. Tokens : src/index.css :root. */
+.fdc-root {
+  position: relative; overflow: hidden; container-type: inline-size;
+  height: calc(100vh - 60px); height: calc(100dvh - 60px); min-height: 420px;
+  background: #e6e1d8;
+}
+
+.fdc-card { background: rgba(255, 255, 255, .94); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 0 rgba(26,26,26,.04), 0 10px 28px -16px rgba(30,40,60,.35); }
+
+.fdc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.fdc-stats div { background: #fff; padding: 11px 12px; }
+.fdc-stats b { display: block; font: 600 18px 'DM Mono', monospace; color: var(--ink); letter-spacing: -.01em; }
+.fdc-stats span { font-size: 11.5px; color: var(--ink-faint); }
+.fdc-actions { display: flex; gap: 8px; }
+.fdc-btn { white-space: nowrap; height: 42px; padding: 0 16px; border-radius: 11px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.fdc-btn.primary { flex: 1; background: var(--brand); color: #fff; border: 0; }
+.fdc-btn.primary:hover { background: var(--brand-hover); }
+.fdc-btn.ghost { background: #fff; color: var(--ink-soft); border: 1px solid #cfc7b9; font-weight: 500; }
+.fdc-btn.ghost:hover { background: var(--paper); }
+
+/* Le cartable : bouton dessiné + menu vers « Mon espace » */
+.fdc-bag {
+  position: absolute; right: 16px; bottom: 16px; z-index: 6; display: flex; align-items: center; gap: 10px;
+  padding: 6px 16px 6px 8px; border-radius: 16px; cursor: pointer; text-align: left; font: inherit; color: var(--ink);
+  transition: border-color .2s ease, transform .25s cubic-bezier(.22,1,.36,1);
+}
+.fdc-bag:hover { border-color: var(--gold); transform: translateY(-2px); }
+.fdc-bag svg { flex: none; overflow: visible; }
+.fdc-bag .flap { transform-box: fill-box; transform-origin: 50% 0; transition: transform .3s cubic-bezier(.22,1,.36,1); }
+.fdc-bag .peek { transition: transform .3s cubic-bezier(.22,1,.36,1); }
+.fdc-bag:hover .flap, .fdc-bag[aria-expanded="true"] .flap { transform: scaleY(.82); }
+.fdc-bag:hover .peek, .fdc-bag[aria-expanded="true"] .peek { transform: translateY(-4px); }
+.fdc-bag .tx { display: flex; flex-direction: column; line-height: 1.2; }
+.fdc-bag .tx b { font: 600 15px 'Fraunces', Georgia, serif; }
+.fdc-bag .tx span { font-size: 11.5px; color: var(--ink-faint); }
+/* Le tableau vert du cartable : cadre bois, sous-main, trois objets */
+.fdc-board {
+  position: absolute; right: 16px; bottom: 90px; z-index: 7; width: 500px; max-width: calc(100% - 32px);
+  padding: 9px; border-radius: 18px; background: #c49a6c; box-shadow: 0 26px 50px -22px rgba(0,0,0,.6);
+  animation: fdc-up .25s cubic-bezier(.22,1,.36,1);
+}
+@keyframes fdc-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.fdc-board-in { position: relative; padding: 12px 16px 16px; border-radius: 11px; background: #2f4a3c; box-shadow: inset 0 2px 12px rgba(0,0,0,.35); }
+.fdc-board-in::after { content: ""; position: absolute; inset: 6px; border: 1.5px dashed rgba(255,255,255,.12); border-radius: 8px; pointer-events: none; }
+.fdc-board-head { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font: 500 11px 'DM Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: rgba(241,237,230,.65); }
+.fdc-board-head button { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; color: rgba(241,237,230,.7); cursor: pointer; }
+.fdc-board-head button:hover { background: rgba(255,255,255,.1); color: #f1ede6; }
+.fdc-board-items { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fdc-obj { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px 10px; border-radius: 12px; text-align: center; text-decoration: none; color: #f1ede6; transition: background .2s ease; }
+.fdc-obj:hover, .fdc-obj:focus-visible { background: rgba(255,255,255,.07); }
+.fdc-obj:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.fdc-obj .art { height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; transition: transform .3s cubic-bezier(.22,1,.36,1); }
+.fdc-obj:hover .art, .fdc-obj:focus-visible .art { transform: translateY(-4px); }
+.fdc-obj b { font: 600 15px/1.2 'Fraunces', Georgia, serif; }
+.fdc-obj small { font-size: 12px; color: rgba(241,237,230,.66); }
+.fdc-nb { position: relative; width: 66px; height: 88px; border-radius: 2px 7px 7px 2px; background: #2f6b53; transform: rotate(-4deg); box-shadow: 0 14px 18px -8px rgba(0,0,0,.6); transition: transform .3s ease; }
+.fdc-nb::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 9px; background: rgba(0,0,0,.2); border-radius: 2px 0 0 2px; }
+.fdc-nb::after { content: ""; position: absolute; right: -4px; top: 5px; bottom: 5px; width: 4px; border-radius: 0 2px 2px 0; background: repeating-linear-gradient(#f6f2ea 0 2px, #d6cfc1 2px 3px); }
+.fdc-nb i { position: absolute; left: 17px; right: 9px; top: 20px; height: 20px; border-radius: 4px; background: #fbf8f1; }
+.fdc-fiche {
+  display: flex; flex-direction: column; justify-content: flex-start; width: 118px; height: 76px; padding: 21px 8px 4px; text-align: left;
+  border-radius: 3px; transform: rotate(2.5deg); box-shadow: 0 14px 18px -8px rgba(0,0,0,.6); transition: transform .3s ease;
+  background-color: #fffdf7;
+  background-image: linear-gradient(#e3a1a1, #e3a1a1), repeating-linear-gradient(transparent 0 13px, #cfdcec 13px 14px);
+  background-size: 100% 1.5px, 100% 100%; background-position: 0 17px, 0 21px; background-repeat: no-repeat, repeat;
+}
+.fdc-fiche i { font: italic 500 10.5px/14px 'Fraunces', Georgia, serif; color: #243b6b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fdc-note { position: relative; width: 76px; height: 76px; display: grid; place-items: center; background: #f4e3a1; color: #8a6d1e; transform: rotate(-3deg); box-shadow: 0 14px 18px -8px rgba(0,0,0,.6); transition: transform .3s ease; }
+.fdc-note::before { content: ""; position: absolute; left: 50%; top: -7px; width: 34px; height: 13px; margin-left: -17px; background: rgba(255,255,255,.5); transform: rotate(-4deg); }
+.fdc-obj:hover .fdc-nb, .fdc-obj:hover .fdc-fiche, .fdc-obj:hover .fdc-note { transform: rotate(0); }
+
+/* Chargement / campus indisponible */
+.fdc-state { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; text-align: center; padding: 16px; }
+.fdc-state p { margin: 0 0 12px; font: italic 500 17px 'Fraunces', Georgia, serif; color: var(--ink-soft); }
+
+/* Zone étroite (sidebar dépliée sur petit écran, tablette, mobile) : cartable compact, tableau pleine largeur */
+@container (max-width: 819px) {
+  .fdc-bag { padding: 6px; }
+  .fdc-bag .tx { display: none; }
+  .fdc-board { right: 12px; left: 12px; width: auto; max-width: none; bottom: 84px; }
+  .fdc-obj .art { height: 88px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fdc-board { animation: none; }
+  .fdc-bag, .fdc-bag .flap, .fdc-bag .peek { transition: none; }
+}

@@ -221,10 +221,13 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
     /**
      * Add a comment to content
      */
-    addComment: async (id: string, content: string, parentId?: string) => {
+    addComment: async (id: string, content: string, parentId?: string, fileIds?: string[]) => {
+      // file_ids : images déjà envoyées (/files/upload/). Avant, ce paramètre n'existait pas :
+      // les images des commentaires étaient envoyées mais jamais rattachées.
       const response = await api.post(`/${resourcePath}/${id}/comment/`, {
         content,
         parent: parentId,
+        ...(fileIds && fileIds.length ? { file_ids: fileIds } : {}),
       });
       return response.data;
     },
@@ -299,7 +302,6 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
           const response = await api.post(`/${resourcePath}/${id}/save_time_spent/`, {
             time_spent: timeSeconds,
           });
-          console.log(`Auto-saved ${timeSeconds}s for ${resourceName} ${id}`);
           return response.data;
         } catch (error) {
           console.warn(`Failed to auto-save time spent on ${resourceName}:`, error);

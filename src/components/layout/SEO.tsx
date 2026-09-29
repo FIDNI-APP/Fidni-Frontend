@@ -29,7 +29,7 @@ const defaultKeywords = [
 
 export function SEO({
   title = 'Fidni - Plateforme d\'apprentissage des mathématiques',
-  description = 'Progressez en mathématiques avec des exercices adaptés à votre niveau. Plus de 1000 exercices, solutions détaillées et suivi personnalisé pour collégiens et lycéens.',
+  description = 'Exercices, leçons et examens de maths corrigés pour les lycéens et leurs professeurs : solutions détaillées, suivi de progression et feuilles d’exercices en PDF.',
   keywords = defaultKeywords,
   author = 'Fidni',
   ogType = 'website',
@@ -38,7 +38,7 @@ export function SEO({
   noindex = false,
   structuredData,
 }: SEOProps) {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.com';
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.fr';
   const fullTitle = title.includes('Fidni') ? title : `${title} | Fidni`;
   const currentUrl = canonicalUrl || `${siteUrl}${window.location.pathname}`;
 
@@ -90,7 +90,7 @@ export function SEO({
       <meta property="twitter:image" content={`${siteUrl}${ogImage}`} />
 
       {/* Additional Meta Tags */}
-      <meta name="theme-color" content="#4f46e5" />
+      <meta name="theme-color" content="#1a1a1a" />
       <meta httpEquiv="Content-Language" content="fr" />
       <meta name="language" content="French" />
       <meta name="revisit-after" content="7 days" />
@@ -116,7 +116,7 @@ export const createExerciseStructuredData = (exercise: {
   class_levels?: Array<{ name: string }>;
   subject?: { name: string };
 }) => {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.com';
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.fr';
 
   return {
     '@context': 'https://schema.org',
@@ -155,7 +155,7 @@ export const createLessonStructuredData = (lesson: {
   created_at: string;
   updated_at: string;
 }) => {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.com';
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.fr';
 
   return {
     '@context': 'https://schema.org',
@@ -185,12 +185,12 @@ export const createLearningPathStructuredData = (path: {
   description: string;
   chapters: Array<{ id: string; title: string }>;
 }) => {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.com';
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.fr';
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Course',
-    '@id': `${siteUrl}/learning-paths/${path.id}`,
+    '@id': `${siteUrl}/learning-path/${path.id}`,
     name: path.title,
     description: path.description,
     provider: {
@@ -209,7 +209,7 @@ export const createLearningPathStructuredData = (path: {
 
 // Helper function for breadcrumb structured data
 export const createBreadcrumbStructuredData = (items: Array<{ name: string; url: string }>) => {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.com';
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.fr';
 
   return {
     '@context': 'https://schema.org',

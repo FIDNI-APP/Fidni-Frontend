@@ -1,5 +1,5 @@
 import React from 'react';
-import { SortOption } from '../types';
+import type { SortOption } from '@/types';
 
 interface SortDropdownProps {
   value: SortOption;
@@ -11,12 +11,13 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({ value, onChange }) =
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as SortOption)}
-      className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      aria-label="Trier"
+      className="pl-3 pr-8 py-2 text-sm bg-white border border-[#e7e3dc] rounded-xl text-[#1a1a1a] focus:outline-none focus:border-[#1a7a4a] focus:ring-2 focus:ring-[#1a7a4a]/20"
     >
       <option value="newest">Plus récents</option>
       <option value="oldest">Plus anciens</option>
       <option value="most_upvoted">Plus populaires</option>
-      <option value="most_commented">Plus commentés</option>
+      {/* « Plus commentés » retiré : le serveur ne sait pas trier ainsi et renvoyait les plus récents. */}
     </select>
   );
 };

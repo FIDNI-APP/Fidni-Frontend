@@ -22,11 +22,9 @@ import {
   X, Upload, Camera, Check, ChevronDown, Search, FunctionSquare
 } from 'lucide-react';
 
-import { RealTimeMathExtension, getFormulaAtPosition } from './MathExtension';
+import { RealTimeMathExtension } from './MathExtension';
 import TipTapRenderer from './TipTapRenderer';
-import {
-  MathFormula, FormulaCategory, colorOptions, mathFormulaCategories, mathSymbols, PAGE_CONFIG
-} from './editorConfig';
+import { FormulaCategory, colorOptions, mathFormulaCategories, mathSymbols, PAGE_CONFIG } from './editorConfig';
 
 // ============================================
 // Sub-components
@@ -200,18 +198,32 @@ const ImageModal: React.FC<{
   const [imageUrl, setImageUrl] = useState('');
   const [caption, setCaption] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Local preview immediately
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setPreview(result);
-      setImageUrl(result);
-    };
+    reader.onload = (ev) => setPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
+    // Real upload to S3 — the stable download_url is what gets embedded
+    try {
+      setUploading(true);
+      setUploadError(null);
+      setImageUrl('');
+      const { fileAPI } = await import('@/lib/api');
+      const res = await fileAPI.upload(file, 'content');
+      setImageUrl(res.download_url || res.url);
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      setUploadError("Échec de l'envoi de l'image. Réessaie.");
+      setPreview(null);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleInsert = () => {
@@ -241,6 +253,12 @@ const ImageModal: React.FC<{
             <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
               <img src={preview} alt="Aperçu" className="max-w-full max-h-48 mx-auto rounded-lg" />
             </div>
+          )}
+          {uploading && (
+            <p className="text-sm text-center" style={{ color: '#6b6862' }}>Envoi de l'image…</p>
+          )}
+          {uploadError && (
+            <p className="text-sm text-center" style={{ color: '#b91c1c' }}>{uploadError}</p>
           )}
 
           <div>
@@ -280,11 +298,11 @@ const ImageModal: React.FC<{
           </button>
           <button
             onClick={handleInsert}
-            disabled={!imageUrl}
+            disabled={!imageUrl || uploading}
             className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             <Check className="w-4 h-4" />
-            Insérer
+            {uploading ? 'Envoi…' : 'Insérer'}
           </button>
         </div>
       </div>
@@ -464,7 +482,6 @@ interface TipTapEditorProps {
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
   content = '',
   onChange,
-  placeholder,
 }) => {
   const [activeTab, setActiveTab] = useState<'text' | 'math'>('text');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -475,7 +492,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
 
   // Formula edit handler
-  const handleEditMath = (latex: string, isDisplay: boolean, nodePos: number) => {
+  const handleEditMath = (latex: string, isDisplay: boolean, _nodePos: number) => {
     setEditingFormula({ latex, isDisplay });
     setShowFormulaModal(true);
   };
@@ -564,7 +581,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
   // Close dropdowns on outside click
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (_e: MouseEvent) => {
       if (showColorPicker) setShowColorPicker(false);
       if (activeCategoryIndex !== null) setActiveCategoryIndex(null);
     };

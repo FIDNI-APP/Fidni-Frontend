@@ -1,620 +1,256 @@
-// src/components/profile/StatsDashboard.tsx - Version corrigée
-import React, { useState, useEffect } from 'react';
-import { 
-  Clock, Target, BookOpen, CheckCircle, Eye, MessageSquare, 
-  TrendingUp, Award, GraduationCap, PenTool, FileCheck,
-  Search, Layers, FileText, Zap
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ProgressRing } from '@/components/ui/ProgressRing';
+// src/components/profile/StatsDashboard.tsx
+// Onglet « Statistiques » du profil : le bilan au LONG COURS (l'accueil montre la semaine en
+// cours). Une seule page lisible au lieu de quatre sous-onglets ; uniquement des chiffres
+// enregistrés — l'ancien « score d'impact » (formule inventée) est retiré.
+import React, { useEffect, useMemo, useState } from 'react';
+import { Clock, BookOpen, PenTool, FileCheck, CheckCircle2, Bookmark, Eye, MessageSquare, ThumbsUp, Layers, Search } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { getTaxonomyTimeStats, type TaxonomyTimeItem } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Types pour les données de l'API
 interface TimeTrackingData {
-  exercise_stats: {
-    total_time_seconds: number;
-    total_time_formatted: string;
-    unique_content_studied: number;
-  };
-  lesson_stats: {
-    total_time_seconds: number;
-    total_time_formatted: string;
-    unique_content_studied: number;
-  };
-  exam_stats: {
-    total_time_seconds: number;
-    total_time_formatted: string;
-    unique_content_studied: number;
-  };
-  overall_stats: {
-    total_time_all_content: number;
-    total_time_formatted: string;
-    current_study_streak: number;
-  };
+  exercise_stats: { total_time_seconds: number; total_time_formatted: string; unique_content_studied: number };
+  lesson_stats: { total_time_seconds: number; total_time_formatted: string; unique_content_studied: number };
+  exam_stats: { total_time_seconds: number; total_time_formatted: string; unique_content_studied: number };
+  overall_stats: { total_time_seconds: number; total_time_formatted: string; current_study_streak: number };
 }
 
 interface StatsDashboardProps {
   username: string;
   contributionStats?: {
-    exercises: number;
-    solutions: number;
-    comments: number;
-    total_contributions: number;
-    upvotes_received: number;
-    view_count: number;
+    exercises: number; solutions: number; comments: number; total_contributions: number;
+    upvotes_received: number; view_count: number;
   };
   learningStats?: {
-    exercises_completed: number;
-    exercises_in_review: number;
-    exercises_saved: number;
-    subjects_studied: string[];
-    total_viewed: number;
+    exercises_completed: number; exercises_in_review: number; exercises_saved: number;
+    subjects_studied: string[]; total_viewed: number;
   };
 }
 
-// Configuration pour les types de taxonomie
-const TAXONOMY_CONFIG = {
-  subject: {
-    icon: GraduationCap,
-    label: 'Matières',
-    singularLabel: 'Matière',
-    borderColor: 'border-l-blue-500',
-  },
-  subfield: {
-    icon: Layers,
-    label: 'Sous-domaines',
-    singularLabel: 'Sous-domaine',
-    borderColor: 'border-l-violet-500',
-  },
-  chapter: {
-    icon: FileText,
-    label: 'Chapitres',
-    singularLabel: 'Chapitre',
-    borderColor: 'border-l-emerald-500',
-  },
-  theorem: {
-    icon: Award,
-    label: 'Théorèmes',
-    singularLabel: 'Théorème',
-    borderColor: 'border-l-amber-500',
-  },
+type Tax = 'chapter' | 'subfield' | 'theorem';
+const TAX_LABEL: Record<Tax, string> = { chapter: 'Chapitres', subfield: 'Sous-domaines', theorem: 'Théorèmes' };
+
+const fmt = (s: number) => {
+  if (!s) return '0 min';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `${h} h ${String(m).padStart(2, '0')}` : m ? `${m} min` : `${s} s`;
 };
 
-export const StatsDashboard: React.FC<StatsDashboardProps> = ({
-  username,
-  contributionStats,
-  learningStats
-}) => {
-  const [activeTab, setActiveTab] = useState<'time' | 'subjects' | 'learning' | 'contributions'>('time');
-  
-  // États pour les données de temps
-  const [timeData, setTimeData] = useState<TimeTrackingData | null>(null);
-  const [timeLoading, setTimeLoading] = useState(true);
-  const [timeError, setTimeError] = useState<string | null>(null);
+export const StatsDashboard: React.FC<StatsDashboardProps> = ({ username, contributionStats, learningStats }) => {
+  const { user } = useAuth();
+  const isOwner = user?.username === username;
+  const [time, setTime] = useState<TimeTrackingData | null>(null);
+  const [timeState, setTimeState] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [tax, setTax] = useState<Tax>('chapter');
+  const [taxData, setTaxData] = useState<Record<Tax, TaxonomyTimeItem[] | undefined>>({ chapter: undefined, subfield: undefined, theorem: undefined });
+  const [search, setSearch] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
-  // États pour les données taxonomiques
-  const [taxonomyData, setTaxonomyData] = useState<TaxonomyTimeItem[]>([]);
-  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
-  const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
-  const [taxonomyFilter, setTaxonomyFilter] = useState<'all' | 'subject' | 'subfield' | 'chapter' | 'theorem'>('all');
-  const [taxonomySearch, setTaxonomySearch] = useState('');
-
-  // Charger les stats de temps
   useEffect(() => {
-    const fetchTimeStats = async () => {
-      try {
-        setTimeLoading(true);
-        setTimeError(null);
-        const response = await api.get(`/users/${username}/study-stats/`);
-        setTimeData(response.data);
-      } catch (err: any) {
-        console.error('Error fetching time stats:', err);
-        setTimeError(err.response?.data?.error || 'Échec du chargement des statistiques');
-      } finally {
-        setTimeLoading(false);
-      }
-    };
+    setTimeState('loading');
+    api.get(`/users/${username}/study-stats/`)
+      .then((r) => { setTime(r.data); setTimeState('ok'); })
+      .catch(() => setTimeState('error'));
+  }, [username]);
 
-    if (username && activeTab === 'time') {
-      fetchTimeStats();
-    }
-  }, [username, activeTab]);
-
-  // Charger les données taxonomiques quand l'onglet est actif
+  // Temps par thème : données de l'utilisateur CONNECTÉ, donc seulement sur son propre profil.
   useEffect(() => {
-    if (activeTab === 'subjects') {
-      loadTaxonomyData();
-    }
-  }, [activeTab, taxonomyFilter]);
+    if (!isOwner || taxData[tax]) return;
+    getTaxonomyTimeStats({ taxonomy_type: tax })
+      .then((r) => setTaxData((d) => ({ ...d, [tax]: r.results || [] })))
+      .catch(() => setTaxData((d) => ({ ...d, [tax]: [] })));
+  }, [tax, isOwner, taxData]);
 
-  const loadTaxonomyData = async () => {
-    try {
-      setTaxonomyLoading(true);
-      setTaxonomyError(null);
-      const params = taxonomyFilter !== 'all' ? { taxonomy_type: taxonomyFilter as any } : undefined;
-      const response = await getTaxonomyTimeStats(params);
-      setTaxonomyData(response.results || []);
-    } catch (error: any) {
-      console.error('Failed to load taxonomy time stats:', error);
-      setTaxonomyError('Échec du chargement des données');
-      setTaxonomyData([]);
-    } finally {
-      setTaxonomyLoading(false);
-    }
-  };
+  const done = learningStats?.exercises_completed ?? 0;
+  const failed = learningStats?.exercises_in_review ?? 0;
+  const finished = done + failed;
 
-  const formatTime = (seconds: number): string => {
-    if (!seconds || seconds === 0) return '0m';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m`;
-    return `${seconds}s`;
-  };
+  const taxRows = useMemo(() => {
+    const rows = (taxData[tax] ?? []).filter((r) => r.total_time_seconds > 0)
+      .filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => b.total_time_seconds - a.total_time_seconds);
+    return rows;
+  }, [taxData, tax, search]);
+  const taxMax = Math.max(1, ...taxRows.map((r) => r.total_time_seconds));
 
-  const totalExercises = (learningStats?.exercises_completed || 0) + 
-                         (learningStats?.exercises_in_review || 0);
-  const successRate = totalExercises > 0 
-    ? Math.round((learningStats?.exercises_completed || 0) / totalExercises * 100) 
-    : 0;
-
-  // Filtrer les données taxonomiques
-  const filteredTaxonomyData = taxonomyData.filter(item =>
-    item.name.toLowerCase().includes(taxonomySearch.toLowerCase())
-  );
+  const byType = time ? [
+    { label: 'Exercices', icon: PenTool, s: time.exercise_stats.total_time_seconds, n: time.exercise_stats.unique_content_studied },
+    { label: 'Leçons', icon: BookOpen, s: time.lesson_stats.total_time_seconds, n: time.lesson_stats.unique_content_studied },
+    { label: 'Examens', icon: FileCheck, s: time.exam_stats.total_time_seconds, n: time.exam_stats.unique_content_studied },
+  ] : [];
+  const typeTotal = byType.reduce((t, r) => t + r.s, 0);
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Segmented Tab Bar */}
-      <div className="flex bg-slate-100 rounded-xl p-1 w-fit">
-        {[
-          { id: 'time', label: 'Temps d\'étude', icon: Clock },
-          { id: 'subjects', label: 'Par sujet', icon: GraduationCap },
-          { id: 'learning', label: 'Apprentissage', icon: Target },
-          { id: 'contributions', label: 'Contributions', icon: Award }
-        ].map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          );
-        })}
+    <div className="flex flex-col gap-6 max-w-5xl">
+      {/* ── Vue d'ensemble ── */}
+      <section aria-label="Vue d’ensemble" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Tile icon={<Clock className="w-4 h-4" />} label="Temps d’étude" loading={timeState === 'loading'}
+          value={time ? fmt(time.overall_stats.total_time_seconds) : '—'} note="mesuré sur les pages de contenu" />
+        <Tile icon={<Layers className="w-4 h-4" />} label="Contenus travaillés" loading={timeState === 'loading'}
+          value={time ? byType.reduce((t, r) => t + r.n, 0) : '—'} note="exercices, leçons et examens" />
+        <Tile icon={<CheckCircle2 className="w-4 h-4" />} label="Exercices validés"
+          value={done} note={finished ? `sur ${finished} terminé${finished > 1 ? 's' : ''} (${Math.round((done / finished) * 100)} %)` : 'aucun terminé pour l’instant'} />
+        <Tile icon={<Eye className="w-4 h-4" />} label="Contenus consultés"
+          value={learningStats?.total_viewed ?? 0} note="pages d’exercices, leçons et examens ouvertes" />
+      </section>
+
+      {timeState === 'error' && (
+        <p className="rounded-xl border border-line bg-white px-4 py-3 text-[13px] text-ink-faint">
+          Le temps d’étude n’a pas pu être chargé. Recharge la page dans un instant.
+        </p>
+      )}
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* ── Où va le temps ── */}
+        <Panel title="Où va ton temps" subtitle="Temps cumulé par type de contenu, depuis ton inscription.">
+          {time && typeTotal > 0 ? (
+            <ul className="flex flex-col gap-4">
+              {byType.map((r) => {
+                const Icon = r.icon;
+                const share = Math.round((r.s / typeTotal) * 100);
+                return (
+                  <li key={r.label}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-ink"><Icon className="w-4 h-4 text-ink-faint" />{r.label}</span>
+                      <span className="text-[12.5px] text-ink-faint fd-nums"><b className="text-ink">{fmt(r.s)}</b> · {share} % · {r.n} contenu{r.n > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="mt-1.5 h-2 rounded-full bg-[#f2f1ee] overflow-hidden">
+                      <div className="h-full rounded-full bg-ink" style={{ width: `${Math.max(share, r.s ? 2 : 0)}%` }} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <EmptyNote text={timeState === 'loading' ? 'Chargement…' : 'Aucun temps d’étude enregistré pour l’instant : il se mesure quand tu travailles sur un exercice, une leçon ou un examen.'} />
+          )}
+        </Panel>
+
+        {/* ── Bilan des exercices ── */}
+        <Panel title="Bilan des exercices" subtitle="Ce que tu as marqué en terminant un exercice.">
+          {finished > 0 ? (
+            <>
+              <div className="flex h-3 rounded-full overflow-hidden gap-[2px] bg-white" role="img"
+                aria-label={`${done} validé${done > 1 ? 's' : ''}, ${failed} échoué${failed > 1 ? 's' : ''}`}>
+                {done > 0 && <div className="bg-brand" style={{ width: `${(done / finished) * 100}%` }} />}
+                {failed > 0 && <div className="bg-gold" style={{ width: `${(failed / finished) * 100}%` }} />}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-ink-faint">
+                <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-brand" />Validés <b className="text-ink fd-nums">{done}</b></span>
+                <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gold" />Échoués, à revoir <b className="text-ink fd-nums">{failed}</b></span>
+              </div>
+            </>
+          ) : (
+            <EmptyNote text="Aucun exercice terminé. Quand tu finis un exercice, marque-le « Validé » ou « Échoué » avec le bouton Terminer." />
+          )}
+          <dl className="mt-5 pt-4 border-t border-line grid grid-cols-2 gap-3">
+            <Mini icon={<Bookmark className="w-3.5 h-3.5" />} label="Enregistrés" value={learningStats?.exercises_saved ?? 0} />
+          </dl>
+        </Panel>
       </div>
 
-      <AnimatePresence mode="wait">
-        {/* TAB: Temps d'étude */}
-        {activeTab === 'time' && (
-          <motion.div
-            key="time"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-6"
-          >
-            {timeLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-              </div>
-            ) : timeError ? (
-              <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
-                <Clock className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p className="text-slate-500">{timeError}</p>
-                <button 
-                  onClick={() => setActiveTab('time')}
-                  className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm"
-                >
-                  Réessayer
+      {/* ── Temps par thème (propre profil) ── */}
+      {isOwner && (
+        <Panel title="Temps par thème" subtitle="Les chapitres, sous-domaines et théorèmes sur lesquels tu as passé le plus de temps.">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div role="tablist" aria-label="Type de thème" className="inline-flex p-1 rounded-xl bg-[#f2f1ee]">
+              {(Object.keys(TAX_LABEL) as Tax[]).map((k) => (
+                <button key={k} role="tab" aria-selected={tax === k} type="button" onClick={() => { setTax(k); setShowAll(false); }}
+                  className={`min-h-[34px] px-3.5 rounded-lg text-[13px] font-semibold transition-colors ${tax === k ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
+                  {TAX_LABEL[k]}
                 </button>
-              </div>
-            ) : timeData ? (
-              <>
-                {/* Stats principales */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-slate-900 text-white rounded-xl p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-xs text-slate-400 font-medium">Temps total</span>
-                    </div>
-                    <div className="text-2xl font-bold">{timeData.overall_stats.total_time_formatted}</div>
-                  </div>
-
-                  <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Zap className="w-4 h-4 text-amber-500" />
-                      <span className="text-xs text-slate-500 font-medium">Série d'étude</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900">
-                      {timeData.overall_stats.current_study_streak} <span className="text-base font-normal text-slate-500">jours</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <PenTool className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs text-slate-500 font-medium">Exercices</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900">{timeData.exercise_stats.unique_content_studied}</div>
-                    <div className="text-xs text-slate-500 mt-1">{timeData.exercise_stats.total_time_formatted}</div>
-                  </div>
-
-                  <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <BookOpen className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs text-slate-500 font-medium">Leçons</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900">{timeData.lesson_stats.unique_content_studied}</div>
-                    <div className="text-xs text-slate-500 mt-1">{timeData.lesson_stats.total_time_formatted}</div>
-                  </div>
-                </div>
-
-                {/* Répartition par type de contenu */}
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-900">Répartition par type de contenu</h3>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    {[
-                      { label: 'Exercices', icon: PenTool, color: 'bg-blue-500', time: timeData.exercise_stats.total_time_seconds, formatted: timeData.exercise_stats.total_time_formatted, count: timeData.exercise_stats.unique_content_studied },
-                      { label: 'Leçons', icon: BookOpen, color: 'bg-indigo-500', time: timeData.lesson_stats.total_time_seconds, formatted: timeData.lesson_stats.total_time_formatted, count: timeData.lesson_stats.unique_content_studied },
-                      { label: 'Examens', icon: FileCheck, color: 'bg-violet-500', time: timeData.exam_stats.total_time_seconds, formatted: timeData.exam_stats.total_time_formatted, count: timeData.exam_stats.unique_content_studied },
-                    ].map((row) => {
-                      const Icon = row.icon;
-                      const maxTime = Math.max(timeData.exercise_stats.total_time_seconds, timeData.lesson_stats.total_time_seconds, timeData.exam_stats.total_time_seconds, 1);
-                      const barPercent = Math.round((row.time / maxTime) * 100);
-                      return (
-                        <div key={row.label} className="flex items-center gap-4">
-                          <div className="flex items-center gap-2 w-28 flex-shrink-0">
-                            <Icon className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600">{row.label}</span>
-                          </div>
-                          <div className="flex-1 h-7 bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${barPercent}%` }}
-                              transition={{ duration: 0.8, ease: 'easeOut' }}
-                              className={`h-full ${row.color} rounded-full`}
-                            />
-                          </div>
-                          <div className="text-right w-20 flex-shrink-0">
-                            <span className="text-sm font-bold text-slate-900">{row.formatted}</span>
-                            <span className="text-[11px] text-slate-400 ml-1">({row.count})</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Message si pas de données */}
-                {timeData.overall_stats.total_time_all_content === 0 && (
-                  <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
-                    <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-600 font-medium mb-1">Aucune donnée de temps d'étude</p>
-                    <p className="text-sm text-slate-500">
-                      Commencez à étudier des exercices, leçons ou examens pour voir vos statistiques !
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : null}
-          </motion.div>
-        )}
-
-        {/* TAB: Par sujet */}
-        {activeTab === 'subjects' && (
-          <motion.div
-            key="subjects"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-4"
-          >
-            {/* Filtres de taxonomie */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setTaxonomyFilter('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  taxonomyFilter === 'all'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-                }`}
-              >
-                Tous
-              </button>
-              {Object.entries(TAXONOMY_CONFIG).map(([key, config]) => {
-                const Icon = config.icon;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setTaxonomyFilter(key as any)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      taxonomyFilter === key
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {config.label}
-                  </button>
-                );
-              })}
+              ))}
             </div>
-
-            {/* Recherche */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                value={taxonomySearch}
-                onChange={(e) => setTaxonomySearch(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Liste */}
-            {taxonomyLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-              </div>
-            ) : taxonomyError ? (
-              <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
-                <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">{taxonomyError}</p>
-                <button 
-                  onClick={loadTaxonomyData}
-                  className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm"
-                >
-                  Réessayer
+            {(taxData[tax]?.length ?? 0) > 8 && (
+              <label className="relative flex-1 min-w-[180px] max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" aria-hidden />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher…" aria-label="Rechercher un thème"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-line bg-white text-[13px] outline-none focus:border-brand" />
+              </label>
+            )}
+          </div>
+          {taxData[tax] === undefined ? (
+            <EmptyNote text="Chargement…" />
+          ) : taxRows.length === 0 ? (
+            <EmptyNote text={search ? 'Aucun résultat.' : `Pas encore de temps enregistré par ${TAX_LABEL[tax].toLowerCase()}.`} />
+          ) : (
+            <>
+              <ul className="flex flex-col gap-3">
+                {(showAll ? taxRows : taxRows.slice(0, 8)).map((r) => (
+                  <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 items-baseline">
+                    <span className="text-[13.5px] font-medium text-ink truncate" title={r.name}>{r.name}</span>
+                    <span className="text-[12.5px] font-semibold text-ink fd-nums">{fmt(r.total_time_seconds)}</span>
+                    <div className="col-span-2 h-1.5 rounded-full bg-[#f2f1ee] overflow-hidden">
+                      <div className="h-full rounded-full bg-brand" style={{ width: `${Math.max((r.total_time_seconds / taxMax) * 100, 2)}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {taxRows.length > 8 && (
+                <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-4 text-[13px] font-semibold text-brand-hover hover:underline">
+                  {showAll ? 'Voir moins' : `Voir les ${taxRows.length}`}
                 </button>
-              </div>
-            ) : filteredTaxonomyData.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
-                <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">
-                  {taxonomySearch ? 'Aucun résultat trouvé' : 'Aucune donnée disponible'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredTaxonomyData.map((item) => {
-                  const config = TAXONOMY_CONFIG[item.taxonomy_type];
-                  const Icon = config.icon;
-                  const hasBreakdown = item.exercise_time_seconds > 0 || item.lesson_time_seconds > 0 || item.exam_time_seconds > 0;
+              )}
+            </>
+          )}
+        </Panel>
+      )}
 
-                  return (
-                    <div
-                      key={item.id}
-                      className={`bg-white p-5 rounded-xl border border-slate-200 border-l-4 ${config.borderColor} hover:border-slate-300 transition-colors`}
-                    >
-                      {/* Header */}
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="p-2.5 rounded-lg bg-slate-900">
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-slate-900 truncate">{item.name}</h4>
-                          <p className="text-xs text-slate-500">{config.singularLabel}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-slate-900">
-                            {item.total_time_formatted}
-                          </p>
-                        </div>
-                      </div>
+      {/* ── Contributions ── */}
+      <Panel title="Contributions" subtitle="Ce que tu as apporté à la communauté Fidni.">
+        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Mini icon={<PenTool className="w-3.5 h-3.5" />} label="Contenus publiés" value={contributionStats?.exercises ?? 0} big />
+          <Mini icon={<MessageSquare className="w-3.5 h-3.5" />} label="Commentaires" value={contributionStats?.comments ?? 0} big />
+          <Mini icon={<ThumbsUp className="w-3.5 h-3.5" />} label="Votes reçus" value={contributionStats?.upvotes_received ?? 0} big />
+          <Mini icon={<Eye className="w-3.5 h-3.5" />} label="Vues de tes contenus" value={contributionStats?.view_count ?? 0} big />
+        </dl>
+      </Panel>
 
-                      {/* Breakdown par type de contenu */}
-                      {hasBreakdown && (
-                        <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
-                          {item.exercise_time_seconds > 0 && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50">
-                              <PenTool className="w-3.5 h-3.5 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-900">
-                                {formatTime(item.exercise_time_seconds)}
-                              </span>
-                              <span className="text-xs text-blue-600">exercices</span>
-                            </div>
-                          )}
-                          {item.lesson_time_seconds > 0 && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50">
-                              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-sm font-medium text-emerald-900">
-                                {formatTime(item.lesson_time_seconds)}
-                              </span>
-                              <span className="text-xs text-emerald-600">leçons</span>
-                            </div>
-                          )}
-                          {item.exam_time_seconds > 0 && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50">
-                              <FileCheck className="w-3.5 h-3.5 text-violet-600" />
-                              <span className="text-sm font-medium text-violet-900">
-                                {formatTime(item.exam_time_seconds)}
-                              </span>
-                              <span className="text-xs text-violet-600">examens</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* TAB: Apprentissage */}
-        {activeTab === 'learning' && (
-          <motion.div
-            key="learning"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-6 gap-4">
-              {/* Featured: Success Rate with ProgressRing */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="col-span-6 sm:col-span-3 lg:col-span-2 bg-blue-600 text-white rounded-2xl p-6 flex items-center gap-6"
-              >
-                <ProgressRing percentage={successRate} size={80} strokeWidth={6} trackColor="rgba(255,255,255,0.2)" progressColor="#ffffff">
-                  <span className="text-lg font-bold text-white">{successRate}%</span>
-                </ProgressRing>
-                <div>
-                  <div className="text-2xl font-bold">{totalExercises}</div>
-                  <div className="text-sm text-blue-200">exercices au total</div>
-                  <div className="mt-2 h-1.5 w-24 bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-white rounded-full" style={{ width: `${successRate}%` }} />
-                  </div>
-                </div>
-              </motion.div>
-              {/* Smaller stat cards */}
-              {[
-                { label: 'Validés', value: learningStats?.exercises_completed || 0, icon: CheckCircle, dot: 'bg-emerald-500' },
-                { label: 'Échoués', value: learningStats?.exercises_in_review || 0, icon: Clock, dot: 'bg-red-500' },
-                { label: 'Sauvegardés', value: learningStats?.exercises_saved || 0, icon: Target, dot: 'bg-blue-500' },
-                { label: 'Consultés', value: learningStats?.total_viewed || 0, icon: Eye, dot: 'bg-slate-400' }
-              ].map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="col-span-3 sm:col-span-3 lg:col-span-1 bg-white rounded-xl border border-slate-200 p-5"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className={`w-2 h-2 rounded-full ${stat.dot}`} />
-                      <span className="text-xs text-slate-500 font-medium">{stat.label}</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900 mb-4">Progression globale</h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-600">Taux de complétion</span>
-                    <span className="font-semibold text-slate-900">{successRate}%</span>
-                  </div>
-                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${successRate}%` }}
-                      transition={{ duration: 1 }}
-                      className="h-full bg-emerald-500 rounded-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-                  <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {learningStats?.exercises_completed || 0}
-                    </div>
-                    <div className="text-xs text-emerald-700">Validés</div>
-                  </div>
-                  <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">
-                      {learningStats?.exercises_in_review || 0}
-                    </div>
-                    <div className="text-xs text-red-700">Échoués</div>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {learningStats?.exercises_saved || 0}
-                    </div>
-                    <div className="text-xs text-blue-700">Sauvegardés</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {learningStats?.subjects_studied && learningStats.subjects_studied.length > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-900 mb-4">Matières étudiées</h3>
-                <div className="flex flex-wrap gap-2">
-                  {learningStats.subjects_studied.map((subject, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
-                    >
-                      {subject}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* TAB: Contributions */}
-        {activeTab === 'contributions' && (
-          <motion.div
-            key="contributions"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: 'Exercices créés', value: contributionStats?.exercises || 0, icon: BookOpen },
-                { label: 'Commentaires', value: contributionStats?.comments || 0, icon: MessageSquare },
-                { label: 'Votes reçus', value: contributionStats?.upvotes_received || 0, icon: TrendingUp },
-                { label: 'Vues totales', value: contributionStats?.view_count || 0, icon: Eye }
-              ].map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-white rounded-xl border border-slate-200 p-5"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <Icon className="w-4 h-4 text-slate-400" />
-                      <span className="text-xs text-slate-500 font-medium">{stat.label}</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900">{(stat.value || 0).toLocaleString()}</div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <div className="bg-slate-900 rounded-xl p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold mb-1">Score d'impact</h3>
-                  <p className="text-sm text-slate-400">Votre contribution à la communauté</p>
-                </div>
-                <div className="text-4xl font-bold">
-                  {(contributionStats?.upvotes_received || 0) * 10 + (contributionStats?.exercises || 0) * 50}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {learningStats?.subjects_studied && learningStats.subjects_studied.length > 0 && (
+        <p className="text-[12.5px] text-ink-faint">
+          Matières étudiées : {[...new Set(learningStats.subjects_studied)].join(', ')}.
+        </p>
+      )}
     </div>
   );
 };
+
+function Tile({ icon, label, value, note, loading }: { icon: React.ReactNode; label: string; value: React.ReactNode; note?: string; loading?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white px-4 py-4 min-w-0">
+      <div className="flex items-center gap-2 text-ink-faint">
+        {icon}<span className="text-[11px] font-semibold uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="mt-3 text-[26px] font-bold text-ink leading-none fd-nums" style={{ fontFamily: "'DM Mono', ui-monospace, monospace", letterSpacing: '-0.02em' }}>
+        {loading ? <span className="inline-block h-6 w-16 rounded bg-[#f2f1ee] animate-pulse align-middle" /> : value}
+      </div>
+      {note && <p className="mt-2 text-[12px] text-ink-faint leading-snug">{note}</p>}
+    </div>
+  );
+}
+
+function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-line bg-white p-5 sm:p-6">
+      <h2 className="text-[15.5px] font-bold text-ink tracking-tight">{title}</h2>
+      {subtitle && <p className="text-[12.5px] text-ink-faint mt-1 mb-4 leading-relaxed">{subtitle}</p>}
+      {!subtitle && <div className="mb-4" />}
+      {children}
+    </section>
+  );
+}
+
+function Mini({ icon, label, value, big }: { icon: React.ReactNode; label: string; value: number; big?: boolean }) {
+  return (
+    <div className={big ? 'rounded-xl bg-[#faf9f7] px-3.5 py-3' : ''}>
+      <dt className="flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-faint">{icon}{label}</dt>
+      <dd className={`mt-1 font-bold text-ink fd-nums ${big ? 'text-[22px]' : 'text-[18px]'}`}>{value.toLocaleString('fr-FR')}</dd>
+    </div>
+  );
+}
+
+function EmptyNote({ text }: { text: string }) {
+  return <p className="rounded-xl bg-[#faf9f7] border border-dashed border-line px-4 py-4 text-[13px] text-ink-faint leading-relaxed">{text}</p>;
+}
 
 export default StatsDashboard;

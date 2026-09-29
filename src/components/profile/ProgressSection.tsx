@@ -3,9 +3,18 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Content } from '@/types';
 import {
-  CheckCircle, Clock, Target, ChevronRight, BookOpen,
-  Search, TrendingUp, ChevronDown, Layers, FileText,
-  BarChart3, PenTool, X
+  CheckCircle,
+  Clock,
+  Target,
+  ChevronRight,
+  BookOpen,
+  Search,
+  TrendingUp,
+  ChevronDown,
+  Layers,
+  FileText,
+  BarChart3,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -175,7 +184,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
       {/* Asymmetric Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {/* Featured card */}
-        <div className="col-span-2 bg-blue-600 rounded-2xl p-6 text-white flex items-center gap-5">
+        <div className="col-span-2 bg-indigo-600 rounded-2xl p-6 text-white flex items-center gap-5">
           <ProgressRing
             percentage={successRate}
             size={80}
@@ -187,8 +196,8 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           </ProgressRing>
           <div>
             <div className="text-3xl font-bold">{totalExercises}</div>
-            <div className="text-blue-200 text-sm">exercices au total</div>
-            <div className="mt-2 h-1.5 w-32 bg-blue-500/40 rounded-full overflow-hidden">
+            <div className="text-indigo-200 text-sm">exercices au total</div>
+            <div className="mt-2 h-1.5 w-32 bg-indigo-500/40 rounded-full overflow-hidden">
               <div
                 className="h-full bg-white rounded-full transition-all"
                 style={{ width: `${successRate}%` }}
@@ -198,7 +207,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         </div>
 
         {/* Smaller stat cards */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-xs text-slate-500 font-medium">Validés</span>
@@ -206,7 +215,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           <div className="text-2xl font-bold text-slate-900">{safeSuccessExercises.length}</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-red-500" />
             <span className="text-xs text-slate-500 font-medium">Échoués</span>
@@ -214,15 +223,15 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           <div className="text-2xl font-bold text-slate-900">{safeReviewExercises.length}</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <div className="w-2 h-2 rounded-full bg-indigo-500" />
             <span className="text-xs text-slate-500 font-medium">Réussite</span>
           </div>
           <div className="text-2xl font-bold text-slate-900">{successRate}%</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-slate-400" />
             <span className="text-xs text-slate-500 font-medium">Temps total</span>
@@ -232,7 +241,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="fd-card p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         {/* View mode pills */}
         <div className="flex bg-slate-100 rounded-full p-1">
           {[
@@ -279,7 +288,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                   >
                     {tab.label}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'
+                      activeTab === tab.id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-500'
                     }`}>
                       {tab.count}
                     </span>
@@ -294,14 +303,14 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                   placeholder="Rechercher..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-40"
+                  className="pl-9 pr-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-40"
                 />
               </div>
 
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="date">Récents</option>
                 <option value="time">Temps</option>
@@ -318,7 +327,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           {(viewMode === 'by-subject' ? subjectStats : chapterStats).map((stat) => (
             <div
               key={`${stat.id}`}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+              className="fd-card overflow-hidden"
             >
               <button
                 onClick={() => toggleExpanded(`${stat.id}`)}
@@ -338,7 +347,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                 <div className="hidden md:block w-24">
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-600 rounded-full transition-all"
+                      className="h-full bg-indigo-600 rounded-full transition-all"
                       style={{ width: `${stat.successRate}%` }}
                     />
                   </div>
@@ -360,7 +369,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="border-t border-slate-100"
+                    className="border-t border-[#faf9f7]"
                   >
                     <div className="p-2">
                       {stat.exercises.map((exercise) => (
@@ -382,7 +391,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                             }
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-slate-900 group-hover:text-blue-600 truncate transition-colors">
+                            <h4 className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 truncate transition-colors">
                               {exercise.title}
                             </h4>
                           </div>
@@ -401,7 +410,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           ))}
 
           {(viewMode === 'by-subject' ? subjectStats : chapterStats).length === 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+            <div className="fd-card p-12 text-center">
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
                 <BarChart3 className="w-7 h-7 text-slate-400" />
               </div>
@@ -418,7 +427,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
       {viewMode === 'list' && (
         <>
           {filteredExercises.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+            <div className="fd-card p-12 text-center">
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
                 <Target className="w-7 h-7 text-slate-400" />
               </div>
@@ -428,7 +437,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
               </p>
               <Link
                 to="/exercises"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
               >
                 Explorer les exercices
                 <ChevronRight className="w-4 h-4" />
@@ -440,10 +449,10 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                 <Link
                   key={exercise.id}
                   to={`/exercises/${exercise.id}`}
-                  className="bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all group"
+                  className="bg-white rounded-xl border border-[#e7e3dc] p-4 hover:border-indigo-300 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <h4 className="font-medium text-slate-900 text-sm leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    <h4 className="font-medium text-slate-900 text-sm leading-tight line-clamp-2 group-hover:text-indigo-600 transition-colors">
                       {exercise.title}
                     </h4>
                     <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
@@ -470,10 +479,10 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
 
           {/* Summary */}
           {filteredExercises.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="fd-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <TrendingUp className="w-4 h-4 text-blue-500" />
+                  <TrendingUp className="w-4 h-4 text-indigo-500" />
                   <span>
                     Temps total sur <span className="font-semibold text-slate-900">{filteredExercises.length}</span> exercice{filteredExercises.length > 1 ? 's' : ''}
                   </span>

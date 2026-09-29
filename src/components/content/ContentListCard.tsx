@@ -8,6 +8,7 @@ import type { VoteValue } from '@/types';
 import type { ExerciseListItem, ExamListItem, LessonListItem } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
+import { isModerator } from '@/lib/features';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import {
   exerciseContentAPI, examContentAPI, lessonContentAPI,
@@ -152,7 +153,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           isSaved={isSaved}
           isSaving={isSaving}
           onSave={handleSave}
-          showOwnerActions={isAuthor}
+          showOwnerActions={isAuthor || isModerator(user)}
           onEdit={onEdit ? (e) => { e.stopPropagation(); onEdit(content.id.toString()); } : undefined}
           onDelete={onDelete ? (e) => { e.stopPropagation(); onDelete(content.id.toString()); } : undefined}
         />
@@ -170,7 +171,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
                 maxHeight: 120,
                 overflow: 'hidden',
                 fontSize: 12,
-                color: '#4b4880',
+                color: '#33302b',
                 lineHeight: 1.5,
                 pointerEvents: 'none',
                 WebkitMaskImage: 'linear-gradient(to bottom, #000 65%, transparent 100%)',
@@ -199,7 +200,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
             .card-preview-mode h3 { font-size: 13px !important; margin-bottom: .35em !important; }
           `}</style>
 
-          <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: 11, color: '#9391b8' }}>
+          <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: 11, color: '#6b6862' }}>
             {author && <span>{author}</span>}
             {className && (
               <>
@@ -226,9 +227,9 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
         {/* Footer */}
         <div
           className="flex items-center gap-2 px-4 py-2.5"
-          style={{ borderTop: '1px solid #f0effe' }}
+          style={{ borderTop: '1px solid #faf9f7' }}
         >
-          <div onClick={(e) => e.stopPropagation()}>
+          <div onClick={(e) => e.stopPropagation()} data-tour="vote">
             <VoteButtons
               initialVotes={voteCount}
               onVote={handleVote}

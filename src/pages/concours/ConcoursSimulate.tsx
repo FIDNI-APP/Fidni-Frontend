@@ -57,21 +57,23 @@ export default function ConcoursSimulatePage() {
     })();
   }, [sessionId, navigate]);
 
-  // Countdown
+  // Compte à rebours recalculé depuis l'heure de fin à chaque tic : les navigateurs ralentissent
+  // les minuteries des onglets en arrière-plan, et un simple « -1 par seconde » dérivait alors
+  // de plusieurs minutes. Au retour sur l'onglet, l'affichage est juste immédiatement.
   useEffect(() => {
     if (!sess || sess.status !== 'in_progress') return;
-    const t = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(t);
-          // Auto-submit
-          if (!submittedRef.current) handleSubmit(true);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
+    const endMs = new Date(sess.started_at).getTime() + sess.duration_minutes * 60 * 1000;
+    const tick = () => {
+      const left = Math.max(0, Math.round((endMs - Date.now()) / 1000));
+      setSecondsLeft(left);
+      if (left === 0) {
+        clearInterval(t);
+        if (!submittedRef.current) handleSubmit(true);
+      }
+    };
+    const t = setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
   }, [sess]);
 
   const choose = async (key: string) => {
@@ -79,8 +81,10 @@ export default function ConcoursSimulatePage() {
     setAnswers((prev) => ({ ...prev, [pos]: key }));
     try {
       await answerSimulationQuestion(sess.session_id, pos, key);
-    } catch (e) {
+    } catch (e: any) {
       console.error('answer save failed', e);
+      // Temps écoulé côté serveur (horloge de l'appareil en retard, onglet endormi…) : on rend la copie.
+      if (e?.response?.data?.code === 'time_over' && !submittedRef.current) handleSubmit(true);
     }
   };
 
@@ -116,8 +120,8 @@ export default function ConcoursSimulatePage() {
 
   if (loading || !sess) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#4f46e5' }} />
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
       </div>
     );
   }
@@ -127,7 +131,7 @@ export default function ConcoursSimulatePage() {
   const q = item.question;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1e1b4b', color: '#fff', paddingBottom: 32 }}>
+    <div style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', paddingBottom: 32 }}>
       <SEO title="Simulation - Fidni" description="Simulation de concours" />
 
       {/* Dark-mode + bigger LaTeX for the simulation runner. */}
@@ -148,7 +152,7 @@ export default function ConcoursSimulatePage() {
       <div
         style={{
           position: 'sticky', top: 0, zIndex: 30,
-          background: 'rgba(30,27,75,.92)',
+          background: 'rgba(20,18,16,.92)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(255,255,255,.08)',
           padding: '14px 24px',
@@ -156,7 +160,7 @@ export default function ConcoursSimulatePage() {
         className="flex items-center justify-between gap-3 flex-wrap"
       >
         <div>
-          <div style={{ fontSize: 11, letterSpacing: '.06em', color: '#a5b4fc', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div style={{ fontSize: 11, letterSpacing: '.06em', color: '#b8b4ac', textTransform: 'uppercase', fontWeight: 700 }}>
             Simulation · {sess.concours_type.toUpperCase()}
           </div>
           <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginTop: 2 }}>
@@ -165,11 +169,12 @@ export default function ConcoursSimulatePage() {
         </div>
         <div className="flex items-center gap-3">
           <div
+            data-tour="simulation-chrono"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 10,
               background: lowTime ? 'rgba(220,38,38,.2)' : 'rgba(255,255,255,.1)',
-              color: lowTime ? '#fca5a5' : '#c7d2fe',
+              color: lowTime ? '#fca5a5' : '#d8d4cc',
               border: `1px solid ${lowTime ? 'rgba(220,38,38,.4)' : 'rgba(255,255,255,.18)'}`,
               animation: lowTime ? 'pulse 1.5s infinite' : undefined,
             }}
@@ -181,6 +186,7 @@ export default function ConcoursSimulatePage() {
           </div>
           <button
             onClick={() => setShowConfirm(true)}
+            data-tour="simulation-soumettre"
             disabled={submitting}
             className="fd-btn-primary"
             style={{ background: '#16a34a' }}
@@ -206,7 +212,7 @@ export default function ConcoursSimulatePage() {
               className="inline-flex items-center justify-center flex-shrink-0"
               style={{
                 width: 44, height: 44, borderRadius: 11,
-                background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+                background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
                 fontSize: 16, fontWeight: 800, fontFamily: 'DM Mono',
               }}
             >
@@ -227,8 +233,8 @@ export default function ConcoursSimulatePage() {
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 14,
                     padding: '14px 16px', borderRadius: 12,
-                    background: selected ? 'rgba(129,140,248,.18)' : 'rgba(255,255,255,.04)',
-                    border: `1.5px solid ${selected ? '#818cf8' : 'rgba(255,255,255,.08)'}`,
+                    background: selected ? 'rgba(180,176,168,.18)' : 'rgba(255,255,255,.04)',
+                    border: `1.5px solid ${selected ? '#9a958c' : 'rgba(255,255,255,.08)'}`,
                     color: '#fff',
                     cursor: 'pointer', textAlign: 'left',
                     transition: 'all .15s',
@@ -238,10 +244,10 @@ export default function ConcoursSimulatePage() {
                     className="inline-flex items-center justify-center flex-shrink-0"
                     style={{
                       width: 34, height: 34, borderRadius: 9,
-                      background: selected ? '#4f46e5' : 'transparent',
-                      color: selected ? '#fff' : '#c7d2fe',
+                      background: selected ? '#1a1a1a' : 'transparent',
+                      color: selected ? '#fff' : '#d8d4cc',
                       fontSize: 14, fontWeight: 800, fontFamily: 'DM Mono',
-                      border: `1.5px solid ${selected ? '#4f46e5' : 'rgba(255,255,255,.18)'}`,
+                      border: `1.5px solid ${selected ? '#1a1a1a' : 'rgba(255,255,255,.18)'}`,
                     }}
                   >
                     {opt.key}
@@ -261,7 +267,7 @@ export default function ConcoursSimulatePage() {
               disabled={pos === 0}
               className="fd-btn-ghost"
               style={{
-                background: 'transparent', color: '#c7d2fe',
+                background: 'transparent', color: '#d8d4cc',
                 border: '1px solid rgba(255,255,255,.18)',
               }}
             >
@@ -271,7 +277,7 @@ export default function ConcoursSimulatePage() {
               onClick={() => choose('')}
               className="fd-btn-ghost"
               style={{
-                background: 'transparent', color: '#c7d2fe',
+                background: 'transparent', color: '#d8d4cc',
                 border: '1px solid rgba(255,255,255,.18)',
               }}
             >
@@ -289,6 +295,7 @@ export default function ConcoursSimulatePage() {
 
         {/* Sidebar — question grid */}
         <div
+          data-tour="simulation-grille"
           style={{
             background: 'rgba(255,255,255,.04)',
             border: '1px solid rgba(255,255,255,.08)',
@@ -299,7 +306,7 @@ export default function ConcoursSimulatePage() {
             top: 92,
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>
             Questions
           </div>
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
@@ -314,11 +321,11 @@ export default function ConcoursSimulatePage() {
                     aspectRatio: '1 / 1',
                     minWidth: 36,
                     borderRadius: 8,
-                    border: `1.5px solid ${isCurrent ? '#818cf8' : isAnswered ? 'rgba(34,197,94,.4)' : 'rgba(255,255,255,.12)'}`,
+                    border: `1.5px solid ${isCurrent ? '#9a958c' : isAnswered ? 'rgba(34,197,94,.4)' : 'rgba(255,255,255,.12)'}`,
                     background: isCurrent
-                      ? 'rgba(129,140,248,.25)'
+                      ? 'rgba(180,176,168,.25)'
                       : isAnswered ? 'rgba(34,197,94,.15)' : 'transparent',
-                    color: isCurrent ? '#fff' : isAnswered ? '#86efac' : '#c7d2fe',
+                    color: isCurrent ? '#fff' : isAnswered ? '#86efac' : '#d8d4cc',
                     fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono',
                     cursor: 'pointer',
                   }}
@@ -328,7 +335,7 @@ export default function ConcoursSimulatePage() {
               );
             })}
           </div>
-          <div className="flex flex-col gap-1.5 mt-4" style={{ fontSize: 11, color: '#c7d2fe' }}>
+          <div className="flex flex-col gap-1.5 mt-4" style={{ fontSize: 11, color: '#d8d4cc' }}>
             <div className="flex items-center gap-2">
               <span style={{ width: 12, height: 12, borderRadius: 4, background: 'rgba(34,197,94,.15)', border: '1.5px solid rgba(34,197,94,.4)' }} />
               {answered.size} répondues
@@ -351,9 +358,9 @@ export default function ConcoursSimulatePage() {
           onClick={() => setShowConfirm(false)}
         >
           <div className="fd-card" style={{ maxWidth: 420, padding: 22 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b' }}>Soumettre la simulation ?</h3>
-            <p style={{ fontSize: 13, color: '#7068a8', marginTop: 6 }}>
-              Tu as répondu à <strong style={{ color: '#1e1b4b' }}>{answered.size}</strong> question{answered.size > 1 ? 's' : ''} sur {sess.total_questions}.
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>Soumettre la simulation ?</h3>
+            <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>
+              Tu as répondu à <strong style={{ color: '#1a1a1a' }}>{answered.size}</strong> question{answered.size > 1 ? 's' : ''} sur {sess.total_questions}.
               Les questions non répondues compteront comme fausses.
             </p>
             <div className="flex justify-end gap-2 mt-4">

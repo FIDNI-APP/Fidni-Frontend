@@ -92,6 +92,8 @@ export {
   register,
   getCurrentUser,
   shouldCompleteProfile,
+  requestPasswordReset,
+  confirmPasswordReset,
 } from './authApi';
 
 // ============ USER API ============
@@ -115,6 +117,7 @@ export {
   getOnboardingState,
   updateOnboardingStep,
   completeOnboarding,
+  searchSchools,
   getTeacherStudents,
   sendTeacherInvitation,
   deleteTeacherInvitation,
@@ -197,6 +200,10 @@ export {
 // ============ DASHBOARD API ============
 export {
   getUserDashboardStats,
+  getDashboardOverview,
+  type DashboardOverview,
+  type OverviewContent,
+  type OverviewChapter,
   getLearningPathProgress,
   getRecommendedContent,
   type DashboardStats,
@@ -308,3 +315,5 @@ export { deleteExercise as deleteContent } from './exerciseApiExtensions';
 
 /** @deprecated Use markExerciseViewed instead */
 export { markExerciseViewed as markContentViewed } from './exerciseApiExtensions';
+
+export { aiCorrectionAPI, type AIVerdict, type AICorrectionResult } from './aiCorrectionApi';

@@ -33,6 +33,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/security-headers.conf
 
 # Add non-root user
 RUN addgroup -g 1001 -S nginx-group && \
@@ -55,12 +56,12 @@ RUN mkdir -p /var/cache/nginx/client_temp \
 
 USER nginx-user
 
-# Expose ports
-EXPOSE 80 443
+# Expose port (>1024 : bindable par l'utilisateur non-root)
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+  CMD curl -f http://localhost:8080/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

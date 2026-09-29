@@ -16,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/learningpath/VideoPlayer';
 import { VideoSidebar } from '@/components/learningpath/VideoSidebar';
-import { TranscriptTab } from '@/components/learningpath/TranscriptTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   getLearningPath,
@@ -42,7 +41,6 @@ export const ChapterVideo: React.FC = () => {
   const [currentVideo, setCurrentVideoState] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [autoPlay, setAutoPlay] = useState(true);
   const [lastSavedProgress, setLastSavedProgress] = useState(0);
 
   useEffect(() => {
@@ -102,6 +100,20 @@ export const ChapterVideo: React.FC = () => {
   };
 
 
+  // Fin de la vidéo : on la marque vue en entier (la sauvegarde toutes les 10 s peut rater la fin).
+  // Cette fonction manquait : la page plantait dès qu'une vidéo s'affichait.
+  const handleVideoEnd = async () => {
+    if (!currentVideo || !isAuthenticated) return;
+    try {
+      await updateVideoProgress(currentVideo.id, {
+        watched_seconds: Math.max(lastSavedProgress, currentVideo.duration_seconds || 0),
+        is_completed: true,
+      });
+    } catch (err) {
+      console.error('Failed to save video completion:', err);
+    }
+  };
+
   const navigateToNextVideo = () => {
     if (!currentChapter || !currentVideo || !learningPath) return;
     
@@ -110,17 +122,17 @@ export const ChapterVideo: React.FC = () => {
     // Check if there's a next video in the current chapter
     if (currentVideoIndex < currentChapter.videos.length - 1) {
       const nextVideo = currentChapter.videos[currentVideoIndex + 1];
-      navigate(`/learning-paths/${pathId}/chapters/${chapterId}/videos/${nextVideo.id}`);
+      navigate(`/learning-path/${pathId}/chapters/${chapterId}/videos/${nextVideo.id}`);
     } else if (currentChapter.quiz) {
       // Navigate to chapter quiz
-      navigate(`/learning-paths/${pathId}/chapters/${chapterId}/quiz`);
+      navigate(`/learning-path/${pathId}/chapters/${chapterId}/quiz`);
     } else {
       // Find next chapter
       const currentChapterIndex = learningPath.path_chapters.findIndex(ch => ch.id === chapterId);
       if (currentChapterIndex < learningPath.path_chapters.length - 1) {
         const nextChapter = learningPath.path_chapters[currentChapterIndex + 1];
         if (nextChapter.videos.length > 0) {
-          navigate(`/learning-paths/${pathId}/chapters/${nextChapter.id}/videos/${nextChapter.videos[0].id}`);
+          navigate(`/learning-path/${pathId}/chapters/${nextChapter.id}/videos/${nextChapter.videos[0].id}`);
         }
       }
     }
@@ -134,7 +146,7 @@ export const ChapterVideo: React.FC = () => {
     // Check if there's a previous video in the current chapter
     if (currentVideoIndex > 0) {
       const previousVideo = currentChapter.videos[currentVideoIndex - 1];
-      navigate(`/learning-paths/${pathId}/chapters/${chapterId}/videos/${previousVideo.id}`);
+      navigate(`/learning-path/${pathId}/chapters/${chapterId}/videos/${previousVideo.id}`);
     } else {
       // Find previous chapter
       const currentChapterIndex = learningPath.path_chapters.findIndex(ch => ch.id === chapterId);
@@ -142,18 +154,18 @@ export const ChapterVideo: React.FC = () => {
         const previousChapter = learningPath.path_chapters[currentChapterIndex - 1];
         if (previousChapter.videos.length > 0) {
           const lastVideo = previousChapter.videos[previousChapter.videos.length - 1];
-          navigate(`/learning-paths/${pathId}/chapters/${previousChapter.id}/videos/${lastVideo.id}`);
+          navigate(`/learning-path/${pathId}/chapters/${previousChapter.id}/videos/${lastVideo.id}`);
         }
       }
     }
   };
 
   const handleVideoSelect = (newChapterId: string, newVideoId: string) => {
-    navigate(`/learning-paths/${pathId}/chapters/${newChapterId}/videos/${newVideoId}`);
+    navigate(`/learning-path/${pathId}/chapters/${newChapterId}/videos/${newVideoId}`);
   };
 
   const handleQuizSelect = (quizChapterId: string) => {
-    navigate(`/learning-paths/${pathId}/chapters/${quizChapterId}/quiz`);
+    navigate(`/learning-path/${pathId}/chapters/${quizChapterId}/quiz`);
   };
 
   if (loading) {
@@ -168,12 +180,12 @@ export const ChapterVideo: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto">
-          <Button onClick={() => navigate(`/learning-paths/${pathId}`)}>
+          <Button onClick={() => navigate(`/learning-path/${pathId}`)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Learning Path
+            Retour au parcours
           </Button>
           <div className="mt-4 text-center text-gray-600">
-            Video not found
+            Vidéo introuvable
           </div>
         </div>
       </div>
@@ -189,10 +201,10 @@ export const ChapterVideo: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/learning-paths/${pathId}`)}
+              onClick={() => navigate(`/learning-path/${pathId}`)}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Overview
+              Retour au parcours
             </Button>
             
             <div className="h-6 w-px bg-gray-300" />
@@ -215,14 +227,14 @@ export const ChapterVideo: React.FC = () => {
               disabled={!currentChapter || currentChapter.videos[0].id === currentVideo.id}
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Previous
+              Précédent
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={navigateToNextVideo}
             >
-              Next
+              Suivant
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -251,7 +263,7 @@ export const ChapterVideo: React.FC = () => {
                     <span>•</span>
                     <span className="flex items-center gap-1 text-green-600">
                       <CheckCircle className="w-4 h-4" />
-                      Completed
+                      Terminé
                     </span>
                   </>
                 )}
@@ -273,15 +285,15 @@ export const ChapterVideo: React.FC = () => {
 
             {/* Tabs */}
             <Tabs defaultValue="resources" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="resources">Resources</TabsTrigger>
-                <TabsTrigger value="transcript">Transcript</TabsTrigger>
+              {/* L'onglet « Transcription » n'affichait qu'un « bientôt disponible » : retiré. */}
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="resources">Ressources</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
               </TabsList>
               
               <TabsContent value="resources" className="mt-6">
                 <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-lg font-semibold mb-4">Learning Resources</h3>
+                  <h3 className="text-lg font-semibold mb-4">Ressources</h3>
                   {currentVideo.resources.length > 0 ? (
                     <div className="space-y-3">
                       {currentVideo.resources.map(resource => (
@@ -317,26 +329,24 @@ export const ChapterVideo: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-600">No resources available for this video.</p>
+                    <p className="text-gray-600">Aucune ressource pour cette vidéo.</p>
                   )}
                 </div>
               </TabsContent>
               
-              <TabsContent value="transcript" className="mt-6">
-                <TranscriptTab videoId={currentVideo.id} />
-              </TabsContent>
               
               <TabsContent value="notes" className="mt-6">
                 <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-lg font-semibold mb-4">Your Notes</h3>
+                  <h3 className="text-lg font-semibold mb-4">Tes notes</h3>
                   <textarea
                     className="w-full h-64 p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Take notes while watching the video..."
+                    placeholder="Prends des notes pendant la vidéo…"
                     defaultValue={currentVideo.user_progress?.notes || ''}
                     onBlur={async (e) => {
                       if (isAuthenticated) {
                         await updateVideoProgress(currentVideo.id, {
-                          watched_seconds: currentVideo.user_progress?.watched_seconds || 0,
+                          // Le serveur garde la plus grande position : envoyer 0 ne fait pas reculer.
+                          watched_seconds: lastSavedProgress,
                           notes: e.target.value
                         });
                       }

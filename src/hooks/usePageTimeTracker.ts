@@ -59,7 +59,6 @@ export function usePageTimeTracker({
         content_id: contentId,
         time_spent_seconds: Math.floor(timeSpentSeconds)
       });
-      console.log(`[PageTimeTracker] Sent ${Math.floor(timeSpentSeconds)}s for ${contentType} ${contentId}`);
     } catch (error) {
       console.error('[PageTimeTracker] Failed to send study time:', error);
     }
@@ -96,7 +95,6 @@ export function usePageTimeTracker({
     if (previousContentIdRef.current && previousContentIdRef.current !== contentId) {
       const totalTime = totalTimeRef.current + (Date.now() - startTimeRef.current) / 1000;
       if (totalTime >= 1 && isAuthenticated && enabled) {
-        console.log(`[PageTimeTracker] Content changed - sending ${Math.floor(totalTime)}s for previous content`);
         sendStudyTime(totalTime).then(() => {
           // Reset for new content
           startTimeRef.current = Date.now();
@@ -125,7 +123,6 @@ export function usePageTimeTracker({
         const totalTime = totalTimeRef.current + sessionTime;
 
         if (totalTime >= 1) {
-          console.log(`[PageTimeTracker] Unmounting - total time: ${Math.floor(totalTime)}s for ${latestContentType} ${latestContentId}`);
 
           // Use sendBeacon with token in FormData (since headers don't work with sendBeacon)
           try {
@@ -138,7 +135,6 @@ export function usePageTimeTracker({
 
             const url = `${api.defaults.baseURL}/study-time/track/`;
             navigator.sendBeacon(url, data);
-            console.log(`[PageTimeTracker] Sent ${Math.floor(totalTime)}s via sendBeacon with token`);
           } catch (error) {
             console.error('[PageTimeTracker] sendBeacon failed:', error);
           }

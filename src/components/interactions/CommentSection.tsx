@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Comment, User, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { isModerator } from '@/lib/features';
 import { VoteButtonsComment } from '@/components/interactions/VoteButtonsComment';
 import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/contentItemApi';
@@ -204,6 +205,8 @@ export function CommentSection({
 
   const handleFileUpload = (file: FileUploadResponse) => {
     setUploadedFiles(prev => [...prev, file]);
+    // Fichier ajouté : la zone de dépôt se referme (la pastille du fichier suffit).
+    setShowFileUpload(false);
   };
 
   const handleRemoveFile = async (fileId: string) => {
@@ -256,7 +259,7 @@ export function CommentSection({
   };
 
   const handleDelete = async (commentId: string) => {
-    if (window.confirm('Are you sure you want to delete this comment?')) {
+    if (window.confirm('Supprimer ce commentaire ?')) {
       try {
         setSubmitting(true);
         await onDeleteComment(commentId);
@@ -297,51 +300,57 @@ export function CommentSection({
             </button>
           ))
         ) : (
-          <div className="px-4 py-2 text-gray-500 text-sm">No users found</div>
+          <div className="px-4 py-2 text-gray-500 text-sm">Aucun utilisateur trouvé</div>
         )}
       </div>
     );
   };
 
   const renderCommentContent = (comment: Comment) => (
-    <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:border-indigo-100 transition-colors">
+    <div className="bg-white rounded-xl p-4 border border-[#e7e3dc] hover:border-[#d8d4cc] transition-colors">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
             {comment.author.username.charAt(0).toUpperCase()}
           </div>
           <div>
-            <a
-              href={`/profile/${comment.author.username}/`}
-              className="font-bold text-sm text-gray-900 hover:text-indigo-600 hover:underline"
-            >
-              {comment.author.username}
-            </a>
+            {(comment.author as { is_deleted?: boolean }).is_deleted ? (
+              <span className="font-bold text-sm text-[#9a958c] italic">Compte supprimé</span>
+            ) : (
+              <a
+                href={`/profile/${comment.author.username}/`}
+                className="font-bold text-sm text-gray-900 hover:text-indigo-600 hover:underline"
+              >
+                {comment.author.username}
+              </a>
+            )}
             <div className="flex items-center text-xs text-gray-500">
               <time dateTime={comment.created_at}>{formatTimeSince(comment.created_at)}</time>
             </div>
           </div>
         </div>
         
-        {user?.id === comment.author.id && editingComment !== comment.id && (
+        {(user?.id === comment.author.id || isModerator(user)) && editingComment !== comment.id && (
           <div className="flex gap-1">
+            {user?.id === comment.author.id && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleStartEdit(comment);
               }}
               className="p-1 text-gray-400 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors"
-              title="Edit comment"
+              title="Modifier le commentaire"
             >
               <Edit className="w-4 h-4" />
             </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(comment.id);
               }}
               className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
-              title="Delete comment"
+              title="Supprimer le commentaire"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -357,7 +366,7 @@ export function CommentSection({
             onChange={(e) => handleTextareaChange(e, setEditContent)}
             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             rows={3}
-            placeholder="Edit your comment..."
+            placeholder="Modifie ton commentaire…"
           />
           <div className="mt-2 flex justify-end gap-2">
             <Button
@@ -367,7 +376,7 @@ export function CommentSection({
               disabled={submitting}
               className="rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               size="sm"
@@ -375,7 +384,7 @@ export function CommentSection({
               disabled={submitting || !editContent.trim()}
               className="rounded-full bg-indigo-600 hover:bg-indigo-700"
             >
-              {submitting ? 'Saving...' : 'Save Changes'}
+              {submitting ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </div>
         </div>
@@ -386,22 +395,23 @@ export function CommentSection({
           </div>
           {comment.attachments && comment.attachments.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {comment.attachments.map((file: any) => (
-                <a
-                  key={file.id}
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 transition-colors"
-                >
-                  {file.file_type === 'image' ? (
-                    <ImageIcon className="w-4 h-4 text-gray-600" />
-                  ) : (
-                    <FileIcon className="w-4 h-4 text-gray-600" />
-                  )}
-                  <span className="text-sm text-gray-700">{file.file_name}</span>
-                </a>
-              ))}
+              {comment.attachments.map((file: any) => {
+                // URL stable (redirige vers une URL S3 fraîche) : l'URL signée expire.
+                const href = file.download_url || file.url;
+                return file.file_type === 'image' ? (
+                  <a key={file.id} href={href} target="_blank" rel="noopener noreferrer"
+                    className="block rounded-xl overflow-hidden border border-[#e7e3dc] bg-[#faf9f7] hover:border-[#d8d4cc]"
+                    title={file.file_name}>
+                    <img src={href} alt={file.file_name} loading="lazy" className="block max-h-56 max-w-[260px] object-contain" />
+                  </a>
+                ) : (
+                  <a key={file.id} href={href} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-[#faf9f7] hover:bg-[#f2f1ee] px-3 py-2 rounded-lg border border-[#e7e3dc] transition-colors">
+                    <FileIcon className="w-4 h-4 text-[#6b6862]" />
+                    <span className="text-sm text-[#33302b]">{file.file_name}</span>
+                  </a>
+                );
+              })}
             </div>
           )}
         </>
@@ -425,7 +435,7 @@ export function CommentSection({
             className="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
           >
             <MessageSquare className="w-4 h-4 mr-1" />
-            Reply
+            Répondre
           </Button>
         )}
       </div>
@@ -437,7 +447,7 @@ export function CommentSection({
       <div className="flex items-center gap-2 mb-2">
         <CornerDownRight className="w-4 h-4 text-indigo-400" />
         <span className="text-sm text-gray-600">
-          Replying to <span className="font-medium text-indigo-600">@{parentAuthor}</span>
+          En réponse à <span className="font-medium text-indigo-600">@{parentAuthor}</span>
         </span>
         <button
           onClick={() => {
@@ -445,7 +455,7 @@ export function CommentSection({
             setShowReplyButtons(false);
           }}
           className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-          title="Cancel reply"
+          title="Annuler la réponse"
         >
           <X className="w-4 h-4" />
         </button>
@@ -455,7 +465,7 @@ export function CommentSection({
           ref={replyTextareaRef}
           value={replyContent}
           onChange={(e) => handleTextareaChange(e, setReplyContent)}
-          placeholder="Write your reply..."
+          placeholder="Écris ta réponse…"
           className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           rows={3}
         />
@@ -471,7 +481,7 @@ export function CommentSection({
             }}
             className="rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
           >
-            Cancel
+            Annuler
           </Button>
           <Button
             size="sm"
@@ -479,7 +489,7 @@ export function CommentSection({
             disabled={submitting || !replyContent.trim()}
             className="rounded-full bg-indigo-600 hover:bg-indigo-700"
           >
-            {submitting ? 'Posting...' : 'Reply'}
+            {submitting ? 'Envoi…' : 'Répondre'}
             <Send className="w-3.5 h-3.5 ml-1.5" />
           </Button>
         </div>
@@ -524,10 +534,11 @@ export function CommentSection({
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return `${seconds}s ago`;
+    if (days > 30) return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(commentDate);
+    if (days > 0) return `il y a ${days} jour${days > 1 ? 's' : ''}`;
+    if (hours > 0) return `il y a ${hours} h`;
+    if (minutes > 0) return `il y a ${minutes} min`;
+    return seconds < 10 ? "à l'instant" : `il y a ${seconds} s`;
   };
 
   return (
@@ -545,18 +556,18 @@ export function CommentSection({
         
         {/* Sorting Dropdown */}
         <div className="relative">
-          <label htmlFor="sort-comments" className="sr-only">Sort comments</label>
+          <label htmlFor="sort-comments" className="sr-only">Trier les commentaires</label>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Sort by:</span>
+            <span className="text-sm text-gray-500">Trier par :</span>
             <select
               id="sort-comments"
               value={sortOption}
               onChange={(e) => handleSortChange(e.target.value as 'mostUpvoted' | 'recent' | 'oldest')}
               className="appearance-none bg-white border border-gray-200 rounded-full px-3 py-1.5 pr-8 text-sm text-gray-700 hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="mostUpvoted">Most Upvoted</option>
-              <option value="recent">Recent</option>
-              <option value="oldest">Oldest</option>
+              <option value="mostUpvoted">Les plus utiles</option>
+              <option value="recent">Plus récents</option>
+              <option value="oldest">Plus anciens</option>
             </select>
             <div className="pointer-events-none absolute right-2 flex items-center text-gray-500">
               <ChevronDown className="w-4 h-4" />
@@ -573,7 +584,7 @@ export function CommentSection({
               ref={commentTextareaRef}
               value={newComment}
               onChange={(e) => handleTextareaChange(e, setNewComment)}
-              placeholder="Write a comment..."
+              placeholder="Écris un commentaire…"
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y min-h-[100px]"
               onFocus={() => setShowButtons(true)}
             />
@@ -611,7 +622,7 @@ export function CommentSection({
                   className="text-gray-600 hover:text-indigo-600"
                 >
                   <Paperclip className="w-4 h-4 mr-1" />
-                  Attach file
+                  Ajouter une image
                 </Button>
 
                 <div className="flex gap-2">
@@ -627,7 +638,7 @@ export function CommentSection({
                     }}
                     className="rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
                   >
-                    Cancel
+                    Annuler
                   </Button>
 
                   <Button
@@ -657,11 +668,11 @@ export function CommentSection({
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           ></path>
                         </svg>
-                        Posting...
+                        Envoi…
                       </span>
                     ) : (
                       <>
-                        Comment
+                        Commenter
                         <Send className="ml-2 w-4 h-4" />
                       </>
                     )}
@@ -687,18 +698,17 @@ export function CommentSection({
         <div className="mb-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-center">
           <div className="flex items-center justify-center gap-2 text-indigo-800 mb-2">
             <AlertCircle className="w-5 h-5" />
-            <span className="font-medium">You need to be logged in to comment</span>
+            <span className="font-medium">Connecte-toi pour commenter</span>
           </div>
           <p className="text-sm text-indigo-600">
-            Please{' '}
             <a href="/login" className="font-medium underline hover:text-indigo-800">
-              log in
+              Connecte-toi
             </a>{' '}
-            or{' '}
+            ou{' '}
             <a href="/signup" className="font-medium underline hover:text-indigo-800">
-              sign up
+              inscris-toi
             </a>{' '}
-            to join the discussion.
+            pour participer à la discussion.
           </p>
         </div>
       )}
@@ -712,8 +722,8 @@ export function CommentSection({
         {comments.length === 0 && (
           <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 mb-1">No comments yet</h3>
-            <p className="text-gray-500">Be the first to share your thoughts!</p>
+            <h3 className="text-lg font-medium text-gray-700 mb-1">Pas encore de commentaire</h3>
+            <p className="text-gray-500">Pose une question ou partage une astuce : tu seras le premier.</p>
           </div>
         )}
       </div>

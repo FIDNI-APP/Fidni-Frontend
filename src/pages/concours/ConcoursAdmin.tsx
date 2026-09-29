@@ -30,9 +30,9 @@ export default function ConcoursAdminPage() {
 
   if (!user?.is_superuser) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#7068a8' }}>Accès réservé aux administrateurs.</p>
+          <p style={{ color: '#6b6862' }}>Accès réservé aux administrateurs.</p>
           <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
         </div>
       </div>
@@ -40,7 +40,7 @@ export default function ConcoursAdminPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title="Admin Concours - Fidni" description="" />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         <button onClick={() => navigate('/concours')} className="fd-btn-ghost mb-3"
@@ -49,10 +49,10 @@ export default function ConcoursAdminPage() {
         </button>
 
         <div className="mb-5">
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
             Administration des concours
           </h1>
-          <p style={{ fontSize: 13, color: '#7068a8', marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
             Gère les annales, les questions, et les astuces.
           </p>
         </div>
@@ -105,8 +105,8 @@ function ExamsAdmin() {
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b' }}>
-          Examens <span style={{ color: '#9391b8', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {exams.length}</span>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+          Examens <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {exams.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditingMeta('new')}>
           <Plus className="w-4 h-4" /> Nouvel examen
@@ -115,11 +115,11 @@ function ExamsAdmin() {
 
       {loading ? (
         <div className="text-center" style={{ padding: 40 }}>
-          <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#4f46e5' }} />
+          <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
         </div>
       ) : exams.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 40 }}>
-          <p style={{ color: '#7068a8' }}>Aucun examen.</p>
+          <p style={{ color: '#6b6862' }}>Aucun examen.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -128,17 +128,17 @@ function ExamsAdmin() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span style={{
-                    background: '#eef2ff', color: '#4338ca',
+                    background: '#f2f1ee', color: '#000000',
                     fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
                     letterSpacing: '.04em',
                   }}>
                     {e.concours_type_display.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>
                     {e.title}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: '#9391b8' }}>
+                <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: '#6b6862' }}>
                   <span>{e.question_count} questions</span>
                   <span>·</span>
                   <span>{e.duration_minutes} min</span>
@@ -247,8 +247,8 @@ function TipsAdmin() {
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b' }}>
-          Astuces <span style={{ color: '#9391b8', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {tips.length}</span>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+          Astuces <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {tips.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditing('new')}>
           <Plus className="w-4 h-4" /> Nouvelle astuce
@@ -257,11 +257,11 @@ function TipsAdmin() {
 
       {loading ? (
         <div className="text-center" style={{ padding: 40 }}>
-          <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#4f46e5' }} />
+          <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
         </div>
       ) : tips.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 40 }}>
-          <p style={{ color: '#7068a8' }}>Aucune astuce.</p>
+          <p style={{ color: '#6b6862' }}>Aucune astuce.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -277,10 +277,10 @@ function TipsAdmin() {
                 <Lightbulb className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>{t.title}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{t.title}</div>
                 <div className="flex items-center gap-2 flex-wrap mt-1">
-                  {t.subject_name && <span style={{ fontSize: 10, color: '#4338ca', background: '#eef2ff', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subject_name}</span>}
-                  {t.subfield_name && <span style={{ fontSize: 10, color: '#7068a8', background: '#f5f4ff', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subfield_name}</span>}
+                  {t.subject_name && <span style={{ fontSize: 10, color: '#000000', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subject_name}</span>}
+                  {t.subfield_name && <span style={{ fontSize: 10, color: '#6b6862', background: '#f7f6f3', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subfield_name}</span>}
                   {(t.video_url || t.video_file) && <span style={{ fontSize: 10, color: '#a16207', background: '#fef3c7', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>VIDÉO</span>}
                 </div>
               </div>
@@ -408,9 +408,9 @@ function TipModal({ tip, onClose, onSaved }: {
 
       <Field label="OU vidéo uploadée">
         {videoFileId ? (
-          <div className="flex items-center gap-2" style={{ background: '#f9f8ff', border: '1px solid #ede9fe', padding: 10, borderRadius: 10 }}>
-            <Upload className="w-4 h-4" style={{ color: '#4338ca' }} />
-            <span style={{ fontSize: 13, color: '#1e1b4b', flex: 1 }}>{videoFileName || videoFileId}</span>
+          <div className="flex items-center gap-2" style={{ background: '#f9f8ff', border: '1px solid #e7e3dc', padding: 10, borderRadius: 10 }}>
+            <Upload className="w-4 h-4" style={{ color: '#000000' }} />
+            <span style={{ fontSize: 13, color: '#1a1a1a', flex: 1 }}>{videoFileName || videoFileId}</span>
             <button
               onClick={() => { setVideoFileId(null); setVideoFileName(null); }}
               className="fd-btn-ghost"
@@ -450,11 +450,11 @@ function TipModal({ tip, onClose, onSaved }: {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
-  border: '1.5px solid #e4e2f5',
+  border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
   fontFamily: 'DM Sans',
-  color: '#1e1b4b',
+  color: '#1a1a1a',
   background: '#f9f8ff',
   outline: 'none',
 };
@@ -462,7 +462,7 @@ const inputStyle: React.CSSProperties = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-      <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>{label}</span>
       {children}
     </label>
   );
@@ -475,7 +475,7 @@ function Modal({ onClose, title, children, wide }: {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(30,27,75,.45)', backdropFilter: 'blur(4px)',
+        background: 'rgba(20,18,16,.45)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       }}
       onClick={onClose}
@@ -492,8 +492,8 @@ function Modal({ onClose, title, children, wide }: {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b' }}>{title}</h3>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7068a8' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>{title}</h3>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
             <X className="w-5 h-5" />
           </button>
         </div>

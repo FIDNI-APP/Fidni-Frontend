@@ -1,36 +1,35 @@
-# robots.txt for Fidni - Educational Mathematics Platform
+# robots.txt — Fidni
+#
+# Un seul groupe pour tous les robots : un groupe dédié (User-agent: Googlebot…) remplace
+# entièrement le groupe « * », et les anciennes lignes « Allow: / » par moteur annulaient
+# donc toutes les interdictions ci-dessous pour Google et Bing.
 
-# Allow all crawlers
 User-agent: *
 Allow: /
 
-# Disallow private/admin pages (if any)
-Disallow: /admin/
+# Espaces personnels, administration, pages techniques
 Disallow: /api/
-Disallow: /private/
-
-# Disallow user-specific pages that shouldn't be indexed
+Disallow: /admin/
+Disallow: /logs
+Disallow: /concours/admin
+Disallow: /concours/simulate/
+Disallow: /concours/sessions/
 Disallow: /profile/*/edit
 Disallow: /complete-profile
+Disallow: /notebooks
+Disallow: /revision-lists
+Disallow: /saved
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /apercu-import
 
-# Allow all public content
-Allow: /exercises/
-Allow: /lessons/
-Allow: /exams/
-Allow: /learning-paths/
+# Pages de création / modification
+Disallow: /*/new
+Disallow: /*/edit
 
-# Sitemap location (you'll need to generate this)
-Sitemap: https://fidni.fr/sitemap.xml
+# Parcours : pas encore publié
+Disallow: /learning-path
+Disallow: /learning-paths/
 
-# Crawl delay for polite crawling (optional)
-# Crawl-delay: 1
-
-# Specific rules for common search engines
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Slurp
-Allow: /
+# Plan du site (généré par l’API à partir des contenus publiés)
+Sitemap: https://api.fidni.fr/sitemap.xml

@@ -28,7 +28,7 @@ export default function StatsAdmin() {
 
   if (loading) return (
     <div className="text-center" style={{ padding: 40 }}>
-      <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#4f46e5' }} />
+      <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
     </div>
   );
 
@@ -38,15 +38,15 @@ export default function StatsAdmin() {
 
   return (
     <>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', marginBottom: 4 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
         Statistiques des examens
       </h2>
-      <p style={{ fontSize: 13, color: '#7068a8', marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
         Choisis un examen pour éditer son analyse comparative (la répartition par chapitre est automatique).
       </p>
       {exams.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 40 }}>
-          <p style={{ color: '#7068a8' }}>Aucun examen.</p>
+          <p style={{ color: '#6b6862' }}>Aucun examen.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -55,15 +55,15 @@ export default function StatsAdmin() {
                     style={{ padding: '12px 16px', cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
                     onClick={() => setSelected(e)}>
               <span style={{
-                background: '#eef2ff', color: '#4338ca',
+                background: '#f2f1ee', color: '#000000',
                 fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, letterSpacing: '.04em',
               }}>
                 {e.concours_type_display.toUpperCase()}
               </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }} className="flex-1">
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }} className="flex-1">
                 {e.title}
               </span>
-              <ChevronRight className="w-4 h-4" style={{ color: '#b0adcd' }} />
+              <ChevronRight className="w-4 h-4" style={{ color: '#6b6862' }} />
             </button>
           ))}
         </div>
@@ -109,7 +109,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
 
   if (loading) return (
     <div className="text-center" style={{ padding: 40 }}>
-      <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#4f46e5' }} />
+      <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
     </div>
   );
 
@@ -120,7 +120,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
           <button onClick={onBack} className="fd-btn-ghost mb-2" style={{ padding: '5px 10px', fontSize: 12 }}>
             ← Tous les examens
           </button>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
             {exam.concours_type_display} · {exam.title}
           </h2>
         </div>
@@ -133,20 +133,20 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
       {/* Insight cards */}
       <div className="fd-card mb-4" style={{ padding: '20px 22px' }}>
         <div className="flex items-center justify-between mb-3">
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>Cards d'insight</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>Cards d'insight</h3>
           <button className="fd-btn-ghost" onClick={addCard} style={{ fontSize: 12, padding: '5px 10px' }}>
             <Plus className="w-3.5 h-3.5" /> Ajouter
           </button>
         </div>
         {cards.length === 0 ? (
-          <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>
+          <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>
             Aucune card. Ajoute des points clés (ex. récurrence d'un type de question).
           </p>
         ) : (
           <div className="flex flex-col gap-3">
             {cards.map((c, i) => (
               <div key={i} className="flex gap-2" style={{
-                background: '#faf9ff', border: '1px solid #efedf9', borderRadius: 10, padding: 12,
+                background: '#faf9f7', border: '1px solid #efece6', borderRadius: 10, padding: 12,
               }}>
                 <div className="flex-1 flex flex-col gap-2">
                   <input
@@ -154,8 +154,8 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
                     onChange={e => updateCard(i, { title: e.target.value })}
                     placeholder="Titre (ex. Récurrence)"
                     style={{
-                      padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e4e2f5',
-                      fontSize: 13, fontWeight: 600, color: '#1e1b4b', outline: 'none',
+                      padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e7e3dc',
+                      fontSize: 13, fontWeight: 600, color: '#1a1a1a', outline: 'none',
                     }}
                   />
                   <textarea
@@ -164,8 +164,8 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
                     placeholder="Texte explicatif…"
                     rows={2}
                     style={{
-                      padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e4e2f5',
-                      fontSize: 13, color: '#4b4880', outline: 'none', resize: 'vertical',
+                      padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e7e3dc',
+                      fontSize: 13, color: '#33302b', outline: 'none', resize: 'vertical',
                     }}
                   />
                 </div>
@@ -181,10 +181,10 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
 
       {/* Rich comparison */}
       <div className="fd-card" style={{ padding: '20px 22px' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', marginBottom: 4 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
           Analyse comparative
         </h3>
-        <p style={{ fontSize: 12, color: '#7068a8', marginBottom: 12 }}>
+        <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 12 }}>
           Texte libre : comparaison avec les autres concours, tendances sur les dernières années, etc.
         </p>
         <CompactTipTapEditor content={html} onChange={setHtml} />

@@ -37,11 +37,11 @@ interface Props {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
-  border: '1.5px solid #e4e2f5',
+  border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
   fontFamily: 'DM Sans',
-  color: '#1e1b4b',
+  color: '#1a1a1a',
   background: '#f9f8ff',
   outline: 'none',
 };
@@ -192,7 +192,7 @@ function FieldGroup({ label, children, compact }: {
 }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: compact ? 0 : 4 }}>
-      <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>{label}</span>
       {children}
     </label>
   );
@@ -243,21 +243,21 @@ export function MultiChapterPicker({
 
   if (!subjectId) {
     return (
-      <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>
+      <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>
         Sélectionne d'abord une matière.
       </p>
     );
   }
-  if (loading) return <p style={{ fontSize: 12, color: '#9391b8' }}>Chargement…</p>;
+  if (loading) return <p style={{ fontSize: 12, color: '#6b6862' }}>Chargement…</p>;
   if (chapters.length === 0) {
-    return <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>Aucun chapitre disponible.</p>;
+    return <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun chapitre disponible.</p>;
   }
 
   return (
     <div
       className="flex flex-wrap gap-1.5"
       style={{
-        background: '#f9f8ff', border: '1.5px solid #e4e2f5',
+        background: '#f9f8ff', border: '1.5px solid #e7e3dc',
         borderRadius: 10, padding: 10, maxHeight: 200, overflowY: 'auto',
       }}
     >
@@ -271,9 +271,9 @@ export function MultiChapterPicker({
             onClick={() => toggle(cid)}
             style={{
               padding: '5px 12px', borderRadius: 99,
-              border: `1.5px solid ${checked ? '#4f46e5' : '#e4e2f5'}`,
-              background: checked ? '#4f46e5' : '#fff',
-              color: checked ? '#fff' : '#7068a8',
+              border: `1.5px solid ${checked ? '#1a1a1a' : '#e7e3dc'}`,
+              background: checked ? '#1a1a1a' : '#fff',
+              color: checked ? '#fff' : '#6b6862',
               fontSize: 12, fontWeight: checked ? 600 : 500,
               cursor: 'pointer', transition: 'all .15s',
             }}

@@ -43,12 +43,6 @@ export const colorOptions = [
   "#993366", "#c0c0c0", "#ff99cc", "#ffcc00"
 ];
 
-export const editorThemes: EditorTheme[] = [
-  { name: "Classique", bgColor: "bg-white", textColor: "text-gray-800", accentColor: "from-gray-800 to-gray-900" },
-  { name: "Pastel", bgColor: "bg-blue-50", textColor: "text-gray-800", accentColor: "from-blue-400 to-indigo-500" },
-  { name: "Académique", bgColor: "bg-amber-50", textColor: "text-gray-800", accentColor: "from-amber-500 to-orange-500" },
-];
-
 export const mathFormulaCategories: FormulaCategory[] = [
   {
     name: "Algèbre",

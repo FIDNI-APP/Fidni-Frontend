@@ -1,5 +1,5 @@
 // src/components/HomeContentCard.tsx - Lavender redesign (clean truncation)
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, MessageSquare } from 'lucide-react';
 import { Content, VoteValue } from '@/types';
@@ -15,8 +15,10 @@ import {
 import {
   ContentCardBanner, getSubjectTheme, DIFFICULTY_CFG,
 } from './ContentCardBanner';
-import { ExerciseRenderer } from './viewer/ExerciseRenderer';
-import { LessonRenderer } from './viewer/LessonRenderer';
+// Aperçu chargé à la demande : il embarque KaTeX (~600 Ko) que l'accueil n'a pas à attendre.
+// La carte s'affiche tout de suite ; l'aperçu mathématique arrive juste après.
+const ExerciseRenderer = lazy(() => import('./viewer/ExerciseRenderer').then((m) => ({ default: m.ExerciseRenderer })));
+const LessonRenderer = lazy(() => import('./viewer/LessonRenderer').then((m) => ({ default: m.LessonRenderer })));
 import type { FlexibleExerciseStructure } from './editor/FlexibleExerciseEditor';
 import type { FlexibleLessonStructure } from './editor/FlexibleLessonEditor';
 
@@ -170,21 +172,23 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
                 maxHeight: 120,
                 overflow: 'hidden',
                 fontSize: 12,
-                color: '#4b4880',
+                color: '#33302b',
                 lineHeight: 1.5,
                 pointerEvents: 'none',
                 WebkitMaskImage: 'linear-gradient(to bottom, #000 65%, transparent 100%)',
                 maskImage: 'linear-gradient(to bottom, #000 65%, transparent 100%)',
               }}
             >
-              {contentType === 'lesson' ? (
-                <LessonRenderer structure={previewStructure as FlexibleLessonStructure} />
-              ) : (
-                <ExerciseRenderer
-                  structure={previewStructure as FlexibleExerciseStructure}
-                  interactive={false}
-                />
-              )}
+              <Suspense fallback={null}>
+                {contentType === 'lesson' ? (
+                  <LessonRenderer structure={previewStructure as FlexibleLessonStructure} />
+                ) : (
+                  <ExerciseRenderer
+                    structure={previewStructure as FlexibleExerciseStructure}
+                    interactive={false}
+                  />
+                )}
+              </Suspense>
             </div>
           ) : (
             <div className="flex-1 min-h-0" />
@@ -201,7 +205,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
           `}</style>
 
           {/* Meta row */}
-          <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: 11, color: '#9391b8' }}>
+          <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: 11, color: '#6b6862' }}>
             {author && <span>{author}</span>}
             {className && (
               <>
@@ -228,7 +232,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
         {/* Footer */}
         <div
           className="flex items-center gap-2 px-4 py-2.5"
-          style={{ borderTop: '1px solid #f0effe' }}
+          style={{ borderTop: '1px solid #faf9f7' }}
         >
           {/* Vote pill */}
           <div onClick={(e) => e.stopPropagation()}>

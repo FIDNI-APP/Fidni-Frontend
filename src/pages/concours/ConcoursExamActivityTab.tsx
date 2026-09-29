@@ -43,11 +43,11 @@ export function ConcoursExamActivityTab({
 
       {/* ── My history ── */}
       <section style={{
-        background: '#fff', borderRadius: 18, border: '1px solid #ece9fb', padding: '24px 28px',
+        background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
       }}>
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="w-5 h-5" style={{ color: theme.from }} />
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             Mes simulations sur cet examen
           </h2>
         </div>
@@ -58,10 +58,10 @@ export function ConcoursExamActivityTab({
             textAlign: 'center', border: `1px solid ${theme.from}22`,
           }}>
             <Lock className="w-7 h-7 mx-auto mb-3" style={{ color: theme.from }} />
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#1e1b4b', marginBottom: 4 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>
               Connecte-toi pour suivre tes simulations
             </p>
-            <p style={{ fontSize: 13, color: '#7068a8', marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
               Garde une trace de tes scores et de ta progression sur cet examen.
             </p>
             <Link to="/login" className="fd-btn-primary inline-flex" style={{ background: theme.from }}>
@@ -69,7 +69,7 @@ export function ConcoursExamActivityTab({
             </Link>
           </div>
         ) : !data.mine || data.mine.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#9391b8', fontStyle: 'italic' }}>
+          <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
             Tu n'as pas encore lancé de simulation sur cet examen.
           </p>
         ) : (
@@ -84,12 +84,12 @@ export function ConcoursExamActivityTab({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 14,
                     padding: '13px 16px', borderRadius: 12, textDecoration: 'none',
-                    background: '#faf9ff', border: '1px solid #efedf9',
+                    background: '#faf9f7', border: '1px solid #efece6',
                   }}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>
                         {submitted ? 'Terminée' : 'En cours'}
                       </span>
                       {!submitted && (
@@ -101,7 +101,7 @@ export function ConcoursExamActivityTab({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: '#9391b8' }}>
+                    <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: '#6b6862' }}>
                       <span className="inline-flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {s.duration_minutes} min
                       </span>
@@ -112,11 +112,11 @@ export function ConcoursExamActivityTab({
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{
                       fontSize: 18, fontWeight: 800, fontFamily: 'DM Mono',
-                      color: submitted ? scoreColor(pct) : '#9391b8',
+                      color: submitted ? scoreColor(pct) : '#6b6862',
                     }}>
                       {submitted ? `${pct}%` : '—'}
                     </div>
-                    <div style={{ fontSize: 10, color: '#9391b8', fontFamily: 'DM Mono' }}>
+                    <div style={{ fontSize: 10, color: '#6b6862', fontFamily: 'DM Mono' }}>
                       {s.correct_count}/{s.total_questions}
                     </div>
                   </div>
@@ -130,20 +130,20 @@ export function ConcoursExamActivityTab({
 
       {/* ── Community ── */}
       <section style={{
-        background: '#fff', borderRadius: 18, border: '1px solid #ece9fb', padding: '24px 28px',
+        background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
       }}>
         <div className="flex items-center gap-2 mb-1">
           <Users className="w-5 h-5" style={{ color: theme.from }} />
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             Dernières sessions de la communauté
           </h2>
         </div>
-        <p style={{ fontSize: 13, color: '#7068a8', marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
           Les 10 dernières simulations terminées sur cet examen (anonymisées).
         </p>
 
         {data.community.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#9391b8', fontStyle: 'italic' }}>
+          <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
             Personne n'a encore terminé de simulation sur cet examen. Sois le premier !
           </p>
         ) : (
@@ -154,7 +154,7 @@ export function ConcoursExamActivityTab({
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 14,
                   padding: '12px 16px', borderRadius: 12,
-                  background: '#faf9ff', border: '1px solid #efedf9',
+                  background: '#faf9f7', border: '1px solid #efece6',
                 }}>
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -165,10 +165,10 @@ export function ConcoursExamActivityTab({
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e1b4b' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                       Un étudiant
                     </div>
-                    <div style={{ fontSize: 11, color: '#9391b8' }}>
+                    <div style={{ fontSize: 11, color: '#6b6862' }}>
                       {relDate(s.submitted_at)}
                     </div>
                   </div>
@@ -178,7 +178,7 @@ export function ConcoursExamActivityTab({
                     }}>
                       {pct}%
                     </div>
-                    <div style={{ fontSize: 10, color: '#9391b8', fontFamily: 'DM Mono' }}>
+                    <div style={{ fontSize: 10, color: '#6b6862', fontFamily: 'DM Mono' }}>
                       {s.correct_count}/{s.total_questions}
                     </div>
                   </div>

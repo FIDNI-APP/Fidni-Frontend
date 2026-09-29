@@ -35,34 +35,6 @@ declare module '@tiptap/core' {
   }
 }
 
-// Helper function to get formula at position
-export function getFormulaAtPosition(editor: any, position: number): FormulaInfo | null {
-  if (!editor) return null;
-
-  const doc = editor.state.doc;
-  const node = doc.nodeAt(position);
-
-  if (!node || node.type.name !== 'text') return null;
-
-  const text = node.text || '';
-  const regex = /\$\$([^\$]+)\$\$|\$([^\$]+)\$/g;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    const fullMatch = match[0];
-    const latex = match[1] || match[2];
-    const isDisplay = fullMatch.startsWith('$$');
-    const matchStart = position + match.index;
-    const matchEnd = matchStart + fullMatch.length;
-
-    if (position >= matchStart && position < matchEnd) {
-      return { latex, isDisplay };
-    }
-  }
-
-  return null;
-}
-
 // Math view class for rendering formulas
 class MathView {
   dom: HTMLElement;

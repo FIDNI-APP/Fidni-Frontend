@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Save, Eye, EyeOff, ArrowLeft, Trash2, BookOpen, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Save, Eye, ArrowLeft, Trash2, BookOpen, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { TextBlockEditor } from './TextBlockEditor';
 import type { ContentBlock } from '@/types/content';
 
@@ -324,14 +324,14 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onTogglePreview}
+          <button type="button" onClick={onTogglePreview} data-tour="creer-apercu"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
               showPreview ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
             }`}>
             <Eye className="w-4 h-4" />
             Aperçu
           </button>
-          <button type="button" onClick={handleSave} disabled={isSaving || isLoading || !title.trim()}
+          <button type="button" onClick={handleSave} data-tour="creer-enregistrer" disabled={isSaving || isLoading || !title.trim()}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm transition-colors">
             <Save className="w-4 h-4" />
             {isSaving ? 'Enregistrement...' : 'Enregistrer'}
@@ -345,6 +345,7 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
 
           {/* Title */}
           <input
+            data-tour="creer-titre"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -354,7 +355,7 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
 
           {/* Sections */}
           {structure.sections.length === 0 ? (
-            <div className="py-16 text-center">
+            <div className="py-16 text-center" data-tour="creer-blocs">
               <p className="text-slate-400 text-sm mb-4">Commencez à construire votre leçon</p>
               <button type="button" onClick={() => addSection()}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors mx-auto">
@@ -362,7 +363,7 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
               </button>
             </div>
           ) : (
-            <div className="space-y-0">
+            <div className="space-y-0" data-tour="creer-blocs">
               {structure.sections.map((section, index) => (
                 <React.Fragment key={section.id}>
                   <SectionRow

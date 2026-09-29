@@ -94,3 +94,34 @@ export async function getRecommendedContent(): Promise<RecommendedContent> {
     exams: normalizeList(data.exams || []),
   };
 }
+
+// ── Tableau de bord de l'accueil (/api/dashboard/overview/) : uniquement des chiffres enregistrés.
+export interface OverviewContent {
+  id: number; type: 'exercise' | 'exam' | 'lesson'; title: string; url: string; chapter: string | null;
+  assessed?: number; total?: number; last_at?: string;
+}
+export interface OverviewWeek {
+  questions: number; success_rate: number | null; completed: number; chrono_minutes: number; active_days: number;
+}
+export interface OverviewChapter {
+  id: number; name: string; subfield: string | null; assessed: number;
+  success_pct: number | null; skilliq_pct: number | null; contents: number;
+}
+export interface DashboardOverview {
+  level: { id: number; name: string } | null;
+  streak: { current: number; best: number };
+  calendar: { date: string; count: number }[];
+  week: OverviewWeek;
+  previous_week: OverviewWeek;
+  totals: { questions: number; success_rate: number | null; exercises_done: number; exams_done: number; chrono_minutes: number };
+  resume: OverviewContent[];
+  review: OverviewContent[];
+  chapters: OverviewChapter[];
+  coverage: { total: number; touched: number };
+  weak_notions: { slug: string; label: string; assessed: number; mastery_pct: number }[];
+}
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {
+  const response = await api.get('/dashboard/overview/');
+  return response.data;
+}

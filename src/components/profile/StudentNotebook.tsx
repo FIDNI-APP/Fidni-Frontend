@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Loader2, FileText, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Loader2, FileText, ChevronRight } from 'lucide-react';
 import api from '@/lib/api';
 import { getClassLevels, getSubjects } from '@/lib/api';
 import { toast } from 'react-toastify';
-import { SubjectModel, ClassLevelModel, Notebook, Section } from '@/types';
+import { SubjectModel, ClassLevelModel, Notebook } from '@/types';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 
 // Import separated components
 import NotebooksListView from '@/components/notebook/NotebookListView';
 import NotebookSections from '@/components/notebook/NotebookSections';
 import SectionContent from '@/components/notebook/SectionContent';
+import { normalizeNotebookPayload } from '@/lib/api/notebookApi';
 import CreateNotebookForm from '@/components/notebook/CreateNotebookForm';
 
 
@@ -46,7 +48,67 @@ const StudentNotebook: React.FC = () => {
   
   // References
   const contentRef = useRef<HTMLDivElement>(null);
-  
+  const paneRef = useRef<HTMLDivElement>(null);
+
+  // The reading pane must fill exactly what the shell leaves below the TopBar.
+  // Hardcoding `100vh - 60px` assumed the TopBar was the only chrome above it,
+  // so the OnboardingBanner pushed the pane past the viewport and scrolled its
+  // header out of view. Measure the real offset instead — it also covers the
+  // banner wrapping to two lines on narrow screens.
+  const [paneHeight, setPaneHeight] = useState('calc(100dvh - 60px)');
+
+  useLayoutEffect(() => {
+    const el = paneRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      setPaneHeight(`calc(100dvh - ${Math.round(top)}px)`);
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+    // The banner can appear, disappear or reflow after mount.
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      observer.disconnect();
+    };
+  }, [currentNotebookId]);
+
+  const { setCrumbs } = useBreadcrumb();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // The open notebook lives in the URL (?nb=<id>) so the breadcrumb link to
+  // /notebooks (no query) returns to the list, and refresh/back keep state.
+  useEffect(() => {
+    const nb = searchParams.get('nb');
+    if (nb) {
+      if (nb !== currentNotebookId) {
+        setCurrentNotebookId(nb);
+        setCurrentSectionId(null);
+      }
+      setShowNotebooksList(false);
+    } else {
+      setShowNotebooksList(true);
+      setCurrentNotebookId(null);
+      setCurrentSectionId(null);
+      setCurrentNotebook(null);
+    }
+  }, [searchParams]);
+
+  // Push "Cahiers › <notebook>" into the app TopBar while reading a notebook.
+  useEffect(() => {
+    if (!showNotebooksList && currentNotebook) {
+      setCrumbs([{ label: 'Cahiers', to: '/notebooks' }, { label: currentNotebook.title }]);
+    } else {
+      setCrumbs(null);
+    }
+    return () => setCrumbs(null);
+  }, [showNotebooksList, currentNotebook?.title]);
+
   // Load notebooks on component mount
   useEffect(() => {
     loadNotebooks();
@@ -113,8 +175,7 @@ const StudentNotebook: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/notebooks/get_notebooks/');
-      console.log('Notebooks response:', response.data);
-      setNotebooks(response.data);
+      setNotebooks(normalizeNotebookPayload(response.data));
     } catch (err) {
       console.error('Failed to load notebooks:', err);
       setError('Failed to load notebooks');
@@ -127,16 +188,19 @@ const StudentNotebook: React.FC = () => {
     try {
       setSectionsLoading(true);
       
-      // Get detailed notebook data including sections
+      // Get detailed notebook data including sections. The lesson body arrives
+      // as `json_content`; the readers expect `structure`, so normalize here —
+      // this page talks to `api` directly rather than through notebookApi.
       const response = await api.get(`/notebooks/${notebookId}/`);
-      
+      const notebookData = normalizeNotebookPayload(response.data);
+
       // Update the current notebook with full details
-      setCurrentNotebook(response.data);
-      
+      setCurrentNotebook(notebookData);
+
       // Also update the notebook in the notebooks array
-      setNotebooks(prev => 
-        prev.map(notebook => 
-          notebook.id === notebookId ? response.data : notebook
+      setNotebooks(prev =>
+        prev.map(notebook =>
+          notebook.id === notebookId ? notebookData : notebook
         )
       );
     } catch (err) {
@@ -188,9 +252,7 @@ const StudentNotebook: React.FC = () => {
 
   // Event handlers
   const handleNotebookSelect = (notebookId: string) => {
-    setCurrentNotebookId(notebookId);
-    setCurrentSectionId(null); // Reset section when changing notebooks
-    setShowNotebooksList(false);
+    setSearchParams({ nb: notebookId });
   };
 
   // Critical function for fixing the lesson content loading issue
@@ -211,14 +273,13 @@ const StudentNotebook: React.FC = () => {
       } catch (error: any) {
         if (error.response?.status === 404) {
           // Fallback to old API if new one doesn't exist yet (server not restarted)
-          console.log("New API not available, falling back to old API");
           response = await api.get(`/sections/${sectionId}/`);
         } else {
           throw error;
         }
       }
-      console.log("Section data response:", response.data);
-      
+      response = { ...response, data: normalizeNotebookPayload(response.data) };
+
       if (response.data) {
         // Find existing section to update
         const updatedSections = currentNotebook.sections.map(section => {
@@ -254,10 +315,7 @@ const StudentNotebook: React.FC = () => {
   };
 
   const handleGoBackToNotebooks = () => {
-    setShowNotebooksList(true);
-    setCurrentNotebookId(null);
-    setCurrentSectionId(null);
-    setCurrentNotebook(null);
+    setSearchParams({});
   };
 
   const handleStartEditNotes = (notes: string) => {
@@ -303,12 +361,12 @@ const StudentNotebook: React.FC = () => {
 
   const handleCreateNotebook = async () => {
     if (!selectedSubject || !selectedClassLevel) {
-      toast.info('Please select a subject and class level');
+      toast.info('Choisis une matière et un niveau.');
       return;
     }
     
     if (!notebookTitle) {
-      toast.info('Please enter a title for your notebook');
+      toast.info('Donne un titre à ton cahier.');
       return;
     }
     
@@ -322,10 +380,9 @@ const StudentNotebook: React.FC = () => {
       });
       
       setNotebooks(prev => [...prev, response.data]);
-      setCurrentNotebookId(response.data.id);
       setCurrentNotebook(response.data);
-      setShowNotebooksList(false);
       setShowCreateForm(false);
+      setSearchParams({ nb: response.data.id });
       
       // Reset form
       setSelectedSubject("");
@@ -342,7 +399,7 @@ const StudentNotebook: React.FC = () => {
   };
 
   const handleRemoveLesson = async (sectionId: string, lessonEntryId: string) => {
-    if (!window.confirm('Are you sure you want to remove this lesson page?')) return;
+    if (!window.confirm('Retirer cette leçon du cahier ?')) return;
     
     try {
       if (!currentNotebook) return;
@@ -363,7 +420,7 @@ const StudentNotebook: React.FC = () => {
   };
 
   const handleDeleteNotebook = async (notebookId: string) => {
-    if (!window.confirm('Are you sure you want to delete this notebook?')) return;
+    if (!window.confirm('Supprimer ce cahier ? Cette action est définitive.')) return;
     
     try {
       await api.delete(`/notebooks/${notebookId}/`);
@@ -373,9 +430,7 @@ const StudentNotebook: React.FC = () => {
       
       // If we just deleted the current notebook, go back to notebooks list
       if (currentNotebookId === notebookId) {
-        setShowNotebooksList(true);
-        setCurrentNotebookId(null);
-        setCurrentNotebook(null);
+        setSearchParams({});
       }
       
       toast.success('Notebook deleted successfully');
@@ -393,66 +448,75 @@ const StudentNotebook: React.FC = () => {
 
   // Main render
   return (
-    <div className="flex flex-col bg-slate-50">
+    <div className="flex flex-col">
       {/* Main Content Area */}
       <div className="flex-1">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="flex flex-col items-center">
-              <Loader2 className="w-8 h-8 animate-spin text-slate-400 mb-3" />
-              <p className="text-slate-500">Loading notebooks...</p>
-            </div>
+          <div className="flex flex-col justify-center items-center py-24">
+            <Loader2 className="w-7 h-7 animate-spin mb-3" style={{ color: '#9a958c' }} />
+            <p style={{ color: '#6b6862', fontSize: 14 }}>Chargement des cahiers…</p>
           </div>
         ) : error ? (
-          <div className="text-center text-red-600 p-4 bg-red-50 rounded-lg">{error}</div>
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
+            <div className="flex items-center gap-3 p-4" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, color: '#991b1b', fontSize: 14 }}>{error}</div>
+          </div>
         ) : showCreateForm ? (
-          <CreateNotebookForm 
-            onClose={() => setShowCreateForm(false)}
-            onSubmit={handleCreateNotebook}
-            loading={loading}
-            classLevels={classLevels}
-            subjects={subjects}
-            setSelectedClassLevel={setSelectedClassLevel}
-            selectedClassLevel={selectedClassLevel}
-            setSelectedSubject={setSelectedSubject}
-            selectedSubject={selectedSubject}
-            notebookTitle={notebookTitle}
-            setNotebookTitle={setNotebookTitle}
-          />
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
+            <CreateNotebookForm
+              onClose={() => setShowCreateForm(false)}
+              onSubmit={handleCreateNotebook}
+              loading={loading}
+              classLevels={classLevels}
+              subjects={subjects}
+              setSelectedClassLevel={setSelectedClassLevel}
+              selectedClassLevel={selectedClassLevel}
+              setSelectedSubject={setSelectedSubject}
+              selectedSubject={selectedSubject}
+              notebookTitle={notebookTitle}
+              setNotebookTitle={setNotebookTitle}
+            />
+          </div>
         ) : showNotebooksList ? (
-          <NotebooksListView 
-            notebooks={notebooks}
-            onSelectNotebook={handleNotebookSelect}
-            onDeleteNotebook={handleDeleteNotebook}
-            onCreateNotebook={() => setShowCreateForm(true)}
-          />
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
+            <NotebooksListView
+              notebooks={notebooks}
+              onSelectNotebook={handleNotebookSelect}
+              onDeleteNotebook={handleDeleteNotebook}
+              onCreateNotebook={() => setShowCreateForm(true)}
+            />
+          </div>
         ) : (
-          <div className="bg-white flex flex-col border-t border-slate-200" style={{ position: 'fixed', top: '64px', left: 0, right: 0, bottom: 0, zIndex: 40 }}>
+          // In-flow reading pane: fills the area under the TopBar, to the right
+          // of the app sidebar (which stays visible and collapsible).
+          <div ref={paneRef} className="bg-white flex flex-col" style={{ height: paneHeight, borderTop: '1px solid #e7e3dc' }}>
             {/* Notebook Content */}
             {sectionsLoading ? (
-              <div className="flex-1 flex items-center justify-center bg-slate-50">
-                <div className="text-center bg-white p-8 rounded-xl border border-slate-200">
-                  <Loader2 className="w-10 h-10 mx-auto text-slate-400 animate-spin mb-4" />
-                  <p className="text-slate-600 font-medium">Chargement du contenu...</p>
+              <div className="flex-1 flex items-center justify-center" style={{ background: '#faf9f7' }}>
+                <div className="text-center" style={{ background: '#fff', padding: 32, borderRadius: 16, border: '1px solid #e7e3dc' }}>
+                  <Loader2 className="w-8 h-8 mx-auto animate-spin mb-3" style={{ color: '#9a958c' }} />
+                  <p style={{ color: '#6b6862', fontWeight: 500, fontSize: 14 }}>Chargement du contenu…</p>
                 </div>
               </div>
             ) : (
               <div className="flex flex-1 overflow-hidden">
                 {/* Sections sidebar */}
                 {currentNotebook && (
+                  <div data-tour="cahier-sections" className="flex">
                   <NotebookSections
                     sections={currentNotebook.sections}
                     activeSectionId={currentSectionId}
                     onSelectSection={handleSectionSelect}
                     onRemoveLesson={handleRemoveLesson}
                     onGoBack={handleGoBackToNotebooks}
-                    notebookTitle={currentNotebook.title}
+                    notebookTitle="Mes cahiers"
                   />
+                  </div>
                 )}
 
                 {/* Main content area — fills remaining, scrolls internally */}
                 <div
                   ref={contentRef}
+                  data-tour="cahier-contenu"
                   className="flex-1 flex flex-col overflow-hidden"
                 >
                   {currentSectionId ? (
@@ -468,15 +532,17 @@ const StudentNotebook: React.FC = () => {
                       notebookId={currentNotebookId || undefined}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full p-8">
-                      <div className="bg-white p-6 rounded-xl max-w-md text-center border border-slate-200">
-                        <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                        <h3 className="text-lg font-medium text-slate-800 mb-2">Sélectionner un chapitre</h3>
-                        <p className="text-slate-500 mb-4">
-                          Choisir un chapitre à partir de la liste de chapitres disponibles.
+                    <div className="flex flex-col items-center justify-center h-full p-8" style={{ background: '#faf9f7' }}>
+                      <div className="text-center max-w-sm" style={{ background: '#fff', padding: 28, borderRadius: 16, border: '1px solid #e7e3dc' }}>
+                        <div className="mx-auto mb-4 flex items-center justify-center" style={{ width: 56, height: 56, borderRadius: 16, background: '#f7f6f3' }}>
+                          <FileText className="w-7 h-7" style={{ color: '#cfcdc8' }} />
+                        </div>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>Sélectionnez un chapitre</h3>
+                        <p style={{ fontSize: 13.5, color: '#6b6862', marginBottom: 12 }}>
+                          Choisissez un chapitre dans la liste à gauche pour afficher son contenu.
                         </p>
-                        <p className="text-sm text-blue-600">
-                          <ChevronRight className="w-4 h-4 inline mr-1" />
+                        <p className="inline-flex items-center gap-1" style={{ fontSize: 12.5, color: '#15633c', fontWeight: 500 }}>
+                          <ChevronRight className="w-4 h-4" />
                           Les chapitres contenant des leçons sont cliquables.
                         </p>
                       </div>
@@ -490,7 +556,7 @@ const StudentNotebook: React.FC = () => {
       </div>
 
       {/* CSS for animations and paper styling */}
-      <style jsx>{`
+      <style>{`
         .fade-in {
           animation: fadeIn 0.3s ease-out forwards;
         }
@@ -499,12 +565,11 @@ const StudentNotebook: React.FC = () => {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .notebook-paper {
-          background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+          background-image: linear-gradient(#f2f1ee 1px, transparent 1px);
           background-size: 100% 2rem;
           background-position: 0 1rem;
-          box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
         }
       `}</style>
     </div>

@@ -44,9 +44,9 @@ export function ClassroomsPage() {
 
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center">
-          <p style={{ color: '#7068a8', fontSize: 14 }}>Connecte-toi pour voir tes classes.</p>
+          <p style={{ color: '#6b6862', fontSize: 14 }}>Connecte-toi pour voir tes classes.</p>
         </div>
       </div>
     );
@@ -56,7 +56,7 @@ export function ClassroomsPage() {
   const joined = classrooms.filter(c => !c.is_owner);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title="Mes classes - Fidni" description="Gérer mes classes et collaborer avec mes camarades." />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
@@ -66,24 +66,24 @@ export function ClassroomsPage() {
             <span
               className="inline-flex items-center gap-1.5"
               style={{
-                background: '#eef2ff', color: '#4338ca',
+                background: '#f2f1ee', color: '#000000',
                 padding: '4px 12px', borderRadius: 99,
                 fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
               }}
             >
               <GraduationCap className="w-3 h-3" /> CLASSES
             </span>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em', marginTop: 10 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
               Mes classes
             </h1>
-            <p style={{ fontSize: 13, color: '#7068a8', marginTop: 4 }}>
+            <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
               {isTeacher
                 ? 'Crée une classe, ajoute des matières et invite tes élèves avec un code.'
                 : 'Rejoins une classe avec un code donné par ton enseignant·e.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-tour="classes-actions">
             {!isTeacher && (
               <button className="fd-btn-primary" onClick={() => setShowJoin(true)}>
                 <LogIn className="w-4 h-4" /> Rejoindre une classe
@@ -113,14 +113,14 @@ export function ClassroomsPage() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#4f46e5' }} />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1a1a1a' }} />
           </div>
         ) : (
           <>
             {/* Owned classrooms (teacher) */}
             {owned.length > 0 && (
               <Section title="Classes que je gère" subtitle="Enseignement">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="classes-liste">
                   {owned.map(c => (
                     <ClassroomCard
                       key={c.id}
@@ -141,7 +141,7 @@ export function ClassroomsPage() {
             {/* Joined classrooms */}
             {joined.length > 0 && (
               <Section title="Classes auxquelles je participe" subtitle="Apprentissage">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="classes-liste">
                   {joined.map(c => (
                     <ClassroomCard
                       key={c.id}
@@ -165,15 +165,15 @@ export function ClassroomsPage() {
                   className="inline-flex items-center justify-center mx-auto mb-4"
                   style={{
                     width: 72, height: 72, borderRadius: 18,
-                    background: 'linear-gradient(135deg,#eef2ff,#f0effe)', color: '#7068a8',
+                    background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)', color: '#6b6862',
                   }}
                 >
                   <GraduationCap className="w-8 h-8" />
                 </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1e1b4b' }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
                   {isTeacher ? "Crée ta première classe" : "Tu n'es dans aucune classe"}
                 </h3>
-                <p style={{ fontSize: 13, color: '#7068a8', marginTop: 8, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
+                <p style={{ fontSize: 13, color: '#6b6862', marginTop: 8, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
                   {isTeacher
                     ? "Une classe te permet de regrouper tes élèves, d'y associer des matières et de suivre leurs progrès."
                     : "Demande un code de classe à ton enseignant·e pour rejoindre une classe."}
@@ -221,10 +221,10 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
   return (
     <section className="mb-6">
       <div className="mb-3">
-        <span style={{ fontSize: 10, color: '#9391b8', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 10, color: '#6b6862', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>
           {subtitle}
         </span>
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em', marginTop: 2 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em', marginTop: 2 }}>
           {title}
         </h2>
       </div>
@@ -252,7 +252,7 @@ function ClassroomCard({
           className="inline-flex items-center justify-center"
           style={{
             width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+            background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
           }}
         >
           <Users className="w-4 h-4" />
@@ -277,38 +277,38 @@ function ClassroomCard({
         )}
       </div>
 
-      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>
+      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>
         {classroom.name}
       </h3>
       {classroom.class_level_name && (
-        <p style={{ fontSize: 11, color: '#9391b8', marginTop: 2 }}>{classroom.class_level_name}</p>
+        <p style={{ fontSize: 11, color: '#6b6862', marginTop: 2 }}>{classroom.class_level_name}</p>
       )}
 
       <div className="flex items-center gap-3 mt-4 text-xs">
-        <span className="inline-flex items-center gap-1" style={{ color: '#7068a8' }}>
+        <span className="inline-flex items-center gap-1" style={{ color: '#6b6862' }}>
           <Users className="w-3 h-3" /> {classroom.student_count} élève{classroom.student_count > 1 ? 's' : ''}
         </span>
-        <span className="inline-flex items-center gap-1" style={{ color: '#7068a8' }}>
+        <span className="inline-flex items-center gap-1" style={{ color: '#6b6862' }}>
           <BookOpen className="w-3 h-3" /> {classroom.subjects.length} matière{classroom.subjects.length > 1 ? 's' : ''}
         </span>
       </div>
 
       <div
         className="flex items-center justify-between mt-4 pt-3"
-        style={{ borderTop: '1px dashed #ede9fe' }}
+        style={{ borderTop: '1px dashed #e7e3dc' }}
       >
         <div className="inline-flex items-center gap-1.5">
-          <Hash className="w-3 h-3" style={{ color: '#9391b8' }} />
+          <Hash className="w-3 h-3" style={{ color: '#6b6862' }} />
           <span
             style={{
               fontFamily: 'DM Mono', fontSize: 13, fontWeight: 700,
-              color: '#4338ca', letterSpacing: '.06em',
+              color: '#000000', letterSpacing: '.06em',
             }}
           >
             {classroom.join_code}
           </span>
         </div>
-        <span style={{ fontSize: 10, color: '#9391b8' }}>
+        <span style={{ fontSize: 10, color: '#6b6862' }}>
           {classroom.is_owner ? 'Propriétaire' : `par ${classroom.owner.username}`}
         </span>
       </div>
@@ -322,7 +322,7 @@ function ModalShell({ title, onClose, children, width = 480 }: { title: string; 
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(30,27,75,.4)', backdropFilter: 'blur(4px)',
+        background: 'rgba(20,18,16,.4)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
         animation: 'fadeIn .15s ease',
       }}
@@ -334,10 +334,10 @@ function ModalShell({ title, onClose, children, width = 480 }: { title: string; 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.02em' }}>{title}</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{title}</h3>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7068a8', padding: 4 }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862', padding: 4 }}
           >
             <X className="w-5 h-5" />
           </button>
@@ -434,7 +434,7 @@ function JoinClassroomModal({ onClose, onJoined }: { onClose: () => void; onJoin
             }}
           />
         </Field>
-        <p style={{ fontSize: 11, color: '#9391b8' }}>
+        <p style={{ fontSize: 11, color: '#6b6862' }}>
           Le code te sera donné par ton enseignant·e.
         </p>
         {err && <p style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
@@ -454,11 +454,11 @@ function JoinClassroomModal({ onClose, onJoined }: { onClose: () => void; onJoin
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
-  border: '1.5px solid #e4e2f5',
+  border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
   fontFamily: 'DM Sans',
-  color: '#1e1b4b',
+  color: '#1a1a1a',
   background: '#f9f8ff',
   outline: 'none',
 };
@@ -466,7 +466,7 @@ const inputStyle: React.CSSProperties = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 11, color: '#7068a8', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>{label}</span>
       {children}
     </label>
   );

@@ -47,6 +47,23 @@ export interface RevisionListStatistics {
 }
 
 /**
+ * L'API renvoie l'énoncé dans `json_content` ; le reste du front (ExerciseRenderer, PDF)
+ * l'attend dans `structure`, comme le fait contentApiFactory. Sans ça, chaque carte de la
+ * liste affichait « Aucun contenu disponible ».
+ */
+function withStructures(list: RevisionList): RevisionList {
+  return {
+    ...list,
+    items: (list.items || []).map((item) => {
+      const c = item.content_object;
+      if (!c || !('json_content' in c)) return item;
+      const { json_content, ...rest } = c;
+      return { ...item, content_object: { ...rest, structure: json_content } };
+    }),
+  };
+}
+
+/**
  * Get all revision lists for the current user
  */
 export async function getRevisionLists(): Promise<RevisionList[]> {
@@ -65,7 +82,7 @@ export async function getRevisionLists(): Promise<RevisionList[]> {
 export async function getRevisionList(id: number): Promise<RevisionList> {
   try {
     const response = await api.get(`/revision-lists/${id}/`);
-    return response.data;
+    return withStructures(response.data);
   } catch (error) {
     console.error('Failed to fetch revision list:', error);
     throw error;

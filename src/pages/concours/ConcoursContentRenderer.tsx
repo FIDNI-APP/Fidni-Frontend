@@ -22,6 +22,7 @@
 import React, { useMemo } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface Props {
   html: string;
@@ -119,12 +120,12 @@ function renderMathInHtml(html: string): string {
 }
 
 export const ConcoursContentRenderer: React.FC<Props> = ({ html, className }) => {
-  const rendered = useMemo(() => renderMathInHtml(html || ''), [html]);
+  const rendered = useMemo(() => sanitizeHtml(renderMathInHtml(html || '')), [html]);
   return (
     <div
       className={`concours-content ${className || ''}`}
-      // Output is HTML we built ourselves from a trusted KaTeX call.
-      // The original `html` prop is admin-authored, not user-submitted.
+      // Rédigé par un admin, mais filtré quand même : un compte admin compromis ou un
+      // copier-coller malheureux ne doit pas pouvoir exécuter de code chez les élèves.
       dangerouslySetInnerHTML={{ __html: rendered }}
     />
   );

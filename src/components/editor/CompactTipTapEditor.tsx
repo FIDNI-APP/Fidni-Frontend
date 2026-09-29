@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { createPortal } from 'react-dom';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -176,7 +177,7 @@ const MathPanel: React.FC<{
   editor: Editor;
   onInsertFormula: (latex: string) => void;
   onOpenFormulaModal?: (latex?: string) => void;
-}> = ({ editor, onInsertFormula, onOpenFormulaModal }) => {
+}> = ({ onInsertFormula, onOpenFormulaModal }) => {
   const [quickLatex, setQuickLatex] = useState('');
   const [openCategory, setOpenCategory] = useState<number | null>(null);
 
@@ -277,16 +278,35 @@ const ImageModal: React.FC<{
   onInsert: (url: string) => void;
 }> = ({ isOpen, onClose, onInsert }) => {
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Local preview immediately
     const reader = new FileReader();
     reader.onload = (ev) => setPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
+    // Real upload to S3 via the files API — we embed the stable URL, never base64
+    try {
+      setUploading(true);
+      setUploadError(null);
+      setUploadedUrl(null);
+      const { fileAPI } = await import('@/lib/api');
+      const res = await fileAPI.upload(file, 'content');
+      setUploadedUrl(res.download_url || res.url);
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      setUploadError("Échec de l'envoi de l'image. Réessaie.");
+      setPreview(null);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -317,6 +337,12 @@ const ImageModal: React.FC<{
           {preview && (
             <img src={preview} alt="Preview" className="max-h-40 mx-auto rounded" />
           )}
+          {uploading && (
+            <p className="text-sm text-center" style={{ color: '#6b6862' }}>Envoi de l'image…</p>
+          )}
+          {uploadError && (
+            <p className="text-sm text-center" style={{ color: '#b91c1c' }}>{uploadError}</p>
+          )}
         </div>
         <div className="px-4 py-3 bg-slate-50 rounded-b-xl flex justify-end gap-2">
           <button
@@ -329,16 +355,17 @@ const ImageModal: React.FC<{
           <button
             type="button"
             onClick={() => {
-              if (preview) {
-                onInsert(preview);
+              if (uploadedUrl) {
+                onInsert(uploadedUrl);
                 onClose();
                 setPreview(null);
+                setUploadedUrl(null);
               }
             }}
-            disabled={!preview}
+            disabled={!uploadedUrl || uploading}
             className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded disabled:opacity-50 hover:bg-indigo-700"
           >
-            Insérer
+            {uploading ? 'Envoi…' : 'Insérer'}
           </button>
         </div>
       </div>
@@ -528,11 +555,12 @@ interface CompactTipTapEditorProps {
 const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   content = '',
   onChange,
-  placeholder = 'Écrivez ici...',
   minHeight = '100px',
 }) => {
   const [showMathPanel, setShowMathPanel] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const colorRef = useRef<HTMLDivElement>(null);
+  const calloutRef = useRef<HTMLDivElement>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [showCalloutMenu, setShowCalloutMenu] = useState(false);
@@ -751,15 +779,15 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
         <div className="h-5 border-l border-slate-300 mx-1" />
 
         {/* Color picker */}
-        <div className="relative">
+        <div className="relative" ref={colorRef}>
           <ToolbarButton
             icon={<Palette className="w-4 h-4" />}
             label="Couleur"
             onClick={() => setShowColorPicker(!showColorPicker)}
             isActive={showColorPicker}
           />
-          {showColorPicker && (
-            <div className="absolute top-full left-0 mt-1 z-50 p-2 bg-white rounded-lg shadow-xl border border-slate-200 grid grid-cols-4 gap-1">
+          <FloatingPanel anchorRef={colorRef} open={showColorPicker} onClose={() => setShowColorPicker(false)}
+            className="p-2 bg-white rounded-lg shadow-xl border border-slate-200 grid grid-cols-4 gap-1">
               {colorOptions.map((color) => (
                 <button
                   key={color}
@@ -772,8 +800,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
                   style={{ backgroundColor: color }}
                 />
               ))}
-            </div>
-          )}
+          </FloatingPanel>
         </div>
 
         <ToolbarButton
@@ -800,7 +827,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
         </button>
 
         {/* Callout toggle */}
-        <div className="relative callout-menu-container">
+        <div className="relative callout-menu-container" ref={calloutRef}>
           <button
             type="button"
             onClick={() => setShowCalloutMenu(!showCalloutMenu)}
@@ -816,8 +843,9 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
           </button>
 
           {/* Callout Dropdown */}
-          {showCalloutMenu && (
-            <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-lg shadow-xl border border-slate-200 w-64 max-h-96 overflow-y-auto">
+          {/* Même classe que le bouton : le « clic extérieur » ci-dessus reconnaît le menu. */}
+          <FloatingPanel anchorRef={calloutRef} open={showCalloutMenu}
+            className="callout-menu-container bg-white rounded-lg shadow-xl border border-slate-200 w-64 max-h-96 overflow-y-auto">
               <div className="p-2 grid grid-cols-2 gap-2">
                 {(Object.keys(CALLOUT_CONFIGS) as CalloutType[]).map((type) => {
                   const config = CALLOUT_CONFIGS[type];
@@ -841,8 +869,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
                   );
                 })}
               </div>
-            </div>
-          )}
+          </FloatingPanel>
         </div>
 
         <div className="flex-1" />
@@ -999,19 +1026,19 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
 
         .compact-editor [data-callout-type="theorem"] {
           background-color: #eff6ff;
-          border-left-color: #3b82f6;
+          border-left-color: #1a1a1a;
           color: #1e3a8a;
         }
 
         .compact-editor [data-callout-type="property"] {
-          background-color: #eef2ff;
-          border-left-color: #6366f1;
+          background-color: #f2f1ee;
+          border-left-color: #33302b;
           color: #312e81;
         }
 
         .compact-editor [data-callout-type="definition"] {
-          background-color: #f5f3ff;
-          border-left-color: #8b5cf6;
+          background-color: #f7f6f3;
+          border-left-color: #1a1a1a;
           color: #4c1d95;
         }
 

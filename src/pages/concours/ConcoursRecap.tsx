@@ -50,8 +50,8 @@ export default function ConcoursRecapPage() {
 
   if (loading || !recap) {
     return (
-      <div style={{ minHeight: '100vh', background: '#1e1b4b' }} className="flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#a5b4fc' }} />
+      <div style={{ minHeight: '100vh', background: '#1a1a1a' }} className="flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#b8b4ac' }} />
       </div>
     );
   }
@@ -60,7 +60,7 @@ export default function ConcoursRecapPage() {
   const overallColor = overall >= 75 ? '#16a34a' : overall >= 50 ? '#f59e0b' : '#dc2626';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1e1b4b', color: '#fff', paddingBottom: 60 }}>
+    <div style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', paddingBottom: 60 }}>
       <SEO title="Résultat - Fidni" description="Résultat de simulation" />
 
       {/* Dark-mode + bigger LaTeX for the recap. */}
@@ -83,7 +83,7 @@ export default function ConcoursRecapPage() {
         <button
           onClick={() => navigate('/concours/sessions')}
           className="fd-btn-ghost mb-4"
-          style={{ background: 'rgba(255,255,255,.08)', color: '#c7d2fe', border: '1px solid rgba(255,255,255,.15)' }}
+          style={{ background: 'rgba(255,255,255,.08)', color: '#d8d4cc', border: '1px solid rgba(255,255,255,.15)' }}
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Mon historique
         </button>
@@ -91,7 +91,7 @@ export default function ConcoursRecapPage() {
         {/* Score hero */}
         <div
           style={{
-            background: 'linear-gradient(135deg,#3730a3 0%,#4f46e5 50%,#7c3aed 100%)',
+            background: 'linear-gradient(135deg,#1a1a1a 0%,#1a1a1a 50%,#1a1a1a 100%)',
             borderRadius: 24,
             padding: '32px 36px',
             position: 'relative',
@@ -105,13 +105,13 @@ export default function ConcoursRecapPage() {
           }} />
           <div className="flex items-center justify-between flex-wrap gap-4" style={{ position: 'relative' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', letterSpacing: '.08em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#b8b4ac', letterSpacing: '.08em', textTransform: 'uppercase' }}>
                 {recap.concours_type.toUpperCase()} · {recap.mode === 'exam' ? 'Annale' : recap.mode === 'random_year' ? 'Année aléatoire' : 'Mix aléatoire'}
               </div>
               <h1 style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginTop: 8 }}>
                 Résultat
               </h1>
-              <p style={{ fontSize: 13, color: '#c7d2fe', marginTop: 6 }}>
+              <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
                 {recap.correct_count} bonne{recap.correct_count > 1 ? 's' : ''} réponse{recap.correct_count > 1 ? 's' : ''} sur {recap.total_questions}
               </p>
               <div className="flex items-center gap-2 mt-3">
@@ -131,19 +131,19 @@ export default function ConcoursRecapPage() {
               >
                 <div style={{
                   width: 92, height: 92, borderRadius: '50%',
-                  background: '#3730a3',
+                  background: '#1a1a1a',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexDirection: 'column',
                 }}>
                   <div style={{ fontSize: 26, fontWeight: 800, color: '#fff', fontFamily: 'DM Mono' }}>
                     {overall}%
                   </div>
-                  <div style={{ fontSize: 9, color: '#c7d2fe', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 9, color: '#d8d4cc', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
                     Score
                   </div>
                 </div>
               </div>
-              <Trophy className="w-10 h-10" style={{ color: overall >= 75 ? '#fbbf24' : '#a5b4fc' }} />
+              <Trophy className="w-10 h-10" style={{ color: overall >= 75 ? '#fbbf24' : '#b8b4ac' }} />
             </div>
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function ConcoursRecapPage() {
         <div className="mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
-            <h2 style={{ fontSize: 12, color: '#a5b4fc', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 700 }}>
+            <h2 style={{ fontSize: 12, color: '#b8b4ac', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 700 }}>
               Par domaine
             </h2>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
@@ -169,7 +169,7 @@ export default function ConcoursRecapPage() {
               {recap.breakdown.map((b, i) => {
                 const key = `${b.subject_id || ''}-${b.subfield_id || ''}`;
                 const pct = b.total ? Math.round((b.correct * 100) / b.total) : 0;
-                const ringColor = pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#7c3aed';
+                const ringColor = pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#1a1a1a';
                 const isActive = key === activeDomainKey;
                 return (
                   <button
@@ -181,8 +181,8 @@ export default function ConcoursRecapPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 14,
                       padding: '12px 14px', borderRadius: 12,
-                      background: isActive ? 'rgba(129,140,248,.15)' : 'transparent',
-                      border: `1px solid ${isActive ? '#818cf8' : 'transparent'}`,
+                      background: isActive ? 'rgba(180,176,168,.15)' : 'transparent',
+                      border: `1px solid ${isActive ? '#9a958c' : 'transparent'}`,
                       cursor: 'pointer', textAlign: 'left',
                       transition: 'all .15s',
                     }}
@@ -197,7 +197,7 @@ export default function ConcoursRecapPage() {
                     >
                       <div style={{
                         width: 46, height: 46, borderRadius: '50%',
-                        background: '#1e1b4b',
+                        background: '#1a1a1a',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', fontFamily: 'DM Mono' }}>{pct}%</span>
@@ -208,9 +208,9 @@ export default function ConcoursRecapPage() {
                         {b.subfield_name || b.subject_name || 'Sans matière'}
                       </div>
                       {b.subject_name && b.subfield_name && (
-                        <div style={{ fontSize: 11, color: '#a5b4fc', marginTop: 1 }}>{b.subject_name}</div>
+                        <div style={{ fontSize: 11, color: '#b8b4ac', marginTop: 1 }}>{b.subject_name}</div>
                       )}
-                      <div style={{ fontSize: 11, color: '#c7d2fe', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: '#d8d4cc', marginTop: 2 }}>
                         {b.correct} sur {b.total} correct{b.correct > 1 ? 'es' : 'e'}
                       </div>
                     </div>
@@ -235,19 +235,19 @@ export default function ConcoursRecapPage() {
                 borderRadius: 16, padding: 22,
               }}
             >
-              <div style={{ fontSize: 11, color: '#a5b4fc', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
                 Domaine
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                 {activeBreakdown.subfield_name || activeBreakdown.subject_name || 'Sans matière'}
               </h3>
-              <p style={{ fontSize: 13, color: '#c7d2fe', marginTop: 6 }}>
+              <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
                 {activeBreakdown.correct} sur {activeBreakdown.total} correct{activeBreakdown.correct > 1 ? 'es' : 'e'}
               </p>
 
               <div style={{ height: 1, background: 'rgba(255,255,255,.08)', margin: '14px 0' }} />
 
-              <div style={{ fontSize: 11, color: '#a5b4fc', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
                 Sélection des questions
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -258,8 +258,8 @@ export default function ConcoursRecapPage() {
                   const isCurrent = p === activePos;
                   let bg = 'transparent';
                   let border = 'rgba(255,255,255,.18)';
-                  let color = '#c7d2fe';
-                  if (isCurrent) { bg = 'rgba(129,140,248,.25)'; border = '#818cf8'; color = '#fff'; }
+                  let color = '#d8d4cc';
+                  if (isCurrent) { bg = 'rgba(180,176,168,.25)'; border = '#9a958c'; color = '#fff'; }
                   else if (isAnswered && isCorrect) { bg = 'rgba(34,197,94,.15)'; border = 'rgba(34,197,94,.4)'; color = '#86efac'; }
                   else if (isAnswered && !isCorrect) { bg = 'rgba(220,38,38,.15)'; border = 'rgba(220,38,38,.4)'; color = '#fca5a5'; }
                   return (
@@ -302,7 +302,7 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <p style={{ color: '#a5b4fc', fontSize: 13 }}>Sélectionne une question.</p>
+        <p style={{ color: '#b8b4ac', fontSize: 13 }}>Sélectionne une question.</p>
       </div>
     );
   }
@@ -326,7 +326,7 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
           <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Question {pos + 1}</h3>
           <span style={{
             fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
-            color: '#a5b4fc', background: 'rgba(255,255,255,.08)',
+            color: '#b8b4ac', background: 'rgba(255,255,255,.08)',
             padding: '3px 9px', borderRadius: 99, textTransform: 'uppercase',
           }}>
             Non répondue
@@ -334,7 +334,7 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
         </div>
         <div className="text-center" style={{ padding: 60 }}>
           <EyeOff className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(255,255,255,.3)' }} />
-          <p style={{ color: '#a5b4fc', fontSize: 13 }}>Détail indisponible pour les questions non répondues.</p>
+          <p style={{ color: '#b8b4ac', fontSize: 13 }}>Détail indisponible pour les questions non répondues.</p>
         </div>
       </div>
     );

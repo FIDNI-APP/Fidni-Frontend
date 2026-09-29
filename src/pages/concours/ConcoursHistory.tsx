@@ -16,7 +16,7 @@ const MODE_ICON: Record<SimulationMode, any> = {
 };
 
 const SCORE_COLOR = (pct: number, submitted: boolean) => {
-  if (!submitted) return { color: '#9391b8', bg: '#f5f4ff' };
+  if (!submitted) return { color: '#6b6862', bg: '#f7f6f3' };
   if (pct >= 75) return { color: '#16a34a', bg: '#f0fdf4' };
   if (pct >= 50) return { color: '#d97706', bg: '#fffbeb' };
   return { color: '#dc2626', bg: '#fef2f2' };
@@ -46,10 +46,10 @@ export default function ConcoursHistoryPage() {
   }, [sessions]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title="Historique de simulations - Fidni" description="Historique des simulations" />
       <style>{`
-        .session-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(90,70,200,.12) !important; }
+        .session-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(20,18,16,.12) !important; }
       `}</style>
 
       <ConcoursHero
@@ -65,13 +65,13 @@ export default function ConcoursHistoryPage() {
         {!loading && stats.count > 0 && (
           <div className="grid grid-cols-3 gap-3 mb-7 animate-fade-up">
             {[
-              { icon: Trophy, label: 'Simulations', value: stats.count, color: '#4f46e5', bg: '#eef2ff' },
+              { icon: Trophy, label: 'Simulations', value: stats.count, color: '#1a1a1a', bg: '#f2f1ee' },
               { icon: TrendingUp, label: 'Score moyen', value: `${stats.avg}%`, color: '#0e7490', bg: '#ecfeff' },
               { icon: Target, label: 'Meilleur score', value: `${stats.best}%`, color: '#16a34a', bg: '#f0fdf4' },
             ].map(({ icon: Icon, label, value, color, bg }) => (
               <div key={label} style={{
-                background: '#fff', borderRadius: 16, border: '1px solid #ece9fb',
-                padding: '18px 20px', boxShadow: '0 2px 10px rgba(90,70,200,.05)',
+                background: '#fff', borderRadius: 16, border: '1px solid #e7e3dc',
+                padding: '18px 20px', boxShadow: '0 2px 10px rgba(20,18,16,.05)',
               }}>
                 <div style={{
                   width: 38, height: 38, borderRadius: 10, background: bg, color,
@@ -79,10 +79,10 @@ export default function ConcoursHistoryPage() {
                 }}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', fontFamily: 'DM Mono', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: '#1a1a1a', fontFamily: 'DM Mono', letterSpacing: '-0.03em', lineHeight: 1 }}>
                   {value}
                 </div>
-                <div style={{ fontSize: 12, color: '#9391b8', marginTop: 4 }}>{label}</div>
+                <div style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -109,15 +109,15 @@ export default function ConcoursHistoryPage() {
 
         {loading ? (
           <div className="flex justify-center" style={{ padding: '80px 0' }}>
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#4f46e5' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
           </div>
         ) : sessions.length === 0 ? (
           <div className="fd-card text-center" style={{ padding: 64 }}>
             <Trophy className="w-10 h-10 mx-auto mb-4" style={{ color: '#c4c0e8' }} />
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#1e1b4b', marginBottom: 6 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>
               Aucune simulation pour le moment
             </p>
-            <p style={{ fontSize: 13, color: '#7068a8', marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 20 }}>
               Lance ta première simulation depuis la page des examens.
             </p>
             <Link to="/concours" className="fd-btn-primary inline-flex">
@@ -138,8 +138,8 @@ export default function ConcoursHistoryPage() {
                   className="session-card animate-fade-up"
                   style={{
                     textDecoration: 'none', display: 'flex', alignItems: 'stretch',
-                    background: '#fff', borderRadius: 16, border: '1px solid #ece9fb',
-                    boxShadow: '0 2px 10px rgba(90,70,200,.05)', overflow: 'hidden',
+                    background: '#fff', borderRadius: 16, border: '1px solid #e7e3dc',
+                    boxShadow: '0 2px 10px rgba(20,18,16,.05)', overflow: 'hidden',
                     transition: 'transform .2s, box-shadow .2s',
                   }}
                 >
@@ -162,18 +162,18 @@ export default function ConcoursHistoryPage() {
                   <div className="flex items-center gap-3 flex-1 min-w-0" style={{ padding: '14px 18px' }}>
                     <div style={{
                       width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                      background: '#f4f2ff', color: '#4338ca',
+                      background: '#f4f2ff', color: '#000000',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       <Icon className="w-4.5 h-4.5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>
                           {s.concours_type_display}
                         </span>
                         <span style={{
-                          fontSize: 10, fontWeight: 700, color: '#4338ca', background: '#eef2ff',
+                          fontSize: 10, fontWeight: 700, color: '#000000', background: '#f2f1ee',
                           padding: '2px 8px', borderRadius: 99, letterSpacing: '.04em', textTransform: 'uppercase',
                         }}>
                           {s.mode_display}
@@ -188,9 +188,9 @@ export default function ConcoursHistoryPage() {
                         )}
                       </div>
                       {s.exam_title && (
-                        <div style={{ fontSize: 12, color: '#7068a8', marginTop: 3 }} className="truncate">{s.exam_title}</div>
+                        <div style={{ fontSize: 12, color: '#6b6862', marginTop: 3 }} className="truncate">{s.exam_title}</div>
                       )}
-                      <div className="flex items-center gap-3 mt-1.5" style={{ fontSize: 11, color: '#9391b8' }}>
+                      <div className="flex items-center gap-3 mt-1.5" style={{ fontSize: 11, color: '#6b6862' }}>
                         <span className="inline-flex items-center gap-1">
                           <Clock className="w-3 h-3" /> {s.duration_minutes} min
                         </span>

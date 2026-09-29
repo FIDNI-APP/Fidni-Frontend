@@ -18,6 +18,7 @@ import {
 } from '@/lib/api/concoursApi';
 import { getSubjects } from '@/lib/api/hierarchyApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { isModerator } from '@/lib/features';
 import { SEO } from '@/components/layout/SEO';
 import type { SubjectModel } from '@/types';
 
@@ -52,10 +53,10 @@ export function ConcoursTipsListPage() {
   }, [filterType, filterSubjectId, search]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title="Astuces - Concours - Fidni" description="Astuces et techniques pour les concours" />
       <style>{`
-        .tip-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(90,70,200,.14) !important; }
+        .tip-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(20,18,16,.14) !important; }
       `}</style>
 
       <ConcoursHero
@@ -71,17 +72,17 @@ export function ConcoursTipsListPage() {
         <div className="flex items-center gap-2 flex-wrap mb-6">
           {/* Search */}
           <div className="flex items-center gap-2" style={{
-            background: '#fff', border: '1.5px solid #e4e2f5',
+            background: '#fff', border: '1.5px solid #e7e3dc',
             borderRadius: 10, padding: '7px 14px', minWidth: 200,
           }}>
-            <Search className="w-3.5 h-3.5" style={{ color: '#9391b8', flexShrink: 0 }} />
+            <Search className="w-3.5 h-3.5" style={{ color: '#6b6862', flexShrink: 0 }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher…"
               style={{
                 flex: 1, border: 'none', outline: 'none',
-                background: 'transparent', fontSize: 13, color: '#1e1b4b',
+                background: 'transparent', fontSize: 13, color: '#1a1a1a',
               }}
             />
           </div>
@@ -104,8 +105,8 @@ export function ConcoursTipsListPage() {
             onChange={(e) => setFilterSubjectId(e.target.value ? Number(e.target.value) : null)}
             style={{
               padding: '7px 14px', borderRadius: 10,
-              border: '1.5px solid #e4e2f5', background: '#fff',
-              fontSize: 12, color: '#7068a8', outline: 'none',
+              border: '1.5px solid #e7e3dc', background: '#fff',
+              fontSize: 12, color: '#6b6862', outline: 'none',
             }}
           >
             <option value="">Toutes matières</option>
@@ -115,7 +116,7 @@ export function ConcoursTipsListPage() {
 
         {/* Count */}
         {!loading && tips.length > 0 && (
-          <p style={{ fontSize: 12, color: '#9391b8', marginBottom: 16, fontFamily: 'DM Mono' }}>
+          <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 16, fontFamily: 'DM Mono' }}>
             {tips.length} astuce{tips.length !== 1 ? 's' : ''}
           </p>
         )}
@@ -123,12 +124,12 @@ export function ConcoursTipsListPage() {
         {/* List */}
         {loading ? (
           <div className="flex justify-center" style={{ padding: '80px 0' }}>
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#4f46e5' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
           </div>
         ) : tips.length === 0 ? (
           <div className="fd-card text-center" style={{ padding: 56 }}>
             <Lightbulb className="w-9 h-9 mx-auto mb-3" style={{ color: '#c4c0e8' }} />
-            <p style={{ fontSize: 14, color: '#7068a8' }}>Aucune astuce trouvée.</p>
+            <p style={{ fontSize: 14, color: '#6b6862' }}>Aucune astuce trouvée.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -139,8 +140,8 @@ export function ConcoursTipsListPage() {
                 className="tip-card animate-fade-up"
                 style={{
                   overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column',
-                  background: '#fff', borderRadius: 18, border: '1px solid #ece9fb',
-                  boxShadow: '0 2px 10px rgba(90,70,200,.05)',
+                  background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc',
+                  boxShadow: '0 2px 10px rgba(20,18,16,.05)',
                   transition: 'transform .2s, box-shadow .2s',
                 }}
               >
@@ -165,7 +166,7 @@ export function ConcoursTipsListPage() {
                     {(t.video_url || t.video_file) && (
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
-                        background: 'rgba(30,27,75,.85)', color: '#fff',
+                        background: 'rgba(20,18,16,.85)', color: '#fff',
                         fontSize: 9, fontWeight: 700, padding: '4px 9px', borderRadius: 99,
                         letterSpacing: '.06em', flexShrink: 0, backdropFilter: 'blur(4px)',
                       }}>
@@ -176,22 +177,22 @@ export function ConcoursTipsListPage() {
                 </div>
 
                 <div className="p-4 flex flex-col gap-2 flex-1">
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
                     {t.title}
                   </h3>
                   {t.description && (
-                    <p style={{ fontSize: 12, color: '#7068a8', lineHeight: 1.5 }} className="line-clamp-2">
+                    <p style={{ fontSize: 12, color: '#6b6862', lineHeight: 1.5 }} className="line-clamp-2">
                       {t.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-2 flex-wrap mt-auto pt-3" style={{ borderTop: '1px solid #f0effe' }}>
+                  <div className="flex items-center gap-2 flex-wrap mt-auto pt-3" style={{ borderTop: '1px solid #faf9f7' }}>
                     {t.subject_name && (
-                      <span style={{ background: '#eef2ff', color: '#4338ca', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>
+                      <span style={{ background: '#f2f1ee', color: '#000000', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>
                         {t.subject_name}
                       </span>
                     )}
-                    <div className="flex items-center gap-2 ml-auto" style={{ fontSize: 11, color: '#9391b8' }}>
+                    <div className="flex items-center gap-2 ml-auto" style={{ fontSize: 11, color: '#6b6862' }}>
                       <span className="inline-flex items-center gap-1">
                         <ThumbsUp className="w-3 h-3" /> {t.vote_count}
                       </span>
@@ -215,7 +216,7 @@ export function ConcoursTipsListPage() {
 function getEmbedUrl(url: string): string | null {
   // YouTube
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/);
-  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  if (yt) return `https://www.youtube-nocookie.com/embed/${yt[1]}`;  // sans cookie publicitaire (RGPD)
   // Vimeo
   const vm = url.match(/vimeo\.com\/(\d+)/);
   if (vm) return `https://player.vimeo.com/video/${vm[1]}`;
@@ -241,16 +242,16 @@ export function ConcoursTipDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f8f7ff' }} className="flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#4f46e5' }} />
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
       </div>
     );
   }
   if (!tip) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f8f7ff' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center">
-          <p style={{ color: '#7068a8' }}>Astuce introuvable.</p>
+          <p style={{ color: '#6b6862' }}>Astuce introuvable.</p>
           <Link to="/concours/tips" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
         </div>
       </div>
@@ -278,7 +279,7 @@ export function ConcoursTipDetailPage() {
   const directVideoSrc = tip.video_file?.url || (tip.video_url && !embedUrl ? tip.video_url : null);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title={`${tip.title} - Astuces - Fidni`} description={tip.description} />
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
@@ -320,17 +321,17 @@ export function ConcoursTipDetailPage() {
 
           {/* Body */}
           <div className="p-6">
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1e1b4b', letterSpacing: '-0.03em' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
               {tip.title}
             </h1>
             <div className="flex items-center gap-2 flex-wrap mt-3">
               {tip.subject_name && (
-                <span style={{ background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99 }}>
+                <span style={{ background: '#f2f1ee', color: '#000000', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99 }}>
                   {tip.subject_name}
                 </span>
               )}
               {tip.subfield_name && (
-                <span style={{ background: '#f5f4ff', color: '#7068a8', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99 }}>
+                <span style={{ background: '#f7f6f3', color: '#6b6862', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99 }}>
                   {tip.subfield_name}
                 </span>
               )}
@@ -342,18 +343,18 @@ export function ConcoursTipDetailPage() {
             </div>
             {tip.description && (
               <div
-                style={{ fontSize: 14, color: '#4b4880', lineHeight: 1.7, marginTop: 14, whiteSpace: 'pre-wrap' }}
+                style={{ fontSize: 14, color: '#33302b', lineHeight: 1.7, marginTop: 14, whiteSpace: 'pre-wrap' }}
               >
                 {tip.description}
               </div>
             )}
 
             {/* Action bar */}
-            <div className="flex items-center gap-2 mt-5 pt-4" style={{ borderTop: '1px solid #f0effe' }}>
+            <div className="flex items-center gap-2 mt-5 pt-4" style={{ borderTop: '1px solid #faf9f7' }}>
               <div
                 className="inline-flex items-center"
                 style={{
-                  background: '#f5f4ff', border: '1px solid #ede9fe',
+                  background: '#f7f6f3', border: '1px solid #e7e3dc',
                   borderRadius: 99, padding: 2,
                 }}
               >
@@ -362,13 +363,13 @@ export function ConcoursTipDetailPage() {
                   disabled={busyVote}
                   style={{
                     padding: '5px 9px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                    background: tip.user_vote === 1 ? '#4f46e5' : 'transparent',
-                    color: tip.user_vote === 1 ? '#fff' : '#7068a8',
+                    background: tip.user_vote === 1 ? '#1a1a1a' : 'transparent',
+                    color: tip.user_vote === 1 ? '#fff' : '#6b6862',
                   }}
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />
                 </button>
-                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'DM Mono', minWidth: 30, textAlign: 'center', color: '#1e1b4b' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'DM Mono', minWidth: 30, textAlign: 'center', color: '#1a1a1a' }}>
                   {tip.vote_count}
                 </span>
                 <button
@@ -377,7 +378,7 @@ export function ConcoursTipDetailPage() {
                   style={{
                     padding: '5px 9px', borderRadius: 99, border: 'none', cursor: 'pointer',
                     background: tip.user_vote === -1 ? '#dc2626' : 'transparent',
-                    color: tip.user_vote === -1 ? '#fff' : '#7068a8',
+                    color: tip.user_vote === -1 ? '#fff' : '#6b6862',
                   }}
                 >
                   <ThumbsDown className="w-3.5 h-3.5" />
@@ -386,14 +387,14 @@ export function ConcoursTipDetailPage() {
               <button onClick={onSave} className="fd-btn-ghost"
                       style={{
                         background: tip.is_saved ? '#fef3c7' : '#fff',
-                        color: tip.is_saved ? '#a16207' : '#7068a8',
-                        borderColor: tip.is_saved ? '#fde68a' : '#e4e2f5',
+                        color: tip.is_saved ? '#a16207' : '#6b6862',
+                        borderColor: tip.is_saved ? '#fde68a' : '#e7e3dc',
                       }}>
                 {busySave ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   : <Bookmark className="w-3.5 h-3.5" fill={tip.is_saved ? 'currentColor' : 'none'} />}
                 {tip.is_saved ? 'Sauvegardée' : 'Sauvegarder'}
               </button>
-              <span style={{ fontSize: 11, color: '#9391b8', marginLeft: 'auto' }}>
+              <span style={{ fontSize: 11, color: '#6b6862', marginLeft: 'auto' }}>
                 <Eye className="inline w-3 h-3 mr-1" />
                 {tip.view_count}
               </span>
@@ -404,17 +405,17 @@ export function ConcoursTipDetailPage() {
         {/* Comments */}
         <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-3">
-            <MessageSquare className="w-4 h-4" style={{ color: '#4338ca' }} />
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>Commentaires</h3>
+            <MessageSquare className="w-4 h-4" style={{ color: '#000000' }} />
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>
           </div>
-          <TipCommentsBlock tipId={tip.id} currentUserId={user?.id} />
+          <TipCommentsBlock tipId={tip.id} currentUserId={user?.id} canModerate={isModerator(user)} />
         </div>
       </div>
     </div>
   );
 }
 
-function TipCommentsBlock({ tipId, currentUserId }: { tipId: number; currentUserId?: number | string }) {
+function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId: number; currentUserId?: number | string; canModerate?: boolean }) {
   const [comments, setComments] = useState<ConcoursComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -448,8 +449,8 @@ function TipCommentsBlock({ tipId, currentUserId }: { tipId: number; currentUser
           rows={2}
           style={{
             flex: 1, padding: '10px 12px', borderRadius: 10,
-            border: '1.5px solid #e4e2f5', background: '#f9f8ff',
-            fontSize: 13, fontFamily: 'DM Sans', color: '#1e1b4b',
+            border: '1.5px solid #e7e3dc', background: '#f9f8ff',
+            fontSize: 13, fontFamily: 'DM Sans', color: '#1a1a1a',
             outline: 'none', resize: 'vertical', minHeight: 60,
           }}
         />
@@ -460,33 +461,33 @@ function TipCommentsBlock({ tipId, currentUserId }: { tipId: number; currentUser
       </div>
       {loading ? (
         <div className="text-center" style={{ padding: 12 }}>
-          <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: '#4f46e5' }} />
+          <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
         </div>
       ) : comments.length === 0 ? (
-        <p style={{ fontSize: 12, color: '#9391b8', fontStyle: 'italic' }}>Aucun commentaire.</p>
+        <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun commentaire.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {comments.map(c => (
             <div key={c.id} className="flex gap-3" style={{
-              background: '#f9f8ff', border: '1px solid #ede9fe',
+              background: '#f9f8ff', border: '1px solid #e7e3dc',
               borderRadius: 10, padding: 12,
             }}>
               {c.author.avatar
                 ? <img src={c.author.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%' }} />
                 : <div style={{
                     width: 32, height: 32, borderRadius: '50%',
-                    background: 'linear-gradient(135deg,#4f46e5,#818cf8)', color: '#fff',
+                    background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 700,
                   }}>{c.author.username[0]?.toUpperCase()}</div>}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1e1b4b' }}>{c.author.username}</span>
-                  <span style={{ fontSize: 10, color: '#9391b8' }}>{new Date(c.created_at).toLocaleString('fr-FR')}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.author.username}</span>
+                  <span style={{ fontSize: 10, color: '#6b6862' }}>{new Date(c.created_at).toLocaleString('fr-FR')}</span>
                 </div>
-                <p style={{ fontSize: 13, color: '#4b4880', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.content}</p>
+                <p style={{ fontSize: 13, color: '#33302b', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.content}</p>
               </div>
-              {(currentUserId !== undefined && Number(currentUserId) === c.author.id) && (
+              {(canModerate || (currentUserId !== undefined && Number(currentUserId) === c.author.id)) && (
                 <button onClick={() => remove(c.id)}
                         style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer' }}>
                   <Trash2 className="w-4 h-4" />

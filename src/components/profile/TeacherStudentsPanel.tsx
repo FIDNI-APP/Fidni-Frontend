@@ -25,7 +25,7 @@ interface Invitation {
 }
 
 const Avatar: React.FC<{ src: string | null; name: string; size?: string }> = ({ src, name, size = 'w-10 h-10' }) => (
-  <div className={`${size} rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0`}>
+  <div className={`${size} rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center flex-shrink-0`}>
     {src
       ? <img src={src} alt={name} className="w-full h-full object-cover" />
       : <span className="text-white font-semibold text-sm">{name[0]?.toUpperCase()}</span>
@@ -101,9 +101,9 @@ const TeacherStudentsPanel: React.FC = () => {
     <div className="space-y-8 max-w-2xl">
 
       {/* Invite form */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div className="fd-card shadow-sm p-6">
         <h2 className="text-base font-semibold text-slate-900 mb-1 flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-blue-600" />
+          <UserPlus className="w-5 h-5 text-indigo-600" />
           Inviter un élève
         </h2>
         <p className="text-sm text-slate-500 mb-4">
@@ -118,13 +118,13 @@ const TeacherStudentsPanel: React.FC = () => {
               value={identifier}
               onChange={e => { setIdentifier(e.target.value); setSendError(null); setSendSuccess(null); }}
               placeholder="Nom d'utilisateur de l'élève"
-              className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2.5 border border-[#e7e3dc] rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
           <button
             type="submit"
             disabled={sending || !identifier.trim()}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             Inviter
@@ -147,12 +147,12 @@ const TeacherStudentsPanel: React.FC = () => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+          <Loader2 className="w-7 h-7 animate-spin text-indigo-600" />
         </div>
       ) : (
         <>
           {/* Current students */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="fd-card shadow-sm p-6">
             <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-600" />
               Mes élèves
@@ -190,7 +190,7 @@ const TeacherStudentsPanel: React.FC = () => {
 
           {/* Pending invitations */}
           {pendingInvitations.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div className="fd-card shadow-sm p-6">
               <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-amber-500" />
                 Invitations en attente
@@ -222,7 +222,7 @@ const TeacherStudentsPanel: React.FC = () => {
 
           {/* Past invitations (declined) */}
           {pastInvitations.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div className="fd-card shadow-sm p-6">
               <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-slate-400" />
                 Historique des invitations

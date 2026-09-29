@@ -1,12 +1,37 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Bouton partagé, aligné sur le système « encre & papier » (mêmes rendus que .fd-btn-primary
+ * et .fd-btn-ghost d'index.css). Remplace l'ancien style « liquid glass » (verre flou, reflet
+ * qui balaie au survol, zoom) qui détonnait avec le reste du site et rendait le texte blanc
+ * illisible sur fond clair. `className` reste prioritaire (tailwind-merge).
+ */
+type Variant = 'default' | 'primary' | 'secondary' | 'ghost' | 'outline' | 'destructive';
+
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'primary' | 'secondary' | 'ghost';
+  variant?: Variant;
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
   loading?: boolean;
+  /** React 19 : `ref` est une prop ordinaire, transmise au <button> par le spread. */
+  ref?: React.Ref<HTMLButtonElement>;
 }
+
+const VARIANTS: Record<Variant, string> = {
+  default: 'bg-brand text-white border border-brand hover:bg-brand-hover hover:border-brand-hover',
+  primary: 'bg-brand text-white border border-brand hover:bg-brand-hover hover:border-brand-hover',
+  secondary: 'bg-brand-soft text-brand-hover border border-brand-line hover:bg-[#dcede2]',
+  outline: 'bg-white text-ink-soft border border-[#d8d4cc] hover:border-ink hover:text-ink hover:bg-[#f7f6f3]',
+  ghost: 'bg-transparent text-ink-soft border border-transparent hover:bg-[#f2f1ee] hover:text-ink',
+  destructive: 'bg-[#c2564f] text-white border border-[#c2564f] hover:bg-[#a8463f] hover:border-[#a8463f]',
+};
+
+const SIZES = {
+  sm: 'px-3 py-1.5 text-[13px]',
+  md: 'px-5 py-2.5 text-sm',
+  lg: 'px-7 py-3 text-base',
+};
 
 export const Button: React.FC<ButtonProps> = ({
   variant = 'default',
@@ -16,42 +41,26 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   disabled,
   ...props
-}) => {
-  const baseClasses = 'liquid-glass-button font-medium transition-all duration-300 rounded-xl liquid-effect justify-center flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500';
-  
-  const variantClasses = {
-    default: 'text-white',
-    primary: 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white hover:from-indigo-500/30 hover:to-purple-500/30',
-    secondary: 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-700 hover:from-emerald-500/30 hover:to-teal-500/30',
-    ghost: 'liquid-glass !backdrop-filter-none !bg-transparent border-transparent hover:border-gray-200'
-  };
-  
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-5 py-2.5 text-base',
-    lg: 'px-8 py-3.5 text-lg'
-  };
-  
-  return (
-    <button
-      className={cn(
-        baseClasses,
-        variantClasses[variant],
-        sizeClasses[size],
-        disabled && 'opacity-50 cursor-not-allowed',
-        className
-      )}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? (
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-          <span>Loading...</span>
-        </div>
-      ) : (
-        children
-      )}
-    </button>
-  );
-};
+}) => (
+  <button
+    className={cn(
+      'inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold transition-colors',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+      VARIANTS[variant] ?? VARIANTS.default,
+      SIZES[size],
+      (disabled || loading) && 'opacity-50 cursor-not-allowed',
+      className
+    )}
+    disabled={disabled || loading}
+    {...props}
+  >
+    {loading ? (
+      <>
+        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" aria-hidden="true" />
+        <span>Chargement…</span>
+      </>
+    ) : (
+      children
+    )}
+  </button>
+);

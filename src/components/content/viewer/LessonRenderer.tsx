@@ -15,7 +15,7 @@ const RenderContent: React.FC<{ html?: string; className?: string }> = ({ html, 
   if (!html) return null;
 
   return (
-    <div className={`text-slate-700 min-w-0 max-w-full ${className}`}>
+    <div className={`text-ink-soft min-w-0 max-w-full ${className}`}>
       <TipTapRenderer content={html} />
     </div>
   );
@@ -29,8 +29,8 @@ const SubSectionRenderer: React.FC<{ subSection: SubSectionBlock; sectionIndex: 
   return (
     <div className="mt-6">
       {subSection.title && (
-        <h4 className="text-lg font-semibold text-slate-800 mb-3">
-          {sectionIndex + 1}.{index + 1}. {subSection.title}
+        <h4 className="fd-display text-lg font-semibold text-ink-soft mb-3" style={{ letterSpacing: '-0.01em' }}>
+          <span className="fd-nums">{sectionIndex + 1}.{index + 1}.</span> {subSection.title}
         </h4>
       )}
       <RenderContent html={subSection.content?.html} className="prose prose-slate" />
@@ -41,8 +41,8 @@ const SubSectionRenderer: React.FC<{ subSection: SubSectionBlock; sectionIndex: 
 const SectionRenderer: React.FC<{ section: SectionBlock; index: number }> = ({ section, index }) => {
   return (
     <div className="mt-8 first:mt-0">
-      <h3 className="text-2xl font-bold text-slate-900 mb-4">
-        {index + 1}. {section.title || 'Section sans titre'}
+      <h3 className="fd-display text-2xl text-ink mb-4" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
+        <span className="fd-nums">{index + 1}.</span> {section.title || 'Section sans titre'}
       </h3>
 
       <RenderContent html={section.content?.html} className="prose prose-slate mb-4" />
@@ -66,8 +66,8 @@ const SectionRenderer: React.FC<{ section: SectionBlock; index: number }> = ({ s
 export const LessonRenderer: React.FC<LessonRendererProps> = ({ structure }) => {
   if (!structure || !structure.sections || structure.sections.length === 0) {
     return (
-      <div className="text-center text-slate-400 py-12">
-        <p>Aucune section à afficher</p>
+      <div className="text-center text-ink-faint py-12">
+        <p>Aucune section à afficher pour le moment.</p>
       </div>
     );
   }

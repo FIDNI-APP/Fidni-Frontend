@@ -1,14 +1,7 @@
 // src/pages/learningpaths/CreateLearningPath.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Save, 
-  Plus, 
-  Trash2,
-  Loader2,
-  AlertCircle
-} from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +48,7 @@ export const CreateLearningPath: React.FC = () => {
   // Check if user is superuser
   useEffect(() => {
     if (!user?.is_superuser) {
-      navigate('/learning-paths');
+      navigate('/learning-path');
     }
   }, [user, navigate]);
 
@@ -77,7 +70,7 @@ export const CreateLearningPath: React.FC = () => {
       setClassLevels(classLevelsData);
     } catch (err) {
       console.error('Failed to fetch data:', err);
-      setError('Failed to load form data');
+      setError('Impossible de charger le formulaire.');
     } finally {
       setLoading(false);
     }
@@ -98,7 +91,7 @@ export const CreateLearningPath: React.FC = () => {
       });
     } catch (err) {
       console.error('Failed to fetch learning path:', err);
-      setError('Failed to load learning path');
+      setError('Impossible de charger le parcours.');
     }
   };
 
@@ -106,7 +99,7 @@ export const CreateLearningPath: React.FC = () => {
     e.preventDefault();
     
     if (!formData.title || !formData.subject || formData.class_level.length === 0) {
-      setError('Please fill in all required fields');
+      setError('Remplis tous les champs obligatoires.');
       return;
     }
 
@@ -119,14 +112,14 @@ export const CreateLearningPath: React.FC = () => {
       } else {
         const result = await createLearningPath(formData);
         // Navigate to the newly created learning path
-        navigate(`/learning-paths/${result.id}`);
+        navigate(`/learning-path/${result.id}`);
         return;
       }
       
-      navigate('/learning-paths');
+      navigate('/learning-path');
     } catch (err) {
       console.error('Failed to save learning path:', err);
-      setError('Failed to save learning path. Please try again.');
+      setError('Impossible d’enregistrer le parcours. Réessaie.');
     } finally {
       setSaving(false);
     }
@@ -157,20 +150,20 @@ export const CreateLearningPath: React.FC = () => {
           <div className="mb-8">
             <Button
               variant="ghost"
-              onClick={() => navigate('/learning-paths')}
+              onClick={() => navigate('/learning-path')}
               className="mb-4"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Learning Paths
+              Retour aux parcours
             </Button>
             
             <h1 className="text-3xl font-bold text-gray-900">
-              {isEditMode ? 'Edit Learning Path' : 'Create New Learning Path'}
+              {isEditMode ? 'Modifier le parcours' : 'Nouveau parcours'}
             </h1>
             <p className="text-gray-600 mt-2">
               {isEditMode 
-                ? 'Update the learning path details below' 
-                : 'Create a structured learning experience for students'
+                ? 'Modifie les informations du parcours.' 
+                : 'Un parcours guidé, chapitre par chapitre, pour les élèves.'
               }
             </p>
           </div>
@@ -187,12 +180,12 @@ export const CreateLearningPath: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
               {/* Title */}
               <div>
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title">Titre *</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Mastering Calculus Fundamentals"
+                  placeholder="ex. : Maîtriser les suites numériques"
                   className="mt-1"
                   required
                 />
@@ -205,20 +198,20 @@ export const CreateLearningPath: React.FC = () => {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Provide a detailed description of what students will learn..."
+                  placeholder="Ce que les élèves vont apprendre dans ce parcours…"
                   className="mt-1 h-32"
                 />
               </div>
 
               {/* Subject */}
               <div>
-                <Label htmlFor="subject">Subject *</Label>
+                <Label htmlFor="subject">Matière *</Label>
                 <Select
                   value={formData.subject}
                   onValueChange={(value) => setFormData({ ...formData, subject: value })}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select a subject" />
+                    <SelectValue placeholder="Choisir une matière" />
                   </SelectTrigger>
                   <SelectContent>
                     {subjects.map(subject => (
@@ -232,9 +225,9 @@ export const CreateLearningPath: React.FC = () => {
 
               {/* Class Levels */}
               <div>
-                <Label>Class Levels *</Label>
+                <Label>Niveaux *</Label>
                 <p className="text-sm text-gray-600 mb-3">
-                  Select all class levels this learning path is suitable for
+                  Les niveaux concernés par ce parcours
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {classLevels.map(level => (
@@ -261,7 +254,7 @@ export const CreateLearningPath: React.FC = () => {
 
               {/* Estimated Hours */}
               <div>
-                <Label htmlFor="hours">Estimated Hours</Label>
+                <Label htmlFor="hours">Durée estimée (heures)</Label>
                 <Input
                   id="hours"
                   type="number"
@@ -275,16 +268,16 @@ export const CreateLearningPath: React.FC = () => {
                   className="mt-1"
                 />
                 <p className="text-sm text-gray-600 mt-1">
-                  Total estimated time to complete this learning path
+                  Temps total estimé pour terminer le parcours
                 </p>
               </div>
 
               {/* Active Status */}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="active">Active Status</Label>
+                  <Label htmlFor="active">Parcours visible</Label>
                   <p className="text-sm text-gray-600">
-                    Inactive paths won't be visible to students
+                    Un parcours désactivé n’apparaît pas aux élèves
                   </p>
                 </div>
                 <Switch
@@ -300,9 +293,9 @@ export const CreateLearningPath: React.FC = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/learning-paths')}
+                onClick={() => navigate('/learning-path')}
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 type="submit"
@@ -312,32 +305,32 @@ export const CreateLearningPath: React.FC = () => {
                 {saving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
+                    Enregistrement…
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    {isEditMode ? 'Update' : 'Create'} Learning Path
+                    {isEditMode ? 'Enregistrer le parcours' : 'Créer le parcours'}
                   </>
                 )}
               </Button>
             </div>
           </form>
 
-          {/* Next Steps Info */}
+          {/* Ensuite Info */}
           {!isEditMode && (
             <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                Next Steps
+                Ensuite
               </h3>
               <p className="text-blue-800">
-                After creating the learning path, you'll be able to:
+                Une fois le parcours créé, tu pourras :
               </p>
               <ul className="mt-2 space-y-1 text-blue-800">
-                <li>• Add chapters with video lessons</li>
-                <li>• Create quizzes for each chapter</li>
-                <li>• Upload resources and materials</li>
-                <li>• Set prerequisites and learning objectives</li>
+                <li>• ajouter des chapitres avec leurs vidéos</li>
+                <li>• créer un quiz par chapitre</li>
+                <li>• joindre des ressources</li>
+                <li>• préciser les prérequis et les objectifs</li>
               </ul>
             </div>
           )}

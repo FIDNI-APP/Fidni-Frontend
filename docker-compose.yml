@@ -1,9 +1,8 @@
-version: "3.9"
-
 services:
-  fidni-backend:
+  fidni-frontend:
     image: fidni-frontend
     container_name: fidni-frontend
+    build: .
     ports:
-      - "3000:80"
+      - "127.0.0.1:3001:8080"   # version de production ; 3000 reste au serveur de dev Vite
     restart: unless-stopped

@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
-import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getUserProfile,
@@ -8,16 +8,18 @@ import {
   getUserSavedExercises,
   getUserSavedLessons,
   getUserSavedExams,
-  getUserProgressExercises
+  getUserProgressExercises,
+  getUserContributions
 } from '@/lib/api/userApi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '@/lib/api/apiClient';
 import {
-  User, Target, BarChart3, Bookmark, NotebookPen,
-  ListChecks, Settings, Loader2, Menu, Brain, X, Users
+  User, Target, BarChart3,
+  Settings, Loader2, Users, Pencil, Lock, Plus
 } from 'lucide-react';
+import { identityFromUser } from '@/lib/identity';
 
 // Import des sections
-import { ProfileOverviewSection } from '@/components/profile/ProfileOverviewSection';
+import { ProfileBilanSection, type SkillAssessment } from '@/components/profile/ProfileBilanSection';
 import { StatsDashboard } from '@/components/profile/StatsDashboard';
 import { ProgressSection } from '@/components/profile/ProgressSection';
 import { SavedContentSection } from '@/components/profile/SavedContentSection';
@@ -26,6 +28,7 @@ import StudentNotebook from '@/components/profile/StudentNotebook';
 import { SettingsSection } from '@/components/profile/SettingsSection';
 import { SkillIQSection } from '@/components/profile/SkillIQSection';
 import TeacherStudentsPanel from '@/components/profile/TeacherStudentsPanel';
+import { ModerationDeleteButton } from '@/components/profile/ModerationDeleteButton';
 
 interface FeatureConfig {
   id: string;
@@ -36,13 +39,10 @@ interface FeatureConfig {
 }
 
 const FEATURES_CONFIG: FeatureConfig[] = [
-  { id: 'overview', title: 'Vue d\'ensemble', icon: User, forUserType: ['student', 'teacher'] },
+  { id: 'overview', title: 'Bilan', icon: User, forUserType: ['student', 'teacher'] },
   { id: 'statistics', title: 'Statistiques', icon: BarChart3, forUserType: ['student', 'teacher'] },
   { id: 'progress', title: 'Progression', icon: Target, forUserType: ['student'] },
-  { id: 'skilliq', title: 'Skill IQ', icon: Brain, forUserType: ['student'] },
-  { id: 'notebooks', title: 'Cahiers', icon: NotebookPen, forUserType: ['student'] },
-  { id: 'revisionlists', title: 'Révisions', icon: ListChecks, forUserType: ['student'] },
-  { id: 'saved', title: 'Favoris', icon: Bookmark, forUserType: ['student', 'teacher'] },
+  // Skill IQ, Cahiers, Révisions et Favoris ont été déplacés vers la sidebar ("Mon espace").
   { id: 'students', title: 'Mes élèves', icon: Users, forUserType: ['teacher'], ownerOnly: true },
   { id: 'settings', title: 'Paramètres', icon: Settings, forUserType: ['student', 'teacher'], ownerOnly: true },
 ];
@@ -68,38 +68,59 @@ export const ProfilePage: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [savedData, setSavedData] = useState<SavedData>({ exercises: [], lessons: [], exams: [] });
   const [progressData, setProgressData] = useState<ProgressData>({ successExercises: [], reviewExercises: [] });
+  const [assessments, setAssessments] = useState<SkillAssessment[]>([]);
+  const [contributions, setContributions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [savedLoading, setSavedLoading] = useState(false);
-  const [progressLoading, setProgressLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [bilanLoading, setBilanLoading] = useState(true);
 
   const isOwner = currentUser?.username === username;
   const userType = profileData?.profile?.user_type || 'student';
 
-  const availableFeatures = FEATURES_CONFIG.filter(f => {
+  const availableFeatures = useMemo(() => FEATURES_CONFIG.filter(f => {
     const matchesUserType = f.forUserType.includes(userType as 'student' | 'teacher');
     const matchesOwner = f.ownerOnly ? isOwner : true;
     return matchesUserType && matchesOwner;
-  });
+  }), [userType, isOwner]);
+
+  // Données déjà chargées pour ce profil : changer d'onglet ne les redemande pas
+  // (avant, chaque clic relançait les requêtes et réaffichait un chargement).
+  const loaded = useRef<{ user?: string; progress?: boolean; bilanFor?: boolean; saved?: boolean }>({});
+  // Onglets déjà ouverts : ils restent montés (cachés), on y revient instantanément.
+  const [visited, setVisited] = useState<Set<string>>(() => new Set([activeSection]));
 
   useEffect(() => {
-    if (username) loadProfileData();
+    if (!username || loaded.current.user === username) return;
+    // Nouveau profil : on oublie tout ce qui concernait le précédent.
+    loaded.current = { user: username };
+    setSavedData({ exercises: [], lessons: [], exams: [] });
+    setProgressData({ successExercises: [], reviewExercises: [] });
+    setProgressLoading(true);
+    setBilanLoading(true);
+    setVisited(new Set([activeSection]));
+    loadProfileData();
   }, [username]);
 
   useEffect(() => {
-    if (activeSection === 'saved' && username && savedData.exercises.length === 0) loadSavedData();
-  }, [activeSection, username]);
-
-  useEffect(() => {
-    if (activeSection === 'progress' && username) loadProgressData();
-  }, [activeSection, username]);
-
-  useEffect(() => {
-    if (activeSection === 'overview' && username) {
+    if (!username) return;
+    setVisited(prev => (prev.has(activeSection) ? prev : new Set(prev).add(activeSection)));
+    const done = loaded.current;
+    if ((activeSection === 'overview' || activeSection === 'progress') && !done.progress) {
+      done.progress = true;
       loadProgressData();
+    }
+    // Les bilans Skill IQ ne sont lisibles que par leur propriétaire : on recharge si
+    // l'on apprend après coup que c'est bien son profil (session restaurée tardivement).
+    if (activeSection === 'overview' && done.bilanFor !== isOwner) {
+      done.bilanFor = isOwner;
+      loadBilanData();
+    }
+    if (activeSection === 'saved' && !done.saved) {
+      done.saved = true;
       loadSavedData();
     }
-  }, [activeSection, username]);
+  }, [activeSection, username, isOwner]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -164,232 +185,229 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  // Skill IQ assessments are owner-only ("my"), so a visitor's view simply
+  // falls back to the exercise record — the component handles both.
+  const loadBilanData = async () => {
+    if (!username) return;
+    try {
+      setBilanLoading(true);
+      const [contributionsData, assessmentsRes] = await Promise.all([
+        getUserContributions(username).catch(() => []),
+        isOwner ? api.get('/skill-assessments/my/').catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+      ]);
+      const items = Array.isArray(contributionsData)
+        ? contributionsData
+        : (contributionsData as any)?.results ?? [];
+      setContributions(items);
+      setAssessments(Array.isArray(assessmentsRes.data) ? assessmentsRes.data : []);
+    } catch (error) {
+      console.error('Error loading bilan data:', error);
+    } finally {
+      setBilanLoading(false);
+    }
+  };
+
+  const panel = (id: string, node: React.ReactNode) =>
+    visited.has(id) || activeSection === id ? (
+      <div key={id} hidden={activeSection !== id}>{node}</div>
+    ) : null;
+
   const handleSectionChange = (sectionId: string) => {
     setActiveSection(sectionId);
     setSearchParams({ tab: sectionId });
-    setSidebarOpen(false);
   };
 
-  const currentFeature = FEATURES_CONFIG.find(f => f.id === activeSection);
+  // Prénom, nom, établissement : le propriétaire se relit, les visiteurs ne reçoivent même pas ces champs.
+  const privateLine = useMemo(() => {
+    if (!isOwner || !currentUser) return '';
+    const id = identityFromUser(currentUser);
+    const civ = id.gender === 'M' ? 'M. ' : id.gender === 'F' ? 'Mme ' : '';
+    const name = `${id.firstName} ${id.lastName}`.trim();
+    return [name && `${civ}${name}`, id.school.name].filter(Boolean).join(' · ');
+  }, [isOwner, currentUser]);
+
+  const publicFigures = [
+    // `total_contributions` ne compte que les exercices : on préfère la vraie liste une fois chargée.
+    { label: 'Publications', value: contributions.length || (stats?.contribution_stats?.total_contributions ?? 0) },
+    { label: 'Votes reçus', value: stats?.contribution_stats?.upvotes_received ?? 0 },
+    { label: 'Vues', value: stats?.contribution_stats?.view_count ?? 0 },
+  ];
+
+  const ownProfile = profileData?.profile;
+  const missing = isOwner && ownProfile ? [
+    !ownProfile.bio && { label: 'Présentation', section: 'photo' },
+    userType !== 'teacher' && !ownProfile.class_level && { label: 'Niveau', section: 'scolarite' },
+    userType !== 'teacher' && !(ownProfile.subject_grades?.length) && { label: 'Objectifs de notes', section: 'objectifs' },
+  ].filter(Boolean) as { label: string; section: string }[] : [];
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f0effe' }} className="flex items-center justify-center">
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#4f46e5' }} />
-          <p style={{ fontSize: 13, color: '#7068a8' }}>Chargement du profil…</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#1a1a1a' }} />
+          <p style={{ fontSize: 13, color: '#6b6862' }}>Chargement du profil…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0effe' }}>
-      {/* Mobile Header */}
-      <div
-        className="lg:hidden sticky top-0 z-40"
-        style={{
-          background: 'rgba(255,255,255,.92)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #ede9fe',
-        }}
-      >
-        <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-lg"
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-          >
-            <Menu className="w-5 h-5" style={{ color: '#1e1b4b' }} />
-          </button>
-
-          {currentFeature && (
-            <div className="flex items-center gap-2">
-              <currentFeature.icon className="w-4 h-4" style={{ color: '#7068a8' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>{currentFeature.title}</span>
-            </div>
-          )}
-
-          <div className="w-9" />
-        </div>
-      </div>
-
-      <div className="flex max-w-7xl mx-auto">
-        {/* Sidebar */}
-        <aside
-          className={`
-            fixed inset-y-0 left-0 z-50 w-72 lg:w-64
-            transform transition-transform duration-300 ease-in-out
-            lg:translate-x-0 lg:static lg:z-0
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          `}
-          style={{
-            background: '#fff',
-            borderRight: '1px solid #ede9fe',
-          }}
-        >
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden absolute top-4 right-4 p-2"
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-          >
-            <X className="w-5 h-5" style={{ color: '#7068a8' }} />
-          </button>
-
-          {/* Profile Card */}
+    <div className="profile-mono" style={{ minHeight: '100vh', background: '#faf9f7' }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        {/* ── En-tête : qui est cette personne ── */}
+        <header className="fd-card mb-5 overflow-hidden">
+          {/* Bandeau papier quadrillé, même motif que les cahiers. */}
           <div
-            className="p-6 pb-5 text-center"
-            style={{ background: 'linear-gradient(180deg,#f5f4ff,#fff)' }}
-          >
-            <div
-              className="mx-auto"
-              style={{
-                width: 72, height: 72, borderRadius: 18,
-                background: 'linear-gradient(135deg,#4f46e5,#818cf8)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 26, fontWeight: 800, overflow: 'hidden',
-                boxShadow: '0 8px 24px rgba(79,70,229,.25)',
-              }}
-            >
-              {profileData?.profile?.avatar ? (
-                <img src={profileData.profile.avatar} alt={username} className="w-full h-full object-cover" />
-              ) : (
-                username?.charAt(0).toUpperCase()
+            aria-hidden
+            className="h-20 md:h-24 border-b border-line"
+            style={{
+              backgroundColor: '#f4f1ea',
+              backgroundImage:
+                'linear-gradient(#e6e0d4 1px, transparent 1px), linear-gradient(90deg, #e6e0d4 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+            }}
+          />
+          <div className="px-5 pb-5 md:px-7 md:pb-6">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="flex min-w-0 items-end gap-4" data-tour="profil-identite">
+                <div className="-mt-10 flex h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink text-3xl font-bold text-white ring-4 ring-white md:-mt-12 md:h-[104px] md:w-[104px]">
+                  {profileData?.profile?.avatar ? (
+                    <img src={profileData.profile.avatar} alt={username} className="h-full w-full object-cover" />
+                  ) : (
+                    username?.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 pb-0.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="fd-display truncate text-[24px] leading-tight text-ink md:text-[28px]">
+                      {profileData?.username || username}
+                    </h1>
+                    <span className="rounded-md border border-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.06em] text-ink">
+                      {userType === 'teacher' ? 'Enseignant' : 'Étudiant'}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-[13px] text-ink-soft">
+                    {[
+                      profileData?.profile?.class_level_name,
+                      profileData?.profile?.location,
+                      profileData?.profile?.joined_at
+                        ? `Membre depuis ${new Date(profileData.profile.joined_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`
+                        : null,
+                    ].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+              </div>
+
+              {isOwner && (
+                <Link to={`/profile/${username}/edit`} className="fd-btn-ghost shrink-0" data-tour="profil-modifier">
+                  <Pencil className="h-3.5 w-3.5" /> Modifier le profil
+                </Link>
               )}
+              {!isOwner && currentUser?.is_superuser && username && <ModerationDeleteButton username={username} />}
             </div>
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b', marginTop: 12, letterSpacing: '-0.02em' }}>
-              {profileData?.username || username}
-            </h2>
-            <span
-              className="inline-block mt-2"
-              style={{
-                background: '#eef2ff', color: '#4338ca',
-                padding: '3px 10px', borderRadius: 99,
-                fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {userType === 'teacher' ? 'Enseignant' : 'Étudiant'}
-            </span>
-            {profileData?.email && (
-              <p
-                className="truncate"
-                style={{ fontSize: 11, color: '#9391b8', marginTop: 6 }}
-              >
-                {profileData.email}
+
+            {profileData?.profile?.bio && (
+              <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-ink-soft">{profileData.profile.bio}</p>
+            )}
+
+            {/* Identité réelle : rappelée au propriétaire seulement, jamais montrée aux visiteurs. */}
+            {isOwner && privateLine && (
+              <p className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-[#f2f1ee] px-2.5 py-1 text-[12px] text-ink-soft"
+                title="Visible de toi seul : ton pseudo reste ton nom public">
+                <Lock className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="truncate">{privateLine}</span>
+                <span className="shrink-0 text-ink-faint">· visible de toi seul</span>
               </p>
             )}
-          </div>
 
-          {/* Navigation */}
-          <nav className="px-3 pb-6">
-            <div className="flex flex-col gap-1">
-              {availableFeatures.map((feature) => {
-                const Icon = feature.icon;
-                const isActive = activeSection === feature.id;
-                return (
-                  <button
-                    key={feature.id}
-                    onClick={() => handleSectionChange(feature.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '9px 12px', borderRadius: 10,
-                      background: isActive ? '#eef2ff' : 'transparent',
-                      color: isActive ? '#4338ca' : '#4b4880',
-                      fontSize: 13, fontWeight: isActive ? 700 : 500,
-                      fontFamily: 'DM Sans', cursor: 'pointer',
-                      border: 'none', textAlign: 'left',
-                      borderLeft: isActive ? '3px solid #4f46e5' : '3px solid transparent',
-                      transition: 'all .15s',
-                    }}
-                  >
-                    <Icon className="w-4 h-4" style={{ color: isActive ? '#4f46e5' : '#9391b8' }} />
-                    <span>{feature.title}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-        </aside>
-
-        {/* Mobile Overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 lg:hidden"
-            style={{ background: 'rgba(30,27,75,.4)', backdropFilter: 'blur(2px)' }}
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main Content */}
-        <main className="flex-1 min-w-0 lg:min-h-screen">
-          {/* Desktop Header */}
-          <header
-            className="hidden lg:block sticky z-30"
-            style={{
-              top: 60, // navbar height
-              background: 'rgba(240,239,254,.85)',
-              backdropFilter: 'blur(12px)',
-              borderBottom: '1px solid #ede9fe',
-            }}
-          >
-            <div className="px-8 py-4">
-              {currentFeature && (
-                <div className="flex items-center gap-3">
-                  <div
-                    className="inline-flex items-center justify-center"
-                    style={{
-                      width: 28, height: 28, borderRadius: 8,
-                      background: '#eef2ff', color: '#4338ca',
-                    }}
-                  >
-                    <currentFeature.icon className="w-3.5 h-3.5" />
+            {/* Bilan public : ce que la personne a apporté. Masqué tant qu'il n'y a rien (pas de rangée de zéros). */}
+            {publicFigures.some(f => f.value > 0) && (
+              <dl className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-[#f2f1ee] pt-4">
+                {publicFigures.map(figure => (
+                  <div key={figure.label}>
+                    <dd className="fd-nums text-[20px] font-bold leading-tight text-ink">{figure.value}</dd>
+                    <dt className="mt-0.5 text-[11px] tracking-[.03em] text-ink-faint">{figure.label}</dt>
                   </div>
-                  <h1 style={{ fontSize: 16, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>
-                    {currentFeature.title}
-                  </h1>
-                </div>
-              )}
-            </div>
-          </header>
+                ))}
+              </dl>
+            )}
 
-          {/* Page Content */}
-          <div className="p-4 lg:p-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeSection}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {activeSection === 'overview' && (
-                  <ProfileOverviewSection
-                    user={profileData}
-                    stats={stats}
-                    progressData={progressData}
-                    savedData={savedData}
-                    onNavigate={handleSectionChange}
-                  />
-                )}
-                {activeSection === 'statistics' && (
-                  <StatsDashboard username={username!} contributionStats={stats?.contribution_stats} learningStats={stats?.learning_stats} />
-                )}
-                {activeSection === 'progress' && (
-                  <ProgressSection successExercises={progressData.successExercises} reviewExercises={progressData.reviewExercises} isLoading={progressLoading} />
-                )}
-                {activeSection === 'skilliq' && <SkillIQSection />}
-                {activeSection === 'notebooks' && <StudentNotebook />}
-                {activeSection === 'revisionlists' && <RevisionListsSection />}
-                {activeSection === 'saved' && (
-                  <SavedContentSection exercises={savedData.exercises} lessons={savedData.lessons} exams={savedData.exams} isLoading={savedLoading} />
-                )}
-                {activeSection === 'students' && <TeacherStudentsPanel />}
-                {activeSection === 'settings' && <SettingsSection />}
-              </motion.div>
-            </AnimatePresence>
+            {/* Ce qui manque au profil, avec un lien direct vers la bonne section. */}
+            {isOwner && missing.length > 0 && (
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[#f2f1ee] pt-4">
+                <span className="text-[12.5px] font-medium text-ink-soft">À compléter :</span>
+                {missing.map(m => (
+                  <Link key={m.label} to={`/profile/${username}/edit#${m.section}`}
+                    className="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-gold-line bg-gold-soft px-3 text-[12px] font-semibold text-gold-strong hover:border-gold">
+                    <Plus className="h-3 w-3" aria-hidden /> {m.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        </main>
+        </header>
+
+        {/* ── Tab bar (underline) ── */}
+        <div className="mb-6" style={{ borderBottom: '1px solid #e7e3dc' }} data-tour="profil-onglets">
+          <div className="flex gap-6 overflow-x-auto" style={{ marginBottom: -1, scrollbarWidth: 'none' }}>
+            {availableFeatures.map((feature) => {
+              const Icon = feature.icon;
+              const isActive = activeSection === feature.id;
+              return (
+                <button
+                  key={feature.id}
+                  onClick={() => handleSectionChange(feature.id)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    padding: '10px 2px', border: 'none', background: 'transparent',
+                    borderBottom: isActive ? '2px solid #1a7a4a' : '2px solid transparent',
+                    color: isActive ? '#15633c' : '#6b6862',
+                    fontSize: 13.5, fontWeight: isActive ? 700 : 500,
+                    fontFamily: 'DM Sans', cursor: 'pointer', whiteSpace: 'nowrap',
+                    transition: 'color .15s',
+                  }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#1a1a1a'; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = '#6b6862'; }}
+                >
+                  <Icon className="w-4 h-4" />
+                  {feature.title}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Section content ── */}
+        {/* Pas de fondu : l'ancien fondu sortie puis entrée, ajouté au rechargement,
+            donnait l'impression que chaque onglet se chargeait deux fois. */}
+        <div>
+            {panel('overview', (
+              <ProfileBilanSection
+                progressData={progressData}
+                assessments={assessments}
+                contributions={contributions}
+                learningStats={stats?.learning_stats}
+                isOwner={isOwner}
+                goals={isOwner && userType !== 'teacher' ? (profileData?.profile?.subject_grades ?? []) : undefined}
+                editUrl={`/profile/${username}/edit`}
+                loading={bilanLoading || progressLoading}
+              />
+            ))}
+            {panel('statistics', (
+              <StatsDashboard username={username!} contributionStats={stats?.contribution_stats} learningStats={stats?.learning_stats} />
+            ))}
+            {panel('progress', (
+              <ProgressSection successExercises={progressData.successExercises} reviewExercises={progressData.reviewExercises} isLoading={progressLoading} />
+            ))}
+            {panel('skilliq', <SkillIQSection />)}
+            {panel('notebooks', <StudentNotebook />)}
+            {panel('revisionlists', <RevisionListsSection />)}
+            {panel('saved', (
+              <SavedContentSection exercises={savedData.exercises} lessons={savedData.lessons} exams={savedData.exams} isLoading={savedLoading} />
+            ))}
+            {panel('students', <TeacherStudentsPanel />)}
+            {panel('settings', <SettingsSection />)}
+        </div>
       </div>
     </div>
   );

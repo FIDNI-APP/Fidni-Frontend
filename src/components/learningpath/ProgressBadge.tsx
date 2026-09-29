@@ -33,7 +33,7 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({
     <div className={cn('w-full', className)}>
       {showLabel && (
         <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium text-gray-700">Progress</span>
+          <span className="text-sm font-medium text-gray-700">Progression</span>
           <span className="text-sm font-medium text-gray-900">{percentage}%</span>
         </div>
       )}
