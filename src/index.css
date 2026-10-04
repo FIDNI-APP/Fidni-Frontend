@@ -381,6 +381,8 @@ html {
 .fd-card-preview .katex-display { margin: .25em 0; text-align: left; }
 .fd-card-preview .katex-display > .katex { text-align: left; }
 .fd-card-preview img { max-height: 80px; width: auto; }
+/* L'aperçu est coupé en fondu : pas de barre de défilement sous une formule large. */
+.fd-card-preview .tiptap-full-renderer .math-display { overflow: hidden; }
 .fd-card-preview h1, .fd-card-preview h2, .fd-card-preview h3 { font-size: 1em; margin: 0 0 .2em; }
 /* Première phrase d'un exercice d'examen : une seule ligne. */
 .fd-preview-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -401,6 +403,16 @@ html {
 .fd-reader p { margin: 0 0 0.75em 0; }
 .fd-reader p:last-child { margin-bottom: 0; }
 .fd-reader .katex-display { margin: 0.6em 0; }
+
+/* Concours (énoncés et corrections) : une formule centrée plus large que l'écran du téléphone
+   défile horizontalement au lieu d'être coupée à droite. */
+.concours-content .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 0;
+}
 
 /* ──────────────────────────────────────────────────────────────
    Keyboard focus — visible ring for every interactive element.

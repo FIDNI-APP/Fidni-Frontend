@@ -242,17 +242,33 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = memo(({
           border-radius: 0.5rem;
         }
 
+        /* Formule en ligne : « inline » (pas inline-block) pour que KaTeX puisse passer à la ligne
+           après un signe =, +, … au lieu de déborder à droite sur téléphone. */
         .tiptap-full-renderer .math-inline {
-          display: inline-block;
-          vertical-align: middle;
+          display: inline;
           margin: 0 2px;
         }
 
+        /* Formule centrée trop large pour l'écran : elle défile horizontalement au lieu d'être
+           coupée par la carte (overflow-hidden). */
         .tiptap-full-renderer .math-display {
           display: block;
           margin: 1em 0;
           text-align: center;
-          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          padding: 2px 0;
+        }
+        .tiptap-full-renderer .math-display .katex-display { margin: 0; }
+
+        /* Tableaux et blocs de code larges : même traitement. */
+        .tiptap-full-renderer .ProseMirror table,
+        .tiptap-full-renderer .ProseMirror pre {
+          display: block;
+          max-width: 100%;
+          overflow-x: auto;
         }
 
         .tiptap-full-renderer .math-error {
