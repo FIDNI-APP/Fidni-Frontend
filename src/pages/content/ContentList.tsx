@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import type { HubInfo } from '@/lib/api/hubApi';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
   Plus,
@@ -12,7 +13,7 @@ import {
   ChevronRight,
   Loader2,
   LayoutGrid,
-  List as ListIcon,
+  FileText,
   Clock,
   Play,
   Pause,
@@ -39,12 +40,15 @@ import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
 import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
+import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
+import { SignupStrip } from '@/components/auth/SignupPrompt';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import type { Difficulty, SortOption } from '@/types';
 import type { ExerciseListItem, ExamListItem, LessonListItem, ContentFilters, AssessmentStatus } from '@/types/content';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { SEO } from '@/components/layout/SEO';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
@@ -72,7 +76,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
 }> = {
   exercise: {
     title: 'Exercices',
-    subtitle: 'Parcourez et pratiquez des exercices',
+    subtitle: 'Entraîne-toi chapitre par chapitre, du plus simple au plus exigeant.',
     createLabel: 'Ajouter un exercice',
     emptyMessage: 'Aucun exercice trouvé',
     icon: <BookOpen className="w-5 h-5" />,
@@ -82,7 +86,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   },
   exam: {
     title: 'Examens',
-    subtitle: 'Sujets d\'examens et corrigés',
+    subtitle: 'Devoirs surveillés et sujets d’examen, pour te mettre en conditions.',
     createLabel: 'Ajouter un examen',
     emptyMessage: 'Aucun examen trouvé',
     icon: <APlusIcon className="w-5 h-5" />,
@@ -92,7 +96,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   },
   lesson: {
     title: 'Leçons',
-    subtitle: 'Cours et ressources pédagogiques',
+    subtitle: 'Les cours du programme, avec définitions, propriétés et méthodes.',
     createLabel: 'Ajouter une leçon',
     emptyMessage: 'Aucune leçon trouvée',
     icon: <LessonIcon className="w-5 h-5" />,
@@ -104,8 +108,25 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
 
 const ITEMS_PER_PAGE = 12;
 
+const LIST_SEO: Record<ContentType, { title: string; description: string }> = {
+  exercise: {
+    title: 'Exercices de maths corrigés – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
+    description: 'Exercices de maths corrigés pour le lycée au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC (BIOF). Classés par chapitre, avec solutions détaillées. Gratuit.',
+  },
+  lesson: {
+    title: 'Cours de maths – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
+    description: 'Cours de maths du lycée au Maroc : définitions, théorèmes, propriétés et méthodes, du Tronc commun au 2ème Bac SM. Leçons claires, à imprimer ou à ranger dans ton cahier. Gratuit.',
+  },
+  exam: {
+    title: 'Devoirs surveillés et examens de maths corrigés – Bac Maroc | Fidni',
+    description: 'Devoirs surveillés et sujets d’examen de maths corrigés pour le Bac au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC. Barème, durée, corrigé détaillé et épreuve chronométrée.',
+  },
+};
+
 interface ContentListProps {
   contentType?: ContentType;
+  /** Page par niveau / chapitre : filtres imposés, titre et introduction propres (ContentHub). */
+  hub?: HubInfo;
 }
 
 interface FilterState {
@@ -126,9 +147,11 @@ interface FilterState {
 
 export const ContentList: React.FC<ContentListProps> = ({
   contentType = 'exercise',
+  hub,
 }) => {
   const config = CONTENT_TYPE_CONFIG[contentType];
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { openModal } = useAuthModal();
@@ -160,11 +183,14 @@ export const ContentList: React.FC<ContentListProps> = ({
     const dateStartParam = searchParams.get('dateStart');
     const dateEndParam = searchParams.get('dateEnd');
 
+    // Page par niveau / chapitre : le niveau et le chapitre viennent de l'adresse, pas des paramètres.
+    const hubLevels = hub ? [String(hub.level.id)] : [];
+    const hubChapters = hub?.chapter ? [String(hub.chapter.id)] : [];
     return {
-      classLevels: classLevelsParam ? classLevelsParam.split(',') : [],
+      classLevels: classLevelsParam ? classLevelsParam.split(',') : hubLevels,
       subjects: subjectsParam ? subjectsParam.split(',') : [],
       subfields: subfieldsParam ? subfieldsParam.split(',') : [],
-      chapters: chaptersParam ? chaptersParam.split(',') : [],
+      chapters: chaptersParam ? chaptersParam.split(',') : hubChapters,
       theorems: theoremsParam ? theoremsParam.split(',') : [],
       difficulties: difficultiesParam ? difficultiesParam.split(',') as Difficulty[] : [],
       showViewed: showViewedParam === 'true',
@@ -194,13 +220,15 @@ export const ContentList: React.FC<ContentListProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Vue complète par défaut ; le choix de l'élève est retenu d'une visite à l'autre.
-  const [viewMode, setViewModeState] = useState<'card' | 'full'>(() => {
-    try { return localStorage.getItem('fidni:list-view') === 'card' ? 'card' : 'full'; } catch { return 'full'; }
+  // Deux affichages : Cartes (par défaut : un aperçu lisible de chaque contenu) et Énoncés (le texte
+  // complet, interactif). Le choix de l'élève est retenu d'une visite à l'autre.
+  type ViewMode = 'card' | 'full';
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    try { return localStorage.getItem('fidni:affichage-liste') === 'full' ? 'full' : 'card'; } catch { return 'card'; }
   });
-  const setViewMode = (mode: 'card' | 'full') => {
+  const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
-    try { localStorage.setItem('fidni:list-view', mode); } catch { /* stockage indisponible */ }
+    try { localStorage.setItem('fidni:affichage-liste', mode); } catch { /* stockage indisponible */ }
   };
   const [showAllSolutions] = useState(false);
   const [itemProgress, setItemProgress] = useState<Record<string, Record<string, AssessmentStatus>>>({});
@@ -419,8 +447,29 @@ export const ContentList: React.FC<ContentListProps> = ({
       params.set('sort', sortBy);
     }
 
+    if (hub) {
+      // Sur une page de niveau / chapitre : rester sur une page de ce type tant que le choix s'y
+      // ramène (un niveau, zéro ou un chapitre), sinon revenir à la liste générale filtrée.
+      const lv = newFilters.classLevels;
+      const chs = newFilters.chapters;
+      let target: string | null = null;
+      if (lv.length === 1 && lv[0] === String(hub.level.id)) {
+        if (chs.length === 0) target = hub.level.url;
+        else if (chs.length === 1) target = hub.chapters.find((c) => String(c.id) === chs[0])?.url ?? null;
+      }
+      if (target) {
+        params.delete('classLevels');
+        params.delete('chapters');
+        const search = params.toString();
+        if (target === location.pathname) setSearchParams(params, { replace: true });
+        else navigate(`${target}${search ? `?${search}` : ''}`);
+      } else {
+        navigate(`${config.basePath}?${params.toString()}`);
+      }
+      return;
+    }
     setSearchParams(params, { replace: true });
-  }, [sortBy, setSearchParams]);
+  }, [sortBy, setSearchParams, hub, location.pathname, navigate, config.basePath]);
 
   const handleSortChange = useCallback((newSortOption: SortOption) => {
     if (listRef.current) {
@@ -694,31 +743,73 @@ export const ContentList: React.FC<ContentListProps> = ({
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
+  // La matière n'est affichée que si la liste en mélange plusieurs (aujourd'hui, seulement les maths).
+  const showSubject = useMemo(
+    () => new Set(items.map((it) => (typeof it.subject === 'string' ? it.subject : it.subject?.name)).filter(Boolean)).size > 1,
+    [items],
+  );
+
+  const viewToggle = (
+            <div data-tour="liste-vue" role="radiogroup" aria-label="Affichage" className="inline-flex p-[3px] rounded-[10px] bg-[#f2f1ee]">
+              {([
+                ['card', 'Cartes', LayoutGrid],
+                ['full', 'Énoncés', FileText],
+              ] as const).map(([mode, label, Icon]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="radio"
+                  aria-checked={viewMode === mode}
+                  onClick={() => setViewMode(mode)}
+                  title={label}
+                  className={`inline-flex items-center gap-1.5 h-9 px-2.5 lg:px-3 rounded-lg text-[12.5px] transition-colors ${
+                    viewMode === mode ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink-faint font-medium hover:text-ink'}`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="sm:hidden lg:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+  );
+
+  const handleDeleteItem = async (id: string) => {
+    if (!window.confirm('Supprimer définitivement ce contenu ?')) return;
+    try {
+      await config.api.delete(id);
+      loadContent(false);
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
+
   // Dynamic colors based on content type
   return (
     <div style={{ minHeight: '100vh', background: '#faf9f7', paddingBottom: 64 }}>
-      {/* Header Section — lavender pill style */}
+      {/* Mêmes titres que les pages pré-remplies par le serveur (backend/src/config/seo.py). */}
+      {hub ? (
+        <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
+      ) : (
+        <SEO title={LIST_SEO[contentType].title} description={LIST_SEO[contentType].description} canonicalUrl={config.basePath} />
+      )}
+      {/* En-tête compact : titre, nombre, une phrase ; le contenu commence tout de suite après. */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <span
-              className="inline-flex items-center gap-1.5"
-              style={{
-                background: '#f2f1ee', color: '#000000',
-                padding: '4px 12px', borderRadius: 99,
-                fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
-              }}
-            >
-              {config.icon}
-              <span>{contentType === 'exercise' ? 'PRATIQUE' : contentType === 'exam' ? 'EXAMENS' : 'COURS'}</span>
-            </span>
-            <h1 style={{ fontSize: 30, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10, lineHeight: 1.1 }}>
-              {config.title}
-              <span style={{ color: '#6b6862', fontSize: 16, fontWeight: 500, marginLeft: 10, fontFamily: 'DM Mono' }}>
-                · {totalCount}
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            {hub && (
+              <nav aria-label="Fil d’Ariane" className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
+                <Link to={config.basePath} className="hover:text-ink">{config.title}</Link>
+                <span aria-hidden>›</span>
+                {hub.chapter ? <Link to={hub.level.url} className="hover:text-ink">{hub.level.name}</Link> : <span className="text-ink-soft">{hub.level.name}</span>}
+                {hub.chapter && <><span aria-hidden>›</span><span className="text-ink-soft">{hub.chapter.name}</span></>}
+              </nav>
+            )}
+            <h1 className="fd-display text-ink flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 'clamp(26px,3vw,32px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+              {hub ? hub.h1 : config.title}
+              <span className="fd-nums text-[15px] font-medium text-ink-faint" style={{ letterSpacing: 0 }}>
+                {totalCount > 0 ? totalCount : ''}
               </span>
             </h1>
-            <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>{config.subtitle}</p>
+            <p className="text-[13.5px] text-ink-faint mt-1.5 max-w-3xl">{hub ? hub.intro : config.subtitle}</p>
           </div>
 
           {/* Publier est réservé aux comptes : pour un visiteur, la page commence par le contenu. */}
@@ -726,15 +817,51 @@ export const ContentList: React.FC<ContentListProps> = ({
             <button
               onClick={handleNewContentClick}
               data-tour="liste-creer"
-              className="fd-btn-primary"
-              style={{ padding: '10px 18px' }}
+              className="fd-btn-ghost flex-shrink-0"
+              style={{ padding: '9px 14px' }}
+              aria-label={config.createLabel}
             >
               <Plus className="w-4 h-4" />
-              {config.createLabel}
+              <span className="hidden sm:inline">{config.createLabel}</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Page de niveau / chapitre : les chapitres du niveau et les autres rubriques, en liens. */}
+      {hub && (hub.chapters.length > 0 || hub.related.length > 0) && (
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
+          {hub.chapters.length > 0 && (
+            <div className="flex flex-wrap gap-1.5" aria-label="Chapitres">
+              <Link to={hub.level.url}
+                className={`rounded-full border px-3 py-1 text-[12.5px] transition-colors ${!hub.chapter ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-ink'}`}>
+                Tous les chapitres
+              </Link>
+              {hub.chapters.map((ch) => {
+                const active = hub.chapter?.id === ch.id;
+                return (
+                  <Link key={ch.id} to={ch.url} aria-current={active ? 'page' : undefined}
+                    className={`rounded-full border px-3 py-1 text-[12.5px] transition-colors ${active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-ink'}`}>
+                    {ch.name} <span className={`fd-nums ${active ? 'text-white/70' : 'text-ink-faint'}`}>{ch.count}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+          {hub.related.length > 0 && (
+            <p className="mt-2.5 text-[12.5px] text-ink-faint">
+              Aussi pour {hub.chapter ? `« ${hub.chapter.name} »` : `le ${hub.level.name}`} :{' '}
+              {hub.related.map((r, i) => (
+                <React.Fragment key={r.url}>
+                  {i > 0 && ' · '}
+                  <Link to={r.url} className="font-medium text-brand-hover hover:underline">{r.label}</Link>{' '}
+                  <span className="fd-nums">({r.count})</span>
+                </React.Fragment>
+              ))}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Main layout */}
       <div className="max-w-7xl mx-auto px-4 md:px-6">
@@ -746,51 +873,13 @@ export const ContentList: React.FC<ContentListProps> = ({
           sortBy={sortBy}
           onSortChange={handleSortChange}
           accentColor={contentType === 'exam' ? 'violet' : contentType === 'lesson' ? 'emerald' : 'blue'}
+          trailing={<div className="hidden sm:block">{viewToggle}</div>}
         />
-
-        {/* View Toggle */}
-        <div className="flex items-center justify-end gap-2 mb-5 mt-4">
-          <div
-            data-tour="liste-vue"
-            className="inline-flex"
-            style={{
-              background: '#fff', border: '1px solid #e7e3dc',
-              borderRadius: 10, padding: 3,
-            }}
-          >
-            <button
-              onClick={() => setViewMode('full')}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 14px', borderRadius: 8, border: 'none',
-                background: viewMode === 'full' ? '#1a1a1a' : 'transparent',
-                color: viewMode === 'full' ? '#fff' : '#6b6862',
-                fontSize: 12, fontWeight: viewMode === 'full' ? 600 : 500,
-                fontFamily: 'DM Sans', cursor: 'pointer', transition: 'all .15s',
-              }}
-            >
-              <ListIcon className="w-3.5 h-3.5" />
-              Vue complète
-            </button>
-            <button
-              onClick={() => setViewMode('card')}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 14px', borderRadius: 8, border: 'none',
-                background: viewMode === 'card' ? '#1a1a1a' : 'transparent',
-                color: viewMode === 'card' ? '#fff' : '#6b6862',
-                fontSize: 12, fontWeight: viewMode === 'card' ? 600 : 500,
-                fontFamily: 'DM Sans', cursor: 'pointer', transition: 'all .15s',
-              }}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              Vue cartes
-            </button>
-          </div>
-        </div>
+        {/* Téléphone : le choix d'affichage passe sous la barre, pour ne pas déborder. */}
+        <div className="sm:hidden mt-3 flex justify-end">{viewToggle}</div>
 
         {/* Content Area */}
-        <div ref={listRef}>
+        <div ref={listRef} className="mt-4">
           {/* Error message */}
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-5 mb-6 rounded-xl shadow-sm">
@@ -815,24 +904,22 @@ export const ContentList: React.FC<ContentListProps> = ({
             </div>
           ) : items.length > 0 ? (
             viewMode === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((item) => (
-                  <ContentListCard
-                    key={item.id}
-                    content={item}
-                    contentType={contentType}
-                    onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
-                    onDelete={async (id) => {
-                      if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contenu ?')) {
-                        try {
-                          await config.api.delete(id);
-                          loadContent(false);
-                        } catch (err) {
-                          console.error('Delete failed:', err);
-                        }
-                      }
-                    }}
-                  />
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-[1700px]:grid-cols-3 gap-5">
+                {items.map((item, i) => (
+                  <React.Fragment key={item.id}>
+                    <ContentListCard
+                      content={item}
+                      contentType={contentType}
+                      first={i === 0}
+                      showSubject={showSubject}
+                      onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
+                      onDelete={handleDeleteItem}
+                    />
+                    {/* Visiteur : une invitation après les premières cartes, pas plus. */}
+                    {!isAuthenticated && i === Math.min(3, items.length - 1) && (
+                      <SignupStrip className="lg:col-span-2 min-[1700px]:col-span-3" />
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
             ) : (
@@ -1250,6 +1337,7 @@ export const ContentList: React.FC<ContentListProps> = ({
           contentType={contentType}
           contentId={Number(revisionListModal.itemId)}
           contentTitle={revisionListModal.itemTitle || undefined}
+          contentLabels={labelsFromContent(items.find((it) => String(it.id) === revisionListModal.itemId))}
         />
       )}
     </div>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, ChevronLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, ChevronLeft, Printer } from 'lucide-react';
 import { Section } from '@/types';
 
 interface NotebookSectionsProps {
@@ -9,6 +10,8 @@ interface NotebookSectionsProps {
   onRemoveLesson: (sectionId: string, lessonEntryId: string) => void;
   onGoBack?: () => void;
   notebookTitle?: string;
+  /** Lien vers la version imprimable du cahier (PDF). */
+  printTo?: string;
 }
 
 const NotebookSections: React.FC<NotebookSectionsProps> = ({
@@ -16,7 +19,8 @@ const NotebookSections: React.FC<NotebookSectionsProps> = ({
   activeSectionId,
   onSelectSection,
   onGoBack,
-  notebookTitle
+  notebookTitle,
+  printTo,
 }) => {
   return (
     <div
@@ -92,6 +96,15 @@ const NotebookSections: React.FC<NotebookSectionsProps> = ({
           </div>
         )}
       </div>
+
+      {printTo && (
+        <div className="mt-auto p-3" style={{ borderTop: '1px solid #f2f1ee' }}>
+          <Link to={printTo} data-tour="cahier-imprimer"
+            className="flex items-center justify-center gap-2 w-full rounded-lg border border-line bg-white px-3 py-2 text-[13px] font-semibold text-ink-soft hover:border-ink hover:text-ink transition-colors">
+            <Printer className="w-4 h-4" /> Imprimer le cahier
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

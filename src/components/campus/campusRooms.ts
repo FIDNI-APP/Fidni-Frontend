@@ -25,7 +25,7 @@ export const CAMPUS_ROOMS: CampusRoom[] = [
   {
     id: 'direction', key: '1', page: 'Statistiques', building: 'La Direction',
     desc: 'Ton bilan sur la durée : temps d’étude, maîtrise par chapitre, séries.',
-    route: (u) => (u ? `/profile/${u}?tab=statistics` : '/'),
+    route: (u) => (u ? '/statistiques' : '/'),
     cam: { r: 82, phi: 1.0, off: 0.32 },
   },
   {

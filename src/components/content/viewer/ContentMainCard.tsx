@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Eye, EyeOff,
-  Play, Pause, RotateCcw, Save
+  Play, Pause, RotateCcw, Save, Printer, Flag
 } from 'lucide-react';
-import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
+import { Link } from 'react-router-dom';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
+import { SignupCard } from '@/components/auth/SignupPrompt';
+import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
 import ExerciseRenderer from './ExerciseRenderer';
 import { countQuestionsWithSolutions } from '@/lib/utils/contentHelpers';
 import { LessonRenderer } from './LessonRenderer';
@@ -12,6 +14,9 @@ import type { FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor
 import type { FlexibleLessonStructure } from '../editor/FlexibleLessonEditor';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { NotebookPaper, paperTextStyle } from '@/components/notebook/NotebookPaper';
+import { useLessonOutline } from '@/components/lesson/useLessonOutline';
+import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/LessonOutline';
+import { ExamView } from './ExamView';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -41,6 +46,10 @@ interface ContentMainCardProps {
   // Solution validation
   solutionValidations?: Record<string, string | null>;
   onValidateSolution?: (path: string, validation: string | null) => void;
+  /** Examen : enregistre la durée d'une épreuve terminée. */
+  onSaveExamSession?: (seconds: number) => Promise<void>;
+  /** Ouvre « Signaler une erreur » (avec la question concernée si elle est connue). */
+  onReport?: (path?: string) => void;
 }
 
 // Small uppercase label used for the study-rail panels.
@@ -72,11 +81,19 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   questionProgress,
   onQuestionAssess,
   solutionValidations,
-  onValidateSolution
+  onValidateSolution,
+  onSaveExamSession,
+  onReport,
 }) => {
   const [showAllSolutions, setShowAllSolutions] = useState(false);
 
   const isExercise = contentType !== 'lesson';
+
+  // Sommaire de la leçon (à gauche) : dès qu'elle a au moins deux parties.
+  const lessonRef = useRef<HTMLDivElement>(null);
+  const withOutline = contentType === 'lesson'
+    && ((content.structure as FlexibleLessonStructure | undefined)?.sections?.length ?? 0) >= 2;
+  const outline = useLessonOutline({ containerRef: lessonRef, topOffset: 84, deps: [content.id, contentType] });
 
   // Garde : sans structure, l'opérateur « in » levait une erreur et la page de l'exercice plantait.
   const hasSolution = !!content.structure && 'solution' in content.structure && content.structure.solution;
@@ -127,7 +144,11 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   const timerBtn = 'p-1.5 rounded-lg transition-colors';
   const renderRail = () => (
     <div className="space-y-4">
-      {totalQuestions > 0 && (
+      {!isAuthenticated && (
+        <SignupCard title="Suis ta progression" tour="detail-inscription"
+          text="Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir." />
+      )}
+      {isAuthenticated && totalQuestions > 0 && (
         <div className="rounded-2xl border border-line bg-white p-5" data-tour="detail-progression">
           <RailLabel>Progression</RailLabel>
           <div className="flex items-baseline justify-between mt-2.5 mb-3">
@@ -174,18 +195,72 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
     </div>
   );
 
+  // Votes : en haut à droite de la carte du contenu, visibles sans descendre jusqu'en bas.
+  const votes = (
+    <div data-tour="vote" className="ml-auto shrink-0">
+      <VoteButtons initialVotes={voteCount} onVote={onVote} vertical={false} userVote={userVote} size="sm" />
+    </div>
+  );
+
+  // Bas de la carte : signaler une erreur, discret mais toujours au même endroit.
+  const reportFooter = onReport ? (
+    <div className="flex justify-end px-6 sm:px-7 py-2.5 border-t border-line bg-[#fcfbf9]">
+      <button type="button" onClick={() => onReport()} data-tour="signaler"
+        className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-faint hover:text-ink transition-colors">
+        <Flag className="w-3.5 h-3.5" /> Une erreur ? Signale-la
+      </button>
+    </div>
+  ) : null;
+
+  // Examen : présenté comme un sujet (fiche, un bloc par exercice, épreuve chronométrée, copie).
+  if (contentType === 'exam') {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <ExamView
+          content={content as ContentExam}
+          isAuthenticated={isAuthenticated}
+          questionProgress={questionProgress}
+          onQuestionAssess={onQuestionAssess}
+          solutionValidations={solutionValidations}
+          onValidateSolution={onValidateSolution}
+          onSaveSession={onSaveExamSession}
+          sessionCount={getSessionCount()}
+          onOpenHistory={loadHistory}
+          votes={votes}
+          footer={reportFooter}
+          onReport={onReport}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       {/* Leçon : un peu plus large que le texte, pour la marge de la feuille de cahier. */}
-      <div className={isExercise ? 'grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start' : contentType === 'lesson' ? 'max-w-4xl mx-auto' : 'max-w-3xl mx-auto'}>
+      <div className={isExercise ? 'grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start'
+        : withOutline ? 'grid lg:grid-cols-[230px_minmax(0,1fr)] gap-8 items-start'
+        : contentType === 'lesson' ? 'max-w-4xl mx-auto' : 'max-w-3xl mx-auto'}>
+        {/* Leçon : sommaire collant à gauche (ordinateur). */}
+        {withOutline && (
+          <aside className="hidden lg:block sticky top-[84px] max-h-[calc(100vh-104px)] overflow-y-auto pr-1 pb-4" data-tour="lecon-sommaire">
+            <LessonOutlinePanel outline={outline} storageKey={`lecon-${content.id}`} syncHash />
+          </aside>
+        )}
         {/* Left column — the exercise/lesson */}
         <div className="min-w-0">
+          {/* Téléphone / tablette : sommaire repliable, collé sous la barre du site. */}
+          {withOutline && (
+            <LessonOutlineBar outline={outline} storageKey={`lecon-${content.id}`} tourId="lecon-sommaire-barre" className="lg:hidden sticky top-[68px] z-20 mb-3" />
+          )}
           <div className="bg-white rounded-2xl border border-line overflow-hidden">
-            {/* Barre de la carte : les solutions (le titre est dans l'en-tête, les votes en bas).
-                Une leçon n'en a pas : elle commence directement sur la feuille. */}
-            {(contentType !== 'lesson' || questionsWithSolutions > 0) && (
+            {/* Barre de la carte : solutions (exercice) ou impression (leçon) à gauche, votes à droite. */}
             <div className="flex items-center gap-3 flex-wrap px-6 sm:px-7 py-3 border-b border-line bg-[#fcfbf9]">
-              {questionsWithSolutions > 0 ? (
+              {contentType === 'lesson' ? (
+                <Link to={`/lessons/${content.id}/pdf`} data-tour="lecon-imprimer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-line bg-white text-ink-soft hover:border-ink transition-colors whitespace-nowrap">
+                  <Printer className="w-4 h-4" /> Imprimer la leçon
+                </Link>
+              ) : questionsWithSolutions > 0 ? (
                 <button
                   onClick={() => setShowAllSolutions(!showAllSolutions)}
                   data-tour="detail-solutions"
@@ -199,18 +274,16 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                   {showAllSolutions ? 'Masquer les solutions' : `Voir les solutions (${questionsWithSolutions})`}
                 </button>
               ) : (
-                <span className="text-sm text-ink-faint">
-                  {isExercise ? 'Pas encore de solution détaillée' : 'Bonne lecture !'}
-                </span>
+                <span className="text-sm text-ink-faint">Pas encore de solution détaillée</span>
               )}
+              {votes}
             </div>
-            )}
 
             {/* Content */}
             {contentType === 'lesson' ? (
               // Même feuille que dans le cahier (NotebookPaper) : papier, marge, reliure, texte à 90 %.
               <NotebookPaper>
-                <div data-tour="lecon-contenu" className="py-8 pr-5 sm:pr-8" style={{ ...paperTextStyle(), zoom: 0.9 }}>
+                <div ref={lessonRef} data-tour="lecon-contenu" className="py-8 pr-5 sm:pr-8" style={{ ...paperTextStyle(), zoom: 0.9 }}>
                   <LessonRenderer structure={content.structure as FlexibleLessonStructure} />
                 </div>
               </NotebookPaper>
@@ -224,9 +297,12 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                 interactive={isAuthenticated}
                 showAllSolutions={showAllSolutions}
                 compact={false}
+                onReport={onReport}
               />
             </div>
             )}
+
+            {reportFooter}
 
             {/* Whole-exercise solution toggle */}
             {hasSolution && (
@@ -241,18 +317,6 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
               </div>
             )}
 
-            {/* Votes en bas à gauche, comme sur Reddit : on vote une fois le contenu lu. */}
-            <div className="flex items-center px-6 sm:px-7 py-3 border-t border-line bg-[#fcfbf9]">
-              <div data-tour="vote">
-              <VoteButtons
-                initialVotes={voteCount}
-                onVote={onVote}
-                vertical={false}
-                userVote={userVote}
-                size="sm"
-              />
-              </div>
-            </div>
           </div>
 
           <AdSlot className="mt-6" />

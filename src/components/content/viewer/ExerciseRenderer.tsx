@@ -8,7 +8,7 @@
 
 import React, { useState, useRef } from 'react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import { Check, X, RotateCcw, HelpCircle, Eye, EyeOff, ThumbsUp, GitCompare, AlertCircle, ClipboardCheck, ChevronDown } from 'lucide-react';
+import { Check, X, RotateCcw, HelpCircle, Eye, EyeOff, ThumbsUp, GitCompare, AlertCircle, ClipboardCheck, ChevronDown, Flag } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
@@ -40,7 +40,26 @@ interface ExerciseRendererProps {
    * statements keep their rhythm and the text sits at a comfortable measure.
    */
   compact?: boolean;
+  /** Épreuve en cours : solutions et auto-évaluation masquées jusqu'à la fin. */
+  locked?: boolean;
+  /** Signaler une erreur sur une question (chemin « q2 », « q2.sq1 ») ; absent = pas de bouton. */
+  onReport?: (path: string) => void;
 }
+
+// Signaler une erreur sur une question précise : petit drapeau à droite, visible au survol de la
+// question (toujours discret sur écran tactile, où le survol n'existe pas).
+const ReportQuestionButton: React.FC<{ onClick: () => void; group: 'q' | 'sq' }> = ({ onClick, group }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title="Signaler une erreur sur cette question"
+    aria-label="Signaler une erreur sur cette question"
+    className={`shrink-0 -mr-1 p-1 rounded-md text-ink-faint hover:text-[#a23b34] hover:bg-[#fbecea] transition-opacity opacity-0 focus-visible:opacity-100 [@media(hover:none)]:opacity-50 ${
+      group === 'q' ? 'group-hover/q:opacity-100' : 'group-hover/sq:opacity-100'}`}
+  >
+    <Flag className="w-3.5 h-3.5" />
+  </button>
+);
 
 // =====================
 // CONTENT RENDERER
@@ -331,6 +350,8 @@ interface SubQuestionRendererProps {
   onAssess?: (path: string, status: AssessmentStatus) => void;
   onValidateSolution?: (path: string, validation: string | null) => void;
   interactive: boolean;
+  locked?: boolean;
+  onReport?: (path: string) => void;
 }
 
 const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
@@ -343,21 +364,26 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   onAssess,
   onValidateSolution,
   interactive,
+  locked = false,
+  onReport,
 }) => {
   const [localShowSolution, setLocalShowSolution] = useState(false);
   const path = `${questionPath}.${subQuestion.id}`;
   const currentStatus = progress?.[path]?.status;
   const validationStatus = progress?.[path]?.solution_validation as ValidationStatus;
-  const hasSolution = Boolean(subQuestion.solution?.html);
-  const showSolution = globalShowSolutions || localShowSolution;
+  const hasSolution = Boolean(subQuestion.solution?.html) && !locked;
+  const showSolution = !locked && (globalShowSolutions || localShowSolution);
 
   return (
-    <div className="ml-5 mt-1 flex items-start gap-2">
+    <div className="group/sq ml-5 mt-1 flex items-start gap-2">
       <span className="font-mono fd-nums font-semibold text-ink-faint shrink-0">
         {questionIndex}.{sqIndex + 1}.
       </span>
       <div className="flex-1 min-w-0">
-        <RenderContent content={subQuestion.content} className="prose-sm" />
+        <div className="flex items-start gap-1">
+          <div className="flex-1 min-w-0"><RenderContent content={subQuestion.content} className="prose-sm" /></div>
+          {onReport && <ReportQuestionButton group="sq" onClick={() => onReport(path)} />}
+        </div>
         <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-1.5">
           {subQuestion.points && (
             <span className="text-xs text-ink-faint fd-nums">{formatPoints(subQuestion.points)}</span>
@@ -367,7 +393,7 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
             onToggle={() => setLocalShowSolution(v => !v)}
             hasSolution={hasSolution}
           />
-          {interactive && onAssess && (
+          {interactive && onAssess && !locked && (
             <AssessmentButtons
               path={path}
               currentStatus={currentStatus}
@@ -399,6 +425,8 @@ interface QuestionRendererProps {
   onValidateSolution?: (path: string, validation: string | null) => void;
   interactive: boolean;
   isFirst?: boolean;
+  locked?: boolean;
+  onReport?: (path: string) => void;
 }
 
 const QuestionRenderer: React.FC<QuestionRendererProps> = ({
@@ -410,23 +438,27 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   onValidateSolution,
   interactive,
   isFirst = false,
+  locked = false,
+  onReport,
 }) => {
   const [localShowSolution, setLocalShowSolution] = useState(false);
   const path = block.id;
   const currentStatus = progress?.[path]?.status;
   const validationStatus = progress?.[path]?.solution_validation as ValidationStatus;
   const hasSubQuestions = block.subQuestions && block.subQuestions.length > 0;
-  const hasSolution = Boolean(block.solution?.html);
-  const showSolution = globalShowSolutions || localShowSolution;
+  const hasSolution = Boolean(block.solution?.html) && !locked;
+  const showSolution = !locked && (globalShowSolutions || localShowSolution);
 
   return (
     <div className={isFirst ? '' : 'mt-2'}>
       {/* Question header */}
-      <div className="flex items-start gap-2 flex-1 min-w-0">
+      <div className="group/q flex items-start gap-2 flex-1 min-w-0">
         <span className="font-mono fd-nums font-semibold text-ink shrink-0">{questionIndex}.</span>
         <div className="flex-1 min-w-0">
           <RenderContent content={block.content} />
         </div>
+        {/* Question à sous-questions : chaque sous-question a son propre drapeau. */}
+        {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
       </div>
       {/* Points + actions — only when no sub-questions */}
       {!hasSubQuestions && (
@@ -439,7 +471,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             onToggle={() => setLocalShowSolution(v => !v)}
             hasSolution={hasSolution}
           />
-          {interactive && onAssess && (
+          {interactive && onAssess && !locked && (
             <AssessmentButtons
               path={path}
               currentStatus={currentStatus}
@@ -474,6 +506,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               onAssess={onAssess}
               onValidateSolution={onValidateSolution}
               interactive={interactive}
+              locked={locked}
+              onReport={onReport}
             />
           ))}
         </div>
@@ -494,6 +528,8 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   interactive = false,
   showAllSolutions = false,
   compact = true,
+  locked = false,
+  onReport,
 }) => {
   if (!structure || !structure.blocks || structure.blocks.length === 0) {
     return (
@@ -533,6 +569,8 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                 onValidateSolution={onValidateSolution}
                 interactive={interactive}
                 isFirst={index === 0}
+                locked={locked}
+                onReport={onReport}
               />
             );
           });

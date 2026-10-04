@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { HelpCircle, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { TOURS, resolveText, type Tour, type TourContext } from '@/lib/tours';
 
 const SEEN_KEY = 'fidni.visites-vues';
@@ -58,6 +59,8 @@ export const useTour = () => useContext(TourCtx);
 export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { pathname } = useLocation();
   const { user } = useAuth();
+  // Fenêtre de connexion / inscription ouverte : la visite se met en pause (elle la masquait).
+  const { isOpen: authOpen } = useAuthModal();
   const [active, setActive] = useState<Tour | null>(null);
   const [available, setAvailable] = useState<Tour | null>(null);
   const stableSince = useRef<Record<string, number>>({});
@@ -100,7 +103,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <TourCtx.Provider value={{ hasTour: !!available, start }}>
       {children}
-      {active && createPortal(<TourOverlay tour={active} context={context} onClose={finish} />, document.body)}
+      {active && !authOpen && createPortal(<TourOverlay tour={active} context={context} onClose={finish} />, document.body)}
     </TourCtx.Provider>
   );
 };

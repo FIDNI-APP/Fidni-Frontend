@@ -367,6 +367,27 @@ html {
   font-feature-settings: 'tnum' 1;
 }
 
+/* Aperçu dans les cartes de liste : le vrai rendu (formules comprises), resserré, coupé en fondu
+   (masque CSS, pas de classe bg-gradient-* : index.css les rend noires). */
+.fd-card-preview-clip {
+  max-height: 138px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
+}
+.fd-card-preview p { margin: 0 0 .3em; }
+.fd-card-preview ul, .fd-card-preview ol:not(.flex) { margin: 0 0 .3em 1.1em; }
+.fd-card-preview .katex { font-size: 1.02em; }
+.fd-card-preview .katex-display { margin: .25em 0; text-align: left; }
+.fd-card-preview .katex-display > .katex { text-align: left; }
+.fd-card-preview img { max-height: 80px; width: auto; }
+.fd-card-preview h1, .fd-card-preview h2, .fd-card-preview h3 { font-size: 1em; margin: 0 0 .2em; }
+/* Première phrase d'un exercice d'examen : une seule ligne. */
+.fd-preview-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd-preview-line p { display: inline; margin: 0; }
+.fd-preview-line .katex-display { display: inline; margin: 0; }
+.fd-preview-line .katex-display > .katex { display: inline; }
+
 /* ──────────────────────────────────────────────────────────────
    Reading surface — comfortable measure + vertical rhythm.
    Use on the FULL exercise/lesson view (not card previews) so

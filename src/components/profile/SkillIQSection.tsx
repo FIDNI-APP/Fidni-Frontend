@@ -1,7 +1,7 @@
 // src/components/profile/SkillIQSection.tsx
-// Skill IQ : des quiz courts par chapitre, corrigés tout de suite. Vue principale = tous les
-// chapitres du niveau d'un coup d'œil (plus d'accordéons imbriqués) ; les quiz qui n'existent pas
-// encore sont annoncés comme tels au lieu d'échouer au clic.
+// Skill IQ : des quiz courts par chapitre, corrigés tout de suite. Vue principale = les chapitres
+// d'une matière du niveau d'un coup d'œil (un onglet par matière dès qu'il y en a plusieurs) ;
+// les quiz qui n'existent pas encore sont annoncés comme tels au lieu d'échouer au clic.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -48,8 +48,9 @@ export const SkillIQSection: React.FC = () => {
   const [available, setAvailable] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [levelId, setLevelId] = useState<number | null>(null);
+  const [subjectId, setSubjectId] = useState<number | null>(null);
 
-  const [activeQuiz, setActiveQuiz] = useState<{ chapterId: number; chapterName: string } | null>(null);
+  const [activeQuiz, setActiveQuiz] = useState<{ chapterId: number; chapterName: string; subjectName?: string } | null>(null);
   const [quizState, setQuizState] = useState<QuizState | null>(null);
   const [lastQuestions, setLastQuestions] = useState<QuizQuestion[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
@@ -80,17 +81,21 @@ export const SkillIQSection: React.FC = () => {
 
   const byChapter = useMemo(() => new Map(assessments.map((a) => [a.chapter, a])), [assessments]);
   const level = classLevels.find((l) => l.id === levelId);
+  // Matières du niveau qui ont un programme ; celle qui a le plus de quiz prêts s'ouvre par défaut.
+  const subjects = useMemo(() => (level?.subjects ?? []).filter((s) => s.chapters.length > 0), [level]);
+  const readyIn = (s: Subject) => s.chapters.filter((c) => available[c.id]).length;
+  const subject = subjects.find((s) => s.id === subjectId)
+    ?? [...subjects].sort((a, b) => readyIn(b) - readyIn(a))[0];
   const chapters = useMemo(() => {
-    const all = (level?.subjects ?? []).flatMap((s) => s.chapters);
     const seen = new Set<number>();
-    return all.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)))
+    return (subject?.chapters ?? []).filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)))
       .sort((a, b) => Number(!available[b.id]) - Number(!available[a.id]) || a.name.localeCompare(b.name, 'fr'));
-  }, [level, available]);
+  }, [subject, available]);
   const availableHere = chapters.filter((c) => available[c.id]).length;
   const average = assessments.length ? Math.round(assessments.reduce((s, a) => s + pct(a), 0) / assessments.length) : null;
 
-  const startQuiz = async (chapterId: number, chapterName: string) => {
-    setActiveQuiz({ chapterId, chapterName });
+  const startQuiz = async (chapterId: number, chapterName: string, subjectName?: string) => {
+    setActiveQuiz({ chapterId, chapterName, subjectName });
     setQuizResult(null);
     setQuizLoading(true);
     try {
@@ -147,7 +152,9 @@ export const SkillIQSection: React.FC = () => {
               <span className="text-[26px] font-bold text-ink fd-nums">{score}%</span>
             </ProgressRing>
             <div className="text-center sm:text-left">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-faint">Quiz terminé</p>
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-faint">
+                Quiz terminé{activeQuiz.subjectName ? ` · ${activeQuiz.subjectName}` : ''}
+              </p>
               <h2 className="fd-display text-[22px] font-semibold text-ink mt-1">{activeQuiz.chapterName}</h2>
               <p className="text-[13.5px] text-ink-faint mt-1 fd-nums">{quizResult.score} / {quizResult.max_score} points (facile 1, moyen 2, difficile 3)</p>
               <span className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-[12.5px] font-semibold ${lv.className}`}>
@@ -187,7 +194,7 @@ export const SkillIQSection: React.FC = () => {
           )}
 
           <div className="px-6 py-4 border-t border-line flex flex-wrap gap-2.5 justify-end">
-            <button className="fd-btn-ghost" onClick={() => startQuiz(activeQuiz.chapterId, activeQuiz.chapterName)}>
+            <button className="fd-btn-ghost" onClick={() => startQuiz(activeQuiz.chapterId, activeQuiz.chapterName, activeQuiz.subjectName)}>
               <RotateCcw className="w-4 h-4" /> Refaire (nouvelles questions)
             </button>
             <button className="fd-btn-primary" onClick={closeQuiz}>Autres chapitres</button>
@@ -229,7 +236,9 @@ export const SkillIQSection: React.FC = () => {
       <div className="max-w-2xl mx-auto flex flex-col gap-5">
         <div className="flex items-center justify-between gap-3">
           <BackButton onClick={closeQuiz} label="Quitter" />
-          <span className="text-[13px] font-medium text-ink-faint truncate">{activeQuiz.chapterName}</span>
+          <span className="text-[13px] font-medium text-ink-faint truncate">
+            {activeQuiz.subjectName ? `${activeQuiz.subjectName} · ` : ''}{activeQuiz.chapterName}
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -311,14 +320,14 @@ export const SkillIQSection: React.FC = () => {
         <dl className="grid grid-cols-3 gap-3 lg:w-[420px]">
           <Stat label="Quiz passés" value={assessments.length} />
           <Stat label="Score moyen" value={average !== null ? `${average} %` : '—'} />
-          <Stat label="Quiz disponibles" value={`${availableHere} / ${chapters.length}`} />
+          <Stat label={subjects.length > 1 && subject ? `Quiz · ${subject.name}` : 'Quiz disponibles'} value={`${availableHere} / ${chapters.length}`} />
         </dl>
       </header>
 
       {classLevels.length > 1 && (
         <div role="tablist" aria-label="Niveau" className="flex flex-wrap gap-2">
           {classLevels.map((l) => (
-            <button key={l.id} type="button" role="tab" aria-selected={l.id === levelId} onClick={() => setLevelId(l.id)}
+            <button key={l.id} type="button" role="tab" aria-selected={l.id === levelId} onClick={() => { setLevelId(l.id); setSubjectId(null); }}
               className={`min-h-[40px] px-4 rounded-full text-[13px] font-semibold border transition-colors ${
                 l.id === levelId ? 'bg-ink text-white border-ink' : 'bg-white text-ink-soft border-line hover:border-ink'}`}>
               {l.name}
@@ -327,13 +336,39 @@ export const SkillIQSection: React.FC = () => {
         </div>
       )}
 
+      {subjects.length > 1 && (
+        <div role="tablist" aria-label="Matière" className="flex flex-wrap gap-1 p-1 rounded-xl bg-[#f2f1ee] self-start">
+          {subjects.map((s) => {
+            const on = s.id === subject?.id;
+            const ready = readyIn(s);
+            return (
+              <button key={s.id} type="button" role="tab" aria-selected={on} onClick={() => setSubjectId(s.id)}
+                className={`min-h-[38px] px-3.5 rounded-lg text-[13px] font-semibold transition-colors ${
+                  on ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
+                {s.name}
+                <span className="ml-1.5 text-[11.5px] font-medium text-ink-faint fd-nums">{ready ? `${ready} quiz` : 'bientôt'}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {subject && (
+        <div className="flex items-baseline justify-between gap-3 -mb-2">
+          <h2 className="text-[15px] font-semibold text-ink">{subject.name}</h2>
+          <span className="text-[12.5px] text-ink-faint fd-nums">
+            {chapters.length} chapitre{chapters.length > 1 ? 's' : ''} · {availableHere} quiz prêt{availableHere > 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
       {chapters.length > 0 && availableHere === 0 && (
         <div className="rounded-2xl border border-gold-line bg-gold-soft px-5 py-4 flex items-start gap-3">
           <Hourglass className="w-5 h-5 text-gold-strong flex-shrink-0 mt-0.5" />
           <p className="text-[13.5px] text-ink-soft leading-relaxed">
-            <b className="text-ink">Les quiz de ce niveau sont en préparation.</b> Chaque chapitre ci-dessous s’activera
+            <b className="text-ink">Les quiz {subject ? `de ${subject.name.toLowerCase()} ` : ''}de ce niveau sont en préparation.</b> Chaque chapitre ci-dessous s’activera
             dès que ses questions seront prêtes. En attendant, entraîne-toi sur les{' '}
-            <Link to={`/exercises${levelId ? `?classLevels=${levelId}` : ''}`} className="font-semibold text-brand-hover underline">exercices</Link>.
+            <Link to={`/exercises?${new URLSearchParams({ ...(levelId ? { classLevels: String(levelId) } : {}), ...(subject ? { subjects: String(subject.id) } : {}) })}`} className="font-semibold text-brand-hover underline">exercices</Link>.
           </p>
         </div>
       )}
@@ -347,7 +382,7 @@ export const SkillIQSection: React.FC = () => {
           return (
             <article key={c.id} className={`rounded-2xl border bg-white p-4 flex flex-col gap-3 ${n ? 'border-line' : 'border-dashed border-line opacity-75'}`}>
               <div className="flex items-start justify-between gap-3">
-                <h2 className="text-[14.5px] font-semibold text-ink leading-snug">{c.name}</h2>
+                <h3 className="text-[14.5px] font-semibold text-ink leading-snug">{c.name}</h3>
                 {a && lv && <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${lv.className}`}>{lv.label}</span>}
               </div>
 
@@ -370,7 +405,7 @@ export const SkillIQSection: React.FC = () => {
 
               <div className="mt-auto">
                 {n ? (
-                  <button type="button" onClick={() => startQuiz(c.id, c.name)}
+                  <button type="button" onClick={() => startQuiz(c.id, c.name, subject?.name)}
                     className={`${a ? 'fd-btn-ghost' : 'fd-btn-primary'} w-full justify-center`} style={{ minHeight: 40 }}>
                     {a ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4" />} {a ? 'Refaire le quiz' : 'Passer le quiz'}
                   </button>

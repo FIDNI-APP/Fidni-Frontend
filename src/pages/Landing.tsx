@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight, ArrowUpRight, BookOpen, GraduationCap,
   FileText, Check, ListChecks, Map, LineChart, Gift,
@@ -7,6 +7,7 @@ import {
 import { SEO } from '@/components/layout/SEO';
 import { HomeContentCard } from '@/components/content/HomeContentCard';
 import { getExercises } from '@/lib/api';
+import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import type { Content } from '@/types';
 
 /**
@@ -21,7 +22,6 @@ import type { Content } from '@/types';
  *  · Green marks action / progress only. No emojis, no gradients, flat + bordered.
  */
 export function Landing() {
-  const navigate = useNavigate();
   const [popular, setPopular] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,14 +41,15 @@ export function Landing() {
   }, []);
 
   // Voting requires an account — nudge visitors to sign up.
-  const handleVote = () => navigate('/signup');
+  const openSignup = useOpenSignup();
+  const handleVote = () => openSignup();
 
   return (
     <div style={{ background: PAPER }}>
       <SEO
-        title="Fidni - Exercices, leçons et examens de maths corrigés"
-        description="Progresse en maths et prépare ton bac avec des milliers d'exercices, leçons et sujets d'examen corrigés et un suivi de progression."
-        keywords={['mathématiques', 'bac', 'exercices corrigés', 'leçons', 'examens', 'lycée']}
+        title="Fidni – Exercices de maths corrigés, cours et examens | Lycée et Bac au Maroc"
+        description="Exercices de maths corrigés, cours et devoirs surveillés pour les lycéens marocains : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC (BIOF). Solutions détaillées, suivi de progression. Gratuit."
+        keywords={['exercices maths maroc', 'exercices corrigés', '2 bac sm', '1 bac sm', 'tronc commun', 'bac maroc', 'cours de maths', 'devoirs surveillés']}
         ogType="website"
         canonicalUrl="/"
       />
@@ -66,7 +67,14 @@ export function Landing() {
 
 /* ═══════════════════════════════ Hero ═══════════════════════════════ */
 
+/** Le lien garde /signup (clic molette, partage) ; un clic simple ouvre la fenêtre sur place. */
+function useSignupClick() {
+  const openSignup = useOpenSignup();
+  return (e: React.MouseEvent) => { e.preventDefault(); openSignup(); };
+}
+
 function Hero() {
+  const onSignupClick = useSignupClick();
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-10 md:pb-14">
       <div className="grid lg:grid-cols-[1fr_1.02fr] gap-10 lg:gap-14 items-center">
@@ -86,12 +94,12 @@ function Hero() {
 
           <p style={heroLede}>
             Des exercices, des leçons et des sujets d'examen{' '}
-            <span style={{ color: INK, fontWeight: 600 }}>corrigés en détail</span>, du collège
-            au bac — avec un suivi qui te garde motivé jusqu'au jour J.
+            <span style={{ color: INK, fontWeight: 600 }}>corrigés en détail</span>, du Tronc commun
+            au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.
           </p>
 
           <div className="flex flex-wrap items-center" style={{ gap: 12, marginBottom: 26 }}>
-            <Link to="/signup" style={btnPrimary}>
+            <Link to="/signup" onClick={onSignupClick} style={btnPrimary}>
               Créer un compte gratuit <ArrowRight className="w-4 h-4" />
             </Link>
             <Link to="/exercises" style={btnSecondary}>
@@ -135,7 +143,7 @@ function WorkedExample() {
       {/* Header — looks like a real exercise sheet */}
       <div style={{ padding: '16px 22px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <span className="fd-nums" style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.06em', color: FAINT, textTransform: 'uppercase' }}>
-          Analyse · Terminale
+          Analyse · 2ème Bac
         </span>
         <span style={difficultyPill}>Moyen</span>
       </div>
@@ -196,7 +204,7 @@ function WorkedExample() {
 // et la confiance est perdue.)
 const PROMISES = [
   { icon: ListChecks, title: 'Corrigés pas à pas', text: 'Chaque question a sa solution détaillée.' },
-  { icon: Map, title: 'Programme marocain', text: 'Du collège au 2ème Bac, par chapitre.' },
+  { icon: Map, title: 'Programme marocain', text: 'Du Tronc commun au 2ème Bac, par chapitre.' },
   { icon: LineChart, title: 'Ta progression suivie', text: 'Statistiques, révisions et objectifs.' },
   { icon: Gift, title: 'Gratuit', text: 'Un compte suffit, en moins d’une minute.' },
 ];
@@ -327,7 +335,7 @@ function Curriculum() {
           <SectionHead
             align="left"
             eyebrow="Le programme"
-            title="Du collège au bac, ton sommaire de maths"
+            title="Du Tronc commun au Bac, ton sommaire de maths"
             subtitle="Choisis un chapitre pour trouver exactement les exercices, leçons et examens qui vont avec."
           />
           <Link to="/exercises" style={{ ...btnSecondary, marginTop: 22 }}>
@@ -394,6 +402,7 @@ function PopularPreview({ items, loading, onVote }: {
 /* ═══════════════════════════════ Final CTA ═══════════════════════════════ */
 
 function FinalCTA() {
+  const onSignupClick = useSignupClick();
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24">
       <div style={{ borderRadius: 20, padding: '52px 32px', color: '#fff', background: ACCENT_HOVER, textAlign: 'center' }}>
@@ -404,7 +413,7 @@ function FinalCTA() {
           Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui. Aucune carte requise.
         </p>
         <div className="flex flex-wrap items-center justify-center" style={{ gap: 12 }}>
-          <Link to="/signup" style={{ ...btnPrimary, background: '#fff', color: ACCENT_HOVER, border: '1px solid #fff' }}>
+          <Link to="/signup" onClick={onSignupClick} style={{ ...btnPrimary, background: '#fff', color: ACCENT_HOVER, border: '1px solid #fff' }}>
             Créer un compte gratuit <ArrowRight className="w-4 h-4" />
           </Link>
           <Link to="/exercises" style={{ ...btnSecondary, background: 'transparent', borderColor: 'rgba(255,255,255,.28)', color: '#fff' }}>

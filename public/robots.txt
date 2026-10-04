@@ -22,6 +22,7 @@ Disallow: /saved
 Disallow: /verify-email
 Disallow: /reset-password
 Disallow: /apercu-import
+Disallow: /pilotage
 
 # Pages de création / modification
 Disallow: /*/new
@@ -32,4 +33,4 @@ Disallow: /learning-path
 Disallow: /learning-paths/
 
 # Plan du site (généré par l’API à partir des contenus publiés)
-Sitemap: https://api.fidni.fr/sitemap.xml
+Sitemap: https://fidni.fr/sitemap.xml

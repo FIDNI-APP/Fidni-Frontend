@@ -323,7 +323,7 @@ export const ProfileBilanSection: React.FC<ProfileBilanSectionProps> = ({
   );
 };
 
-const PublicationsCard: React.FC<{ items: any[]; isOwner: boolean; total: number }> = ({ items, isOwner, total }) => (
+export const PublicationsCard: React.FC<{ items: any[]; isOwner: boolean; total: number }> = ({ items, isOwner, total }) => (
   <section className="fd-card p-5 md:p-6">
     <SectionTitle
       action={
@@ -372,7 +372,7 @@ const PublicationsCard: React.FC<{ items: any[]; isOwner: boolean; total: number
 );
 
 /** Moyenne actuelle → objectif, sur l'échelle 0–20 : le chemin qui reste, sans rien inventer. */
-const GoalsCard: React.FC<{ goals: NonNullable<ProfileBilanSectionProps['goals']>; editUrl?: string }> = ({ goals, editUrl }) => (
+export const GoalsCard: React.FC<{ goals: NonNullable<ProfileBilanSectionProps['goals']>; editUrl?: string }> = ({ goals, editUrl }) => (
   <section className="fd-card p-5 md:p-6">
     <SectionTitle
       action={editUrl ? (

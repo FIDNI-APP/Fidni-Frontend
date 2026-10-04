@@ -40,7 +40,10 @@ export function SEO({
 }: SEOProps) {
   const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fidni.fr';
   const fullTitle = title.includes('Fidni') ? title : `${title} | Fidni`;
-  const currentUrl = canonicalUrl || `${siteUrl}${window.location.pathname}`;
+  // Lien canonique toujours absolu (« / » relatif était mal interprété).
+  const currentUrl = canonicalUrl
+    ? (canonicalUrl.startsWith('http') ? canonicalUrl : `${siteUrl}${canonicalUrl}`)
+    : `${siteUrl}${window.location.pathname}`;
 
   // Default structured data for the organization
   const defaultStructuredData = {
@@ -50,6 +53,7 @@ export function SEO({
     description: description,
     url: siteUrl,
     logo: `${siteUrl}/logo.png`,
+    areaServed: 'MA',
     sameAs: [
       // Add your social media URLs here when available
     ],

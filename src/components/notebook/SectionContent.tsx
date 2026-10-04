@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { Save, BookMarked, Trash, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import NotebookContent from './NotebookContent';
+import { useLessonOutline } from '@/components/lesson/useLessonOutline';
+import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/LessonOutline';
 import { Section } from '@/types';
 import { saveLessonAnnotations, getLessonAnnotations } from '@/lib/api/notebookApi';
 import toast from 'react-hot-toast';
@@ -61,6 +63,16 @@ const SectionContent: React.FC<SectionContentProps> = ({
   // Référence pour le conteneur de contenu
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  // Cadre qui défile (feuille du cahier) : gardé aussi en état pour que le sommaire suive la lecture.
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+  const setScrollRefs = (el: HTMLDivElement | null) => {
+    (contentContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    setScrollEl(el);
+  };
+  const outline = useLessonOutline({
+    containerRef: contentRef, scrollRoot: scrollEl, topOffset: 52, // barre d’annotation collante
+    deps: [currentPageIndex, renderKey, section?.id],
+  });
   
   // Couleurs disponibles pour les notes
   const noteColors = [
@@ -301,9 +313,20 @@ const SectionContent: React.FC<SectionContentProps> = ({
         )}
       </div>
 
+      {/* Sommaire de la leçon : barre repliable sur écran moyen. */}
+      {currentLessonEntry && (
+        <LessonOutlineBar outline={outline} storageKey={`lecon-${currentLessonEntry.lesson.id}`} className="xl:hidden mx-3 mt-2 flex-shrink-0" />
+      )}
+      <div className="flex flex-1 min-h-0">
+      {/* Sommaire de la leçon : colonne à gauche de la feuille sur grand écran. */}
+      {outline.items.length >= 2 && currentLessonEntry && (
+        <aside className="hidden xl:block w-[230px] flex-shrink-0 overflow-y-auto border-r border-line bg-[#fcfbf9] px-4 py-5">
+          <LessonOutlinePanel outline={outline} storageKey={`lecon-${currentLessonEntry.lesson.id}`} title="Dans cette leçon" />
+        </aside>
+      )}
       {/* Notebook paper — fills all remaining space */}
       <div
-        ref={contentContainerRef}
+        ref={setScrollRefs}
         className={`flex-1 overflow-auto relative ${addingNote ? 'cursor-crosshair ring-2 ring-[#1a7a4a]/40' : ''}`}
         onClick={addingNote ? addModularNote : undefined}
       >
@@ -453,6 +476,7 @@ const SectionContent: React.FC<SectionContentProps> = ({
            
           </div>
         </div>
+      </div>
 
       {/* Add a style tag for CSS animations */}
       <style>{`

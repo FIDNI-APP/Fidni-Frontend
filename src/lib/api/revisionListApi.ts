@@ -14,6 +14,8 @@ export interface RevisionListItem {
   notes: string;
 }
 
+export interface NamedRef { id: number; name: string }
+
 export interface RevisionList {
   id: number;
   name: string;
@@ -21,6 +23,10 @@ export interface RevisionList {
   user: any;
   items: RevisionListItem[];
   item_count: number;
+  /** Étiquettes facultatives choisies par l'élève (filtres de la page Révisions). */
+  class_levels?: NamedRef[];
+  subjects?: NamedRef[];
+  chapters?: NamedRef[];
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +34,21 @@ export interface RevisionList {
 export interface CreateRevisionListData {
   name: string;
   description?: string;
+  class_level_ids?: number[];
+  subject_ids?: number[];
+  chapter_ids?: number[];
+}
+
+/** Exercice ou examen à retravailler (raté, ou questions ratées), encore dans aucune liste. */
+export interface RevisionSuggestion {
+  id: number;
+  type: 'exercise' | 'exam';
+  title: string;
+  failed: boolean;
+  weak_questions: number;
+  chapters: string[];
+  class_level: string | null;
+  at: string;
 }
 
 export interface AddItemData {
@@ -68,7 +89,7 @@ function withStructures(list: RevisionList): RevisionList {
  */
 export async function getRevisionLists(): Promise<RevisionList[]> {
   try {
-    const response = await api.get('/revision-lists/');
+    const response = await api.get('/revision-lists/', { params: { page_size: 200 } });
     return response.data.results || response.data;
   } catch (error) {
     console.error('Failed to fetch revision lists:', error);
@@ -165,4 +186,16 @@ export async function getRevisionListStatistics(listId: number): Promise<Revisio
     console.error('Failed to fetch revision list statistics:', error);
     throw error;
   }
+}
+
+/** Ajout en un clic à la liste « À revoir » (créée et étiquetée au besoin). */
+export async function quickAddToRevision(objectId: number): Promise<{ list_id: number; list_name: string; created_list: boolean; added: boolean }> {
+  const response = await api.post('/revision-lists/quick_add/', { object_id: objectId });
+  return response.data;
+}
+
+/** Exercices à retravailler, pas encore rangés dans une liste. */
+export async function getRevisionSuggestions(): Promise<{ count: number; results: RevisionSuggestion[] }> {
+  const response = await api.get('/revision-lists/suggestions/');
+  return response.data;
 }

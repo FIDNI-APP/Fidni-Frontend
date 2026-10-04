@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { Helmet } from 'react-helmet';
 import {
   exerciseContentAPI,
   examContentAPI,
@@ -26,12 +27,16 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { ContentHeader } from '@/components/content/viewer/ContentHeader';
 import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
+import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
+import { api } from '@/lib/api/apiClient';
 import { ActivitySection } from '@/components/activity/ActivitySection';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
 import { CommentSection } from '@/components/interactions/CommentSection';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
 import { listProposedSolutions, type ProposedSolution } from '@/lib/api/proposedSolutionsApi';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
+import { RevisionNudge } from '@/components/revision/RevisionNudge';
+import { SignupBanner } from '@/components/auth/SignupPrompt';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -139,6 +144,14 @@ const useTimer = (contentId: string | undefined, contentType: ContentType, api: 
 
   const getSessionCount = useCallback(() => sessionCount, [sessionCount]);
 
+  /** Épreuve d'examen terminée : sa durée est enregistrée comme session « exam ». */
+  const saveExamSession = useCallback(async (seconds: number) => {
+    if (!contentId || contentType !== 'exam' || seconds <= 0) return;
+    await api.saveTimerSession(contentId, seconds, 'exam');
+    const history = await api.getSessionHistory(contentId);
+    setSessionCount(history.sessions?.length || 0);
+  }, [contentId, contentType, api]);
+
   const loadHistory = useCallback(async () => {
     setShowHistoryModal(true);
   }, []);
@@ -162,6 +175,7 @@ const useTimer = (contentId: string | undefined, contentType: ContentType, api: 
     formatCurrentTime,
     saveSession,
     getSessionCount,
+    saveExamSession,
     loadHistory,
     showHistoryModal,
     setShowHistoryModal,
@@ -176,7 +190,16 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { openModal } = useAuthModal();
+  const { openModal, setInitialTab } = useAuthModal();
+  const [showReport, setShowReport] = useState(false);
+  // Signaler une erreur demande un compte (évite les signalements anonymes en masse).
+  // path : question choisie depuis son drapeau (sinon l'élève la choisit dans la fenêtre).
+  const [reportPath, setReportPath] = useState('');
+  const openReport = (path?: string) => {
+    if (!isAuthenticated) { setInitialTab('login'); openModal(); return; }
+    setReportPath(typeof path === 'string' ? path : '');
+    setShowReport(true);
+  };
 
   const [content, setContent] = useState<ContentItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -191,6 +214,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const [solutionValidations, setSolutionValidations] = useState<Record<string, string | null>>({});
   const [savingSession, setSavingSession] = useState(false);
   const [completionStatus, setCompletionStatus] = useState<'success' | 'review' | null>(null);
+  // Question ratée (ou exercice échoué) : proposer de le ranger dans « À revoir ».
+  const [revisionNudge, setRevisionNudge] = useState(0);
 
   // Statistics state
   const [statistics, setStatistics] = useState<ContentStatistics | null>(null);
@@ -314,6 +339,22 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   }, [id, config.api]);
 
   // Handle delete
+  // Administrateurs : correction relue → retirer (ou remettre) le bandeau « à vérifier ».
+  const handleSetVerified = async (verifie: boolean) => {
+    if (!content) return;
+    try {
+      await api.post(`/contents/${content.id}/verification/`, { verifie });
+      setContent((prev) => {
+        if (!prev) return prev;
+        const structure = { ...((prev as any).structure || {}) };
+        if (verifie) delete structure.a_verifier; else structure.a_verifier = true;
+        return { ...prev, structure } as ContentItem;
+      });
+    } catch {
+      alert('La mise à jour a échoué. Réessaie.');
+    }
+  };
+
   const handleDelete = async () => {
     if (!id || !content) return;
     if (!confirm(config.deleteConfirm)) return;
@@ -396,6 +437,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       return { ...prev, [path]: status };
     });
 
+    if (!isToggleOff && ['failed', 'review', 'partial'].includes(status)) setRevisionNudge((n) => n + 1);
+
     // Persist to backend
     try {
       if (isToggleOff) {
@@ -462,6 +505,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     if (!id) return;
     const prev = completionStatus;
     setCompletionStatus(status);
+    if (status === 'review') setRevisionNudge((n) => n + 1);
     try {
       if (status === null) {
         await config.api.removeComplete(id);
@@ -639,6 +683,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
+      {/* Titre de l'onglet (le serveur envoie déjà le même titre aux moteurs de recherche : config/seo.py). */}
+      <Helmet><title>{`${content.title} – ${config.title} | Fidni`}</title></Helmet>
       {/* Header */}
       <ContentHeader
         content={content}
@@ -648,7 +694,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         onToggleSave={handleSave}
         isAuthor={!!isAuthor || isModerator(user)}
         onDelete={handleDelete}
-        onPrint={contentType === 'lesson' ? undefined : () => navigate(`${config.basePath}/${content.id}/pdf`)}
+        onPrint={() => navigate(`${config.basePath}/${content.id}/pdf`)}
+        onReport={openReport}
+        onSetVerified={isModerator(user) ? handleSetVerified : undefined}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         basePath={config.basePath}
@@ -687,6 +735,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
                 onQuestionAssess={handleQuestionAssess}
                 solutionValidations={solutionValidations}
                 onValidateSolution={handleValidateSolution}
+                onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
+                onReport={openReport}
               />
 
             </div>
@@ -737,6 +787,21 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           </div>
         )}
       </div>
+
+      {isAuthenticated && contentType !== 'lesson' && id && (
+        <RevisionNudge contentId={id} trigger={revisionNudge} kind={contentType} />
+      )}
+      <SignupBanner contentId={id} />
+
+      <ReportContentModal
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+        contentId={content.id}
+        contentTitle={content.title}
+        contentType={contentType}
+        structure={content.structure}
+        initialPath={reportPath}
+      />
 
       {/* Session History Modal */}
       <SessionHistoryModal

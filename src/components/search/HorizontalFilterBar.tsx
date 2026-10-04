@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Difficulty, SortOption } from '@/types';
 import { getClassLevels, getSubjects, getSubfields, getChapters, getTheorems, getDifficultyCounts } from '@/lib/api';
 import { SortDropdown } from './SortDropdown';
+import { api } from '@/lib/api/apiClient';
 
 interface HorizontalFilterBarProps {
   contentType: 'exercise' | 'lesson' | 'exam';
@@ -26,6 +27,8 @@ interface HorizontalFilterBarProps {
   sortBy: SortOption;
   onSortChange: (sort: SortOption) => void;
   accentColor?: string;
+  /** Contrôle affiché à droite du tri (choix de l'affichage de la liste). */
+  trailing?: React.ReactNode;
 }
 
 interface Option {
@@ -40,6 +43,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   onFilterChange,
   sortBy,
   onSortChange,
+  trailing,
 }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -56,6 +60,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   const [subjects, setSubjects] = useState<Option[]>([]);
   const [subfields, setSubfields] = useState<Option[]>([]);
   const [chapters, setChapters] = useState<Option[]>([]);
+  // Noms des chapitres choisis par l'adresse (page de chapitre, lien « Revoir ce thème ») : la liste
+  // des chapitres ne se charge qu'après le choix d'une matière, l'étiquette affichait leur numéro.
+  const [chapterNames, setChapterNames] = useState<Record<string, string>>({});
   const [theorems, setTheorems] = useState<Option[]>([]);
   const [difficultyCounts, setDifficultyCounts] = useState<Record<string, number>>({});
 
@@ -273,6 +280,19 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     return option?.name || id;
   };
 
+  useEffect(() => {
+    const missing = filters.chapters.filter((id) => !chapters.some((c) => c.id.toString() === id) && !chapterNames[id]);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    Promise.all(missing.map((id) => api.get(`/chapters/${id}/`).then((r) => [id, r.data?.name as string] as const).catch(() => null)))
+      .then((rows) => {
+        if (cancelled) return;
+        const found = Object.fromEntries(rows.filter((r): r is readonly [string, string] => !!r && !!r[1]));
+        if (Object.keys(found).length) setChapterNames((prev) => ({ ...prev, ...found }));
+      });
+    return () => { cancelled = true; };
+  }, [filters.chapters, chapters, chapterNames]);
+
   const activeFilterCount = getActiveFilterCount();
 
   return (
@@ -322,7 +342,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 )
               )}
               {filters.chapters.map((id) =>
-                renderChip(getOptionName(chapters, id), () =>
+                renderChip(chapterNames[id] && !chapters.some((c) => c.id.toString() === id) ? chapterNames[id] : getOptionName(chapters, id), () =>
                   handleToggleFilter('chapters', id)
                 )
               )}
@@ -387,6 +407,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
             <ArrowUpDown className="w-4 h-4 text-slate-400 hidden sm:block" />
             <SortDropdown value={sortBy} onChange={onSortChange} />
           </div>
+          {trailing && <div className="flex-shrink-0 self-start sm:self-center">{trailing}</div>}
         </div>
       </div>
 

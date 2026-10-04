@@ -8,6 +8,7 @@ import {
 } from '@/lib/api';
 import { X, Plus, Check, ListChecks, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RevisionLabelPicker, EMPTY_LABELS, labelsToPayload, type RevisionLabels } from './RevisionLabelPicker';
 
 interface AddToRevisionListModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ interface AddToRevisionListModalProps {
   contentType: 'exercise' | 'exam';
   contentId: number;
   contentTitle?: string;
+  /** Niveau, matière et chapitre de l'exercice : proposés comme étiquettes d'une nouvelle liste. */
+  contentLabels?: RevisionLabels;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -32,13 +35,16 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
   onClose,
   contentType,
   contentId,
-  contentTitle
+  contentTitle,
+  contentLabels,
 }) => {
   const [lists, setLists] = useState<RevisionList[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [newListDescription, setNewListDescription] = useState('');
+  const [newLabels, setNewLabels] = useState<RevisionLabels>(EMPTY_LABELS);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [, setSelectedListId] = useState<number | null>(null);
   const [addedToLists, setAddedToLists] = useState<Set<number>>(new Set());
   const [processingListId, setProcessingListId] = useState<number | null>(null);
@@ -79,17 +85,20 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
 
     try {
       const newList = await createRevisionList({
-        name: newListName,
-        description: newListDescription
+        name: newListName.trim(),
+        description: newListDescription,
+        ...labelsToPayload(newLabels),
       });
       setNewListName('');
       setNewListDescription('');
       setShowCreateForm(false);
+      setCreateError(null);
+      // La nouvelle liste reçoit directement l'exercice : c'est pour ça qu'on l'a créée.
+      await addItemToRevisionList(newList.id, { content_type: contentType, object_id: contentId });
       await loadRevisionLists();
-      // Automatically select the newly created list
       setSelectedListId(newList.id);
-    } catch (error) {
-      console.error('Failed to create revision list:', error);
+    } catch (error: any) {
+      setCreateError(error?.response?.data?.name?.[0] || 'La liste n’a pas pu être créée.');
     }
   };
 
@@ -174,10 +183,10 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
               ) : (
                 <div className="flex flex-col gap-5">
                   {/* Create New List Section */}
-                  <div style={{ borderBottom: '1px solid #f2f1ee', paddingBottom: 18 }}>
+                  <div style={{ borderBottom: lists.length ? '1px solid #f2f1ee' : 'none', paddingBottom: lists.length ? 18 : 0 }}>
                     {!showCreateForm ? (
                       <button
-                        onClick={() => setShowCreateForm(true)}
+                        onClick={() => { setNewLabels(contentLabels ?? EMPTY_LABELS); setShowCreateForm(true); }}
                         className="w-full flex items-center justify-center gap-2"
                         style={{
                           height: 44, borderRadius: 12, border: '1.5px dashed #d8d4cc',
@@ -222,10 +231,12 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                             onBlur={blurGrey}
                           />
                         </div>
+                        <RevisionLabelPicker value={newLabels} onChange={setNewLabels} />
+                        {createError && <p role="alert" style={{ fontSize: 12.5, color: '#9c3b2e' }}>{createError}</p>}
                         <div className="flex gap-2.5">
                           <button type="submit" className="fd-btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
                             <Plus className="w-4 h-4" />
-                            Créer
+                            Créer et ajouter
                           </button>
                           <button
                             type="button"
@@ -250,12 +261,12 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                         <ListChecks className="w-6 h-6" style={{ color: '#cfcdc8' }} />
                       </div>
                       <p style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>Aucune liste de révision</p>
-                      <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>Créez votre première liste ci-dessus</p>
+                      <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>Crée ta première liste ci-dessus : l’exercice y sera ajouté directement.</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2.5">
                       <h3 style={{ fontSize: 10.5, fontWeight: 700, color: '#9a958c', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-                        Vos listes de révision
+                        Tes listes de révision
                       </h3>
                       {lists.map((list) => {
                         const isAdded = addedToLists.has(list.id);

@@ -26,6 +26,8 @@ const SECTION_LABELS: Record<string, string> = {
   settings: 'Paramètres',
   search: 'Recherche',
   login: 'Connexion',
+  pilotage: 'Pilotage',
+  statistiques: 'Statistiques',
 };
 
 export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {

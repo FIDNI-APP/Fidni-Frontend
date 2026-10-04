@@ -45,8 +45,10 @@ export const register = async (username: string, email: string, password: string
 };
 
 // Confirm an email address from the link sent on signup.
+/** Confirme l'adresse. À la première confirmation, l'API connecte l'élève (jetons + profil). */
 export const verifyEmail = async (token: string) => {
   const response = await api.post('/auth/verify-email/', { token });
+  if (response.data?.access) storeTokens(response.data.access, response.data.refresh);
   return response.data;
 };
 

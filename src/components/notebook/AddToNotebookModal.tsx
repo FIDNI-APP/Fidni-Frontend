@@ -1,25 +1,18 @@
-import React, { useState, useEffect } from 'react';
+// Ajouter une leçon à un cahier de cours : directement dans le chapitre de la leçon.
+// Le cahier de la bonne matière et du bon niveau vient en premier ; s'il n'existe pas, on le crée en
+// un clic (ses chapitres sont créés d'après le programme), et le chapitre manquant est ajouté au besoin.
+// On ne propose jamais un chapitre sans rapport (« Nombres complexes » pour une leçon de limites).
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Check, BookMarked, ChevronLeft, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ArrowRight, BookMarked, Check, Loader2, Plus, X } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { addLessonToNotebook, addChapterToNotebook } from '@/lib/api/notebookApi';
 import toast from 'react-hot-toast';
 
-interface Notebook {
-  id: string;
-  title: string;
-  subject: { id: string; name: string };
-  class_level: { id: string; name: string };
-  sections: NotebookSection[];
-}
-
-interface NotebookSection {
-  id: string;
-  chapter: { id: string; name: string };
-  lesson_entries: { id: string; lesson: { id: string; title: string } }[];
-}
+interface Ref { id: string | number; name: string }
+interface NotebookSection { id: string | number; chapter: Ref; lesson_entries: { id: string | number; lesson: { id: string | number } }[] }
+interface Notebook { id: string | number; title: string; subject: Ref; class_level: Ref; sections: NotebookSection[] }
 
 interface AddToNotebookModalProps {
   isOpen: boolean;
@@ -27,295 +20,186 @@ interface AddToNotebookModalProps {
   lessonId: string;
   lessonTitle?: string;
   lessonChapters?: { id: string; name: string }[];
+  lessonSubject?: { id: string | number; name: string } | null;
+  lessonLevels?: { id: string | number; name: string }[];
 }
 
+const same = (a: unknown, b: unknown) => String(a) === String(b);
+
 export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
-  isOpen,
-  onClose,
-  lessonId,
-  lessonTitle,
-  lessonChapters = []
+  isOpen, onClose, lessonId, lessonTitle, lessonChapters = [], lessonSubject, lessonLevels = [],
 }) => {
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
-  const [addedSections, setAddedSections] = useState<Set<string>>(new Set());
-  const [processing, setProcessing] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [done, setDone] = useState<{ notebookId: string | number; chapter: string } | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await api.get('/notebooks/get_notebooks/');
+      setNotebooks(r.data || []);
+    } catch {
+      setNotebooks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (isOpen) {
-      loadNotebooks();
-      setSelectedNotebook(null);
-      setAddedSections(new Set());
-    }
+    if (isOpen) { setDone(null); load(); }
   }, [isOpen]);
 
-  const loadNotebooks = async () => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
+  // Cahiers de la même matière : ceux du niveau de la leçon d'abord.
+  const { matching, others } = useMemo(() => {
+    const bySubject = notebooks.filter((n) => !lessonSubject || same(n.subject?.id, lessonSubject.id));
+    const levelOk = (n: Notebook) => !lessonLevels.length || lessonLevels.some((l) => same(l.id, n.class_level?.id));
+    return { matching: bySubject.filter(levelOk), others: bySubject.filter((n) => !levelOk(n)) };
+  }, [notebooks, lessonSubject, lessonLevels]);
+
+  const hasLesson = (s?: NotebookSection) => !!s?.lesson_entries?.some((e) => same(e.lesson?.id, lessonId));
+
+  const addTo = async (nb: Notebook, chapter: { id: string; name: string }) => {
+    const key = `${nb.id}-${chapter.id}`;
+    setBusy(key);
     try {
-      setLoading(true);
-      const response = await api.get('/notebooks/get_notebooks/');
-      setNotebooks(response.data);
-    } catch (error) {
-      console.error('Failed to load notebooks:', error);
+      let section: { id: string | number } | undefined = nb.sections.find((s) => same(s.chapter?.id, chapter.id));
+      if (!section) section = await addChapterToNotebook(String(nb.id), String(chapter.id));
+      await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
+      toast.success(`Leçon ajoutée à « ${chapter.name} »`);
+      setDone({ notebookId: nb.id, chapter: chapter.name });
+      await load();
+    } catch {
+      toast.error('La leçon n’a pas pu être ajoutée.');
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   };
 
-  const loadNotebookDetails = async (notebook: Notebook) => {
+  const createAndAdd = async () => {
+    if (!lessonSubject || !lessonLevels.length) return;
+    setBusy('create');
     try {
-      setLoading(true);
-      const response = await api.get(`/notebooks/${notebook.id}/`);
-      setSelectedNotebook(response.data);
-
-      // Pre-mark sections that already contain this lesson
-      const alreadyAdded = new Set<string>();
-      response.data.sections?.forEach((section: NotebookSection) => {
-        const has = section.lesson_entries?.some(
-          (entry: any) => String(entry.lesson?.id) === String(lessonId)
-        );
-        if (has) alreadyAdded.add(section.id);
-      });
-      setAddedSections(alreadyAdded);
-    } catch (error) {
-      console.error('Failed to load notebook details:', error);
+      const r = await api.post('/notebooks/create_notebook/', { subject_id: lessonSubject.id, class_level_id: lessonLevels[0].id });
+      const nb: Notebook = r.data;
+      const chapter = lessonChapters[0];
+      if (chapter) {
+        let section: { id: string | number } | undefined = nb.sections?.find((s) => same(s.chapter?.id, chapter.id));
+        if (!section) section = await addChapterToNotebook(String(nb.id), String(chapter.id));
+        await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
+        setDone({ notebookId: nb.id, chapter: chapter.name });
+      }
+      toast.success('Cahier créé, leçon ajoutée');
+      await load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Le cahier n’a pas pu être créé.');
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   };
 
-  const handleAddToSection = async (sectionId: string) => {
-    if (addedSections.has(sectionId) || processing) return;
-    setProcessing(true);
-    try {
-      await addLessonToNotebook(selectedNotebook!.id, sectionId, lessonId);
-      setAddedSections(prev => new Set(prev).add(sectionId));
-      toast.success('Leçon ajoutée au cahier');
-    } catch (error) {
-      console.error('Failed to add lesson:', error);
-      toast.error('Erreur lors de l\'ajout');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleCreateChapterAndAdd = async (chapterId: string, chapterName: string) => {
-    if (processing || !selectedNotebook) return;
-    setProcessing(true);
-    try {
-      // Create the chapter in notebook
-      const newSection = await addChapterToNotebook(selectedNotebook.id, chapterId);
-      // Add lesson to the new section
-      await addLessonToNotebook(selectedNotebook.id, newSection.id, lessonId);
-      toast.success(`Chapitre "${chapterName}" créé et leçon ajoutée`);
-      // Reload details
-      await loadNotebookDetails(selectedNotebook);
-    } catch (error) {
-      console.error('Failed to create chapter and add:', error);
-      toast.error('Erreur lors de la création du chapitre');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleClose = () => {
-    setSelectedNotebook(null);
-    onClose();
-  };
-
-  // Chapters from the lesson that are not yet in the selected notebook
-  const missingChapters = selectedNotebook
-    ? lessonChapters.filter(
-        ch => !selectedNotebook.sections.some(s => String(s.chapter.id) === String(ch.id))
-      )
-    : [];
-
-  return createPortal(
-    <AnimatePresence mode="wait">
-      {isOpen && (
-        <motion.div
-          key="notebook-modal-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
-          onClick={handleClose}
-        >
-          <motion.div
-            key="notebook-modal-content"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-[#faf9f7]">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {selectedNotebook && (
-                  <button
-                    onClick={() => setSelectedNotebook(null)}
-                    className="p-1.5 rounded-lg hover:bg-white transition-colors flex-shrink-0"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-gray-600" />
-                  </button>
-                )}
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <BookMarked className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                    <span className="truncate">
-                      {selectedNotebook ? selectedNotebook.title : 'Ajouter au cahier'}
-                    </span>
-                  </h2>
-                  {lessonTitle && (
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{lessonTitle}</p>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={handleClose}
-                className="p-1.5 hover:bg-white rounded-lg transition-colors flex-shrink-0 ml-2"
-                aria-label="Fermer"
-              >
-                <X className="w-5 h-5 text-gray-500" />
+  const NotebookBlock: React.FC<{ nb: Notebook }> = ({ nb }) => (
+    <div className="rounded-xl border border-line bg-white">
+      <div className="px-4 pt-3 pb-2 flex items-baseline justify-between gap-3">
+        <p className="font-semibold text-ink truncate">{nb.title}</p>
+        <p className="text-[12px] text-ink-faint shrink-0">{nb.class_level?.name}</p>
+      </div>
+      <ul className="px-2 pb-2">
+        {(lessonChapters.length ? lessonChapters : []).map((ch) => {
+          const section = nb.sections.find((s) => same(s.chapter?.id, ch.id));
+          const added = hasLesson(section);
+          const key = `${nb.id}-${ch.id}`;
+          return (
+            <li key={ch.id}>
+              <button type="button" disabled={added || busy !== null} onClick={() => addTo(nb, ch)}
+                className={`w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
+                  added ? 'bg-brand-soft' : 'hover:bg-[#f7f6f3]'}`}>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[.06em] text-ink-faint">Chapitre</span>
+                  <span className={`block truncate text-[14px] font-medium ${added ? 'text-brand-hover' : 'text-ink'}`}>{ch.name}</span>
+                  {!section && !added && <span className="block text-[12px] text-ink-faint">Sera ajouté à ce cahier</span>}
+                </span>
+                {busy === key ? <Loader2 className="w-4 h-4 animate-spin text-brand" />
+                  : added ? <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-hover shrink-0"><Check className="w-4 h-4" /> Ajoutée</span>
+                  : <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-[12.5px] font-semibold text-white shrink-0"><Plus className="w-3.5 h-3.5" /> Ajouter</span>}
               </button>
-            </div>
+            </li>
+          );
+        })}
+        {!lessonChapters.length && (
+          <li className="px-2.5 py-2 text-[13px] text-ink-faint">Cette leçon n’est rattachée à aucun chapitre.</li>
+        )}
+      </ul>
+    </div>
+  );
 
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-5">
-              {loading ? (
-                <div className="flex justify-center items-center py-10">
-                  <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-                </div>
-              ) : !selectedNotebook ? (
-                /* Step 1 — pick notebook */
-                notebooks.length === 0 ? (
-                  <div className="text-center py-10">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <BookMarked className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <p className="text-gray-700 font-semibold">Aucun cahier</p>
-                    <p className="text-sm text-gray-500 mt-1">Créez un cahier depuis votre profil</p>
+  if (!isOpen) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[rgba(20,18,16,.45)] backdrop-blur-[2px]" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="nb-modal-title" onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-md rounded-2xl border border-line bg-white shadow-[0_20px_50px_rgba(20,18,16,.25)]">
+          <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+            <div className="min-w-0">
+              <h2 id="nb-modal-title" className="flex items-center gap-2 text-[17px] font-semibold text-ink">
+                <BookMarked className="w-5 h-5 text-brand" /> Ajouter à mon cahier
+              </h2>
+              {lessonTitle && <p className="mt-0.5 truncate text-[13px] text-ink-faint">{lessonTitle}</p>}
+            </div>
+            <button onClick={onClose} aria-label="Fermer" className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]"><X className="w-5 h-5" /></button>
+          </div>
+
+          <div className="px-5 pb-5 flex flex-col gap-3">
+            {loading ? (
+              <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-ink-faint" /></div>
+            ) : (
+              <>
+                {matching.map((nb) => <NotebookBlock key={nb.id} nb={nb} />)}
+
+                {matching.length === 0 && lessonSubject && lessonLevels.length > 0 && (
+                  <div className="rounded-xl border border-dashed border-brand-line bg-brand-soft/40 px-4 py-4">
+                    <p className="text-[14px] font-semibold text-ink">Pas encore de cahier {lessonSubject.name} — {lessonLevels[0].name}</p>
+                    <p className="mt-1 text-[13px] text-ink-soft">
+                      Crée-le : ses chapitres suivent le programme, et cette leçon ira directement dans
+                      {lessonChapters[0] ? <> « {lessonChapters[0].name} »</> : ' son chapitre'}.
+                    </p>
+                    <button type="button" onClick={createAndAdd} disabled={busy !== null} className="fd-btn-primary mt-3 w-full justify-center">
+                      {busy === 'create' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Créer le cahier et ajouter la leçon
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {notebooks.map((nb) => (
-                      <button
-                        key={nb.id}
-                        onClick={() => loadNotebookDetails(nb)}
-                        className="w-full text-left p-4 border border-gray-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-all"
-                      >
-                        <p className="font-semibold text-gray-900">{nb.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {nb.subject?.name} · {nb.class_level?.name}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )
-              ) : (
-                /* Step 2 — pick chapter in notebook */
-                <div className="space-y-3">
-                  {/* Existing chapters */}
-                  {selectedNotebook.sections.length > 0 && (
-                    <>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Chapitres existants</p>
-                      <div className="space-y-2">
-                        {selectedNotebook.sections.map((section) => {
-                          const isAdded = addedSections.has(section.id);
-                          return (
-                            <motion.button
-                              key={section.id}
-                              whileHover={!isAdded ? { scale: 1.01 } : {}}
-                              whileTap={!isAdded ? { scale: 0.98 } : {}}
-                              onClick={() => handleAddToSection(section.id)}
-                              disabled={isAdded || processing}
-                              className={`w-full text-left p-4 border-2 rounded-xl transition-all flex items-center justify-between ${
-                                isAdded
-                                  ? 'border-green-400 bg-green-50 cursor-default'
-                                  : 'border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer'
-                              }`}
-                            >
-                              <div>
-                                <p className="font-semibold text-gray-900">{section.chapter.name}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {section.lesson_entries.length} leçon{section.lesson_entries.length !== 1 ? 's' : ''}
-                                </p>
-                              </div>
-                              {isAdded ? (
-                                <div className="bg-green-500 rounded-full p-1">
-                                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                                </div>
-                              ) : processing ? (
-                                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                              ) : (
-                                <div className="bg-emerald-100 rounded-full p-1.5">
-                                  <Plus className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
-                                </div>
-                              )}
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
+                )}
 
-                  {/* Chapters from lesson not yet in notebook — offer to create */}
-                  {missingChapters.length > 0 && (
-                    <>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-4">
-                        Créer un chapitre
-                      </p>
-                      <div className="space-y-2">
-                        {missingChapters.map((ch) => (
-                          <button
-                            key={ch.id}
-                            onClick={() => handleCreateChapterAndAdd(ch.id, ch.name)}
-                            disabled={processing}
-                            className="w-full text-left p-4 border-2 border-dashed border-emerald-300 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all flex items-center justify-between disabled:opacity-60"
-                          >
-                            <div>
-                              <p className="font-semibold text-emerald-700">{ch.name}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">Créer + ajouter la leçon</p>
-                            </div>
-                            {processing ? (
-                              <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                            ) : (
-                              <div className="bg-emerald-100 rounded-full p-1.5">
-                                <Plus className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                {others.length > 0 && (
+                  <details className="group">
+                    <summary className="cursor-pointer select-none text-[12.5px] font-medium text-ink-faint hover:text-ink">
+                      Autres cahiers de {lessonSubject?.name || 'cette matière'} ({others.length})
+                    </summary>
+                    <div className="mt-2 flex flex-col gap-2">{others.map((nb) => <NotebookBlock key={nb.id} nb={nb} />)}</div>
+                  </details>
+                )}
 
-                  {/* No chapters at all and no chapters on the lesson */}
-                  {selectedNotebook.sections.length === 0 && missingChapters.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 text-sm">Aucun chapitre disponible dans ce cahier.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-5 border-t border-gray-200 bg-gray-50">
-              <Button
-                onClick={handleClose}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold h-11"
-              >
-                Fermer
-              </Button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body
+                {done && (
+                  <Link to={`/notebooks?nb=${done.notebookId}`} onClick={onClose}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-[13.5px] font-semibold text-ink-soft hover:border-ink hover:text-ink">
+                    Ouvrir mon cahier <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 };
+
+export default AddToNotebookModal;

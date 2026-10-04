@@ -29,7 +29,8 @@ const SubSectionRenderer: React.FC<{ subSection: SubSectionBlock; sectionIndex: 
   return (
     <div className="mt-6">
       {subSection.title && (
-        <h4 className="fd-display text-lg font-semibold text-ink-soft mb-3" style={{ letterSpacing: '-0.01em' }}>
+        <h4 className="fd-display text-lg font-semibold text-ink-soft mb-3" style={{ letterSpacing: '-0.01em' }}
+          data-outline-level="2" data-outline-num={`${sectionIndex + 1}.${index + 1}`} data-outline-title={subSection.title}>
           <span className="fd-nums">{sectionIndex + 1}.{index + 1}.</span> {subSection.title}
         </h4>
       )}
@@ -41,7 +42,9 @@ const SubSectionRenderer: React.FC<{ subSection: SubSectionBlock; sectionIndex: 
 const SectionRenderer: React.FC<{ section: SectionBlock; index: number }> = ({ section, index }) => {
   return (
     <div className="mt-8 first:mt-0">
-      <h3 className="fd-display text-2xl text-ink mb-4" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
+      {/* data-outline-* : repères du sommaire de la leçon (components/lesson/useLessonOutline). */}
+      <h3 className="fd-display text-2xl text-ink mb-4" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
+        data-outline-level="1" data-outline-num={`${index + 1}`} data-outline-title={section.title || 'Section sans titre'}>
         <span className="fd-nums">{index + 1}.</span> {section.title || 'Section sans titre'}
       </h3>
 

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getRevisionLists, deleteRevisionList, createRevisionList, type RevisionList } from '@/lib/api/revisionListApi';
-import { AlertCircle, ArrowRight, BookOpen, CheckCircle2, ListPlus, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  getRevisionLists, deleteRevisionList, createRevisionList, getRevisionSuggestions, quickAddToRevision,
+  type RevisionList, type RevisionSuggestion,
+} from '@/lib/api/revisionListApi';
+import { AlertCircle, ArrowRight, BookOpen, CheckCircle2, Filter, ListPlus, Loader2, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RevisionLabelPicker, EMPTY_LABELS, labelsToPayload, type RevisionLabels } from '@/components/revision/RevisionLabelPicker';
 
 /** Ce que la carte montre d'une liste, calculé à partir de ses éléments (aucun chiffre inventé). */
 function summarize(list: RevisionList) {
@@ -17,7 +21,13 @@ function summarize(list: RevisionList) {
     (c?.chapters || []).forEach((ch: { id: number; name: string }) => chapters.set(String(ch.id), ch.name));
   });
   const total = list.item_count ?? items.length;
-  return { total, success, review, todo: Math.max(total - success - review, 0), chapters: Array.from(chapters.values()) };
+  // Les chapitres choisis par l'élève priment sur ceux déduits des exercices.
+  const labelled = (list.chapters || []).map((c) => c.name);
+  return {
+    total, success, review, todo: Math.max(total - success - review, 0),
+    chapters: labelled.length ? labelled : Array.from(chapters.values()),
+    level: list.class_levels?.[0]?.name, subject: list.subjects?.[0]?.name,
+  };
 }
 
 const NAME_IDEAS = ['Limites — DS 1', 'Avant le bac blanc', 'Exercices ratés'];
@@ -39,13 +49,22 @@ export const RevisionLists = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [newListDescription, setNewListDescription] = useState('');
+  const [newLabels, setNewLabels] = useState<RevisionLabels>(EMPTY_LABELS);
+  // Filtres par étiquette (niveau, matière, chapitre).
+  const [fLevel, setFLevel] = useState('');
+  const [fSubject, setFSubject] = useState('');
+  const [fChapter, setFChapter] = useState('');
+  // Exercices ratés pas encore rangés dans une liste.
+  const [suggestions, setSuggestions] = useState<RevisionSuggestion[]>([]);
+  const [suggestionCount, setSuggestionCount] = useState(0);
+  const [addingId, setAddingId] = useState<number | 'all' | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/login');
       return;
     }
-    if (isAuthenticated) fetchLists();
+    if (isAuthenticated) { fetchLists(); fetchSuggestions(); }
   }, [isAuthenticated, authLoading, navigate]);
 
   // Échap ferme la fenêtre de création.
@@ -69,6 +88,44 @@ export const RevisionLists = () => {
     }
   };
 
+  const fetchSuggestions = async () => {
+    try {
+      const r = await getRevisionSuggestions();
+      setSuggestions(r.results || []);
+      setSuggestionCount(r.count || 0);
+    } catch { /* encart facultatif */ }
+  };
+
+  const addSuggestion = async (ids: number[], key: number | 'all') => {
+    setAddingId(key);
+    try {
+      for (const id of ids) await quickAddToRevision(id);
+      setSuggestions((prev) => prev.filter((x) => !ids.includes(x.id)));
+      setSuggestionCount((n) => Math.max(0, n - ids.length));
+      await fetchLists();
+    } catch {
+      setError('L’exercice n’a pas pu être ajouté.');
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  // Valeurs de filtre disponibles : seulement celles présentes sur les listes.
+  const facets = useMemo(() => {
+    const collect = (key: 'class_levels' | 'subjects' | 'chapters') => {
+      const m = new Map<string, string>();
+      lists.forEach((l) => (l[key] || []).forEach((x) => m.set(String(x.id), x.name)));
+      return Array.from(m, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    };
+    return { levels: collect('class_levels'), subjects: collect('subjects'), chapters: collect('chapters') };
+  }, [lists]);
+  const hasFacets = facets.levels.length + facets.subjects.length + facets.chapters.length > 0;
+  const filtering = !!(fLevel || fSubject || fChapter);
+  const shown = lists.filter((l) =>
+    (!fLevel || (l.class_levels || []).some((x) => String(x.id) === fLevel))
+    && (!fSubject || (l.subjects || []).some((x) => String(x.id) === fSubject))
+    && (!fChapter || (l.chapters || []).some((x) => String(x.id) === fChapter)));
+
   const handleDelete = async (list: RevisionList) => {
     if (!window.confirm(`Supprimer la liste « ${list.name} » ? Les exercices eux-mêmes restent sur Fidni.`)) return;
     try {
@@ -87,12 +144,12 @@ export const RevisionLists = () => {
     if (!newListName.trim() || creating) return;
     try {
       setCreating(true);
-      const newList = await createRevisionList({ name: newListName.trim(), description: newListDescription.trim() });
+      const newList = await createRevisionList({ name: newListName.trim(), description: newListDescription.trim(), ...labelsToPayload(newLabels) });
       setLists([newList, ...lists]);
       closeModal();
       navigate(`/profile/revision-lists/${newList.id}`);
-    } catch {
-      setError('La liste n’a pas pu être créée.');
+    } catch (err: any) {
+      setError(err?.response?.data?.name?.[0] || 'La liste n’a pas pu être créée.');
     } finally {
       setCreating(false);
     }
@@ -102,6 +159,7 @@ export const RevisionLists = () => {
     setShowCreateModal(false);
     setNewListName('');
     setNewListDescription('');
+    setNewLabels(EMPTY_LABELS);
     setError(null);
   };
 
@@ -127,6 +185,69 @@ export const RevisionLists = () => {
       {error && !showCreateModal && (
         <div role="alert" className="mb-5 flex items-center gap-3 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">
           <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-gold-line bg-gold-soft/50 p-5" data-tour="revisions-suggestions">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="flex items-center gap-2 text-[16px] font-semibold text-ink">
+                <Sparkles className="h-4 w-4 text-gold-strong" /> À retravailler
+                <span className="fd-nums rounded-full bg-white px-2 py-0.5 text-[12px] font-semibold text-gold-strong">{suggestionCount}</span>
+              </h2>
+              <p className="mt-1 text-[13px] text-ink-soft">
+                Tu as raté ces exercices, ou certaines de leurs questions. Range-les pour y revenir avant ton prochain devoir.
+              </p>
+            </div>
+            {suggestions.length > 1 && (
+              <button className="fd-btn-primary shrink-0" disabled={addingId !== null}
+                onClick={() => addSuggestion(suggestions.map((x) => x.id), 'all')}>
+                {addingId === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
+                Tout ajouter à « À revoir »
+              </button>
+            )}
+          </div>
+          <ul className="mt-4 grid gap-2 md:grid-cols-2">
+            {suggestions.slice(0, 6).map((x) => (
+              <li key={x.id} className="flex items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <Link to={`/${x.type === 'exam' ? 'exams' : 'exercises'}/${x.id}`} className="line-clamp-1 text-[14px] font-semibold text-ink hover:underline">{x.title}</Link>
+                  <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-faint">
+                    {[x.failed ? 'Marqué échoué' : `${x.weak_questions} question${x.weak_questions > 1 ? 's' : ''} à reprendre`, x.chapters[0]].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                <button type="button" disabled={addingId !== null} onClick={() => addSuggestion([x.id], x.id)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] font-semibold text-ink-soft hover:border-brand hover:text-brand-hover disabled:opacity-50">
+                  {addingId === x.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Ajouter
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!loading && lists.length > 1 && hasFacets && (
+        <div className="mb-5 flex flex-wrap items-center gap-2" data-tour="revisions-filtres">
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint"><Filter className="h-3.5 w-3.5" /> Filtrer</span>
+          {([
+            ['Niveau', facets.levels, fLevel, setFLevel],
+            ['Matière', facets.subjects, fSubject, setFSubject],
+            ['Chapitre', facets.chapters, fChapter, setFChapter],
+          ] as const).filter(([, opts]) => opts.length > 0).map(([label, opts, val, set]) => (
+            <select key={label} value={val} onChange={(e) => set(e.target.value)} aria-label={label}
+              className={`h-9 max-w-[16rem] rounded-lg border px-2.5 text-[13px] ${val ? 'border-brand bg-brand-soft text-brand-hover font-semibold' : 'border-line bg-white text-ink-soft'}`}>
+              <option value="">{label} : tous</option>
+              {opts.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          ))}
+          {filtering && (
+            <button type="button" onClick={() => { setFLevel(''); setFSubject(''); setFChapter(''); }}
+              className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-faint hover:text-ink">
+              <X className="h-3.5 w-3.5" /> Effacer
+            </button>
+          )}
+          <span className="ml-auto text-[12.5px] text-ink-faint fd-nums">{shown.length} / {lists.length} listes</span>
         </div>
       )}
 
@@ -167,9 +288,14 @@ export const RevisionLists = () => {
             <Link to="/exercises" className="fd-btn-ghost">Parcourir les exercices</Link>
           </div>
         </section>
+      ) : shown.length === 0 ? (
+        <div className="fd-card px-5 py-10 text-center text-[14px] text-ink-faint">
+          Aucune liste avec ces étiquettes.{' '}
+          <button className="font-semibold text-brand-hover hover:underline" onClick={() => { setFLevel(''); setFSubject(''); setFChapter(''); }}>Tout afficher</button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {lists.map((list, i) => {
+          {shown.map((list, i) => {
             const s = summarize(list);
             const pct = (n: number) => (s.total ? (n / s.total) * 100 : 0);
             const open = () => navigate(`/profile/revision-lists/${list.id}`);
@@ -202,6 +328,9 @@ export const RevisionLists = () => {
                   <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-ink-soft">{list.description}</p>
                 )}
 
+                {(s.level || s.subject) && (
+                  <p className="mt-2 text-[12px] text-ink-faint">{[s.level, s.subject].filter(Boolean).join(' · ')}</p>
+                )}
                 {s.chapters.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {s.chapters.slice(0, 3).map(name => (
@@ -256,14 +385,14 @@ export const RevisionLists = () => {
       {/* Création */}
       <AnimatePresence>
         {showCreateModal && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[2px]" onClick={closeModal}>
+          <div className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-[70] flex items-center justify-center bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[2px]" onClick={closeModal}>
             <motion.form
               onSubmit={handleCreate}
               initial={{ opacity: 0, scale: 0.97, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 8 }}
               transition={{ duration: 0.16 }}
-              className="w-full max-w-md rounded-2xl border border-line bg-white p-6 shadow-[0_20px_50px_rgba(20,18,16,.22)]"
+              className="w-full max-w-lg rounded-2xl border border-line bg-white p-6 shadow-[0_20px_50px_rgba(20,18,16,.22)]"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -307,6 +436,10 @@ export const RevisionLists = () => {
                   rows={3}
                 />
               </label>
+
+              <div className="mt-4">
+                <RevisionLabelPicker value={newLabels} onChange={setNewLabels} />
+              </div>
 
               {error && (
                 <p role="alert" className="mt-3 flex items-center gap-2 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-3 py-2.5 text-[13px] text-[#9c3b2e]">

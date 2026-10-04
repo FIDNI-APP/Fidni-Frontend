@@ -158,17 +158,17 @@ const StudentNotebook: React.FC = () => {
     };
   }, [currentNotebookId]);
 
-  // Auto-generate notebook title when subject and class level are selected
+  // Propose « Matière - Niveau » quand le champ est vide ; ne pas le re-remplir si l'élève l'efface pour écrire son nom.
   useEffect(() => {
-    if (selectedSubject && selectedClassLevel && !notebookTitle) {
+    if (selectedSubject && selectedClassLevel) {
       const subjectName = subjects.find(s => s.id === selectedSubject)?.name || '';
       const levelName = classLevels.find(c => c.id === selectedClassLevel)?.name || '';
-      
+
       if (subjectName && levelName) {
-        setNotebookTitle(`${subjectName} - ${levelName}`);
+        setNotebookTitle(t => t || `${subjectName} - ${levelName}`);
       }
     }
-  }, [selectedSubject, selectedClassLevel, subjects, classLevels, notebookTitle]);
+  }, [selectedSubject, selectedClassLevel, subjects, classLevels]);
 
   // Main data loading functions
   const loadNotebooks = async () => {
@@ -205,7 +205,7 @@ const StudentNotebook: React.FC = () => {
       );
     } catch (err) {
       console.error('Error loading notebook details:', err);
-      toast.error('Failed to load notebook details');
+      toast.error('Impossible de charger ce cahier.');
     } finally {
       setSectionsLoading(false);
     }
@@ -217,7 +217,7 @@ const StudentNotebook: React.FC = () => {
       setClassLevels(data);
     } catch (err) {
       console.error('Error loading class levels:', err);
-      toast.error('Failed to load class levels');
+      toast.error('Impossible de charger les niveaux.');
     }
   };
 
@@ -227,7 +227,7 @@ const StudentNotebook: React.FC = () => {
       setSubjects(data);
     } catch (err) {
       console.error('Error loading subjects:', err);
-      toast.error('Failed to load subjects');
+      toast.error('Impossible de charger les matières.');
     }
   };
 
@@ -245,7 +245,7 @@ const StudentNotebook: React.FC = () => {
       toast.success('Notes modulaires sauvegardées');
     } catch (err) {
       console.error('Error saving modular notes:', err);
-      toast.error('Failed to save modular notes');
+      toast.error('Tes notes n’ont pas pu être enregistrées.');
       throw err; // Rethrow pour que le composant SectionContent puisse le gérer
     }
   };
@@ -310,7 +310,7 @@ const StudentNotebook: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching section data:', error);
-      toast.error('Failed to load section content');
+      toast.error('Impossible de charger ce chapitre.');
     }
   };
 
@@ -347,10 +347,10 @@ const StudentNotebook: React.FC = () => {
       });
       
       setEditingNotes(false);
-      toast.success('Notes saved successfully');
+      toast.success('Notes enregistrées');
     } catch (err) {
       console.error('Error saving notes:', err);
-      toast.error('Failed to save notes');
+      toast.error('Tes notes n’ont pas pu être enregistrées.');
     }
   };
 
@@ -365,7 +365,7 @@ const StudentNotebook: React.FC = () => {
       return;
     }
     
-    if (!notebookTitle) {
+    if (!notebookTitle.trim()) {
       toast.info('Donne un titre à ton cahier.');
       return;
     }
@@ -389,10 +389,10 @@ const StudentNotebook: React.FC = () => {
       setSelectedClassLevel("");
       setNotebookTitle("");
       
-      toast.success('Notebook created successfully');
-    } catch (err) {
+      toast.success('Cahier créé');
+    } catch (err: any) {
       console.error('Error creating notebook:', err);
-      toast.error('Failed to create notebook');
+      toast.error(err?.response?.data?.error || 'Le cahier n’a pas pu être créé.');
     } finally {
       setLoading(false);
     }
@@ -412,10 +412,10 @@ const StudentNotebook: React.FC = () => {
       // Refresh the notebook data
       loadNotebookDetails(currentNotebook.id);
       
-      toast.success('Lesson page removed successfully');
+      toast.success('Leçon retirée du cahier');
     } catch (err) {
       console.error('Error removing lesson:', err);
-      toast.error('Failed to remove lesson');
+      toast.error('La leçon n’a pas pu être retirée.');
     }
   };
 
@@ -433,10 +433,10 @@ const StudentNotebook: React.FC = () => {
         setSearchParams({});
       }
       
-      toast.success('Notebook deleted successfully');
+      toast.success('Cahier supprimé');
     } catch (err) {
       console.error('Error deleting notebook:', err);
-      toast.error('Failed to delete notebook');
+      toast.error('Le cahier n’a pas pu être supprimé.');
     }
   };
 
@@ -509,6 +509,7 @@ const StudentNotebook: React.FC = () => {
                     onRemoveLesson={handleRemoveLesson}
                     onGoBack={handleGoBackToNotebooks}
                     notebookTitle="Mes cahiers"
+                    printTo={`/notebooks/${currentNotebook.id}/pdf`}
                   />
                   </div>
                 )}

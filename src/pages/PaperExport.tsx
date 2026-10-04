@@ -1,16 +1,18 @@
-// Feuille d'exercices au format A4, façon sujet de maths, à exporter en PDF.
-// Ce n'est pas une impression de la page du site : la mise en page est propre au papier
-// (en-tête Fidni, exercices numérotés, barème, corrigé optionnel, pied de page paginé).
+// Feuille A4 à exporter en PDF : exercices et examens façon sujet de maths, leçons et cahiers de
+// cours façon polycopié. Ce n'est pas une impression de la page du site : la mise en page est
+// propre au papier (en-tête Fidni, numérotation, barème, corrigé optionnel, pied de page paginé).
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Download, Loader2, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRevisionList } from '@/lib/api';
+import { getNotebookById } from '@/lib/api/notebookApi';
 import { exerciseAPI } from '@/lib/api/contentApiFactory';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { getDifficultyLabel } from '@/lib/utils/difficultyHelpers';
 import type { Difficulty } from '@/types';
 import { TourHelpButton } from '@/components/tour/TourProvider';
+import { SignupCard, useOpenSignup } from '@/components/auth/SignupPrompt';
 
 type SolutionsMode = 'none' | 'end' | 'inline';
 
@@ -25,11 +27,19 @@ interface Block {
   subQuestions?: SubQuestion[];
 }
 
+interface LessonSub { id: string; title?: string; content?: RichText }
+interface LessonSection { id: string; title?: string; content?: RichText; subSections?: LessonSub[] }
+
 interface PaperItem {
   key: string;
   kind: 'exercise' | 'exam' | 'lesson';
   title: string;
   blocks: Block[];
+  /** Leçon : ses parties. */
+  sections?: LessonSection[];
+  /** Cahier : chapitre ouvert par cette leçon, et notes de l'élève sur ce chapitre. */
+  chapterHeading?: string;
+  chapterNotes?: string;
   subject?: string;
   level?: string;
   difficulty?: string;
@@ -42,6 +52,9 @@ interface PaperData {
   description?: string;
   kindLabel: string;
   items: PaperItem[];
+  /** Leçon ou cahier : pas de barème ni de cases « Nom, classe » par défaut. */
+  reading?: boolean;
+  isNotebook?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,6 +63,7 @@ const toItem = (c: any, key: string): PaperItem => ({
   kind: c.type === 'exam' ? 'exam' : c.type === 'lesson' ? 'lesson' : 'exercise',
   title: c.title || 'Sans titre',
   blocks: Array.isArray(c.structure?.blocks) ? c.structure.blocks : [],
+  sections: Array.isArray(c.structure?.sections) ? c.structure.sections : undefined,
   subject: typeof c.subject === 'string' ? c.subject : c.subject?.name,
   level: c.class_levels?.[0] ? (typeof c.class_levels[0] === 'string' ? c.class_levels[0] : c.class_levels[0].name) : undefined,
   difficulty: c.difficulty,
@@ -139,6 +153,27 @@ const ExerciseBody: React.FC<{ item: PaperItem; inlineSolutions: boolean }> = ({
   );
 };
 
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+const stripHtml = (h?: string) => (h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Leçon : parties numérotées I, II… et sous-parties 1, 2…, encadrés (définitions, théorèmes) conservés. */
+const LessonBody: React.FC<{ item: PaperItem }> = ({ item }) => (
+  <>
+    {(item.sections || []).map((sec, i) => (
+      <section key={sec.id || i} className="fp-l-sec">
+        {sec.title && <h2 className="fp-l-h2"><span>{ROMAN[i] || i + 1}.</span> {stripHtml(sec.title)}</h2>}
+        <Rich content={sec.content} />
+        {(sec.subSections || []).map((sub, j) => (
+          <div key={sub.id || j} className="fp-l-subsec">
+            {sub.title && <h3 className="fp-l-h3"><span>{j + 1}.</span> {stripHtml(sub.title)}</h3>}
+            <Rich content={sub.content} />
+          </div>
+        ))}
+      </section>
+    ))}
+  </>
+);
+
 /** Corrigé regroupé en fin de document, sur une nouvelle page. */
 const AnswerKey: React.FC<{ items: PaperItem[] }> = ({ items }) => (
   <section className="fp-key">
@@ -216,7 +251,7 @@ const currentSchoolYear = () => {
 };
 
 interface PaperExportProps {
-  source: 'revision-list' | 'content';
+  source: 'revision-list' | 'content' | 'notebook';
 }
 
 export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
@@ -226,16 +261,20 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   const [data, setData] = useState<PaperData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const openSignup = useOpenSignup();
+  // Visiteur : il voit un aperçu de la feuille (exercice, examen, leçon), mais télécharger demande un compte.
+  const guest = !authLoading && !user;
   const userKey = user ? String(user.id) : 'guest';
   const [showCustomize, setShowCustomize] = useState(false);
   const [overrides, setOverrides] = useState<Partial<PaperCustom>>(() => loadPrefs(userKey));
+  const [withNotes, setWithNotes] = useState(true);
   useEffect(() => { setOverrides(loadPrefs(userKey)); }, [userKey]);
   const mode = (['none', 'end', 'inline'].includes(searchParams.get('solutions') || '')
     ? searchParams.get('solutions') : 'none') as SolutionsMode;
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || (!user && source !== 'content')) return;
     let cancelled = false;
     (async () => {
       try {
@@ -245,20 +284,41 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
             .filter((it) => it.content_object)
             .map((it) => toItem(it.content_object, String(it.id)));
           if (!cancelled) setData({ title: list.name, description: list.description, kindLabel: 'Série de révision', items });
+        } else if (source === 'notebook') {
+          // Cahier de cours : ses chapitres dans l'ordre, chacun avec ses leçons et les notes de l'élève.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const nb: any = await getNotebookById(id);
+          const items: PaperItem[] = [];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          [...(nb.sections || [])].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)).forEach((sec: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const entries = [...(sec.lesson_entries || [])].sort((a: any, b: any) => (a.page_order ?? 0) - (b.page_order ?? 0))
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .filter((e: any) => e.lesson);
+            if (!entries.length) return;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            entries.forEach((e: any, k: number) => {
+              const it = toItem(e.lesson, `${sec.id}-${e.id}`);
+              if (k === 0) { it.chapterHeading = sec.chapter?.name; it.chapterNotes = sec.user_notes || ''; }
+              items.push(it);
+            });
+          });
+          const sub = [nb.subject?.name, nb.class_level?.name].filter(Boolean).join(' · ');
+          if (!cancelled) setData({ title: nb.title || 'Cahier de cours', description: sub, kindLabel: 'Cahier de cours', items, reading: true, isNotebook: true });
         } else {
           const c = await exerciseAPI.getById(id);
           const item = toItem(c, String(id));
           const kindLabel = item.kind === 'exam'
             ? (item.nationalYear ? `Examen national ${item.nationalYear}` : 'Examen')
-            : 'Exercice';
-          if (!cancelled) setData({ title: item.title, kindLabel, items: [item] });
+            : item.kind === 'lesson' ? 'Leçon' : 'Exercice';
+          if (!cancelled) setData({ title: item.title, kindLabel, items: [item], reading: item.kind === 'lesson' });
         }
       } catch {
         if (!cancelled) setError('Impossible de charger ce contenu.');
       }
     })();
     return () => { cancelled = true; };
-  }, [id, source]);
+  }, [id, source, user]);
 
   // Valeurs par défaut tirées du compte : établissement, nom de l'enseignant, classe.
   const defaults = useMemo<PaperCustom | null>(() => {
@@ -278,8 +338,8 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
       className: levels.length === 1 ? levels[0] : profile?.class_level_name || '',
       schoolYear: currentSchoolYear(),
       instructions: '',
-      studentLine: true,
-      showDifficulty: true,
+      studentLine: !data.reading,
+      showDifficulty: !data.reading,
     };
   }, [data, user]);
   const custom: PaperCustom | null = defaults ? { ...defaults, ...overrides } : null;
@@ -309,6 +369,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   };
 
   const handleDownload = async () => {
+    if (guest) { openSignup('signup'); return; }
     setPreparing(true);
     try {
       // Polices et images chargées avant de générer, sinon le PDF peut sortir incomplet.
@@ -323,8 +384,24 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
 
   const goBack = () => {
     if (window.history.length > 1) navigate(-1);
-    else navigate(source === 'revision-list' ? '/revision-lists' : '/');
+    else navigate(source === 'revision-list' ? '/revision-lists' : source === 'notebook' ? '/notebooks' : '/');
   };
+
+  // Cahiers et listes de révision sont privés : un visiteur voit directement l'invitation.
+  if (guest && source !== 'content') {
+    return (
+      <div className="fp-desk fp-center">
+        <div style={{ maxWidth: 420, width: '100%' }}>
+          <SignupCard title="Imprimer avec un compte"
+            text="Le téléchargement en PDF (exercices, sujets, leçons, cahiers) est réservé aux membres. L’inscription est gratuite et prend une minute." />
+          <button className="fp-back" style={{ margin: '14px auto 0', display: 'flex' }} onClick={goBack}>
+            <ArrowLeft className="w-4 h-4" /> Retour
+          </button>
+        </div>
+        <style>{styles('')}</style>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -352,7 +429,13 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   const anySolution = items.some(hasSolutions);
   const effectiveMode: SolutionsMode = anySolution ? mode : 'none';
   const today = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-  const facts = [
+  const chapterCount = items.filter((i) => i.chapterHeading).length;
+  const partCount = items.reduce((n, i) => n + (i.sections?.length || 0), 0);
+  const facts = data.reading ? [
+    data.isNotebook ? `${chapterCount} chapitre${chapterCount > 1 ? 's' : ''}` : null,
+    data.isNotebook ? `${items.length} leçon${items.length > 1 ? 's' : ''}` : `${partCount} partie${partCount > 1 ? 's' : ''}`,
+    today,
+  ].filter(Boolean) : [
     `${items.length} ${items.length > 1 ? 'exercices' : 'exercice'}`,
     totalPoints > 0 ? `${String(totalPoints).replace('.', ',')} points` : null,
     duration > 0 ? `Durée : ${formatDuration(duration)}` : null,
@@ -369,10 +452,15 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
           </button>
           <div className="fp-toolbar-title">Aperçu du PDF</div>
           <div className="fp-toolbar-actions">
-            <button className={`fp-back ${showCustomize ? 'is-on' : ''}`} onClick={() => setShowCustomize((v) => !v)} data-tour="pdf-personnaliser"
+            <button className={`fp-back ${showCustomize ? 'is-on' : ''}`} onClick={() => (guest ? openSignup('signup') : setShowCustomize((v) => !v))} data-tour="pdf-personnaliser"
               aria-expanded={showCustomize}>
               <SlidersHorizontal className="w-4 h-4" /> Personnaliser
             </button>
+            {data.isNotebook && items.some((i) => i.chapterNotes?.trim()) && (
+              <label className="fp-check fp-back" style={{ cursor: 'pointer' }}>
+                <input type="checkbox" checked={withNotes} onChange={(e) => setWithNotes(e.target.checked)} /> Mes notes
+              </label>
+            )}
             {anySolution && (
               <div className="fp-seg" role="group" aria-label="Solutions" data-tour="pdf-corrige">
                 {([['none', 'Sans corrigé'], ['end', 'Corrigé à la fin'], ['inline', 'Sous chaque question']] as const).map(([m, label]) => (
@@ -387,7 +475,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
             </button>
           </div>
         </div>
-        <p className="fp-hint">Choisis « Enregistrer au format PDF » comme destination dans la fenêtre qui s’ouvre.</p>
+        <p className="fp-hint">{guest ? "Aperçu de la feuille : crée ton compte gratuit pour la télécharger en PDF." : "Choisis « Enregistrer au format PDF » comme destination dans la fenêtre qui s’ouvre."}</p>
       </div>
 
       {showCustomize && (
@@ -441,6 +529,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
       )}
 
       {/* La feuille */}
+      <div className={guest ? 'fp-teaser' : undefined}>
       <article className="fp-sheet">
         <header className="fp-top">
           <div className="fp-brand">
@@ -484,9 +573,41 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
           </div>
         )}
 
-        {items.length === 0 && <p className="fp-empty">Cette liste ne contient encore aucun exercice.</p>}
+        {items.length === 0 && (
+          <p className="fp-empty">{data.isNotebook ? 'Ce cahier ne contient encore aucune leçon.' : 'Cette liste ne contient encore aucun exercice.'}</p>
+        )}
 
         {items.map((item, idx) => {
+          if (item.kind === 'lesson') {
+            // Leçon seule : le titre du document suffit. Cahier : un chapitre par page, puis ses leçons.
+            const single = !data.isNotebook;
+            const chapterIndex = items.slice(0, idx + 1).filter((i) => i.chapterHeading).length;
+            return (
+              <React.Fragment key={item.key}>
+                {item.chapterHeading && (
+                  <div className={`fp-chap ${chapterIndex > 1 ? 'fp-chap-break' : ''}`}>
+                    <span>Chapitre {chapterIndex}</span> {item.chapterHeading}
+                  </div>
+                )}
+                <section className="fp-ex fp-lesson">
+                  {!single && (
+                    <header className="fp-ex-head">
+                      <span className="fp-ex-label">Leçon</span>
+                      <span className="fp-ex-title">{item.title}</span>
+                    </header>
+                  )}
+                  {item.sections?.length ? <LessonBody item={item} /> : <p className="fp-empty">Leçon vide.</p>}
+                </section>
+                {/* Notes de l'élève sur le chapitre : après sa dernière leçon. */}
+                {withNotes && data.isNotebook && (idx === items.length - 1 || items[idx + 1]?.chapterHeading) && (() => {
+                  const owner = [...items.slice(0, idx + 1)].reverse().find((i) => i.chapterHeading);
+                  return owner?.chapterNotes?.trim() ? (
+                    <div className="fp-notes"><span className="fp-sol-label">Mes notes</span><Rich content={{ html: owner.chapterNotes }} /></div>
+                  ) : null;
+                })()}
+              </React.Fragment>
+            );
+          }
           const pts = itemPoints(item);
           const meta = [
             item.nationalYear ? `Examen national ${item.nationalYear}` : null,
@@ -512,6 +633,16 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
 
         {effectiveMode === 'end' && <AnswerKey items={items} />}
       </article>
+      </div>
+      {guest && (
+        <>
+          <div className="fp-guest-cta">
+            <SignupCard title="Télécharge cette feuille en PDF"
+              text="Crée ton compte gratuit pour télécharger et imprimer la feuille complète, avec ou sans corrigé, à ton nom et à celui de ton établissement." />
+          </div>
+          <p className="fp-guest-print">Connecte-toi sur fidni.fr pour imprimer cette feuille.</p>
+        </>
+      )}
 
       <style>{styles(paperTitle)}</style>
     </div>
@@ -630,6 +761,38 @@ const styles = (title: string) => `
 
   .fp-empty { color: #6b6862; font-style: italic; margin: 12pt 0; }
 
+  /* Aperçu pour un visiteur : le haut de la feuille, qui s'efface, puis l'invitation. */
+  .fp-teaser { max-height: 250mm; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
+    mask-image: linear-gradient(to bottom, #000 62%, transparent); }
+  .fp-guest-cta { position: relative; max-width: 440px; margin: -90px auto 0; font-family: 'DM Sans', system-ui, sans-serif;
+    background: #fff; border-radius: 16px; box-shadow: 0 16px 40px rgba(20,18,16,.12); }
+  .fp-guest-print { display: none; }
+
+  /* Leçons et cahiers */
+  .fp-chap { margin: 14pt 0 8pt; padding: 8pt 0 5pt; border-bottom: 1.2pt solid #1a1a1a; font-size: 15pt; font-weight: 700;
+    break-after: avoid; }
+  .fp-chap span { display: block; font-family: 'DM Sans', system-ui, sans-serif; font-size: 8.5pt; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: #9a6e1c; }
+  .fp-chap-break { break-before: page; page-break-before: always; margin-top: 0; }
+  .fp-lesson .fp-ex-head { margin-top: 4pt; }
+  .fp-l-sec { margin-top: 10pt; }
+  .fp-l-h2 { font-size: 13pt; font-weight: 700; margin: 12pt 0 5pt; break-after: avoid; }
+  .fp-l-h2 span, .fp-l-h3 span { color: #1a7a4a; }
+  .fp-l-h3 { font-size: 11.5pt; font-weight: 700; margin: 8pt 0 4pt; break-after: avoid; }
+  .fp-l-subsec { margin-left: 3mm; }
+  .fp-notes { margin: 10pt 0 4pt; padding: 5pt 9pt; border: 0.6pt dashed #cfcdc8; border-radius: 3pt; font-size: 10pt; }
+  .fp-rich [data-callout-type] { border: 0.6pt solid #e2ded6 !important; border-left: 2.4pt solid #1a7a4a !important;
+    border-radius: 3pt; padding: 5pt 9pt !important; margin: 6pt 0 !important; background: #fbfaf8 !important; break-inside: avoid; }
+  .fp-rich [data-callout-type="theorem"], .fp-rich [data-callout-type="property"], .fp-rich [data-callout-type="corollary"],
+  .fp-rich [data-callout-type="lemma"] { border-left-color: #c0892f !important; }
+  .fp-rich [data-callout-type="remark"], .fp-rich [data-callout-type="example"], .fp-rich [data-callout-type="proof"] { border-left-color: #9a958c !important; }
+  .fp-rich [data-callout-type="warning"] { border-left-color: #a23b34 !important; }
+  .fp-rich .callout-head { display: flex; gap: 5pt; align-items: baseline; margin-bottom: 2pt; }
+  .fp-rich .callout-kind { font-family: 'DM Sans', system-ui, sans-serif; font-size: 8pt; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: #15633c; }
+  .fp-rich [data-callout-type="theorem"] .callout-kind, .fp-rich [data-callout-type="property"] .callout-kind { color: #9a6e1c; }
+  .fp-rich .callout-name { font-weight: 700; font-size: 10.5pt; }
+
   /* Contenu riche (HTML des exercices) */
   .fp-rich p { margin: 0 0 3pt; }
   .fp-rich p:last-child { margin-bottom: 0; }
@@ -641,7 +804,6 @@ const styles = (title: string) => `
   .fp-rich .math-inline { display: inline; }
   .fp-rich .katex { font-size: 1.08em; }
   .fp-rich .math-error { color: #b42318; font-family: monospace; font-size: .9em; }
-  .fp-rich [data-callout-type] { border-left: 2pt solid #9a958c; padding: 3pt 8pt; margin: 5pt 0; background: #faf9f7; }
   .fp-rich table { border-collapse: collapse; margin: 4pt auto; }
   .fp-rich td, .fp-rich th { border: 0.6pt solid #9a958c; padding: 2pt 6pt; }
 
@@ -659,7 +821,8 @@ const styles = (title: string) => `
   @media print {
     /* Tout ce qui entoure la feuille (fond du site, conteneurs) devient blanc. */
     html, body, #root, #root div:not(.fp-sheet):not(.fp-sheet *) { background: #fff !important; min-height: 0 !important; }
-    .fp-toolbar, .fp-panel { display: none !important; }
+    .fp-toolbar, .fp-panel, .fp-teaser, .fp-guest-cta { display: none !important; }
+    .fp-guest-print { display: block; text-align: center; margin-top: 40mm; font-size: 14pt; }
     .fp-desk { background: none; padding: 0; min-height: 0; }
     .fp-sheet { width: auto; min-height: 0; padding: 0; margin: 0; box-shadow: none; }
     .fp-rich .math-display { overflow: visible; }

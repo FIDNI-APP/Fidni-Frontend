@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary Meta Tags -->
-    <title>Fidni - Plateforme d'apprentissage des mathématiques en ligne</title>
-    <meta name="title" content="Fidni - Plateforme d'apprentissage des mathématiques en ligne" />
-    <meta name="description" content="Exercices, leçons et examens de maths corrigés pour les lycéens et leurs professeurs : solutions détaillées, suivi de progression et feuilles d’exercices en PDF." />
-    <meta name="keywords" content="mathématiques, exercices de maths, cours de maths, problèmes mathématiques, apprentissage des maths, exercices en ligne, soutien scolaire, révision mathématiques, collège, lycée, bac, brevet" />
+    <title>Fidni – Exercices de maths corrigés, cours et examens | Lycée et Bac au Maroc</title>
+    <meta name="title" content="Fidni – Exercices de maths corrigés, cours et examens | Lycée et Bac au Maroc" />
+    <meta name="description" content="Exercices de maths corrigés, cours et devoirs surveillés pour les lycéens marocains : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC (BIOF). Solutions détaillées, suivi de progression. Gratuit." />
+    <meta name="keywords" content="exercices maths maroc, exercices corrigés, 2 bac sm, 1 bac sm, tronc commun, bac maroc, cours de maths, devoirs surveillés, examen national, BIOF" />
     <meta name="author" content="Fidni" />
     <meta name="language" content="French" />
     <meta name="theme-color" content="#1a7a4a" />
@@ -17,15 +17,23 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Fidni" />
     <meta property="og:locale" content="fr_FR" />
+    <meta property="og:image" content="https://fidni.fr/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Favicon (add your favicon files to public folder) -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Favicons. Google affiche l'icône d'un site dans ses résultats seulement si elle est carrée et
+         de taille multiple de 48 px (48, 96, 144, 192…) : on les déclare en premier. -->
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="/favicon-144x144.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Polices : auto-hébergées (src/assets/fonts), pas de Google Fonts (RGPD). -->
@@ -38,6 +46,15 @@
     <!-- Robots -->
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow" />
+
+    <!-- Fond papier dès le premier affichage, et texte pré-rempli pour les moteurs de recherche
+         (config/seo.py, .fd-prerender) invisible le temps que l'application démarre : il s'affichait
+         brut une fraction de seconde. S'il n'y a pas de JavaScript, il réapparaît au bout de 4 s. -->
+    <style>
+      html, body { background: #faf9f7; }
+      .fd-prerender { opacity: 0; animation: fd-prerender-show 0s linear 4s forwards; }
+      @keyframes fd-prerender-show { to { opacity: 1; } }
+    </style>
   </head>
   <body>
     <div id="root"></div>

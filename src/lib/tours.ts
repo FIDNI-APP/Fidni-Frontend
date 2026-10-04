@@ -58,6 +58,12 @@ const VOTE: TourStep = {
   body: (c) => `${c.kind === 'lesson' ? 'Cette leçon t’a aidé' : 'Ce contenu t’a aidé'} ? Vote pour le faire remonter pour les autres élèves.`,
 };
 
+const SIGNALER: TourStep = {
+  target: 'signaler',
+  title: 'Une erreur ?',
+  body: 'Tu as repéré une erreur ? Signale-la ici en indiquant la question : on la corrige pour tout le monde.',
+};
+
 export const TOURS: Tour[] = [
   // ───────────────────────────────────────────── Accueil (tableau de bord)
   {
@@ -91,7 +97,7 @@ export const TOURS: Tour[] = [
     steps: [
       { target: 'liste-filtres', title: 'Filtrer', body: 'Niveau, chapitre, théorème, difficulté : ne garde que ce qui t’intéresse.' },
       { target: 'liste-tri', title: 'Trier', body: 'Les plus récents, les mieux notés… choisis l’ordre d’affichage.' },
-      { target: 'liste-vue', title: 'Deux affichages', body: 'Vue complète : l’énoncé directement dans la liste. Vue cartes : un aperçu compact.' },
+      { target: 'liste-vue', title: 'Deux affichages', body: 'Cartes : un aperçu de chaque contenu (le début de l’énoncé, les exercices d’un sujet, le sommaire d’une leçon). Énoncés : le texte complet, avec chrono et auto-évaluation.' },
       { target: 'liste-chrono', title: 'Chronomètre', body: 'Lance-le avant de commencer, puis enregistre ton temps pour suivre tes progrès.' },
       { target: 'liste-terminer', title: 'Terminé ?', body: (c) => `Marque ${le(c)} Validé ou Échoué : ça alimente tes statistiques.` },
       { target: 'liste-revision', title: 'Liste de révision', body: 'Mets-le de côté dans une liste pour le retravailler ou l’imprimer.' },
@@ -106,10 +112,10 @@ export const TOURS: Tour[] = [
     ],
   },
 
-  // ───────────────────────────────────────────── Exercice / examen
+  // ───────────────────────────────────────────── Exercice
   {
     id: 'exercice',
-    match: /^\/(exercises|exams)\/\d+\/?$/,
+    match: /^\/exercises\/\d+\/?$/,
     requires: 'detail-onglets',
     steps: [
       {
@@ -127,6 +133,25 @@ export const TOURS: Tour[] = [
       { target: 'detail-liste', title: 'Liste de révision', body: 'Range-le dans une liste pour le réviser plus tard ou l’imprimer.' },
       { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ou télécharger en PDF façon sujet d’examen.' },
       VOTE,
+      SIGNALER,
+    ],
+  },
+  // ───────────────────────────────────────────── Examen (présenté comme un sujet)
+  {
+    id: 'examen',
+    match: /^\/exams\/\d+\/?$/,
+    requires: 'examen-fiche',
+    steps: [
+      { target: 'examen-fiche', title: 'Le sujet', body: 'Durée, barème, nombre d’exercices : comme la copie distribuée en classe.' },
+      { target: 'examen-epreuve', title: 'L’épreuve', body: 'Lance le compte à rebours et compose sur une feuille : les solutions restent cachées jusqu’à la fin, et ton temps est enregistré.' },
+      SOLUTION,
+      AUTO_EVAL,
+      { target: 'examen-copie', title: 'Ta copie', body: 'Évalue chaque question après l’épreuve : ta note estimée se calcule avec le barème, exercice par exercice.' },
+      { target: 'detail-onglets', title: 'Les onglets', body: 'Discussions pour poser tes questions, Solutions pour voir celles des autres élèves, Activité pour te situer.' },
+      { target: 'detail-terminer', title: 'Terminer', body: 'Fini ? Marque le sujet Validé ou Échoué.' },
+      { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ou télécharger le sujet en PDF pour le faire sur papier.' },
+      VOTE,
+      SIGNALER,
     ],
   },
   {
@@ -146,11 +171,14 @@ export const TOURS: Tour[] = [
     match: /^\/lessons\/\d+\/?$/,
     requires: 'detail-onglets',
     steps: [
+      { target: ['lecon-sommaire', 'lecon-sommaire-barre'], title: 'Le sommaire', body: 'Toutes les parties de la leçon : clique pour y aller. La partie en cours est surlignée et Fidni retient où tu t’es arrêté.' },
       { target: 'lecon-contenu', title: 'La leçon', body: 'Définitions, théorèmes, propriétés : chaque encadré annonce sa nature en en-tête.' },
       { target: 'detail-onglets', title: 'Une question ?', body: 'L’onglet Discussions sert à poser tes questions sur la leçon.' },
-      { target: 'detail-cahier', title: 'Cahier', body: 'Ajoute la leçon à ton cahier de cours, rangée par chapitre.' },
+      { target: 'lecon-imprimer', title: 'Imprimer', body: 'Télécharge la leçon en PDF, mise en page comme un polycopié, pour la lire ou l’annoter sur papier.' },
+      { target: 'detail-cahier', title: 'Cahier', body: 'Ajoute la leçon à ton cahier de cours : elle va directement dans son chapitre.' },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-la à tes favoris.' },
       VOTE,
+      SIGNALER,
     ],
   },
 
@@ -204,6 +232,19 @@ export const TOURS: Tour[] = [
     steps: [
       { target: 'cahier-sections', title: 'Les chapitres', body: 'Choisis un chapitre pour lire ses leçons. Pour en ajouter une : bouton « Cahier » sur sa page.' },
       { target: 'cahier-contenu', title: 'La lecture', body: 'Tes leçons s’affichent ici, comme dans un vrai cahier.' },
+      { target: 'cahier-imprimer', title: 'Imprimer le cahier', body: 'Tout ton cahier en PDF : un chapitre par page, avec tes notes si tu le souhaites.' },
+    ],
+  },
+  {
+    id: 'statistiques',
+    match: /^\/statistiques\/?$/,
+    requires: 'stats-filtres',
+    steps: [
+      { target: 'stats-filtres', title: 'Choisis la période', body: '7 jours, 30 jours, 3 mois… et, si tu en as plusieurs, la matière et le niveau : tout se recalcule.' },
+      { target: 'stats-resultats', title: 'Tes résultats', body: 'Ta moyenne, ta meilleure et ta plus basse note aux examens que tu as corrigés, comparées à la période précédente.' },
+      { target: 'stats-evolution', title: 'Ta progression', body: 'La courbe de tes notes d’examen, ou de ta réussite aux questions, au fil du temps.' },
+      { target: 'stats-difficultes', title: 'Tes difficultés', body: 'Les notions que tu réussis le moins, avec un lien pour t’entraîner dessus.' },
+      { target: 'stats-temps', title: 'Ton temps d’étude', body: 'Combien de temps tu travailles, et sur quels chapitres.' },
     ],
   },
   {
@@ -211,7 +252,9 @@ export const TOURS: Tour[] = [
     match: /^\/revision-lists\/?$/,
     requires: 'revisions-nouvelle',
     steps: [
-      { target: 'revisions-nouvelle', title: 'Nouvelle liste', body: 'Regroupe des exercices à retravailler (ex. « Limites – DS 1 »). On en ajoute depuis leur page, bouton « Liste ».' },
+      { target: 'revisions-suggestions', title: 'À retravailler', body: 'Les exercices que tu as ratés et que tu n’as encore rangés nulle part : ajoute-les en un clic.' },
+      { target: 'revisions-nouvelle', title: 'Nouvelle liste', body: 'Regroupe des exercices à retravailler (ex. « Limites – DS 1 »), avec un niveau, une matière et des chapitres si tu veux. On en ajoute depuis leur page ou leur carte, bouton « Liste ».' },
+      { target: 'revisions-filtres', title: 'Filtrer', body: 'Retrouve tes listes par niveau, matière ou chapitre.' },
       { target: 'revisions-liste', title: 'Réviser', body: 'Ouvre une liste pour refaire ses exercices à la suite ; la barre montre ce qui est réussi et ce qui reste à revoir.' },
     ],
   },

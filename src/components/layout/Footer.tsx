@@ -20,7 +20,7 @@ export const Footer: React.FC = () => {
           <div className="space-y-4">
             <h2 className="fd-display text-2xl" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>Fidni</h2>
             <p className="text-[#9a958c] text-sm leading-relaxed max-w-xs">
-              La plateforme de maths des lycéens : exercices, leçons et examens corrigés, du collège au bac.
+              La plateforme de maths des lycéens : exercices, leçons et examens corrigés, du Tronc commun au Bac, programme marocain.
             </p>
             <div className="pt-1">
               {/* « En savoir plus », « À propos », « Accessibilité » menaient vers /about, qui

@@ -180,7 +180,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    // Le fond défile : sur un écran peu haut (ou zoomé), la fenêtre ne sort plus de l'écran,
+    // on la fait défiler au lieu de devoir dézoomer. Centrée verticalement quand elle tient.
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -493,6 +496,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
           </div>
         </div>
       </motion.div>
+      </div>
     </div>
   );
 };

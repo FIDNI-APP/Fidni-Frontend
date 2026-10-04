@@ -1,5 +1,5 @@
 // src/App.tsx - Structured Content System
-import { Routes, Route, Navigate, useParams, generatePath } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, generatePath, useLocation, useNavigationType, useNavigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { useAuth } from './contexts/AuthContext';
@@ -7,7 +7,7 @@ import { canSeeParcours } from './lib/features';
 import { AppShell } from './components/layout/AppShell';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/auth/AuthController';
 import { FilterProvider } from './components/navbar/FilterContext';
@@ -26,8 +26,35 @@ import Footer from './components/layout/Footer';
 // Pages chargées à la demande : l'accueil s'affiche sans télécharger l'éditeur, l'admin,
 // les concours… (avant, tout arrivait d'un bloc : ~2 Mo de JavaScript avant la première page).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Après une mise en ligne, un onglet ouvert avant demande d'anciens fichiers de page (nom haché) qui
+// n'existent plus : le chargement échoue et la page restait blanche jusqu'à un rafraîchissement.
+// On recharge alors une fois le site (nouvelle version) ; le drapeau évite une boucle si le serveur
+// est vraiment indisponible.
+const RELOAD_FLAG = 'fidni:rechargement-version';
+const reloadOnceForNewVersion = () => {
+  try {
+    if (sessionStorage.getItem(RELOAD_FLAG)) return false;
+    sessionStorage.setItem(RELOAD_FLAG, String(Date.now()));
+  } catch { /* stockage indisponible : on recharge quand même une fois par page */ }
+  window.location.reload();
+  return true;
+};
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceForNewVersion()) event.preventDefault();
+});
+// Chargement réussi : on réarme pour la prochaine mise en ligne.
+window.setTimeout(() => { try { sessionStorage.removeItem(RELOAD_FLAG); } catch { /* rien */ } }, 10000);
+
 const page = <M,>(loader: () => Promise<M>, name: keyof M) =>
-  lazy(async () => ({ default: (await loader())[name] as unknown as React.ComponentType<any> }));
+  lazy(async () => {
+    const mod = await loader().catch((error) => {
+      if (reloadOnceForNewVersion()) return undefined;
+      throw error;
+    });
+    // undefined : rechargement en cours (ici ou via « vite:preloadError ») → on attend sans erreur.
+    if (!mod) return new Promise<never>(() => {});
+    return { default: mod[name] as unknown as React.ComponentType<any> };
+  });
 
 const VerifyEmail = page(() => import('./pages/VerifyEmail'), 'VerifyEmail');
 const ResetPassword = page(() => import('./pages/ResetPassword'), 'ResetPassword');
@@ -49,6 +76,7 @@ const ConcoursHistoryPage = page(() => import('./pages/concours/ConcoursHistory'
 const ConcoursTipsListPage = page(() => import('./pages/concours/ConcoursTips'), 'ConcoursTipsListPage');
 const ConcoursTipDetailPage = page(() => import('./pages/concours/ConcoursTips'), 'ConcoursTipDetailPage');
 const ConcoursAdminPage = page(() => import('./pages/concours/ConcoursAdmin'), 'default');
+const PilotagePage = page(() => import('./pages/Pilotage'), 'default');
 const ConcoursExamQuestionsPage = page(() => import('./pages/concours/ConcoursExamQuestions'), 'default');
 const EditorTestPage = page(() => import('./pages/concours/EditorTest'), 'default');
 const LearningPathList = page(() => import('./pages/learningpaths/LearningPathList'), 'LearningPathList');
@@ -63,8 +91,10 @@ const SavedItems = page(() => import('./pages/SavedItems'), 'SavedItems');
 const RevisionLists = page(() => import('./pages/RevisionLists'), 'RevisionLists');
 const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'), 'default');
 const SkillIQSection = page(() => import('@/components/profile/SkillIQSection'), 'SkillIQSection');
+const StatisticsPage = page(() => import('./pages/Statistics'), 'default');
 const LogsConsole = page(() => import('./pages/admin/LogsConsole'), 'LogsConsole');
 const ContentList = page(() => import('./pages/content/ContentList'), 'ContentList');
+const ContentHub = page(() => import('./pages/content/ContentHub'), 'ContentHub');
 const ContentDetail = page(() => import('./pages/content/ContentDetail'), 'ContentDetail');
 const ContentCreate = page(() => import('./pages/content/ContentCreate'), 'ContentCreate');
 
@@ -75,37 +105,28 @@ const PageLoader = () => (
   </div>
 );
 
-// Composant pour rediriger vers la home avec modal ouvert
-const SignUpRedirect = () => {
+// /signup et /login : ouvrent la fenêtre de connexion commune puis reviennent à l'accueil.
+// La fenêtre vit au-dessus des routes : elle reste ouverte après la navigation. On l'ouvre
+// tout de suite (pas de minuteur : la redirection démonterait ce composant et l'annulerait).
+const AuthRedirect = ({ tab }: { tab: 'login' | 'signup' }) => {
   const { openModal, setInitialTab } = useAuthModal();
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialTab('signup');
+    if (isLoading) return;
+    if (!user) {
+      setInitialTab(tab);
       openModal();
-    }, 50);
+    }
+    navigate('/', { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
-    return () => clearTimeout(timer);
-  }, [openModal, setInitialTab]);
-
-  return <Navigate to="/" replace />;
+  return null;
 };
-
-// /login mirrors /signup: open the shared auth modal instead of a separate page.
-const LoginRedirect = () => {
-  const { openModal, setInitialTab } = useAuthModal();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialTab('login');
-      openModal();
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [openModal, setInitialTab]);
-
-  return <Navigate to="/" replace />;
-};
+const SignUpRedirect = () => <AuthRedirect tab="signup" />;
+const LoginRedirect = () => <AuthRedirect tab="login" />;
 
 // Layout wrapper: the app shell (sidebar + top bar) for normal pages,
 // or a bare full-width frame for chrome-less pages (legal, etc.).
@@ -151,6 +172,21 @@ const RedirectLearningPaths = () => {
   return <Navigate to={`/learning-path${rest ? `/${rest}` : ''}`} replace />;
 };
 
+/**
+ * Nouvelle page = haut de page. Sans ça, la fenêtre gardait la position de la page précédente :
+ * ouvrir un exercice depuis le bas d'une liste l'affichait déjà défilé. Le bouton « Retour »
+ * (POP) et les liens vers une ancre (#partie-…) gardent leur comportement.
+ */
+const ScrollToTopOnNavigate = () => {
+  const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+  useLayoutEffect(() => {
+    if (hash || navigationType === 'POP') return;
+    window.scrollTo(0, 0);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+};
+
 function App() {
   useEffect(() => {
     interface WheelEventExtended extends WheelEvent {
@@ -177,6 +213,7 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <ScrollToTopOnNavigate />
         <LegalRedirector />
         <ConsentBanner />
         <ThemeProvider>
@@ -307,6 +344,9 @@ function App() {
                     <Route path="/concours/tips/:id" element={
                       <NavbarWrapper><ConcoursTipDetailPage /></NavbarWrapper>
                     } />
+                    <Route path="/pilotage" element={
+                      <NavbarWrapper><PilotagePage /></NavbarWrapper>
+                    } />
                     <Route path="/concours/admin" element={
                       <NavbarWrapper><ConcoursAdminPage /></NavbarWrapper>
                     } />
@@ -327,6 +367,11 @@ function App() {
                         <StudentNotebook />
                       </NavbarWrapper>
                     } />
+                    <Route path="/statistiques" element={
+                      <NavbarWrapper>
+                        <StatisticsPage />
+                      </NavbarWrapper>
+                    } />
                     <Route path="/skill-iq" element={
                       <NavbarWrapper>
                         <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
@@ -343,6 +388,22 @@ function App() {
                         <ContentList />
                       </NavbarWrapper>
                     } />
+                    {/* Pages par niveau et par chapitre (référencement) : la liste, déjà filtrée. */}
+                    <Route path="/exercises/niveau/:level/:chapter?" element={
+                      <NavbarWrapper>
+                        <ContentHub contentType="exercise" />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/lessons/niveau/:level/:chapter?" element={
+                      <NavbarWrapper>
+                        <ContentHub contentType="lesson" />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/exams/niveau/:level/:chapter?" element={
+                      <NavbarWrapper>
+                        <ContentHub contentType="exam" />
+                      </NavbarWrapper>
+                    } />
                     <Route path="/exercises/new" element={
                       <NavbarWrapper showFooter={false}>
                         <ContentCreate />
@@ -352,6 +413,8 @@ function App() {
                     <Route path="/exercises/:id/pdf" element={<PaperExport source="content" />} />
                     <Route path="/exams/:id/pdf" element={<PaperExport source="content" />} />
                     <Route path="/revision-lists/:id/pdf" element={<PaperExport source="revision-list" />} />
+                    <Route path="/lessons/:id/pdf" element={<PaperExport source="content" />} />
+                    <Route path="/notebooks/:id/pdf" element={<PaperExport source="notebook" />} />
                     <Route path="/exercises/:id" element={
                       <NavbarWrapper>
                         <ContentDetail />

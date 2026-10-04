@@ -174,7 +174,7 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-[200] bg-black/80 flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true">
       <img src={src} alt="" className="max-w-full max-h-full rounded-lg shadow-2xl bg-white" />
       <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center" aria-label="Fermer">
         <X className="w-5 h-5" />

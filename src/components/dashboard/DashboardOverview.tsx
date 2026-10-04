@@ -12,6 +12,8 @@ import {
   RotateCcw, PlayCircle, CalendarDays, BookOpen, Brain, ChevronDown, Sparkles,
 } from 'lucide-react';
 import { getDashboardOverview, type DashboardOverview as Overview, type OverviewChapter } from '@/lib/api';
+import { getRevisionSuggestions, quickAddToRevision } from '@/lib/api/revisionListApi';
+import { Loader2 } from 'lucide-react';
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -121,6 +123,7 @@ export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?:
               Rien à revoir. Quand tu marques un exercice « Échoué », il t’attend ici pour une seconde tentative.
             </p>
           )}
+          <RevisionCta />
         </Panel>
       </div>
 
@@ -453,6 +456,43 @@ function ChapterMastery({ chapters, coverage, hasLevel }: { chapters: OverviewCh
 }
 
 /* ───────────────────────────── Divers ───────────────────────────── */
+
+/** Exercices ratés rangés dans aucune liste : les ranger d'un clic dans « À revoir ». */
+function RevisionCta() {
+  const [ids, setIds] = useState<number[]>([]);
+  const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle');
+  useEffect(() => {
+    getRevisionSuggestions().then((r) => setIds((r.results || []).map((x) => x.id))).catch(() => {});
+  }, []);
+  if (state === 'done') {
+    return (
+      <Link to="/revision-lists" className="mt-4 flex items-center justify-between gap-2 rounded-xl bg-brand-soft px-3.5 py-2.5 text-[13px] font-semibold text-brand-hover hover:underline">
+        Rangés dans « À revoir » <ArrowRight className="w-4 h-4" />
+      </Link>
+    );
+  }
+  if (!ids.length) return null;
+  const add = async () => {
+    setState('busy');
+    try {
+      for (const id of ids) await quickAddToRevision(id);
+      setState('done');
+    } catch {
+      setState('idle');
+    }
+  };
+  return (
+    <div className="mt-4 rounded-xl border border-gold-line bg-gold-soft/60 px-3.5 py-3">
+      <p className="text-[13px] text-ink-soft leading-snug">
+        <b className="text-ink fd-nums">{ids.length}</b> exercice{ids.length > 1 ? 's' : ''} raté{ids.length > 1 ? 's' : ''} ne {ids.length > 1 ? 'sont' : 'est'} dans aucune liste de révision.
+      </p>
+      <button type="button" onClick={add} disabled={state === 'busy'} className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-hover hover:underline disabled:opacity-60">
+        {state === 'busy' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ListChecks className="w-3.5 h-3.5" />}
+        Les ranger dans « À revoir »
+      </button>
+    </div>
+  );
+}
 
 function Skeleton() {
   return (

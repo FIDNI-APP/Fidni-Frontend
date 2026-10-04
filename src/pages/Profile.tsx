@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getUserProfile,
@@ -13,14 +13,14 @@ import {
 } from '@/lib/api/userApi';
 import { api } from '@/lib/api/apiClient';
 import {
-  User, Target, BarChart3,
+  User, Target,
   Settings, Loader2, Users, Pencil, Lock, Plus
 } from 'lucide-react';
 import { identityFromUser } from '@/lib/identity';
 
 // Import des sections
 import { ProfileBilanSection, type SkillAssessment } from '@/components/profile/ProfileBilanSection';
-import { StatsDashboard } from '@/components/profile/StatsDashboard';
+import { ProfileOverview } from '@/components/profile/ProfileOverview';
 import { ProgressSection } from '@/components/profile/ProgressSection';
 import { SavedContentSection } from '@/components/profile/SavedContentSection';
 import { RevisionListsSection } from '@/components/profile/RevisionListsSection';
@@ -39,8 +39,8 @@ interface FeatureConfig {
 }
 
 const FEATURES_CONFIG: FeatureConfig[] = [
-  { id: 'overview', title: 'Bilan', icon: User, forUserType: ['student', 'teacher'] },
-  { id: 'statistics', title: 'Statistiques', icon: BarChart3, forUserType: ['student', 'teacher'] },
+  // Profil = qui je suis. Les statistiques ont leur propre page (/statistiques, barre latérale).
+  { id: 'overview', title: 'Profil', icon: User, forUserType: ['student', 'teacher'] },
   { id: 'progress', title: 'Progression', icon: Target, forUserType: ['student'] },
   // Skill IQ, Cahiers, Révisions et Favoris ont été déplacés vers la sidebar ("Mon espace").
   { id: 'students', title: 'Mes élèves', icon: Users, forUserType: ['teacher'], ownerOnly: true },
@@ -62,6 +62,7 @@ export const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [activeSection, setActiveSection] = useState<string>(searchParams.get('tab') || 'overview');
   const [profileData, setProfileData] = useState<any>(null);
@@ -124,8 +125,14 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
+    // Ancien onglet « Statistiques » : il a sa propre page.
+    if (tab === 'statistics') {
+      if (isOwner) navigate('/statistiques', { replace: true });
+      else setActiveSection('overview');
+      return;
+    }
     if (tab && availableFeatures.some(f => f.id === tab)) setActiveSection(tab);
-  }, [searchParams, availableFeatures]);
+  }, [searchParams, availableFeatures, isOwner, navigate]);
 
   const loadProfileData = async () => {
     try {
@@ -381,7 +388,16 @@ export const ProfilePage: React.FC = () => {
         {/* Pas de fondu : l'ancien fondu sortie puis entrée, ajouté au rechargement,
             donnait l'impression que chaque onglet se chargeait deux fois. */}
         <div>
-            {panel('overview', (
+            {panel('overview', isOwner ? (
+              <ProfileOverview
+                profile={profileData?.profile}
+                userType={userType}
+                school={currentUser ? identityFromUser(currentUser).school.name : undefined}
+                goals={userType !== 'teacher' ? (profileData?.profile?.subject_grades ?? []) : undefined}
+                editUrl={`/profile/${username}/edit`}
+                contributions={contributions}
+              />
+            ) : (
               <ProfileBilanSection
                 progressData={progressData}
                 assessments={assessments}
@@ -392,9 +408,6 @@ export const ProfilePage: React.FC = () => {
                 editUrl={`/profile/${username}/edit`}
                 loading={bilanLoading || progressLoading}
               />
-            ))}
-            {panel('statistics', (
-              <StatsDashboard username={username!} contributionStats={stats?.contribution_stats} learningStats={stats?.learning_stats} />
             ))}
             {panel('progress', (
               <ProgressSection successExercises={progressData.successExercises} reviewExercises={progressData.reviewExercises} isLoading={progressLoading} />

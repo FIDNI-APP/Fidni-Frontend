@@ -5,7 +5,7 @@ import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User, Bookmark as BookmarkIcon, Settings, LogOut,
   X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, BarChart3, Target,
+  NotebookPen, Brain, ListChecks, BarChart3, Target, Gauge,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
@@ -62,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
 const MON_ESPACE_GROUP: NavGroup = {
   title: 'Mon espace',
   items: [
+    { to: '/statistiques', label: 'Statistiques', icon: BarChart3, match: ['/statistiques'] },
     { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
     { to: '/skill-iq', label: 'Skill IQ', icon: Brain, match: ['/skill-iq'] },
     { to: '/revision-lists', label: 'Révisions', icon: ListChecks, match: ['/revision-lists', '/profile/revision-lists'] },
@@ -275,7 +276,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
   const hoverIn = (el: HTMLElement) => { if (!active) el.style.background = '#f7f6f3'; if (room) setHoverRoom(room.id); };
   const hoverOut = (el: HTMLElement) => { if (!active) el.style.background = 'transparent'; if (room) setHoverRoom(null); };
   const [open, setOpen] = useState<boolean>(active && hasDropdown);
-  const [levels, setLevels] = useState<{ id: string; name: string }[] | null>(null);
+  const [levels, setLevels] = useState<{ id: string; name: string; slug?: string }[] | null>(null);
   const [loading, setLoading] = useState(false);
   // Sous-lien actif : même page ET même niveau dans l'URL (« Tout voir » = page sans niveau).
   const location = useLocation();
@@ -287,7 +288,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
     let cancelled = false;
     setLoading(true);
     getClassLevels(item.dropdown)
-      .then(data => { if (!cancelled) setLevels(data.map((l: any) => ({ id: String(l.id), name: l.name }))); })
+      .then(data => { if (!cancelled) setLevels(data.map((l: any) => ({ id: String(l.id), name: l.name, slug: l.slug }))); })
       .catch(e => console.error('Sidebar: failed to load class levels', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -356,8 +357,9 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
             </div>
           )}
           {!loading && levels?.map(l => (
-            <SubLink key={l.id} to={`${item.to}?classLevels=${l.id}`} label={l.name} onClick={onClick}
-              active={onBase && currentLevel === l.id} />
+            // Page du niveau (/exercises/niveau/2eme-bac-sm) : une vraie adresse, que Google indexe.
+            <SubLink key={l.id} to={l.slug ? `${item.to}/niveau/${l.slug}` : `${item.to}?classLevels=${l.id}`} label={l.name} onClick={onClick}
+              active={(onBase && currentLevel === l.id) || (!!l.slug && location.pathname.startsWith(`${item.to}/niveau/${l.slug}`))} />
           ))}
           {!loading && levels && levels.length === 0 && (
             <div style={{ padding: '7px 10px', color: '#6b6862', fontSize: 12 }}>Aucun niveau</div>
@@ -478,9 +480,12 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
           }}
         >
           <MenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => go(`/profile/${user.username}`)} />
-          <MenuItem icon={<BarChart3 className="w-4 h-4" />} label="Statistiques" onClick={() => go(`/profile/${user.username}?tab=statistics`)} />
+          <MenuItem icon={<BarChart3 className="w-4 h-4" />} label="Statistiques" onClick={() => go('/statistiques')} />
           <MenuItem icon={<Target className="w-4 h-4" />} label="Progression" onClick={() => go(`/profile/${user.username}?tab=progress`)} />
           <MenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => go(`/profile/${user.username}?tab=settings`)} />
+          {user.is_superuser && (
+            <MenuItem icon={<Gauge className="w-4 h-4" />} label="Pilotage" onClick={() => go('/pilotage')} />
+          )}
           {user.is_superuser && (
             <MenuItem icon={<Trophy className="w-4 h-4" />} label="Admin concours" onClick={() => go('/concours/admin')} />
           )}

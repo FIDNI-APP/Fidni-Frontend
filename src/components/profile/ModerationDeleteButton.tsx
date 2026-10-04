@@ -36,7 +36,7 @@ export const ModerationDeleteButton: React.FC<{ username: string }> = ({ usernam
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={close}
+        <div className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-[100] bg-black/50 flex items-center justify-center p-4" onClick={close}
           role="dialog" aria-modal="true">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-[#1a1a1a] mb-2">Supprimer « {username} » et son contenu ?</h3>

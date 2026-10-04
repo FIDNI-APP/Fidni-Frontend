@@ -5,11 +5,14 @@ import {
   Share2, Bookmark, MoreHorizontal, BookOpen, Printer,
   ListPlus, MessageSquare,
   GitPullRequest, Activity, ArrowLeft, Loader2,
-  Pencil, Trash2, BookMarked, CheckCircle2, Circle, X, User, Calendar, Eye, GraduationCap } from 'lucide-react';
+  Pencil, Trash2, BookMarked, CheckCircle2, Circle, X, User, Calendar, Eye, GraduationCap, Flag, ShieldQuestion, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
+import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAuthModal } from '@/components/auth/AuthController';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -22,6 +25,10 @@ interface ContentHeaderProps {
   isAuthor: boolean;
   onDelete?: () => Promise<void>;
   onPrint?: () => void;
+  /** Ouvre « Signaler une erreur ». */
+  onReport?: () => void;
+  /** Administrateurs : marquer la correction vérifiée (true) ou la remettre « à vérifier » (false). */
+  onSetVerified?: (verifie: boolean) => void;
   activeTab: 'exercise' | 'discussions' | 'proposals' | 'activity';
   onTabChange: (tab: 'exercise' | 'discussions' | 'proposals' | 'activity') => void;
   basePath: string;
@@ -67,6 +74,8 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   isAuthor,
   onDelete,
   onPrint,
+  onReport,
+  onSetVerified,
   activeTab,
   onTabChange,
   basePath,
@@ -76,6 +85,13 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   onSetCompletion,
 }) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { openModal, setInitialTab } = useAuthModal();
+  // Cahier et listes demandent un compte : un visiteur arrive sur l'inscription.
+  const needAccount = (then: () => void) => () => {
+    if (isAuthenticated) then();
+    else { setInitialTab('signup'); openModal(); }
+  };
   const [showDropdown, setShowDropdown] = useState(false);
   const [showRevisionListModal, setShowRevisionListModal] = useState(false);
   const [showNotebookModal, setShowNotebookModal] = useState(false);
@@ -98,7 +114,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   };
 
   const tabs = [
-    { id: 'exercise', label: contentType === 'lesson' ? 'Leçon' : 'Exercice', icon: BookOpen },
+    { id: 'exercise', label: contentType === 'lesson' ? 'Leçon' : contentType === 'exam' ? 'Sujet' : 'Exercice', icon: BookOpen },
     { id: 'discussions', label: 'Discussions', icon: MessageSquare, count: commentCount },
     { id: 'proposals', label: 'Solutions', icon: GitPullRequest, count: solutionCount },
     { id: 'activity', label: 'Activité', icon: Activity }
@@ -185,12 +201,12 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
 
             {/* List / notebook */}
             {contentType === 'lesson' ? (
-              <Button onClick={() => setShowNotebookModal(true)} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-cahier">
+              <Button onClick={needAccount(() => setShowNotebookModal(true))} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-cahier">
                 <BookMarked className="w-4 h-4" />
                 <span className="hidden sm:inline">Cahier</span>
               </Button>
             ) : (
-              <Button onClick={() => setShowRevisionListModal(true)} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-liste">
+              <Button onClick={needAccount(() => setShowRevisionListModal(true))} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-liste">
                 <ListPlus className="w-4 h-4" />
                 <span className="hidden sm:inline">Liste</span>
               </Button>
@@ -203,7 +219,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
               </Button>
 
               <FloatingPanel anchorRef={moreRef} open={showDropdown} onClose={() => setShowDropdown(false)} placement="bottom-end"
-                className="w-48 bg-white rounded-xl shadow-xl py-2 border border-[#e7e3dc] overflow-hidden">
+                className="min-w-48 w-max max-w-[300px] bg-white rounded-xl shadow-xl py-2 border border-[#e7e3dc] overflow-hidden">
                     <button
                       onClick={() => { handleShare(); setShowDropdown(false); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
@@ -215,8 +231,36 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                         onClick={() => { onPrint(); setShowDropdown(false); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
                       >
-                        <Printer className="w-4 h-4 text-ink-faint" /> Exporter en PDF
+                        <Printer className="w-4 h-4 text-ink-faint" /> Imprimer / PDF
                       </button>
+                    )}
+                    {onReport && (
+                      <button
+                        onClick={() => { onReport(); setShowDropdown(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
+                      >
+                        <Flag className="w-4 h-4 text-ink-faint" /> Signaler une erreur
+                      </button>
+                    )}
+                    {onSetVerified && contentType !== 'lesson' && (
+                      <>
+                        <div className="border-t border-line my-1" />
+                        {(content as any).structure?.a_verifier ? (
+                          <button
+                            onClick={() => { setShowDropdown(false); onSetVerified(true); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-brand-hover hover:bg-brand-soft transition-colors text-sm font-medium text-left"
+                          >
+                            <ShieldCheck className="w-4 h-4 shrink-0" /> Marquer la correction comme vérifiée
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setShowDropdown(false); onSetVerified(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm text-left"
+                          >
+                            <ShieldQuestion className="w-4 h-4 shrink-0 text-ink-faint" /> Remettre « à vérifier »
+                          </button>
+                        )}
+                      </>
                     )}
                     {isAuthor && (
                       <>
@@ -244,10 +288,14 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
         {(() => {
           const c = content as any;
           const credit: string | undefined = c.structure?.credit;
+          const aVerifier: boolean = !!c.structure?.a_verifier;
           const diff = c.difficulty ? DIFFICULTY[c.difficulty] : null;
-          const chapters: { id: string | number; name: string }[] = c.chapters || [];
+          const chapters: { id: string | number; name: string; slug?: string }[] = c.chapters || [];
           const level = c.class_levels?.[0];
           const levelName = level ? (typeof level === 'string' ? level : level.name) : null;
+          // Étiquettes cliquables : page du niveau, page du chapitre (même rubrique).
+          const levelSlug: string | undefined = level && typeof level !== 'string' ? level.slug : undefined;
+          const levelUrl = levelSlug ? `${basePath}/niveau/${levelSlug}` : null;
           return (
             <div className="mb-4">
               <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
@@ -262,13 +310,18 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                     Examen national{c.national_year ? ` ${c.national_year}` : ''}
                   </span>
                 )}
-                {chapters.slice(0, 2).map((ch) => (
+                {chapters.slice(0, 2).map((ch) => (levelUrl && ch.slug ? (
+                  <Link key={ch.id} to={`${levelUrl}/${ch.slug}`} title={`Tous les contenus : ${ch.name}`}
+                    className="hover:!bg-[#e7e3dc] transition-colors" style={{ ...chipStyle, background: '#f2f1ee', color: '#4b4843' }}>{ch.name}</Link>
+                ) : (
                   <span key={ch.id} style={{ ...chipStyle, background: '#f2f1ee', color: '#4b4843' }}>{ch.name}</span>
-                ))}
+                )))}
                 {chapters.length > 2 && (
                   <span style={{ ...chipStyle, background: '#f2f1ee', color: '#6b6862' }}>+{chapters.length - 2}</span>
                 )}
-                {levelName && <span style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</span>}
+                {levelName && (levelUrl
+                  ? <Link to={levelUrl} className="hover:!text-[#1a1a1a] transition-colors" style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</Link>
+                  : <span style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</span>)}
               </div>
               <h1 className="fd-display" style={{ fontSize: 'clamp(26px, 3.6vw, 36px)', lineHeight: 1.15, color: '#1a1a1a' }}>
                 {content.title}
@@ -298,6 +351,16 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                 )}
                 <span className="fd-nums" style={{ color: '#9a958c' }}>#{content.id}</span>
               </div>
+              {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}
+              {aVerifier && contentType !== 'lesson' && (
+                <p className="mt-3 inline-flex items-start gap-2 rounded-xl border border-[#ecdcb4] bg-gold-soft px-3 py-2 text-[13px] text-gold-strong">
+                  <ShieldQuestion className="w-4 h-4 mt-px shrink-0" aria-hidden />
+                  <span>
+                    <strong className="font-semibold">Correction en cours de vérification.</strong>{' '}
+                    L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la en bas de la page.
+                  </span>
+                </p>
+              )}
             </div>
           );
         })()}
@@ -337,6 +400,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
           contentType={contentType}
           contentId={Number(content.id)}
           contentTitle={content.title}
+          contentLabels={labelsFromContent(content)}
         />
       )}
 
@@ -347,6 +411,8 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
           lessonId={String(content.id)}
           lessonTitle={content.title}
           lessonChapters={content.chapters?.map(ch => ({ id: String(ch.id), name: ch.name })) ?? []}
+          lessonSubject={content.subject ? { id: content.subject.id, name: content.subject.name } : null}
+          lessonLevels={(content.class_levels || []).map((l) => ({ id: l.id, name: l.name }))}
         />
       )}
     </div>

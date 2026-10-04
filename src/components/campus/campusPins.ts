@@ -27,7 +27,7 @@ export const MAP_PINS: MapPin[] = [
   {
     id: 'direction', name: 'Bâtiment principal', page: 'Statistiques', icon: 'landmark', x: 0.469, y: 0.266,
     desc: 'Ton bilan sur la durée : temps d’étude, maîtrise par chapitre, séries.',
-    route: (u) => (u ? `/profile/${u}?tab=statistics` : '/'),
+    route: (u) => (u ? '/statistiques' : '/'),
   },
   {
     id: 'bibliotheque', name: 'Bibliothèque', page: 'Leçons', icon: 'book', x: 0.239, y: 0.3,
