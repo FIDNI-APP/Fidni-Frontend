@@ -248,12 +248,22 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = memo(({
           margin: 0 2px;
         }
 
+        /* Formule centrée plus large que l'écran (téléphone) : elle défile horizontalement au lieu
+           d'être coupée au bord de la carte. Petite marge verticale : overflow masque sinon les
+           exposants et indices qui débordent de la boîte KaTeX. */
         .tiptap-full-renderer .math-display {
           display: block;
           margin: 1em 0;
           text-align: center;
           width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          padding: 0.2em 0;
+          scrollbar-width: thin;
         }
+        .tiptap-full-renderer .math-display .katex-display { margin: 0; }
 
         .tiptap-full-renderer .math-error {
           color: #cc0000;
@@ -296,6 +306,10 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = memo(({
 
         @media (max-width: 640px) {
           .tiptap-full-renderer .ProseMirror { min-width: 0 !important; max-width: 100% !important; }
+          /* Téléphone : formules un peu plus petites (KaTeX les grossit à 1,21 em), et une formule en
+             ligne peut passer à la ligne après un « = » ou un « + » au lieu de déborder à droite. */
+          .tiptap-full-renderer .math-display .katex { font-size: 1.05em; }
+          .tiptap-full-renderer .math-inline { display: inline; margin: 0 1px; }
           .tiptap-full-renderer .ProseMirror p,
           .tiptap-full-renderer .ProseMirror h1,
           .tiptap-full-renderer .ProseMirror h2,

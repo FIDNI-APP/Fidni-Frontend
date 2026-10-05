@@ -346,7 +346,7 @@ export const ExamView: React.FC<Props> = ({
             </div>
           </div>
           {intro.length > 0 && (
-            <div className="px-6 sm:px-7 py-5 border-b border-line">
+            <div className="px-4 sm:px-7 py-5 border-b border-line">
               <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} />
             </div>
           )}
@@ -361,7 +361,7 @@ export const ExamView: React.FC<Props> = ({
           {parts.map((p, i) => {
             const s = scores[i];
             return (
-              <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-6 sm:px-7 pt-6 pb-7 ${i > 0 ? 'border-t border-line' : ''}`}>
+              <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-4 sm:px-7 pt-6 pb-7 ${i > 0 ? 'border-t border-line' : ''}`}>
                 <div className="flex items-baseline justify-between gap-3 mb-4">
                   <h2 className="fd-display text-[19px] text-ink min-w-0 [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
                   <span className="flex items-center gap-2 shrink-0">

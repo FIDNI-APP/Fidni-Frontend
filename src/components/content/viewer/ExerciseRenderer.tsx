@@ -321,7 +321,7 @@ const InlineSolution: React.FC<InlineSolutionProps> = ({
   if (!isVisible || !solution || !solution.html) return null;
 
   return (
-    <div className="mt-2 pl-4 border-l-2 border-brand bg-brand-soft py-2 pr-3 rounded-r">
+    <div className="mt-2 pl-3 sm:pl-4 border-l-2 border-brand bg-brand-soft py-2 pr-2 sm:pr-3 rounded-r min-w-0">
       <div className="flex items-center justify-between mb-1">
         <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover">Solution</div>
         {onValidate && (
@@ -375,7 +375,7 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   const showSolution = !locked && (globalShowSolutions || localShowSolution);
 
   return (
-    <div className="group/sq ml-5 mt-1 flex items-start gap-2">
+    <div className="group/sq ml-1 sm:ml-5 mt-1 flex items-start gap-1.5 sm:gap-2">
       <span className="font-mono fd-nums font-semibold text-ink-faint shrink-0">
         {questionIndex}.{sqIndex + 1}.
       </span>
@@ -462,7 +462,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       </div>
       {/* Points + actions — only when no sub-questions */}
       {!hasSubQuestions && (
-        <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-1.5 ml-6">
+        <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-1.5 ml-5 sm:ml-6">
           {block.points && (
             <span className="text-xs text-ink-faint fd-nums">{formatPoints(block.points)}</span>
           )}

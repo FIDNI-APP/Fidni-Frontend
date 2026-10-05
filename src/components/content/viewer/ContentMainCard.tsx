@@ -288,7 +288,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                 </div>
               </NotebookPaper>
             ) : (
-            <div className="p-6 sm:p-7">
+            <div className="px-4 py-5 sm:p-7">
               <ExerciseRenderer
                 structure={content.structure as unknown as FlexibleExerciseStructure}
                 progress={progressData}

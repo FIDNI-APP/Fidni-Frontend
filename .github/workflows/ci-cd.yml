@@ -1,0 +1,65 @@
+# Vérification TypeScript + build à chaque push et pull request ; mise en ligne sur OVH à chaque
+# push sur master, si le build passe. Côté serveur : deploy/ovh/deployer-ci.sh du dépôt backend.
+# Secrets du dépôt : OVH_HOST, OVH_KNOWN_HOSTS, OVH_SSH_KEY (voir le README de deploy/ovh).
+name: CI/CD
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: TypeScript et build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: tsc + vite build
+        run: npm run build
+
+  deploiement:
+    name: Mise en ligne (OVH)
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://fidni.fr
+    concurrency:
+      group: deploiement-frontend
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clé SSH
+        env:
+          OVH_SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
+          OVH_KNOWN_HOSTS: ${{ secrets.OVH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$OVH_SSH_KEY" > ~/.ssh/fidni
+          chmod 600 ~/.ssh/fidni
+          printf '%s\n' "$OVH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Envoi du code et reconstruction
+        env:
+          OVH_HOST: ${{ secrets.OVH_HOST }}
+        run: |
+          git archive --format=tar.gz HEAD \
+            | ssh -i ~/.ssh/fidni -o BatchMode=yes -o StrictHostKeyChecking=yes \
+                deploiement@"$OVH_HOST" frontend
