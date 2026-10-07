@@ -6,7 +6,6 @@ import { OnboardingBanner } from './OnboardingBanner';
 import { IdentityGate } from '@/components/profile/IdentityForm';
 import Footer from './Footer';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
-import { useHomeView } from '@/stores/homeViewStore';
 
 const COLLAPSE_KEY = 'fd-sidebar-collapsed';
 
@@ -26,8 +25,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true 
     () => typeof window !== 'undefined' && localStorage.getItem(COLLAPSE_KEY) === '1'
   );
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Campus affiché : il occupe tout l'espace sous la barre du haut, sans pied de page.
-  const immersive = useHomeView((s) => s.immersive);
 
   // Neutralize any legacy `body { padding-top }` (old fixed-navbar offset that
   // may still ship in cached/legacy CSS). An inline style beats any stylesheet,
@@ -69,7 +66,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true 
           <IdentityGate />
           <TopBar onOpenMobile={() => setMobileOpen(true)} />
           <main className="flex-grow">{children}</main>
-          {showFooter && !immersive && <Footer />}
+          {showFooter && <Footer />}
         </div>
       </div>
     </BreadcrumbProvider>

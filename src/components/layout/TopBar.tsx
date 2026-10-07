@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, Search as SearchIcon, ChevronRight } from 'lucide-react';
 import { useBreadcrumb, type Crumb } from '@/contexts/BreadcrumbContext';
-import { CampusViewSwitch } from '@/components/campus/CampusViewSwitch';
 import { TourHelpButton } from '@/components/tour/TourProvider';
 import { trackAction } from '@/lib/usage';
 
@@ -126,9 +125,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
         </nav>
 
         <div className="flex-1" />
-
-        {/* Classique / Campus — même place sur toutes les pages */}
-        <div data-tour="vue-switch" className="flex-shrink-0"><CampusViewSwitch /></div>
 
         {/* Search — full field on larger screens */}
         <form

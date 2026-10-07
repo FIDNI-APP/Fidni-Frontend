@@ -2,8 +2,8 @@
 /**
  * Fonctionnalités en cours de construction : visibles des admins seulement.
  *
- * Parcours n'est pas terminé : il est masqué partout pour les élèves (barre latérale, plan du
- * campus, adresses /learning-path…, API). Pour le publier, passer PARCOURS_PUBLIC à true ici
+ * Parcours n'est pas terminé : il est masqué partout pour les élèves (barre latérale,
+ * adresses /learning-path…, API). Pour le publier, passer PARCOURS_PUBLIC à true ici
  * ET dans le .env du backend (PARCOURS_PUBLIC=True).
  */
 export const PARCOURS_PUBLIC = false;
