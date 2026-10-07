@@ -7,6 +7,7 @@ interface NotebooksListViewProps {
   notebooks: Notebook[];
   onSelectNotebook: (id: string) => void;
   onDeleteNotebook: (id: string) => void;
+  onRenameNotebook?: (id: string, title: string) => Promise<boolean>;
   onCreateNotebook: () => void;
   isLoading?: boolean;
 }
@@ -15,6 +16,7 @@ const NotebooksListView: React.FC<NotebooksListViewProps> = ({
   notebooks,
   onSelectNotebook,
   onDeleteNotebook,
+  onRenameNotebook,
   onCreateNotebook,
   isLoading = false
 }) => {
@@ -67,6 +69,7 @@ const NotebooksListView: React.FC<NotebooksListViewProps> = ({
               notebook={notebook}
               onClick={onSelectNotebook}
               onDelete={onDeleteNotebook}
+              onRename={onRenameNotebook}
             />
           ))}
 

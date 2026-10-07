@@ -5,6 +5,7 @@ import { getUserSavedExercises, getUserSavedLessons, getUserSavedExams } from '@
 import { Bookmark, BookOpen, AlertCircle, PenTool, FileCheck, Search, Loader2, ArrowRight } from 'lucide-react';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { motion } from 'framer-motion';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 interface SavedItem {
   id: number;
@@ -276,7 +277,7 @@ export const SavedItems = () => {
                   )}
                   {item.difficulty && (
                     <span style={{ ...chipStyle, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: 99, background: DIFFICULTY_DOT[diffKey] || '#9a958c' }} />
+                      <span style={{ display: 'inline-flex', color: DIFFICULTY_DOT[diffKey] || '#9a958c' }}><DifficultyBars difficulty={diffKey} /></span>
                       {item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1)}
                     </span>
                   )}

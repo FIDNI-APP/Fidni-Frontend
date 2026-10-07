@@ -5,6 +5,7 @@ import { Difficulty, SortOption } from '@/types';
 import { getClassLevels, getSubjects, getSubfields, getChapters, getTheorems, getDifficultyCounts } from '@/lib/api';
 import { SortDropdown } from './SortDropdown';
 import { api } from '@/lib/api/apiClient';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 interface HorizontalFilterBarProps {
   contentType: 'exercise' | 'lesson' | 'exam';
@@ -29,6 +30,8 @@ interface HorizontalFilterBarProps {
   accentColor?: string;
   /** Contrôle affiché à droite du tri (choix de l'affichage de la liste). */
   trailing?: React.ReactNode;
+  /** Section « Examens nationaux » : filtre par année du Bac. */
+  nationalSection?: boolean;
 }
 
 interface Option {
@@ -44,6 +47,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   sortBy,
   onSortChange,
   trailing,
+  nationalSection = false,
 }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -497,7 +501,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                             isSelected ? diff.selected : diff.unselected
                           }`}
                         >
-                          {diff.name}
+                          <span className="inline-flex items-center gap-1.5"><DifficultyBars difficulty={diff.id} />{diff.name}</span>
                           {count != null && (
                             <span className={`ml-1.5 ${isSelected ? 'opacity-75' : 'opacity-50'}`}>({count})</span>
                           )}
@@ -549,36 +553,12 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 </div>
               </div>
 
-              {/* National exam + date — exams only */}
-              {contentType === 'exam' && (
+              {/* Examens nationaux : filtre par année du Bac (la section décide national / devoirs). */}
+              {contentType === 'exam' && nationalSection && (
                 <>
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-2 border-b border-slate-100 pb-3 mb-3">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider w-28 flex-shrink-0 pt-2">
-                      Type
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => onFilterChange({ ...filters, isNationalExam: filters.isNationalExam ? undefined : true })}
-                        className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                          filters.isNationalExam === true ? colorClasses.selected : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        Examen National
-                      </button>
-                      <button
-                        onClick={() => onFilterChange({ ...filters, isNationalExam: filters.isNationalExam === false ? undefined : false })}
-                        className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                          filters.isNationalExam === false ? colorClasses.selected : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        Autres examens
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="flex flex-col sm:flex-row sm:items-start gap-2 pb-1">
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider w-28 flex-shrink-0 pt-2">
-                      Période
+                      Année du Bac
                     </span>
                     <div className="flex items-center gap-3">
                       <select

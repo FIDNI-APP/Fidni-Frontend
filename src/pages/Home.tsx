@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, TrendingUp, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Landing } from './Landing';
 import { HomeContentCard } from '@/components/content/HomeContentCard';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
@@ -35,10 +35,11 @@ export function Home() {
   const [recExercises, setRecExercises] = useState<Content[]>([]);
   const [recLessons, setRecLessons] = useState<Content[]>([]);
   const [recExams, setRecExams] = useState<Content[]>([]);
+  const [recLevel, setRecLevel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [progress, setProgress] = useState<WeeklyProgress | null>(null);
-  const [progressLoading, setProgressLoading] = useState(false);
+  const [, setProgressLoading] = useState(false);
 
   // « Classique » (par défaut) ou « Campus » : choisi dans la barre du haut, mémorisé sur l'appareil.
   const view = useHomeView((s) => s.view);
@@ -77,6 +78,7 @@ export function Home() {
       setRecExercises(data.exercises || []);
       setRecLessons(data.lessons || []);
       setRecExams(data.exams || []);
+      setRecLevel(data.level);
     } catch (err) {
       console.error('Home: fetchRecs failed', err);
     } finally {
@@ -171,39 +173,12 @@ export function Home() {
             </div>
             <ProgressChart data={progress.you} compare={progress.average} labels={progress.labels} />
           </div>
-        ) : isAuthenticated && !progressLoading && (
-          <div className="fd-card p-5 mt-6 flex items-center gap-4 flex-wrap">
-            <div className="inline-flex items-center justify-center flex-shrink-0" style={{ width: 46, height: 46, borderRadius: 12, background: ACCENT_SOFT, color: ACCENT_HOVER }}>
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-[220px]">
-              <h3 className="fd-display" style={{ fontSize: 17, fontWeight: 600, color: INK, letterSpacing: '-0.01em' }}>
-                {progressLoading ? 'Chargement…' : 'Compare ta progression à ta classe'}
-              </h3>
-              {!progressLoading && (
-                <p style={{ fontSize: 12.5, color: FAINT, marginTop: 4, maxWidth: 460 }}>
-                  Rejoins une classe pour suivre ton taux de réussite hebdomadaire face à tes camarades.
-                </p>
-              )}
-            </div>
-            {!progressLoading && (
-              <Link to="/classrooms" className="fd-btn-primary" style={{ flexShrink: 0 }}>
-                Rejoindre une classe <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            )}
-          </div>
-        )}
+        ) : null}
 
         {/* Recommendations */}
-        <div data-tour="home-reco" className="mt-10">
-        <RecSection title="Exercices recommandés" eyebrow="Pour toi" link="/exercises" loading={loading} items={recExercises} onVote={handleVote} />
+        <div data-tour="home-reco" className="mt-9">
+          <RecTabs loading={loading} level={recLevel} exercises={recExercises} lessons={recLessons} exams={recExams} onVote={handleVote} />
         </div>
-        {recLessons.length > 0 && (
-          <RecSection title="Leçons à explorer" eyebrow="Continue d'apprendre" link="/lessons" loading={loading} items={recLessons} onVote={handleVote} />
-        )}
-        {recExams.length > 0 && (
-          <RecSection title="Examens disponibles" eyebrow="Mets-toi à l'épreuve" link="/exams" loading={loading} items={recExams} onVote={handleVote} />
-        )}
       </div>
     </div>
     </>
@@ -264,23 +239,74 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RecSection({ title, eyebrow, link, loading, items, onVote }: {
-  title: string; eyebrow: string; link: string;
+/** Titre de l'encart des exercices : « les plus aimés » seulement s'il y a vraiment des j'aime. */
+function likedHeading(items: Content[], level: string | null, kind: 'exercise' | 'lesson' | 'exam' = 'exercise'): { title: string; hint: string } {
+  const where = level ? ` en ${level}` : '';
+  const liked = items.slice(0, 3).some((i) => ((i as any).like_count ?? 0) > 0);
+  const noun = kind === 'lesson' ? ['Les leçons les plus aimées', 'Leçons à découvrir']
+    : kind === 'exam' ? ['Les examens les plus aimés', 'Examens à découvrir']
+      : ['Les exercices les plus aimés', 'Exercices à découvrir'];
+  return liked
+    ? { title: `${noun[0]}${where}`, hint: 'Classés par les j’aime des élèves. Un contenu t’a aidé ? Mets-lui un j’aime pour guider les autres.' }
+    : { title: `${noun[1]}${where}`, hint: 'Pas encore de j’aime : sois le premier à recommander ce qui t’a aidé, ça remontera ici pour les autres.' };
+}
+
+type RecKind = 'exercise' | 'lesson' | 'exam';
+const REC_TABS: { key: RecKind; label: string; link: string }[] = [
+  { key: 'exercise', label: 'Exercices', link: '/exercises?sort=most_upvoted' },
+  { key: 'lesson', label: 'Leçons', link: '/lessons?sort=most_upvoted' },
+  { key: 'exam', label: 'Examens', link: '/exams?sort=most_upvoted' },
+];
+
+/** Les plus aimés du niveau, en trois onglets (une seule rangée de cartes à l'écran). */
+function RecTabs({ loading, level, exercises, lessons, exams, onVote }: {
+  loading: boolean; level: string | null; exercises: Content[]; lessons: Content[]; exams: Content[];
+  onVote: (id: string, value: VoteValue, contentType?: RecKind) => void;
+}) {
+  const [tab, setTab] = useState<RecKind>('exercise');
+  const items = tab === 'exercise' ? exercises : tab === 'lesson' ? lessons : exams;
+  const tabs = REC_TABS.filter((t) => t.key === 'exercise' || (t.key === 'lesson' ? lessons.length : exams.length) > 0);
+  const current = REC_TABS.find((t) => t.key === tab)!;
+  const { title, hint } = likedHeading(items, level, tab);
+  return (
+    <RecSection title={title} hint={hint} eyebrow="Tu ne sais pas quoi travailler ?" link={current.link}
+      loading={loading} items={items}
+      onVote={(id, v) => onVote(id, v, tab)}
+      tabs={tabs.length > 1 ? (
+        <div role="tablist" aria-label="Type de contenu" className="inline-flex rounded-xl bg-[#f2f1ee] p-1">
+          {tabs.map((t) => (
+            <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
+              className={`h-8 rounded-lg px-3 text-[13px] transition-colors ${tab === t.key ? 'bg-white font-semibold text-ink shadow-sm' : 'font-medium text-ink-faint hover:text-ink'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : null} />
+  );
+}
+
+function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }: {
+  title: string; hint?: string; eyebrow: string; link: string;
   loading: boolean; items: Content[];
   onVote: (id: string, value: VoteValue, contentType?: 'exercise' | 'lesson' | 'exam') => void;
+  tabs?: React.ReactNode;
 }) {
   return (
     <section className="mb-10">
-      <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
+      <div className="flex items-end justify-between mb-5 flex-wrap gap-3">
         <div>
           <Eyebrow>{eyebrow}</Eyebrow>
           <h2 className="fd-display" style={{ fontSize: 20, fontWeight: 600, color: INK, letterSpacing: '-0.02em', marginTop: 5 }}>
             {title}
           </h2>
+          {hint && <p style={{ fontSize: 12.5, color: FAINT, marginTop: 4, maxWidth: 520 }}>{hint}</p>}
         </div>
-        <Link to={link} className="fd-btn-ghost">
-          Voir tout <ChevronRight className="w-3 h-3" />
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          {tabs}
+          <Link to={link} className="fd-btn-ghost">
+            Voir tout <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
       </div>
 
       {loading ? (
@@ -320,7 +346,5 @@ const FAINT = 'var(--ink-faint)';
 const NEUTRAL = 'var(--neutral)';
 const LINE = 'var(--line)';
 const ACCENT = 'var(--brand)';
-const ACCENT_HOVER = 'var(--brand-hover)';
-const ACCENT_SOFT = 'var(--brand-soft)';
 const MONO = "'DM Mono', ui-monospace, monospace";
 

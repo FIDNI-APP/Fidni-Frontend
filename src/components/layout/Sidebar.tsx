@@ -5,7 +5,7 @@ import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User, Bookmark as BookmarkIcon, Settings, LogOut,
   X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, BarChart3, Target, Gauge,
+  NotebookPen, Brain, ListChecks, BarChart3, Target, Gauge, Landmark,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
@@ -22,6 +22,8 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   match?: string[];
+  /** Chemins qui ne l'activent pas malgré `match` (sous-section qui a sa propre entrée). */
+  exclude?: string[];
   /** Content type for the class-level quick-link dropdown (singular API form). */
   dropdown?: 'exercise' | 'lesson' | 'exam';
 }
@@ -45,7 +47,8 @@ const NAV_GROUPS: NavGroup[] = [
     title: "S'entraîner",
     items: [
       { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], dropdown: 'exercise' },
-      { to: '/exams', label: 'Examens', icon: APlusIcon, match: ['/exams', '/exam'], dropdown: 'exam' },
+      { to: '/exams', label: 'Examens', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux'], dropdown: 'exam' },
+      { to: '/exams/nationaux', label: 'Examens nationaux', icon: Landmark, match: ['/exams/nationaux'] },
       { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
     ],
   },
@@ -147,6 +150,7 @@ const SidebarInner: React.FC<{
 
   const isActive = (item: NavItem) => {
     if (item.to === '/') return location.pathname === '/';
+    if (item.exclude?.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))) return false;
     return item.match?.some(p => location.pathname === p || location.pathname.startsWith(p + '/')) ?? false;
   };
 

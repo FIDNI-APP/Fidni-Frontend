@@ -3,7 +3,7 @@
  * Uses the structured API endpoints
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Helmet } from 'react-helmet';
@@ -33,10 +33,18 @@ import { ActivitySection } from '@/components/activity/ActivitySection';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
 import { CommentSection } from '@/components/interactions/CommentSection';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
+import { FinishPanel } from '@/components/content/viewer/FinishPanel';
+import type { ContentTab } from '@/components/content/viewer/ContentHeader';
 import { listProposedSolutions, type ProposedSolution } from '@/lib/api/proposedSolutionsApi';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
 import { RevisionNudge } from '@/components/revision/RevisionNudge';
 import { SignupBanner } from '@/components/auth/SignupPrompt';
+import { questionAnchor, type AssessChanges } from '@/components/content/viewer/ExerciseRenderer';
+import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
+import { assessablePaths } from '@/lib/utils/contentHelpers';
+import { questionNumbering } from '@/lib/reportTargets';
+import { trackAction } from '@/lib/usage';
+import { SimilarContents } from '@/components/content/viewer/SimilarContents';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -208,10 +216,10 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
+  const [likeCounts, setLikeCounts] = useState({ likes: 0, dislikes: 0 });
   const [userVote, setUserVote] = useState<1 | -1 | 0>(0);
-  const [activeTab, setActiveTab] = useState<'exercise' | 'discussions' | 'proposals' | 'activity'>('exercise');
+  const [activeTab, setActiveTab] = useState<ContentTab>('exercise');
   const [questionProgress, setQuestionProgress] = useState<Record<string, AssessmentStatus>>({});
-  const [solutionValidations, setSolutionValidations] = useState<Record<string, string | null>>({});
   const [savingSession, setSavingSession] = useState(false);
   const [completionStatus, setCompletionStatus] = useState<'success' | 'review' | null>(null);
   // Question ratée (ou exercice échoué) : proposer de le ranger dans « À revoir ».
@@ -248,12 +256,22 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         const data = await config.api.get(id);
         setContent(data as ContentItem);
         if ('vote_count' in data && typeof data.vote_count === 'number') setVoteCount(data.vote_count);
+        setLikeCounts({ likes: (data as any).like_count ?? 0, dislikes: (data as any).dislike_count ?? 0 });
         if ('user_vote' in data) setUserVote((data.user_vote as 1 | -1 | 0) ?? 0);
         if ('user_save' in data) setIsSaved(Boolean(data.user_save));
         if ('user_complete' in data) setCompletionStatus((data as any).user_complete || null);
 
-        // Record view (fire-and-forget, dedup handled by backend)
-        config.api.recordView(id).catch(() => {});
+        // Vue : un envoi par contenu et par jour depuis ce navigateur (le serveur dédoublonne aussi).
+        try {
+          const key = `fidni:vue:${id}`;
+          const last = Number(localStorage.getItem(key) || 0);
+          if (Date.now() - last > 24 * 3600 * 1000) {
+            localStorage.setItem(key, String(Date.now()));
+            config.api.recordView(id).catch(() => {});
+          }
+        } catch {
+          config.api.recordView(id).catch(() => {});
+        }
 
         // Load existing progress if authenticated
         if (isAuthenticated && contentType !== 'lesson') {
@@ -262,17 +280,12 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             if (progress && 'item_progress' in progress && progress.item_progress) {
               // Convert item_progress to questionProgress format
               const converted: Record<string, AssessmentStatus> = {};
-              const validations: Record<string, string | null> = {};
               for (const [path, data] of Object.entries(progress.item_progress)) {
                 if (data && typeof data === 'object' && 'status' in data) {
                   converted[path] = (data as { status: AssessmentStatus }).status;
                 }
-                if (data && typeof data === 'object' && 'solution_validation' in data) {
-                  validations[path] = (data as { solution_validation?: string | null }).solution_validation || null;
-                }
               }
               setQuestionProgress(converted);
-              setSolutionValidations(validations);
             }
           } catch {
             // Progress not started yet, ignore
@@ -289,7 +302,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     loadContent();
   }, [id, config, isAuthenticated, contentType]);
 
-  // Load statistics when activity tab is active
+  useEffect(() => { setActiveTab('exercise'); }, [id]);
+  // Statistiques : chargées à l'ouverture de l'onglet Activité.
   useEffect(() => {
     const loadStatistics = async () => {
       if (activeTab !== 'activity' || !id || contentType === 'lesson') return;
@@ -378,6 +392,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     try {
       const response = await config.api.vote(id, value);
       setVoteCount(response.vote_count);
+      if (typeof response.like_count === 'number') setLikeCounts({ likes: response.like_count, dislikes: response.dislike_count ?? 0 });
       setUserVote(response.user_vote as 1 | -1 | 0);
     } catch (err) {
       console.error('Vote failed:', err);
@@ -417,92 +432,76 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     setShowSolution(!showSolution);
   };
 
-  // Handle question-level assessment
-  const handleQuestionAssess = async (path: string, status: AssessmentStatus) => {
-    if (!isAuthenticated) {
-      openModal();
-      return;
-    }
+  // Auto-évaluation : un clic par question, « Tout réussi », et le résultat du contenu se déduit tout
+  // seul quand toutes les questions sont évaluées (toutes réussies → Réussi, sinon → À revoir).
+  const leafPaths = useMemo(
+    () => (contentType === 'lesson' ? [] : assessablePaths(content?.structure as unknown as FlexibleExerciseStructure)),
+    [content, contentType]);
+  const progressRef = useRef(questionProgress);
+  progressRef.current = questionProgress;
+  const completionRef = useRef(completionStatus);
+  completionRef.current = completionStatus;
+
+  const applyAssessments = async (changes: AssessChanges, completion?: 'success' | 'review' | null) => {
+    if (!isAuthenticated) { openModal(); return; }
     if (!id) return;
-
-    // Optimistic update
-    const previousStatus = questionProgress[path];
-    const isToggleOff = previousStatus === status;
-
-    setQuestionProgress(prev => {
-      if (isToggleOff) {
-        const { [path]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [path]: status };
-    });
-
-    if (!isToggleOff && ['failed', 'review', 'partial'].includes(status)) setRevisionNudge((n) => n + 1);
-
-    // Persist to backend
+    const before = progressRef.current;
+    const beforeCompletion = completionRef.current;
+    const next = { ...before };
+    for (const [p, s] of Object.entries(changes)) {
+      if (s) next[p] = s; else delete next[p];
+    }
+    let target = completion;
+    if (target === undefined && leafPaths.length && leafPaths.every((p) => next[p])) {
+      target = leafPaths.every((p) => next[p] === 'success') ? 'success' : 'review';
+    }
+    const sendCompletion = target !== undefined && target !== beforeCompletion;
+    progressRef.current = next;
+    setQuestionProgress(next);
+    if (sendCompletion) {
+      completionRef.current = target ?? null;
+      setCompletionStatus(target ?? null);
+    }
+    if (Object.values(changes).some((s) => s && s !== 'success')) setRevisionNudge((n) => n + 1);
     try {
-      if (isToggleOff) {
-        await config.api.removeAssessment(id, { item_path: path });
-      } else {
-        await config.api.assess(id, {
-          item_path: path,
-          assessment: status,
-        });
-      }
+      await api.post(`/contents/${id}/assess_many/`, sendCompletion ? { assessments: changes, completion: target } : { assessments: changes });
     } catch (err) {
       console.error('Assessment failed:', err);
-      // Rollback on error
-      setQuestionProgress(prev => {
-        if (previousStatus) {
-          return { ...prev, [path]: previousStatus };
+      setQuestionProgress((cur) => {
+        const r = { ...cur };
+        for (const p of Object.keys(changes)) {
+          if (before[p]) r[p] = before[p]; else delete r[p];
         }
-        const { [path]: _, ...rest } = prev;
-        return rest;
+        progressRef.current = r;
+        return r;
       });
-    }
-  };
-
-  const handleValidateSolution = async (path: string, validation: string | null) => {
-    if (!isAuthenticated) {
-      openModal();
-      return;
-    }
-    if (!id) return;
-
-    // Optimistic update
-    const previousValidation = solutionValidations[path];
-
-    setSolutionValidations(prev => {
-      if (!validation) {
-        const { [path]: _, ...rest } = prev;
-        return rest;
+      if (sendCompletion) {
+        completionRef.current = beforeCompletion;
+        setCompletionStatus(beforeCompletion);
       }
-      return { ...prev, [path]: validation };
-    });
-
-    // Persist to backend
-    try {
-      await config.api.validateSolution(id, {
-        item_path: path,
-        validation,
-      });
-    } catch (err) {
-      console.error('Validation failed:', err);
-      // Rollback on error
-      setSolutionValidations(prev => {
-        if (previousValidation) {
-          return { ...prev, [path]: previousValidation };
-        }
-        const { [path]: _, ...rest } = prev;
-        return rest;
-      });
     }
   };
 
-  // Set overall completion status
+  // Re-cliquer le choix actif l'efface.
+  const handleQuestionAssess = (path: string, status: AssessmentStatus) =>
+    applyAssessments({ [path]: progressRef.current[path] === status ? null : status });
+
+  // « Où en es-tu ? » : « Tout réussi » coche toutes les questions (re-cliquer les efface) ;
+  // « À revoir » ne touche qu'au résultat du contenu. Leçon : « Marquer comme lue ».
   const handleSetCompletion = async (status: 'success' | 'review' | null) => {
     if (!isAuthenticated) { openModal(); return; }
     if (!id) return;
+    if (leafPaths.length) {
+      if (status === 'success') {
+        trackAction('tout-reussi');
+        await applyAssessments(Object.fromEntries(leafPaths.map((p) => [p, 'success'])), 'success');
+        return;
+      }
+      if (status === null && completionRef.current === 'success') {
+        await applyAssessments(Object.fromEntries(leafPaths.map((p) => [p, null])), null);
+        return;
+      }
+    }
     const prev = completionStatus;
     setCompletionStatus(status);
     if (status === 'review') setRevisionNudge((n) => n + 1);
@@ -698,60 +697,66 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         onReport={openReport}
         onSetVerified={isModerator(user) ? handleSetVerified : undefined}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(t) => {
+          if (t === 'activity') trackAction('onglet-activite');
+          if (t === 'proposals') trackAction('onglet-solutions');
+          setActiveTab(t);
+        }}
         basePath={config.basePath}
-        commentCount={comments.length}
         solutionCount={proposedSolutions?.length ?? 0}
-        completionStatus={completionStatus}
-        onSetCompletion={handleSetCompletion}
       />
 
-      {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'exercise' && (
           <div className="space-y-6">
-            {/* Main content */}
-            <div>
-              <ContentMainCard
-                content={content}
-                contentType={contentType}
-                voteCount={voteCount}
-                userVote={userVote}
-                onVote={handleVote}
-                showSolution={showSolution}
-                onToggleSolution={handleToggleSolution}
-                isAuthenticated={isAuthenticated}
-                timer={timerHook.timer}
-                isTimerRunning={timerHook.isTimerRunning}
-                startTimer={timerHook.startTimer}
-                stopTimer={timerHook.stopTimer}
-                resetTimer={timerHook.resetTimer}
-                saveSession={handleSaveSession}
-                formatCurrentTime={timerHook.formatCurrentTime}
-                getSessionCount={timerHook.getSessionCount}
-                loadHistory={timerHook.loadHistory}
-                saving={savingSession}
-                questionProgress={questionProgress}
-                onQuestionAssess={handleQuestionAssess}
-                solutionValidations={solutionValidations}
-                onValidateSolution={handleValidateSolution}
-                onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
-                onReport={openReport}
-              />
+            {/* « Où en es-tu ? » en haut de la page, visible dès l'arrivée (Natsu). */}
+            {isAuthenticated && (
+              <FinishPanel content={content} contentType={contentType} completionStatus={completionStatus}
+                onSetCompletion={handleSetCompletion}
+                progress={{ assessed: leafPaths.filter((p) => questionProgress[p]).length, total: leafPaths.length }} />
+            )}
 
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'discussions' && (
-          <div className="fd-card" style={{ padding: 22 }}>
-            <CommentSection
-              comments={comments}
-              onAddComment={handleAddComment}
-              onVoteComment={handleVoteComment}
-              onEditComment={handleEditComment}
-              onDeleteComment={handleDeleteComment}
+            <ContentMainCard
+              content={content}
+              contentType={contentType}
+              voteCount={voteCount}
+              likeCount={likeCounts.likes}
+              dislikeCount={likeCounts.dislikes}
+              userVote={userVote}
+              onVote={handleVote}
+              showSolution={showSolution}
+              onToggleSolution={handleToggleSolution}
+              isAuthenticated={isAuthenticated}
+              timer={timerHook.timer}
+              isTimerRunning={timerHook.isTimerRunning}
+              startTimer={timerHook.startTimer}
+              stopTimer={timerHook.stopTimer}
+              resetTimer={timerHook.resetTimer}
+              saveSession={handleSaveSession}
+              formatCurrentTime={timerHook.formatCurrentTime}
+              getSessionCount={timerHook.getSessionCount}
+              loadHistory={timerHook.loadHistory}
+              saving={savingSession}
+              questionProgress={questionProgress}
+              onQuestionAssess={handleQuestionAssess}
+              onAssessMany={applyAssessments}
+              onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
+              onReport={openReport}
             />
+
+            {/* Contenus semblables : ce qu'on peut faire ensuite (mêmes notions, même chapitre). */}
+            {id && <SimilarContents contentId={id} />}
+
+            {/* Discussion sous le contenu (plus d'onglet à part : personne ne l'ouvrait). */}
+            <section id="discussion" className="fd-card scroll-mt-20" style={{ padding: 22 }} data-tour="detail-discussion">
+              <CommentSection
+                comments={comments}
+                onAddComment={handleAddComment}
+                onVoteComment={handleVoteComment}
+                onEditComment={handleEditComment}
+                onDeleteComment={handleDeleteComment}
+              />
+            </section>
           </div>
         )}
 
@@ -773,18 +778,16 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               contentType={contentType}
               onRemoveSolutionFlag={handleRemoveSolutionFlag}
               onGoToQuestions={() => { setActiveTab('exercise'); window.scrollTo({ top: 0 }); }}
+              totalQuestions={leafPaths.length}
+              numbering={questionNumbering(content.structure)}
+              onGoToQuestion={(path) => {
+                setActiveTab('exercise');
+                window.setTimeout(() => document.getElementById(questionAnchor(path))
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+              }}
             />
             {user?.is_superuser && id && <AIVerdictPanel contentId={id} />}
           </>
-        )}
-
-        {activeTab === 'activity' && contentType === 'lesson' && (
-          <div className="fd-card" style={{ padding: 22 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 12 }}>Activité</h2>
-            <p style={{ fontSize: 13, color: '#6b6862', textAlign: 'center', padding: '32px 0' }}>
-              Statistiques non disponibles pour les leçons.
-            </p>
-          </div>
         )}
       </div>
 

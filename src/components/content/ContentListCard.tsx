@@ -22,6 +22,7 @@ import {
   BASE_PATH, chapterLabel, facts, levelLabel, progressOf, useBookmark, type ListItem, type ListKind,
 } from './listing/listingUtils';
 import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, ProgressPill } from './listing/ListingParts';
+import { NewBadge, isNewContent } from './NewBadge';
 
 interface ContentListCardProps {
   content: ListItem;
@@ -127,19 +128,19 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const structure = (content as { structure?: any }).structure;
   const comments = content.comment_count ?? 0;
 
-  const [votes, setVotes] = useState(content.vote_count ?? 0);
+  const [counts, setCounts] = useState({ likes: content.like_count ?? 0, dislikes: content.dislike_count ?? 0 });
   const [myVote, setMyVote] = useState<1 | -1 | 0>((content.user_vote as 1 | -1 | 0) ?? 0);
   useEffect(() => {
-    setVotes(content.vote_count ?? 0);
+    setCounts({ likes: content.like_count ?? 0, dislikes: content.dislike_count ?? 0 });
     setMyVote((content.user_vote as 1 | -1 | 0) ?? 0);
-  }, [content.vote_count, content.user_vote]);
+  }, [content.like_count, content.dislike_count, content.user_vote]);
 
   const vote = async (value: VoteValue) => {
     if (!isAuthenticated) { openModal(); return; }
     const api = contentType === 'exam' ? examContentAPI : contentType === 'lesson' ? lessonContentAPI : exerciseContentAPI;
     try {
       const r = await api.vote(String(content.id), value);
-      setVotes(r.vote_count);
+      if (typeof r.like_count === 'number') setCounts({ likes: r.like_count, dislikes: r.dislike_count ?? 0 });
       setMyVote(r.user_vote as 1 | -1 | 0);
     } catch (e) { console.error('Vote', e); }
   };
@@ -150,8 +151,12 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
     ...facts(content, contentType),
   ].filter(Boolean) as string[], [content, contentType, showSubject]);
 
+  // « Nouveau » : calculé une fois (lit le stockage du navigateur).
+  const isNew = useMemo(() => isNewContent(content as { id: string | number; created_at?: string }), [content]);
+
   return (
     <article className="group relative h-full flex flex-col rounded-2xl border border-line bg-white transition-[border-color,box-shadow] hover:border-[#d6d2ca] hover:shadow-[0_12px_32px_rgba(20,18,16,.07)]">
+      {isNew && <NewBadge />}
       <div className="px-5 pt-4 flex-1 flex flex-col">
         {/* Repères : chapitre, difficulté, état de l'élève ; favori à droite. */}
         <div className="flex items-start justify-between gap-2">
@@ -214,7 +219,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
       {/* Pied : votes, discussions, vues ; bouton d'ouverture. */}
       <div className="relative z-10 flex items-center gap-3 px-4 py-3 border-t border-[#f0ede8]">
         <div data-tour={first ? 'vote' : undefined}>
-          <VoteButtons initialVotes={votes} onVote={vote} vertical={false} userVote={myVote} size="sm" />
+          <VoteButtons likes={counts.likes} dislikes={counts.dislikes} onVote={vote} userVote={myVote} size="sm" />
         </div>
         {comments > 0 && (
           <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title={`${comments} message${comments > 1 ? 's' : ''}`}>

@@ -23,6 +23,8 @@ export interface ProposedSolution {
   body: string;
   attachments: SolutionAttachment[];
   vote_count: number;
+  like_count?: number;
+  dislike_count?: number;
   user_vote: 1 | -1 | null;
   is_mine: boolean;
   created_at: string;

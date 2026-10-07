@@ -33,6 +33,12 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<{ notebookId: string | number; chapter: string } | null>(null);
+  // Nom du cahier créé depuis la leçon : proposé, modifiable (avant : toujours « Matière - Niveau »).
+  const [newTitle, setNewTitle] = useState('');
+  useEffect(() => {
+    if (lessonSubject && lessonLevels.length) setNewTitle(`${lessonSubject.name} - ${lessonLevels[0].name}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonSubject?.id, lessonLevels[0]?.id]);
 
   const load = async () => {
     setLoading(true);
@@ -87,7 +93,9 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
     if (!lessonSubject || !lessonLevels.length) return;
     setBusy('create');
     try {
-      const r = await api.post('/notebooks/create_notebook/', { subject_id: lessonSubject.id, class_level_id: lessonLevels[0].id });
+      const r = await api.post('/notebooks/create_notebook/', {
+        subject_id: lessonSubject.id, class_level_id: lessonLevels[0].id, title: newTitle.trim(),
+      });
       const nb: Notebook = r.data;
       const chapter = lessonChapters[0];
       if (chapter) {
@@ -170,7 +178,12 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
                       Crée-le : ses chapitres suivent le programme, et cette leçon ira directement dans
                       {lessonChapters[0] ? <> « {lessonChapters[0].name} »</> : ' son chapitre'}.
                     </p>
-                    <button type="button" onClick={createAndAdd} disabled={busy !== null} className="fd-btn-primary mt-3 w-full justify-center">
+                    <label className="mt-3 block">
+                      <span className="block text-[12px] font-semibold text-ink-soft">Nom du cahier</span>
+                      <input value={newTitle} maxLength={200} onChange={(e) => setNewTitle(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" />
+                    </label>
+                    <button type="button" onClick={createAndAdd} disabled={busy !== null || !newTitle.trim()} className="fd-btn-primary mt-3 w-full justify-center">
                       {busy === 'create' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                       Créer le cahier et ajouter la leçon
                     </button>

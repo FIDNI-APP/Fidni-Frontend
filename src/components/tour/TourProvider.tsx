@@ -8,6 +8,7 @@
  * - « Déjà vu » est retenu sur l'appareil (localStorage) : simple confort, rien de grave s'il se perd.
  */
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { trackAction } from '@/lib/usage';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { HelpCircle, X } from 'lucide-react';
@@ -95,7 +96,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.clearInterval(id);
   }, [pathname, active]);
 
-  const start = useCallback(() => { if (available) setActive(available); }, [available]);
+  const start = useCallback(() => { if (available) { setActive(available); trackAction('visite-guidee'); } }, [available]);
   const finish = useCallback(() => {
     setActive((t) => { if (t) markSeen(t); return null; });
   }, []);

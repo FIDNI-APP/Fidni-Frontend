@@ -50,6 +50,7 @@ import type { FlexibleExerciseStructure } from '@/components/content/editor/Flex
 import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
+import { trackAction, trackFilterChange } from '@/lib/usage';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -86,7 +87,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   },
   exam: {
     title: 'Examens',
-    subtitle: 'Devoirs surveillés et sujets d’examen, pour te mettre en conditions.',
+    subtitle: 'Devoirs surveillés et devoirs maison, pour te mettre en conditions.',
     createLabel: 'Ajouter un examen',
     emptyMessage: 'Aucun examen trouvé',
     icon: <APlusIcon className="w-5 h-5" />,
@@ -108,6 +109,9 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
 
 const ITEMS_PER_PAGE = 12;
 
+// Tri par défaut : les plus aimés d'abord (j'aime des élèves), pour guider ceux qui ne savent pas quoi travailler.
+const DEFAULT_SORT: SortOption = 'most_upvoted';
+
 const LIST_SEO: Record<ContentType, { title: string; description: string }> = {
   exercise: {
     title: 'Exercices de maths corrigés – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
@@ -127,7 +131,17 @@ interface ContentListProps {
   contentType?: ContentType;
   /** Page par niveau / chapitre : filtres imposés, titre et introduction propres (ContentHub). */
   hub?: HubInfo;
+  /** Examens : true = section « Examens nationaux », sinon la section « Examens » ne montre que les devoirs. */
+  national?: boolean;
 }
+
+// Section « Examens nationaux » : textes propres (la liste et ses filtres restent les mêmes).
+const NATIONAL = {
+  title: 'Examens nationaux',
+  subtitle: 'Les sujets du Bac national, corrigés, pour t’entraîner en conditions réelles.',
+  seoTitle: 'Examens nationaux de maths corrigés – Bac Maroc | Fidni',
+  seoDescription: 'Sujets d’examen national de mathématiques du Bac marocain (2ème Bac SM et PC), avec corrigé détaillé et épreuve chronométrée.',
+};
 
 interface FilterState {
   classLevels: string[];
@@ -148,7 +162,9 @@ interface FilterState {
 export const ContentList: React.FC<ContentListProps> = ({
   contentType = 'exercise',
   hub,
+  national = false,
 }) => {
+  const isNationalSection = contentType === 'exam' && national;
   const config = CONTENT_TYPE_CONFIG[contentType];
   const navigate = useNavigate();
   const location = useLocation();
@@ -204,8 +220,10 @@ export const ContentList: React.FC<ContentListProps> = ({
   };
 
   const [filters, setFilters] = useState<FilterState>(getInitialFilters);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
   const [sortBy, setSortBy] = useState<SortOption>(
-    (searchParams.get('sort') as SortOption) || 'newest'
+    (searchParams.get('sort') as SortOption) || DEFAULT_SORT
   );
   const [page, setPage] = useState(1);
 
@@ -216,7 +234,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   useEffect(() => {
     const next = getInitialFilters();
     setFilters(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-    setSortBy((searchParams.get('sort') as SortOption) || 'newest');
+    setSortBy((searchParams.get('sort') as SortOption) || DEFAULT_SORT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -233,7 +251,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   const [showAllSolutions] = useState(false);
   const [itemProgress, setItemProgress] = useState<Record<string, Record<string, AssessmentStatus>>>({});
   const [itemValidations, setItemValidations] = useState<Record<string, Record<string, string | null>>>({});
-  const [itemVotes, setItemVotes] = useState<Record<string, { vote: number; count: number }>>({});
+  const [itemVotes, setItemVotes] = useState<Record<string, { vote: number; count: number; likes: number; dislikes: number }>>({});
   const [itemBookmarks, setItemBookmarks] = useState<Record<string, boolean>>({});
   const [itemTimers, setItemTimers] = useState<Record<string, { isRunning: boolean; elapsed: number }>>({});
   const [savingTimer, setSavingTimer] = useState<Record<string, boolean>>({});
@@ -281,8 +299,17 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (filters.showCompleted) params.showCompleted = true;
     if (filters.showFailed) params.showFailed = true;
 
+    // Examens : chaque section ne montre que les siens ; la période porte sur l'année du Bac.
+    if (contentType === 'exam') {
+      params.is_national = isNationalSection;
+      if (isNationalSection) {
+        if (filters.dateStart) params.national_year_min = Number(filters.dateStart);
+        if (filters.dateEnd) params.national_year_max = Number(filters.dateEnd);
+      }
+    }
+
     return params;
-  }, [filters, sortBy]);
+  }, [filters, sortBy, contentType, isNationalSection]);
 
   // Filtres + tri de la dernière liste demandée : une réponse pour d'AUTRES filtres (ex. la liste
   // complète, encore en cours quand on clique sur « 1ère Bac SM ») est ignorée au lieu d'écraser
@@ -315,13 +342,15 @@ export const ContentList: React.FC<ContentListProps> = ({
       setHasMore(!!response.next);
 
       // Initialize vote and bookmark states from loaded items
-      const newVoteState: Record<string, { vote: number; count: number }> = {};
+      const newVoteState: Record<string, { vote: number; count: number; likes: number; dislikes: number }> = {};
       const newBookmarkState: Record<string, boolean> = {};
 
       loadedItems.forEach(item => {
         newVoteState[item.id] = {
           vote: item.user_vote || 0,
-          count: item.vote_count || 0
+          count: item.vote_count || 0,
+          likes: item.like_count ?? 0,
+          dislikes: item.dislike_count ?? 0,
         };
         // API returns user_save, not is_saved
         newBookmarkState[item.id] = ('user_save' in item ? Boolean(item.user_save) : false);
@@ -400,6 +429,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       listRef.current.scrollTop = 0;
     }
 
+    trackFilterChange(filtersRef.current as unknown as Record<string, unknown>, newFilters as unknown as Record<string, unknown>);
     setFilters(newFilters);
 
     const params = new URLSearchParams();
@@ -443,7 +473,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (newFilters.dateEnd) {
       params.set('dateEnd', newFilters.dateEnd);
     }
-    if (sortBy !== 'newest') {
+    if (sortBy !== DEFAULT_SORT) {
       params.set('sort', sortBy);
     }
 
@@ -475,11 +505,12 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (listRef.current) {
       listRef.current.scrollTop = 0;
     }
+    trackAction('tri');
     setSortBy(newSortOption);
 
     // Update URL
     const params = new URLSearchParams(searchParams);
-    if (newSortOption !== 'newest') {
+    if (newSortOption !== DEFAULT_SORT) {
       params.set('sort', newSortOption);
     } else {
       params.delete('sort');
@@ -540,24 +571,6 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
   }, [isAuthenticated, openModal, config.api, itemProgress]);
 
-  // Handle solution validation
-  const handleValidateSolution = useCallback(async (itemId: string, path: string, validation: string | null) => {
-    if (!isAuthenticated) {
-      openModal();
-      return;
-    }
-
-    setItemValidations(prev => ({
-      ...prev,
-      [itemId]: { ...(prev[itemId] || {}), [path]: validation }
-    }));
-
-    try {
-      await config.api.validateSolution(itemId, { item_path: path, validation });
-    } catch (err) {
-      console.error('Validation failed:', err);
-    }
-  }, [isAuthenticated, openModal, config.api]);
 
   // Handle vote
   const handleVote = useCallback(async (itemId: string, voteValue: 1 | -1) => {
@@ -566,20 +579,8 @@ export const ContentList: React.FC<ContentListProps> = ({
       return;
     }
 
-    const currentVote = itemVotes[itemId]?.vote || 0;
-    const currentCount = itemVotes[itemId]?.count || 0;
-
-    // Optimistic update
-    const newVote = currentVote === voteValue ? 0 : voteValue;
-    const countChange = newVote - currentVote;
-
-    setItemVotes(prev => ({
-      ...prev,
-      [itemId]: {
-        vote: newVote,
-        count: currentCount + countChange
-      }
-    }));
+    // Les nombres s'actualisent tout de suite dans le bouton ; ici on retient l'état d'avant (en cas d'échec).
+    const before = itemVotes[itemId] ?? { vote: 0, count: 0, likes: 0, dislikes: 0 };
 
     try {
       const response = await config.api.vote(itemId, voteValue);
@@ -589,17 +590,16 @@ export const ContentList: React.FC<ContentListProps> = ({
           ...prev,
           [itemId]: {
             vote: response.user_vote || 0,
-            count: response.vote_count || 0
+            count: response.vote_count || 0,
+            likes: response.like_count ?? 0,
+            dislikes: response.dislike_count ?? 0,
           }
         }));
       }
     } catch (err) {
       console.error('Vote failed:', err);
       // Rollback on error
-      setItemVotes(prev => ({
-        ...prev,
-        [itemId]: { vote: currentVote, count: currentCount }
-      }));
+      setItemVotes(prev => ({ ...prev, [itemId]: { ...before } }));
     }
   }, [isAuthenticated, openModal, config.api, itemVotes]);
 
@@ -788,6 +788,8 @@ export const ContentList: React.FC<ContentListProps> = ({
       {/* Mêmes titres que les pages pré-remplies par le serveur (backend/src/config/seo.py). */}
       {hub ? (
         <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
+      ) : isNationalSection ? (
+        <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux" />
       ) : (
         <SEO title={LIST_SEO[contentType].title} description={LIST_SEO[contentType].description} canonicalUrl={config.basePath} />
       )}
@@ -804,12 +806,12 @@ export const ContentList: React.FC<ContentListProps> = ({
               </nav>
             )}
             <h1 className="fd-display text-ink flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 'clamp(26px,3vw,32px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-              {hub ? hub.h1 : config.title}
+              {hub ? hub.h1 : isNationalSection ? NATIONAL.title : config.title}
               <span className="fd-nums text-[15px] font-medium text-ink-faint" style={{ letterSpacing: 0 }}>
                 {totalCount > 0 ? totalCount : ''}
               </span>
             </h1>
-            <p className="text-[13.5px] text-ink-faint mt-1.5 max-w-3xl">{hub ? hub.intro : config.subtitle}</p>
+            <p className="text-[13.5px] text-ink-faint mt-1.5 max-w-3xl">{hub ? hub.intro : isNationalSection ? NATIONAL.subtitle : config.subtitle}</p>
           </div>
 
           {/* Publier est réservé aux comptes : pour un visiteur, la page commence par le contenu. */}
@@ -873,6 +875,7 @@ export const ContentList: React.FC<ContentListProps> = ({
           sortBy={sortBy}
           onSortChange={handleSortChange}
           accentColor={contentType === 'exam' ? 'violet' : contentType === 'lesson' ? 'emerald' : 'blue'}
+          nationalSection={isNationalSection}
           trailing={<div className="hidden sm:block">{viewToggle}</div>}
         />
         {/* Téléphone : le choix d'affichage passe sous la barre, pour ne pas déborder. */}
@@ -1204,7 +1207,6 @@ export const ContentList: React.FC<ContentListProps> = ({
                               structure={item.structure as unknown as FlexibleExerciseStructure}
                               progress={progressData}
                               onAssess={(path, status) => handleAssess(String(item.id), path, status)}
-                              onValidateSolution={(path, validation) => handleValidateSolution(String(item.id), path, validation)}
                               interactive={isAuthenticated}
                               showAllSolutions={showAllSolutions}
                               compact={false}
@@ -1225,7 +1227,8 @@ export const ContentList: React.FC<ContentListProps> = ({
                           <div className="flex items-center gap-3">
                             <div data-tour="vote">
                             <VoteButtons
-                              initialVotes={itemVotes[item.id]?.count || 0}
+                              likes={itemVotes[item.id]?.likes ?? 0}
+                              dislikes={itemVotes[item.id]?.dislikes ?? 0}
                               onVote={(value) => handleVote(String(item.id), value)}
                               vertical={false}
                               userVote={(itemVotes[item.id]?.vote || 0) as 1 | -1 | 0}
@@ -1277,24 +1280,31 @@ export const ContentList: React.FC<ContentListProps> = ({
                 return (
                   <>
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-                      {filtered ? config.emptyMessage : 'Rien de publié ici pour le moment'}
+                      {filtered ? config.emptyMessage : isNationalSection ? 'Les sujets nationaux arrivent bientôt' : 'Rien de publié ici pour le moment'}
                     </h3>
                     <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
                       {filtered
                         ? 'Aucun résultat avec ces filtres : essaie d’en retirer un.'
-                        : 'Les premiers contenus arrivent bientôt. Tu peux aussi proposer le tien.'}
+                        : isNationalSection
+                          ? 'Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.'
+                          : 'Les premiers contenus arrivent bientôt. Tu peux aussi proposer le tien.'}
                     </p>
                   </>
                 );
               })()}
-              <button
-                onClick={handleNewContentClick}
-                className="fd-btn-primary"
-                style={{ marginTop: 18 }}
-              >
-                <Plus className="w-4 h-4" />
-                {config.createLabel}
-              </button>
+              {/* Section nationale vide : on renvoie vers les devoirs (proposer un sujet national n'a pas de sens). */}
+              {isNationalSection ? (
+                <Link to="/exams" className="fd-btn-primary inline-flex" style={{ marginTop: 18 }}>Voir les devoirs surveillés</Link>
+              ) : (
+                <button
+                  onClick={handleNewContentClick}
+                  className="fd-btn-primary"
+                  style={{ marginTop: 18 }}
+                >
+                  <Plus className="w-4 h-4" />
+                  {config.createLabel}
+                </button>
+              )}
             </div>
           )}
 

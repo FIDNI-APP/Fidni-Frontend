@@ -2,17 +2,11 @@ import React, { useState, useRef } from 'react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Share2, Bookmark, MoreHorizontal, BookOpen, Printer,
-  ListPlus, MessageSquare,
-  GitPullRequest, Activity, ArrowLeft, Loader2,
-  Pencil, Trash2, BookMarked, CheckCircle2, Circle, X, User, Calendar, Eye, GraduationCap, Flag, ShieldQuestion, ShieldCheck } from 'lucide-react';
+  Share2, Bookmark, MoreHorizontal, Printer, BookOpen, Lightbulb, BarChart3, ArrowLeft, Loader2,
+  Pencil, Trash2, User, Calendar, Eye, GraduationCap, Flag, ShieldQuestion, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
-import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
-import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
-import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
-import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/auth/AuthController';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -29,15 +23,15 @@ interface ContentHeaderProps {
   onReport?: () => void;
   /** Administrateurs : marquer la correction vérifiée (true) ou la remettre « à vérifier » (false). */
   onSetVerified?: (verifie: boolean) => void;
-  activeTab: 'exercise' | 'discussions' | 'proposals' | 'activity';
-  onTabChange: (tab: 'exercise' | 'discussions' | 'proposals' | 'activity') => void;
+  activeTab: ContentTab;
+  onTabChange: (tab: ContentTab) => void;
   basePath: string;
-  commentCount?: number;
   /** Nombre de solutions proposées par les élèves (pastille de l'onglet). */
   solutionCount?: number;
-  completionStatus?: 'success' | 'review' | null;
-  onSetCompletion?: (status: 'success' | 'review' | null) => void;
 }
+
+// La discussion est sous le contenu, dans l'onglet principal (plus d'onglet Discussions).
+export type ContentTab = 'exercise' | 'proposals' | 'activity';
 
 // Light, focus-first header chrome. Shared ghost-button styling (ink on white).
 const ghostBtn = 'rounded-xl gap-2 text-[#33302b] hover:bg-[#f7f6f3]';
@@ -79,24 +73,13 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   activeTab,
   onTabChange,
   basePath,
-  commentCount = 0,
   solutionCount = 0,
-  completionStatus,
-  onSetCompletion,
 }) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { openModal, setInitialTab } = useAuthModal();
-  // Cahier et listes demandent un compte : un visiteur arrive sur l'inscription.
-  const needAccount = (then: () => void) => () => {
-    if (isAuthenticated) then();
-    else { setInitialTab('signup'); openModal(); }
-  };
+  // Un examen national revient à sa section ; les autres examens, à la section Examens (devoirs).
+  const isNational = contentType === 'exam' && !!(content as any)?.is_national_exam;
+  const backPath = isNational ? '/exams/nationaux' : basePath;
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showRevisionListModal, setShowRevisionListModal] = useState(false);
-  const [showNotebookModal, setShowNotebookModal] = useState(false);
-  const [showCompletionDropdown, setShowCompletionDropdown] = useState(false);
-  const completionBtnRef = useRef<HTMLButtonElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
   const handleShare = () => {
@@ -113,13 +96,14 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
     }
   };
 
-  const tabs = [
-    { id: 'exercise', label: contentType === 'lesson' ? 'Leçon' : contentType === 'exam' ? 'Sujet' : 'Exercice', icon: BookOpen },
-    { id: 'discussions', label: 'Discussions', icon: MessageSquare, count: commentCount },
-    { id: 'proposals', label: 'Solutions', icon: GitPullRequest, count: solutionCount },
-    { id: 'activity', label: 'Activité', icon: Activity }
-  ];
-  const filteredTabs = contentType === 'lesson' ? tabs.filter(t => t.id !== 'proposals') : tabs;
+  // short : libellé sur téléphone, pour que les trois onglets tiennent sur une ligne.
+  const tabs: { id: ContentTab; label: string; short?: string; icon: React.ElementType; count?: number }[] = contentType === 'lesson'
+    ? [{ id: 'exercise', label: 'Leçon', icon: BookOpen }]
+    : [
+        { id: 'exercise', label: contentType === 'exam' ? 'Sujet' : 'Exercice', icon: BookOpen },
+        { id: 'proposals', label: 'Solutions des élèves', short: 'Solutions', icon: Lightbulb, count: solutionCount },
+        { id: 'activity', label: 'Activité', icon: BarChart3 },
+      ];
 
   return (
     <div style={{ background: '#fff', borderBottom: '1px solid #e7e3dc' }}>
@@ -129,63 +113,15 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center min-w-0">
             <button
-              onClick={() => navigate(basePath)}
+              onClick={() => navigate(backPath)}
               className="inline-flex items-center gap-1.5 py-1.5 -ml-1 pr-2 rounded-lg text-sm text-[#6b6862] hover:text-[#1a1a1a] transition-colors flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              {contentType === 'lesson' ? 'Leçons' : contentType === 'exam' ? 'Examens' : 'Exercices'}
+              {contentType === 'lesson' ? 'Leçons' : isNational ? 'Examens nationaux' : contentType === 'exam' ? 'Examens' : 'Exercices'}
             </button>
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Completion */}
-            {onSetCompletion && (
-              <div className="relative">
-                <Button
-                  ref={completionBtnRef}
-                  data-tour="detail-terminer"
-                  onClick={() => setShowCompletionDropdown(!showCompletionDropdown)}
-                  variant="ghost"
-                  size="sm"
-                  className={`rounded-xl gap-2 ${
-                    completionStatus === 'success'
-                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                      : completionStatus === 'review'
-                        ? 'bg-red-50 text-red-700 hover:bg-red-100'
-                        : ghostBtn
-                  }`}
-                >
-                  {completionStatus === 'success' ? <CheckCircle2 className="w-4 h-4" />
-                    : completionStatus === 'review' ? <X className="w-4 h-4" />
-                    : <Circle className="w-4 h-4" />}
-                  <span className="hidden sm:inline">
-                    {completionStatus === 'success' ? 'Validé' : completionStatus === 'review' ? 'Échoué' : 'Terminer'}
-                  </span>
-                </Button>
-
-                <FloatingPanel anchorRef={completionBtnRef} open={showCompletionDropdown}
-                  onClose={() => setShowCompletionDropdown(false)} offset={4}
-                  className="bg-white rounded-lg shadow-lg border border-[#e7e3dc] py-1 min-w-[140px]">
-                      <button
-                        onClick={() => { onSetCompletion(completionStatus === 'success' ? null : 'success'); setShowCompletionDropdown(false); }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                          completionStatus === 'success' ? 'bg-emerald-100 text-emerald-700' : 'text-emerald-600 hover:bg-[#f7f6f3]'
-                        }`}
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> <span>Validé</span>
-                      </button>
-                      <button
-                        onClick={() => { onSetCompletion(completionStatus === 'review' ? null : 'review'); setShowCompletionDropdown(false); }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                          completionStatus === 'review' ? 'bg-red-100 text-red-700' : 'text-red-600 hover:bg-[#f7f6f3]'
-                        }`}
-                      >
-                        <X className="w-3.5 h-3.5" /> <span>Échoué</span>
-                      </button>
-                </FloatingPanel>
-              </div>
-            )}
-
             {/* Save */}
             <Button
               onClick={onToggleSave}
@@ -198,19 +134,6 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />}
               <span className="hidden sm:inline">{isSaved ? 'Enregistré' : 'Enregistrer'}</span>
             </Button>
-
-            {/* List / notebook */}
-            {contentType === 'lesson' ? (
-              <Button onClick={needAccount(() => setShowNotebookModal(true))} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-cahier">
-                <BookMarked className="w-4 h-4" />
-                <span className="hidden sm:inline">Cahier</span>
-              </Button>
-            ) : (
-              <Button onClick={needAccount(() => setShowRevisionListModal(true))} variant="ghost" size="sm" className={ghostBtn} data-tour="detail-liste">
-                <ListPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Liste</span>
-              </Button>
-            )}
 
             {/* More */}
             <div className="relative" ref={moreRef}>
@@ -301,7 +224,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
               <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
                 {diff && (
                   <span style={{ ...chipStyle, background: diff.bg, color: diff.text }}>
-                    <span style={{ width: 6, height: 6, borderRadius: 99, background: 'currentColor' }} />
+                    <DifficultyBars difficulty={c.difficulty} />
                     {diff.label}
                   </span>
                 )}
@@ -365,56 +288,28 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
           );
         })()}
 
-        {/* Tabs — underline style */}
-        <div className="flex items-center gap-5 overflow-x-auto scrollbar-hide" style={{ marginBottom: -1 }} data-tour="detail-onglets">
-          {filteredTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id as any)}
-                className={`flex items-center gap-2 py-2.5 text-sm whitespace-nowrap border-b-2 transition-colors ${
-                  isActive
-                    ? 'text-[#15633c] border-[#1a7a4a] font-semibold'
-                    : 'text-[#6b6862] border-transparent hover:text-ink font-medium'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded-md fd-nums ${isActive ? 'bg-[#eaf3ed] text-[#15633c]' : 'bg-[#f2f1ee] text-[#6b6862]'}`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {/* Onglets : celui qui est ouvert est en vert plein, impossible à manquer. */}
+        {tabs.length > 1 && (
+          <div role="tablist" aria-label="Sections" data-tour="detail-onglets"
+            className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-4 scrollbar-hide sm:mx-0 sm:px-0">
+            {tabs.map(({ id, label, short, icon: Icon, count }) => {
+              const active = activeTab === id;
+              return (
+                <button key={id} type="button" role="tab" aria-selected={active} onClick={() => onTabChange(id)}
+                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-[14px] sm:px-4 font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                    active ? 'bg-brand text-white shadow-sm' : 'bg-[#f2f1ee] text-ink-soft hover:bg-[#e9e6e0] hover:text-ink'
+                  }`}>
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {short ? <><span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span></> : label}
+                  {count !== undefined && count > 0 && (
+                    <span className={`fd-nums rounded-full px-1.5 text-[12px] font-semibold ${active ? 'bg-white/20 text-white' : 'bg-white text-ink-soft'}`}>{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {contentType !== 'lesson' && (
-        <AddToRevisionListModal
-          isOpen={showRevisionListModal}
-          onClose={() => setShowRevisionListModal(false)}
-          contentType={contentType}
-          contentId={Number(content.id)}
-          contentTitle={content.title}
-          contentLabels={labelsFromContent(content)}
-        />
-      )}
-
-      {contentType === 'lesson' && (
-        <AddToNotebookModal
-          isOpen={showNotebookModal}
-          onClose={() => setShowNotebookModal(false)}
-          lessonId={String(content.id)}
-          lessonTitle={content.title}
-          lessonChapters={content.chapters?.map(ch => ({ id: String(ch.id), name: ch.name })) ?? []}
-          lessonSubject={content.subject ? { id: content.subject.id, name: content.subject.name } : null}
-          lessonLevels={(content.class_levels || []).map((l) => ({ id: l.id, name: l.name }))}
-        />
-      )}
     </div>
   );
 };

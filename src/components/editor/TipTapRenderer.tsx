@@ -52,7 +52,12 @@ function processLatex(html: string): string {
   // Display math first so the inline pass doesn't eat `$$` pairs.
   html = html.replace(/\$\$([\s\S]*?)\$\$/g, (_m, latex) => renderMath(latex, true));
   // Inline math: a single `$...$` on one line (not `$$`).
-  html = html.replace(/\$(?!\$)([^\$\n]+?)\$(?!\$)/g, (_m, latex) => renderMath(latex, false));
+  // La ponctuation collée à une formule reste sur sa ligne (avant : un « . » ou un « ) » seul en début de
+  // ligne, une « ( » seule en fin de ligne) : WORD JOINER (U+2060) entre les deux ; « $x$ : » → espace
+  // insécable devant « : ; ! ? ».
+  html = html.replace(/(\()?\$(?!\$)([^\$\n]+?)\$(?!\$)(?:([.,)\]])| ([:;!?]))?/g,
+    (_m, open, latex, close, spaced) => `${open ? '(⁠' : ''}${renderMath(latex, false)}`
+      + `${close ? `⁠${close}` : spaced ? ` ${spaced}` : ''}`);
   return html;
 }
 

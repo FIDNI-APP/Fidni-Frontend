@@ -58,6 +58,33 @@ export function reportTargets(contentType: 'exercise' | 'exam' | 'lesson', struc
   return groups;
 }
 
+/**
+ * Questions qu'on évalue, avec la numérotation vue à l'écran (ExerciseRenderer) : « 2 », « 2.1 » ; dans un
+ * examen, `part` = titre de l'exercice (« Exercice 2 »), la numérotation repartant à 1 dans chaque exercice.
+ */
+export interface QuestionNumber { path: string; num: string; part: string | null }
+export function questionNumbering(structure: any): QuestionNumber[] {
+  const out: QuestionNumber[] = [];
+  let part: string | null = null;
+  let parts = 0;
+  let q = 0;
+  for (const b of structure?.blocks || []) {
+    if (!b?.id) continue;
+    if (b.type === 'section') {
+      parts += 1;
+      part = short(plain(b.content?.html) || `Partie ${parts}`, 32);
+      q = 0;
+      continue;
+    }
+    if (b.type !== 'question') continue;
+    q += 1;
+    const subs = (b.subQuestions || []).filter((sq: any) => sq?.id);
+    if (subs.length) subs.forEach((sq: any, k: number) => out.push({ path: `${b.id}.${sq.id}`, num: `${q}.${k + 1}`, part }));
+    else out.push({ path: b.id, num: String(q), part });
+  }
+  return out;
+}
+
 /** Libellé enregistré avec le signalement : « Exercice 2 · Question 1.3 ». */
 export function targetLabel(groups: ReportTargetGroup[], path: string): string {
   for (const g of groups) {

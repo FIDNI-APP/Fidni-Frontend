@@ -419,6 +419,26 @@ const StudentNotebook: React.FC = () => {
     }
   };
 
+  // Renommer un cahier (crayon de la carte). Le nom doit être unique parmi ses cahiers (contrainte en base).
+  const handleRenameNotebook = async (notebookId: string, title: string): Promise<boolean> => {
+    if (!title) { toast.info('Donne un nom à ton cahier.'); return false; }
+    if (notebooks.some((n) => n.id !== notebookId && n.title.trim().toLowerCase() === title.toLowerCase())) {
+      toast.info('Tu as déjà un cahier qui porte ce nom.');
+      return false;
+    }
+    try {
+      await api.patch(`/notebooks/${notebookId}/`, { title });
+      setNotebooks((prev) => prev.map((n) => (n.id === notebookId ? { ...n, title } : n)));
+      setCurrentNotebook((prev) => (prev && prev.id === notebookId ? { ...prev, title } : prev));
+      toast.success('Cahier renommé');
+      return true;
+    } catch (err) {
+      console.error('Error renaming notebook:', err);
+      toast.error('Le cahier n’a pas pu être renommé.');
+      return false;
+    }
+  };
+
   const handleDeleteNotebook = async (notebookId: string) => {
     if (!window.confirm('Supprimer ce cahier ? Cette action est définitive.')) return;
     
@@ -482,6 +502,7 @@ const StudentNotebook: React.FC = () => {
               notebooks={notebooks}
               onSelectNotebook={handleNotebookSelect}
               onDeleteNotebook={handleDeleteNotebook}
+              onRenameNotebook={handleRenameNotebook}
               onCreateNotebook={() => setShowCreateForm(true)}
             />
           </div>

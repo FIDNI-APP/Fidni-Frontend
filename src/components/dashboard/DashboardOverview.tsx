@@ -1,15 +1,16 @@
 /**
  * Tableau de bord de l'accueil (élève connecté). Données : GET /api/dashboard/overview/ — que des
- * chiffres enregistrés, jamais d'estimation. Hiérarchie de lecture :
- *   1. où j'en suis cette semaine (4 chiffres)       2. quoi faire maintenant (reprendre / à revoir)
- *   3. ma régularité (calendrier)                   4. ma maîtrise du programme (chapitres, notions)
+ * chiffres enregistrés, jamais d'estimation. Allégé le 06/10/2026 (Natsu : « trop chargé ») :
+ *   1. bonjour + une action      2. ta semaine (une bande : série, questions, réussite, 7 jours)
+ *   3. à faire maintenant (reprendre / à revoir / notions faibles, dans un seul encart, s'il y a quelque chose)
+ * La régularité sur l'année et la maîtrise du programme sont passées sur la page Statistiques (YearOverview).
  * Palette encre / vert / or, pas de dégradé ; vert = progression, or = à consolider.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, ArrowUpRight, ArrowDownRight, Minus, Flame, CheckCircle2, Target, ListChecks,
-  RotateCcw, PlayCircle, CalendarDays, BookOpen, Brain, ChevronDown, Sparkles,
+  ArrowRight, ArrowUpRight, ArrowDownRight, Minus, Flame, Target, ListChecks,
+  RotateCcw, PlayCircle, CalendarDays, BookOpen, Brain, ChevronDown,
 } from 'lucide-react';
 import { getDashboardOverview, type DashboardOverview as Overview, type OverviewChapter } from '@/lib/api';
 import { getRevisionSuggestions, quickAddToRevision } from '@/lib/api/revisionListApi';
@@ -39,96 +40,139 @@ export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?:
 
   const next = data.resume[0];
   const levelQuery = data.level ? `?classLevels=${data.level.id}` : '';
+  const hasTodo = data.resume.length > 0 || data.review.length > 0 || data.weak_notions.length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Header username={username} data={data} next={next} levelQuery={levelQuery} fallbackExercise={fallbackExercise} />
+      <WeekStrip data={data} />
+      {hasTodo && <NextSteps data={data} />}
+    </div>
+  );
+};
 
-      {/* 1. Cette semaine */}
-      <section aria-label="Cette semaine" data-tour="home-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Tile icon={<Flame className="w-4 h-4" />} label="Série" tone="gold"
-          value={data.streak.current} unit={data.streak.current > 1 ? 'jours' : 'jour'}
-          note={data.streak.best > 0 ? `record : ${data.streak.best} j` : 'un exercice aujourd’hui la lance'} />
-        <Tile icon={<ListChecks className="w-4 h-4" />} label="Questions (7 j)"
-          value={data.week.questions}
-          delta={<Delta now={data.week.questions} before={data.previous_week.questions} />} />
-        <Tile icon={<Target className="w-4 h-4" />} label="Réussite (7 j)"
-          value={data.week.success_rate ?? '—'} unit={data.week.success_rate !== null ? '%' : undefined}
-          delta={data.week.success_rate !== null && data.previous_week.success_rate !== null
-            ? <Delta now={data.week.success_rate} before={data.previous_week.success_rate} unit=" pts" />
-            : undefined}
-          note={data.week.success_rate === null ? 'auto-évalue tes réponses pour la voir' : undefined} />
-        <Tile icon={<CheckCircle2 className="w-4 h-4" />} label="Exercices réussis"
-          value={data.totals.exercises_done}
-          note={data.totals.exams_done ? `+ ${data.totals.exams_done} examen${data.totals.exams_done > 1 ? 's' : ''}` : 'depuis ton inscription'} />
-      </section>
+/* ───────────────────────────── Ta semaine (une seule bande) ───────────────────────────── */
 
-      {/* 2. Quoi faire maintenant */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <Panel className="lg:col-span-2" icon={<PlayCircle className="w-4 h-4" />} title="Reprendre là où tu t’es arrêté">
-          {data.resume.length ? (
-            <ul className="divide-y divide-line">
-              {data.resume.map((c) => {
+const DAY_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+function WeekStrip({ data }: { data: Overview }) {
+  const last7 = data.calendar.slice(-7).map((d) => ({ ...d, day: new Date(`${d.date}T12:00:00`) }));
+  const w = data.week;
+  return (
+    <section aria-label="Ta semaine" data-tour="home-stats"
+      className="rounded-2xl border border-line bg-white px-5 py-4 grid grid-cols-2 md:grid-cols-[repeat(3,minmax(0,1fr))_auto] gap-x-6 gap-y-4 items-center">
+      <Stat icon={<Flame className="w-4 h-4 text-gold" />} label="Série"
+        value={`${data.streak.current} ${data.streak.current > 1 ? 'jours' : 'jour'}`}
+        note={data.streak.best > data.streak.current ? `record : ${data.streak.best} j` : data.streak.current ? 'continue demain' : 'un exercice la lance'} />
+      <Stat icon={<ListChecks className="w-4 h-4 text-ink-faint" />} label="Questions (7 j)" value={String(w.questions)}
+        note={<Delta now={w.questions} before={data.previous_week.questions} />} />
+      <Stat icon={<Target className="w-4 h-4 text-ink-faint" />} label="Réussite (7 j)"
+        value={w.success_rate !== null ? `${w.success_rate} %` : '—'}
+        note={w.success_rate === null ? 'évalue tes réponses' : `${data.totals.exercises_done} exercice${data.totals.exercises_done > 1 ? 's' : ''} réussi${data.totals.exercises_done > 1 ? 's' : ''} en tout`} />
+      <div className="col-span-2 md:col-span-1 flex items-end gap-1.5 md:pl-6 md:border-l md:border-line" role="img"
+        aria-label={`${w.active_days} jour${w.active_days > 1 ? 's' : ''} actif${w.active_days > 1 ? 's' : ''} sur les 7 derniers jours`}>
+        {last7.map((d) => (
+          <div key={d.date} className="flex flex-col items-center gap-1" title={`${d.count ? `${d.count} activité${d.count > 1 ? 's' : ''}` : 'Aucune activité'} — ${d.day.getDate()} ${MONTHS[d.day.getMonth()]}`}>
+            <span className="w-6 h-6 rounded-md" style={{ background: HEAT[heatStep(d.count)], border: d.count ? 'none' : '1px solid #e7e3dc' }} />
+            <span className="text-[10.5px] text-ink-faint">{DAY_LETTERS[d.day.getDay()]}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Stat({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string; note?: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{label}</span>
+      </div>
+      <div className="mt-1 text-[22px] font-bold text-ink leading-tight fd-nums" style={{ fontFamily: "'DM Mono', ui-monospace, monospace", letterSpacing: '-0.02em' }}>{value}</div>
+      {note && <div className="text-[12px] text-ink-faint leading-snug truncate">{note}</div>}
+    </div>
+  );
+}
+
+/* ───────────────────────────── À faire maintenant (un seul encart) ───────────────────────────── */
+
+function NextSteps({ data }: { data: Overview }) {
+  const resume = data.resume.slice(0, 3);
+  const review = data.review.slice(0, 3);
+  return (
+    <section className="rounded-2xl border border-line bg-white">
+      <div className={`grid ${resume.length && review.length ? 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : ''}`}>
+        {resume.length > 0 && (
+          <div className="p-5 sm:p-6">
+            <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><PlayCircle className="w-4 h-4 text-ink-faint" /> Reprendre</h2>
+            <ul className="mt-2 divide-y divide-line">
+              {resume.map((c) => {
                 const pct = c.total ? Math.round(((c.assessed ?? 0) / c.total) * 100) : 0;
                 return (
                   <li key={c.id}>
-                    <Link to={c.url} className="group flex items-center gap-4 py-3.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                    <Link to={c.url} className="group flex items-center gap-4 py-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14.5px] font-semibold text-ink truncate group-hover:underline">{c.title}</p>
-                        <p className="text-[12.5px] text-ink-faint mt-0.5">
-                          {c.chapter ?? 'Sans chapitre'} · {ago(c.last_at)}
-                        </p>
-                        <div className="mt-2 flex items-center gap-3">
-                          <div className="h-1.5 flex-1 max-w-[260px] rounded-full bg-[#f2f1ee] overflow-hidden">
+                        <p className="text-[14px] font-semibold text-ink truncate group-hover:underline">{c.title}</p>
+                        <div className="mt-1.5 flex items-center gap-3">
+                          <div className="h-1.5 flex-1 max-w-[220px] rounded-full bg-[#f2f1ee] overflow-hidden">
                             <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="text-[12px] text-ink-faint fd-nums">{c.assessed} / {c.total} questions</span>
+                          <span className="text-[12px] text-ink-faint fd-nums whitespace-nowrap">{c.assessed} / {c.total} · {ago(c.last_at)}</span>
                         </div>
                       </div>
-                      <span className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-hover">
-                        Continuer <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                      </span>
+                      <ArrowRight className="w-4 h-4 text-brand-hover flex-shrink-0 transition-transform group-hover:translate-x-0.5" />
                     </Link>
                   </li>
                 );
               })}
             </ul>
-          ) : (
-            <Empty
-              text="Rien en cours pour l’instant. Commence un exercice : il apparaîtra ici dès ta première auto-évaluation."
-              action={fallbackExercise
-                ? { to: `/exercises/${fallbackExercise.id}`, label: `Commencer « ${fallbackExercise.title} »` }
-                : { to: `/exercises${levelQuery}`, label: 'Choisir un exercice' }} />
-          )}
-        </Panel>
-
-        <Panel icon={<RotateCcw className="w-4 h-4" />} title="À revoir"
-          action={data.review.length ? { to: '/revision-lists', label: 'Listes' } : undefined}>
-          {data.review.length ? (
-            <ul className="flex flex-col gap-1.5">
-              {data.review.map((c) => (
+          </div>
+        )}
+        {review.length > 0 && (
+          <div className={`p-5 sm:p-6 ${resume.length ? 'border-t lg:border-t-0 lg:border-l border-line' : ''}`}>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><RotateCcw className="w-4 h-4 text-ink-faint" /> À revoir</h2>
+              <Link to="/revision-lists" className="text-[12.5px] font-semibold text-brand-hover hover:underline">Mes listes</Link>
+            </div>
+            <ul className="mt-2 flex flex-col">
+              {review.map((c) => (
                 <li key={c.id}>
-                  <Link to={c.url} className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 -mx-2.5 hover:bg-[#faf9f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" aria-hidden />
-                    <span className="min-w-0">
-                      <span className="block text-[13.5px] font-medium text-ink truncate">{c.title}</span>
-                      <span className="block text-[12px] text-ink-faint">{typeLabel(c.type)}{c.chapter ? ` · ${c.chapter}` : ''}</span>
-                    </span>
+                  <Link to={c.url} className="flex items-center gap-2.5 py-2 group">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" aria-hidden />
+                    <span className="min-w-0 flex-1 text-[13.5px] font-medium text-ink truncate group-hover:underline">{c.title}</span>
+                    <span className="text-[11.5px] text-ink-faint flex-shrink-0">{typeLabel(c.type)}</span>
                   </Link>
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="text-[13px] text-ink-faint leading-relaxed">
-              Rien à revoir. Quand tu marques un exercice « Échoué », il t’attend ici pour une seconde tentative.
-            </p>
-          )}
-          <RevisionCta />
-        </Panel>
+            <RevisionCta />
+          </div>
+        )}
       </div>
+      {data.weak_notions.length > 0 && (
+        <div className="px-5 sm:px-6 py-3 border-t border-line bg-[#fcfbf9] rounded-b-2xl flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px]">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><Target className="w-4 h-4 text-gold-strong" /> À retravailler :</span>
+          <span className="text-ink-soft min-w-0">{data.weak_notions.slice(0, 3).map((n) => n.label).join(', ')}</span>
+          <Link to="/skill-iq" className="ml-auto inline-flex items-center gap-1.5 font-semibold text-brand-hover hover:underline">
+            <Brain className="w-4 h-4" /> Me tester
+          </Link>
+        </div>
+      )}
+    </section>
+  );
+}
 
-      {/* 3. Régularité */}
-      <Panel icon={<CalendarDays className="w-4 h-4" />} title="Ta régularité"
+/* ───────────────────────────── Sur l'année (page Statistiques) ───────────────────────────── */
+
+/** Régularité (calendrier) et maîtrise du programme : bilan de long terme, sur la page Statistiques. */
+export const YearOverview: React.FC = () => {
+  const [data, setData] = useState<Overview | null>(null);
+  useEffect(() => { getDashboardOverview().then(setData).catch(() => {}); }, []);
+  if (!data) return null;
+  return (
+    <div className="flex flex-col gap-6">
+      <Panel icon={<CalendarDays className="w-4 h-4" />} title="Ma régularité sur l’année"
         subtitle="Chaque case est un jour : questions auto-évaluées, exercices terminés, chronos enregistrés et quiz Skill IQ.">
         <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
           <ActivityCalendar days={data.calendar} />
@@ -139,42 +183,10 @@ export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?:
           </dl>
         </div>
       </Panel>
-
-      {/* 4. Maîtrise du programme */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <Panel className="lg:col-span-2" icon={<BookOpen className="w-4 h-4" />} title="Ta maîtrise du programme"
-          subtitle={data.level ? `Programme de ${data.level.name}` : 'Choisis ton niveau dans ton profil pour voir tout ton programme.'}>
-          <ChapterMastery chapters={data.chapters} coverage={data.coverage} hasLevel={!!data.level} />
-        </Panel>
-
-        <Panel icon={<Target className="w-4 h-4" />} title="Notions à retravailler">
-          {data.weak_notions.length ? (
-            <>
-              <ul className="flex flex-col gap-3">
-                {data.weak_notions.map((n) => (
-                  <li key={n.slug}>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[13.5px] font-medium text-ink">{n.label}</span>
-                      <span className="text-[12px] text-gold-strong font-semibold fd-nums">{n.mastery_pct} %</span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-[#f2f1ee] overflow-hidden">
-                      <div className="h-full rounded-full bg-gold" style={{ width: `${Math.max(n.mastery_pct, 3)}%` }} />
-                    </div>
-                    <p className="text-[11.5px] text-ink-faint mt-1">sur {n.assessed} question{n.assessed > 1 ? 's' : ''} évaluée{n.assessed > 1 ? 's' : ''}</p>
-                  </li>
-                ))}
-              </ul>
-              <Link to="/skill-iq" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-hover hover:underline">
-                <Brain className="w-4 h-4" /> Me tester avec Skill IQ
-              </Link>
-            </>
-          ) : (
-            <p className="text-[13px] text-ink-faint leading-relaxed">
-              Aucune notion en difficulté. Elles apparaissent ici dès 2 questions évaluées sur une même notion, sous 60 % de réussite.
-            </p>
-          )}
-        </Panel>
-      </div>
+      <Panel icon={<BookOpen className="w-4 h-4" />} title="Ma maîtrise du programme"
+        subtitle={data.level ? `Programme de ${data.level.name}` : 'Choisis ton niveau dans ton profil pour voir tout ton programme.'}>
+        <ChapterMastery chapters={data.chapters} coverage={data.coverage} hasLevel={!!data.level} />
+      </Panel>
     </div>
   );
 };
@@ -229,35 +241,17 @@ function Header({ username, data, next, levelQuery, fallbackExercise }: {
 
 /* ───────────────────────────── Briques ───────────────────────────── */
 
-function Tile({ icon, label, value, unit, note, delta, tone }: {
-  icon: React.ReactNode; label: string; value: React.ReactNode; unit?: string;
-  note?: string; delta?: React.ReactNode; tone?: 'gold';
-}) {
-  return (
-    <div className="rounded-2xl border border-line bg-white px-4 py-4 min-w-0">
-      <div className={`flex items-center gap-2 ${tone === 'gold' ? 'text-gold' : 'text-ink-faint'}`}>
-        {icon}
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{label}</span>
-      </div>
-      <div className="mt-3 flex items-baseline gap-1.5">
-        <span className="text-[28px] font-bold text-ink leading-none fd-nums" style={{ fontFamily: "'DM Mono', ui-monospace, monospace", letterSpacing: '-0.02em' }}>{value}</span>
-        {unit && <span className="text-[12.5px] font-semibold text-ink-faint">{unit}</span>}
-      </div>
-      <div className="mt-2 text-[12px] text-ink-faint leading-snug min-h-[16px]">{delta ?? note}</div>
-    </div>
-  );
-}
 
 /** Écart avec les 7 jours précédents : flèche + texte (jamais la couleur seule). */
 function Delta({ now, before, unit = '' }: { now: number; before: number; unit?: string }) {
   const d = now - before;
-  if (d === 0) return <span className="inline-flex items-center gap-1"><Minus className="w-3.5 h-3.5" /> comme les 7 jours d’avant</span>;
+  if (d === 0) return <span className="inline-flex items-center gap-1"><Minus className="w-3.5 h-3.5" /> comme la semaine d’avant</span>;
   const up = d > 0;
   return (
     <span className={`inline-flex items-center gap-1 ${up ? 'text-brand-hover' : 'text-ink-soft'}`}>
       {up ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
       <span className="fd-nums font-semibold">{up ? '+' : '−'}{Math.abs(d)}{unit}</span>
-      <span className="text-ink-faint">vs 7 j d’avant</span>
+      <span className="text-ink-faint">vs semaine d’avant</span>
     </span>
   );
 }
@@ -284,17 +278,6 @@ function Panel({ icon, title, subtitle, action, className = '', children }: {
   );
 }
 
-function Empty({ text, action }: { text: string; action: { to: string; label: string } }) {
-  return (
-    <div className="rounded-xl bg-[#faf9f7] border border-dashed border-line px-5 py-6 flex flex-col sm:flex-row sm:items-center gap-4">
-      <Sparkles className="w-5 h-5 text-gold flex-shrink-0" aria-hidden />
-      <p className="text-[13.5px] text-ink-soft flex-1 leading-relaxed">{text}</p>
-      <Link to={action.to} className="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 rounded-lg bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover self-start sm:self-auto max-w-full">
-        <span className="truncate">{action.label}</span> <ArrowRight className="w-4 h-4 flex-shrink-0" />
-      </Link>
-    </div>
-  );
-}
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (

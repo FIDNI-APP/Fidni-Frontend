@@ -5,6 +5,7 @@ import { ArrowRight, Eye, MessageSquare } from 'lucide-react';
 import { Content, VoteValue } from '@/types';
 import type { ExerciseListItem, ExamListItem, LessonListItem } from '@/types/content';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
+import { NewBadge, isNewContent } from './NewBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import {
@@ -130,18 +131,20 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
     ? (typeof content.class_levels[0] === 'string' ? content.class_levels[0] : content.class_levels[0].name)
     : '';
 
-  const voteCount = (content as any).vote_count ?? 0;
+  const likeCount = (content as any).like_count ?? 0;
+  const dislikeCount = (content as any).dislike_count ?? 0;
   const userVote = (content as any).user_vote ?? 0;
   const viewCount = content.view_count ?? 0;
   const commentCount = (content as any).comment_count ?? 0;
 
   return (
     <div
-      className="group cursor-pointer h-full"
+      className="group relative cursor-pointer h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
+      {isNewContent(content as any) && <NewBadge />}
       <div
         className="fd-card h-full flex flex-col overflow-hidden"
         style={isHovered ? { boxShadow: `0 14px 40px ${theme.glow}` } : undefined}
@@ -237,7 +240,8 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
           {/* Vote pill */}
           <div onClick={(e) => e.stopPropagation()}>
             <VoteButtons
-              initialVotes={voteCount}
+              likes={likeCount}
+              dislikes={dislikeCount}
               onVote={(value) => onVote(content.id.toString(), value, contentType)}
               vertical={false}
               userVote={userVote}

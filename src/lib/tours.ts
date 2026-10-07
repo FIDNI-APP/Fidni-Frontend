@@ -50,12 +50,12 @@ const SOLUTION: TourStep = {
 const AUTO_EVAL: TourStep = {
   target: 'auto-eval',
   title: 'Auto-évaluation',
-  body: "Après chaque question, dis si tu l'as réussie : Fidni repère tes notions à retravailler.",
+  body: "Un clic sous chaque question : Réussi, En partie ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
 };
 const VOTE: TourStep = {
   target: 'vote',
-  title: 'Voter',
-  body: (c) => `${c.kind === 'lesson' ? 'Cette leçon t’a aidé' : 'Ce contenu t’a aidé'} ? Vote pour le faire remonter pour les autres élèves.`,
+  title: 'J’aime',
+  body: (c) => `${c.kind === 'lesson' ? 'Cette leçon t’a aidé' : 'Ce contenu t’a aidé'} ? Mets-lui un j’aime : les listes sont triées des plus aimés aux moins aimés, ça guide les autres élèves.`,
 };
 
 const SIGNALER: TourStep = {
@@ -82,7 +82,7 @@ export const TOURS: Tour[] = [
       { target: 'menu-mobile', title: 'Le menu', body: 'Toutes les rubriques : leçons, exercices, examens, concours et ton espace perso.' },
       { target: 'recherche', title: 'Rechercher', body: 'Un mot-clé, un chapitre ou un théorème (ex. « TVI ») pour trouver un contenu.' },
       { target: 'vue-switch', title: 'Classique ou Campus', body: 'Change l’accueil : ce tableau de bord, ou le plan illustré du campus.' },
-      { target: 'home-stats', title: 'Ton tableau de bord', body: 'Ta série de jours, tes réussites et ton temps d’étude, mis à jour à chaque séance.' },
+      { target: 'home-stats', title: 'Ta semaine', body: 'Ta série de jours, tes questions et ta réussite des 7 derniers jours. Le bilan sur l’année est dans Statistiques.' },
       { target: 'home-reco', title: 'Pour toi', body: 'Des contenus choisis pour ton niveau. Ouvre une carte pour commencer.' },
       { target: 'nav-compte', title: 'Ton compte', body: 'Ton profil, tes statistiques et tes paramètres.' },
       { target: 'aide', title: 'Un doute ?', body: 'Chaque page a son guide : clique sur ? pour le revoir.' },
@@ -121,14 +121,14 @@ export const TOURS: Tour[] = [
       {
         target: 'detail-onglets',
         title: 'Les onglets',
-        body: 'Discussions pour poser tes questions, Solutions pour voir celles des autres élèves, Activité pour te situer.',
+        body: 'Solutions des élèves pour comparer ta démarche, Activité pour te situer. Les questions et la discussion sont en bas de l’exercice.',
       },
       { target: 'detail-solutions', title: 'Toutes les solutions', body: 'Affiche ou masque d’un coup la solution de chaque question.' },
       SOLUTION,
       AUTO_EVAL,
       { target: 'detail-progression', title: 'Ta progression', body: 'Elle se remplit à mesure que tu t’auto-évalues.' },
       { target: 'detail-chrono', title: 'Chronomètre', body: 'Démarre, fais une pause, puis enregistre : tu retrouves tous tes temps juste en dessous.' },
-      { target: 'detail-terminer', title: 'Terminer', body: (c) => `Fini ? Marque ${le(c)} Validé ou Échoué pour te comparer aux autres élèves.` },
+      { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => `Tout bon ? « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque ${le(c)} « À revoir ».` },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-le à tes favoris.' },
       { target: 'detail-liste', title: 'Liste de révision', body: 'Range-le dans une liste pour le réviser plus tard ou l’imprimer.' },
       { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ou télécharger en PDF façon sujet d’examen.' },
@@ -147,8 +147,8 @@ export const TOURS: Tour[] = [
       SOLUTION,
       AUTO_EVAL,
       { target: 'examen-copie', title: 'Ta copie', body: 'Évalue chaque question après l’épreuve : ta note estimée se calcule avec le barème, exercice par exercice.' },
-      { target: 'detail-onglets', title: 'Les onglets', body: 'Discussions pour poser tes questions, Solutions pour voir celles des autres élèves, Activité pour te situer.' },
-      { target: 'detail-terminer', title: 'Terminer', body: 'Fini ? Marque le sujet Validé ou Échoué.' },
+      { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche, Activité pour te situer. Les questions et la discussion sont en bas du sujet.' },
+      { target: 'detail-terminer', title: 'Où en es-tu ?', body: 'Après l’épreuve : « Tout réussi » coche toutes les questions, puis décoche celles que tu as ratées. Ta note se calcule avec le barème.' },
       { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ou télécharger le sujet en PDF pour le faire sur papier.' },
       VOTE,
       SIGNALER,
@@ -159,8 +159,8 @@ export const TOURS: Tour[] = [
     match: /^\/(exercises|exams)\/\d+\/?$/,
     requires: 'activite-bilan',
     steps: [
-      { target: 'activite-bilan', title: 'Ton bilan', body: 'Ton résultat et ton temps, comparés à ceux des autres élèves.' },
-      { target: 'activite-questions', title: 'Question par question', body: 'Ton statut et la part d’élèves qui réussissent chaque question. « Piège » : celle où la plupart échouent.' },
+      { target: 'activite-bilan', title: 'Ton bilan', body: 'Tes questions réussies, en partie et à revoir, à côté de la réussite des autres élèves.' },
+      { target: 'activite-questions', title: 'Question par question', body: 'Une colonne par question : la part d’élèves qui la réussissent. Clique une colonne pour le détail, et pour revenir à la question.' },
       { target: 'activite-notions', title: 'Tes notions', body: 'Les plus faibles d’abord : c’est là qu’il faut retravailler.' },
     ],
   },
@@ -169,11 +169,11 @@ export const TOURS: Tour[] = [
   {
     id: 'lecon',
     match: /^\/lessons\/\d+\/?$/,
-    requires: 'detail-onglets',
+    requires: 'lecon-contenu',
     steps: [
       { target: ['lecon-sommaire', 'lecon-sommaire-barre'], title: 'Le sommaire', body: 'Toutes les parties de la leçon : clique pour y aller. La partie en cours est surlignée et Fidni retient où tu t’es arrêté.' },
       { target: 'lecon-contenu', title: 'La leçon', body: 'Définitions, théorèmes, propriétés : chaque encadré annonce sa nature en en-tête.' },
-      { target: 'detail-onglets', title: 'Une question ?', body: 'L’onglet Discussions sert à poser tes questions sur la leçon.' },
+      { target: 'detail-discussion', title: 'Une question ?', body: 'Pose tes questions sur la leçon ici, en bas de la page.' },
       { target: 'lecon-imprimer', title: 'Imprimer', body: 'Télécharge la leçon en PDF, mise en page comme un polycopié, pour la lire ou l’annoter sur papier.' },
       { target: 'detail-cahier', title: 'Cahier', body: 'Ajoute la leçon à ton cahier de cours : elle va directement dans son chapitre.' },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-la à tes favoris.' },

@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { SignupCard } from '@/components/auth/SignupPrompt';
 import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
-import ExerciseRenderer from './ExerciseRenderer';
+import ExerciseRenderer, { type AssessChanges } from './ExerciseRenderer';
 import { countQuestionsWithSolutions } from '@/lib/utils/contentHelpers';
 import { LessonRenderer } from './LessonRenderer';
 import type { FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
@@ -17,6 +17,7 @@ import { NotebookPaper, paperTextStyle } from '@/components/notebook/NotebookPap
 import { useLessonOutline } from '@/components/lesson/useLessonOutline';
 import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/LessonOutline';
 import { ExamView } from './ExamView';
+import { trackAction } from '@/lib/usage';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -24,6 +25,8 @@ interface ContentMainCardProps {
   content: ContentItem;
   contentType: 'exercise' | 'exam' | 'lesson';
   voteCount: number;
+  likeCount?: number;
+  dislikeCount?: number;
   userVote: 1 | -1 | 0;
   onVote: (value: 1 | -1 | 0) => Promise<void>;
   showSolution: boolean;
@@ -43,9 +46,8 @@ interface ContentMainCardProps {
   // Question-level progress
   questionProgress?: Record<string, AssessmentStatus>;
   onQuestionAssess?: (path: string, status: AssessmentStatus) => void;
-  // Solution validation
-  solutionValidations?: Record<string, string | null>;
-  onValidateSolution?: (path: string, validation: string | null) => void;
+  /** Plusieurs questions d'un coup (« Tout réussi » d'une question à sous-questions). */
+  onAssessMany?: (changes: AssessChanges) => void;
   /** Examen : enregistre la durée d'une épreuve terminée. */
   onSaveExamSession?: (seconds: number) => Promise<void>;
   /** Ouvre « Signaler une erreur » (avec la question concernée si elle est connue). */
@@ -63,6 +65,8 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   content,
   contentType,
   voteCount,
+  likeCount,
+  dislikeCount,
   userVote,
   onVote,
   showSolution,
@@ -80,8 +84,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   saving,
   questionProgress,
   onQuestionAssess,
-  solutionValidations,
-  onValidateSolution,
+  onAssessMany,
   onSaveExamSession,
   onReport,
 }) => {
@@ -132,7 +135,6 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
           path,
           {
             status,
-            solution_validation: solutionValidations?.[path] || null,
             assessed_at: new Date().toISOString()
           }
         ])
@@ -198,7 +200,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   // Votes : en haut à droite de la carte du contenu, visibles sans descendre jusqu'en bas.
   const votes = (
     <div data-tour="vote" className="ml-auto shrink-0">
-      <VoteButtons initialVotes={voteCount} onVote={onVote} vertical={false} userVote={userVote} size="sm" />
+      <VoteButtons likes={likeCount} dislikes={dislikeCount} initialVotes={voteCount} onVote={onVote} userVote={userVote} size="sm" />
     </div>
   );
 
@@ -221,8 +223,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
           isAuthenticated={isAuthenticated}
           questionProgress={questionProgress}
           onQuestionAssess={onQuestionAssess}
-          solutionValidations={solutionValidations}
-          onValidateSolution={onValidateSolution}
+          onAssessMany={onAssessMany}
           onSaveSession={onSaveExamSession}
           sessionCount={getSessionCount()}
           onOpenHistory={loadHistory}
@@ -262,7 +263,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                 </Link>
               ) : questionsWithSolutions > 0 ? (
                 <button
-                  onClick={() => setShowAllSolutions(!showAllSolutions)}
+                  onClick={() => { if (!showAllSolutions) trackAction('toutes-solutions'); setShowAllSolutions(!showAllSolutions); }}
                   data-tour="detail-solutions"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap ${
                     showAllSolutions
@@ -293,7 +294,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                 structure={content.structure as unknown as FlexibleExerciseStructure}
                 progress={progressData}
                 onAssess={onQuestionAssess}
-                onValidateSolution={onValidateSolution}
+                onAssessMany={onAssessMany}
                 interactive={isAuthenticated}
                 showAllSolutions={showAllSolutions}
                 compact={false}

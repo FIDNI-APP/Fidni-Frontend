@@ -12,16 +12,16 @@ import type { AssessmentStatus, ContentExam } from '@/types/content';
 import type { ExerciseBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { AdSlot } from '@/components/ads/AdSlot';
-import ExerciseRenderer from './ExerciseRenderer';
+import ExerciseRenderer, { type AssessChanges } from './ExerciseRenderer';
 import { SignupCard } from '@/components/auth/SignupPrompt';
+import { trackAction } from '@/lib/usage';
 
 interface Props {
   content: ContentExam;
   isAuthenticated: boolean;
   questionProgress?: Record<string, AssessmentStatus>;
   onQuestionAssess?: (path: string, status: AssessmentStatus) => void;
-  solutionValidations?: Record<string, string | null>;
-  onValidateSolution?: (path: string, validation: string | null) => void;
+  onAssessMany?: (changes: AssessChanges) => void;
   onSaveSession?: (seconds: number) => Promise<void>;
   sessionCount: number;
   onOpenHistory: () => void;
@@ -144,7 +144,7 @@ function useEpreuve(examId: number | string, durationMin: number, onDone: (secon
 // ───────────────────────────── Vue
 
 export const ExamView: React.FC<Props> = ({
-  content, isAuthenticated, questionProgress, onQuestionAssess, solutionValidations, onValidateSolution,
+  content, isAuthenticated, questionProgress, onQuestionAssess, onAssessMany,
   onSaveSession, sessionCount, onOpenHistory, votes, footer, onReport,
 }) => {
   const structure = content.structure as unknown as FlexibleExerciseStructure | undefined;
@@ -180,7 +180,7 @@ export const ExamView: React.FC<Props> = ({
 
   const progressData = questionProgress
     ? Object.fromEntries(Object.entries(questionProgress).map(([path, status]) => [path, {
-      status, solution_validation: solutionValidations?.[path] || null, assessed_at: new Date().toISOString(),
+      status, assessed_at: new Date().toISOString(),
     }]))
     : undefined;
 
@@ -335,7 +335,7 @@ export const ExamView: React.FC<Props> = ({
             <div className="flex flex-col items-end gap-2.5 ml-auto">
             {votes}
             {solutionCount > 0 && (
-              <button type="button" disabled={locked} onClick={() => setShowAll((v) => !v)} data-tour="detail-solutions"
+              <button type="button" disabled={locked} onClick={() => { if (!showAll) trackAction('toutes-solutions'); setShowAll((v) => !v); }} data-tour="detail-solutions"
                 title={locked ? 'Disponible à la fin de l’épreuve' : undefined}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
                   showAll && !locked ? 'bg-brand-soft text-brand-hover border-brand-line' : 'bg-white text-ink-soft border-line hover:border-ink'}`}>
@@ -381,7 +381,7 @@ export const ExamView: React.FC<Props> = ({
                   structure={{ version: structure?.version || '2.1', blocks: p.blocks }}
                   progress={progressData}
                   onAssess={onQuestionAssess}
-                  onValidateSolution={onValidateSolution}
+                  onAssessMany={onAssessMany}
                   interactive={isAuthenticated}
                   showAllSolutions={showAll}
                   compact={false}

@@ -54,6 +54,8 @@ export interface RecommendedContent {
   exercises: any[];
   lessons: any[];
   exams: any[];
+  /** Niveau de l'élève (les recommandations en viennent), null s'il n'est pas renseigné. */
+  level: string | null;
 }
 
 /**
@@ -92,6 +94,7 @@ export async function getRecommendedContent(): Promise<RecommendedContent> {
     exercises: normalizeList(data.exercises || []),
     lessons: normalizeList(data.lessons || []),
     exams: normalizeList(data.exams || []),
+    level: data.level ?? null,
   };
 }
 

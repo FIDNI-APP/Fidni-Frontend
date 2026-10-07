@@ -4,6 +4,7 @@ import { Menu, Search as SearchIcon, ChevronRight } from 'lucide-react';
 import { useBreadcrumb, type Crumb } from '@/contexts/BreadcrumbContext';
 import { CampusViewSwitch } from '@/components/campus/CampusViewSwitch';
 import { TourHelpButton } from '@/components/tour/TourProvider';
+import { trackAction } from '@/lib/usage';
 
 interface TopBarProps {
   onOpenMobile: () => void;
@@ -14,6 +15,7 @@ const SECTION_LABELS: Record<string, string> = {
   '': 'Accueil',
   exercises: 'Exercices',
   exams: 'Examens',
+  nationaux: 'Examens nationaux',
   lessons: 'Leçons',
   'learning-path': 'Parcours',
   classrooms: 'Classes',
@@ -37,12 +39,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   const [searchValue, setSearchValue] = useState('');
 
   const parts = location.pathname.split('/').filter(Boolean);
-  const segment = parts[0] ?? '';
+  // /exams/nationaux est une section à part entière (pas une page de la section Examens).
+  const segment = parts[0] === 'exams' && parts[1] === 'nationaux' ? 'nationaux' : (parts[0] ?? '');
   const sectionLabel = SECTION_LABELS[segment] ?? 'Fidni';
   const isHome = parts.length === 0;
   // A deeper segment (e.g. an id) means the section name should link back to
   // its listing; on the listing page itself it's the current crumb (plain).
-  const hasDeeper = parts.length > 1;
+  const hasDeeper = parts.length > (segment === 'nationaux' ? 2 : 1);
 
   // A page (e.g. content detail) can push a rich trail via context; otherwise
   // fall back to the current route's section label.
@@ -50,12 +53,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
     ? crumbs
     : isHome
       ? []
-      : [{ label: sectionLabel, to: hasDeeper ? `/${segment}` : undefined }];
+      : [{ label: sectionLabel, to: hasDeeper ? (segment === 'nationaux' ? '/exams/nationaux' : `/${segment}`) : undefined }];
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchValue.trim();
-    if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
+    if (q) { trackAction('recherche'); navigate(`/search?q=${encodeURIComponent(q)}`); }
   };
 
   const crumbLink: React.CSSProperties = {

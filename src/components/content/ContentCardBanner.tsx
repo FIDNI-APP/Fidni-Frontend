@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Bookmark, Loader2, Check, Edit, Trash2 } from 'lucide-react';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 export interface SubjectTheme {
   from: string;
@@ -22,15 +23,16 @@ const DEFAULT_THEME: SubjectTheme = INK_THEME;
 export const getSubjectTheme = (_name?: string): SubjectTheme => DEFAULT_THEME;
 
 export interface DifficultyConfig {
+  level?: number;
   label: string;
   bg: string;
   text: string;
 }
 // Tons adoucis, ceux du reste du site (vert / ambre / brique), au lieu des couleurs vives de Tailwind.
 export const DIFFICULTY_CFG: Record<'easy' | 'medium' | 'hard', DifficultyConfig> = {
-  easy:   { label: 'Facile',    bg: '#eaf3ed', text: '#15633c' },
-  medium: { label: 'Moyen',     bg: '#faf3e2', text: '#9a6e1c' },
-  hard:   { label: 'Difficile', bg: '#fbecea', text: '#a23b34' },
+  easy:   { level: 1, label: 'Facile',    bg: '#eaf3ed', text: '#15633c' },
+  medium: { level: 2, label: 'Moyen',     bg: '#faf3e2', text: '#9a6e1c' },
+  hard:   { level: 3, label: 'Difficile', bg: '#fbecea', text: '#a23b34' },
 };
 
 export interface ContentCardBannerProps {
@@ -103,7 +105,7 @@ export const ContentCardBanner: React.FC<ContentCardBannerProps> = ({
           <span style={{ ...chip, background: '#f2f1ee', color: '#4b4843' }}>{subjectName || typeLabel}</span>
           {difficulty && (
             <span style={{ ...chip, background: difficulty.bg, color: difficulty.text }}>
-              <span style={{ width: 5, height: 5, borderRadius: 99, background: 'currentColor' }} />
+              <DifficultyBars level={difficulty.level} size={10} />
               {difficulty.label}
             </span>
           )}

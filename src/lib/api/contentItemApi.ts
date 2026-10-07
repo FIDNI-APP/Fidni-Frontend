@@ -65,9 +65,11 @@ function buildQueryParams(filters: ContentFilters | ContentExamFilters): URLSear
   if (filters.showCompleted) params.append('showCompleted', 'true');
   if (filters.showFailed) params.append('showFailed', 'true');
 
-  if ('is_national' in filters && filters.is_national !== undefined) {
-    params.append('is_national', String(filters.is_national));
+  if (filters.is_national !== undefined) {
+    params.append('is_national_exam', String(filters.is_national));
   }
+  if (filters.national_year_min) params.append('national_year_min', String(filters.national_year_min));
+  if (filters.national_year_max) params.append('national_year_max', String(filters.national_year_max));
   if ('national_year' in filters && (filters as ContentExamFilters).national_year) {
     params.append('national_year', String((filters as ContentExamFilters).national_year));
   }
@@ -138,7 +140,7 @@ export const exerciseContentAPI = {
   },
 
   delete: async (id: string): Promise<void> => { await api.delete(`/contents/${id}/`); },
-  vote: async (id: string, value: number): Promise<{ vote_count: number; user_vote: number }> => {
+  vote: async (id: string, value: number): Promise<{ vote_count: number; like_count?: number; dislike_count?: number; user_vote: number }> => {
     const response = await api.post(`/contents/${id}/vote/`, { value });
     return response.data;
   },

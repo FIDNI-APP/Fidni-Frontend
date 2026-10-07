@@ -4,14 +4,21 @@
  * Layout compact, espacements naturels.
  * Chaque question a son propre toggle solution.
  * Option globale pour tout développer/réduire.
+ *
+ * Auto-évaluation en un clic (06/10/2026) : trois boutons sous chaque question (Réussi / En partie /
+ * À revoir) ; re-cliquer le bouton actif l'efface. Discrets (Natsu : « trop intrusifs », puis les icônes seules
+ * « pas intuitives ») : les trois boutons gardent leur texte, dans un groupe gris clair sans cadre ; seul le
+ * choix fait prend sa couleur. La solution : une simple icône d'œil. Une question à sous-questions a en plus « Tout
+ * réussi ». Avant : un menu déroulant (deux clics par question) et un second menu « Comparer » qui
+ * redisait la même chose.
  */
 
-import React, { useState, useRef } from 'react';
-import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import { Check, X, RotateCcw, HelpCircle, Eye, EyeOff, ThumbsUp, GitCompare, AlertCircle, ClipboardCheck, ChevronDown, Flag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, RotateCcw, CircleDot, Eye, EyeOff, Flag, CheckCheck } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
+import { trackAction } from '@/lib/usage';
 
 // =====================
 // TYPES
@@ -21,16 +28,18 @@ interface ProgressData {
   [path: string]: {
     status: AssessmentStatus;
     assessed_at?: string;
-    /** Validation de la solution par l'élève (renvoyée par l'API de progression). */
-    solution_validation?: string | null;
   };
 }
+
+/** Plusieurs questions d'un coup : chemin → statut (null = effacer). */
+export type AssessChanges = Record<string, AssessmentStatus | null>;
 
 interface ExerciseRendererProps {
   structure: FlexibleExerciseStructure;
   progress?: ProgressData;
   onAssess?: (path: string, status: AssessmentStatus) => void;
-  onValidateSolution?: (path: string, validation: string | null) => void;
+  /** « Tout réussi » d'une question à sous-questions. */
+  onAssessMany?: (changes: AssessChanges) => void;
   interactive?: boolean;
   /** External control for showing all solutions */
   showAllSolutions?: boolean;
@@ -45,6 +54,9 @@ interface ExerciseRendererProps {
   /** Signaler une erreur sur une question (chemin « q2 », « q2.sq1 ») ; absent = pas de bouton. */
   onReport?: (path: string) => void;
 }
+
+/** Ancre d'une question (onglet Activité → « Revoir la question »). */
+export const questionAnchor = (path: string) => `question-${path.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
 // Signaler une erreur sur une question précise : petit drapeau à droite, visible au survol de la
 // question (toujours discret sur écran tactile, où le survol n'existe pas).
@@ -119,119 +131,61 @@ const SectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ bl
 );
 
 // =====================
-// ASSESSMENT BUTTONS
+// AUTO-ÉVALUATION EN UN CLIC
 // =====================
 
-interface AssessmentButtonsProps {
-  path: string;
-  currentStatus?: AssessmentStatus;
-  onAssess: (status: AssessmentStatus) => void;
-}
+const QUICK_OPTIONS: { value: AssessmentStatus; label: string; icon: React.ReactNode; on: string }[] = [
+  { value: 'success', label: 'Réussi', icon: <Check className="w-3.5 h-3.5" />, on: 'bg-white text-brand-hover shadow-sm' },
+  { value: 'partial', label: 'En partie', icon: <CircleDot className="w-3.5 h-3.5" />, on: 'bg-white text-gold-strong shadow-sm' },
+  { value: 'review', label: 'À revoir', icon: <RotateCcw className="w-3.5 h-3.5" />, on: 'bg-white text-[#a23b34] shadow-sm' },
+];
 
-// Shared "pill + dropdown" control used by both the self-assessment and the
-// solution-comparison. One option can be selected; selecting the active one
-// (or the "Effacer" row) clears it — so a choice is always cancellable.
-interface PillOption {
-  value: string;
-  icon: React.ReactNode;
-  label: string;
-  activeClass: string; // bg/text/border for the selected state
-}
-
-const PillDropdown: React.FC<{
-  current?: string | null;
-  options: PillOption[];
-  placeholderIcon: React.ReactNode;
-  placeholderLabel: string;
-  title?: string;
-  onSelect: (value: string) => void;
-  onClear: () => void;
-}> = ({ current, options, placeholderIcon, placeholderLabel, title, onSelect, onClear }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const active = options.find(o => o.value === current);
-
-  const toggleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(v => !v);
-  };
-
+/** Trois boutons côte à côte, discrets : un clic choisit, re-cliquer le choix actif l'efface. */
+const QuickAssess: React.FC<{ current?: AssessmentStatus; onAssess: (status: AssessmentStatus) => void }> = ({ current, onAssess }) => {
+  // « Échoué » (ancien choix) s'affiche comme « À revoir ».
+  const shown = current === 'failed' ? 'review' : current;
   return (
-    <div className="relative inline-flex">
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={toggleOpen}
-        title={title}
-        className={`inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
-          active ? active.activeClass : 'bg-white text-[#33302b] border-[#e7e3dc] hover:bg-[#f7f6f3]'
-        }`}
-      >
-        {active ? <>{active.icon}{active.label}</> : <>{placeholderIcon}{placeholderLabel}</>}
-        <ChevronDown className={`w-3 h-3 opacity-60 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      <FloatingPanel anchorRef={btnRef} open={isOpen} onClose={() => setIsOpen(false)} offset={4}
-        className="bg-white rounded-lg shadow-lg border border-[#e7e3dc] py-1 min-w-[160px]">
-            {options.map(o => {
-              const isActive = o.value === current;
-              return (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isActive) onClear(); else onSelect(o.value);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                    isActive ? o.activeClass : 'text-[#33302b] hover:bg-[#f7f6f3]'
-                  }`}
-                >
-                  {o.icon}
-                  <span className="flex-1 text-left">{o.label}</span>
-                  {isActive && <Check className="w-3.5 h-3.5" />}
-                </button>
-              );
-            })}
-            {active && (
-              <>
-                <div className="my-1 border-t border-[#f0efea]" />
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onClear(); setIsOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[#6b6862] hover:bg-[#f7f6f3]"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Effacer</span>
-                </button>
-              </>
-            )}
-      </FloatingPanel>
+    <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval"
+      className="inline-flex items-center rounded-full bg-[#f5f4f1] p-0.5">
+      {QUICK_OPTIONS.map((o) => {
+        const active = shown === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={active}
+            title={active ? `${o.label} : cliquer pour effacer` : o.label}
+            onClick={(e) => { e.stopPropagation(); onAssess(active && current ? current : o.value); }}
+            className={`inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              active ? `${o.on} font-semibold` : 'text-ink-faint hover:text-ink'}`}
+          >
+            {o.icon}{o.label}
+          </button>
+        );
+      })}
     </div>
   );
 };
 
-const ASSESS_OPTIONS: PillOption[] = [
-  { value: 'success', icon: <Check className="w-3.5 h-3.5" />,      label: 'Réussi',   activeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { value: 'partial', icon: <HelpCircle className="w-3.5 h-3.5" />, label: 'Partiel',  activeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { value: 'review',  icon: <RotateCcw className="w-3.5 h-3.5" />,  label: 'À revoir', activeClass: 'bg-[#f2f1ee] text-ink-soft border-line' },
-  { value: 'failed',  icon: <X className="w-3.5 h-3.5" />,          label: 'Échoué',   activeClass: 'bg-rose-50 text-rose-700 border-rose-200' },
-];
-
-const AssessmentButtons: React.FC<AssessmentButtonsProps> = ({ currentStatus, onAssess }) => (
-  <div className="inline-flex" data-tour="auto-eval">
-    <PillDropdown
-      current={currentStatus}
-      options={ASSESS_OPTIONS}
-      placeholderIcon={<ClipboardCheck className="w-3.5 h-3.5" />}
-      placeholderLabel="Auto-évaluation"
-      title="M'auto-évaluer"
-      onSelect={(v) => onAssess(v as AssessmentStatus)}
-      onClear={() => { if (currentStatus) onAssess(currentStatus); }} // same status toggles it off
-    />
-  </div>
-);
+/** Question à sous-questions : toutes réussies d'un clic (re-cliquer les efface). */
+const AllSuccessChip: React.FC<{ paths: string[]; progress?: ProgressData; onAssessMany: (c: AssessChanges) => void }> = ({ paths, progress, onAssessMany }) => {
+  const all = paths.length > 0 && paths.every((p) => progress?.[p]?.status === 'success');
+  return (
+    <button
+      type="button"
+      aria-pressed={all}
+      onClick={() => {
+        if (!all) trackAction('tout-reussi');
+        onAssessMany(Object.fromEntries(paths.map((p) => [p, all ? null : 'success'])));
+      }}
+      title={all ? 'Cliquer pour effacer' : 'Marquer toutes les sous-questions comme réussies'}
+      className={`shrink-0 inline-flex items-center gap-1 h-6 px-2 -ml-2 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap ${
+        all ? 'bg-brand-soft text-brand-hover' : 'text-ink-faint hover:text-brand-hover hover:bg-brand-soft'}`}
+    >
+      <CheckCheck className="w-3.5 h-3.5" /> Tout réussi
+    </button>
+  );
+};
 
 // =====================
 // SOLUTION TOGGLE BUTTON
@@ -251,90 +205,49 @@ const SolutionToggle: React.FC<SolutionToggleProps> = ({ isOpen, onToggle, hasSo
       type="button"
       onClick={(e) => {
         e.stopPropagation();
+        if (!isOpen) trackAction('voir-solution');
         onToggle();
       }}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap ${
-        isOpen
-          ? 'bg-white text-ink-soft border-line hover:border-ink'
-          : 'bg-white text-brand-hover border-brand-line hover:bg-brand-soft'
-      }`}
-      title={isOpen ? 'Masquer la solution' : 'Afficher la solution'}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+        isOpen ? 'bg-brand-soft text-brand-hover' : 'text-brand-hover/80 hover:text-brand-hover hover:bg-brand-soft'}`}
+      title={isOpen ? 'Masquer la solution' : 'Voir la solution'}
+      aria-label={isOpen ? 'Masquer la solution' : 'Voir la solution'}
+      aria-expanded={isOpen}
       data-tour="solution"
     >
-      {isOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-      {isOpen ? 'Masquer la solution' : 'Voir la solution'}
+      {isOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </button>
   );
 };
 
 // =====================
-// SOLUTION VALIDATION BUTTONS
-// =====================
-
-type ValidationStatus = 'compatible' | 'different' | 'not-understood' | null;
-
-interface SolutionValidationButtonsProps {
-  currentValidation?: ValidationStatus;
-  onValidate: (status: ValidationStatus) => void;
-}
-
-const VALIDATION_OPTIONS: PillOption[] = [
-  { value: 'compatible',     icon: <ThumbsUp className="w-3.5 h-3.5" />,    label: 'Compatible',  activeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { value: 'different',      icon: <GitCompare className="w-3.5 h-3.5" />,  label: 'Différente',  activeClass: 'bg-[#f2f1ee] text-ink-soft border-line' },
-  { value: 'not-understood', icon: <AlertCircle className="w-3.5 h-3.5" />, label: 'Pas compris', activeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-];
-
-const SolutionValidationButtons: React.FC<SolutionValidationButtonsProps> = ({
-  currentValidation,
-  onValidate,
-}) => (
-  <PillDropdown
-    current={currentValidation ?? undefined}
-    options={VALIDATION_OPTIONS}
-    placeholderIcon={<GitCompare className="w-3.5 h-3.5" />}
-    placeholderLabel="Comparer"
-    title="Comparer ma solution à la correction"
-    onSelect={(v) => onValidate(v as ValidationStatus)}
-    onClear={() => onValidate(null)}
-  />
-);
-
-/** Barème à la française : « 1 pt », « 0,5 pt », « 2 pts ». */
-
-// =====================
 // INLINE SOLUTION
 // =====================
 
-interface InlineSolutionProps {
-  solution?: ContentBlock;
-  isVisible: boolean;
-  validationStatus?: ValidationStatus;
-  onValidate?: (status: ValidationStatus) => void;
-}
-
-const InlineSolution: React.FC<InlineSolutionProps> = ({
-  solution,
-  isVisible,
-  validationStatus,
-  onValidate
-}) => {
+const InlineSolution: React.FC<{ solution?: ContentBlock; isVisible: boolean }> = ({ solution, isVisible }) => {
   if (!isVisible || !solution || !solution.html) return null;
 
   return (
     <div className="mt-2 pl-3 sm:pl-4 border-l-2 border-brand bg-brand-soft py-2 pr-2 sm:pr-3 rounded-r min-w-0">
-      <div className="flex items-center justify-between mb-1">
-        <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover">Solution</div>
-        {onValidate && (
-          <SolutionValidationButtons
-            currentValidation={validationStatus}
-            onValidate={onValidate}
-          />
-        )}
-      </div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover mb-1">Solution</div>
       <RenderContent content={solution} className="prose-sm" />
     </div>
   );
 };
+
+/** Barre d'actions d'une question : barème, solution, auto-évaluation. */
+const QuestionActions: React.FC<{
+  points?: number; showSolution: boolean; onToggleSolution: () => void; hasSolution: boolean;
+  assess?: { current?: AssessmentStatus; onAssess: (s: AssessmentStatus) => void };
+  className?: string;
+}> = ({ points, showSolution, onToggleSolution, hasSolution, assess, className = '' }) => (
+  <div className={`flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-1 -ml-1.5 ${className}`}>
+    <SolutionToggle isOpen={showSolution} onToggle={onToggleSolution} hasSolution={hasSolution} />
+    {hasSolution && assess && <span className="w-px h-4 bg-line mx-1" aria-hidden />}
+    {assess && <QuickAssess current={assess.current} onAssess={assess.onAssess} />}
+    {points ? <span className="ml-1 text-xs text-ink-faint fd-nums">{formatPoints(points)}</span> : null}
+  </div>
+);
 
 // =====================
 // SUB-QUESTION RENDERER
@@ -348,7 +261,6 @@ interface SubQuestionRendererProps {
   globalShowSolutions: boolean;
   progress?: ProgressData;
   onAssess?: (path: string, status: AssessmentStatus) => void;
-  onValidateSolution?: (path: string, validation: string | null) => void;
   interactive: boolean;
   locked?: boolean;
   onReport?: (path: string) => void;
@@ -362,20 +274,17 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   globalShowSolutions,
   progress,
   onAssess,
-  onValidateSolution,
   interactive,
   locked = false,
   onReport,
 }) => {
   const [localShowSolution, setLocalShowSolution] = useState(false);
   const path = `${questionPath}.${subQuestion.id}`;
-  const currentStatus = progress?.[path]?.status;
-  const validationStatus = progress?.[path]?.solution_validation as ValidationStatus;
   const hasSolution = Boolean(subQuestion.solution?.html) && !locked;
   const showSolution = !locked && (globalShowSolutions || localShowSolution);
 
   return (
-    <div className="group/sq ml-1 sm:ml-5 mt-1 flex items-start gap-1.5 sm:gap-2">
+    <div id={questionAnchor(path)} className="group/sq ml-1 sm:ml-5 mt-1 flex items-start gap-1.5 sm:gap-2 scroll-mt-24">
       <span className="font-mono fd-nums font-semibold text-ink-faint shrink-0">
         {questionIndex}.{sqIndex + 1}.
       </span>
@@ -384,29 +293,15 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
           <div className="flex-1 min-w-0"><RenderContent content={subQuestion.content} className="prose-sm" /></div>
           {onReport && <ReportQuestionButton group="sq" onClick={() => onReport(path)} />}
         </div>
-        <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-1.5">
-          {subQuestion.points && (
-            <span className="text-xs text-ink-faint fd-nums">{formatPoints(subQuestion.points)}</span>
-          )}
-          <SolutionToggle
-            isOpen={showSolution}
-            onToggle={() => setLocalShowSolution(v => !v)}
-            hasSolution={hasSolution}
-          />
-          {interactive && onAssess && !locked && (
-            <AssessmentButtons
-              path={path}
-              currentStatus={currentStatus}
-              onAssess={(status) => onAssess(path, status)}
-            />
-          )}
-        </div>
-        <InlineSolution
-          solution={subQuestion.solution}
-          isVisible={showSolution}
-          validationStatus={validationStatus}
-          onValidate={onValidateSolution ? (status) => onValidateSolution(path, status) : undefined}
+        <QuestionActions
+          points={subQuestion.points}
+          showSolution={showSolution}
+          onToggleSolution={() => setLocalShowSolution(v => !v)}
+          hasSolution={hasSolution}
+          assess={interactive && onAssess && !locked
+            ? { current: progress?.[path]?.status, onAssess: (s) => onAssess(path, s) } : undefined}
         />
+        <InlineSolution solution={subQuestion.solution} isVisible={showSolution} />
       </div>
     </div>
   );
@@ -422,7 +317,7 @@ interface QuestionRendererProps {
   globalShowSolutions: boolean;
   progress?: ProgressData;
   onAssess?: (path: string, status: AssessmentStatus) => void;
-  onValidateSolution?: (path: string, validation: string | null) => void;
+  onAssessMany?: (changes: AssessChanges) => void;
   interactive: boolean;
   isFirst?: boolean;
   locked?: boolean;
@@ -435,7 +330,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   globalShowSolutions,
   progress,
   onAssess,
-  onValidateSolution,
+  onAssessMany,
   interactive,
   isFirst = false,
   locked = false,
@@ -443,14 +338,14 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 }) => {
   const [localShowSolution, setLocalShowSolution] = useState(false);
   const path = block.id;
-  const currentStatus = progress?.[path]?.status;
-  const validationStatus = progress?.[path]?.solution_validation as ValidationStatus;
   const hasSubQuestions = block.subQuestions && block.subQuestions.length > 0;
   const hasSolution = Boolean(block.solution?.html) && !locked;
   const showSolution = !locked && (globalShowSolutions || localShowSolution);
+  const canAssess = interactive && !!onAssess && !locked;
+  const subPaths = hasSubQuestions ? block.subQuestions!.map((sq) => `${path}.${sq.id}`) : [];
 
   return (
-    <div className={isFirst ? '' : 'mt-2'}>
+    <div id={hasSubQuestions ? undefined : questionAnchor(path)} className={`scroll-mt-24 ${isFirst ? '' : 'mt-2'}`}>
       {/* Question header */}
       <div className="group/q flex items-start gap-2 flex-1 min-w-0">
         <span className="font-mono fd-nums font-semibold text-ink shrink-0">{questionIndex}.</span>
@@ -462,38 +357,27 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       </div>
       {/* Points + actions — only when no sub-questions */}
       {!hasSubQuestions && (
-        <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-1.5 ml-5 sm:ml-6">
-          {block.points && (
-            <span className="text-xs text-ink-faint fd-nums">{formatPoints(block.points)}</span>
-          )}
-          <SolutionToggle
-            isOpen={showSolution}
-            onToggle={() => setLocalShowSolution(v => !v)}
-            hasSolution={hasSolution}
-          />
-          {interactive && onAssess && !locked && (
-            <AssessmentButtons
-              path={path}
-              currentStatus={currentStatus}
-              onAssess={(status) => onAssess(path, status)}
-            />
-          )}
-        </div>
+        <QuestionActions
+          className="ml-5 sm:ml-6"
+          points={block.points}
+          showSolution={showSolution}
+          onToggleSolution={() => setLocalShowSolution(v => !v)}
+          hasSolution={hasSolution}
+          assess={canAssess ? { current: progress?.[path]?.status, onAssess: (s) => onAssess!(path, s) } : undefined}
+        />
       )}
 
       {/* Solution — only for questions without sub-questions */}
-      {!hasSubQuestions && (
-        <InlineSolution
-          solution={block.solution}
-          isVisible={showSolution}
-          validationStatus={validationStatus}
-          onValidate={onValidateSolution ? (status) => onValidateSolution(path, status) : undefined}
-        />
-      )}
+      {!hasSubQuestions && <InlineSolution solution={block.solution} isVisible={showSolution} />}
 
       {/* Sub-questions */}
       {hasSubQuestions && (
         <div>
+          {canAssess && onAssessMany && subPaths.length > 1 && (
+            <div className="ml-1 sm:ml-5 mt-1.5 mb-1">
+              <AllSuccessChip paths={subPaths} progress={progress} onAssessMany={onAssessMany} />
+            </div>
+          )}
           {block.subQuestions!.map((sq, sqIdx) => (
             <SubQuestionRenderer
               key={sq.id}
@@ -504,7 +388,6 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               globalShowSolutions={globalShowSolutions}
               progress={progress}
               onAssess={onAssess}
-              onValidateSolution={onValidateSolution}
               interactive={interactive}
               locked={locked}
               onReport={onReport}
@@ -524,7 +407,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   structure,
   progress,
   onAssess,
-  onValidateSolution,
+  onAssessMany,
   interactive = false,
   showAllSolutions = false,
   compact = true,
@@ -566,7 +449,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                 globalShowSolutions={showAllSolutions}
                 progress={progress}
                 onAssess={onAssess}
-                onValidateSolution={onValidateSolution}
+                onAssessMany={onAssessMany}
                 interactive={interactive}
                 isFirst={index === 0}
                 locked={locked}

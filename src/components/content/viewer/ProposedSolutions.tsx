@@ -255,7 +255,10 @@ const SolutionCard: React.FC<{
       {/* Votes en bas à gauche, comme sur Reddit, puis les actions de l'auteur. */}
       <footer className="flex items-center gap-1 mt-4 pt-3 border-t border-line">
         <VoteButtons
+          likes={solution.like_count}
+          dislikes={solution.dislike_count}
           initialVotes={solution.vote_count}
+          showBadge={false}
           userVote={(solution.user_vote ?? 0) as 1 | -1 | 0}
           onVote={(v) => { if (v === 1 || v === -1) voteProposedSolution(solution.id, v).catch(() => undefined); }}
           vertical={false}

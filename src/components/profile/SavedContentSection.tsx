@@ -6,6 +6,7 @@ import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Content } from '@/types';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 interface SavedContentSectionProps {
   exercises: Content[];
@@ -177,7 +178,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({
                       )}
                       {diffConfig && (
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${diffConfig.bg} ${diffConfig.text} ${diffConfig.border}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${diffConfig.dot}`} />
+                          <DifficultyBars difficulty={item.difficulty} />
                           {diffConfig.label}
                         </span>
                       )}

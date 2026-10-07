@@ -1,15 +1,33 @@
 // src/components/notebook/NotebookCard.tsx
-import React from 'react';
-import { Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, Pencil, Trash2 } from 'lucide-react';
 import { Notebook } from '@/types';
 
 interface NotebookCardProps {
   notebook: Notebook;
   onClick: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Renommer : renvoie false si le nom est refusé (déjà pris, vide), le champ reste alors ouvert. */
+  onRename?: (id: string, title: string) => Promise<boolean>;
 }
 
-const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete }) => {
+const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete, onRename }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(notebook.title);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const save = async () => {
+    if (!onRename || saving) return;
+    const title = draft.trim();
+    if (title === notebook.title) { setEditing(false); return; }
+    setSaving(true);
+    const ok = await onRename(notebook.id, title);
+    setSaving(false);
+    if (ok) setEditing(false);
+    else inputRef.current?.focus();
+  };
   const total = notebook.sections?.length || 0;
   const done = notebook.sections?.filter(s => s.lesson_entries && s.lesson_entries.length > 0).length || 0;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -17,7 +35,7 @@ const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete
   return (
     <div
       className="group cursor-pointer"
-      onClick={() => onClick(notebook.id)}
+      onClick={() => { if (!editing) onClick(notebook.id); }}
       style={{ transition: 'transform .16s' }}
       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
@@ -44,19 +62,48 @@ const NotebookCard: React.FC<NotebookCardProps> = ({ notebook, onClick, onDelete
         {/* Cover content */}
         <div className="flex-1 flex flex-col" style={{ padding: '18px 18px 16px 42px' }}>
           <div className="flex items-start justify-between gap-2">
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }} className="line-clamp-2">
-              {notebook.title}
-            </h3>
+            {editing ? (
+              <form className="flex min-w-0 flex-1 items-center gap-1.5" onClick={(e) => e.stopPropagation()}
+                onSubmit={(e) => { e.preventDefault(); save(); }}>
+                <input ref={inputRef} value={draft} maxLength={200} aria-label="Nom du cahier" disabled={saving}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { setDraft(notebook.title); setEditing(false); } }}
+                  className="min-w-0 flex-1 rounded-lg border border-brand bg-white px-2 py-1 text-[15px] font-bold text-ink outline-none ring-2 ring-brand/20" />
+                <button type="submit" aria-label="Enregistrer le nom" disabled={saving}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white hover:bg-brand-hover">
+                  <Check className="h-4 w-4" />
+                </button>
+              </form>
+            ) : (
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }} className="line-clamp-2">
+                {notebook.title}
+              </h3>
+            )}
+            {!editing && (
+            <div className="flex flex-shrink-0 items-center">
+            {onRename && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setDraft(notebook.title); setEditing(true); }}
+                title="Renommer le cahier"
+                aria-label="Renommer le cahier"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(notebook.id); }}
               title="Supprimer le cahier"
-              className="flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100"
+              aria-label="Supprimer le cahier"
+              className="flex items-center justify-center flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100"
               style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'transparent', color: '#9a958c', cursor: 'pointer', transition: 'opacity .15s, background .14s, color .14s' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#b91c1c'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9a958c'; }}
             >
               <Trash2 className="w-4 h-4" />
             </button>
+            </div>
+            )}
           </div>
 
           <div className="mt-1.5 flex flex-col gap-0.5">

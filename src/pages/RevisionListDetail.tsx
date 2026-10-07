@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Content } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { ExerciseRenderer } from '@/components/content/viewer/ExerciseRenderer';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 export const RevisionListDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -363,8 +364,8 @@ export const RevisionListDetail: React.FC = () => {
                           </span>
                         )}
                         {content.difficulty && (
-                          <span className={`text-xs font-semibold ${getDifficultyColor(content.difficulty)}`}>
-                            {getDifficultyLabel(content.difficulty)}
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${getDifficultyColor(content.difficulty)}`}>
+                            <DifficultyBars difficulty={content.difficulty} />{getDifficultyLabel(content.difficulty)}
                           </span>
                         )}
                         {content.class_levels && content.class_levels.length > 0 && (

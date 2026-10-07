@@ -112,6 +112,8 @@ export interface ContentBase {
   subfields: Subfield[];
   view_count: number;
   vote_count?: number;
+  like_count?: number;
+  dislike_count?: number;
   user_vote?: number | null;
   user_save?: boolean;
   user_complete?: 'success' | 'review' | null;
@@ -160,6 +162,8 @@ export interface ExerciseListItem {
   user_save?: boolean;
   user_vote?: number | null;
   vote_count?: number;
+  like_count?: number;
+  dislike_count?: number;
   created_at: string;
   view_count: number;
   total_points?: number;
@@ -183,6 +187,8 @@ export interface ExamListItem {
   user_save?: boolean;
   user_vote?: number | null;
   vote_count?: number;
+  like_count?: number;
+  dislike_count?: number;
   created_at: string;
   view_count: number;
   total_points?: number;
@@ -208,6 +214,8 @@ export interface LessonListItem {
   user_save?: boolean;
   user_vote?: number | null;
   vote_count?: number;
+  like_count?: number;
+  dislike_count?: number;
   created_at: string;
   view_count: number;
   section_count?: number;
@@ -364,6 +372,10 @@ export interface ContentFilters {
   hideViewed?: boolean;
   showCompleted?: boolean;
   showFailed?: boolean;
+  /** Examens : nationaux (true) ou devoirs (false) ; années d'un examen national. */
+  is_national?: boolean;
+  national_year_min?: number;
+  national_year_max?: number;
 }
 
 export interface ContentExamFilters extends ContentFilters {

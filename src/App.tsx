@@ -4,6 +4,7 @@ import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { useAuth } from './contexts/AuthContext';
 import { canSeeParcours } from './lib/features';
+import { trackPage } from './lib/usage';
 import { AppShell } from './components/layout/AppShell';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -184,6 +185,8 @@ const ScrollToTopOnNavigate = () => {
     if (hash || navigationType === 'POP') return;
     window.scrollTo(0, 0);
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Mesure d'usage (Pilotage) : le motif de la page seulement.
+  useEffect(() => { trackPage(pathname); }, [pathname]);
   return null;
 };
 
@@ -436,6 +439,12 @@ function App() {
                     <Route path="/exams" element={
                       <NavbarWrapper>
                         <ContentList contentType="exam" />
+                      </NavbarWrapper>
+                    } />
+                    {/* Examens nationaux : section à part (la section Examens ne garde que les devoirs). */}
+                    <Route path="/exams/nationaux" element={
+                      <NavbarWrapper>
+                        <ContentList key="nationaux" contentType="exam" national />
                       </NavbarWrapper>
                     } />
                     <Route path="/exams/new" element={

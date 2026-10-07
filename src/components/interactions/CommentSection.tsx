@@ -17,7 +17,7 @@ import {
 import { Comment, User, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { isModerator } from '@/lib/features';
-import { VoteButtonsComment } from '@/components/interactions/VoteButtonsComment';
+import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
@@ -419,11 +419,14 @@ export function CommentSection({
 
       <div className="mt-4 flex gap-3 items-center">
         {isAuthenticated && (
-          <VoteButtonsComment
+          <VoteButtons
+            likes={comment.like_count}
+            dislikes={comment.dislike_count}
             initialVotes={comment.vote_count}
-            onVote={(type: VoteValue) => onVoteComment(comment.id, type)}
-            vertical={false}
-            userVote={comment.user_vote}
+            onVote={(type) => onVoteComment(comment.id, type)}
+            userVote={(comment.user_vote ?? 0) as 1 | -1 | 0}
+            size="sm"
+            showBadge={false}
           />
         )}
 
@@ -544,11 +547,10 @@ export function CommentSection({
   return (
     <div className="relative max-w-full mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center">
-          <MessageSquare className="w-5 h-5 mr-2 text-indigo-600" />
-          Discussion
+        <h2 className="fd-display text-ink flex items-center" style={{ fontSize: 22 }}>
+          Questions et discussion
           {comments.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-sm rounded-full">
+            <span className="ml-2 px-2 py-0.5 bg-brand-soft text-brand-hover text-sm font-semibold rounded-full fd-nums">
               {comments.length}
             </span>
           )}

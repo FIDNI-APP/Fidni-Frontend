@@ -8,6 +8,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Clock, Loader2, Mi
 import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
+import { YearOverview } from '@/components/dashboard/DashboardOverview';
 
 interface ExamResult { id: number; title: string; url: string; date: string; note: number; complete: boolean }
 interface Summary { count: number; average: number | null; best: number | null; worst: number | null }
@@ -118,6 +119,9 @@ export const StatisticsPage: React.FC = () => {
           <StudyTime data={data} />
         </div>
       )}
+
+      {/* Bilan sur l'année (indépendant des filtres) : venu de l'accueil, allégé le 06/10/2026. */}
+      {data && <div className="mt-6"><YearOverview /></div>}
     </div>
   );
 };

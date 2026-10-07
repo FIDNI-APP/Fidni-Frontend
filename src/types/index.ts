@@ -140,6 +140,8 @@ export interface Comment {
   parent_id?: string;
   replies?: Comment[];
   vote_count: number;
+  like_count?: number;
+  dislike_count?: number;
   attachments?: Array<{
     id: string;
     file_name: string;
@@ -158,6 +160,8 @@ export interface Solution {
   downvotes_count?: number;
   user_vote: VoteValue;
   vote_count: number;
+  like_count?: number;
+  dislike_count?: number;
 }
 
 /**
@@ -182,6 +186,8 @@ export interface Content {
   updated_at?: string;
   view_count: number;
   vote_count: number;
+  like_count?: number;
+  dislike_count?: number;
   user_vote?: VoteValue;
   solution?: Solution;
   comments?: Comment[];

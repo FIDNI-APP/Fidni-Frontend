@@ -2,6 +2,7 @@
 import React from 'react';
 import { Bookmark, Check, Loader2, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { DIFFICULTY, type Progress } from './listingUtils';
+import { DifficultyBars } from '@/components/common/DifficultyBars';
 
 export const ProgressPill: React.FC<{ progress: Progress }> = ({ progress }) =>
   progress === 'success' ? (
@@ -19,7 +20,7 @@ export const DifficultyChip: React.FC<{ difficulty?: string | null }> = ({ diffi
   if (!d) return null;
   return (
     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px] font-semibold" style={{ background: d.bg, color: d.text }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: d.dot }} aria-hidden />
+      <DifficultyBars difficulty={difficulty} />
       {d.label}
     </span>
   );

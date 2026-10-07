@@ -13,6 +13,7 @@ import { getDifficultyLabel } from '@/lib/utils/difficultyHelpers';
 import type { Difficulty } from '@/types';
 import { TourHelpButton } from '@/components/tour/TourProvider';
 import { SignupCard, useOpenSignup } from '@/components/auth/SignupPrompt';
+import { trackAction } from '@/lib/usage';
 
 type SolutionsMode = 'none' | 'end' | 'inline';
 
@@ -379,6 +380,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
     } finally {
       setPreparing(false);
     }
+    trackAction('imprimer');
     window.print();
   };
 
