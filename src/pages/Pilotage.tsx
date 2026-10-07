@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { IATab } from '@/components/pilotage/IATab';
-import { pageInfo } from '@/lib/usage';
+import { PAGES, pageInfo } from '@/lib/usage';
 
 interface ContentRef { id: number; type: string; title: string; url: string }
 type MetricKey = 'views' | 'active' | 'signups' | 'work';
@@ -252,9 +252,12 @@ const Trend: React.FC<{ now: number; before: number | null }> = ({ now, before }
   return <span className={pct > 0 ? 'text-brand' : 'text-[#a23b34]'}>{pct > 0 ? '↑' : '↓'} {Math.abs(pct)} %</span>;
 };
 
+const TOP_PAGES = 15;
+
 const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
   const [featSort, setFeatSort] = useState<'membres' | 'fois'>('membres');
   const [pageView, setPageView] = useState<'page' | 'rubrique'>('page');
+  const [allPages, setAllPages] = useState(false);
   const active = Math.max(data.metrics.active.value, 1);
   const since = dayLabel(data.usage_since, { day: 'numeric', month: 'long' });
 
@@ -279,6 +282,11 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       return acc;
     }, {})).sort((a, b) => b.views - a.views);
   const maxViews = Math.max(1, ...rows.map((r) => r.views));
+  // Le serveur renvoie toutes les pages vues : les 15 premières, le reste replié. Avant, il s'arrêtait
+  // à 15 et une page peu vue (« Mes statistiques ») paraissait absente.
+  const shownRows = allPages ? rows : rows.slice(0, TOP_PAGES);
+  const visited = new Set(data.pages.map((p) => p.page));
+  const neverVisited = PAGES.filter((p) => !visited.has(p.pattern)).map((p) => p.label);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2 items-start">
@@ -343,7 +351,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       <section className="fd-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h2 className="fd-display text-[16px] text-ink">Pages les plus visitées</h2>
+            <h2 className="fd-display text-[16px] text-ink">Pages visitées</h2>
             <p className="mt-0.5 text-[12px] text-ink-faint">Sur {data.days} j, visiteurs compris, mesuré depuis le {since}.</p>
           </div>
           <Segmented label="Regrouper" value={pageView} onChange={setPageView}
@@ -353,7 +361,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
           <p className="mt-4 text-[13px] text-ink-faint">Pas encore de visite enregistrée : la mesure a commencé le {since}.</p>
         ) : (
           <ol className="mt-4 flex flex-col gap-3">
-            {rows.map((r, i) => (
+            {shownRows.map((r, i) => (
               <li key={r.key}>
                 <div className="flex items-baseline gap-2 text-[13px]">
                   <span className="fd-nums w-5 shrink-0 text-[11.5px] text-ink-faint">{i + 1}</span>
@@ -367,6 +375,16 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
               </li>
             ))}
           </ol>
+        )}
+        {rows.length > TOP_PAGES && (
+          <button type="button" className="fd-btn-ghost mt-3 text-[12.5px]" onClick={() => setAllPages((v) => !v)}>
+            {allPages ? 'Replier' : `Voir les ${rows.length - TOP_PAGES} autres`}
+          </button>
+        )}
+        {rows.length > 0 && neverVisited.length > 0 && (
+          <p className="mt-4 rounded-xl border border-[#ecdcb6] bg-gold-soft px-3.5 py-2.5 text-[12.5px] text-ink-soft">
+            <b className="text-ink">Aucune visite sur {data.days} j :</b> {neverVisited.join(', ')}.
+          </p>
         )}
       </section>
 
