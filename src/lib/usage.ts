@@ -56,7 +56,7 @@ const LABELS = new Map(PAGES.map((p) => [p.pattern, p]));
 export const pageInfo = (pattern: string) => LABELS.get(pattern) ?? { pattern, label: pattern, group: 'Autres' };
 
 export type UsageAction =
-  | 'voir-solution' | 'toutes-solutions' | 'tout-reussi' | 'imprimer'
+  | 'voir-solution' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'imprimer'
   | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
   | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri';

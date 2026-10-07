@@ -42,9 +42,10 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({ content, contentType, 
   const success = completionStatus === 'success';
   const review = completionStatus === 'review';
 
+  // Ce que le choix change, dit tout de suite (07/10/2026) : c'est ce qui donne envie de cliquer.
   const status = success
-    ? (isLesson ? 'Leçon marquée comme lue.' : 'Réussi : c’est noté dans ta progression.')
-    : review ? 'À revoir : refais-le dans quelques jours.' : null;
+    ? (isLesson ? 'Leçon marquée comme lue.' : 'Réussi : il ne reviendra plus en tête de ta liste.')
+    : review ? 'À revoir : on te le reproposera dans 3 jours.' : null;
   const total = progress?.total ?? 0;
   const assessed = progress?.assessed ?? 0;
   const hint = isLesson || total < 2 ? null

@@ -15,6 +15,7 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import ExerciseRenderer, { type AssessChanges } from './ExerciseRenderer';
 import { SignupCard } from '@/components/auth/SignupPrompt';
 import { trackAction } from '@/lib/usage';
+import { assessablePaths } from '@/lib/utils/contentHelpers';
 
 interface Props {
   content: ContentExam;
@@ -149,6 +150,8 @@ export const ExamView: React.FC<Props> = ({
 }) => {
   const structure = content.structure as unknown as FlexibleExerciseStructure | undefined;
   const { intro, parts } = useMemo(() => splitExam(structure), [structure]);
+  // Le sujet est affiché exercice par exercice : le message après une auto-évaluation compte tout le sujet.
+  const allPaths = useMemo(() => assessablePaths(structure), [structure]);
   const durationMin = Number(content.duration_minutes) || 0;
   const [showAll, setShowAll] = useState(false);
 
@@ -387,6 +390,8 @@ export const ExamView: React.FC<Props> = ({
                   compact={false}
                   locked={locked}
                   onReport={onReport}
+                  kind="exam"
+                  allPaths={allPaths}
                 />
               </div>
             );
