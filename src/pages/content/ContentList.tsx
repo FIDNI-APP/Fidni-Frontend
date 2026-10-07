@@ -34,6 +34,7 @@ import { ContentListCard } from '@/components/content/ContentListCard';
 import {
   ContentCardBanner, getSubjectTheme, DIFFICULTY_CFG,
 } from '@/components/content/ContentCardBanner';
+import { CatchUpBanner } from '@/components/content/listing/CatchUpBanner';
 import { HorizontalFilterBar } from '@/components/search/HorizontalFilterBar';
 import { ExerciseRenderer } from '@/components/content/viewer/ExerciseRenderer';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
@@ -259,6 +260,11 @@ export const ContentList: React.FC<ContentListProps> = ({
   const [savingTimer, setSavingTimer] = useState<Record<string, boolean>>({});
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [itemCompletions, setItemCompletions] = useState<Record<string, 'success' | 'review' | null>>({});
+  // Évalué depuis le bandeau de rattrapage : la carte de la liste le montre tout de suite.
+  const handleCatchUp = useCallback((id: number, result: 'success' | 'review') => {
+    setItems((prev) => prev.map((it) => (String(it.id) === String(id) ? { ...it, user_complete: result } : it)));
+    setItemCompletions((p) => ({ ...p, [String(id)]: result }));
+  }, []);
   const [completionDropdown, setCompletionDropdown] = useState<{ itemId: string | number | null; pos: { top: number; left: number } }>({ itemId: null, pos: { top: 0, left: 0 } });
   // Bouton du menu ouvert : le menu s'y accroche (et suit la page quand elle défile).
   const completionAnchor = useRef<HTMLElement | null>(null);
@@ -885,6 +891,10 @@ export const ContentList: React.FC<ContentListProps> = ({
 
         {/* Content Area */}
         <div ref={listRef} className="mt-4">
+          {/* « Pour toi » : rattraper d'un clic ce qu'il a ouvert sans dire s'il l'a réussi. */}
+          {isAuthenticated && sortBy === 'recommended' && contentType !== 'lesson' && (
+            <CatchUpBanner kind={contentType} onEvaluated={handleCatchUp} />
+          )}
           {/* Error message */}
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-5 mb-6 rounded-xl shadow-sm">
