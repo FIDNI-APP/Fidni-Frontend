@@ -81,6 +81,7 @@ export const TOURS: Tour[] = [
       { target: 'nav-classe', title: 'Ma classe', body: 'Rejoins la classe de ton prof avec son code pour suivre tes TD.' },
       { target: 'menu-mobile', title: 'Le menu', body: 'Toutes les rubriques : leçons, exercices, examens, concours et ton espace perso.' },
       { target: 'recherche', title: 'Rechercher', body: 'Un mot-clé, un chapitre ou un théorème (ex. « TVI ») pour trouver un contenu.' },
+      { target: 'notifications', title: 'Notifications', body: 'Quand quelqu’un commente un contenu sur lequel tu as travaillé, ou répond à ton commentaire, la cloche te prévient. Un clic et tu peux lui répondre.' },
       { target: 'home-stats', title: 'Ta semaine', body: 'Ta série de jours, tes questions et ta réussite des 7 derniers jours. Le bilan sur l’année est dans Statistiques.' },
       { target: 'home-reco', title: 'Pour toi', body: 'Des contenus choisis pour ton niveau. Ouvre une carte pour commencer.' },
       { target: 'nav-compte', title: 'Ton compte', body: 'Ton profil, tes statistiques et tes paramètres.' },

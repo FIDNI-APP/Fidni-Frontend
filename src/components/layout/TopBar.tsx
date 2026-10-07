@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, Search as SearchIcon, ChevronRight } from 'lucide-react';
 import { useBreadcrumb, type Crumb } from '@/contexts/BreadcrumbContext';
 import { TourHelpButton } from '@/components/tour/TourProvider';
+import { NotificationBell } from './NotificationBell';
 import { trackAction } from '@/lib/usage';
 
 interface TopBarProps {
@@ -162,6 +163,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
         >
           <SearchIcon className="w-5 h-5" />
         </button>
+
+        {/* Notifications (membres connectés) : nouveaux commentaires, réponses */}
+        <NotificationBell />
 
         {/* Guide de la page (visite guidée), s'il y en a un */}
         <TourHelpButton />
