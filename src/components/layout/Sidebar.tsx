@@ -5,15 +5,13 @@ import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User, Bookmark as BookmarkIcon, Settings, LogOut,
   X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, BarChart3, Target, Gauge, Landmark,
+  NotebookPen, Brain, ListChecks, TrendingUp, Target, Gauge, Landmark,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { getClassLevels } from '@/lib/api';
-import { nameSaysPage, pinForPath } from '@/components/campus/campusPins';
-import { useHomeView } from '@/stores/homeViewStore';
 import { canSeeParcours } from '@/lib/features';
 import Logo3 from '@/assets/logo3.svg';
 
@@ -65,7 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
 const MON_ESPACE_GROUP: NavGroup = {
   title: 'Mon espace',
   items: [
-    { to: '/statistiques', label: 'Statistiques', icon: BarChart3, match: ['/statistiques'] },
+    { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
     { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
     { to: '/skill-iq', label: 'Skill IQ', icon: Brain, match: ['/skill-iq'] },
     { to: '/revision-lists', label: 'Révisions', icon: ListChecks, match: ['/revision-lists', '/profile/revision-lists'] },
@@ -132,8 +130,6 @@ const SidebarInner: React.FC<{
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const showParcours = canSeeParcours(user);
-  // Campus affiché : chaque entrée montre son bâtiment et le met en valeur au survol.
-  const immersive = useHomeView((s) => s.immersive);
 
   // Insert "Mon espace" right after "S'entraîner" for signed-in users.
   const groups = useMemo(() => {
@@ -206,7 +202,7 @@ const SidebarInner: React.FC<{
             )}
             <div className="flex flex-col gap-0.5">
               {group.items.map(item => (
-                <NavItemRow key={item.to} item={item} active={isActive(item)} collapsed={collapsed} onClick={onCloseMobile} immersive={immersive} />
+                <NavItemRow key={item.to} item={item} active={isActive(item)} collapsed={collapsed} onClick={onCloseMobile} />
               ))}
             </div>
           </div>
@@ -226,10 +222,7 @@ const INK = '#1a1a1a';
 const TOUR_GROUP: Record<string, string> = {
   Apprendre: 'nav-apprendre', "S'entraîner": 'nav-entrainer', 'Ma classe': 'nav-classe', 'Mon espace': 'nav-espace',
 };
-/** Entrées de « Mon espace » que le cartable du campus ouvre aussi. */
-const BAG_PATHS = ['/notebooks', '/revision-lists', '/saved'];
-
-// Entrée active : fond encre, tuile d'icône dorée (repris du dock de la maquette du campus).
+// Entrée active : fond encre, tuile d'icône dorée.
 const rowLinkStyle = (active: boolean, collapsed: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', gap: 10,
   padding: collapsed ? '5px' : '5px 8px 5px 5px',
@@ -257,28 +250,18 @@ const IconTile: React.FC<{ icon: React.ComponentType<{ className?: string }>; ac
   </span>
 );
 
-/** Libellé, avec le nom du bâtiment en dessous quand le campus est affiché. */
-const RowLabel: React.FC<{ label: string; sub?: string; active: boolean }> = ({ label, sub, active }) => (
+const RowLabel: React.FC<{ label: string }> = ({ label }) => (
   <span className="min-w-0 flex flex-col" style={{ lineHeight: 1.2 }}>
     <span className="truncate">{label}</span>
-    {sub && (
-      <span className="truncate" style={{ fontSize: 11, fontWeight: 500, marginTop: 1, color: active ? 'rgba(255,255,255,.62)' : '#6b6862' }}>
-        {sub}
-      </span>
-    )}
   </span>
 );
 
-const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean; onClick?: () => void; immersive?: boolean }> = ({
-  item, active, collapsed, onClick, immersive,
+const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean; onClick?: () => void }> = ({
+  item, active, collapsed, onClick,
 }) => {
   const hasDropdown = !!item.dropdown && !collapsed;
-  const setHoverRoom = useHomeView((s) => s.setHoverRoom);
-  const room = immersive ? pinForPath(item.to) : undefined;
-  // Le bâtiment n'est rappelé que s'il ne dit pas déjà la page (« Bibliothèque » sous « Leçons », pas « Espace exercices » sous « Exercices »).
-  const sub = room ? (nameSaysPage(room) ? undefined : room.name) : (immersive && BAG_PATHS.includes(item.to) ? 'Dans ton cartable' : undefined);
-  const hoverIn = (el: HTMLElement) => { if (!active) el.style.background = '#f7f6f3'; if (room) setHoverRoom(room.id); };
-  const hoverOut = (el: HTMLElement) => { if (!active) el.style.background = 'transparent'; if (room) setHoverRoom(null); };
+  const hoverIn = (el: HTMLElement) => { if (!active) el.style.background = '#f7f6f3'; };
+  const hoverOut = (el: HTMLElement) => { if (!active) el.style.background = 'transparent'; };
   const [open, setOpen] = useState<boolean>(active && hasDropdown);
   const [levels, setLevels] = useState<{ id: string; name: string; slug?: string }[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -308,7 +291,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
         onMouseLeave={(e) => hoverOut(e.currentTarget)}
       >
         <IconTile icon={item.icon} active={active} />
-        {!collapsed && <RowLabel label={item.label} sub={sub} active={active} />}
+        {!collapsed && <RowLabel label={item.label} />}
       </Link>
     );
   }
@@ -331,7 +314,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
           }}
         >
           <IconTile icon={item.icon} active={active} />
-          <RowLabel label={item.label} sub={sub} active={active} />
+          <RowLabel label={item.label} />
         </Link>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
@@ -484,8 +467,8 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
           }}
         >
           <MenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => go(`/profile/${user.username}`)} />
-          <MenuItem icon={<BarChart3 className="w-4 h-4" />} label="Statistiques" onClick={() => go('/statistiques')} />
-          <MenuItem icon={<Target className="w-4 h-4" />} label="Progression" onClick={() => go(`/profile/${user.username}?tab=progress`)} />
+          <MenuItem icon={<TrendingUp className="w-4 h-4" />} label="Ma progression" onClick={() => go('/progression')} />
+          <MenuItem icon={<Target className="w-4 h-4" />} label="Réussis / à revoir" onClick={() => go(`/profile/${user.username}?tab=progress`)} />
           <MenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => go(`/profile/${user.username}?tab=settings`)} />
           {user.is_superuser && (
             <MenuItem icon={<Gauge className="w-4 h-4" />} label="Pilotage" onClick={() => go('/pilotage')} />

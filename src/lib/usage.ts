@@ -30,7 +30,8 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/concours/tips', label: 'Conseils concours', group: 'Concours' },
   { pattern: '/concours/tips/:id', label: 'Conseil concours', group: 'Concours' },
   { pattern: '/skill-iq', label: 'Skill IQ', group: 'Mon espace' },
-  { pattern: '/statistiques', label: 'Mes statistiques', group: 'Mon espace' },
+  { pattern: '/progression', label: 'Ma progression', group: 'Mon espace' },
+  { pattern: '/statistiques', label: 'Mes statistiques (ancienne page)', group: 'Mon espace' },
   { pattern: '/notebooks', label: 'Cahiers', group: 'Mon espace' },
   { pattern: '/notebooks/:id/pdf', label: 'Cahier : impression', group: 'Mon espace' },
   { pattern: '/revision-lists', label: 'Révisions', group: 'Mon espace' },
@@ -56,7 +57,7 @@ const LABELS = new Map(PAGES.map((p) => [p.pattern, p]));
 export const pageInfo = (pattern: string) => LABELS.get(pattern) ?? { pattern, label: pattern, group: 'Autres' };
 
 export type UsageAction =
-  | 'voir-solution' | 'toutes-solutions' | 'tout-reussi' | 'imprimer'
+  | 'voir-solution' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'rattrapage-liste' | 'imprimer'
   | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
   | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri';

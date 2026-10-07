@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import {
@@ -197,6 +197,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const config = CONTENT_TYPE_CONFIG[contentType];
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Lien d'une notification : « ?commentaire=<id>#discussion » ouvre ce commentaire, réponse prête.
+  const [searchParams] = useSearchParams();
+  const focusCommentId = searchParams.get('commentaire');
   const { user, isAuthenticated } = useAuth();
   const { openModal, setInitialTab } = useAuthModal();
   const [showReport, setShowReport] = useState(false);
@@ -755,6 +758,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
                 onVoteComment={handleVoteComment}
                 onEditComment={handleEditComment}
                 onDeleteComment={handleDeleteComment}
+                focusCommentId={focusCommentId}
               />
             </section>
           </div>

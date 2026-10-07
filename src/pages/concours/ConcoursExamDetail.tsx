@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useScrollToHash } from '@/hooks/useScrollToHash';
 import {
   ArrowLeft, Bookmark, MessageSquare, Loader2,
   Check, Lightbulb, Clock, ListChecks, Trash2, Play, ChevronDown, ChevronUp, ChevronRight,
@@ -35,6 +36,7 @@ export default function ConcoursExamDetailPage() {
   const { user, isAuthenticated } = useAuth();
 
   const [exam, setExam] = useState<ConcoursExam | null>(null);
+  useScrollToHash(!!exam);  // « #commentaires » : lien d'une notification
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -396,7 +398,7 @@ export default function ConcoursExamDetailPage() {
         )}
 
         {/* Comments */}
-        <div className="mt-10" style={{
+        <div id="commentaires" className="mt-10 scroll-mt-20" style={{
           background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
         }}>
           <div className="flex items-center gap-2 mb-4">

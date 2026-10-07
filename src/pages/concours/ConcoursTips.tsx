@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useScrollToHash } from '@/hooks/useScrollToHash';
 import { ConcoursHero } from './ConcoursHero';
 import {
   ArrowLeft, Lightbulb, Loader2, Search, Bookmark, ThumbsUp, ThumbsDown,
@@ -229,6 +230,7 @@ export function ConcoursTipDetailPage() {
   const { user } = useAuth();
 
   const [tip, setTip] = useState<ConcoursTip | null>(null);
+  useScrollToHash(!!tip);  // « #commentaires » : lien d'une notification
   const [loading, setLoading] = useState(true);
   const [busySave, setBusySave] = useState(false);
   const [busyVote, setBusyVote] = useState(false);
@@ -403,7 +405,7 @@ export function ConcoursTipDetailPage() {
         </div>
 
         {/* Comments */}
-        <div className="fd-card p-5">
+        <div id="commentaires" className="fd-card p-5 scroll-mt-20">
           <div className="flex items-center gap-2 mb-3">
             <MessageSquare className="w-4 h-4" style={{ color: '#000000' }} />
             <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>

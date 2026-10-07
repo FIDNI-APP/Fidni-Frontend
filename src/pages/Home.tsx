@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { Landing } from './Landing';
@@ -6,18 +6,12 @@ import { HomeContentCard } from '@/components/content/HomeContentCard';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import {
   voteExercise, voteLesson, voteExam,
-  getUserDashboardStats, getRecommendedContent,
+  getRecommendedContent,
   getWeeklyProgress, type WeeklyProgress,
-  type DashboardStats,
 } from '@/lib/api';
 import { Content, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
-import { useHomeView } from '@/stores/homeViewStore';
-import { CampusErrorBoundary } from '@/components/campus/CampusErrorBoundary';
-
-// Plan du campus chargé à la demande : rien n'est téléchargé tant que l'élève reste en vue classique.
-const CampusMap = React.lazy(() => import('@/components/campus/CampusMap'));
 
 /**
  * Homepage at "/". Branches on auth:
@@ -37,23 +31,13 @@ export function Home() {
   const [recExams, setRecExams] = useState<Content[]>([]);
   const [recLevel, setRecLevel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [progress, setProgress] = useState<WeeklyProgress | null>(null);
   const [, setProgressLoading] = useState(false);
-
-  // « Classique » (par défaut) ou « Campus » : choisi dans la barre du haut, mémorisé sur l'appareil.
-  const view = useHomeView((s) => s.view);
-  const setView = useHomeView((s) => s.setView);
-  const showCampus = view === 'campus';
-  // Une fois ouvert, le campus reste monté (caché) : revenir dessus est instantané.
-  const [keepCampus, setKeepCampus] = useState(showCampus);
-  useEffect(() => { if (showCampus) setKeepCampus(true); }, [showCampus]);
 
   useEffect(() => {
     // Signed-in dashboard only — logged-out visitors get the Landing page.
     if (!authLoading && isAuthenticated) {
       fetchRecs();
-      fetchStats();
       fetchProgress();
     }
   }, [authLoading, isAuthenticated]);
@@ -86,15 +70,6 @@ export function Home() {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const s = await getUserDashboardStats();
-      setStats(s);
-    } catch (err) {
-      console.error('Home: fetchStats failed', err);
-    }
-  };
-
   const handleVote = async (id: string, value: VoteValue, contentType?: 'exercise' | 'lesson' | 'exam') => {
     if (!isAuthenticated) { navigate('/login'); return; }
     try {
@@ -115,23 +90,7 @@ export function Home() {
   if (!isAuthenticated) return <Landing />;
 
   return (
-    <>
-    {keepCampus && (
-      <div hidden={!showCampus}>
-        <CampusErrorBoundary onClassic={() => setView('classic')}>
-          <Suspense
-            fallback={(
-              <div className="grid place-items-center" style={{ height: 'calc(100dvh - 60px)', minHeight: 420, background: '#e6e1d8' }}>
-                <p className="fd-display" style={{ fontStyle: 'italic', fontSize: 17, color: 'var(--ink-soft)' }}>On ouvre les portes du campus…</p>
-              </div>
-            )}
-          >
-            <CampusMap active={showCampus} stats={stats} username={user?.username} onUnavailable={() => setView('classic')} />
-          </Suspense>
-        </CampusErrorBoundary>
-      </div>
-    )}
-    <div hidden={showCampus} style={{ minHeight: '100vh', background: PAPER }}>
+    <div style={{ minHeight: '100vh', background: PAPER }}>
       <SEO
         title="Fidni - Tableau de bord"
         description="Plateforme moderne d'apprentissage en mathématiques."
@@ -181,7 +140,6 @@ export function Home() {
         </div>
       </div>
     </div>
-    </>
   );
 }
 

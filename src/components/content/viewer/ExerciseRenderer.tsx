@@ -13,7 +13,7 @@
  * redisait la même chose.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, RotateCcw, CircleDot, Eye, EyeOff, Flag, CheckCheck } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
@@ -188,6 +188,50 @@ const AllSuccessChip: React.FC<{ paths: string[]; progress?: ProgressData; onAss
 };
 
 // =====================
+// « TU AVAIS TROUVÉ ? » (07/10/2026)
+// =====================
+
+/**
+ * Sous une solution ouverte, si la question n'est pas encore évaluée : c'est le moment où l'élève sait
+ * s'il avait trouvé. Deux réponses seulement (« En partie » reste dans les boutons du dessus) ; après le
+ * clic, un simple « Noté » quelques secondes.
+ */
+const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentStatus) => void }> = ({ assessed, onAnswer }) => {
+  const [noted, setNoted] = useState(false);
+  useEffect(() => {
+    if (!noted) return;
+    const t = window.setTimeout(() => setNoted(false), 3000);
+    return () => window.clearTimeout(t);
+  }, [noted]);
+  if (noted) {
+    return (
+      <p role="status" className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-brand-hover">
+        <Check className="w-3.5 h-3.5" /> Noté
+      </p>
+    );
+  }
+  if (assessed) return null;
+  const answer = (status: AssessmentStatus) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackAction('trouve-apres-solution');
+    onAnswer(status);
+    setNoted(true);
+  };
+  const btn = 'inline-flex items-center gap-1 h-7 px-3 rounded-full text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
+  return (
+    <div role="group" aria-label="Tu avais trouvé ?" data-tour="trouve" className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <span className="text-[13px] font-medium text-ink-soft">Tu avais trouvé ?</span>
+      <button type="button" onClick={answer('success')} className={`${btn} bg-brand-soft text-brand-hover hover:bg-brand hover:text-white`}>
+        <Check className="w-3.5 h-3.5" /> Oui
+      </button>
+      <button type="button" onClick={answer('review')} className={`${btn} bg-[#fbecea] text-[#a23b34] hover:bg-[#a23b34] hover:text-white`}>
+        <RotateCcw className="w-3.5 h-3.5" /> Non, à revoir
+      </button>
+    </div>
+  );
+};
+
+// =====================
 // SOLUTION TOGGLE BUTTON
 // =====================
 
@@ -302,6 +346,9 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
             ? { current: progress?.[path]?.status, onAssess: (s) => onAssess(path, s) } : undefined}
         />
         <InlineSolution solution={subQuestion.solution} isVisible={showSolution} />
+        {showSolution && hasSolution && interactive && onAssess && (
+          <FoundPrompt assessed={!!progress?.[path]?.status} onAnswer={(s) => onAssess(path, s)} />
+        )}
       </div>
     </div>
   );
@@ -369,6 +416,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
       {/* Solution — only for questions without sub-questions */}
       {!hasSubQuestions && <InlineSolution solution={block.solution} isVisible={showSolution} />}
+      {!hasSubQuestions && showSolution && hasSolution && canAssess && (
+        <FoundPrompt assessed={!!progress?.[path]?.status} onAnswer={(s) => onAssess!(path, s)} />
+      )}
 
       {/* Sub-questions */}
       {hasSubQuestions && (

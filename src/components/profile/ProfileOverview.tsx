@@ -1,6 +1,6 @@
 // Onglet « Profil » (propriétaire) : qui je suis, pas comment je progresse.
 // Parcours (niveau, établissement, matières, ancienneté), objectifs, publications, et un petit
-// résumé chiffré avec un lien vers la page Statistiques — qui garde tout le détail.
+// résumé chiffré avec un lien vers la page « Ma progression » — qui garde tout le détail.
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart3, Pencil } from 'lucide-react';
@@ -65,7 +65,7 @@ export const ProfileOverview: React.FC<Props> = ({ profile, userType, school, go
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* ── Résumé de progression → page Statistiques */}
+        {/* ── Résumé de progression → page « Ma progression » */}
         <section className="fd-card p-5 md:p-6" data-tour="profil-resume">
           <h2 className="fd-display text-[17px] text-ink">Ma progression</h2>
           <p className="mt-0.5 text-[12px] text-ink-faint">Sur les 30 derniers jours</p>
@@ -75,8 +75,8 @@ export const ProfileOverview: React.FC<Props> = ({ profile, userType, school, go
             <Figure label="Réussite aux questions" value={summary?.questions.success_rate != null ? `${summary.questions.success_rate} %` : '—'} />
             <Figure label="Temps d’étude" value={summary ? fmtTime(summary.time.seconds) : '—'} />
           </dl>
-          <Link to="/statistiques" className="fd-btn-primary mt-5 w-full justify-center">
-            <BarChart3 className="h-4 w-4" /> Voir toutes mes statistiques <ArrowRight className="h-4 w-4" />
+          <Link to="/progression" className="fd-btn-primary mt-5 w-full justify-center">
+            <BarChart3 className="h-4 w-4" /> Voir toute ma progression <ArrowRight className="h-4 w-4" />
           </Link>
         </section>
 

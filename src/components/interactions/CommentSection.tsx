@@ -28,6 +28,8 @@ interface CommentSectionProps {
   onVoteComment: (commentId: string, type: VoteValue) => Promise<void>;
   onEditComment: (commentId: string, content: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
+  /** Arrivée depuis une notification (« ?commentaire=… ») : ce commentaire est montré, réponse prête. */
+  focusCommentId?: string | null;
 }
 
 export function CommentSection({
@@ -36,6 +38,7 @@ export function CommentSection({
   onVoteComment,
   onEditComment,
   onDeleteComment,
+  focusCommentId,
 }: CommentSectionProps) {
   const { isAuthenticated, user } = useAuth();
 
@@ -91,6 +94,31 @@ export function CommentSection({
     setReplyContent(`@${authorUsername} `);
     setShowReplyButtons(true);
   };
+
+  // Arrivée depuis une notification : on fait défiler jusqu'au commentaire, on le met en valeur
+  // quelques secondes et on ouvre le champ de réponse (c'est tout l'intérêt de la notification).
+  const focusedRef = useRef<string | null>(null);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusCommentId || focusedRef.current === focusCommentId) return;
+    const find = (list: Comment[]): Comment | undefined => {
+      for (const c of list) {
+        if (String(c.id) === focusCommentId) return c;
+        const inReplies = c.replies?.length ? find(c.replies) : undefined;
+        if (inReplies) return inReplies;
+      }
+      return undefined;
+    };
+    const target = find(comments);
+    if (!target) return;
+    focusedRef.current = focusCommentId;
+    if (isAuthenticated) handleStartReply(target.id, target.author.username);
+    setHighlight(String(target.id));
+    window.setTimeout(() => {
+      document.getElementById(`comment-${target.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    window.setTimeout(() => setHighlight(null), 3500);
+  }, [focusCommentId, comments, isAuthenticated]);
 
   const handleMention = (username: string) => {
     const textarea = 
@@ -506,7 +534,7 @@ export function CommentSection({
     const paddingLeft = currentDepth * 16;
 
     return (
-      <div key={comment.id} className="relative" style={{ marginLeft: `${paddingLeft}px` }}>
+      <div key={comment.id} id={`comment-${comment.id}`} className="relative scroll-mt-24" style={{ marginLeft: `${paddingLeft}px` }}>
         {depth > 0 && (
           <div
             className="absolute top-0 left-[-12px] bottom-0 w-[2px] bg-indigo-100 rounded-full"
@@ -514,7 +542,7 @@ export function CommentSection({
           ></div>
         )}
 
-        <div className="mb-4">
+        <div className={`mb-4 rounded-xl transition-shadow duration-700 ${highlight === String(comment.id) ? 'ring-2 ring-brand/50 ring-offset-4' : ''}`}>
           {renderCommentContent(comment)}
           {replyingTo === comment.id && renderReplyForm(comment.id, comment.author.username)}
           {comment.replies && comment.replies.length > 0 && (
