@@ -39,9 +39,10 @@ interface FeatureConfig {
 }
 
 const FEATURES_CONFIG: FeatureConfig[] = [
-  // Profil = qui je suis. Les statistiques ont leur propre page (/statistiques, barre latérale).
+  // Profil = qui je suis. La progression a sa propre page (/progression, barre latérale).
   { id: 'overview', title: 'Profil', icon: User, forUserType: ['student', 'teacher'] },
-  { id: 'progress', title: 'Progression', icon: Target, forUserType: ['student'] },
+  // Exercices réussis et à revoir (« Ma progression » est une page à part : /progression).
+  { id: 'progress', title: 'Réussis / à revoir', icon: Target, forUserType: ['student'] },
   // Skill IQ, Cahiers, Révisions et Favoris ont été déplacés vers la sidebar ("Mon espace").
   { id: 'students', title: 'Mes élèves', icon: Users, forUserType: ['teacher'], ownerOnly: true },
   { id: 'settings', title: 'Paramètres', icon: Settings, forUserType: ['student', 'teacher'], ownerOnly: true },
@@ -127,7 +128,7 @@ export const ProfilePage: React.FC = () => {
     const tab = searchParams.get('tab');
     // Ancien onglet « Statistiques » : il a sa propre page.
     if (tab === 'statistics') {
-      if (isOwner) navigate('/statistiques', { replace: true });
+      if (isOwner) navigate('/progression', { replace: true });
       else setActiveSection('overview');
       return;
     }

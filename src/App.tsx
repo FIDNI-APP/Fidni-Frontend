@@ -92,7 +92,7 @@ const SavedItems = page(() => import('./pages/SavedItems'), 'SavedItems');
 const RevisionLists = page(() => import('./pages/RevisionLists'), 'RevisionLists');
 const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'), 'default');
 const SkillIQSection = page(() => import('@/components/profile/SkillIQSection'), 'SkillIQSection');
-const StatisticsPage = page(() => import('./pages/Statistics'), 'default');
+const ProgressionPage = page(() => import('./pages/progression/Progression'), 'default');
 const LogsConsole = page(() => import('./pages/admin/LogsConsole'), 'LogsConsole');
 const ContentList = page(() => import('./pages/content/ContentList'), 'ContentList');
 const ContentHub = page(() => import('./pages/content/ContentHub'), 'ContentHub');
@@ -370,11 +370,13 @@ function App() {
                         <StudentNotebook />
                       </NavbarWrapper>
                     } />
-                    <Route path="/statistiques" element={
+                    <Route path="/progression" element={
                       <NavbarWrapper>
-                        <StatisticsPage />
+                        <ProgressionPage />
                       </NavbarWrapper>
                     } />
+                    {/* Ancienne adresse de la page (« Statistiques », remplacée le 07/10/2026). */}
+                    <Route path="/statistiques" element={<Navigate to="/progression" replace />} />
                     <Route path="/skill-iq" element={
                       <NavbarWrapper>
                         <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">

@@ -5,7 +5,7 @@ import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User, Bookmark as BookmarkIcon, Settings, LogOut,
   X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, BarChart3, Target, Gauge, Landmark,
+  NotebookPen, Brain, ListChecks, TrendingUp, Target, Gauge, Landmark,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
@@ -63,7 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
 const MON_ESPACE_GROUP: NavGroup = {
   title: 'Mon espace',
   items: [
-    { to: '/statistiques', label: 'Statistiques', icon: BarChart3, match: ['/statistiques'] },
+    { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
     { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
     { to: '/skill-iq', label: 'Skill IQ', icon: Brain, match: ['/skill-iq'] },
     { to: '/revision-lists', label: 'Révisions', icon: ListChecks, match: ['/revision-lists', '/profile/revision-lists'] },
@@ -467,8 +467,8 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
           }}
         >
           <MenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => go(`/profile/${user.username}`)} />
-          <MenuItem icon={<BarChart3 className="w-4 h-4" />} label="Statistiques" onClick={() => go('/statistiques')} />
-          <MenuItem icon={<Target className="w-4 h-4" />} label="Progression" onClick={() => go(`/profile/${user.username}?tab=progress`)} />
+          <MenuItem icon={<TrendingUp className="w-4 h-4" />} label="Ma progression" onClick={() => go('/progression')} />
+          <MenuItem icon={<Target className="w-4 h-4" />} label="Réussis / à revoir" onClick={() => go(`/profile/${user.username}?tab=progress`)} />
           <MenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => go(`/profile/${user.username}?tab=settings`)} />
           {user.is_superuser && (
             <MenuItem icon={<Gauge className="w-4 h-4" />} label="Pilotage" onClick={() => go('/pilotage')} />

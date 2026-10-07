@@ -36,15 +36,16 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
 
-const Avatar: React.FC<{ actor: Notif['actor'] }> = ({ actor }) => (
-  actor?.avatar
-    ? <img src={actor.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+const Avatar: React.FC<{ actor: Notif['actor'] }> = ({ actor }) => {
+  const [broken, setBroken] = useState(false);  // image introuvable : l'initiale à la place
+  return actor?.avatar && !broken
+    ? <img src={actor.avatar} alt="" onError={() => setBroken(true)} className="h-9 w-9 shrink-0 rounded-full object-cover" />
     : (
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-bold uppercase text-ink-soft">
         {actor?.username?.[0] ?? <MessageCircle className="h-4 w-4" />}
       </span>
-    )
-);
+    );
+};
 
 function Message({ n }: { n: Notif }) {
   const who = <b className="font-semibold text-ink">{n.actor?.username ?? 'Quelqu’un'}</b>;
@@ -53,7 +54,7 @@ function Message({ n }: { n: Notif }) {
     return <>{who} {n.count > 1 ? `t’a répondu ${n.count} fois` : 'a répondu à ton commentaire'} sur {what}</>;
   }
   return n.count > 1
-    ? <><b className="font-semibold text-ink">{n.count} nouveaux commentaires</b> sur {what}, dont {who}</>
+    ? <><b className="font-semibold text-ink">{n.count} nouveaux commentaires</b> sur {what} (le dernier de {who})</>
     : <>{who} a commenté {what}</>;
 }
 

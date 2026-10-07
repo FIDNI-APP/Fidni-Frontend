@@ -3,7 +3,7 @@
 // d'une matière du niveau d'un coup d'œil (un onglet par matière dès qu'il y en a plusieurs) ;
 // les quiz qui n'existent pas encore sont annoncés comme tels au lieu d'échouer au clic.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Brain, CheckCircle2, XCircle, Play, RotateCcw, ArrowLeft, Loader2, Clock, Award, Hourglass,
 } from 'lucide-react';
@@ -127,6 +127,21 @@ export const SkillIQSection: React.FC = () => {
   };
 
   const closeQuiz = () => { setActiveQuiz(null); setQuizState(null); setQuizResult(null); };
+
+  // « Passer le quiz » depuis Ma progression : /skill-iq?chapitre=<id> lance directement ce quiz.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const wanted = Number(searchParams.get('chapitre')) || null;
+  useEffect(() => {
+    if (loading || !wanted) return;
+    setSearchParams((p) => { const next = new URLSearchParams(p); next.delete('chapitre'); return next; }, { replace: true });
+    for (const lv of classLevels) {
+      for (const s of lv.subjects) {
+        const c = s.chapters.find((x) => x.id === wanted);
+        if (c && available[c.id]) { startQuiz(c.id, c.name, s.name); return; }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, wanted]);
 
   if (loading) {
     return (
