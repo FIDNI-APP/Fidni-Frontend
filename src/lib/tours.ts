@@ -55,7 +55,7 @@ const AUTO_EVAL: TourStep = {
 const VOTE: TourStep = {
   target: 'vote',
   title: 'J’aime',
-  body: (c) => `${c.kind === 'lesson' ? 'Cette leçon t’a aidé' : 'Ce contenu t’a aidé'} ? Mets-lui un j’aime : les listes sont triées des plus aimés aux moins aimés, ça guide les autres élèves.`,
+  body: (c) => `${c.kind === 'lesson' ? 'Cette leçon t’a aidé' : 'Ce contenu t’a aidé'} ? Mets-lui un j’aime : les contenus aimés remontent dans les listes, ça guide les autres élèves.`,
 };
 
 const SIGNALER: TourStep = {

@@ -126,6 +126,8 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const chapter = chapterLabel(content);
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
   const structure = (content as { structure?: any }).structure;
+  // Tri « Pour toi » : pourquoi ce contenu est proposé (« À retravailler », « Suite de ton travail · … »).
+  const reason = (content as { recommendation_reason?: string | null }).recommendation_reason;
   const comments = content.comment_count ?? 0;
 
   const [counts, setCounts] = useState({ likes: content.like_count ?? 0, dislikes: content.dislike_count ?? 0 });
@@ -194,6 +196,9 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           </div>
         </div>
 
+        {reason && (
+          <p className="mt-2 text-[12px] font-semibold text-brand truncate">{reason}</p>
+        )}
         <Link
           to={path}
           className="fd-display mt-2 text-[18.5px] leading-[1.25] font-semibold text-ink line-clamp-2 after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"

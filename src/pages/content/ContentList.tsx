@@ -109,8 +109,10 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
 
 const ITEMS_PER_PAGE = 12;
 
-// Tri par défaut : les plus aimés d'abord (j'aime des élèves), pour guider ceux qui ne savent pas quoi travailler.
-const DEFAULT_SORT: SortOption = 'most_upvoted';
+// Tri par défaut : « Pour toi » — d'abord ce qui suit son travail (chapitre en cours, à retravailler,
+// nouveautés de ses chapitres), varié entre chapitres ; ce qu'il a réussi passe en dernier. Visiteur :
+// nouveautés et plus aimés.
+const DEFAULT_SORT: SortOption = 'recommended';
 
 const LIST_SEO: Record<ContentType, { title: string; description: string }> = {
   exercise: {

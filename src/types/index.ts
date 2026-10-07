@@ -1,5 +1,5 @@
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type SortOption = 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
+export type SortOption = 'recommended' | 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
 export type VoteValue = 1 | -1 | 0;
 export type CompleteValue = 'success' | 'review';
 export type ContentKind = 'exercise' | 'lesson' | 'exam';
