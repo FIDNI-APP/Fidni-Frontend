@@ -13,13 +13,12 @@
  * redisait la même chose.
  */
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Check, RotateCcw, CircleDot, Eye, EyeOff, Flag, CheckCheck, PartyPopper } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, RotateCcw, CircleDot, Eye, EyeOff, Flag, CheckCheck } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
 import { trackAction } from '@/lib/usage';
-import { assessablePaths } from '@/lib/utils/contentHelpers';
 
 // =====================
 // TYPES
@@ -54,10 +53,6 @@ interface ExerciseRendererProps {
   locked?: boolean;
   /** Signaler une erreur sur une question (chemin « q2 », « q2.sq1 ») ; absent = pas de bouton. */
   onReport?: (path: string) => void;
-  /** Exercice ou sujet d'examen : pour le message affiché après une auto-évaluation. */
-  kind?: 'exercise' | 'exam';
-  /** Toutes les questions du contenu (un examen est affiché partie par partie) ; par défaut, celles de `structure`. */
-  allPaths?: string[];
 }
 
 /** Ancre d'une question (onglet Activité → « Revoir la question »). */
@@ -193,18 +188,34 @@ const AllSuccessChip: React.FC<{ paths: string[]; progress?: ProgressData; onAss
 };
 
 // =====================
-// « TU AVAIS TROUVÉ ? » ET RETOUR IMMÉDIAT (07/10/2026)
+// « TU AVAIS TROUVÉ ? » (07/10/2026)
 // =====================
 
 /**
- * Sous une solution qu'on vient d'ouvrir, si la question n'est pas encore évaluée : c'est le moment où
- * l'élève sait s'il avait trouvé. Deux réponses seulement (« En partie » reste dans les boutons du dessus).
+ * Sous une solution ouverte, si la question n'est pas encore évaluée : c'est le moment où l'élève sait
+ * s'il avait trouvé. Deux réponses seulement (« En partie » reste dans les boutons du dessus) ; après le
+ * clic, un simple « Noté » quelques secondes.
  */
-const FoundPrompt: React.FC<{ onAnswer: (status: AssessmentStatus) => void }> = ({ onAnswer }) => {
+const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentStatus) => void }> = ({ assessed, onAnswer }) => {
+  const [noted, setNoted] = useState(false);
+  useEffect(() => {
+    if (!noted) return;
+    const t = window.setTimeout(() => setNoted(false), 3000);
+    return () => window.clearTimeout(t);
+  }, [noted]);
+  if (noted) {
+    return (
+      <p role="status" className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-brand-hover">
+        <Check className="w-3.5 h-3.5" /> Noté
+      </p>
+    );
+  }
+  if (assessed) return null;
   const answer = (status: AssessmentStatus) => (e: React.MouseEvent) => {
     e.stopPropagation();
     trackAction('trouve-apres-solution');
     onAnswer(status);
+    setNoted(true);
   };
   const btn = 'inline-flex items-center gap-1 h-7 px-3 rounded-full text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
   return (
@@ -219,24 +230,6 @@ const FoundPrompt: React.FC<{ onAnswer: (status: AssessmentStatus) => void }> = 
     </div>
   );
 };
-
-/** Ce que l'auto-évaluation vient de changer, sous la question évaluée ; s'efface après quelques secondes. */
-const AssessFeedback: React.FC<{ tone: 'ok' | 'review' | 'done'; children: React.ReactNode }> = ({ tone, children }) => {
-  const style = tone === 'review'
-    ? { icon: <RotateCcw className="w-3.5 h-3.5 shrink-0" />, cls: 'bg-[#fbf3f2] text-[#8d3029]' }
-    : tone === 'done'
-      ? { icon: <PartyPopper className="w-3.5 h-3.5 shrink-0" />, cls: 'bg-brand-soft text-brand-hover font-semibold' }
-      : { icon: <Check className="w-3.5 h-3.5 shrink-0" />, cls: 'bg-brand-soft/70 text-brand-hover' };
-  return (
-    <p role="status" className={`mt-2 inline-flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] leading-snug ${style.cls}`}>
-      <span className="mt-[1px]">{style.icon}</span>
-      <span>{children}</span>
-    </p>
-  );
-};
-
-/** Message à afficher sous une question (seulement celle qu'on vient d'évaluer). */
-const AssessUiContext = createContext<{ feedbackFor: (path: string) => React.ReactNode }>({ feedbackFor: () => null });
 
 // =====================
 // SOLUTION TOGGLE BUTTON
@@ -330,7 +323,6 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   onReport,
 }) => {
   const [localShowSolution, setLocalShowSolution] = useState(false);
-  const { feedbackFor } = useContext(AssessUiContext);
   const path = `${questionPath}.${subQuestion.id}`;
   const hasSolution = Boolean(subQuestion.solution?.html) && !locked;
   const showSolution = !locked && (globalShowSolutions || localShowSolution);
@@ -354,10 +346,9 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
             ? { current: progress?.[path]?.status, onAssess: (s) => onAssess(path, s) } : undefined}
         />
         <InlineSolution solution={subQuestion.solution} isVisible={showSolution} />
-        {showSolution && hasSolution && interactive && onAssess && !progress?.[path]?.status && (
-          <FoundPrompt onAnswer={(s) => onAssess(path, s)} />
+        {showSolution && hasSolution && interactive && onAssess && (
+          <FoundPrompt assessed={!!progress?.[path]?.status} onAnswer={(s) => onAssess(path, s)} />
         )}
-        {feedbackFor(path)}
       </div>
     </div>
   );
@@ -393,7 +384,6 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   onReport,
 }) => {
   const [localShowSolution, setLocalShowSolution] = useState(false);
-  const { feedbackFor } = useContext(AssessUiContext);
   const path = block.id;
   const hasSubQuestions = block.subQuestions && block.subQuestions.length > 0;
   const hasSolution = Boolean(block.solution?.html) && !locked;
@@ -425,14 +415,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       )}
 
       {/* Solution — only for questions without sub-questions */}
-      {!hasSubQuestions && (
-        <div>
-          <InlineSolution solution={block.solution} isVisible={showSolution} />
-          {showSolution && hasSolution && canAssess && !progress?.[path]?.status && (
-            <FoundPrompt onAnswer={(s) => onAssess!(path, s)} />
-          )}
-          {feedbackFor(path)}
-        </div>
+      {!hasSubQuestions && <InlineSolution solution={block.solution} isVisible={showSolution} />}
+      {!hasSubQuestions && showSolution && hasSolution && canAssess && (
+        <FoundPrompt assessed={!!progress?.[path]?.status} onAnswer={(s) => onAssess!(path, s)} />
       )}
 
       {/* Sub-questions */}
@@ -478,47 +463,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   compact = true,
   locked = false,
   onReport,
-  kind = 'exercise',
-  allPaths,
 }) => {
-  // Dernière question évaluée ici : un message dit tout de suite ce que ça change (07/10/2026).
-  const [last, setLast] = useState<{ path: string; status: AssessmentStatus } | null>(null);
-  useEffect(() => {
-    if (!last) return;
-    const t = window.setTimeout(() => setLast(null), 9000);
-    return () => window.clearTimeout(t);
-  }, [last]);
-  const leaves = useMemo(() => allPaths ?? assessablePaths(structure), [allPaths, structure]);
-
-  // Re-cliquer le choix actif l'efface (ContentDetail) : pas de message dans ce cas.
-  const assess = onAssess && ((path: string, status: AssessmentStatus) => {
-    const clearing = progress?.[path]?.status === status;
-    onAssess(path, status);
-    setLast(clearing ? null : { path, status });
-  });
-  const assessMany = onAssessMany && ((changes: AssessChanges) => {
-    onAssessMany(changes);
-    const set = Object.entries(changes).filter(([, st]) => st);
-    setLast(set.length ? { path: set[set.length - 1][0], status: set[set.length - 1][1] as AssessmentStatus } : null);
-  });
-
-  const feedbackFor = (path: string): React.ReactNode => {
-    if (!last || last.path !== path) return null;
-    const st = (p: string) => progress?.[p]?.status;
-    const remaining = leaves.filter((p) => !st(p)).length;
-    const noun = kind === 'exam' ? 'ce sujet' : 'cet exercice';
-    if (remaining === 0) {
-      return leaves.every((p) => st(p) === 'success')
-        ? <AssessFeedback tone="done">{kind === 'exam' ? 'Sujet réussi' : 'Exercice réussi'} : il ne reviendra plus en tête de ta liste.</AssessFeedback>
-        : <AssessFeedback tone="review">Tout est évalué : on te reproposera {noun} dans 3 jours pour le retravailler.</AssessFeedback>;
-    }
-    const left = `${remaining} question${remaining > 1 ? 's' : ''}`;
-    if (last.status === 'success') {
-      return <AssessFeedback tone="ok">Bien joué ! Encore {left} à évaluer pour valider {noun}.</AssessFeedback>;
-    }
-    return <AssessFeedback tone="review">Noté{last.status === 'partial' ? ' (en partie)' : ''} : on te reproposera {noun} dans 3 jours pour le retravailler.</AssessFeedback>;
-  };
-
   if (!structure || !structure.blocks || structure.blocks.length === 0) {
     return (
       <div className="text-center text-ink-faint py-8">
@@ -528,7 +473,6 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   }
 
   return (
-    <AssessUiContext.Provider value={{ feedbackFor }}>
     <div className={compact ? 'content-compact-view bg-white rounded-xl border border-line' : ''}>
       {compact && <CompactStyles />}
       <div className={compact ? 'p-4' : ''}>
@@ -554,8 +498,8 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                 questionIndex={qCount}
                 globalShowSolutions={showAllSolutions}
                 progress={progress}
-                onAssess={assess}
-                onAssessMany={assessMany}
+                onAssess={onAssess}
+                onAssessMany={onAssessMany}
                 interactive={interactive}
                 isFirst={index === 0}
                 locked={locked}
@@ -566,7 +510,6 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
         })()}
       </div>
     </div>
-    </AssessUiContext.Provider>
   );
 };
 

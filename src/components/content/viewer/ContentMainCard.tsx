@@ -299,7 +299,6 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                 showAllSolutions={showAllSolutions}
                 compact={false}
                 onReport={onReport}
-                kind="exercise"
               />
             </div>
             )}
