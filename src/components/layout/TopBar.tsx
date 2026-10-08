@@ -128,6 +128,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
 
         <div className="flex-1" />
 
+        {/* Notifications (membres connectés) : à gauche de la recherche ; l'aide reste tout à droite. */}
+        <NotificationBell />
+
         {/* Search — full field on larger screens */}
         <form
           onSubmit={handleSearchSubmit}
@@ -164,9 +167,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
         >
           <SearchIcon className="w-5 h-5" />
         </button>
-
-        {/* Notifications (membres connectés) : nouveaux commentaires, réponses */}
-        <NotificationBell />
 
         {/* Guide de la page (visite guidée), s'il y en a un */}
         <TourHelpButton />
