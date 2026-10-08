@@ -1,18 +1,19 @@
 /**
  * « Tu as ouvert N exercices sans dire si tu les as réussis » (07/10/2026) : en haut de la liste
- * « Pour toi », les contenus ouverts et travaillés sans « Réussi » ni « À revoir », avec les deux
- * boutons directement sur chaque carte. L'élève rattrape ses oublis d'un clic ; il peut fermer le
- * bandeau (ces contenus ne lui seront plus redemandés ici). Données : GET /api/contents/a-evaluer/
- * (backend things/catch_up.py).
+ * « Pour toi », les contenus ouverts et travaillés sans « Réussi » ni « À revoir », avec les boutons
+ * directement sur chaque carte. L'élève rattrape ses oublis d'un clic.
+ * « Pas encore fait » (08/10/2026) : il a seulement regardé, il ne peut pas juger. Comme la croix du
+ * bandeau, ça ne le lui redemande plus, sauf s'il y retravaille ensuite (backend things/catch_up.py).
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ClipboardCheck, RotateCcw, X } from 'lucide-react';
+import { Check, ClipboardCheck, Eye, RotateCcw, X } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { trackAction } from '@/lib/usage';
 
 type Kind = 'exercise' | 'exam';
 type Result = 'success' | 'review';
+type Answer = Result | 'not_done';
 
 interface PendingItem {
   id: number;
@@ -25,30 +26,27 @@ interface PendingItem {
 
 const PATH: Record<Kind, string> = { exercise: '/exercises', exam: '/exams' };
 const NOUN: Record<Kind, [string, string]> = { exercise: ['exercice', 'exercices'], exam: ['examen', 'examens'] };
-const storageKey = (kind: Kind) => `fidni:rattrapage-ferme:${kind}`;
-
-const readDismissed = (kind: Kind): number[] => {
-  try { return JSON.parse(localStorage.getItem(storageKey(kind)) || '[]'); } catch { return []; }
-};
 
 const ago = (iso: string) => {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   return days <= 0 ? 'ouvert aujourd’hui' : days === 1 ? 'ouvert hier' : `ouvert il y a ${days} j`;
 };
 
+/** Ne plus demander ces contenus (« Pas encore fait », ou bandeau fermé). */
+const ignore = (ids: number[]) => api.post('/contents/a-evaluer/ignorer/', { ids });
+
 export const CatchUpBanner: React.FC<{ kind: Kind; onEvaluated?: (id: number, result: Result) => void }> = ({ kind, onEvaluated }) => {
   const [items, setItems] = useState<PendingItem[]>([]);
   const [count, setCount] = useState(0);
-  const [results, setResults] = useState<Record<number, Result>>({});
+  const [answers, setAnswers] = useState<Record<number, Answer>>({});
   const [failed, setFailed] = useState<number | null>(null);
   const [closed, setClosed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setResults({});
+    setAnswers({});
     setClosed(false);
-    // Ceux écartés en fermant le bandeau ne sont plus redemandés (le serveur ne les compte pas).
-    api.get('/contents/a-evaluer/', { params: { type: kind, exclude: readDismissed(kind).join(',') || undefined } })
+    api.get('/contents/a-evaluer/', { params: { type: kind } })
       .then((r) => {
         if (cancelled) return;
         setItems(r.data.items || []);
@@ -58,7 +56,7 @@ export const CatchUpBanner: React.FC<{ kind: Kind; onEvaluated?: (id: number, re
     return () => { cancelled = true; };
   }, [kind]);
 
-  const answered = items.filter((x) => results[x.id]).length;
+  const answered = items.filter((x) => answers[x.id]).length;
   const allDone = items.length > 0 && answered === items.length;
   // Tout est rattrapé : un merci, puis le bandeau s'en va.
   useEffect(() => {
@@ -70,33 +68,40 @@ export const CatchUpBanner: React.FC<{ kind: Kind; onEvaluated?: (id: number, re
   if (closed || items.length === 0) return null;
 
   const close = () => {
-    const ids = Array.from(new Set([...readDismissed(kind), ...items.map((x) => x.id)])).slice(-200);
-    try { localStorage.setItem(storageKey(kind), JSON.stringify(ids)); } catch { /* stockage indisponible */ }
+    const open = items.filter((x) => !answers[x.id]).map((x) => x.id);
+    if (open.length) ignore(open).catch(() => {});
     setClosed(true);
   };
 
-  const answer = async (item: PendingItem, result: Result) => {
+  const answer = async (item: PendingItem, value: Answer) => {
     setFailed(null);
-    setResults((r) => ({ ...r, [item.id]: result }));
+    setAnswers((a) => ({ ...a, [item.id]: value }));
     trackAction('rattrapage-liste');
     try {
-      if (result === 'success' && item.paths.length) {
+      if (value === 'not_done') {
+        await ignore([item.id]);
+      } else if (value === 'success' && item.paths.length) {
         // Comme « Tout réussi » sur la page du contenu : toutes les questions, puis le contenu.
         await api.post(`/contents/${item.id}/assess_many/`, {
           assessments: Object.fromEntries(item.paths.map((p) => [p, 'success'])), completion: 'success',
         });
       } else {
-        await api.post(`/contents/${item.id}/mark_progress/`, { status: result });
+        await api.post(`/contents/${item.id}/mark_progress/`, { status: value });
       }
-      onEvaluated?.(item.id, result);
+      if (value !== 'not_done') onEvaluated?.(item.id, value);
     } catch {
-      setResults((r) => { const next = { ...r }; delete next[item.id]; return next; });
+      setAnswers((a) => { const next = { ...a }; delete next[item.id]; return next; });
       setFailed(item.id);
     }
   };
 
   const [one, many] = NOUN[kind];
   const btn = 'inline-flex flex-1 items-center justify-center gap-1 h-8 px-3 rounded-lg text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
+  const DONE: Record<Answer, { cls: string; icon: React.ReactNode; label: string }> = {
+    success: { cls: 'bg-brand-soft text-brand-hover', icon: <Check className="h-3.5 w-3.5" />, label: 'Réussi' },
+    review: { cls: 'bg-[#fbecea] text-[#a23b34]', icon: <RotateCcw className="h-3.5 w-3.5" />, label: 'À revoir' },
+    not_done: { cls: 'bg-[#f2f1ee] text-ink-soft', icon: <Eye className="h-3.5 w-3.5" />, label: 'Pas encore fait' },
+  };
 
   return (
     <section aria-label={`${many} à évaluer`} className="mb-5 rounded-2xl border border-[#ecdcb6] bg-[#fdfaf3] p-4 sm:p-5">
@@ -124,7 +129,7 @@ export const CatchUpBanner: React.FC<{ kind: Kind; onEvaluated?: (id: number, re
 
       <ul className="mt-3.5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => {
-          const result = results[item.id];
+          const done = answers[item.id];
           return (
             <li key={item.id} className="flex flex-col rounded-xl border border-line bg-white px-3.5 py-3">
               <Link to={`${PATH[kind]}/${item.id}`} className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-ink hover:underline">
@@ -134,13 +139,16 @@ export const CatchUpBanner: React.FC<{ kind: Kind; onEvaluated?: (id: number, re
                 {[item.chapter, ago(item.seen_at), item.assessed ? `${item.assessed} question${item.assessed > 1 ? 's' : ''} évaluée${item.assessed > 1 ? 's' : ''}` : null]
                   .filter(Boolean).join(' · ')}
               </p>
-              <div className="mt-2.5 flex gap-2">
-                {result ? (
-                  <span role="status" className={`${btn} ${result === 'success' ? 'bg-brand-soft text-brand-hover' : 'bg-[#fbecea] text-[#a23b34]'}`}>
-                    {result === 'success' ? <><Check className="h-3.5 w-3.5" /> Réussi</> : <><RotateCcw className="h-3.5 w-3.5" /> À revoir</>}
-                  </span>
-                ) : (
-                  <>
+              {done ? (
+                <div className="mt-auto pt-2.5">
+                  <span role="status" className={`${btn} w-full ${DONE[done].cls}`}>{DONE[done].icon} {DONE[done].label}</span>
+                  {done === 'not_done' && (
+                    <p className="mt-1.5 text-[11.5px] leading-snug text-ink-faint">On te le redemandera quand tu y auras retravaillé.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-auto pt-2.5">
+                  <div className="flex gap-2">
                     <button type="button" onClick={() => answer(item, 'success')}
                       className={`${btn} bg-brand-soft text-brand-hover hover:bg-brand hover:text-white`}>
                       <Check className="h-3.5 w-3.5" /> Réussi
@@ -149,9 +157,14 @@ export const CatchUpBanner: React.FC<{ kind: Kind; onEvaluated?: (id: number, re
                       className={`${btn} bg-[#fbecea] text-[#a23b34] hover:bg-[#a23b34] hover:text-white`}>
                       <RotateCcw className="h-3.5 w-3.5" /> À revoir
                     </button>
-                  </>
-                )}
-              </div>
+                  </div>
+                  {/* Il l'a seulement regardé : il ne peut pas dire s'il l'a réussi. */}
+                  <button type="button" onClick={() => answer(item, 'not_done')}
+                    className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded-lg py-1 text-[12px] font-medium text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink">
+                    <Eye className="h-3.5 w-3.5" /> Juste regardé, pas encore fait
+                  </button>
+                </div>
+              )}
               {failed === item.id && <p className="mt-1.5 text-[12px] text-[#a23b34]">Ça n’a pas marché, réessaie.</p>}
             </li>
           );
