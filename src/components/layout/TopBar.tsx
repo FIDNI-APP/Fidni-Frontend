@@ -22,7 +22,7 @@ const SECTION_LABELS: Record<string, string> = {
   concours: 'Concours',
   profile: 'Profil',
   saved: 'Favoris',
-  'revision-lists': 'Listes de révision',
+  'revision-lists': 'Révisions',
   notebooks: 'Cahiers',
   'skill-iq': 'Skill IQ',
   settings: 'Paramètres',

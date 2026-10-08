@@ -15,6 +15,7 @@ import {
 import { getDashboardOverview, type DashboardOverview as Overview } from '@/lib/api';
 import { getRevisionSuggestions, quickAddToRevision } from '@/lib/api/revisionListApi';
 import { Loader2 } from 'lucide-react';
+import { NextTestReminder } from '@/components/devoirs/NextTestReminder';
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -45,6 +46,8 @@ export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?:
   return (
     <div className="flex flex-col gap-5">
       <Header username={username} data={data} next={next} levelQuery={levelQuery} fallbackExercise={fallbackExercise} />
+      {/* Prochain DS (« Mon prochain DS ») : le rappel juste sous le bonjour. */}
+      <NextTestReminder />
       <WeekStrip data={data} />
       {hasTodo && <NextSteps data={data} />}
     </div>

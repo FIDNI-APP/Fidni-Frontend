@@ -90,6 +90,8 @@ const RevisionListDetail = page(() => import('./pages/RevisionListDetail'), 'Rev
 const PaperExport = page(() => import('./pages/PaperExport'), 'PaperExport');
 const SavedItems = page(() => import('./pages/SavedItems'), 'SavedItems');
 const RevisionLists = page(() => import('./pages/RevisionLists'), 'RevisionLists');
+const TestPlanPage = page(() => import('./pages/devoirs/TestPlanPage'), 'default');
+const MockExamPage = page(() => import('./pages/devoirs/MockExamPage'), 'default');
 const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'), 'default');
 const SkillIQSection = page(() => import('@/components/profile/SkillIQSection'), 'SkillIQSection');
 const ProgressionPage = page(() => import('./pages/progression/Progression'), 'default');
@@ -362,6 +364,18 @@ function App() {
                     <Route path="/revision-lists" element={
                       <NavbarWrapper>
                         <RevisionLists />
+                      </NavbarWrapper>
+                    } />
+                    {/* « Mon prochain DS » : plan de révision et DS blanc */}
+                    <Route path="/revisions" element={<Navigate to="/revision-lists" replace />} />
+                    <Route path="/revisions/ds/:id" element={
+                      <NavbarWrapper>
+                        <TestPlanPage />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/revisions/ds/:id/blanc" element={
+                      <NavbarWrapper>
+                        <MockExamPage />
                       </NavbarWrapper>
                     } />
                     {/* Mon espace — features moved out of the profile page */}
