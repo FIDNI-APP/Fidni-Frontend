@@ -43,59 +43,168 @@ export const colorOptions = [
   "#993366", "#c0c0c0", "#ff99cc", "#ffcc00"
 ];
 
+// Modèles du programme de lycée (Maroc) : insérés dans le champ « Formule », à compléter (08/10/2026).
 export const mathFormulaCategories: FormulaCategory[] = [
+  {
+    name: "Limites et dérivées",
+    formulas: [
+      { name: "Limite en +∞", latex: "\\lim_{x \\to +\\infty} f(x)" },
+      { name: "Limite en a", latex: "\\lim_{x \\to a} f(x)" },
+      { name: "Nombre dérivé", latex: "\\lim_{h \\to 0} \\frac{f(a+h)-f(a)}{h}" },
+      { name: "Dérivée", latex: "f'(x)" },
+      { name: "Dérivée d'un quotient", latex: "\\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}" },
+      { name: "Composée", latex: "(g \\circ f)'(x) = f'(x)\\,g'(f(x))" },
+    ],
+  },
+  {
+    name: "Suites",
+    formulas: [
+      { name: "Suite", latex: "(u_n)_{n \\in \\mathbb{N}}" },
+      { name: "Récurrence", latex: "u_{n+1} = f(u_n)" },
+      { name: "Arithmétique", latex: "u_n = u_0 + nr" },
+      { name: "Géométrique", latex: "u_n = u_0\\, q^n" },
+      { name: "Somme géométrique", latex: "\\sum_{k=0}^{n} q^k = \\frac{1-q^{n+1}}{1-q}" },
+      { name: "Limite d'une suite", latex: "\\lim_{n \\to +\\infty} u_n = \\ell" },
+    ],
+  },
+  {
+    name: "Intégrales",
+    formulas: [
+      { name: "Intégrale", latex: "\\int_{a}^{b} f(x)\\,dx" },
+      { name: "Primitive", latex: "\\left[F(x)\\right]_{a}^{b} = F(b) - F(a)" },
+      { name: "Intégration par parties", latex: "\\int_{a}^{b} u'v\\,dx = \\left[uv\\right]_{a}^{b} - \\int_{a}^{b} uv'\\,dx" },
+      { name: "Valeur moyenne", latex: "\\frac{1}{b-a}\\int_{a}^{b} f(x)\\,dx" },
+    ],
+  },
+  {
+    name: "ln et exp",
+    formulas: [
+      { name: "Logarithme", latex: "\\ln(x)" },
+      { name: "Exponentielle", latex: "e^{x}" },
+      { name: "ln d'un produit", latex: "\\ln(ab) = \\ln a + \\ln b" },
+      { name: "Croissance comparée (ln)", latex: "\\lim_{x \\to +\\infty} \\frac{\\ln x}{x} = 0" },
+      { name: "Croissance comparée (exp)", latex: "\\lim_{x \\to +\\infty} \\frac{e^{x}}{x} = +\\infty" },
+      { name: "Logarithme de base a", latex: "\\log_{a}(x) = \\frac{\\ln x}{\\ln a}" },
+    ],
+  },
+  {
+    name: "Complexes",
+    formulas: [
+      { name: "Forme algébrique", latex: "z = a + ib" },
+      { name: "Conjugué", latex: "\\overline{z} = a - ib" },
+      { name: "Module", latex: "|z| = \\sqrt{a^2 + b^2}" },
+      { name: "Forme exponentielle", latex: "z = r\\,e^{i\\theta}" },
+      { name: "Moivre", latex: "(\\cos\\theta + i\\sin\\theta)^n = \\cos(n\\theta) + i\\sin(n\\theta)" },
+    ],
+  },
+  {
+    name: "Ensembles et logique",
+    formulas: [
+      { name: "Appartient à ℝ", latex: "x \\in \\mathbb{R}" },
+      { name: "Pour tout", latex: "\\forall x \\in \\mathbb{R}" },
+      { name: "Il existe", latex: "\\exists n \\in \\mathbb{N}" },
+      { name: "Implication", latex: "P \\Rightarrow Q" },
+      { name: "Équivalence", latex: "P \\Leftrightarrow Q" },
+      { name: "Intervalle", latex: "]a\\,;\\,b[" },
+    ],
+  },
   {
     name: "Algèbre",
     formulas: [
-      { name: "Équation quadratique", latex: "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", description: "Solution de ax² + bx + c = 0" },
-      { name: "Binôme de Newton", latex: "(x+y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k", description: "Développement du binôme" },
-      { name: "Fraction", latex: "\\frac{a}{b}", description: "Division de a par b" },
-      { name: "Racine carrée", latex: "\\sqrt{x}", description: "Racine carrée de x" },
-      { name: "Racine n-ième", latex: "\\sqrt[n]{x}", description: "Racine n-ième de x" },
-    ]
-  },
-  {
-    name: "Calcul",
-    formulas: [
-      { name: "Dérivée", latex: "\\frac{d}{dx}f(x)", description: "Dérivée de f(x) par rapport à x" },
-      { name: "Intégrale définie", latex: "\\int_{a}^{b} f(x) \\, dx", description: "Intégrale de f(x) de a à b" },
-      { name: "Limite", latex: "\\lim_{x \\to a} f(x)", description: "Limite de f(x) quand x tend vers a" },
-      { name: "Somme", latex: "\\sum_{i=1}^{n} a_i", description: "Somme des termes" },
-    ]
-  },
-  {
-    name: "Trigonométrie",
-    formulas: [
-      { name: "Identité fondamentale", latex: "\\sin^2(\\theta) + \\cos^2(\\theta) = 1", description: "Relation entre sin² et cos²" },
-      { name: "Loi des sinus", latex: "\\frac{a}{\\sin(A)} = \\frac{b}{\\sin(B)} = \\frac{c}{\\sin(C)}", description: "Pour un triangle quelconque" },
-      { name: "Loi des cosinus", latex: "c^2 = a^2 + b^2 - 2ab\\cos(C)", description: "Généralisation de Pythagore" },
-    ]
-  },
-  {
-    name: "Matrices",
-    formulas: [
-      { name: "Matrice 2×2", latex: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}", description: "Matrice carrée d'ordre 2" },
-      { name: "Système d'équations", latex: "\\begin{cases} a_1x + b_1y = c_1 \\\\ a_2x + b_2y = c_2 \\end{cases}", description: "Système de deux équations" },
-    ]
+      { name: "Fraction", latex: "\\frac{a}{b}" },
+      { name: "Racine n-ième", latex: "\\sqrt[n]{x}" },
+      { name: "Discriminant", latex: "\\Delta = b^2 - 4ac" },
+      { name: "Racines du trinôme", latex: "x = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}" },
+      { name: "Identité remarquable", latex: "(a+b)^2 = a^2 + 2ab + b^2" },
+      { name: "Système", latex: "\\begin{cases} ax + by = c \\\\ a'x + b'y = c' \\end{cases}" },
+    ],
   },
 ];
 
-// Common math symbols for quick insertion
-export const mathSymbols = [
-  { latex: 'x^{2}', label: 'Puissance', display: 'x²' },
-  { latex: '\\frac{a}{b}', label: 'Fraction', display: 'a/b' },
-  { latex: '\\sqrt{x}', label: 'Racine', display: '√' },
-  { latex: '\\sum', label: 'Somme', display: 'Σ' },
-  { latex: '\\int', label: 'Intégrale', display: '∫' },
-  { latex: '\\lim', label: 'Limite', display: 'lim' },
-  { latex: '\\alpha', label: 'Alpha', display: 'α' },
-  { latex: '\\beta', label: 'Beta', display: 'β' },
-  { latex: '\\pi', label: 'Pi', display: 'π' },
-  { latex: '\\theta', label: 'Theta', display: 'θ' },
-  { latex: '\\infty', label: 'Infini', display: '∞' },
-  { latex: '\\leq', label: 'Inférieur ou égal', display: '≤' },
-  { latex: '\\geq', label: 'Supérieur ou égal', display: '≥' },
-  { latex: '\\neq', label: 'Différent', display: '≠' },
-  { latex: '\\times', label: 'Multiplication', display: '×' },
-  { latex: '\\pm', label: 'Plus ou moins', display: '±' },
+export interface MathSymbol {
+  latex: string;
+  label: string;
+  display: string;
+  /** Morceau sélectionné après l'insertion (on tape directement par-dessus) ; remplacé par le texte
+   *  sélectionné dans le champ s'il y en a un (sélectionner `3x+1` puis √ donne `\sqrt{3x+1}`). */
+  select?: string;
+  /** Bouton dessiné par KaTeX (caractères que les polices n'ont pas : flèche de vecteur…). */
+  preview?: string;
+}
+
+// Palette du panneau « Formule » : insérés au curseur du champ LaTeX (08/10/2026).
+export const mathSymbolGroups: { name: string; symbols: MathSymbol[] }[] = [
+  {
+    name: 'Courants',
+    symbols: [
+      { latex: '^{2}', label: 'Puissance (tape la base avant)', display: 'x²', select: '2' },
+      { latex: '_{n}', label: 'Indice (tape la lettre avant)', display: 'xₙ', select: 'n' },
+      { latex: '\\frac{a}{b}', label: 'Fraction', display: 'a⁄b', select: 'a' },
+      { latex: '\\sqrt{x}', label: 'Racine carrée', display: '√x', select: 'x' },
+      { latex: '\\left| x \\right|', label: 'Valeur absolue', display: '|x|', select: 'x' },
+      { latex: '\\lim_{x \\to +\\infty}', label: 'Limite', display: 'lim' },
+      { latex: '\\sum_{k=0}^{n}', label: 'Somme', display: 'Σ' },
+      { latex: '\\int_{a}^{b}', label: 'Intégrale', display: '∫' },
+      { latex: '\\infty', label: 'Infini', display: '∞' },
+      { latex: '\\times', label: 'Multiplié par', display: '×' },
+      { latex: '\\pm', label: 'Plus ou moins', display: '±' },
+      { latex: '\\overrightarrow{AB}', label: 'Vecteur', display: 'AB', select: 'AB', preview: '\\overrightarrow{AB}' },
+      { latex: '\\overline{z}', label: 'Conjugué', display: 'z', select: 'z', preview: '\\overline{z}' },
+    ],
+  },
+  {
+    name: 'Relations',
+    symbols: [
+      { latex: '\\leq', label: 'Inférieur ou égal', display: '≤' },
+      { latex: '\\geq', label: 'Supérieur ou égal', display: '≥' },
+      { latex: '\\neq', label: 'Différent', display: '≠' },
+      { latex: '\\approx', label: 'Environ égal', display: '≈' },
+      { latex: '\\to', label: 'Tend vers', display: '→' },
+      { latex: '\\Rightarrow', label: 'Implique', display: '⇒' },
+      { latex: '\\Leftrightarrow', label: 'Équivaut à', display: '⇔' },
+      { latex: '\\forall', label: 'Pour tout', display: '∀' },
+      { latex: '\\exists', label: 'Il existe', display: '∃' },
+      { latex: '\\in', label: 'Appartient à', display: '∈' },
+      { latex: '\\notin', label: 'N’appartient pas à', display: '∉' },
+      { latex: '\\subset', label: 'Inclus dans', display: '⊂' },
+    ],
+  },
+  {
+    name: 'Ensembles',
+    symbols: [
+      { latex: '\\mathbb{N}', label: 'Entiers naturels', display: 'ℕ' },
+      { latex: '\\mathbb{Z}', label: 'Entiers relatifs', display: 'ℤ' },
+      { latex: '\\mathbb{Q}', label: 'Rationnels', display: 'ℚ' },
+      { latex: '\\mathbb{R}', label: 'Réels', display: 'ℝ' },
+      { latex: '\\mathbb{C}', label: 'Complexes', display: 'ℂ' },
+      { latex: '\\mathbb{R}^{*}', label: 'Réels non nuls', display: 'ℝ*' },
+      { latex: '[a\\,;\\,b]', label: 'Intervalle fermé', display: '[a;b]', select: 'a' },
+      { latex: ']a\\,;\\,b[', label: 'Intervalle ouvert', display: ']a;b[', select: 'a' },
+      { latex: '\\cup', label: 'Union', display: '∪' },
+      { latex: '\\cap', label: 'Intersection', display: '∩' },
+      { latex: '\\emptyset', label: 'Ensemble vide', display: '∅' },
+      { latex: '\\circ', label: 'Composée', display: '∘' },
+    ],
+  },
+  {
+    name: 'Grec',
+    symbols: [
+      { latex: '\\alpha', label: 'Alpha', display: 'α' },
+      { latex: '\\beta', label: 'Bêta', display: 'β' },
+      { latex: '\\gamma', label: 'Gamma', display: 'γ' },
+      { latex: '\\delta', label: 'Delta', display: 'δ' },
+      { latex: '\\Delta', label: 'Delta majuscule', display: 'Δ' },
+      { latex: '\\varepsilon', label: 'Epsilon', display: 'ε' },
+      { latex: '\\theta', label: 'Thêta', display: 'θ' },
+      { latex: '\\lambda', label: 'Lambda', display: 'λ' },
+      { latex: '\\mu', label: 'Mu', display: 'μ' },
+      { latex: '\\pi', label: 'Pi', display: 'π' },
+      { latex: '\\sigma', label: 'Sigma', display: 'σ' },
+      { latex: '\\varphi', label: 'Phi', display: 'φ' },
+      { latex: '\\omega', label: 'Oméga', display: 'ω' },
+    ],
+  },
 ];
+
+// Ancienne liste (éditeur A4 TipTapEditor) : les symboles courants.
+export const mathSymbols = mathSymbolGroups[0].symbols.map((s) => ({ ...s, latex: s.latex.replace(/^([\^_])/, 'x$1') }));

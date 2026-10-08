@@ -438,3 +438,42 @@ html {
 @media print {
   ins.adsbygoogle, .google-auto-placed, .fd-ad { display: none !important; }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Éditeur compact (CompactTipTapEditor) : contenus, solutions, commentaires.
+   Les formules sont des nœuds KaTeX (MathNode.ts) : survol = cliquable, sélection = anneau vert.
+   ────────────────────────────────────────────────────────────── */
+.fd-editor .fd-editor-body { padding: .75rem .875rem; outline: none; color: #1a1a1a; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.fd-editor .fd-editor-body:focus-visible { outline: none; }
+.fd-editor .fd-editor-body p { margin: 0 0 .5rem; }
+.fd-editor .fd-editor-body > :last-child { margin-bottom: 0; }
+.fd-editor .fd-editor-body h1 { font-size: 1.3em; font-weight: 700; line-height: 1.3; margin: .6em 0 .35em; }
+.fd-editor .fd-editor-body h2 { font-size: 1.12em; font-weight: 700; line-height: 1.35; margin: .55em 0 .3em; }
+.fd-editor .fd-editor-body > :first-child { margin-top: 0; }
+.fd-editor .fd-editor-body ul, .fd-editor .fd-editor-body ol { margin: 0 0 .5rem; }
+.fd-editor .fd-editor-body li > p { margin: 0 0 .15rem; }
+.fd-editor .fd-editor-body a { color: #15633c; text-decoration: underline; text-underline-offset: 2px; }
+.fd-editor .fd-editor-body blockquote { border-left: 3px solid #e7e3dc; padding-left: .75rem; color: #33302b; }
+.fd-editor .fd-editor-body .content-image { display: block; margin: .5rem auto; max-width: 100%; }
+.fd-editor .fd-editor-body p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: #8f8a82;
+}
+.fd-editor .math-node { cursor: pointer; border-radius: 6px; padding: 1px 2px; transition: background-color .15s, box-shadow .15s; }
+.fd-editor .math-node-inline { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: bottom; }
+.fd-editor .math-node-display { display: block; margin: .35rem 0; padding: .2rem 0; text-align: center; overflow-x: auto; overflow-y: hidden; }
+.fd-editor .math-node-display .katex-display { margin: 0; }
+.fd-editor .math-node:hover { background: #eaf3ed; box-shadow: 0 0 0 1px #cfe6d8; }
+.fd-editor .math-node.is-selected { background: #eaf3ed; box-shadow: 0 0 0 2px #1a7a4a; }
+.fd-editor .ProseMirror-selectednode { outline: none; }
+/* Encarts (théorème, définition…) */
+.fd-editor [data-callout-type] { border-radius: .5rem; padding: .75rem; margin: .75rem 0; border-left: 4px solid; }
+.fd-editor [data-callout-type="theorem"] { background: #eff6ff; border-left-color: #1a1a1a; color: #1e3a8a; }
+.fd-editor [data-callout-type="property"] { background: #f2f1ee; border-left-color: #33302b; color: #312e81; }
+.fd-editor [data-callout-type="definition"] { background: #f7f6f3; border-left-color: #1a1a1a; color: #4c1d95; }
+.fd-editor [data-callout-type="lemma"] { background: #ecfeff; border-left-color: #06b6d4; color: #164e63; }
+.fd-editor [data-callout-type="corollary"] { background: #f0fdfa; border-left-color: #14b8a6; color: #134e4a; }
+.fd-editor [data-callout-type="example"] { background: #fffbeb; border-left-color: #f59e0b; color: #78350f; }
+.fd-editor [data-callout-type="remark"] { background: #f8fafc; border-left-color: #94a3b8; color: #1e293b; }
+.fd-editor [data-callout-type="proof"] { background: #ecfdf5; border-left-color: #10b981; color: #064e3b; }
+.fd-editor [data-callout-type="method"] { background: #faf5ff; border-left-color: #a855f7; color: #581c87; }
+.fd-editor [data-callout-type="warning"] { background: #fef2f2; border-left-color: #ef4444; color: #7f1d1d; }
