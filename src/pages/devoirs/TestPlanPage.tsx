@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Brain, Check, CheckCircle2, Clock, Dumbbell, Loader2, Pencil, RefreshCw, RotateCcw, Timer,
+  ArrowLeft, ArrowRight, Brain, Check, ChevronDown, Clock, Dumbbell, Loader2, Pencil, RefreshCw, RotateCcw, Timer,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -60,7 +60,10 @@ function advice(p: TestPlan): { text: string; to?: string; anchor?: string; labe
   }
   if (prep.exercises < prep.exercises_goal) {
     const left = prep.exercises_goal - prep.exercises;
-    return { text: `Encore ${plural(left, 'exercice', 'exercices')} dans les chapitres du DS, et tu seras prêt pour le DS blanc.`, anchor: 'exercices', label: 'Voir les exercices' };
+    return { text: prep.mock
+      ? `Encore ${plural(left, 'exercice', 'exercices')} dans les chapitres du DS pour consolider.`
+      : `Encore ${plural(left, 'exercice', 'exercices')} dans les chapitres du DS, et tu seras prêt pour le DS blanc.`,
+    anchor: 'exercices', label: 'Voir les exercices' };
   }
   if (mockReady) return { text: 'Tu as bien travaillé : place au DS blanc, en conditions réelles.', to: blanc, label: 'Lancer le DS blanc' };
   return { text: 'Belle préparation ! La veille, refais un exercice « à revoir », puis repose-toi.' };
@@ -74,6 +77,7 @@ export default function TestPlanPage() {
   const [error, setError] = useState<'missing' | 'failed' | null>(null);
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
+  const [moreExercises, setMoreExercises] = useState(false);
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = plan ? testTitle(plan.test) : null;
   useEffect(() => {
@@ -128,151 +132,130 @@ export default function TestPlanPage() {
     }
   };
 
+  const mock = plan.mock;
+  const prep = plan.preparation;
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
+    <div className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
       <SEO title={`${testTitle(t)} — préparation`} description="Ta révision ciblée pour ce DS." canonicalUrl={`/revisions/ds/${t.id}`} />
       <Link to="/revision-lists" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-faint hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Révisions
       </Link>
 
       {/* En-tête : date, titre, chapitres */}
-      <header className="mt-4 flex gap-4 sm:gap-5">
-        <DateTile date={t.date} size="lg" urgent={t.days_left >= 0 && t.days_left <= 1} />
+      <header className="mt-4 flex gap-4">
+        <DateTile date={t.date} size="md" urgent={t.days_left >= 0 && t.days_left <= 1} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Countdown days={t.days_left} />
-            <span className="text-[13px] text-ink-faint">{longDate(t.date)}</span>
-          </div>
-          <h1 className="fd-display mt-1 text-[26px] leading-tight text-ink md:text-[30px]">{testTitle(t)}</h1>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {t.chapters.map((c) => (
-              <span key={c.id} className="max-w-full truncate rounded-full bg-white px-2.5 py-1 text-[12.5px] text-ink-soft ring-1 ring-line">{c.name}</span>
-            ))}
-          </div>
+          <h1 className="fd-display text-[26px] leading-tight text-ink md:text-[28px]">{testTitle(t)}</h1>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-ink-faint">
+            <Countdown days={t.days_left} /> {longDate(t.date)}
+          </p>
+          <p className="mt-1.5 text-[13px] text-ink-soft">{t.chapters.map((c) => c.name).join(' · ')}</p>
         </div>
-        <button type="button" onClick={() => setEditing(true)} className="fd-btn-ghost h-9 shrink-0 self-start px-3" aria-label="Modifier ce DS">
-          <Pencil className="h-4 w-4" /><span className="hidden sm:inline">Modifier</span>
+        <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink" aria-label="Modifier ce DS" title="Modifier">
+          <Pencil className="h-4 w-4" />
         </button>
       </header>
 
       {past && (
         <Card className="mt-6 border-gold-line bg-gold-soft/40">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-[16px] font-bold text-ink">Comment s’est passé ton DS ?</h2>
-              <p className="mt-0.5 text-[13px] text-ink-soft">Ta note reste dans tes révisions : tu suis tes résultats au fil de l’année.</p>
-            </div>
+            <p className="text-[15px] font-semibold text-ink">Comment s’est passé ton DS ?</p>
             {t.grade !== null ? <GradeBadge grade={t.grade} /> : <GradeForm test={t} onSaved={setTest} />}
           </div>
         </Card>
       )}
 
-      {/* Ta préparation */}
+      {/* La prochaine étape, et les trois choses à faire */}
       <Card className="mt-6">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4 sm:gap-5">
           <div className="flex shrink-0 flex-col items-center">
-            <ReadinessRing value={plan.readiness} />
-            <span className="mt-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{plan.readiness === null ? 'à mesurer' : 'prêt'}</span>
+            <ReadinessRing value={plan.readiness} size={78} />
+            <span className="mt-0.5 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">{plan.readiness === null ? 'à mesurer' : 'prêt'}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-bold uppercase tracking-[.07em] text-ink-faint">Prochaine étape</p>
-            <p className="mt-1 text-[17px] font-semibold leading-snug text-ink">{a.text}</p>
+            <p className="text-[11.5px] font-bold uppercase tracking-[.07em] text-ink-faint">Prochaine étape</p>
+            <p className="mt-1 text-[16px] font-semibold leading-snug text-ink">{a.text}</p>
             {a.label && (a.to
               ? <Link to={a.to} className="fd-btn-primary mt-3">{a.label} <ArrowRight className="h-4 w-4" /></Link>
               : <a href={`#${a.anchor}`} onClick={scrollTo(a.anchor!)} className="fd-btn-primary mt-3">{a.label} <ArrowRight className="h-4 w-4" /></a>)}
           </div>
         </div>
-        <ul className="mt-5 grid gap-2 sm:grid-cols-3">
-          <Step done={plan.preparation.exercises >= plan.preparation.exercises_goal} icon={Dumbbell} label="Exercices"
-            value={`${Math.min(plan.preparation.exercises, plan.preparation.exercises_goal)} / ${plan.preparation.exercises_goal}`} anchor="exercices" />
-          {plan.preparation.quizzes_total > 0 ? (
-            <Step done={plan.preparation.quizzes >= plan.preparation.quizzes_total} icon={Brain} label="Quiz Skill IQ"
-              value={`${plan.preparation.quizzes} / ${plan.preparation.quizzes_total}`} anchor="chapitres" />
-          ) : (
-            <Step done={false} icon={Brain} label="Quiz Skill IQ" value="pas de quiz pour ces chapitres" muted />
+        <ul className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4" aria-label="Ta préparation depuis l’ajout de ce DS">
+          <Step done={prep.exercises >= prep.exercises_goal} icon={Dumbbell}
+            label={`Exercices ${Math.min(prep.exercises, prep.exercises_goal)}/${prep.exercises_goal}`} anchor="exercices" />
+          {prep.quizzes_total > 0 && (
+            <Step done={prep.quizzes >= prep.quizzes_total} icon={Brain} label={`Quiz ${prep.quizzes}/${prep.quizzes_total}`} anchor="chapitres" />
           )}
-          <Step done={plan.preparation.mock} icon={Timer} label="DS blanc" value={plan.preparation.mock ? 'fait' : 'à faire'} anchor="ds-blanc" />
+          <Step done={prep.mock} icon={Timer} label={prep.mock ? 'DS blanc fait' : 'DS blanc'} anchor="ds-blanc" />
         </ul>
-        <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">
-          Depuis l’ajout de ce DS. « Prêt à » suit ta maîtrise des chapitres, comme dans <Link to="/progression" className="font-semibold text-brand-hover hover:underline">Ma progression</Link>.
-        </p>
       </Card>
 
-      {/* 1. Chapitres */}
-      <Card id="chapitres" className="mt-6">
-        <SectionTitle n={1} title="Tes chapitres, du plus fragile au plus solide"
-          hint="Commence par le haut : ce que tu maîtrises le moins passe en premier." />
-        <ol className="mt-4 flex flex-col gap-3">
+      {/* Chapitres : le plus fragile ouvert, les autres en une ligne */}
+      <section id="chapitres" className="mt-7 scroll-mt-20">
+        <h2 className="fd-display mb-3 text-[20px] leading-tight text-ink">Tes chapitres</h2>
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
           {plan.chapters.map((c, i) => (
-            <ChapterRow key={c.id} chapter={c} rank={i + 1} quizDone={plan.preparation.quiz_done.includes(c.id)} />
+            <ChapterRow key={c.id} chapter={c} defaultOpen={i === 0 && c.status !== 'mastered'} quizDone={prep.quiz_done.includes(c.id)} />
           ))}
-        </ol>
-      </Card>
+        </ul>
+      </section>
 
-      {/* 2. Exercices */}
-      <Card id="exercices" className="mt-6">
-        <SectionTitle n={2} title="Exercices choisis pour toi"
-          hint="Dans les chapitres du DS, d’abord ce qui est à retravailler ; jamais ce que tu as déjà réussi." />
+      {/* Exercices pour toi : trois d'abord */}
+      <section id="exercices" className="mt-7 scroll-mt-20">
+        <h2 className="fd-display mb-3 text-[20px] leading-tight text-ink">Exercices pour toi</h2>
         {plan.exercises.length ? (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {plan.exercises.map((e) => <ExerciseCard key={e.id} exercise={e} />)}
-          </ul>
+          <>
+            <ul className="grid gap-3 sm:grid-cols-3">
+              {(moreExercises ? plan.exercises : plan.exercises.slice(0, 3)).map((e) => <ExerciseCard key={e.id} exercise={e} />)}
+            </ul>
+            {plan.exercises.length > 3 && (
+              <button type="button" onClick={() => setMoreExercises((v) => !v)} className="mt-2 text-[13px] font-semibold text-brand-hover hover:underline">
+                {moreExercises ? 'Voir moins' : `Voir ${plan.exercises.length - 3} de plus`}
+              </button>
+            )}
+          </>
         ) : (
-          <p className="mt-4 rounded-xl border border-dashed border-line bg-paper px-4 py-5 text-[13px] text-ink-faint">
-            Tu as réussi tous les exercices de ces chapitres. Refais ceux « à revoir » ou lance le DS blanc.
+          <p className="rounded-2xl border border-dashed border-line bg-white px-4 py-5 text-[13px] text-ink-faint">
+            Tu as réussi tous les exercices de ces chapitres : refais ceux « à revoir » ou lance le DS blanc.
           </p>
         )}
-      </Card>
+      </section>
 
-      {/* 3. DS blanc */}
-      <Card id="ds-blanc" className="mt-6">
-        <SectionTitle n={3} title="DS blanc"
-          hint={plan.mock?.exercises.length
-            ? `${plural(plan.mock.exercises.length, 'exercice', 'exercices')} · ${plan.mock.minutes} min, en conditions réelles : chronomètre et pas de solution avant la fin. Ensuite, tu te corriges question par question.`
-            : undefined} />
-        {plan.mock?.exercises.length ? (
-          <>
-            <ol className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line">
-              {plan.mock.exercises.map((e, i) => (
-                <li key={e.id} className="flex items-center gap-3 bg-white px-4 py-3">
-                  <span className="fd-nums inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[12.5px] font-bold text-ink-soft">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-semibold text-ink">{e.title}</p>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-ink-faint">
-                      {e.chapter && <span className="truncate">{e.chapter}</span>}
-                      <DifficultyDot level={e.difficulty} />
-                    </p>
-                  </div>
-                  <span className="fd-nums inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-ink-soft"><Clock className="h-3.5 w-3.5" />{e.minutes} min</span>
-                </li>
-              ))}
-            </ol>
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              {plan.mock.done_at ? (
-                <>
-                  <p className="mr-auto inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-brand-hover">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Fait le {new Date(plan.mock.done_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                    {plan.mock.seconds !== null && ` en ${minutesLabel(plan.mock.seconds)}`}
-                  </p>
-                  <Link to={`/revisions/ds/${t.id}/blanc`} className="fd-btn-ghost"><RotateCcw className="h-4 w-4" /> Revoir ma correction</Link>
+      {/* DS blanc */}
+      <section id="ds-blanc" className="mt-7 scroll-mt-20">
+        <h2 className="fd-display mb-3 text-[20px] leading-tight text-ink">DS blanc</h2>
+        <Card>
+          {mock?.exercises.length ? (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft"><Timer className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-ink">
+                  {plural(mock.exercises.length, 'exercice', 'exercices')} · {mock.minutes} min
+                </p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">
+                  {mock.done_at
+                    ? `Fait le ${new Date(mock.done_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}${mock.seconds !== null ? ` en ${minutesLabel(mock.seconds)}` : ''}.`
+                    : 'En conditions réelles : chronomètre et pas de solution avant la fin, puis ta correction.'}
+                </p>
+              </div>
+              {mock.done_at ? (
+                <div className="flex flex-wrap gap-2">
+                  <Link to={`/revisions/ds/${t.id}/blanc`} className="fd-btn-ghost"><RotateCcw className="h-4 w-4" /> Ma correction</Link>
                   <button type="button" onClick={renew} disabled={renewing} className="fd-btn-ghost">
-                    {renewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Un autre DS blanc
+                    {renewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Un autre
                   </button>
-                </>
+                </div>
               ) : (
                 <Link to={`/revisions/ds/${t.id}/blanc`} className="fd-btn-primary">
-                  <Timer className="h-4 w-4" /> {plan.mock.started_at ? 'Reprendre le DS blanc' : 'Lancer le DS blanc'}
+                  {mock.started_at ? 'Reprendre' : 'Lancer le DS blanc'} <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
             </div>
-          </>
-        ) : (
-          <p className="mt-4 rounded-xl border border-dashed border-line bg-paper px-4 py-5 text-[13px] text-ink-faint">
-            Pas encore assez d’exercices dans ces chapitres pour un DS blanc.
-          </p>
-        )}
-      </Card>
+          ) : (
+            <p className="text-[13px] text-ink-faint">Pas encore assez d’exercices dans ces chapitres pour un DS blanc.</p>
+          )}
+        </Card>
+      </section>
 
       <TestFormModal open={editing} test={t} onClose={() => setEditing(false)}
         onSaved={() => { setEditing(false); load(); }}
@@ -281,59 +264,38 @@ export default function TestPlanPage() {
   );
 }
 
-function SectionTitle({ n, title, hint }: { n: number; title: string; hint?: string }) {
-  return (
-    <div className="flex gap-3">
-      <span className="fd-nums mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-[13px] font-bold text-white">{n}</span>
-      <div className="min-w-0">
-        <h2 className="text-[17px] font-bold tracking-tight text-ink">{title}</h2>
-        {hint && <p className="mt-0.5 max-w-2xl text-[13px] leading-relaxed text-ink-faint">{hint}</p>}
-      </div>
-    </div>
-  );
-}
-
-function Step({ done, icon: Icon, label, value, anchor, muted }: {
-  done: boolean; icon: typeof Dumbbell; label: string; value: string; anchor?: string; muted?: boolean;
-}) {
-  const body = (
-    <>
-      <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-        done ? 'bg-brand text-white' : 'border border-line bg-white text-ink-soft'}`}>
-        {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[13.5px] font-semibold text-ink">{label}</span>
-        <span className="fd-nums block truncate text-[12.5px] text-ink-faint">{value}</span>
-      </span>
-    </>
-  );
-  const cls = `flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors ${
-    done ? 'border-brand/25 bg-brand-soft' : muted ? 'border-line bg-paper opacity-70' : 'border-line bg-paper hover:border-[#cfcdc8]'}`;
+function Step({ done, icon: Icon, label, anchor }: { done: boolean; icon: typeof Dumbbell; label: string; anchor: string }) {
   return (
     <li>
-      {anchor && !muted ? <a href={`#${anchor}`} onClick={scrollTo(anchor)} className={cls}>{body}</a> : <div className={cls}>{body}</div>}
+      <a href={`#${anchor}`} onClick={scrollTo(anchor)}
+        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+          done ? 'bg-brand-soft text-brand-hover' : 'bg-[#f2f1ee] text-ink-soft hover:bg-[#ebe9e4]'}`}>
+        {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />} {label}
+      </a>
     </li>
   );
 }
 
-function ChapterRow({ chapter: c, rank, quizDone }: { chapter: PlanChapter; rank: number; quizDone: boolean }) {
+function ChapterRow({ chapter: c, defaultOpen, quizDone }: { chapter: PlanChapter; defaultOpen: boolean; quizDone: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const st = STATUS[c.status];
   const Icon = st.icon;
   const pill = 'inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-hover';
   return (
-    <li id={`chapitre-${c.id}`} className={`scroll-mt-24 rounded-xl border p-4 ${c.status === 'weak' ? 'border-gold-line bg-gold-soft/35' : 'border-line bg-white'}`}>
-      <div className="flex items-start gap-3">
-        <span className="fd-nums mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[11.5px] font-bold text-ink-soft">{rank}</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h3 className="text-[15px] font-semibold leading-snug text-ink">{c.name}</h3>
-            <span className={`inline-flex items-center gap-1 text-[12.5px] font-semibold ${st.text}`}>
-              <Icon className="h-3.5 w-3.5" />{st.label}{c.mastery !== null && <span className="fd-nums font-medium opacity-80">· {c.mastery} %</span>}
-            </span>
-          </div>
-          {c.mastery !== null && <Meter pct={c.mastery} status={c.status} className="mt-2" />}
-          <div className="mt-2 space-y-1 text-[13px] leading-relaxed text-ink-soft">
+    <li id={`chapitre-${c.id}`} className="scroll-mt-24">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#faf9f7] sm:px-5">
+        <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${c.status === 'todo' ? 'bg-[#f2f1ee]' : st.track}`}>
+          <Icon className={`h-3.5 w-3.5 ${st.text}`} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-ink">{c.name}</span>
+        <span className={`fd-nums shrink-0 text-[13px] font-bold ${st.text}`}>{c.mastery !== null ? `${c.mastery} %` : st.label.toLowerCase()}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-ink-faint transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pl-[60px] sm:px-5 sm:pl-[64px]">
+          {c.mastery !== null && <Meter pct={c.mastery} status={c.status} className="mb-2.5 max-w-xs" />}
+          <div className="space-y-1 text-[13px] leading-relaxed text-ink-soft">
             {c.notions.worst.length > 0 && (
               <p><span className="font-semibold text-[#8a6318]">À renforcer :</span> {c.notions.worst.map((n) => `${n.label} (${n.pct} %)`).join(', ')}</p>
             )}
@@ -349,16 +311,15 @@ function ChapterRow({ chapter: c, rank, quizDone }: { chapter: PlanChapter; rank
             {c.status === 'started' && <p className="text-ink-faint">Encore quelques questions évaluées et tu auras ton pourcentage.</p>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link to={`/exercises?chapters=${c.id}`} className={pill}><Dumbbell className="h-3.5 w-3.5" /> Exercices du chapitre</Link>
+            <Link to={`/exercises?chapters=${c.id}`} className={pill}><Dumbbell className="h-3.5 w-3.5" /> S’entraîner</Link>
             {c.quiz_ready && (
               <Link to={`/skill-iq?chapitre=${c.id}`} className={pill}>
-                <Brain className="h-3.5 w-3.5" />
-                {quizDone ? 'Quiz fait ✓' : c.skilliq?.pct != null ? `Refaire le quiz (${c.skilliq.pct} %)` : 'Quiz Skill IQ'}
+                <Brain className="h-3.5 w-3.5" />{quizDone ? 'Quiz fait ✓' : c.skilliq?.pct != null ? `Refaire le quiz (${c.skilliq.pct} %)` : 'Quiz'}
               </Link>
             )}
           </div>
         </div>
-      </div>
+      )}
     </li>
   );
 }

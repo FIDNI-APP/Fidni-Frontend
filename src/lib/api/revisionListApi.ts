@@ -23,6 +23,10 @@ export interface RevisionList {
   user: any;
   items: RevisionListItem[];
   item_count: number;
+  /** Liste des listes (GET /revision-lists/, allégée le 08/10/2026) : réussis / à revoir / à faire et
+   *  chapitres des exercices ; les éléments n'y portent que object_id et content_type_name. */
+  progress?: { success: number; review: number; todo: number };
+  item_chapters?: string[];
   /** Étiquettes facultatives choisies par l'élève (filtres de la page Révisions). */
   class_levels?: NamedRef[];
   subjects?: NamedRef[];

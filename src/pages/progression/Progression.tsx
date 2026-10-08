@@ -1,59 +1,35 @@
-// « Ma progression » (07/10/2026, remplace la page Statistiques) : depuis ses débuts, ce que l'élève
-// maîtrise sur le programme de son niveau, ses points forts et ce qui reste à renforcer (auto-évaluations
-// et quiz Skill IQ), son évolution et son temps d'étude. Peu de chiffres à la fois : le détail d'un
-// chapitre s'ouvre au clic. Données : GET /api/stats/progression/ (backend apps/users/progression.py).
-import { useCallback, useEffect, useState } from 'react';
+// « Ma progression » (refaite le 08/10/2026, plus simple) : trois blocs seulement.
+//   1. Où j'en suis : chapitres maîtrisés sur le programme, en une phrase et une barre.
+//   2. Mon programme : les chapitres, à renforcer d'abord ; le détail du chapitre choisi à côté
+//      (téléphone : dessous). Un clic sur un autre chapitre change le détail, sans fenêtre à fermer.
+//   3. Mon activité : un seul graphique (cette semaine / depuis le début).
+// Affichage immédiat au retour sur la page (dernières données gardées), mise à jour en arrière-plan.
+// Données : GET /api/stats/progression/ (backend apps/users/progression.py).
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
-import type { ProgressionData } from './types';
-import { Summary } from './Summary';
-import { ProgramMap } from './ProgramMap';
-import { Strengths } from './Strengths';
-import { Evolution } from './Evolution';
-import { StudyTime } from './StudyTime';
-import { ChapterDrawer } from './ChapterDrawer';
-import { shortDate } from './format';
+import { useProgression } from './useProgression';
+import { Overview } from './Overview';
+import { Programme } from './Programme';
+import { Activity } from './Activity';
 
 export function ProgressionPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [data, setData] = useState<ProgressionData | null>(null);
-  const [failed, setFailed] = useState(false);
-  // Chapitre ouvert : dans l'adresse (« ?chapitre=12 »), pour pouvoir y revenir ou le partager.
-  const [params, setParams] = useSearchParams();
-  const open = Number(params.get('chapitre')) || null;
-  const openChapter = useCallback((id: number | null) => {
-    setParams((p) => {
-      const next = new URLSearchParams(p);
-      if (id) next.set('chapitre', String(id)); else next.delete('chapitre');
-      return next;
-    }, { replace: true });
-  }, [setParams]);
-
-  const closeDrawer = useCallback(() => openChapter(null), [openChapter]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    api.get('/stats/progression/').then((r) => setData(r.data)).catch(() => setFailed(true));
-  }, [isAuthenticated]);
-
-  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { data, failed } = useProgression(isAuthenticated && user ? String(user.id) : null);
+  // « ?chapitre=12 » (Skill IQ, accueil…) : ce chapitre est choisi d'office.
+  const [params] = useSearchParams();
+  const initial = Number(params.get('chapitre')) || null;
 
   if (!authLoading && !isAuthenticated) return <Navigate to="/" replace />;
-  const chapter = data && open ? data.chapters.find((c) => c.id === open) : undefined;
   const fresh = data && data.summary.questions === 0 && data.time.total_seconds === 0;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
-      <SEO title="Ma progression | Fidni" description="Ce que tu maîtrises, ce qui reste à travailler et ton temps d’étude." noindex />
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
+      <SEO title="Ma progression | Fidni" description="Ce que tu maîtrises et ce qui reste à travailler." noindex />
       <header className="mb-5">
         <h1 className="fd-display text-[28px] leading-tight text-ink md:text-[32px]">Ma progression</h1>
         <p className="mt-1 text-[14px] text-ink-faint">
-          {data?.since
-            ? `Tout ce que tu as fait depuis le ${shortDate(data.since)}${data.level ? `, sur le programme de ${data.level.name}` : ''}.`
-            : 'Ce que tu maîtrises, ce qui reste à travailler, et le temps que tu y mets.'}
+          {data?.level ? `Ce que tu maîtrises sur le programme de ${data.level.name}.` : 'Ce que tu maîtrises, et ce qui reste à travailler.'}
         </p>
       </header>
 
@@ -62,26 +38,34 @@ export function ProgressionPage() {
           Ta progression n’a pas pu être chargée. Recharge la page dans un instant.
         </p>
       )}
-      {!data && !failed && <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-ink-faint" /></div>}
+      {!data && !failed && <Skeleton />}
 
       {data && (
         <div className="flex flex-col gap-6">
           {fresh && (
             <div className="rounded-2xl border border-brand-line bg-brand-soft px-5 py-4 text-[13.5px] leading-relaxed text-ink-soft">
               <b className="text-ink">Ta progression se construit au fil de ton travail.</b> Après chaque question, dis si tu l’as
-              réussie (Réussi / À revoir), et passe les quiz Skill IQ : cette page te montrera ce que tu maîtrises.{' '}
+              réussie, ou passe un quiz Skill IQ : cette page te montrera ce que tu maîtrises.{' '}
               <Link to="/exercises" className="font-semibold text-brand-hover hover:underline">Commencer un exercice →</Link>
             </div>
           )}
-          <Summary data={data} onJump={jump} />
-          <ProgramMap chapters={data.chapters} level={data.level} onOpen={openChapter} />
-          <Strengths strengths={data.strengths} weaknesses={data.weaknesses} questions={data.summary.questions} onOpen={openChapter} />
-          <Evolution data={data} />
-          <StudyTime time={data.time} since={data.since} onOpen={openChapter} />
+          <Overview data={data} />
+          <Programme key={initial ?? 'all'} chapters={data.chapters} levelName={data.level?.name ?? null} initial={initial} />
+          <Activity data={data} />
         </div>
       )}
+    </div>
+  );
+}
 
-      {chapter && <ChapterDrawer chapter={chapter} onClose={closeDrawer} />}
+function Skeleton() {
+  return (
+    <div className="flex flex-col gap-6" aria-busy aria-label="Chargement">
+      <div className="h-[118px] animate-pulse rounded-2xl border border-line bg-white" />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className="h-[320px] animate-pulse rounded-2xl border border-line bg-white" />
+        <div className="hidden h-[320px] animate-pulse rounded-2xl border border-line bg-white lg:block" />
+      </div>
     </div>
   );
 }
