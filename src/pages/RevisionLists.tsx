@@ -8,6 +8,7 @@ import {
 import { AlertCircle, ArrowRight, BookOpen, CheckCircle2, Filter, ListPlus, Loader2, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RevisionLabelPicker, EMPTY_LABELS, labelsToPayload, type RevisionLabels } from '@/components/revision/RevisionLabelPicker';
+import { UpcomingTestsSection } from '@/components/devoirs/UpcomingTestsSection';
 
 /** Ce que la carte montre d'une liste, calculé à partir de ses éléments (aucun chiffre inventé). */
 function summarize(list: RevisionList) {
@@ -170,17 +171,27 @@ export const RevisionLists = () => {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
-      <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+      <header className="mb-7">
+        <h1 className="fd-display text-[26px] leading-tight text-ink md:text-[30px]">Révisions</h1>
+        <p className="mt-1 text-sm text-ink-soft">
+          Prépare tes DS et retravaille ce qui te résiste.
+        </p>
+      </header>
+
+      {/* « Mon prochain DS » : révision ciblée de chaque devoir annoncé (08/10/2026). */}
+      <UpcomingTestsSection />
+
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="fd-display text-[26px] leading-tight text-ink md:text-[30px]">Révisions</h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            Tes listes d’exercices à retravailler, avec ce qui est réussi et ce qui reste à revoir.
+          <h2 className="fd-display text-[21px] leading-tight text-ink">Mes listes</h2>
+          <p className="mt-1 text-[13px] text-ink-soft">
+            Tes exercices à retravailler, avec ce qui est réussi et ce qui reste à revoir.
           </p>
         </div>
         <button className="fd-btn-primary shrink-0" onClick={() => setShowCreateModal(true)} data-tour="revisions-nouvelle">
           <Plus className="h-4 w-4" /> Nouvelle liste
         </button>
-      </header>
+      </div>
 
       {error && !showCreateModal && (
         <div role="alert" className="mb-5 flex items-center gap-3 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">

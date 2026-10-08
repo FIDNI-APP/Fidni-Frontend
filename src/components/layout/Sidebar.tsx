@@ -66,7 +66,7 @@ const MON_ESPACE_GROUP: NavGroup = {
     { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
     { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
     { to: '/skill-iq', label: 'Skill IQ', icon: Brain, match: ['/skill-iq'] },
-    { to: '/revision-lists', label: 'Révisions', icon: ListChecks, match: ['/revision-lists', '/profile/revision-lists'] },
+    { to: '/revision-lists', label: 'Révisions', icon: ListChecks, match: ['/revision-lists', '/profile/revision-lists', '/revisions'] },
     { to: '/saved', label: 'Favoris', icon: BookmarkIcon, match: ['/saved'] },
   ],
 };

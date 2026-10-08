@@ -5,8 +5,8 @@
  * Chaque question a son propre toggle solution.
  * Option globale pour tout développer/réduire.
  *
- * Auto-évaluation en un clic (06/10/2026) : trois boutons sous chaque question (Réussi / En partie /
- * À revoir) ; re-cliquer le bouton actif l'efface. Discrets (Natsu : « trop intrusifs », puis les icônes seules
+ * Auto-évaluation en un clic (06/10/2026) : deux boutons sous chaque question (Réussi / À revoir ;
+ * « En partie » retiré le 08/10/2026, peu utile) ; re-cliquer le bouton actif l'efface. Discrets (Natsu : « trop intrusifs », puis les icônes seules
  * « pas intuitives ») : les trois boutons gardent leur texte, dans un groupe gris clair sans cadre ; seul le
  * choix fait prend sa couleur. La solution : une simple icône d'œil. Une question à sous-questions a en plus « Tout
  * réussi ». Avant : un menu déroulant (deux clics par question) et un second menu « Comparer » qui
@@ -14,7 +14,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Check, RotateCcw, CircleDot, Eye, EyeOff, Flag, CheckCheck } from 'lucide-react';
+import { Check, RotateCcw, Eye, EyeOff, Flag, CheckCheck } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
@@ -136,14 +136,13 @@ const SectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ bl
 
 const QUICK_OPTIONS: { value: AssessmentStatus; label: string; icon: React.ReactNode; on: string }[] = [
   { value: 'success', label: 'Réussi', icon: <Check className="w-3.5 h-3.5" />, on: 'bg-white text-brand-hover shadow-sm' },
-  { value: 'partial', label: 'En partie', icon: <CircleDot className="w-3.5 h-3.5" />, on: 'bg-white text-gold-strong shadow-sm' },
   { value: 'review', label: 'À revoir', icon: <RotateCcw className="w-3.5 h-3.5" />, on: 'bg-white text-[#a23b34] shadow-sm' },
 ];
 
-/** Trois boutons côte à côte, discrets : un clic choisit, re-cliquer le choix actif l'efface. */
+/** Deux boutons côte à côte, discrets : un clic choisit, re-cliquer le choix actif l'efface. */
 const QuickAssess: React.FC<{ current?: AssessmentStatus; onAssess: (status: AssessmentStatus) => void }> = ({ current, onAssess }) => {
-  // « Échoué » (ancien choix) s'affiche comme « À revoir ».
-  const shown = current === 'failed' ? 'review' : current;
+  // Anciens choix « Échoué » et « En partie » : affichés comme « À revoir ».
+  const shown = current === 'failed' || current === 'partial' ? 'review' : current;
   return (
     <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval"
       className="inline-flex items-center rounded-full bg-[#f5f4f1] p-0.5">
@@ -193,8 +192,7 @@ const AllSuccessChip: React.FC<{ paths: string[]; progress?: ProgressData; onAss
 
 /**
  * Sous une solution ouverte, si la question n'est pas encore évaluée : c'est le moment où l'élève sait
- * s'il avait trouvé. Deux réponses seulement (« En partie » reste dans les boutons du dessus) ; après le
- * clic, un simple « Noté » quelques secondes.
+ * s'il avait trouvé. Deux réponses (Oui / Non, à revoir) ; après le clic, un simple « Noté » quelques secondes.
  */
 const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentStatus) => void }> = ({ assessed, onAnswer }) => {
   const [noted, setNoted] = useState(false);

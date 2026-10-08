@@ -50,7 +50,7 @@ const SOLUTION: TourStep = {
 const AUTO_EVAL: TourStep = {
   target: 'auto-eval',
   title: 'Auto-évaluation',
-  body: "Un clic sous chaque question : Réussi, En partie ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
+  body: "Un clic sous chaque question : Réussi ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
 };
 const VOTE: TourStep = {
   target: 'vote',
@@ -252,6 +252,7 @@ export const TOURS: Tour[] = [
     match: /^\/revision-lists\/?$/,
     requires: 'revisions-nouvelle',
     steps: [
+      { target: 'revisions-ds', title: 'Mes DS', body: 'Annonce ton prochain DS (date, chapitres) : Fidni te prépare une révision ciblée — tes chapitres fragiles d’abord, des exercices choisis pour toi, un DS blanc chronométré — et te le rappelle sur l’accueil. Après le DS, note ta note.' },
       { target: 'revisions-suggestions', title: 'À retravailler', body: 'Les exercices que tu as ratés et que tu n’as encore rangés nulle part : ajoute-les en un clic.' },
       { target: 'revisions-nouvelle', title: 'Nouvelle liste', body: 'Regroupe des exercices à retravailler (ex. « Limites – DS 1 »), avec un niveau, une matière et des chapitres si tu veux. On en ajoute depuis leur page ou leur carte, bouton « Liste ».' },
       { target: 'revisions-filtres', title: 'Filtrer', body: 'Retrouve tes listes par niveau, matière ou chapitre.' },
