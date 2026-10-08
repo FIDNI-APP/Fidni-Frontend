@@ -477,3 +477,7 @@ html {
 .fd-editor [data-callout-type="proof"] { background: #ecfdf5; border-left-color: #10b981; color: #064e3b; }
 .fd-editor [data-callout-type="method"] { background: #faf5ff; border-left-color: #a855f7; color: #581c87; }
 .fd-editor [data-callout-type="warning"] { background: #fef2f2; border-left-color: #ef4444; color: #7f1d1d; }
+/* Commentaires : paragraphes resserrés, pas de marge sous le dernier. */
+.fd-comment-body.tiptap-full-renderer .ProseMirror p { margin-bottom: .45rem; }
+.fd-comment-body.tiptap-full-renderer .ProseMirror > div > :last-child { margin-bottom: 0; }
+.fd-comment-body.tiptap-full-renderer .ProseMirror a { color: #15633c; text-decoration: underline; text-underline-offset: 2px; }

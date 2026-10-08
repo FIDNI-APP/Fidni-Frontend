@@ -1,26 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  MessageSquare,
-  X,
-  Edit,
-  Trash2,
-  AtSign,
-  ChevronDown,
-  Send,
-  AlertCircle,
-  CornerDownRight,
-  Paperclip,
-  FileIcon,
-  Image as ImageIcon
-} from 'lucide-react';
-import { Comment, User, VoteValue } from '@/types';
+/**
+ * Discussion sous un contenu (réécrite le 08/10/2026).
+ *
+ * - Réponses imbriquées : sous chaque commentaire, toutes ses réponses (réponses aux réponses
+ *   comprises, avec « à @X »), dans l'ordre où elles ont été écrites. Un seul retrait : une longue
+ *   conversation reste lisible sur téléphone. Au-delà de 5 réponses, les plus anciennes se replient.
+ * - Écriture avec l'éditeur des solutions (variante commentaire) : formules `$…$` ou bouton
+ *   « Formule », gras, listes ; Ctrl/Cmd + Entrée publie. Les anciens commentaires (texte brut)
+ *   s'affichent toujours, formules comprises.
+ * - Arrivée depuis une notification (« ?commentaire=… ») : le commentaire est mis en valeur et le
+ *   champ de réponse est ouvert juste dessous.
+ */
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, CornerDownRight, FileIcon, Image as ImageIcon, Loader2, MessageSquare, Paperclip, Pencil, Send, Trash2, X } from 'lucide-react';
+import type { Comment, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthModal } from '@/components/auth/AuthController';
 import { isModerator } from '@/lib/features';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
+import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
+import TipTapRenderer from '@/components/editor/TipTapRenderer';
 
 interface CommentSectionProps {
   comments: Comment[];
@@ -32,6 +34,166 @@ interface CommentSectionProps {
   focusCommentId?: string | null;
 }
 
+type Sort = 'mostUpvoted' | 'recent' | 'oldest';
+const SORTS: { key: Sort; label: string }[] = [
+  { key: 'mostUpvoted', label: 'Les plus utiles' },
+  { key: 'recent', label: 'Plus récents' },
+  { key: 'oldest', label: 'Plus anciens' },
+];
+const SORT_KEY = 'sortOption';
+const FOLD_AFTER = 5;   // réponses affichées sans repli
+const FOLDED_SHOWN = 3; // repliées : les dernières restent visibles
+
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Anciens commentaires (zone de texte) : texte brut → paragraphes. Les nouveaux sont déjà en HTML. */
+const commentHtml = (text: string) => (/<(p|ul|ol|br|strong|em|a|span|div)[\s>/]/i.test(text)
+  ? text
+  : text.split(/\n{2,}/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join(''));
+const isBlank = (html: string) => !html.replace(/<[^>]*>/g, '').replace(/&nbsp;| /g, ' ').trim();
+
+const timeAgo = (iso: string) => {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'à l’instant';
+  if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
+  const d = Math.floor(s / 86400);
+  if (d === 1) return 'hier';
+  if (d < 30) return `il y a ${d} j`;
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+const fullDate = (iso: string) => new Date(iso).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+
+interface Reply { comment: Comment; parent: Comment }
+/** Toutes les réponses d'un fil, à plat, de la plus ancienne à la plus récente. */
+function flatten(root: Comment): Reply[] {
+  const out: Reply[] = [];
+  const walk = (c: Comment) => (c.replies ?? []).forEach((r) => { out.push({ comment: r, parent: c }); walk(r); });
+  walk(root);
+  return out.sort((a, b) => (+new Date(a.comment.created_at) - +new Date(b.comment.created_at)) || (Number(a.comment.id) - Number(b.comment.id)));
+}
+const countAll = (list: Comment[]): number => list.reduce((n, c) => n + 1 + countAll(c.replies ?? []), 0);
+
+const Avatar: React.FC<{ author: Comment['author']; small?: boolean }> = ({ author, small }) => {
+  const [broken, setBroken] = useState(false);  // image introuvable : l'initiale à la place
+  const src = (author as { avatar?: string | null }).avatar;
+  const dim = small ? 'h-7 w-7 text-[11.5px]' : 'h-9 w-9 text-[13px]';
+  return src && !broken
+    ? <img src={src} alt="" onError={() => setBroken(true)} className={`${dim} shrink-0 rounded-full object-cover`} />
+    : (
+      <span aria-hidden className={`${dim} inline-flex shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] font-bold uppercase text-ink-soft`}>
+        {author.username?.[0] ?? '?'}
+      </span>
+    );
+};
+
+// ============================================
+// Zone d'écriture : nouveau commentaire, réponse ou modification
+// ============================================
+const Composer: React.FC<{
+  initial?: string;
+  placeholder: string;
+  submitLabel: string;
+  onSubmit: (html: string, fileIds: string[]) => Promise<void>;
+  onCancel?: () => void;
+  autoFocus?: boolean;
+  /** Joindre des images ou des fichiers (nouveau commentaire seulement). */
+  attachments?: boolean;
+  hint?: React.ReactNode;
+}> = ({ initial = '', placeholder, submitLabel, onSubmit, onCancel, autoFocus, attachments, hint }) => {
+  const [html, setHtml] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<FileUploadResponse[]>([]);
+  const [showUpload, setShowUpload] = useState(false);
+  const blank = isBlank(html);
+
+  const submit = async () => {
+    if (blank || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onSubmit(html, files.map((f) => f.id));
+      setHtml('');
+      setFiles([]);
+      setShowUpload(false);
+    } catch {
+      setError('Ça n’est pas parti : vérifie ta connexion et réessaie (ton texte est gardé).');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeFile = (id: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+    fileAPI.delete(id).catch(() => {});
+  };
+
+  return (
+    <div>
+      <CompactTipTapEditor
+        variant="comment"
+        content={html}
+        onChange={setHtml}
+        placeholder={placeholder}
+        ariaLabel={placeholder}
+        minHeight="60px"
+        autoFocus={autoFocus}
+        onSubmit={submit}
+        footer={(
+          <>
+            {attachments && (
+              <button type="button" onClick={() => setShowUpload((v) => !v)} aria-pressed={showUpload}
+                title="Joindre une photo ou un fichier"
+                className={`inline-flex h-8 items-center gap-1 rounded-md px-2 text-[12.5px] font-semibold transition-colors ${
+                  showUpload ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
+                <Paperclip className="h-4 w-4" /><span className="hidden sm:inline">Photo</span>
+              </button>
+            )}
+            {onCancel && (
+              <button type="button" onClick={onCancel}
+                className="inline-flex h-8 items-center rounded-lg px-2.5 text-[12.5px] font-semibold text-ink-soft hover:bg-[#f2f1ee]">
+                Annuler
+              </button>
+            )}
+            <button type="button" onClick={submit} disabled={blank || busy} title="Ctrl + Entrée"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[12.5px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-40">
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              {submitLabel}
+            </button>
+          </>
+        )}
+      />
+      {files.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {files.map((f) => (
+            <li key={f.id} className="flex items-center gap-1.5 rounded-lg border border-line bg-[#faf9f7] py-1 pl-2.5 pr-1 text-[12.5px] text-ink-soft">
+              {f.file_type === 'image' ? <ImageIcon className="h-3.5 w-3.5" /> : <FileIcon className="h-3.5 w-3.5" />}
+              <span className="max-w-[180px] truncate">{f.file_name}</span>
+              <button type="button" onClick={() => removeFile(f.id)} aria-label={`Retirer ${f.file_name}`}
+                className="rounded p-0.5 text-ink-faint hover:bg-[#f2f1ee] hover:text-ink"><X className="h-3.5 w-3.5" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {showUpload && (
+        <div className="mt-2">
+          <FileUpload
+            onUploadComplete={(f) => { setFiles((prev) => [...prev, f]); setShowUpload(false); }}
+            onUploadError={() => setError('Le fichier n’a pas pu être envoyé.')}
+            accept="image/*,.pdf,.doc,.docx,.txt,.md"
+            maxSizeMB={10}
+          />
+        </div>
+      )}
+      {error && <p role="alert" className="mt-1.5 text-[12.5px] font-medium text-[#a23b34]">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-[12px] text-ink-faint">{hint}</p>}
+    </div>
+  );
+};
+
+// ============================================
+// Discussion
+// ============================================
 export function CommentSection({
   comments,
   onAddComment,
@@ -41,765 +203,262 @@ export function CommentSection({
   focusCommentId,
 }: CommentSectionProps) {
   const { isAuthenticated, user } = useAuth();
-
-  const [newComment, setNewComment] = useState('');
+  const { openModal } = useAuthModal();
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState('');
-  const [editingComment, setEditingComment] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [showMentions, setShowMentions] = useState(false);
-  const [mentionFilter, setMentionFilter] = useState('');
-  const [cursorPosition, setCursorPosition] = useState<{ top: number; left: number } | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [showButtons, setShowButtons] = useState(false);
-  const [showReplyButtons, setShowReplyButtons] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<FileUploadResponse[]>([]);
-  const [showFileUpload, setShowFileUpload] = useState(false);
-
-  // Refs for textareas
-  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Sorting state
-  const [sortOption, setSortOption] = useState<'mostUpvoted' | 'recent' | 'oldest'>(() => {
-    const savedSortOption = localStorage.getItem('sortOption');
-    return savedSortOption ? savedSortOption as 'mostUpvoted' | 'recent' | 'oldest' : 'mostUpvoted';
+  const [editing, setEditing] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [sort, setSort] = useState<Sort>(() => {
+    try {
+      const saved = localStorage.getItem(SORT_KEY);
+      return SORTS.some((s) => s.key === saved) ? (saved as Sort) : 'mostUpvoted';
+    } catch {
+      return 'mostUpvoted';
+    }
   });
 
-  // Sort comments based on the selected option
-  const sortedComments = React.useMemo(() => {
+  const roots = useMemo(() => {
     const copy = [...comments];
-    switch (sortOption) {
-      case 'mostUpvoted':
-        return copy.sort((a, b) => (b.vote_count) - (a.vote_count));
-      case 'recent':
-        return copy.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      case 'oldest':
-        return copy.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      default:
-        return copy;
-    }
-  }, [comments, sortOption]);
+    const time = (c: Comment) => new Date(c.created_at).getTime();
+    if (sort === 'recent') return copy.sort((a, b) => time(b) - time(a));
+    if (sort === 'oldest') return copy.sort((a, b) => time(a) - time(b));
+    return copy.sort((a, b) => (b.vote_count - a.vote_count) || (time(b) - time(a)));
+  }, [comments, sort]);
+  const total = useMemo(() => countAll(comments), [comments]);
 
-  // Handle sorting option change
-  const handleSortChange = (option: 'mostUpvoted' | 'recent' | 'oldest') => {
-    setSortOption(option);
-    localStorage.setItem('sortOption', option);
+  const changeSort = (next: Sort) => {
+    setSort(next);
+    try { localStorage.setItem(SORT_KEY, next); } catch { /* navigation privée */ }
   };
 
-  const handleStartReply = (commentId: string, authorUsername: string) => {
-    setReplyingTo(commentId);
-    setReplyContent(`@${authorUsername} `);
-    setShowReplyButtons(true);
+  const startReply = (c: Comment) => {
+    if (!isAuthenticated) { openModal(); return; }
+    setEditing(null);
+    setReplyingTo(String(c.id));
   };
 
-  // Arrivée depuis une notification : on fait défiler jusqu'au commentaire, on le met en valeur
-  // quelques secondes et on ouvre le champ de réponse (c'est tout l'intérêt de la notification).
+  // Arrivée depuis une notification : défiler jusqu'au commentaire, le mettre en valeur quelques
+  // secondes et ouvrir la réponse juste dessous (c'est tout l'intérêt de la notification).
   const focusedRef = useRef<string | null>(null);
-  const [highlight, setHighlight] = useState<string | null>(null);
   useEffect(() => {
     if (!focusCommentId || focusedRef.current === focusCommentId) return;
-    const find = (list: Comment[]): Comment | undefined => {
-      for (const c of list) {
-        if (String(c.id) === focusCommentId) return c;
-        const inReplies = c.replies?.length ? find(c.replies) : undefined;
-        if (inReplies) return inReplies;
-      }
-      return undefined;
-    };
-    const target = find(comments);
-    if (!target) return;
+    const thread = comments.find((root) => String(root.id) === focusCommentId
+      || flatten(root).some((r) => String(r.comment.id) === focusCommentId));
+    if (!thread) return;
     focusedRef.current = focusCommentId;
-    if (isAuthenticated) handleStartReply(target.id, target.author.username);
-    setHighlight(String(target.id));
-    window.setTimeout(() => {
-      document.getElementById(`comment-${target.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 120);
-    window.setTimeout(() => setHighlight(null), 3500);
+    setExpanded((prev) => new Set(prev).add(String(thread.id)));
+    if (isAuthenticated) setReplyingTo(focusCommentId);
+    setHighlight(focusCommentId);
+    const t1 = window.setTimeout(() => {
+      document.getElementById(`comment-${focusCommentId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    const t2 = window.setTimeout(() => setHighlight(null), 3500);
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [focusCommentId, comments, isAuthenticated]);
 
-  const handleMention = (username: string) => {
-    const textarea = 
-      commentTextareaRef.current || 
-      replyTextareaRef.current || 
-      editTextareaRef.current;
-    
-    if (!textarea) return;
-
-    const currentContent = textarea.value;
-    const cursorPos = textarea.selectionStart;
-    const textBeforeCursor = currentContent.substring(0, cursorPos);
-    const textAfterCursor = currentContent.substring(cursorPos);
-
-    const lastAtPos = textBeforeCursor.lastIndexOf('@');
-    if (lastAtPos >= 0) {
-      const newContent = textBeforeCursor.substring(0, lastAtPos) + `@${username} ` + textAfterCursor;
-
-      if (replyingTo !== null) {
-        setReplyContent(newContent);
-      } else if (editingComment !== null) {
-        setEditContent(newContent);
-      } else {
-        setNewComment(newContent);
-      }
-    }
-
-    setShowMentions(false);
-    textarea.focus();
+  const remove = async (c: Comment) => {
+    const replies = flatten(c).length;
+    const question = replies
+      ? `Supprimer ce commentaire et ${replies > 1 ? `ses ${replies} réponses` : 'sa réponse'} ?`
+      : 'Supprimer ce commentaire ?';
+    if (!window.confirm(question)) return;
+    await onDeleteComment(String(c.id)).catch(() => {});
   };
 
-  const handleTextareaChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>,
-    setter: (value: string) => void
-  ) => {
-    const { value, selectionStart } = e.target;
-    setter(value);
-
-    const textBeforeCursor = value.substring(0, selectionStart);
-    const matches = textBeforeCursor.match(/@(\w*)$/);
-
-    if (matches) {
-      const position = getCaretCoordinates(e.target, selectionStart);
-      
-      // Calculate position relative to textarea
-      const top = position.top;
-      const left = position.left;
-
-      setCursorPosition({
-        top,
-        left
-      });
-
-      setMentionFilter(matches[1]);
-      setShowMentions(true);
-    } else {
-      setShowMentions(false);
-    }
-  };
-
-  useEffect(() => {
-    const extractUsers = (comments: Comment[]): User[] => {
-      const userMap = new Map<string, User>();
-
-      const addUser = (user: User) => {
-        if (!userMap.has(user.id)) {
-          userMap.set(user.id, user);
-        }
-      };
-
-      const processComments = (comments: Comment[]) => {
-        comments.forEach((comment) => {
-          addUser(comment.author);
-          if (comment.replies) {
-            processComments(comment.replies);
-          }
-        });
-      };
-
-      processComments(comments);
-      return Array.from(userMap.values());
-    };
-
-    setUsers(extractUsers(comments));
-  }, [comments]);
-
-  // Close mentions on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowMentions(false);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    try {
-      setSubmitting(true);
-      await onAddComment(newComment, undefined, uploadedFiles.map(f => f.id));
-      setNewComment('');
-      setUploadedFiles([]);
-      setShowButtons(false);
-      setShowFileUpload(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleFileUpload = (file: FileUploadResponse) => {
-    setUploadedFiles(prev => [...prev, file]);
-    // Fichier ajouté : la zone de dépôt se referme (la pastille du fichier suffit).
-    setShowFileUpload(false);
-  };
-
-  const handleRemoveFile = async (fileId: string) => {
-    try {
-      await fileAPI.delete(fileId);
-      setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
-    } catch (err) {
-      console.error('Failed to delete file:', err);
-    }
-  };
-
-  const handleSubmitReply = async (parentId: string) => {
-    if (!replyContent.trim()) return;
-
-    try {
-      setSubmitting(true);
-      await onAddComment(replyContent, parentId);
-      setReplyContent('');
-      setReplyingTo(null);
-      setShowReplyButtons(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEditSubmit = async (commentId: string) => {
-    if (!editContent.trim()) return;
-
-    try {
-      setSubmitting(true);
-      await onEditComment(commentId, editContent);
-      setEditingComment(null);
-      setEditContent('');
-      setShowButtons(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleStartEdit = (comment: Comment) => {
-    setEditingComment(comment.id);
-    setEditContent(comment.content);
-    setShowButtons(true);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingComment(null);
-    setEditContent('');
-    setShowButtons(false);
-  };
-
-  const handleDelete = async (commentId: string) => {
-    if (window.confirm('Supprimer ce commentaire ?')) {
-      try {
-        setSubmitting(true);
-        await onDeleteComment(commentId);
-      } finally {
-        setSubmitting(false);
-      }
-    }
-  };
-
-  const renderMentionsList = () => {
-    if (!showMentions || !cursorPosition) return null;
-
-    const filteredUsers = users.filter((u) =>
-      u.username.toLowerCase().includes(mentionFilter.toLowerCase())
-    );
-
-    return (
-      <div
-        className="absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
-        style={{
-          top: `${cursorPosition.top + 20}px`,
-          left: `${cursorPosition.left}px`,
+  const replyForm = (target: Comment) => (
+    <div className="pb-3 pt-1">
+      <p className="mb-1.5 flex items-center gap-1 text-[12.5px] text-ink-faint">
+        <CornerDownRight className="h-3.5 w-3.5" /> Réponse à <b className="font-semibold text-ink-soft">@{target.author.username}</b>
+      </p>
+      <Composer
+        key={`reply-${target.id}`}
+        autoFocus
+        placeholder="Ta réponse…"
+        submitLabel="Répondre"
+        onCancel={() => setReplyingTo(null)}
+        onSubmit={async (html) => {
+          await onAddComment(html, String(target.id));
+          setReplyingTo(null);
         }}
-      >
-        {filteredUsers.length > 0 ? (
-          filteredUsers.map((user) => (
-            <button
-              key={user.id}
-              type="button"
-              className="w-full px-4 py-2 text-left hover:bg-indigo-50 flex items-center gap-2"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleMention(user.username);
-              }}
-            >
-              <AtSign className="w-4 h-4 text-indigo-500" />
-              {user.username}
-            </button>
-          ))
-        ) : (
-          <div className="px-4 py-2 text-gray-500 text-sm">Aucun utilisateur trouvé</div>
-        )}
-      </div>
-    );
-  };
-
-  const renderCommentContent = (comment: Comment) => (
-    <div className="bg-white rounded-xl p-4 border border-[#e7e3dc] hover:border-[#d8d4cc] transition-colors">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-            {comment.author.username.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            {(comment.author as { is_deleted?: boolean }).is_deleted ? (
-              <span className="font-bold text-sm text-[#9a958c] italic">Compte supprimé</span>
-            ) : (
-              <a
-                href={`/profile/${comment.author.username}/`}
-                className="font-bold text-sm text-gray-900 hover:text-indigo-600 hover:underline"
-              >
-                {comment.author.username}
-              </a>
-            )}
-            <div className="flex items-center text-xs text-gray-500">
-              <time dateTime={comment.created_at}>{formatTimeSince(comment.created_at)}</time>
-            </div>
-          </div>
-        </div>
-        
-        {(user?.id === comment.author.id || isModerator(user)) && editingComment !== comment.id && (
-          <div className="flex gap-1">
-            {user?.id === comment.author.id && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStartEdit(comment);
-              }}
-              className="p-1 text-gray-400 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors"
-              title="Modifier le commentaire"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(comment.id);
-              }}
-              className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
-              title="Supprimer le commentaire"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {editingComment === comment.id ? (
-        <div className="mt-3 relative">
-          <textarea
-            ref={editTextareaRef}
-            value={editContent}
-            onChange={(e) => handleTextareaChange(e, setEditContent)}
-            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            rows={3}
-            placeholder="Modifie ton commentaire…"
-          />
-          <div className="mt-2 flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCancelEdit}
-              disabled={submitting}
-              className="rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
-            >
-              Annuler
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => handleEditSubmit(comment.id)}
-              disabled={submitting || !editContent.trim()}
-              className="rounded-full bg-indigo-600 hover:bg-indigo-700"
-            >
-              {submitting ? 'Enregistrement…' : 'Enregistrer'}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="mt-2 text-gray-800 whitespace-pre-wrap">
-            {comment.content}
-          </div>
-          {comment.attachments && comment.attachments.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {comment.attachments.map((file: any) => {
-                // URL stable (redirige vers une URL S3 fraîche) : l'URL signée expire.
-                const href = file.download_url || file.url;
-                return file.file_type === 'image' ? (
-                  <a key={file.id} href={href} target="_blank" rel="noopener noreferrer"
-                    className="block rounded-xl overflow-hidden border border-[#e7e3dc] bg-[#faf9f7] hover:border-[#d8d4cc]"
-                    title={file.file_name}>
-                    <img src={href} alt={file.file_name} loading="lazy" className="block max-h-56 max-w-[260px] object-contain" />
-                  </a>
-                ) : (
-                  <a key={file.id} href={href} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-[#faf9f7] hover:bg-[#f2f1ee] px-3 py-2 rounded-lg border border-[#e7e3dc] transition-colors">
-                    <FileIcon className="w-4 h-4 text-[#6b6862]" />
-                    <span className="text-sm text-[#33302b]">{file.file_name}</span>
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="mt-4 flex gap-3 items-center">
-        {isAuthenticated && (
-          <VoteButtons
-            likes={comment.like_count}
-            dislikes={comment.dislike_count}
-            initialVotes={comment.vote_count}
-            onVote={(type) => onVoteComment(comment.id, type)}
-            userVote={(comment.user_vote ?? 0) as 1 | -1 | 0}
-            size="sm"
-            showBadge={false}
-          />
-        )}
-
-        {isAuthenticated && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleStartReply(comment.id, comment.author.username)}
-            className="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
-          >
-            <MessageSquare className="w-4 h-4 mr-1" />
-            Répondre
-          </Button>
-        )}
-      </div>
+      />
     </div>
   );
 
-  const renderReplyForm = (parentId: string, parentAuthor: string) => (
-    <div className="mt-4 relative pl-6 border-l-2 border-indigo-100">
-      <div className="flex items-center gap-2 mb-2">
-        <CornerDownRight className="w-4 h-4 text-indigo-400" />
-        <span className="text-sm text-gray-600">
-          En réponse à <span className="font-medium text-indigo-600">@{parentAuthor}</span>
-        </span>
-        <button
-          onClick={() => {
-            setReplyingTo(null);
-            setShowReplyButtons(false);
-          }}
-          className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-          title="Annuler la réponse"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="relative">
-        <textarea
-          ref={replyTextareaRef}
-          value={replyContent}
-          onChange={(e) => handleTextareaChange(e, setReplyContent)}
-          placeholder="Écris ta réponse…"
-          className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          rows={3}
-        />
-      </div>
-      {showReplyButtons && (
-        <div className="mt-2 flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setReplyingTo(null);
-              setShowReplyButtons(false);
-            }}
-            className="rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
-          >
-            Annuler
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => handleSubmitReply(parentId)}
-            disabled={submitting || !replyContent.trim()}
-            className="rounded-full bg-indigo-600 hover:bg-indigo-700"
-          >
-            {submitting ? 'Envoi…' : 'Répondre'}
-            <Send className="w-3.5 h-3.5 ml-1.5" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderComment = (comment: Comment, depth = 0) => {
-    const maxDepth = 10;
-    const currentDepth = Math.min(depth, maxDepth);
-    const paddingLeft = currentDepth * 16;
-
+  const card = (c: Comment, inReplyTo: Comment | null, reply: boolean) => {
+    const id = String(c.id);
+    const mine = !!user && String(user.id) === String(c.author.id);
+    const canDelete = mine || isModerator(user as { is_superuser?: boolean; is_staff?: boolean } | null);
+    const deleted = (c.author as { is_deleted?: boolean }).is_deleted;
+    const action = 'inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[12.5px] font-semibold text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink';
     return (
-      <div key={comment.id} id={`comment-${comment.id}`} className="relative scroll-mt-24" style={{ marginLeft: `${paddingLeft}px` }}>
-        {depth > 0 && (
-          <div
-            className="absolute top-0 left-[-12px] bottom-0 w-[2px] bg-indigo-100 rounded-full"
-            style={{ height: '100%' }}
-          ></div>
-        )}
+      <article id={`comment-${id}`}
+        className={`-mx-2 scroll-mt-24 rounded-xl px-2 transition-colors duration-700 ${reply ? 'py-2' : 'py-2.5'} ${
+          highlight === id ? 'bg-brand-soft/60 ring-2 ring-brand/30' : ''}`}>
+        <div className="flex gap-3">
+          <Avatar author={c.author} small={reply} />
+          <div className="min-w-0 flex-1">
+            <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-tight">
+              {deleted
+                ? <span className="text-[13.5px] font-semibold italic text-ink-faint">Compte supprimé</span>
+                : <Link to={`/profile/${c.author.username}`} className="text-[13.5px] font-semibold text-ink hover:underline">{c.author.username}</Link>}
+              {inReplyTo && (
+                <span className="inline-flex items-center gap-0.5 text-[12px] text-ink-faint">
+                  <CornerDownRight className="h-3 w-3" /> à @{inReplyTo.author.username}
+                </span>
+              )}
+              <time dateTime={c.created_at} title={fullDate(c.created_at)} className="text-[12px] text-ink-faint">{timeAgo(c.created_at)}</time>
+            </header>
 
-        <div className={`mb-4 rounded-xl transition-shadow duration-700 ${highlight === String(comment.id) ? 'ring-2 ring-brand/50 ring-offset-4' : ''}`}>
-          {renderCommentContent(comment)}
-          {replyingTo === comment.id && renderReplyForm(comment.id, comment.author.username)}
-          {comment.replies && comment.replies.length > 0 && (
-            <div className="mt-4">
-              {comment.replies.map((reply) => renderComment(reply, depth + 1))}
-            </div>
-          )}
+            {editing === id ? (
+              <div className="mt-2">
+                <Composer
+                  autoFocus
+                  initial={commentHtml(c.content)}
+                  placeholder="Ton commentaire…"
+                  submitLabel="Enregistrer"
+                  onCancel={() => setEditing(null)}
+                  onSubmit={async (html) => {
+                    await onEditComment(id, html);
+                    setEditing(null);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <TipTapRenderer content={commentHtml(c.content)} className="fd-comment-body mt-1 text-[14.5px] leading-relaxed text-ink-soft" />
+                {!!c.attachments?.length && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.attachments.map((file) => {
+                      // URL stable (redirige vers une URL S3 fraîche) : l'URL signée expire.
+                      const href = (file as { download_url?: string }).download_url || file.url;
+                      return file.file_type === 'image' ? (
+                        <a key={file.id} href={href} target="_blank" rel="noopener noreferrer" title={file.file_name}
+                          className="block overflow-hidden rounded-xl border border-line bg-[#faf9f7] hover:border-[#d8d4cc]">
+                          <img src={href} alt={file.file_name} loading="lazy" className="block max-h-56 max-w-[260px] object-contain" />
+                        </a>
+                      ) : (
+                        <a key={file.id} href={href} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg border border-line bg-[#faf9f7] px-3 py-2 text-[13px] text-ink-soft hover:bg-[#f2f1ee]">
+                          <FileIcon className="h-4 w-4 text-ink-faint" /> {file.file_name}
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="-ml-2 mt-1 flex flex-wrap items-center gap-0.5">
+                  <VoteButtons
+                    likes={c.like_count}
+                    dislikes={c.dislike_count}
+                    initialVotes={c.vote_count}
+                    onVote={(v) => onVoteComment(id, v)}
+                    userVote={(c.user_vote ?? 0) as 1 | -1 | 0}
+                    size="sm"
+                    showBadge={false}
+                  />
+                  <button type="button" onClick={() => startReply(c)} aria-expanded={replyingTo === id} className={action}>
+                    <CornerDownRight className="h-3.5 w-3.5" /> Répondre
+                  </button>
+                  {mine && (
+                    <button type="button" onClick={() => { setReplyingTo(null); setEditing(id); }} className={action} aria-label="Modifier">
+                      <Pencil className="h-3.5 w-3.5" /><span className="hidden sm:inline">Modifier</span>
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button type="button" onClick={() => remove(c)} aria-label="Supprimer"
+                      className={`${action} hover:!bg-[#fbecea] hover:!text-[#a23b34]`}>
+                      <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">Supprimer</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </article>
     );
   };
 
-  const formatTimeSince = (dateString: string) => {
-    const now = new Date();
-    const commentDate = new Date(dateString);
-    const timeDiff = now.getTime() - commentDate.getTime();
-
-    const seconds = Math.floor(timeDiff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 30) return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(commentDate);
-    if (days > 0) return `il y a ${days} jour${days > 1 ? 's' : ''}`;
-    if (hours > 0) return `il y a ${hours} h`;
-    if (minutes > 0) return `il y a ${minutes} min`;
-    return seconds < 10 ? "à l'instant" : `il y a ${seconds} s`;
+  const thread = (root: Comment) => {
+    const rootId = String(root.id);
+    const replies = flatten(root);
+    const folded = replies.length > FOLD_AFTER && !expanded.has(rootId) ? replies.length - FOLDED_SHOWN : 0;
+    const shown = folded ? replies.slice(-FOLDED_SHOWN) : replies;
+    const open = replies.length > 0 || replyingTo === rootId;
+    return (
+      <li key={rootId} className="py-3 first:pt-0 last:pb-0">
+        {card(root, null, false)}
+        {open && (
+          // Le fil : un trait sous l'avatar du commentaire d'origine, les réponses au même retrait.
+          <div className="ml-[17px] border-l-2 border-[#efece6] pl-4 sm:pl-5">
+            {replyingTo === rootId && replyForm(root)}
+            {folded > 0 && (
+              <button type="button" onClick={() => setExpanded((prev) => new Set(prev).add(rootId))}
+                className="my-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] font-semibold text-brand-hover hover:bg-brand-soft">
+                <ChevronDown className="h-3.5 w-3.5" /> Voir les {folded} réponses précédentes
+              </button>
+            )}
+            {shown.map(({ comment, parent }) => (
+              <React.Fragment key={comment.id}>
+                {card(comment, String(parent.id) === rootId ? null : parent, true)}
+                {replyingTo === String(comment.id) && replyForm(comment)}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+      </li>
+    );
   };
 
   return (
-    <div className="relative max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="fd-display text-ink flex items-center" style={{ fontSize: 22 }}>
+    <div className="relative">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="fd-display flex items-center text-ink" style={{ fontSize: 22 }}>
           Questions et discussion
-          {comments.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-brand-soft text-brand-hover text-sm font-semibold rounded-full fd-nums">
-              {comments.length}
-            </span>
+          {total > 0 && (
+            <span className="fd-nums ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-sm font-semibold text-brand-hover">{total}</span>
           )}
         </h2>
-        
-        {/* Sorting Dropdown */}
-        <div className="relative">
-          <label htmlFor="sort-comments" className="sr-only">Trier les commentaires</label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Trier par :</span>
-            <select
-              id="sort-comments"
-              value={sortOption}
-              onChange={(e) => handleSortChange(e.target.value as 'mostUpvoted' | 'recent' | 'oldest')}
-              className="appearance-none bg-white border border-gray-200 rounded-full px-3 py-1.5 pr-8 text-sm text-gray-700 hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="mostUpvoted">Les plus utiles</option>
-              <option value="recent">Plus récents</option>
-              <option value="oldest">Plus anciens</option>
+        {comments.length > 1 && (
+          <label className="relative flex items-center gap-2 text-[13px] text-ink-faint">
+            Trier :
+            <select value={sort} onChange={(e) => changeSort(e.target.value as Sort)}
+              className="appearance-none rounded-lg border border-line bg-white py-1.5 pl-3 pr-8 text-[13px] font-medium text-ink hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20">
+              {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
-            <div className="pointer-events-none absolute right-2 flex items-center text-gray-500">
-              <ChevronDown className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* New Comment Form */}
-      {isAuthenticated ? (
-        <form onSubmit={handleSubmitComment} className="mb-8">
-          <div className="relative">
-            <textarea
-              ref={commentTextareaRef}
-              value={newComment}
-              onChange={(e) => handleTextareaChange(e, setNewComment)}
-              placeholder="Écris un commentaire…"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y min-h-[100px]"
-              onFocus={() => setShowButtons(true)}
-            />
-
-            {/* Uploaded Files Preview */}
-            {uploadedFiles.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {uploadedFiles.map(file => (
-                  <div key={file.id} className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200">
-                    {file.file_type === 'image' ? (
-                      <ImageIcon className="w-4 h-4 text-indigo-600" />
-                    ) : (
-                      <FileIcon className="w-4 h-4 text-indigo-600" />
-                    )}
-                    <span className="text-sm text-indigo-900">{file.file_name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFile(file.id)}
-                      className="text-indigo-400 hover:text-indigo-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {showButtons && (
-              <div className="mt-3 flex justify-between items-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFileUpload(!showFileUpload)}
-                  className="text-gray-600 hover:text-indigo-600"
-                >
-                  <Paperclip className="w-4 h-4 mr-1" />
-                  Ajouter une image
-                </Button>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setNewComment('');
-                      setUploadedFiles([]);
-                      setShowButtons(false);
-                      setShowFileUpload(false);
-                    }}
-                    className="rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
-                  >
-                    Annuler
-                  </Button>
-
-                  <Button
-                    type="submit"
-                    className="rounded-full bg-indigo-600 hover:bg-indigo-700"
-                    disabled={submitting || !newComment.trim()}
-                  >
-                    {submitting ? (
-                      <span className="flex items-center gap-2">
-                        <svg
-                          className="animate-spin h-4 w-4 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Envoi…
-                      </span>
-                    ) : (
-                      <>
-                        Commenter
-                        <Send className="ml-2 w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* File Upload Component */}
-            {showFileUpload && showButtons && (
-              <div className="mt-3">
-                <FileUpload
-                  onUploadComplete={handleFileUpload}
-                  onUploadError={(error) => console.error('Upload error:', error)}
-                  accept="image/*,.pdf,.doc,.docx,.txt,.md"
-                  maxSizeMB={10}
-                />
-              </div>
-            )}
-          </div>
-        </form>
-      ) : (
-        <div className="mb-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-center">
-          <div className="flex items-center justify-center gap-2 text-indigo-800 mb-2">
-            <AlertCircle className="w-5 h-5" />
-            <span className="font-medium">Connecte-toi pour commenter</span>
-          </div>
-          <p className="text-sm text-indigo-600">
-            <a href="/login" className="font-medium underline hover:text-indigo-800">
-              Connecte-toi
-            </a>{' '}
-            ou{' '}
-            <a href="/signup" className="font-medium underline hover:text-indigo-800">
-              inscris-toi
-            </a>{' '}
-            pour participer à la discussion.
-          </p>
-        </div>
-      )}
-
-      {/* Comment List */}
-      <div className="space-y-4">
-        {sortedComments
-          .filter((comment) => !comment.parent_id)
-          .map((comment) => renderComment(comment))}
-
-        {comments.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
-            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 mb-1">Pas encore de commentaire</h3>
-            <p className="text-gray-500">Pose une question ou partage une astuce : tu seras le premier.</p>
-          </div>
+            <ChevronDown className="pointer-events-none absolute right-2.5 h-4 w-4 text-ink-faint" />
+          </label>
         )}
       </div>
 
-      {/* Mentions List */}
-      {showMentions && renderMentionsList()}
+      {isAuthenticated ? (
+        <div className="mb-6">
+          <Composer
+            placeholder="Pose une question ou partage une astuce…"
+            submitLabel="Publier"
+            attachments
+            onSubmit={(html, fileIds) => onAddComment(html, undefined, fileIds)}
+            hint={<>Les maths s’écrivent entre <code className="rounded bg-[#f2f1ee] px-1 font-mono text-[11.5px]">$ $</code>, par exemple <code className="rounded bg-[#f2f1ee] px-1 font-mono text-[11.5px]">$f'(x) = 2x$</code>, ou avec le bouton Formule.</>}
+          />
+        </div>
+      ) : (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3.5">
+          <p className="text-[13.5px] text-ink-soft">Connecte-toi pour poser une question ou répondre à un camarade.</p>
+          <button type="button" onClick={openModal}
+            className="rounded-lg bg-brand px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-brand-hover">
+            Se connecter
+          </button>
+        </div>
+      )}
+
+      {roots.length > 0 ? (
+        <ul className="divide-y divide-line">{roots.map(thread)}</ul>
+      ) : (
+        <div className="rounded-xl border border-dashed border-line bg-[#faf9f7] px-5 py-8 text-center">
+          <MessageSquare className="mx-auto mb-3 h-8 w-8 text-[#cfcdc8]" />
+          <p className="text-[15px] font-semibold text-ink">Pas encore de question</p>
+          <p className="mt-1 text-[13.5px] text-ink-faint">Bloqué sur une question ? Demande ici : un camarade ou un prof te répondra.</p>
+        </div>
+      )}
     </div>
   );
-}
-
-function getCaretCoordinates(element: HTMLTextAreaElement, position: number) {
-  const div = document.createElement('div');
-  const style = div.style;
-  const computed = window.getComputedStyle(element);
-
-  style.whiteSpace = 'pre-wrap';
-  style.wordWrap = 'break-word';
-  style.position = 'absolute';
-  style.visibility = 'hidden';
-
-  const properties = [
-    'direction', 'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
-    'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-    'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-    'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
-    'fontSizeAdjust', 'lineHeight', 'fontFamily', 'textAlign', 'textTransform',
-    'textIndent', 'textDecoration', 'letterSpacing', 'wordSpacing',
-  ];
-
-  properties.forEach((prop) => {
-    // @ts-ignore
-    style[prop] = computed[prop];
-  });
-
-  div.textContent = element.value.substring(0, position);
-  const span = document.createElement('span');
-  span.textContent = element.value.substring(position) || '.';
-  div.appendChild(span);
-
-  document.body.appendChild(div);
-
-  const coordinates = {
-    top: span.offsetTop,
-    left: span.offsetLeft
-  };
-  document.body.removeChild(div);
-  
-  return coordinates;
 }

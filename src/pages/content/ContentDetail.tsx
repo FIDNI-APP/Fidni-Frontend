@@ -587,6 +587,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       setComments(commentsData as Comment[]);
     } catch (err) {
       console.error('Failed to add comment:', err);
+      throw err;  // la zone d'écriture garde le texte et affiche l'échec
     }
   };
 
@@ -614,6 +615,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       setComments(commentsData as Comment[]);
     } catch (err) {
       console.error('Edit comment failed:', err);
+      throw err;
     }
   };
 
