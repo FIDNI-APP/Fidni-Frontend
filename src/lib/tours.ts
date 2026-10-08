@@ -50,7 +50,7 @@ const SOLUTION: TourStep = {
 const AUTO_EVAL: TourStep = {
   target: 'auto-eval',
   title: 'Auto-évaluation',
-  body: "Un clic sous chaque question : Réussi, En partie ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
+  body: "Un clic sous chaque question : Réussi ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
 };
 const VOTE: TourStep = {
   target: 'vote',

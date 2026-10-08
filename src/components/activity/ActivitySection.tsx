@@ -12,7 +12,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRight, BadgeCheck, Check, CircleDot, Info, Loader2, RotateCcw, Sparkles, Target, Timer, Users } from 'lucide-react';
+import { AlertCircle, ArrowRight, BadgeCheck, Check, Info, Loader2, RotateCcw, Sparkles, Target, Timer, Users } from 'lucide-react';
 import { type ContentStatistics } from '@/lib/api';
 import { type PerQuestionStat, type SkillMastery } from '@/lib/api/statisticsApi';
 import { type QuestionNumber } from '@/lib/reportTargets';
@@ -35,13 +35,13 @@ interface ActivitySectionProps {
   numbering?: QuestionNumber[];
 }
 
-type Mine = 'success' | 'partial' | 'review';
-const mine = (s: PerQuestionStat['user_status']): Mine | null => (s === 'failed' ? 'review' : s);
+// « En partie » n'existe plus (08/10/2026) : les anciennes réponses comptent comme « À revoir », comme « Échoué ».
+type Mine = 'success' | 'review';
+const mine = (s: PerQuestionStat['user_status']): Mine | null => (s === 'failed' || s === 'partial' ? 'review' : s);
 
 const C = { brand: '#1a7a4a', gold: '#c0892f', review: '#c9776e', empty: '#ece9e3' };
 const MINE: Record<Mine, { label: string; color: string; chip: string; icon: React.ReactNode }> = {
   success: { label: 'Réussie', color: C.brand, chip: 'bg-brand-soft text-brand-hover border-brand-line', icon: <Check className="w-3 h-3" /> },
-  partial: { label: 'En partie', color: C.gold, chip: 'bg-gold-soft text-gold-strong border-gold-line', icon: <CircleDot className="w-3 h-3" /> },
   review: { label: 'À revoir', color: C.review, chip: 'bg-[#fbecea] text-[#a23b34] border-[#f1d3cf]', icon: <RotateCcw className="w-3 h-3" /> },
 };
 
@@ -115,9 +115,9 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({
 function MyResult({ statistics, perQ, totalQuestions, contentLabel }: {
   statistics: ContentStatistics; perQ: PerQuestionStat[]; totalQuestions: number; contentLabel: string;
 }) {
-  const counts = { success: 0, partial: 0, review: 0 };
+  const counts = { success: 0, review: 0 };
   perQ.forEach((q) => { const m = mine(q.user_status); if (m) counts[m] += 1; });
-  const evaluated = counts.success + counts.partial + counts.review;
+  const evaluated = counts.success + counts.review;
   const total = Math.max(totalQuestions, evaluated);
   const myPct = evaluated ? Math.round((counts.success / evaluated) * 100) : null;
   // Réussite moyenne des élèves sur les mêmes questions (celles que tu as évaluées).
@@ -154,9 +154,9 @@ function MyResult({ statistics, perQ, totalQuestions, contentLabel }: {
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {(['success', 'partial', 'review'] as Mine[]).filter((k) => counts[k] > 0).map((k) => (
+            {(['success', 'review'] as Mine[]).filter((k) => counts[k] > 0).map((k) => (
               <span key={k} className={`inline-flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-full border ${MINE[k].chip}`}>
-                {MINE[k].icon}{counts[k]} {k === 'success' ? plural(counts[k], 'réussie') : k === 'partial' ? 'en partie' : 'à revoir'}
+                {MINE[k].icon}{counts[k]} {k === 'success' ? plural(counts[k], 'réussie') : 'à revoir'}
               </span>
             ))}
             {statistics.user_time_seconds ? (
@@ -183,14 +183,13 @@ function Ring({ counts, total }: { counts: Record<Mine, number>; total: number }
   const R = 46, W = 12, LEN = 2 * Math.PI * R;
   const parts: { key: string; n: number; color: string }[] = [
     { key: 'success', n: counts.success, color: C.brand },
-    { key: 'partial', n: counts.partial, color: C.gold },
     { key: 'review', n: counts.review, color: C.review },
   ];
   let offset = 0;
   const gap = total > 1 ? 2 : 0;
   return (
     <div className="relative w-[124px] h-[124px] shrink-0 self-center" role="img"
-      aria-label={`${counts.success} réussies, ${counts.partial} en partie, ${counts.review} à revoir, sur ${total}`}>
+      aria-label={`${counts.success} réussies, ${counts.review} à revoir, sur ${total}`}>
       <svg viewBox="0 0 124 124" className="w-full h-full -rotate-90">
         <circle cx="62" cy="62" r={R} fill="none" stroke={C.empty} strokeWidth={W} />
         {total > 0 && parts.map((p) => {
@@ -350,7 +349,7 @@ function QuestionsChart({ perQ: stats, trap, showMine, totalQuestions, numbering
                 {trap?.path === sel.path && <span className="text-gold-strong font-semibold"> C’est la question qui fait le plus échouer.</span>}
                 {showMine && (
                   <span className="block mt-0.5">
-                    Toi : {mine(sel.user_status) ? <b className={mine(sel.user_status) === 'success' ? 'text-brand-hover' : mine(sel.user_status) === 'partial' ? 'text-gold-strong' : 'text-[#a23b34]'}>
+                    Toi : {mine(sel.user_status) ? <b className={mine(sel.user_status) === 'success' ? 'text-brand-hover' : 'text-[#a23b34]'}>
                       {MINE[mine(sel.user_status)!].label.toLowerCase()}</b> : <span className="text-ink-faint">pas encore évaluée</span>}.
                   </span>
                 )}
