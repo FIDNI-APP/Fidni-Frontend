@@ -297,6 +297,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
   const neverVisited = PAGES.filter((p) => !visited.has(p.pattern)).map((p) => p.label);
 
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-2 items-start">
       <div className="flex flex-col gap-4">
       <section className="fd-card p-5">
@@ -396,25 +397,70 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
         )}
       </section>
 
-      <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
       </div>
+    </div>
+    <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
     </div>
   );
 };
 
 type Feature = Overview['features'][number];
-const LIST_KINDS: { key: 'tout' | FilterValue['type']; label: string }[] = [
-  { key: 'tout', label: 'Toutes' }, { key: 'exercise', label: 'Exercices' }, { key: 'exam', label: 'Examens' }, { key: 'lesson', label: 'Leçons' },
+type ListKind = 'tout' | FilterValue['type'];
+const LIST_KINDS: { key: ListKind; label: string }[] = [
+  { key: 'tout', label: 'Toutes les listes' }, { key: 'exercise', label: 'Exercices' }, { key: 'exam', label: 'Examens' }, { key: 'lesson', label: 'Leçons' },
 ];
-const VALUES_SHOWN = 3;
+// Ordre et libellés des groupes de valeurs (clé = filtre côté serveur).
+const FILTER_GROUPS: { key: string; label: string }[] = [
+  { key: 'filtre-niveau', label: 'Niveau' }, { key: 'filtre-chapitre', label: 'Chapitre' },
+  { key: 'filtre-difficulte', label: 'Difficulté' }, { key: 'filtre-statut', label: 'Statut (vus, réussis, à revoir)' },
+  { key: 'filtre-matiere', label: 'Matière' }, { key: 'filtre-sous-domaine', label: 'Sous-domaine' },
+  { key: 'filtre-theoreme', label: 'Théorème' }, { key: 'filtre-national', label: 'Examen national' },
+  { key: 'filtre-date', label: 'Année' }, { key: 'tri', label: 'Tri' },
+];
+const VALUES_SHOWN = 5;
 
-/** Filtres et tri : combien de fois chaque filtre, et sous chacun ses valeurs les plus choisies (09/10/2026). */
+/** Une métadonnée : ses valeurs, de la plus choisie à la moins choisie. */
+const ValueGroup: React.FC<{ label: string; values: FilterValue[] }> = ({ label, values }) => {
+  const [all, setAll] = useState(false);
+  const total = values.reduce((n, v) => n + v.count, 0);
+  const max = Math.max(1, ...values.map((v) => v.count));
+  return (
+    <div className="rounded-xl border border-line p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-[13.5px] font-semibold text-ink">{label}</h3>
+        <span className="fd-nums text-[12px] text-ink-faint">{plural(total, ['choix', 'choix'])}</span>
+      </div>
+      <ol className="mt-2.5 flex flex-col gap-2">
+        {(all ? values : values.slice(0, VALUES_SHOWN)).map((v, i) => (
+          <li key={v.value} title={v.anon ? `dont ${v.anon} par des visiteurs non connectés` : undefined}>
+            <div className="flex items-baseline gap-2 text-[12.5px]">
+              <span className="fd-nums w-4 shrink-0 text-[11px] text-ink-faint">{i + 1}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{v.label}</span>
+              <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(v.count)}</b> · {Math.round((v.count / Math.max(total, 1)) * 100)} %</span>
+            </div>
+            <div className="ml-6 mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
+              <div className="h-full rounded-full bg-brand/70" style={{ width: `${Math.max((v.count / max) * 100, 2)}%` }} />
+            </div>
+          </li>
+        ))}
+      </ol>
+      {values.length > VALUES_SHOWN && (
+        <button type="button" onClick={() => setAll((x) => !x)} className="mt-2 text-[12px] font-semibold text-brand-hover hover:underline">
+          {all ? 'Replier' : `Voir les ${values.length - VALUES_SHOWN} autres`}
+        </button>
+      )}
+    </div>
+  );
+};
+
+/** Ce que les élèves choisissent dans les listes : pour chaque métadonnée (niveau, chapitre, difficulté…), ses
+ *  valeurs les plus choisies, par liste (09/10/2026). En dessous, repliés : les anciens compteurs par filtre. */
 const FiltersCard: React.FC<{
   filters: Feature[]; values: FilterValue[]; days: number; filterUses: number; unusedFilters: string[]; maxFilter: number;
 }> = ({ filters, values, days, filterUses, unusedFilters, maxFilter }) => {
-  const [kind, setKind] = useState<'tout' | FilterValue['type']>('tout');
-  const [open, setOpen] = useState<string | null>(null);
-  // Valeurs regroupées par filtre (et additionnées sur les listes si « Toutes »).
+  const [kind, setKind] = useState<ListKind>('tout');
+  const [showOld, setShowOld] = useState(false);
+  // Valeurs de la liste choisie, regroupées par filtre (additionnées sur les listes si « Toutes »).
   const byFilter = values.filter((v) => kind === 'tout' || v.type === kind).reduce<Record<string, FilterValue[]>>((acc, v) => {
     const list = (acc[v.filter] ??= []);
     const same = list.find((x) => x.value === v.value);
@@ -422,60 +468,74 @@ const FiltersCard: React.FC<{
     return acc;
   }, {});
   Object.values(byFilter).forEach((l) => l.sort((a, b) => b.count - a.count));
+  const totalChoices = Object.values(byFilter).flat().reduce((n, v) => n + v.count, 0);
+  const groups = FILTER_GROUPS.filter((g) => byFilter[g.key]?.length);
+  const empty = FILTER_GROUPS.filter((g) => !byFilter[g.key]?.length).map((g) => g.label);
+  const perKind = (k: ListKind) => values.filter((v) => k === 'tout' || v.type === k).reduce((n, v) => n + v.count, 0);
 
   return (
     <section className="fd-card p-5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="fd-display text-[16px] text-ink">Filtres et tri</h2>
+          <h2 className="fd-display text-[16px] text-ink">Ce que les élèves choisissent dans les listes</h2>
           <p className="mt-0.5 text-[12px] text-ink-faint">
-            Listes d’exercices, d’examens et de leçons, sur {days} j : {plural(filterUses, ['filtre ajouté', 'filtres ajoutés'])}. Mesuré depuis le 7 octobre ; valeurs choisies depuis le 9 octobre.
+            Sur {days} j : chaque valeur ajoutée à un filtre, chaque tri, et chaque page de niveau ou de chapitre ouverte depuis le site. Mesuré depuis le 9 octobre.
           </p>
         </div>
-        <Segmented label="Liste" value={kind} onChange={setKind} options={LIST_KINDS} />
+        <div role="radiogroup" aria-label="Liste" className="inline-flex flex-wrap rounded-xl border border-line bg-[#faf9f7] p-0.5">
+          {LIST_KINDS.map((o) => (
+            <button key={o.key} type="button" role="radio" aria-checked={kind === o.key} onClick={() => setKind(o.key)}
+              className={`rounded-[10px] px-2.5 py-1 text-[12px] font-medium transition-colors ${kind === o.key ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
+              {o.label} <span className="fd-nums text-ink-faint">{fmt(perKind(o.key))}</span>
+            </button>
+          ))}
+        </div>
       </div>
-      <ul className="mt-4 flex flex-col gap-3">
-        {[...filters].sort((a, b) => b.actions - a.actions).map((f) => {
-          const vals = byFilter[f.key] ?? [];
-          const total = vals.reduce((n, v) => n + v.count, 0);
-          const expanded = open === f.key;
-          return (
-            <li key={f.key} className={f.actions ? '' : 'opacity-60'}>
-              <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                <span className="min-w-0 truncate text-ink">{f.label}</span>
-                <span className="fd-nums shrink-0 text-ink-faint">
-                  <b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites
-                  <span className="ml-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
-                </span>
-              </div>
-              <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
-                <div className="h-full rounded-full bg-brand/70 transition-[width] duration-500" style={{ width: `${f.actions ? Math.max((f.actions / maxFilter) * 100, 2) : 0}%` }} />
-              </div>
-              {vals.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {(expanded ? vals : vals.slice(0, VALUES_SHOWN)).map((v) => (
-                    <span key={v.value} title={`${v.count} fois, dont ${v.anon} par des visiteurs non connectés`}
-                      className="inline-flex items-baseline gap-1 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">
-                      <span className="max-w-[16rem] truncate">{v.label}</span>
-                      <b className="fd-nums text-ink">{Math.round((v.count / Math.max(total, 1)) * 100)} %</b>
-                    </span>
-                  ))}
-                  {vals.length > VALUES_SHOWN && (
-                    <button type="button" onClick={() => setOpen(expanded ? null : f.key)}
-                      className="text-[11.5px] font-semibold text-brand-hover hover:underline">
-                      {expanded ? 'Moins' : `+ ${vals.length - VALUES_SHOWN} autre${vals.length - VALUES_SHOWN > 1 ? 's' : ''}`}
-                    </button>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {unusedFilters.length > 0 && filterUses > 0 && (
-        <p className="mt-4 rounded-xl border border-[#ecdcb6] bg-gold-soft px-3.5 py-2.5 text-[12.5px] text-ink-soft">
-          <b className="text-ink">Jamais utilisés :</b> {unusedFilters.join(', ')}.
+
+      {totalChoices === 0 ? (
+        <p className="mt-4 rounded-xl border border-line bg-[#faf9f7] px-4 py-3 text-[13px] text-ink-soft">
+          {values.length === 0
+            ? 'Aucun choix enregistré pour l’instant : la mesure des valeurs a commencé à la mise en ligne. Les premiers chiffres apparaissent dès qu’un élève filtre une liste ou ouvre la page d’un chapitre.'
+            : 'Aucun choix enregistré dans cette liste sur la période.'}
         </p>
+      ) : (
+        <>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {groups.map((g) => <ValueGroup key={`${kind}-${g.key}`} label={g.label} values={byFilter[g.key]} />)}
+          </div>
+          {empty.length > 0 && (
+            <p className="mt-3 text-[12.5px] text-ink-faint"><b className="font-semibold text-ink-soft">Jamais choisis ici :</b> {empty.join(', ')}.</p>
+          )}
+        </>
+      )}
+
+      <button type="button" onClick={() => setShowOld((v) => !v)} aria-expanded={showOld}
+        className="mt-4 inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-soft hover:text-ink">
+        <ChevronDown className={`h-4 w-4 transition-transform ${showOld ? 'rotate-180' : ''}`} />
+        Nombre de fois où chaque filtre a été ajouté ({plural(filterUses, ['fois', 'fois'])}, toutes listes, depuis le 7 octobre)
+      </button>
+      {showOld && (
+        <>
+          <ul className="mt-3 grid gap-x-8 gap-y-2.5 md:grid-cols-2">
+            {[...filters].sort((a, b) => b.actions - a.actions).map((f) => (
+              <li key={f.key} className={f.actions ? '' : 'opacity-60'}>
+                <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="min-w-0 truncate text-ink">{f.label}</span>
+                  <span className="fd-nums shrink-0 text-ink-faint">
+                    <b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites
+                    <span className="ml-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
+                  <div className="h-full rounded-full bg-ink/40" style={{ width: `${f.actions ? Math.max((f.actions / maxFilter) * 100, 2) : 0}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          {unusedFilters.length > 0 && filterUses > 0 && (
+            <p className="mt-3 text-[12.5px] text-ink-faint"><b className="font-semibold text-ink-soft">Jamais utilisés :</b> {unusedFilters.join(', ')}.</p>
+          )}
+        </>
       )}
     </section>
   );

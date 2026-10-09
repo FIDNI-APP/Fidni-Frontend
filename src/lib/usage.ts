@@ -111,6 +111,13 @@ export function trackSortValue(kind: ListKind, sort: string) {
   sendValue(kind, 'tri', sort);
 }
 
+/** Niveau / chapitre choisis en ouvrant leur page (/exercises/niveau/…) depuis le site : c'est le choix le plus
+ *  courant, et il ne passe pas par les filtres. Pas les arrivées directes (moteur de recherche, lien partagé). */
+export function trackHubChoice(kind: ListKind, levelId: number, chapterId?: number | null) {
+  if (chapterId) sendValue(kind, 'chapitre', chapterId);
+  else sendValue(kind, 'niveau', levelId);
+}
+
 export function trackFilterChange(before: Filters, after: Filters, kind?: ListKind) {
   const hits = new Set<UsageAction>();
   for (const [key, action] of FILTER_ACTIONS) if (added(before[key], after[key])) hits.add(action);

@@ -51,7 +51,7 @@ import type { FlexibleExerciseStructure } from '@/components/content/editor/Flex
 import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
-import { trackAction, trackFilterChange, trackSortValue } from '@/lib/usage';
+import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -223,6 +223,14 @@ export const ContentList: React.FC<ContentListProps> = ({
   };
 
   const [filters, setFilters] = useState<FilterState>(getInitialFilters);
+
+  // Niveau / chapitre choisi en ouvrant sa page depuis le site (pas une arrivée directe : location.key « default »).
+  const hubLevelId = hub?.level.id;
+  const hubChapterId = hub?.chapter?.id;
+  useEffect(() => {
+    if (hubLevelId && location.key !== 'default') trackHubChoice(contentType, hubLevelId, hubChapterId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubLevelId, hubChapterId, contentType]);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
   const [sortBy, setSortBy] = useState<SortOption>(
