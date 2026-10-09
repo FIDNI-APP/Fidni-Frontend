@@ -136,7 +136,7 @@ function NextSteps({ data }: { data: Overview }) {
           <div className={`p-5 sm:p-6 ${resume.length ? 'border-t lg:border-t-0 lg:border-l border-line' : ''}`}>
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><RotateCcw className="w-4 h-4 text-ink-faint" /> À revoir</h2>
-              <Link to="/revision-lists" className="text-[12.5px] font-semibold text-brand-hover hover:underline">Mes listes</Link>
+              <Link to="/revision-lists?onglet=listes" className="text-[12.5px] font-semibold text-brand-hover hover:underline">Mes listes</Link>
             </div>
             <ul className="mt-2 flex flex-col">
               {review.map((c) => (

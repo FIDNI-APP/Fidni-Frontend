@@ -1,16 +1,37 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+/**
+ * Révisions (/revision-lists) : deux onglets séparés (09/10/2026), mémorisés dans l'adresse (?onglet=ds|listes) :
+ *  - Mes DS : devoirs annoncés, préparation, DS blanc, notes (components/devoirs/UpcomingTestsSection) ;
+ *  - Mes listes : exercices à retravailler rangés par l'élève, et ses exercices ratés pas encore rangés.
+ */
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getRevisionLists, deleteRevisionList, createRevisionList, getRevisionSuggestions, quickAddToRevision,
   type RevisionList, type RevisionSuggestion,
 } from '@/lib/api/revisionListApi';
-import { AlertCircle, ChevronDown, ChevronRight, ListPlus, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { AlertCircle, BookmarkPlus, CalendarCheck, ChevronDown, ChevronRight, ListChecks, ListPlus, Loader2, Plus, Printer, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RevisionLabelPicker, EMPTY_LABELS, labelsToPayload, type RevisionLabels } from '@/components/revision/RevisionLabelPicker';
-import { UpcomingTestsSection } from '@/components/devoirs/UpcomingTestsSection';
+import { HowItWorks, UpcomingTestsSection } from '@/components/devoirs/UpcomingTestsSection';
+import type { UpcomingTest } from '@/lib/api/devoirsApi';
 
 const NAME_IDEAS = ['Limites — DS 1', 'Avant le bac blanc', 'Exercices ratés'];
+
+type Tab = 'ds' | 'listes';
+const TAB_KEY = 'fidni:revisions:onglet';
+const LIST_STEPS = [
+  { icon: BookmarkPlus, title: 'Range des exercices', text: 'Bouton « Liste » sur un exercice ou un examen, ou en un clic depuis tes exercices ratés.' },
+  { icon: RotateCcw, title: 'Refais-les à la suite', text: 'Ouvre la liste : la barre montre ce que tu as réussi et ce qui reste à revoir.' },
+  { icon: Printer, title: 'Imprime une feuille', text: 'Exporte la liste en PDF, avec ou sans corrigé, pour travailler sur papier.' },
+];
+
+function storedTab(): Tab | null {
+  try {
+    const v = localStorage.getItem(TAB_KEY);
+    return v === 'ds' || v === 'listes' ? v : null;
+  } catch { return null; }
+}
 
 export const RevisionLists = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -32,6 +53,19 @@ export const RevisionLists = () => {
   const [suggestions, setSuggestions] = useState<RevisionSuggestion[]>([]);
   const [suggestionCount, setSuggestionCount] = useState(0);
   const [addingId, setAddingId] = useState<number | 'all' | null>(null);
+  // Onglet : celui de l'adresse, sinon le dernier ouvert, sinon « Mes DS ».
+  const [params, setParams] = useSearchParams();
+  const urlTab = params.get('onglet');
+  const tab: Tab = urlTab === 'ds' || urlTab === 'listes' ? urlTab : (storedTab() ?? 'ds');
+  const selectTab = (t: Tab) => {
+    try { localStorage.setItem(TAB_KEY, t); } catch { /* préférence facultative */ }
+    const next = new URLSearchParams(params);
+    next.set('onglet', t);
+    setParams(next, { replace: true });
+  };
+  const [tests, setTests] = useState<UpcomingTest[] | null>(null);
+  const onTests = useCallback((t: UpcomingTest[]) => setTests(t), []);
+  const upcomingCount = (tests ?? []).filter((t) => t.days_left >= 0).length;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -100,6 +134,12 @@ export const RevisionLists = () => {
     && (!fSubject || (l.subjects || []).some((x) => String(x.id) === fSubject))
     && (!fChapter || (l.chapters || []).some((x) => String(x.id) === fChapter)));
 
+  const totals = lists.reduce((acc, l) => {
+    const n = l.item_count ?? 0;
+    const p = l.progress ?? { success: 0, review: 0, todo: n };
+    return { items: acc.items + n, success: acc.success + p.success, review: acc.review + p.review };
+  }, { items: 0, success: 0, review: 0 });
+
   const handleDelete = async (list: RevisionList) => {
     if (!window.confirm(`Supprimer la liste « ${list.name} » ? Les exercices eux-mêmes restent sur Fidni.`)) return;
     try {
@@ -141,21 +181,55 @@ export const RevisionLists = () => {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
-      <header className="mb-6">
+      <header className="mb-5">
         <h1 className="fd-display text-[26px] leading-tight text-ink md:text-[30px]">Révisions</h1>
-        <p className="mt-1 text-sm text-ink-soft">Tes DS à préparer et tes exercices à retravailler.</p>
+        <p className="mt-1 text-sm text-ink-soft">Prépare tes prochains DS et retravaille les exercices que tu as mis de côté.</p>
       </header>
 
-      {/* « Mon prochain DS » : révision ciblée de chaque devoir annoncé. */}
-      <UpcomingTestsSection />
+      {/* Deux onglets : on ne mélange plus DS et listes. */}
+      <div role="tablist" aria-label="Révisions" data-tour="revisions-onglets"
+        className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-[#f2f1ee] p-1 sm:inline-grid sm:w-auto">
+        {([
+          ['ds', 'Mes DS', CalendarCheck, tests === null ? null : upcomingCount],
+          ['listes', 'Mes listes', ListChecks, loading ? null : lists.length],
+        ] as const).map(([key, label, Icon, count]) => {
+          const active = tab === key;
+          return (
+            <button key={key} type="button" role="tab" id={`onglet-${key}`} aria-selected={active} aria-controls={`panneau-${key}`}
+              onClick={() => selectTab(key)}
+              className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold transition-colors sm:min-w-[150px] ${
+                active ? 'bg-white text-ink shadow-[0_1px_2px_rgba(20,18,16,.08)]' : 'text-ink-soft hover:text-ink'}`}>
+              <Icon className="h-4 w-4" /> {label}
+              {count !== null && count > 0 && (
+                <span className={`fd-nums rounded-full px-1.5 text-[11.5px] ${active ? 'bg-brand-soft text-brand-hover' : 'bg-white/70 text-ink-faint'}`}>{count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-      <section aria-labelledby="mes-listes">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <h2 id="mes-listes" className="fd-display text-[21px] leading-tight text-ink">Mes listes</h2>
-          <button type="button" onClick={() => setShowCreateModal(true)} data-tour="revisions-nouvelle"
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13.5px] font-semibold text-brand-hover hover:bg-brand-soft">
-            <Plus className="h-4 w-4" /> Nouvelle liste
-          </button>
+      {/* « Mes DS » reste monté (caché) pour garder le compteur de l'onglet à jour. */}
+      <div role="tabpanel" id="panneau-ds" aria-labelledby="onglet-ds" hidden={tab !== 'ds'}>
+        <UpcomingTestsSection onTests={onTests} />
+      </div>
+
+      <section role="tabpanel" id="panneau-listes" aria-labelledby="onglet-listes" hidden={tab !== 'listes'}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="min-w-0 text-[13.5px] text-ink-soft">
+            {loading ? '\u00a0' : lists.length === 0
+              ? 'Regroupe les exercices à retravailler pour les refaire ou les imprimer.'
+              : <>
+                  <b className="fd-nums font-semibold text-ink">{lists.length}</b> liste{lists.length > 1 ? 's' : ''}
+                  {' · '}<b className="fd-nums font-semibold text-ink">{totals.items}</b> exercice{totals.items > 1 ? 's' : ''}
+                  {totals.success > 0 && <> · <b className="fd-nums font-semibold text-brand-hover">{totals.success}</b> réussi{totals.success > 1 ? 's' : ''}</>}
+                  {totals.review > 0 && <> · <b className="fd-nums font-semibold text-[#8a6318]">{totals.review}</b> à revoir</>}
+                </>}
+          </p>
+          {lists.length > 0 && (
+            <button type="button" onClick={() => setShowCreateModal(true)} data-tour="revisions-nouvelle" className="fd-btn-ghost">
+              <Plus className="h-4 w-4" /> Nouvelle liste
+            </button>
+          )}
         </div>
 
         {error && !showCreateModal && (
@@ -196,6 +270,7 @@ export const RevisionLists = () => {
               {[0, 1].map((i) => <div key={i} className="h-[68px] animate-pulse" />)}
             </div>
           ) : lists.length === 0 ? (
+            <>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft">
                 <ListPlus className="h-5 w-5" />
@@ -204,8 +279,10 @@ export const RevisionLists = () => {
                 <p className="text-[15px] font-semibold text-ink">Pas encore de liste</p>
                 <p className="text-[13px] text-ink-faint">Range ici les exercices à retravailler : bouton « Liste » sur chaque exercice.</p>
               </div>
-              <button type="button" className="fd-btn-ghost" onClick={() => setShowCreateModal(true)}><Plus className="h-4 w-4" /> Créer une liste</button>
+              <button type="button" className="fd-btn-primary" onClick={() => setShowCreateModal(true)} data-tour="revisions-nouvelle"><Plus className="h-4 w-4" /> Créer une liste</button>
             </div>
+            <HowItWorks steps={LIST_STEPS} />
+            </>
           ) : shown.length === 0 ? (
             <p className="px-5 py-6 text-center text-[13.5px] text-ink-faint">
               Aucune liste avec ces étiquettes.{' '}

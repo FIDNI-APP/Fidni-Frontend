@@ -53,7 +53,7 @@ export const RevisionNudge: React.FC<{ contentId: string | number; trigger: numb
             Ajouté à « {listName} »
           </p>
           <p className="mt-1.5 text-[13px] text-ink-soft">Tu le retrouveras dans tes révisions, avec les autres exercices à reprendre.</p>
-          <Link to="/revision-lists" onClick={() => setOpen(false)} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
+          <Link to="/revision-lists?onglet=listes" onClick={() => setOpen(false)} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
             Voir mes révisions <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </>

@@ -3,7 +3,10 @@
  *  - Aperçu : quatre chiffres sur la période choisie (cliquer sur l'un affiche sa courbe), les contenus les plus vus ;
  *  - À traiter : signalements d'erreurs, corrections « à vérifier » à valider ;
  *  - Membres : recherche, filtres rapides, fiche dépliable avec les dernières actions ;
- *  - Usage (06/10/2026) : membres qui se servent de chaque fonctionnalité, pages les plus visitées ;
+ *  - Usage (06/10/2026) : membres qui se servent de chaque fonctionnalité, pages les plus visitées, filtres et
+ *    leurs valeurs les plus choisies (difficulté, chapitre, tri…, 09/10/2026) ;
+ *  - Visiteurs (09/10/2026) : les visiteurs non connectés, à part (components/pilotage/VisitorsTab) ;
+ *  - Membres : aussi « Un membre n'arrive pas à se connecter ? » (components/pilotage/LoginDiagnostic) ;
  *  - IA : un document (PDF, Word, photos) → fiches préparées par l'IA, relues puis publiées (components/pilotage/IATab).
  * Données : /api/pilotage/?jours=7|30|90, /api/pilotage/utilisateurs/ (+ /<id>/) — backend apps/users/admin_dashboard.py.
  * Les comptes maison (admins, compte éditorial, compte de test) sont exclus des chiffres.
@@ -18,6 +21,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { IATab } from '@/components/pilotage/IATab';
+import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
+import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
 import { PAGES, pageInfo } from '@/lib/usage';
 
 interface ContentRef { id: number; type: string; title: string; url: string }
@@ -36,7 +41,10 @@ interface Overview {
   usage_since: string;
   features: { key: string; label: string; source: 'base' | 'navigateur' | 'filtre'; actions: number; users: number | null; visits?: number; previous: number | null }[];
   pages: { page: string; views: number; visits: number }[];
+  filter_values: FilterValue[];
+  anonymes: AnonymousStats;
 }
+interface FilterValue { filter: string; type: 'exercise' | 'exam' | 'lesson'; value: string; label: string; count: number; visits: number; anon: number }
 interface UserRow {
   id: number; username: string; email: string; full_name: string; user_type: string | null;
   class_level: string | null; school: string | null; date_joined: string; last_login: string | null;
@@ -47,7 +55,7 @@ interface UsersPage { count: number; pages: number; results: UserRow[]; counts: 
 interface ActivityEvent { at: string; kind: string; username: string | null; label: string; content?: ContentRef }
 
 const PERIODS = [7, 30, 90];
-type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'ia';
+type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'visiteurs' | 'ia';
 
 const METRICS: { key: MetricKey; label: string; hint: string; unit: [string, string]; color: string; icon: React.ElementType }[] = [
   { key: 'views', label: 'Vues des contenus', unit: ['vue', 'vues'], color: '#1a1a1a', icon: Eye,
@@ -388,13 +396,50 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
         )}
       </section>
 
-      <section className="fd-card p-5">
-        <h2 className="fd-display text-[16px] text-ink">Filtres et tri</h2>
-        <p className="mt-0.5 text-[12px] text-ink-faint">
-          Listes d’exercices, d’examens et de leçons, sur {data.days} j : {plural(filterUses, ['filtre ajouté', 'filtres ajoutés'])}. Mesuré depuis le 7 octobre.
-        </p>
-        <ul className="mt-4 flex flex-col gap-2.5">
-          {[...filters].sort((a, b) => b.actions - a.actions).map((f) => (
+      <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
+      </div>
+    </div>
+  );
+};
+
+type Feature = Overview['features'][number];
+const LIST_KINDS: { key: 'tout' | FilterValue['type']; label: string }[] = [
+  { key: 'tout', label: 'Toutes' }, { key: 'exercise', label: 'Exercices' }, { key: 'exam', label: 'Examens' }, { key: 'lesson', label: 'Leçons' },
+];
+const VALUES_SHOWN = 3;
+
+/** Filtres et tri : combien de fois chaque filtre, et sous chacun ses valeurs les plus choisies (09/10/2026). */
+const FiltersCard: React.FC<{
+  filters: Feature[]; values: FilterValue[]; days: number; filterUses: number; unusedFilters: string[]; maxFilter: number;
+}> = ({ filters, values, days, filterUses, unusedFilters, maxFilter }) => {
+  const [kind, setKind] = useState<'tout' | FilterValue['type']>('tout');
+  const [open, setOpen] = useState<string | null>(null);
+  // Valeurs regroupées par filtre (et additionnées sur les listes si « Toutes »).
+  const byFilter = values.filter((v) => kind === 'tout' || v.type === kind).reduce<Record<string, FilterValue[]>>((acc, v) => {
+    const list = (acc[v.filter] ??= []);
+    const same = list.find((x) => x.value === v.value);
+    if (same) { same.count += v.count; same.anon += v.anon; same.visits += v.visits; } else list.push({ ...v });
+    return acc;
+  }, {});
+  Object.values(byFilter).forEach((l) => l.sort((a, b) => b.count - a.count));
+
+  return (
+    <section className="fd-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="fd-display text-[16px] text-ink">Filtres et tri</h2>
+          <p className="mt-0.5 text-[12px] text-ink-faint">
+            Listes d’exercices, d’examens et de leçons, sur {days} j : {plural(filterUses, ['filtre ajouté', 'filtres ajoutés'])}. Mesuré depuis le 7 octobre ; valeurs choisies depuis le 9 octobre.
+          </p>
+        </div>
+        <Segmented label="Liste" value={kind} onChange={setKind} options={LIST_KINDS} />
+      </div>
+      <ul className="mt-4 flex flex-col gap-3">
+        {[...filters].sort((a, b) => b.actions - a.actions).map((f) => {
+          const vals = byFilter[f.key] ?? [];
+          const total = vals.reduce((n, v) => n + v.count, 0);
+          const expanded = open === f.key;
+          return (
             <li key={f.key} className={f.actions ? '' : 'opacity-60'}>
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
                 <span className="min-w-0 truncate text-ink">{f.label}</span>
@@ -406,17 +451,33 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
               <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
                 <div className="h-full rounded-full bg-brand/70 transition-[width] duration-500" style={{ width: `${f.actions ? Math.max((f.actions / maxFilter) * 100, 2) : 0}%` }} />
               </div>
+              {vals.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {(expanded ? vals : vals.slice(0, VALUES_SHOWN)).map((v) => (
+                    <span key={v.value} title={`${v.count} fois, dont ${v.anon} par des visiteurs non connectés`}
+                      className="inline-flex items-baseline gap-1 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">
+                      <span className="max-w-[16rem] truncate">{v.label}</span>
+                      <b className="fd-nums text-ink">{Math.round((v.count / Math.max(total, 1)) * 100)} %</b>
+                    </span>
+                  ))}
+                  {vals.length > VALUES_SHOWN && (
+                    <button type="button" onClick={() => setOpen(expanded ? null : f.key)}
+                      className="text-[11.5px] font-semibold text-brand-hover hover:underline">
+                      {expanded ? 'Moins' : `+ ${vals.length - VALUES_SHOWN} autre${vals.length - VALUES_SHOWN > 1 ? 's' : ''}`}
+                    </button>
+                  )}
+                </div>
+              )}
             </li>
-          ))}
-        </ul>
-        {unusedFilters.length > 0 && filterUses > 0 && (
-          <p className="mt-4 rounded-xl border border-[#ecdcb6] bg-gold-soft px-3.5 py-2.5 text-[12.5px] text-ink-soft">
-            <b className="text-ink">Jamais utilisés :</b> {unusedFilters.join(', ')}.
-          </p>
-        )}
-      </section>
-      </div>
-    </div>
+          );
+        })}
+      </ul>
+      {unusedFilters.length > 0 && filterUses > 0 && (
+        <p className="mt-4 rounded-xl border border-[#ecdcb6] bg-gold-soft px-3.5 py-2.5 text-[12.5px] text-ink-soft">
+          <b className="text-ink">Jamais utilisés :</b> {unusedFilters.join(', ')}.
+        </p>
+      )}
+    </section>
   );
 };
 
@@ -646,7 +707,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
 export default function Pilotage() {
   const { user, isLoading } = useAuth();
   const [params, setParams] = useSearchParams();
-  const tab = (['apercu', 'a-traiter', 'membres', 'usage', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
+  const tab = (['apercu', 'a-traiter', 'membres', 'usage', 'visiteurs', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
   const days = PERIODS.includes(Number(params.get('periode'))) ? Number(params.get('periode')) : 30;
   const setParam = (key: string, value: string) => setParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n; }, { replace: true });
 
@@ -688,6 +749,7 @@ export default function Pilotage() {
     { key: 'a-traiter', label: 'À traiter', badge: todoCount },
     { key: 'membres', label: 'Membres', badge: undefined },
     { key: 'usage', label: 'Usage' },
+    { key: 'visiteurs', label: 'Visiteurs' },
     { key: 'ia', label: 'IA' },
   ];
 
@@ -714,10 +776,10 @@ export default function Pilotage() {
         </div>
       </header>
 
-      <nav role="tablist" aria-label="Sections du pilotage" className="mb-5 flex gap-1 border-b border-line">
+      <nav role="tablist" aria-label="Sections du pilotage" className="mb-5 flex gap-1 overflow-x-auto border-b border-line">
         {tabs.map((t) => (
           <button key={t.key} role="tab" type="button" aria-selected={tab === t.key} onClick={() => setParam('onglet', t.key)}
-            className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[14px] font-medium transition-colors ${tab === t.key ? 'border-brand text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>
+            className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[14px] font-medium transition-colors ${tab === t.key ? 'border-brand text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>
             {t.label}
             {!!t.badge && <span className="fd-nums rounded-full bg-gold-soft px-1.5 text-[11.5px] font-semibold text-gold-strong">{t.badge}</span>}
           </button>
@@ -727,13 +789,18 @@ export default function Pilotage() {
       {error && <p role="alert" className="mb-5 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">{error}</p>}
 
       {tab === 'membres' ? (
-        <MembersTab days={days} />
+        <>
+          <LoginDiagnostic />
+          <MembersTab days={days} />
+        </>
       ) : tab === 'ia' ? (
         <IATab />
       ) : !data ? (
         <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-ink-faint" /></div>
       ) : tab === 'usage' ? (
         <UsageTab data={data} />
+      ) : tab === 'visiteurs' ? (
+        <VisitorsTab data={data.anonymes} days={data.days} />
       ) : tab === 'a-traiter' ? (
         <div>
           <ReportsPanel onOpenCountChange={setReportsOpen} />

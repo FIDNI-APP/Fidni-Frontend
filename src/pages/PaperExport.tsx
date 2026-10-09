@@ -386,7 +386,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
 
   const goBack = () => {
     if (window.history.length > 1) navigate(-1);
-    else navigate(source === 'revision-list' ? '/revision-lists' : source === 'notebook' ? '/notebooks' : '/');
+    else navigate(source === 'revision-list' ? '/revision-lists?onglet=listes' : source === 'notebook' ? '/notebooks' : '/');
   };
 
   // Cahiers et listes de révision sont privés : un visiteur voit directement l'invitation.

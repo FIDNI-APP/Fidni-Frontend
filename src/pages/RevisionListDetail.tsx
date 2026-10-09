@@ -175,7 +175,7 @@ export const RevisionListDetail: React.FC = () => {
           <h2 className="text-xl font-bold text-ink mb-2">Liste non trouvée</h2>
           <p className="text-ink-faint mb-6 text-sm">Cette liste n'existe pas ou a été supprimée.</p>
           <Button
-            onClick={() => navigate('/revision-lists')}
+            onClick={() => navigate('/revision-lists?onglet=listes')}
             className="bg-[#1a7a4a] hover:bg-[#15633c] text-white"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -192,7 +192,7 @@ export const RevisionListDetail: React.FC = () => {
       <section className="revision-print-hide" style={{ background: '#faf9f7', borderBottom: '1px solid #e7e3dc' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-6">
           <button
-            onClick={() => navigate('/revision-lists')}
+            onClick={() => navigate('/revision-lists?onglet=listes')}
             className="inline-flex items-center gap-1.5 text-sm mb-5"
             style={{ color: '#6b6862' }}
           >

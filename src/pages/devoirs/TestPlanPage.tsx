@@ -81,7 +81,7 @@ export default function TestPlanPage() {
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = plan ? testTitle(plan.test) : null;
   useEffect(() => {
-    setCrumbs([{ label: 'Révisions', to: '/revision-lists' }, { label: crumbTitle ?? 'Préparation du DS' }]);
+    setCrumbs([{ label: 'Révisions', to: '/revision-lists?onglet=ds' }, { label: crumbTitle ?? 'Préparation du DS' }]);
   }, [crumbTitle, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
 
