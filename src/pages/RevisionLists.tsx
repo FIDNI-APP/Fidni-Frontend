@@ -5,39 +5,12 @@ import {
   getRevisionLists, deleteRevisionList, createRevisionList, getRevisionSuggestions, quickAddToRevision,
   type RevisionList, type RevisionSuggestion,
 } from '@/lib/api/revisionListApi';
-import { AlertCircle, ArrowRight, BookOpen, CheckCircle2, Filter, ListPlus, Loader2, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight, ListPlus, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RevisionLabelPicker, EMPTY_LABELS, labelsToPayload, type RevisionLabels } from '@/components/revision/RevisionLabelPicker';
 import { UpcomingTestsSection } from '@/components/devoirs/UpcomingTestsSection';
 
-/** Ce que la carte montre d'une liste, calculé à partir de ses éléments (aucun chiffre inventé). */
-function summarize(list: RevisionList) {
-  const items = list.items || [];
-  let success = 0, review = 0;
-  const chapters = new Map<string, string>();
-  items.forEach(item => {
-    const c = item.content_object;
-    if (c?.user_complete === 'success') success += 1;
-    else if (c?.user_complete === 'review') review += 1;
-    (c?.chapters || []).forEach((ch: { id: number; name: string }) => chapters.set(String(ch.id), ch.name));
-  });
-  const total = list.item_count ?? items.length;
-  // Les chapitres choisis par l'élève priment sur ceux déduits des exercices.
-  const labelled = (list.chapters || []).map((c) => c.name);
-  return {
-    total, success, review, todo: Math.max(total - success - review, 0),
-    chapters: labelled.length ? labelled : Array.from(chapters.values()),
-    level: list.class_levels?.[0]?.name, subject: list.subjects?.[0]?.name,
-  };
-}
-
 const NAME_IDEAS = ['Limites — DS 1', 'Avant le bac blanc', 'Exercices ratés'];
-
-const STEPS = [
-  { icon: ListPlus, title: 'Crée une liste', text: 'Un thème, un devoir, une semaine : « Limites — DS 1 ».' },
-  { icon: BookOpen, title: 'Ajoute des exercices', text: 'Depuis la page d’un exercice ou d’un examen, bouton « Liste ».' },
-  { icon: CheckCircle2, title: 'Révise et coche', text: 'Marque chaque exercice réussi ou à revoir : la carte suit ta progression.' },
-];
 
 export const RevisionLists = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -164,234 +137,89 @@ export const RevisionLists = () => {
     setError(null);
   };
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-
   if (!isAuthenticated) return null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
-      <header className="mb-7">
+    <div className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
+      <header className="mb-6">
         <h1 className="fd-display text-[26px] leading-tight text-ink md:text-[30px]">Révisions</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Prépare tes DS et retravaille ce qui te résiste.
-        </p>
+        <p className="mt-1 text-sm text-ink-soft">Tes DS à préparer et tes exercices à retravailler.</p>
       </header>
 
-      {/* « Mon prochain DS » : révision ciblée de chaque devoir annoncé (08/10/2026). */}
+      {/* « Mon prochain DS » : révision ciblée de chaque devoir annoncé. */}
       <UpcomingTestsSection />
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="fd-display text-[21px] leading-tight text-ink">Mes listes</h2>
-          <p className="mt-1 text-[13px] text-ink-soft">
-            Tes exercices à retravailler, avec ce qui est réussi et ce qui reste à revoir.
-          </p>
+      <section aria-labelledby="mes-listes">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <h2 id="mes-listes" className="fd-display text-[21px] leading-tight text-ink">Mes listes</h2>
+          <button type="button" onClick={() => setShowCreateModal(true)} data-tour="revisions-nouvelle"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13.5px] font-semibold text-brand-hover hover:bg-brand-soft">
+            <Plus className="h-4 w-4" /> Nouvelle liste
+          </button>
         </div>
-        <button className="fd-btn-primary shrink-0" onClick={() => setShowCreateModal(true)} data-tour="revisions-nouvelle">
-          <Plus className="h-4 w-4" /> Nouvelle liste
-        </button>
-      </div>
 
-      {error && !showCreateModal && (
-        <div role="alert" className="mb-5 flex items-center gap-3 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">
-          <AlertCircle className="h-4 w-4 shrink-0" /> {error}
-        </div>
-      )}
+        {error && !showCreateModal && (
+          <div role="alert" className="mb-3 flex items-center gap-3 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">
+            <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+          </div>
+        )}
 
-      {suggestions.length > 0 && (
-        <section className="mb-6 rounded-2xl border border-gold-line bg-gold-soft/50 p-5" data-tour="revisions-suggestions">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="flex items-center gap-2 text-[16px] font-semibold text-ink">
-                <Sparkles className="h-4 w-4 text-gold-strong" /> À retravailler
-                <span className="fd-nums rounded-full bg-white px-2 py-0.5 text-[12px] font-semibold text-gold-strong">{suggestionCount}</span>
-              </h2>
-              <p className="mt-1 text-[13px] text-ink-soft">
-                Tu as raté ces exercices, ou certaines de leurs questions. Range-les pour y revenir avant ton prochain devoir.
-              </p>
-            </div>
-            {suggestions.length > 1 && (
-              <button className="fd-btn-primary shrink-0" disabled={addingId !== null}
-                onClick={() => addSuggestion(suggestions.map((x) => x.id), 'all')}>
-                {addingId === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
-                Tout ajouter à « À revoir »
+        {/* Filtres : seulement quand il y a beaucoup de listes. */}
+        {!loading && lists.length > 6 && hasFacets && (
+          <div className="mb-3 flex flex-wrap items-center gap-2" data-tour="revisions-filtres">
+            {([
+              ['Niveau', facets.levels, fLevel, setFLevel],
+              ['Matière', facets.subjects, fSubject, setFSubject],
+              ['Chapitre', facets.chapters, fChapter, setFChapter],
+            ] as const).filter(([, opts]) => opts.length > 0).map(([label, opts, val, set]) => (
+              <select key={label} value={val} onChange={(e) => set(e.target.value)} aria-label={label}
+                className={`h-8 max-w-[14rem] rounded-lg border px-2 text-[12.5px] ${val ? 'border-brand bg-brand-soft font-semibold text-brand-hover' : 'border-line bg-white text-ink-soft'}`}>
+                <option value="">{label} : tous</option>
+                {opts.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            ))}
+            {filtering && (
+              <button type="button" onClick={() => { setFLevel(''); setFSubject(''); setFChapter(''); }}
+                className="inline-flex items-center gap-1 text-[12.5px] font-medium text-ink-faint hover:text-ink">
+                <X className="h-3.5 w-3.5" /> Effacer
               </button>
             )}
           </div>
-          <ul className="mt-4 grid gap-2 md:grid-cols-2">
-            {suggestions.slice(0, 6).map((x) => (
-              <li key={x.id} className="flex items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <Link to={`/${x.type === 'exam' ? 'exams' : 'exercises'}/${x.id}`} className="line-clamp-1 text-[14px] font-semibold text-ink hover:underline">{x.title}</Link>
-                  <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-faint">
-                    {[x.failed ? 'Marqué échoué' : `${x.weak_questions} question${x.weak_questions > 1 ? 's' : ''} à reprendre`, x.chapters[0]].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                <button type="button" disabled={addingId !== null} onClick={() => addSuggestion([x.id], x.id)}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] font-semibold text-ink-soft hover:border-brand hover:text-brand-hover disabled:opacity-50">
-                  {addingId === x.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Ajouter
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        )}
 
-      {!loading && lists.length > 1 && hasFacets && (
-        <div className="mb-5 flex flex-wrap items-center gap-2" data-tour="revisions-filtres">
-          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint"><Filter className="h-3.5 w-3.5" /> Filtrer</span>
-          {([
-            ['Niveau', facets.levels, fLevel, setFLevel],
-            ['Matière', facets.subjects, fSubject, setFSubject],
-            ['Chapitre', facets.chapters, fChapter, setFChapter],
-          ] as const).filter(([, opts]) => opts.length > 0).map(([label, opts, val, set]) => (
-            <select key={label} value={val} onChange={(e) => set(e.target.value)} aria-label={label}
-              className={`h-9 max-w-[16rem] rounded-lg border px-2.5 text-[13px] ${val ? 'border-brand bg-brand-soft text-brand-hover font-semibold' : 'border-line bg-white text-ink-soft'}`}>
-              <option value="">{label} : tous</option>
-              {opts.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-          ))}
-          {filtering && (
-            <button type="button" onClick={() => { setFLevel(''); setFSubject(''); setFChapter(''); }}
-              className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-faint hover:text-ink">
-              <X className="h-3.5 w-3.5" /> Effacer
-            </button>
+        <div className="overflow-hidden rounded-2xl border border-line bg-white">
+          {suggestions.length > 0 && (
+            <Suggestions items={suggestions} count={suggestionCount} adding={addingId} onAdd={addSuggestion} />
           )}
-          <span className="ml-auto text-[12.5px] text-ink-faint fd-nums">{shown.length} / {lists.length} listes</span>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy>
-          {[0, 1, 2].map(i => (
-            <div key={i} className="fd-card h-[210px] animate-pulse p-5">
-              <div className="h-3 w-24 rounded bg-[#f2f1ee]" />
-              <div className="mt-4 h-5 w-3/4 rounded bg-[#f2f1ee]" />
-              <div className="mt-8 h-2 rounded-full bg-[#f7f6f3]" />
+          {loading ? (
+            <div aria-busy className="divide-y divide-line">
+              {[0, 1].map((i) => <div key={i} className="h-[68px] animate-pulse" />)}
             </div>
-          ))}
-        </div>
-      ) : lists.length === 0 ? (
-        <section className="fd-card px-5 py-10 md:px-10 md:py-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="fd-display text-[20px] text-ink">Ta première liste en trois gestes</h2>
-            <p className="mt-1.5 text-sm text-ink-soft">
-              Regroupe les exercices qui te résistent pour les reprendre au bon moment.
+          ) : lists.length === 0 ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft">
+                <ListPlus className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-ink">Pas encore de liste</p>
+                <p className="text-[13px] text-ink-faint">Range ici les exercices à retravailler : bouton « Liste » sur chaque exercice.</p>
+              </div>
+              <button type="button" className="fd-btn-ghost" onClick={() => setShowCreateModal(true)}><Plus className="h-4 w-4" /> Créer une liste</button>
+            </div>
+          ) : shown.length === 0 ? (
+            <p className="px-5 py-6 text-center text-[13.5px] text-ink-faint">
+              Aucune liste avec ces étiquettes.{' '}
+              <button className="font-semibold text-brand-hover hover:underline" onClick={() => { setFLevel(''); setFSubject(''); setFChapter(''); }}>Tout afficher</button>
             </p>
-          </div>
-          <ol className="mx-auto mt-8 grid max-w-4xl gap-4 md:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, text }, i) => (
-              <li key={title} className="rounded-2xl border border-line bg-paper p-5">
-                <div className="flex items-center gap-3">
-                  <span className="fd-nums flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[13px] font-bold text-white">{i + 1}</span>
-                  <Icon className="h-4 w-4 text-brand" aria-hidden />
-                </div>
-                <h3 className="mt-3 text-[15px] font-semibold text-ink">{title}</h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">{text}</p>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
-            <button className="fd-btn-primary" onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4" /> Créer ma première liste
-            </button>
-            <Link to="/exercises" className="fd-btn-ghost">Parcourir les exercices</Link>
-          </div>
-        </section>
-      ) : shown.length === 0 ? (
-        <div className="fd-card px-5 py-10 text-center text-[14px] text-ink-faint">
-          Aucune liste avec ces étiquettes.{' '}
-          <button className="font-semibold text-brand-hover hover:underline" onClick={() => { setFLevel(''); setFSubject(''); setFChapter(''); }}>Tout afficher</button>
+          ) : (
+            <ul className="divide-y divide-line">
+              {shown.map((list, i) => (
+                <ListRow key={list.id} list={list} tour={i === 0} deleting={deletingId === list.id} onDelete={() => handleDelete(list)} />
+              ))}
+            </ul>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {shown.map((list, i) => {
-            const s = summarize(list);
-            const pct = (n: number) => (s.total ? (n / s.total) * 100 : 0);
-            const open = () => navigate(`/profile/revision-lists/${list.id}`);
-            return (
-              <motion.article
-                key={list.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: Math.min(i * 0.03, 0.2) }}
-                className="fd-card group flex h-full cursor-pointer flex-col p-5 transition-shadow hover:shadow-[0_10px_30px_rgba(20,18,16,.08)]"
-                onClick={open}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-ink-faint">
-                    <span className="fd-nums">{s.total}</span> exercice{s.total > 1 ? 's' : ''}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(list); }}
-                    disabled={deletingId === list.id}
-                    aria-label={`Supprimer la liste ${list.name}`}
-                    className="-mr-2 -mt-2 flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint opacity-70 hover:bg-[#f2f1ee] hover:text-ink group-hover:opacity-100"
-                  >
-                    {deletingId === list.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </button>
-                </div>
-
-                <h2 className="fd-display mt-1 line-clamp-2 text-[18px] leading-snug text-ink">{list.name}</h2>
-                {list.description && (
-                  <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-ink-soft">{list.description}</p>
-                )}
-
-                {(s.level || s.subject) && (
-                  <p className="mt-2 text-[12px] text-ink-faint">{[s.level, s.subject].filter(Boolean).join(' · ')}</p>
-                )}
-                {s.chapters.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {s.chapters.slice(0, 3).map(name => (
-                      <span key={name} className="max-w-full truncate rounded-full bg-[#f2f1ee] px-2.5 py-0.5 text-[11.5px] text-ink-soft">{name}</span>
-                    ))}
-                    {s.chapters.length > 3 && (
-                      <span className="rounded-full px-1.5 py-0.5 text-[11.5px] text-ink-faint">+{s.chapters.length - 3}</span>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex-1" />
-
-                {/* Progression : réussis (vert), à revoir (or), à faire (vide). */}
-                <div className="mt-5">
-                  {s.total > 0 ? (
-                    <>
-                      <div className="flex h-2 gap-[2px] overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
-                        {s.success > 0 && <div className="h-full bg-brand" style={{ width: `${pct(s.success)}%` }} />}
-                        {s.review > 0 && <div className="h-full bg-gold" style={{ width: `${pct(s.review)}%` }} />}
-                      </div>
-                      <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-soft">
-                        <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-brand" aria-hidden /><span className="fd-nums">{s.success}</span> réussi{s.success > 1 ? 's' : ''}</span>
-                        <span className="inline-flex items-center gap-1"><RotateCcw className="h-3 w-3 text-gold-strong" aria-hidden /><span className="fd-nums">{s.review}</span> à revoir</span>
-                        <span><span className="fd-nums">{s.todo}</span> à faire</span>
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-[12.5px] text-ink-faint">
-                      Vide pour l’instant : ajoute des exercices avec le bouton « Liste ».
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#f2f1ee] pt-3">
-                  <span className="text-[11.5px] text-ink-faint">Modifiée le {formatDate(list.updated_at || list.created_at)}</span>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:text-brand-hover"
-                    onClick={(e) => { e.stopPropagation(); open(); }}
-                    {...(i === 0 ? { 'data-tour': 'revisions-liste' } : {})}
-                  >
-                    {s.todo + s.review > 0 || s.total === 0 ? 'Réviser' : 'Revoir'} <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </motion.article>
-            );
-          })}
-        </div>
-      )}
+      </section>
 
       {/* Création */}
       <AnimatePresence>
@@ -472,3 +300,86 @@ export const RevisionLists = () => {
     </div>
   );
 };
+
+/** Une liste : nom, nombre d'exercices et chapitres, réussis / à revoir en une barre. */
+function ListRow({ list, tour, deleting, onDelete }: { list: RevisionList; tour: boolean; deleting: boolean; onDelete: () => void }) {
+  const total = list.item_count ?? 0;
+  const p = list.progress ?? { success: 0, review: 0, todo: total };
+  const chapters = (list.chapters?.length ? list.chapters.map((c) => c.name) : list.item_chapters ?? []).slice(0, 2);
+  const pct = (n: number) => (total ? (n / total) * 100 : 0);
+  return (
+    <li className="group relative">
+      <Link to={`/profile/revision-lists/${list.id}`} {...(tour ? { 'data-tour': 'revisions-liste' } : {})}
+        className="flex items-center gap-4 py-3.5 pl-4 pr-12 transition-colors hover:bg-[#faf9f7] sm:pl-5">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold text-ink">{list.name}</p>
+          <p className="mt-0.5 truncate text-[12.5px] text-ink-faint">
+            {total} exercice{total > 1 ? 's' : ''}{chapters.length ? ` · ${chapters.join(', ')}` : ''}
+          </p>
+        </div>
+        {total > 0 && (
+          <div className="hidden w-40 shrink-0 sm:block">
+            <div className="flex h-1.5 gap-[2px] overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+              {p.success > 0 && <div className="h-full bg-brand" style={{ width: `${pct(p.success)}%` }} />}
+              {p.review > 0 && <div className="h-full bg-gold" style={{ width: `${pct(p.review)}%` }} />}
+            </div>
+            <p className="mt-1.5 text-[12px] text-ink-faint">
+              {p.success + p.review === 0 ? <><span className="fd-nums font-semibold text-ink-soft">{p.todo}</span> à faire</> : <>
+                <span className="fd-nums font-semibold text-brand-hover">{p.success}</span> réussi{p.success > 1 ? 's' : ''}
+                {p.review > 0 && <> · <span className="fd-nums font-semibold text-[#8a6318]">{p.review}</span> à revoir</>}
+              </>}
+            </p>
+          </div>
+        )}
+        <ChevronRight className="h-5 w-5 shrink-0 text-[#cfcdc8] group-hover:text-ink-faint" />
+      </Link>
+      <button type="button" onClick={onDelete} disabled={deleting} aria-label={`Supprimer la liste ${list.name}`} title="Supprimer"
+        className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ink-faint opacity-70 hover:bg-[#f2f1ee] hover:text-[#a23b34] focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+      </button>
+    </li>
+  );
+}
+
+/** Exercices ratés rangés nulle part : une ligne, dépliable. */
+function Suggestions({ items, count, adding, onAdd }: {
+  items: RevisionSuggestion[]; count: number; adding: number | 'all' | null; onAdd: (ids: number[], key: number | 'all') => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-gold-line bg-gold-soft/60" data-tour="revisions-suggestions">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
+        <Sparkles className="h-4 w-4 shrink-0 text-gold-strong" />
+        <p className="min-w-0 flex-1 text-[13.5px] text-ink-soft">
+          <b className="font-semibold text-ink">{count} exercice{count > 1 ? 's' : ''} raté{count > 1 ? 's' : ''}</b> {count > 1 ? 'ne sont' : 'n’est'} dans aucune liste.
+        </p>
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13px] font-semibold text-ink-soft hover:bg-white/70">
+          {open ? 'Masquer' : 'Voir'} <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+        <button type="button" disabled={adding !== null} onClick={() => onAdd(items.map((x) => x.id), 'all')}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[13px] font-semibold text-brand-hover ring-1 ring-gold-line hover:ring-brand disabled:opacity-50">
+          {adding === 'all' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListPlus className="h-3.5 w-3.5" />} Les ranger dans « À revoir »
+        </button>
+      </div>
+      {open && (
+        <ul className="divide-y divide-gold-line/70 border-t border-gold-line/70">
+          {items.map((x) => (
+            <li key={x.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+              <div className="min-w-0 flex-1">
+                <Link to={`/${x.type === 'exam' ? 'exams' : 'exercises'}/${x.id}`} className="line-clamp-1 text-[13.5px] font-semibold text-ink hover:underline">{x.title}</Link>
+                <p className="line-clamp-1 text-[12px] text-ink-faint">
+                  {[x.failed ? 'Marqué à revoir' : `${x.weak_questions} question${x.weak_questions > 1 ? 's' : ''} à reprendre`, x.chapters[0]].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              <button type="button" disabled={adding !== null} onClick={() => onAdd([x.id], x.id)}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] font-semibold text-brand-hover hover:bg-white/70 disabled:opacity-50">
+                {adding === x.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Ajouter
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

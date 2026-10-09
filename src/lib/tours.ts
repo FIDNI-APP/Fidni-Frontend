@@ -240,11 +240,9 @@ export const TOURS: Tour[] = [
     match: /^\/progression\/?$/,
     requires: 'prog-resume',
     steps: [
-      { target: 'prog-resume', title: 'D’un coup d’œil', body: 'Tes chapitres maîtrisés, tes questions réussies, ton temps d’étude et ta série. Clique sur un repère pour aller au détail.' },
-      { target: 'prog-carte', title: 'Ton programme', body: 'Chaque chapitre de ton niveau : maîtrisé, en bonne voie, à renforcer ou pas commencé. Clique sur un chapitre pour voir ce que tu réussis, ce qui reste à travailler, et quoi faire ensuite.' },
-      { target: 'prog-forces', title: 'Points forts et points faibles', body: 'Calculés avec tes réponses (Réussi / À revoir) et tes quiz Skill IQ. Un clic ouvre le chapitre.' },
-      { target: 'prog-evolution', title: 'Ton évolution', body: 'Tout ce que tu as réussi depuis tes débuts, et tes notes d’examen.' },
-      { target: 'prog-temps', title: 'Ton temps d’étude', body: 'Jour par jour avec ton objectif (réglable ici), et les chapitres où tu passes le plus de temps.' },
+      { target: 'prog-resume', title: 'Où tu en es', body: 'Les chapitres de ton programme que tu maîtrises déjà, et ceux en bonne voie.' },
+      { target: 'prog-carte', title: 'Ton programme', body: 'Tes chapitres, ceux à renforcer en premier. Clique sur un chapitre : son détail s’affiche à côté (ce que tu réussis, ce qui reste à travailler, et de quoi t’entraîner). Clique sur un autre pour passer directement au suivant.' },
+      { target: 'prog-activite', title: 'Ton activité', body: 'Ton temps de travail de la semaine avec ton objectif (réglable ici), ou tout ce que tu as réussi depuis le début.' },
     ],
   },
   {

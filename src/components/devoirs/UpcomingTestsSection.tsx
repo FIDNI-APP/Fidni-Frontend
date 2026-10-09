@@ -1,9 +1,9 @@
-// « Mes DS » en haut de la page Révisions (08/10/2026) : le prochain DS en grand (date, chapitres,
-// préparation, « Préparer ce DS »), les suivants en cartes, les DS passés avec leur note.
+// « Mes DS » en haut de la page Révisions (refait le 08/10/2026, plus sobre) : une ligne par DS à venir
+// (date, chapitres, « Prêt à … % »), puis les notes des DS passés. Sans DS : une phrase et un bouton.
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, CalendarCheck, ChevronDown, Dumbbell, Pencil, Plus, Target, Timer } from 'lucide-react';
-import { devoirsApi, longDate, plural, testTitle, whenLabel, type UpcomingTest } from '@/lib/api/devoirsApi';
+import { CalendarCheck, ChevronRight, Pencil, Plus } from 'lucide-react';
+import { devoirsApi, testTitle, type UpcomingTest } from '@/lib/api/devoirsApi';
 import { TestFormModal } from './TestFormModal';
 import { GradeForm } from './GradeForm';
 import { Countdown, DateTile, GradeBadge, Readiness } from './ui';
@@ -22,7 +22,7 @@ export const UpcomingTestsSection: React.FC = () => {
 
   const upcoming = (tests ?? []).filter((t) => t.days_left >= 0);
   const past = (tests ?? []).filter((t) => t.days_left < 0);
-  const [first, ...others] = upcoming;
+  const add = () => setModal({ test: null });
 
   const saved = (t: UpcomingTest) => {
     const isNew = !modal?.test;
@@ -32,68 +32,73 @@ export const UpcomingTestsSection: React.FC = () => {
   };
 
   return (
-    <section aria-labelledby="mes-ds" className="mb-10" data-tour="revisions-ds">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 id="mes-ds" className="fd-display text-[21px] leading-tight text-ink">Mes DS</h2>
-          <p className="mt-1 text-[13px] text-ink-soft">Annonce ton prochain devoir : Fidni te prépare une révision ciblée.</p>
-        </div>
+    <section aria-labelledby="mes-ds" className="mb-8" data-tour="revisions-ds">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <h2 id="mes-ds" className="fd-display text-[21px] leading-tight text-ink">Mes DS</h2>
         {upcoming.length > 0 && (
-          <button type="button" className="fd-btn-primary shrink-0" onClick={() => setModal({ test: null })}>
+          <button type="button" onClick={add} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13.5px] font-semibold text-brand-hover hover:bg-brand-soft">
             <Plus className="h-4 w-4" /> Ajouter un DS
           </button>
         )}
       </div>
 
-      {tests === null ? (
-        <div className="h-[184px] animate-pulse rounded-2xl border border-line bg-white" aria-busy />
-      ) : upcoming.length === 0 ? (
-        <EmptyState onAdd={() => setModal({ test: null })} failed={failed} />
-      ) : (
-        <div className="flex flex-col gap-3">
-          <NextTestCard test={first} onEdit={() => setModal({ test: first })} />
-          {others.length > 0 && (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {others.map((t) => (
-                <li key={t.id}>
-                  <Link to={`/revisions/ds/${t.id}`}
-                    className="group flex h-full gap-3 rounded-2xl border border-line bg-white p-4 transition-shadow hover:shadow-[0_10px_30px_rgba(20,18,16,.08)]">
-                    <DateTile date={t.date} size="sm" urgent={t.days_left <= 1} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14.5px] font-semibold text-ink">{testTitle(t)}</p>
-                      <p className="mt-0.5 truncate text-[12px] text-ink-faint">
-                        {whenLabel(t.days_left)} · {plural(t.chapters.length, 'chapitre', 'chapitres')}
-                      </p>
-                      <div className="mt-2"><Readiness value={t.readiness} compact /></div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {past.length > 0 && (
-        <div className="mt-5 rounded-2xl border border-line bg-white px-4 py-3 sm:px-5">
-          <h3 className="flex items-center justify-between py-1 text-[13px] font-bold uppercase tracking-[.07em] text-ink-faint">
-            DS passés <span className="fd-nums normal-case tracking-normal">{past.length}</span>
-          </h3>
+      <div className="overflow-hidden rounded-2xl border border-line bg-white">
+        {tests === null ? (
+          <div className="h-[84px] animate-pulse bg-white" aria-busy />
+        ) : upcoming.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-hover">
+              <CalendarCheck className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold text-ink">Un DS bientôt ?</p>
+              <p className="text-[13px] text-ink-faint">
+                {failed ? 'Tes DS n’ont pas pu être chargés.' : 'Ajoute-le : Fidni te prépare une révision ciblée, et te le rappelle sur l’accueil.'}
+              </p>
+            </div>
+            <button type="button" className="fd-btn-primary" onClick={add}><Plus className="h-4 w-4" /> Ajouter mon DS</button>
+          </div>
+        ) : (
           <ul className="divide-y divide-line">
-            {(allPast ? past : past.slice(0, PAST_SHOWN)).map((t) => (
-              <PastRow key={t.id} test={t} onChange={(next) => setTests((cur) => cur?.map((x) => (x.id === next.id ? { ...x, ...next } : x)) ?? cur)}
-                onEdit={() => setModal({ test: t })} />
+            {upcoming.map((t, i) => (
+              <li key={t.id}>
+                <Link to={`/revisions/ds/${t.id}`} className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-[#faf9f7] sm:px-5">
+                  <DateTile date={t.date} size="sm" urgent={t.days_left <= 1} />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-[15px] font-semibold text-ink">{testTitle(t)}</span>
+                      <Countdown days={t.days_left} />
+                    </p>
+                    <p className="mt-0.5 truncate text-[12.5px] text-ink-faint">{t.chapters.map((c) => c.name).join(' · ')}</p>
+                  </div>
+                  <div className="hidden w-36 shrink-0 md:block"><Readiness value={t.readiness} compact /></div>
+                  {i === 0
+                    ? <span className="hidden shrink-0 sm:inline-flex"><span className="fd-btn-primary">Préparer</span></span>
+                    : <ChevronRight className="h-5 w-5 shrink-0 text-[#cfcdc8] group-hover:text-ink-faint" />}
+                  {i === 0 && <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint sm:hidden" />}
+                </Link>
+              </li>
             ))}
           </ul>
-          {past.length > PAST_SHOWN && (
-            <button type="button" onClick={() => setAllPast((v) => !v)}
-              className="mt-1 inline-flex items-center gap-1 py-1.5 text-[13px] font-semibold text-brand-hover hover:underline">
-              <ChevronDown className={`h-4 w-4 transition-transform ${allPast ? 'rotate-180' : ''}`} />
-              {allPast ? 'Voir moins' : `Voir les ${past.length} DS passés`}
-            </button>
-          )}
-        </div>
-      )}
+        )}
+
+        {past.length > 0 && (
+          <div className="border-t border-line bg-[#fcfbf9] px-4 py-3 sm:px-5">
+            <p className="text-[11.5px] font-bold uppercase tracking-[.07em] text-ink-faint">Mes notes</p>
+            <ul className="mt-1 divide-y divide-line">
+              {(allPast ? past : past.slice(0, PAST_SHOWN)).map((t) => (
+                <PastRow key={t.id} test={t} onEdit={() => setModal({ test: t })}
+                  onChange={(next) => setTests((cur) => cur?.map((x) => (x.id === next.id ? { ...x, ...next } : x)) ?? cur)} />
+              ))}
+            </ul>
+            {past.length > PAST_SHOWN && (
+              <button type="button" onClick={() => setAllPast((v) => !v)} className="mt-1 text-[12.5px] font-semibold text-brand-hover hover:underline">
+                {allPast ? 'Voir moins' : `Voir les ${past.length} DS passés`}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       <TestFormModal open={!!modal} test={modal?.test} onClose={() => setModal(null)} onSaved={saved}
         onDeleted={(id) => { setModal(null); setTests((cur) => cur?.filter((x) => x.id !== id) ?? cur); }} />
@@ -101,105 +106,23 @@ export const UpcomingTestsSection: React.FC = () => {
   );
 };
 
-/** Le prochain DS, en grand. */
-function NextTestCard({ test: t, onEdit }: { test: UpcomingTest; onEdit: () => void }) {
-  return (
-    <article className="relative overflow-hidden rounded-2xl border border-line bg-white p-5 sm:p-6">
-      <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-brand" />
-      <div className="flex gap-4 sm:gap-5">
-        <DateTile date={t.date} size="lg" urgent={t.days_left <= 1} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Countdown days={t.days_left} />
-            <span className="text-[12.5px] text-ink-faint">{longDate(t.date)}</span>
-            <button type="button" onClick={onEdit} aria-label="Modifier ce DS" title="Modifier"
-              className="ml-auto -mr-1 -mt-1 inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-              <Pencil className="h-4 w-4" />
-            </button>
-          </div>
-          <h3 className="fd-display mt-1 text-[22px] leading-tight text-ink sm:text-[24px]">{testTitle(t)}</h3>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {t.chapters.map((c) => (
-              <span key={c.id} className="max-w-full truncate rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12.5px] text-ink-soft">{c.name}</span>
-            ))}
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-            <div className="max-w-sm">
-              <Readiness value={t.readiness} />
-              {!!t.weak_chapters?.length && (
-                <p className="mt-1.5 truncate text-[12.5px] text-ink-faint">
-                  <Target className="mr-1 inline h-3.5 w-3.5 text-[#8a6318]" />À renforcer : {t.weak_chapters.join(', ')}
-                </p>
-              )}
-            </div>
-            <Link to={`/revisions/ds/${t.id}`} className="fd-btn-primary justify-center">
-              Préparer ce DS <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-/** Aucun DS à venir : ce que Fidni prépare, et le bouton pour commencer. */
-function EmptyState({ onAdd, failed }: { onAdd: () => void; failed: boolean }) {
-  const steps = [
-    { icon: Target, title: 'Tes chapitres fragiles d’abord', text: 'Ce que tu maîtrises le moins passe en premier.' },
-    { icon: Dumbbell, title: 'Des exercices choisis pour toi', text: 'Dans les chapitres du DS, et le quiz de chacun.' },
-    { icon: Timer, title: 'Un DS blanc chronométré', text: '2 ou 3 exercices en conditions réelles, puis ta correction.' },
-  ];
-  return (
-    <div className="rounded-2xl border border-line bg-white p-5 sm:p-7">
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:gap-8">
-        <div className="min-w-0 md:max-w-xs">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft text-brand-hover">
-            <CalendarCheck className="h-5 w-5" />
-          </span>
-          <h3 className="fd-display mt-3 text-[20px] leading-tight text-ink">Un DS bientôt ?</h3>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">
-            Indique sa date et ses chapitres : ta révision est prête en un clic, et un rappel t’attend sur l’accueil.
-          </p>
-          <button type="button" className="fd-btn-primary mt-4" onClick={onAdd}>
-            <Plus className="h-4 w-4" /> Ajouter mon prochain DS
-          </button>
-          {failed && <p className="mt-2 text-[12px] text-[#a23b34]">Tes DS n’ont pas pu être chargés.</p>}
-        </div>
-        <ol className="grid flex-1 gap-2.5 sm:grid-cols-3">
-          {steps.map(({ icon: Icon, title, text }, i) => (
-            <li key={title} className="rounded-xl border border-line bg-paper p-4">
-              <div className="flex items-center gap-2">
-                <span className="fd-nums inline-flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[11.5px] font-bold text-white">{i + 1}</span>
-                <Icon className="h-4 w-4 text-brand" aria-hidden />
-              </div>
-              <p className="mt-2.5 text-[14px] font-semibold leading-snug text-ink">{title}</p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink-faint">{text}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </div>
-  );
-}
-
-/** Un DS passé : sa note (un clic pour la modifier), ou le champ pour la noter. */
+/** Un DS passé : sa note (un clic pour la changer), ou le champ pour la noter. */
 function PastRow({ test: t, onChange, onEdit }: { test: UpcomingTest; onChange: (t: UpcomingTest) => void; onEdit: () => void }) {
   const [editing, setEditing] = useState(false);
+  const day = new Date(`${t.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-      <DateTile date={t.date} size="sm" />
-      <div className="min-w-0 flex-1">
-        <Link to={`/revisions/ds/${t.id}`} className="block truncate text-[14px] font-semibold text-ink hover:underline">{testTitle(t)}</Link>
-        <p className="truncate text-[12px] text-ink-faint">{t.chapters.map((c) => c.name).join(' · ')}</p>
-      </div>
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2">
+      <Link to={`/revisions/ds/${t.id}`} className="min-w-0 flex-1 truncate text-[13.5px] text-ink-soft hover:underline">
+        <b className="font-semibold text-ink">{testTitle(t)}</b> <span className="text-ink-faint">· {day}</span>
+      </Link>
       {t.grade !== null && !editing ? (
-        <button type="button" onClick={() => setEditing(true)} title="Modifier ma note" className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <button type="button" onClick={() => setEditing(true)} title="Changer ma note" className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
           <GradeBadge grade={t.grade} />
         </button>
       ) : (
         <GradeForm test={t} autoFocus={editing} onSaved={(next) => { onChange(next); setEditing(false); }} />
       )}
-      <button type="button" onClick={onEdit} aria-label="Modifier ce DS" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+      <button type="button" onClick={onEdit} aria-label="Modifier ce DS" className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
         <Pencil className="h-3.5 w-3.5" />
       </button>
     </li>
