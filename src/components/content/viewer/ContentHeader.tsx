@@ -135,6 +135,15 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
               <span className="hidden sm:inline">{isSaved ? 'Enregistré' : 'Enregistrer'}</span>
             </Button>
 
+            {/* Imprimer / PDF : visible directement (exercices, examens) ; la leçon a son bouton dans la carte. */}
+            {onPrint && contentType !== 'lesson' && (
+              <Button onClick={onPrint} data-tour="detail-imprimer" variant="ghost" size="sm" className={ghostBtn}
+                aria-label="Imprimer ou télécharger en PDF">
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            )}
+
             {/* More */}
             <div className="relative" ref={moreRef}>
               <Button onClick={() => setShowDropdown(!showDropdown)} variant="ghost" size="sm" className={`rounded-xl px-2 ${ghostBtn}`} data-tour="detail-plus" aria-label="Plus d'options">
@@ -149,7 +158,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                     >
                       <Share2 className="w-4 h-4 text-ink-faint" /> Partager
                     </button>
-                    {onPrint && (
+                    {onPrint && contentType === 'lesson' && (
                       <button
                         onClick={() => { onPrint(); setShowDropdown(false); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"

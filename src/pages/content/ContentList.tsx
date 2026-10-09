@@ -51,7 +51,7 @@ import type { FlexibleExerciseStructure } from '@/components/content/editor/Flex
 import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
-import { trackAction, trackFilterChange } from '@/lib/usage';
+import { trackAction, trackFilterChange, trackSortValue } from '@/lib/usage';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -437,7 +437,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       listRef.current.scrollTop = 0;
     }
 
-    trackFilterChange(filtersRef.current as unknown as Record<string, unknown>, newFilters as unknown as Record<string, unknown>);
+    trackFilterChange(filtersRef.current as unknown as Record<string, unknown>, newFilters as unknown as Record<string, unknown>, contentType);
     setFilters(newFilters);
 
     const params = new URLSearchParams();
@@ -507,13 +507,14 @@ export const ContentList: React.FC<ContentListProps> = ({
       return;
     }
     setSearchParams(params, { replace: true });
-  }, [sortBy, setSearchParams, hub, location.pathname, navigate, config.basePath]);
+  }, [sortBy, setSearchParams, hub, location.pathname, navigate, config.basePath, contentType]);
 
   const handleSortChange = useCallback((newSortOption: SortOption) => {
     if (listRef.current) {
       listRef.current.scrollTop = 0;
     }
     trackAction('tri');
+    trackSortValue(contentType, newSortOption);
     setSortBy(newSortOption);
 
     // Update URL
@@ -524,7 +525,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       params.delete('sort');
     }
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, contentType]);
 
   const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore) {

@@ -62,7 +62,7 @@ export type UsageAction =
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
   | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri';
 
-function send(kind: 'page' | 'action', name: string) {
+function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.
   api.post('/usage/', { kind, name }).catch(() => {});
 }
@@ -92,11 +92,39 @@ const added = (before: unknown, after: unknown) => (Array.isArray(after)
   ? after.some((x) => !(Array.isArray(before) && before.includes(x)))
   : isSet(after) && after !== before);
 
-export function trackFilterChange(before: Filters, after: Filters) {
+/** Valeur d'un filtre (09/10/2026) : « exercise:difficulte:hard », « exam:chapitre:42 », « lesson:tri:newest ».
+ *  Les identifiants (niveau, chapitre…) sont traduits en noms côté serveur. */
+export type ListKind = 'exercise' | 'exam' | 'lesson';
+const VALUE_KEYS: [string, string][] = [
+  ['classLevels', 'niveau'], ['subjects', 'matiere'], ['subfields', 'sous-domaine'], ['chapters', 'chapitre'],
+  ['theorems', 'theoreme'], ['difficulties', 'difficulte'], ['dateStart', 'date'], ['isNationalExam', 'national'],
+];
+const STATUS_KEYS = ['showViewed', 'hideViewed', 'showCompleted', 'showFailed'];
+const VALUE_RE = /^[A-Za-z0-9_-]{1,40}$/;
+
+function sendValue(kind: ListKind, filter: string, value: unknown) {
+  const v = typeof value === 'boolean' ? (value ? 'oui' : 'non') : String(value);
+  if (VALUE_RE.test(v)) send('filtre', `${kind}:${filter}:${v}`);
+}
+
+export function trackSortValue(kind: ListKind, sort: string) {
+  sendValue(kind, 'tri', sort);
+}
+
+export function trackFilterChange(before: Filters, after: Filters, kind?: ListKind) {
   const hits = new Set<UsageAction>();
   for (const [key, action] of FILTER_ACTIONS) if (added(before[key], after[key])) hits.add(action);
   if (!hits.size && FILTER_ACTIONS.some(([k]) => isSet(before[k])) && !FILTER_ACTIONS.some(([k]) => isSet(after[k]))) {
     hits.add('filtre-effacer');
   }
   hits.forEach((a) => trackAction(a));
+  if (!kind) return;
+  // Chaque valeur AJOUTÉE (une difficulté cochée, un chapitre choisi…) : quelles valeurs sont les plus filtrées.
+  for (const [key, name] of VALUE_KEYS) {
+    const b = before[key];
+    const a = after[key];
+    if (Array.isArray(a)) a.filter((x) => !(Array.isArray(b) && b.includes(x))).forEach((x) => sendValue(kind, name, x));
+    else if (isSet(a) && a !== b) sendValue(kind, name, a);
+  }
+  for (const key of STATUS_KEYS) if (after[key] === true && before[key] !== true) sendValue(kind, 'statut', key);
 }
