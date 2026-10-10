@@ -15,6 +15,8 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Brain, RotateCcw, Sparkles, Target } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { hubPath, profileLevel } from '@/lib/api/hubApi';
 import { practiceUrl, quizUrl } from '@/pages/progression/links';
 
 export interface SkillAssessment {
@@ -34,14 +36,35 @@ export interface SkillAssessment {
   hub_url?: string | null;
 }
 
+/** Niveau ou chapitre tel que l'envoient les cartes (ContentListSerializer : id, nom, slug). */
+interface TaxonRef { id: number | string; name: string; slug?: string }
+
+/** Exercice réussi ou à revoir (/users/<u>/success_thing/, review_thing/) : seuls ces champs servent ici. */
+interface ExerciseRecord {
+  chapters?: TaxonRef[];
+  class_levels?: (TaxonRef | string)[];
+  subject?: { name?: string } | null;
+}
+
+/** Une publication de l'utilisateur. */
+interface PublishedItem {
+  id: number | string;
+  type?: string;
+  title: string;
+  subject?: { name?: string } | null;
+  chapters?: { name?: string }[];
+  vote_count?: number;
+  view_count?: number;
+}
+
 interface ProfileBilanSectionProps {
   progressData: {
-    successExercises: any[];
-    reviewExercises: any[];
+    successExercises: ExerciseRecord[];
+    reviewExercises: ExerciseRecord[];
   };
   assessments: SkillAssessment[];
-  contributions: any[];
-  learningStats: any;
+  contributions: PublishedItem[];
+  learningStats?: { total_viewed?: number } | null;
   isOwner: boolean;
   /** Objectifs de notes (privés : fournis au seul propriétaire). */
   goals?: { subject: number | string; subject_name?: string; min_grade: number | string; max_grade: number | string }[];
@@ -64,17 +87,30 @@ interface ChapterRecord {
   solved: number;
   toReview: number;
   assessment?: SkillAssessment;
+  /** Page d'exercices du chapitre à son niveau : celle du quiz (serveur), sinon déduite des exercices. */
+  hubUrl?: string | null;
+}
+
+/** Niveau de l'élève (id et slug de sa page) : les liens « S'entraîner » mènent à la page du chapitre à ce niveau. */
+type StudentLevel = { id: string; slug: string } | null;
+
+/** Page du chapitre au niveau de l'élève, si l'exercice est bien de son niveau (slugs fournis par la carte). */
+function exerciseHub(ex: ExerciseRecord, chapter: TaxonRef, level: StudentLevel): string | null {
+  if (!level || !chapter.slug) return null;
+  const mine = (ex.class_levels || []).some((l) => typeof l === 'object' && String(l.id) === level.id);
+  return mine ? hubPath('exercises', level.slug, chapter.slug) : null;
 }
 
 /** Fold the two exercise lists and the assessments into one row per chapter. */
 function buildChapterRecords(
-  successExercises: any[],
-  reviewExercises: any[],
-  assessments: SkillAssessment[]
+  successExercises: ExerciseRecord[],
+  reviewExercises: ExerciseRecord[],
+  assessments: SkillAssessment[],
+  level: StudentLevel,
 ): ChapterRecord[] {
   const byId = new Map<string, ChapterRecord>();
 
-  const touch = (chapter: any, subjectName?: string): ChapterRecord => {
+  const touch = (chapter: TaxonRef, subjectName?: string): ChapterRecord => {
     const key = String(chapter.id);
     let record = byId.get(key);
     if (!record) {
@@ -83,20 +119,28 @@ function buildChapterRecords(
     }
     return record;
   };
+  const fromExercise = (ex: ExerciseRecord, field: 'solved' | 'toReview') => {
+    (ex.chapters || []).forEach((c) => {
+      const record = touch(c, ex.subject?.name);
+      record[field] += 1;
+      record.hubUrl = record.hubUrl || exerciseHub(ex, c, level);
+    });
+  };
 
-  successExercises.forEach(ex => {
-    (ex.chapters || []).forEach((c: any) => { touch(c, ex.subject?.name).solved += 1; });
-  });
-  reviewExercises.forEach(ex => {
-    (ex.chapters || []).forEach((c: any) => { touch(c, ex.subject?.name).toReview += 1; });
-  });
+  successExercises.forEach((ex) => fromExercise(ex, 'solved'));
+  reviewExercises.forEach((ex) => fromExercise(ex, 'toReview'));
   assessments.forEach(a => {
     const record = touch({ id: a.chapter, name: a.chapter_name }, a.subject_name);
     record.assessment = a;
+    // Le serveur sait si le chapitre est du niveau de l'élève : son lien l'emporte.
+    if (a.hub_url !== undefined) record.hubUrl = a.hub_url;
   });
 
   return Array.from(byId.values());
 }
+
+/** « S'entraîner » sur un chapitre : sa page à son niveau (les plus faciles d'abord, sans les réussis), sinon la liste filtrée. */
+const practiceOf = (r: ChapterRecord) => practiceUrl(r.hubUrl, r.id);
 
 /** Percentage to fill the bar with, plus what that number is actually based on. */
 function masteryOf(record: ChapterRecord): { percent: number; label: string; style: typeof LEVEL_STYLE[string] | null; basis: string } {
@@ -125,7 +169,7 @@ const ChapterRow: React.FC<{ record: ChapterRecord }> = ({ record }) => {
 
   return (
     <Link
-      to={practiceUrl(record.assessment?.hub_url, record.id)}
+      to={practiceOf(record)}
       className="grid items-center gap-3 group"
       style={{ gridTemplateColumns: 'minmax(0,1fr) 96px', padding: '9px 0', textDecoration: 'none' }}
     >
@@ -179,7 +223,7 @@ function buildPriorities(records: ChapterRecord[]) {
       key: `review-${r.id}`,
       chapter: r.name,
       reason: `${r.toReview} exercice${r.toReview > 1 ? 's' : ''} marqué${r.toReview > 1 ? 's' : ''} à revoir`,
-      to: practiceUrl(r.assessment?.hub_url, r.id),
+      to: practiceOf(r),
       cta: 'Reprendre',
       icon: RotateCcw,
     }));
@@ -191,7 +235,7 @@ function buildPriorities(records: ChapterRecord[]) {
       key: `weak-${r.id}`,
       chapter: r.name,
       reason: `Niveau ${LEVEL_STYLE[r.assessment!.level].label.toLowerCase()} au test`,
-      to: practiceUrl(r.assessment!.hub_url, r.id),
+      to: practiceOf(r),
       cta: "S'entraîner",
       icon: Sparkles,
     }));
@@ -221,9 +265,15 @@ export const ProfileBilanSection: React.FC<ProfileBilanSectionProps> = ({
   editUrl,
   loading = false,
 }) => {
+  // Le Bilan détaillé n'est montré qu'au propriétaire : le niveau est celui de l'élève connecté.
+  const { user } = useAuth();
+  const own = profileLevel(user);
+  const levelId = own?.id ?? null;
+  const levelSlug = own?.slug ?? null;
   const records = useMemo(
-    () => buildChapterRecords(progressData.successExercises, progressData.reviewExercises, assessments),
-    [progressData.successExercises, progressData.reviewExercises, assessments]
+    () => buildChapterRecords(progressData.successExercises, progressData.reviewExercises, assessments,
+      levelId && levelSlug ? { id: levelId, slug: levelSlug } : null),
+    [progressData.successExercises, progressData.reviewExercises, assessments, levelId, levelSlug]
   );
 
   const priorities = useMemo(() => buildPriorities(records), [records]);
@@ -312,9 +362,9 @@ export const ProfileBilanSection: React.FC<ProfileBilanSectionProps> = ({
           </ul>
         )}
 
-        {!loading && learningStats?.total_viewed > 0 && (
+        {!loading && (learningStats?.total_viewed ?? 0) > 0 && (
           <p className="mt-auto pt-4" style={{ fontSize: 11.5, color: '#9a958c', borderTop: '1px solid #f2f1ee' }}>
-            <span className="fd-nums">{learningStats.total_viewed}</span> contenus consultés au total
+            <span className="fd-nums">{learningStats?.total_viewed}</span> contenus consultés au total
           </p>
         )}
       </section>
@@ -330,7 +380,7 @@ export const ProfileBilanSection: React.FC<ProfileBilanSectionProps> = ({
   );
 };
 
-export const PublicationsCard: React.FC<{ items: any[]; isOwner: boolean; total: number }> = ({ items, isOwner, total }) => (
+export const PublicationsCard: React.FC<{ items: PublishedItem[]; isOwner: boolean; total: number }> = ({ items, isOwner, total }) => (
   <section className="fd-card p-5 md:p-6">
     <SectionTitle
       action={

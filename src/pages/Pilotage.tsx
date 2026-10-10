@@ -312,7 +312,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       Tes clics d’administrateur ne sont pas comptés : pour tester une mesure, ouvre une fenêtre de navigation privée.
     </p>
     <div className="grid gap-4 lg:grid-cols-2 items-start">
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
       <section className="fd-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -330,7 +330,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
             const share = Math.round((users / active) * 100);
             const width = featSort === 'membres' ? share : (f.actions / maxActions) * 100;
             return (
-              <li key={f.key} className={users ? '' : 'opacity-60'}>
+              <li key={`${f.source}:${f.key}`} className={users ? '' : 'opacity-60'}>
                 <div className="flex items-baseline justify-between gap-3 text-[13px]">
                   <span className="min-w-0 truncate text-ink">{f.label}</span>
                   <span className="fd-nums shrink-0 text-ink-faint">
@@ -355,7 +355,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
         <p className="mt-0.5 text-[12px] text-ink-faint">Depuis le {since}. « Visites » = une personne comptée une fois par jour.</p>
         <ul className="mt-3 flex flex-col gap-2.5">
           {tracked.map((f) => (
-            <li key={f.key} className={f.actions ? '' : 'opacity-60'}>
+            <li key={`${f.source}:${f.key}`} className={f.actions ? '' : 'opacity-60'}>
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
                 <span className="min-w-0 truncate text-ink">{f.label}</span>
                 <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites</span>
@@ -369,7 +369,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       </section>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
       <section className="fd-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -533,7 +533,7 @@ const FiltersCard: React.FC<{
         <>
           <ul className="mt-3 grid gap-x-8 gap-y-2.5 md:grid-cols-2">
             {[...filters].sort((a, b) => b.actions - a.actions).map((f) => (
-              <li key={f.key} className={f.actions ? '' : 'opacity-60'}>
+              <li key={`${f.source}:${f.key}`} className={f.actions ? '' : 'opacity-60'}>
                 <div className="flex items-baseline justify-between gap-3 text-[13px]">
                   <span className="min-w-0 truncate text-ink">{f.label}</span>
                   <span className="fd-nums shrink-0 text-ink-faint">

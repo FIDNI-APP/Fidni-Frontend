@@ -9,6 +9,7 @@ import {
   getRecommendedContent,
   getWeeklyProgress, type WeeklyProgress,
 } from '@/lib/api';
+import type { RecommendedItem } from '@/lib/api/dashboardApi';
 import { Content, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
@@ -35,6 +36,7 @@ export function Home() {
   const [recExams, setRecExams] = useState<Content[]>([]);
   const [recLevel, setRecLevel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recFailed, setRecFailed] = useState(false);
   const [progress, setProgress] = useState<WeeklyProgress | null>(null);
   const [, setProgressLoading] = useState(false);
 
@@ -62,6 +64,7 @@ export function Home() {
   const fetchRecs = async () => {
     try {
       setLoading(true);
+      setRecFailed(false);
       const data = await getRecommendedContent();
       setRecExercises(data.exercises || []);
       setRecLessons(data.lessons || []);
@@ -69,6 +72,7 @@ export function Home() {
       setRecLevel(data.level);
     } catch (err) {
       console.error('Home: fetchRecs failed', err);
+      setRecFailed(true);
     } finally {
       setLoading(false);
     }
@@ -142,7 +146,8 @@ export function Home() {
 
         {/* Recommendations */}
         <div data-tour="home-reco" className="mt-9">
-          <RecTabs loading={loading} level={recLevel} exercises={recExercises} lessons={recLessons} exams={recExams} onVote={handleVote} />
+          <RecTabs loading={loading} failed={recFailed} onRetry={fetchRecs} level={recLevel}
+            exercises={recExercises} lessons={recLessons} exams={recExams} onVote={handleVote} />
         </div>
       </div>
     </div>
@@ -211,8 +216,8 @@ const REC_TABS: { key: RecKind; label: string; link: string; title: string }[] =
 ];
 
 /** « Pour toi » : exercices, leçons et examens classés pour l'élève (une seule rangée de cartes à l'écran). */
-function RecTabs({ loading, level, exercises, lessons, exams, onVote }: {
-  loading: boolean; level: string | null; exercises: Content[]; lessons: Content[]; exams: Content[];
+function RecTabs({ loading, failed, onRetry, level, exercises, lessons, exams, onVote }: {
+  loading: boolean; failed: boolean; onRetry: () => void; level: string | null; exercises: Content[]; lessons: Content[]; exams: Content[];
   onVote: (id: string, value: VoteValue, contentType?: RecKind) => void;
 }) {
   const [tab, setTab] = useState<RecKind>('exercise');
@@ -220,12 +225,12 @@ function RecTabs({ loading, level, exercises, lessons, exams, onVote }: {
   const tabs = REC_TABS.filter((t) => t.key === 'exercise' || (t.key === 'lesson' ? lessons.length : exams.length) > 0);
   const current = REC_TABS.find((t) => t.key === tab)!;
   // Sujets du bac national : « Voir tout » mène à leur page (la liste des examens ne les montre pas).
-  const shown = items.slice(0, 3) as (Content & { is_national_exam?: boolean })[];
+  const shown = items.slice(0, 3) as RecommendedItem[];
   const link = tab === 'exam' && shown.length && shown.every((c) => c.is_national_exam) ? '/exams/nationaux' : current.link;
   const hint = `D’après ce que tu as travaillé, ce qui est à retravailler${level ? ` et ton niveau (${level})` : ''}.`;
   return (
     <RecSection title={current.title} hint={hint} eyebrow="Pour toi" link={link}
-      loading={loading} items={items}
+      loading={loading} failed={failed} onRetry={onRetry} items={items}
       onVote={(id, v) => onVote(id, v, tab)}
       tabs={tabs.length > 1 ? (
         <div role="tablist" aria-label="Type de contenu" className="inline-flex rounded-xl bg-[#f2f1ee] p-1">
@@ -255,9 +260,9 @@ function ReasonTag({ reason }: { reason?: string | null }) {
   );
 }
 
-function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }: {
+function RecSection({ title, hint, eyebrow, link, loading, failed, onRetry, items, onVote, tabs }: {
   title: string; hint?: string; eyebrow: string; link: string;
-  loading: boolean; items: Content[];
+  loading: boolean; failed?: boolean; onRetry?: () => void; items: Content[];
   onVote: (id: string, value: VoteValue, contentType?: 'exercise' | 'lesson' | 'exam') => void;
   tabs?: React.ReactNode;
 }) {
@@ -292,6 +297,15 @@ function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }
             </div>
           ))}
         </div>
+      ) : failed ? (
+        <div role="alert" className="fd-card p-8 text-center">
+          <p style={{ color: FAINT, fontSize: 13 }}>Les contenus choisis pour toi n’ont pas pu être chargés.</p>
+          {onRetry && (
+            <div className="mt-3 flex justify-center">
+              <button type="button" onClick={onRetry} className="fd-btn-ghost" style={{ minHeight: 40 }}>Réessayer</button>
+            </div>
+          )}
+        </div>
       ) : items.length === 0 ? (
         <div className="fd-card p-8 text-center">
           <p style={{ color: FAINT, fontSize: 13 }}>Aucune recommandation pour le moment.</p>
@@ -309,7 +323,7 @@ function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }
                 }}>
                 <HomeContentCard content={item} onVote={onVote} />
               </div>
-              <ReasonTag reason={(item as Content & { reason?: string | null }).reason} />
+              <ReasonTag reason={(item as RecommendedItem).reason} />
             </div>
           ))}
         </div>

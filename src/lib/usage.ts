@@ -85,8 +85,10 @@ export function trackPage(pathname: string) {
   lastPath = pathname;
   const hit = PAGES.find((p) => matchPath({ path: p.pattern, end: true }, pathname));
   if (hit) send('page', hit.pattern);
-  // eslint-disable-next-line no-console
-  else if (import.meta.env.DEV) console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
+  // Pages d'administration et d'édition : volontairement non suivies.
+  else if (import.meta.env.DEV && !/^\/(pilotage|logs|admin|import)|\/(new|edit)\/?$/.test(pathname)) {
+    console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
+  }
 }
 
 export function trackAction(name: UsageAction) {
@@ -99,7 +101,8 @@ const FILTER_ACTIONS: [string, UsageAction][] = [
   ['classLevels', 'filtre-niveau'], ['subjects', 'filtre-matiere'], ['subfields', 'filtre-sous-domaine'],
   ['chapters', 'filtre-chapitre'], ['theorems', 'filtre-theoreme'], ['difficulties', 'filtre-difficulte'],
   ['showViewed', 'filtre-statut'], ['hideViewed', 'filtre-statut'], ['showCompleted', 'filtre-statut'],
-  ['showFailed', 'filtre-statut'], ['isNationalExam', 'filtre-national'], ['dateStart', 'filtre-date'],
+  ['showFailed', 'filtre-statut'], ['todo', 'filtre-statut'], ['isNationalExam', 'filtre-national'],
+  ['dateStart', 'filtre-date'],
 ];
 const isSet = (v: unknown) => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== false && v !== '');
 const added = (before: unknown, after: unknown) => (Array.isArray(after)
@@ -113,7 +116,7 @@ const VALUE_KEYS: [string, string][] = [
   ['classLevels', 'niveau'], ['subjects', 'matiere'], ['subfields', 'sous-domaine'], ['chapters', 'chapitre'],
   ['theorems', 'theoreme'], ['difficulties', 'difficulte'], ['dateStart', 'date'], ['isNationalExam', 'national'],
 ];
-const STATUS_KEYS = ['showViewed', 'hideViewed', 'showCompleted', 'showFailed'];
+const STATUS_KEYS = ['showViewed', 'hideViewed', 'showCompleted', 'showFailed', 'todo'];
 const VALUE_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
 function sendValue(kind: ListKind, filter: string, value: unknown) {

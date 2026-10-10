@@ -3,11 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { IdentityFields } from '@/components/profile/IdentityForm';
 import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
 import { deleteMyAccount, downloadMyData } from '@/lib/api/userApi';
+import { requestPasswordReset } from '@/lib/api/authApi';
+import { LEGAL } from '@/lib/legal';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import type { User as AppUser } from '@/types';
-import type { AccountFlags } from '@/lib/api/authApi';
 import {
   uploadAvatar,
   removeAvatar,
@@ -20,12 +20,12 @@ import {
   User, Bell, Shield, Palette, LogOut,
   Camera, Check, X, Loader2, Eye, EyeOff,
   Mail, Trash2, Moon, Sun, Monitor,
-  Save, AlertTriangle, Database
+  Save, AlertTriangle, Database, KeyRound, MailCheck
 } from 'lucide-react';
 
 type SettingsTab = 'profile' | 'account' | 'notifications' | 'appearance' | 'danger';
 /** Erreur axios telle que lue ici. */
-type ApiError = { response?: { data?: { error?: string; code?: string } } };
+type ApiError = { response?: { status?: number; data?: { error?: string; code?: string } } };
 const apiData = (err: unknown) => (err as ApiError)?.response?.data;
 
 const SETTINGS_TABS = [
@@ -95,6 +95,8 @@ export const SettingsSection: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bonne nouvelle à lire (nouvelle adresse à confirmer) : reste affichée jusqu'à fermeture.
+  const [notice, setNotice] = useState<string | null>(null);
   // Changer d'adresse e-mail demande le mot de passe actuel (protection du compte).
   const [emailPassword, setEmailPassword] = useState('');
 
@@ -123,6 +125,8 @@ export const SettingsSection: React.FC = () => {
     confirm: false,
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  // Compte sans mot de passe : lien « définir un mot de passe » envoyé par e-mail.
+  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   // Notification settings
   const [notifications, setNotifications] = useState({
@@ -140,10 +144,12 @@ export const SettingsSection: React.FC = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // Compte créé avec Google (10/10/2026) : peut n'avoir aucun mot de passe. Champ absent : comme avant.
-  const account = user as (AppUser & AccountFlags) | null;
-  const hasPassword = account?.has_password !== false;
-  const googleLinked = !!account?.google_linked;
-  const SET_PASSWORD_FIRST = 'Définis d’abord un mot de passe (ci-dessous) pour changer d’adresse e-mail.';
+  // Le premier mot de passe se définit par un lien reçu par e-mail (une session ouverte ne suffit pas).
+  const hasPassword = user?.has_password !== false;
+  const googleLinked = !!user?.google_linked;
+  const SET_PASSWORD_FIRST = googleLinked
+    ? 'Pour changer d’adresse e-mail, définis d’abord un mot de passe : bouton « Définir un mot de passe » ci-dessous.'
+    : `Ton compte n’a pas de mot de passe : pour changer d’adresse e-mail, écris à ${LEGAL.contactEmail}.`;
 
   // Load user data on mount
   useEffect(() => {
@@ -171,6 +177,7 @@ export const SettingsSection: React.FC = () => {
 
     setSaving(true);
     setError(null);
+    setNotice(null);
 
     try {
       // Upload avatar if changed
@@ -196,11 +203,17 @@ export const SettingsSection: React.FC = () => {
         setError(problem);
         return;
       }
-      await updateUserInfo({
+      const newEmail = profileData.email.trim();
+      const info = await updateUserInfo({
         ...identityPayload(identity),
-        ...(emailChanged ? { email: profileData.email, current_password: emailPassword } : {}),
+        ...(emailChanged ? { email: newEmail, current_password: emailPassword } : {}),
       });
       setEmailPassword('');
+      // La nouvelle adresse est enregistrée tout de suite, mais reste « à confirmer » jusqu'au clic sur le lien reçu.
+      if (emailChanged && info?.email_verification_sent) {
+        const to = typeof info.pending_email === 'string' && info.pending_email ? info.pending_email : newEmail;
+        setNotice(`Confirme ta nouvelle adresse : on t’a envoyé un lien à ${to}. Pense à vérifier tes courriers indésirables.`);
+      }
 
       // Update profile (and optionally username)
       await updateUserProfile(user.username, {
@@ -253,6 +266,7 @@ export const SettingsSection: React.FC = () => {
 
   const handlePasswordChange = async () => {
     setError(null);
+    if (!hasPassword) return;  // compte sans mot de passe : lien par e-mail (handleSetPasswordLink)
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
@@ -267,9 +281,7 @@ export const SettingsSection: React.FC = () => {
     setChangingPassword(true);
 
     try {
-      // Sans mot de passe (compte Google) : on en définit un, sans « mot de passe actuel ».
-      await changePassword(hasPassword ? passwordData.currentPassword : null, passwordData.newPassword);
-      if (!hasPassword) await refreshUser();
+      await changePassword(passwordData.currentPassword, passwordData.newPassword);
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -281,6 +293,22 @@ export const SettingsSection: React.FC = () => {
       setError(apiData(err)?.error || 'Erreur lors du changement de mot de passe');
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  /** Compte sans mot de passe (créé avec Google) : même lien que « Mot de passe oublié », envoyé à son adresse. */
+  const handleSetPasswordLink = async () => {
+    if (!user?.email) return;
+    setError(null);
+    setLinkState('sending');
+    try {
+      await requestPasswordReset(user.email);
+      setLinkState('sent');
+    } catch (err) {
+      setLinkState('idle');
+      const status = (err as ApiError)?.response?.status;
+      setError(status === 429 ? 'Trop de demandes. Patiente quelques minutes avant de réessayer.'
+        : apiData(err)?.error || 'Impossible d’envoyer le lien pour le moment. Réessaie dans un instant.');
     }
   };
 
@@ -359,12 +387,23 @@ export const SettingsSection: React.FC = () => {
           >
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
             <p className="text-red-700 text-sm flex-1">{error}</p>
-            <button onClick={() => setError(null)}>
+            <button onClick={() => setError(null)} aria-label="Fermer le message">
               <X className="w-4 h-4 text-red-400 hover:text-red-600" />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Nouvelle adresse à confirmer */}
+      {notice && (
+        <div role="status" className="p-4 bg-brand-soft border border-brand-line rounded-xl flex items-start gap-3">
+          <MailCheck className="w-5 h-5 text-brand-hover flex-shrink-0 mt-0.5" />
+          <p className="text-ink text-sm flex-1 min-w-0 break-words">{notice}</p>
+          <button onClick={() => setNotice(null)} aria-label="Fermer le message">
+            <X className="w-4 h-4 text-ink-faint hover:text-ink" />
+          </button>
+        </div>
+      )}
 
       {/* Segmented Tab Bar */}
       <div className="flex bg-[#f2f1ee] rounded-xl p-1 overflow-x-auto scrollbar-hide w-fit">
@@ -538,10 +577,11 @@ export const SettingsSection: React.FC = () => {
                 </div>
                 {hasPassword && profileData.email.trim().toLowerCase() !== (user?.email || '').toLowerCase() && (
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-ink-soft mb-1.5">
+                    <label htmlFor="settings-email-password" className="block text-sm font-medium text-ink-soft mb-1.5">
                       Mot de passe actuel
                     </label>
                     <input
+                      id="settings-email-password"
                       type="password"
                       value={emailPassword}
                       onChange={(e) => setEmailPassword(e.target.value)}
@@ -549,28 +589,65 @@ export const SettingsSection: React.FC = () => {
                       className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
                       placeholder="••••••••"
                     />
-                    <p className="text-xs text-ink-faint mt-1.5">Nécessaire pour changer l’adresse de ton compte.</p>
+                    <p className="text-xs text-ink-faint mt-1.5">
+                      Nécessaire pour changer l’adresse de ton compte. Puis « Enregistrer » : on enverra un lien de
+                      confirmation à la nouvelle adresse.
+                    </p>
                   </div>
                 )}
               </div>
 
-              {/* Password (compte Google sans mot de passe : « Définir un mot de passe », sans l'actuel) */}
+              {/* Mot de passe. Compte sans mot de passe (créé avec Google) : le premier se définit par un lien
+                  reçu par e-mail, comme « Mot de passe oublié » — une session restée ouverte ne suffit pas. */}
+              {!hasPassword ? (
+                <div className="fd-card p-6">
+                  <h3 className="font-semibold text-ink mb-2">Définir un mot de passe</h3>
+                  {googleLinked ? (
+                    <>
+                      <p className="text-sm text-ink-faint">
+                        Ton compte a été créé avec Google. Un mot de passe te permet aussi de te connecter avec ton
+                        e-mail (ou ton pseudo), et de changer d’adresse e-mail. Pour le choisir, on t’envoie un lien à{' '}
+                        <strong className="text-ink break-words">{user?.email}</strong>.
+                      </p>
+                      {linkState === 'sent' ? (
+                        <p role="status" className="mt-4 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-soft px-4 py-3 text-sm text-ink">
+                          <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-hover" />
+                          <span>
+                            On t’a envoyé un lien par e-mail pour définir ton mot de passe. Pense à regarder dans les
+                            spams. Une fois le mot de passe choisi, reconnecte-toi.
+                          </span>
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSetPasswordLink}
+                          disabled={linkState === 'sending' || !user?.email}
+                          className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {linkState === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                          {linkState === 'sending' ? 'Envoi…' : 'Définir un mot de passe'}
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    // Sans compte Google, le lien « Mot de passe oublié » n'est pas envoyé (rien ne prouve l'adresse).
+                    <p className="text-sm text-ink-faint">
+                      Ton compte n’a pas de mot de passe. Pour en obtenir un, écris à{' '}
+                      <a href={`mailto:${LEGAL.contactEmail}`} className="text-brand-hover underline">{LEGAL.contactEmail}</a>.
+                    </p>
+                  )}
+                </div>
+              ) : (
               <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-4">{hasPassword ? 'Mot de passe' : 'Définir un mot de passe'}</h3>
-                {!hasPassword && (
-                  <p className="text-sm text-ink-faint -mt-2 mb-4">
-                    Ton compte a été créé avec Google. Un mot de passe te permet aussi de te connecter avec ton e-mail
-                    (ou ton pseudo), et de changer d’adresse e-mail.
-                  </p>
-                )}
+                <h3 className="font-semibold text-ink mb-4">Mot de passe</h3>
                 <div className="space-y-4">
-                  {hasPassword && (
                   <div>
-                    <label className="block text-sm font-medium text-ink-soft mb-1.5">
+                    <label htmlFor="settings-current-password" className="block text-sm font-medium text-ink-soft mb-1.5">
                       Mot de passe actuel
                     </label>
                     <div className="relative">
                       <input
+                        id="settings-current-password"
                         type={showPasswords.current ? 'text' : 'password'}
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
@@ -581,20 +658,21 @@ export const SettingsSection: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                        aria-label={showPasswords.current ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-faint hover:text-ink-soft"
                       >
                         {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
-                  )}
 
                   <div>
-                    <label className="block text-sm font-medium text-ink-soft mb-1.5">
+                    <label htmlFor="settings-new-password" className="block text-sm font-medium text-ink-soft mb-1.5">
                       Nouveau mot de passe
                     </label>
                     <div className="relative">
                       <input
+                        id="settings-new-password"
                         type={showPasswords.new ? 'text' : 'password'}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
@@ -605,6 +683,7 @@ export const SettingsSection: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                        aria-label={showPasswords.new ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-faint hover:text-ink-soft"
                       >
                         {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -613,11 +692,12 @@ export const SettingsSection: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-ink-soft mb-1.5">
+                    <label htmlFor="settings-confirm-password" className="block text-sm font-medium text-ink-soft mb-1.5">
                       Confirmer le mot de passe
                     </label>
                     <div className="relative">
                       <input
+                        id="settings-confirm-password"
                         type={showPasswords.confirm ? 'text' : 'password'}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
@@ -628,6 +708,7 @@ export const SettingsSection: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                        aria-label={showPasswords.confirm ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-faint hover:text-ink-soft"
                       >
                         {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -637,13 +718,14 @@ export const SettingsSection: React.FC = () => {
 
                   <button
                     onClick={handlePasswordChange}
-                    disabled={changingPassword || (hasPassword && !passwordData.currentPassword) || !passwordData.newPassword}
+                    disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword}
                     className="px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {changingPassword ? 'Enregistrement…' : hasPassword ? 'Changer le mot de passe' : 'Définir le mot de passe'}
+                    {changingPassword ? 'Enregistrement…' : 'Changer le mot de passe'}
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
 

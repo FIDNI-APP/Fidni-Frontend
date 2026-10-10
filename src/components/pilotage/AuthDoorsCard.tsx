@@ -8,20 +8,26 @@ import { DoorOpen } from 'lucide-react';
 
 export interface AuthDoor { source: string; count: number; visits?: number; anon?: number }
 
-// Sources envoyées par le site (openModal / useOpenSignup) → libellé. Une source inconnue s'affiche telle quelle.
+// Sources envoyées par le site → libellé (useOpenSignup(source) et openModal(source), relevées le 10/10/2026).
+// Une source inconnue (ajoutée depuis) s'affiche brute, tirets remplacés par des espaces.
 const DOOR_LABEL: Record<string, string> = {
-  vote: 'Vote (j’aime)', favori: 'Favori', solution: 'Voir la solution', evaluer: 'Évaluer une question',
-  'auto-evaluation': 'Auto-évaluation', statut: 'Statut réussi / à revoir', commentaire: 'Commentaire',
-  liste: 'Liste de révision', 'liste-revision': 'Liste de révision', cahier: 'Cahier', chrono: 'Chrono',
-  publier: 'Publier un contenu', signaler: 'Signaler une erreur', 'filtre-statut': 'Filtre « Réussis / À revoir »',
-  bandeau: 'Bandeau en bas de page', carte: 'Carte d’invitation', sidebar: 'Barre latérale',
-  'barre-haut': 'Bouton de la barre du haut', 'barre-mobile': 'Barre d’onglets (téléphone)',
-  hero: 'Accueil : haut de page', cta: 'Accueil : bas de page', 'cta-final': 'Accueil : bas de page',
+  // Gestes d'un contenu (pages/content/ContentDetail, ContentList, cartes, recherche, accueil)
+  vote: 'Vote « J’aime »', favori: 'Favori', solution: 'Voir la solution', commentaire: 'Commentaire',
+  evaluer: 'S’évaluer (page d’un contenu)', 'auto-evaluation': 'S’évaluer (dans une liste)',
+  statut: 'Réussi / à revoir (dans une liste)', 'liste-revision': 'Ajouter à une liste de révision',
+  chrono: 'Enregistrer le chrono', publier: 'Publier un contenu', signaler: 'Signaler une erreur',
+  'filtre-statut': 'Filtre « Réussis / À revoir »',
+  // Invitations (components/auth/SignupPrompt, layout, Landing)
+  bandeau: 'Bandeau en bas de page', carte: 'Carte « Crée ton compte »', sidebar: 'Menu latéral',
+  'barre-haut': 'Bouton « Connexion » (barre du haut)', hero: 'Accueil : haut de page', cta: 'Accueil : bas de page',
   autre: 'Autre (non précisé)',
 };
-const doorLabel = (s: string) => DOOR_LABEL[s] ?? s.replace(/-/g, ' ');
+// hasOwn : une source envoyée par n'importe quel visiteur (« constructor »…) ne doit pas lire le prototype.
+const doorLabel = (s: string) => (Object.prototype.hasOwnProperty.call(DOOR_LABEL, s) ? DOOR_LABEL[s] : s.replace(/-/g, ' '));
 
 export const AuthDoorsCard: React.FC<{ doors: AuthDoor[]; days: number }> = ({ doors, days }) => {
+  // Déjà triées par le serveur ; retriées ici au cas où (la plus utilisée en tête).
+  const sorted = [...doors].sort((a, b) => b.count - a.count);
   const total = doors.reduce((n, d) => n + d.count, 0);
   const max = Math.max(1, ...doors.map((d) => d.count));
   return (
@@ -38,7 +44,7 @@ export const AuthDoorsCard: React.FC<{ doors: AuthDoor[]; days: number }> = ({ d
         <p className="mt-4 text-[13px] text-ink-faint">Aucune ouverture enregistrée sur la période.</p>
       ) : (
         <ol className="mt-4 flex flex-col gap-2.5">
-          {doors.map((d) => (
+          {sorted.map((d) => (
             <li key={d.source} title={d.anon ? `dont ${d.anon} par des visiteurs non connectés` : undefined}>
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
                 <span className="min-w-0 truncate text-ink">{doorLabel(d.source)}</span>

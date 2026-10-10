@@ -407,7 +407,9 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
           {!loading && levels && levels.length === 0 && (
             <div style={{ padding: '7px 10px', color: '#6b6862', fontSize: 12 }}>Aucun niveau</div>
           )}
-          {!loading && <SubLink to={item.to} label="Tout voir" onClick={onClick} muted active={onBase && !currentLevel} />}
+          {/* « Tout voir » : la liste de tous les niveaux (sans ?niveau=tous, un élève qui a indiqué sa classe
+              serait renvoyé à la page de son niveau, voir ContentList). */}
+          {!loading && <SubLink to={`${item.to}?niveau=tous`} label="Tout voir" onClick={onClick} muted active={onBase && !currentLevel} />}
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@
  *
  * 10/10/2026 : chargement après l'authentification, contenu et progression en parallèle, squelette au
  * lieu du spinner ; solution ouverte enregistrée (SolutionView, une fois par contenu) ; chaque
- * auto-évaluation dit d'où elle vient ; examen national rangé sous « Examens nationaux ».
+ * auto-évaluation dit d'où elle vient ; examen national rangé sous « Bac national », DS sous « Devoirs (DS) ».
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -663,8 +663,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   };
 
   // Fil d'Ariane de la barre du haut : Section › Niveau › Chapitre (matière unique : pas de « Mathématiques »),
-  // vers les pages de niveau et de chapitre. Un sujet du Bac national est rangé sous « Examens nationaux »
-  // (et c'est cette entrée du menu qui s'allume). Effacé en quittant la page.
+  // vers les pages de niveau et de chapitre, avec les mots du menu (Exercices, Leçons, Devoirs (DS), Bac
+  // national). Un sujet du Bac national est rangé sous « Bac national » (et c'est cette entrée du menu qui
+  // s'allume). Effacé en quittant la page.
   const { setCrumbs } = useBreadcrumb();
   const studentLevel = studentLevelSlug(user);
   useEffect(() => {
@@ -681,11 +682,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     };
     const crumbs: { label: string; to?: string }[] = [];
     if (national) {
-      crumbs.push({ label: 'Examens nationaux', to: '/exams/nationaux' });
+      crumbs.push({ label: 'Bac national', to: '/exams/nationaux' });
       if (cl) crumbs.push({ label: cl.name, to: `/exams/nationaux?${query({ classLevels: String(cl.id) })}` });
     } else {
-      const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Examens' : 'Leçons';
-      crumbs.push({ label: sectionLabel, to: config.basePath });
+      const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Devoirs (DS)' : 'Leçons';
+      // Élève qui a indiqué sa classe : /exercises le renverrait à la page de son niveau (élément suivant du fil).
+      const sectionTo = contentType === 'exercise' && studentLevel ? `${config.basePath}?niveau=tous` : config.basePath;
+      crumbs.push({ label: sectionLabel, to: sectionTo });
       if (cl) crumbs.push({ label: cl.name, to: level ? hubPath(section, level.slug) : `${config.basePath}?${query({ classLevels: String(cl.id) })}` });
       if (chap) {
         crumbs.push({
@@ -695,7 +698,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         });
       }
     }
-    setCrumbs(crumbs, national ? '/exams/nationaux' : null);
+    setCrumbs(crumbs, national ? '/exams/nationaux' : config.basePath);
     return () => setCrumbs(null);
   }, [content, contentType, config.basePath, setCrumbs, studentLevel]);
 

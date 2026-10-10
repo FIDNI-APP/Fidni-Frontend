@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Check, ChevronDown, ClipboardCheck, Eye, RotateCcw, X } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
+import { assessQuestions } from '@/lib/api/contentItemApi';
 import { trackAction } from '@/lib/usage';
 
 type Kind = 'exercise' | 'exam';
@@ -91,10 +92,10 @@ export const CatchUpBanner: React.FC<{
       if (value === 'not_done') {
         await ignore([item.id]);
       } else if (value === 'success' && item.paths.length) {
-        // Comme « Tout réussi » sur la page du contenu : toutes les questions, puis le contenu.
-        await api.post(`/contents/${item.id}/assess_many/`, {
-          assessments: Object.fromEntries(item.paths.map((p) => [p, 'success'])), completion: 'success', source: 'rattrapage',
-        });
+        // Comme « Tout réussi » sur la page du contenu : toutes les questions, puis le contenu
+        // (QuestionProgress.source = « rattrapage » : on sait d'où vient l'évaluation).
+        await assessQuestions(item.id, Object.fromEntries(item.paths.map((p) => [p, 'success'])),
+          { completion: 'success', source: 'rattrapage' });
       } else {
         await api.post(`/contents/${item.id}/mark_progress/`, { status: value });
       }

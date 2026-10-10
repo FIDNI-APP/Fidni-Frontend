@@ -24,32 +24,69 @@ export default function ConcoursRecapPage() {
 
   const [recap, setRecap] = useState<SimulationRecap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [activeDomainKey, setActiveDomainKey] = useState<string | null>(null);
   const [activePos, setActivePos] = useState<number | null>(null);
   const reviewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sessionId) return;
+    let alive = true;
     (async () => {
       try {
         setLoading(true);
+        setFailed(false);
         const r = await getSimulationRecap(sessionId);
+        if (!alive) return;
+        // Simulation pas encore rendue (lien de l'historique, retour arrière…) : on y retourne.
+        if (r.status === 'in_progress') {
+          navigate(`/concours/simulate/${sessionId}`, { replace: true });
+          return;
+        }
         setRecap(r);
         if (r.breakdown.length > 0) {
           const first = r.breakdown[0];
           setActiveDomainKey(`${first.subject_id || ''}-${first.subfield_id || ''}`);
           if (first.positions.length > 0) setActivePos(first.positions[0]);
         }
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) {
+        // 409 : simulation encore en cours (le serveur ne donne pas le corrigé avant la fin).
+        if ((e as { response?: { status?: number } })?.response?.status === 409) {
+          if (alive) navigate(`/concours/simulate/${sessionId}`, { replace: true });
+          return;
+        }
+        console.error(e);
+        if (alive) setFailed(true);
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
-  }, [sessionId]);
+    return () => { alive = false; };
+  }, [sessionId, navigate]);
 
   const activeBreakdown = useMemo<BreakdownEntry | null>(() => {
     if (!recap || !activeDomainKey) return null;
     return recap.breakdown.find(b => `${b.subject_id || ''}-${b.subfield_id || ''}` === activeDomainKey) || null;
   }, [recap, activeDomainKey]);
 
+  if (!loading && (failed || !recap)) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#1a1a1a' }} className="flex items-center justify-center px-4">
+        <div className="text-center" style={{ maxWidth: 360 }}>
+          <p style={{ color: '#d8d4cc', fontSize: 14 }}>
+            Impossible d'afficher ce résultat pour le moment. Vérifie ta connexion et réessaie.
+          </p>
+          <button
+            onClick={() => navigate('/concours/sessions')}
+            className="fd-btn-ghost mt-4 inline-flex"
+            style={{ background: 'rgba(255,255,255,.08)', color: '#d8d4cc', border: '1px solid rgba(255,255,255,.15)' }}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Mon historique
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (loading || !recap) {
     return (
       <div style={{ minHeight: '100vh', background: '#1a1a1a' }} className="flex items-center justify-center">

@@ -188,12 +188,12 @@ export const removeAvatar = async (): Promise<void> => {
 
 // Change password
 /**
- * Changer de mot de passe. `currentPassword` vide/absent : compte sans mot de passe (créé avec Google),
- * le serveur en définit un sans demander l'actuel.
+ * Changer de mot de passe (l'actuel est exigé). Un compte sans mot de passe (créé avec Google) en définit un
+ * par le lien « Mot de passe oublié » (authApi.requestPasswordReset), plus depuis les réglages.
  */
-export const changePassword = async (currentPassword: string | null | undefined, newPassword: string): Promise<{ message: string }> => {
+export const changePassword = async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
   const response = await api.post('/auth/password/change/', {
-    ...(currentPassword ? { current_password: currentPassword } : {}),
+    current_password: currentPassword,
     new_password: newPassword,
   });
   // Les autres appareils sont déconnectés ; le serveur renvoie de nouveaux jetons pour celui-ci.
@@ -206,7 +206,8 @@ export const updateUserInfo = async (data: {
   first_name?: string;
   last_name?: string;
   email?: string;
-  /** Obligatoire quand l'e-mail change. Compte sans mot de passe (Google) : 400 {code:'set_password_first'}. */
+  /** Obligatoire quand l'e-mail change. Compte sans mot de passe (Google) : 400 {code:'set_password_first'}.
+   *  La nouvelle adresse est à confirmer : réponse avec email_verification_sent: true. */
   current_password?: string;
   /** Établissement de la liste officielle, ou nom libre (school_id vide). */
   school_id?: number | '';
@@ -216,7 +217,7 @@ export const updateUserInfo = async (data: {
   birth_date?: string;
   /** Acceptation des CGU et de la politique de confidentialité en vigueur. */
   accept_terms?: boolean;
-}): Promise<Record<string, unknown>> => {
+}): Promise<{ message?: string; email_verification_sent?: boolean; [key: string]: unknown }> => {
   const response = await api.patch('/auth/user/update/', data);
   return response.data;
 };

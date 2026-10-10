@@ -93,12 +93,12 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const from = (location.state as { from?: string } | null)?.from;
   const hub = contentHub(content, studentLevelSlug(user));
   const back = (() => {
-    if (isNational) return { to: '/exams/nationaux', label: 'Examens nationaux' };
+    if (isNational) return { to: '/exams/nationaux', label: 'Bac national' };
     const { level, chapter } = hub;
     const section = basePath.replace(/^\//, '');
     if (level && chapter) return { to: hubPath(section, level.slug, chapter.slug), label: chapter.name };
     if (level) return { to: hubPath(section, level.slug), label: level.name };
-    return { to: basePath, label: contentType === 'lesson' ? 'Leçons' : contentType === 'exam' ? 'Examens' : 'Exercices' };
+    return { to: basePath, label: contentType === 'lesson' ? 'Leçons' : contentType === 'exam' ? 'Devoirs (DS)' : 'Exercices' };
   })();
   const goBack = () => {
     trackAction('retour-liste');

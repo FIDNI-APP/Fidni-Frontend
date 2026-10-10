@@ -41,19 +41,28 @@ export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?:
   const isTeacher = user?.profile?.user_type === 'teacher';
   const [data, setData] = useState<Overview | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const ds = useNextTest();
   // Formulaire « Annoncer un DS » : monté au premier clic, gardé ensuite (animation de fermeture).
   const [announce, setAnnounce] = useState<'closed' | 'open' | 'never'>('never');
   const openAnnounce = () => { trackAction('annoncer-ds'); setAnnounce('open'); };
 
   useEffect(() => {
-    getDashboardOverview().then(setData).catch(() => setFailed(true));
-  }, []);
+    let alive = true;
+    getDashboardOverview()
+      .then((d) => { if (alive) { setData(d); setFailed(false); } })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [attempt]);
 
   if (failed) {
     return (
-      <div className="rounded-2xl border border-line bg-white p-6 text-sm text-ink-faint">
-        Ton tableau de bord n’a pas pu être chargé. Recharge la page dans un instant.
+      <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-5 text-sm text-ink-faint sm:p-6">
+        <span className="min-w-0 flex-1 basis-[220px]">Ton tableau de bord n’a pas pu être chargé : vérifie ta connexion.</span>
+        <button type="button" onClick={() => { setFailed(false); setAttempt((n) => n + 1); }}
+          className="fd-btn-ghost shrink-0" style={{ minHeight: 40 }}>
+          <RotateCcw className="h-4 w-4" /> Réessayer
+        </button>
       </div>
     );
   }
@@ -204,7 +213,8 @@ function NextSteps({ data }: { data: Overview }) {
   const quizChapter = weak.find((n) => n.chapter_id)?.chapter_id ?? null;
   return (
     <section className="rounded-2xl border border-line bg-white">
-      <div className={`grid ${resume.length && review.length ? 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : ''}`}>
+      {/* minmax(0,…) : un titre long se tronque au lieu d'élargir la page sur téléphone. */}
+      <div className={`grid grid-cols-[minmax(0,1fr)] ${resume.length && review.length ? 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : ''}`}>
         {resume.length > 0 && (
           <div className="p-5 sm:p-6">
             <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><PlayCircle className="w-4 h-4 text-ink-faint" /> Reprendre</h2>
@@ -311,7 +321,9 @@ function Header({ username, data, next, levelQuery, fallbackExercise, newcomer }
         <p className="text-[14.5px] text-ink-faint mt-2.5 max-w-xl leading-relaxed">{summary}</p>
       </div>
       <div className="flex flex-wrap gap-2.5">
-        <Link to={primary.to} onClick={next ? () => trackAction('accueil-reprendre') : undefined}
+        {/* Le bouton principal de l'accueil (1re étape de la visite courte) : mesuré quelle que soit sa forme
+            (« Reprendre », « Commencer » l'exercice proposé, ou « Choisir un exercice »). */}
+        <Link to={primary.to} onClick={() => trackAction('accueil-reprendre')} data-tour="home-reprendre"
           className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-brand text-white text-[14px] font-semibold hover:bg-brand-hover transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand max-w-[340px]">
           <PlayCircle className="w-4 h-4 flex-shrink-0" />
           <span className="truncate">{primary.label}{primary.detail ? ` : ${primary.detail}` : ''}</span>

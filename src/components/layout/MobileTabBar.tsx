@@ -19,13 +19,12 @@ import { TABBAR_VAR, exercisesHome, subscribeTabBar, tabBarForcedHidden } from '
 // 56 px d'onglets + 1 px de bordure, plus la zone du geste d'accueil (iPhone).
 const TABBAR_HEIGHT = 'calc(57px + env(safe-area-inset-bottom, 0px))';
 
-// Pages d'épreuve : la barre n'y a pas sa place. L'onboarding garde aussi toute l'attention. Les pages
-// qui ont leur propre barre collée en bas (enregistrer le profil, révéler les corrigés d'une annale de
-// concours) la passeraient dessous : on la cache aussi.
+// Pages d'épreuve : la barre n'y a pas sa place. L'onboarding garde aussi toute l'attention.
 // L'épreuve d'un examen (/exams/:id) la cache elle-même pendant le chrono (ExamView, useHideMobileTabBar).
+// Les pages qui ont leur propre barre collée en bas (enregistrer le profil, révéler les corrigés d'une
+// annale de concours) se placent au-dessus d'elle avec TABBAR_OFFSET.
 const HIDDEN_ROUTES = [
   /^\/concours\/simulate\//, /^\/revisions\/ds\/[^/]+\/blanc\/?$/, /^\/complete-profile\/?$/,
-  /^\/profile\/[^/]+\/edit\/?$/, /^\/concours\/exams\/[^/]+\/?$/,
 ];
 
 interface Tab {

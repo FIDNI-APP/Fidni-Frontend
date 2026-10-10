@@ -31,6 +31,7 @@ export function ClassroomsPage() {
   const refresh = async () => {
     try {
       setLoading(true);
+      setError('');
       const data = await listClassrooms();
       setClassrooms(data);
     } catch (e) {
@@ -128,10 +129,9 @@ export function ClassroomsPage() {
                       classroom={c}
                       onOpen={() => navigate(`/classrooms/${c.id}`)}
                       onDelete={async () => {
-                        if (window.confirm(`Supprimer la classe "${c.name}" ?`)) {
-                          await deleteClassroom(c.id);
-                          refresh();
-                        }
+                        if (!window.confirm(`Supprimer la classe « ${c.name} » ?`)) return;
+                        try { await deleteClassroom(c.id); setError(''); refresh(); }
+                        catch (e) { setError(classroomError(e, 'Impossible de supprimer la classe.')); }
                       }}
                     />
                   ))}
@@ -149,10 +149,9 @@ export function ClassroomsPage() {
                       classroom={c}
                       onOpen={() => navigate(`/classrooms/${c.id}`)}
                       onLeave={async () => {
-                        if (window.confirm(`Quitter la classe "${c.name}" ?`)) {
-                          await leaveClassroom(c.id);
-                          refresh();
-                        }
+                        if (!window.confirm(`Quitter la classe « ${c.name} » ?`)) return;
+                        try { await leaveClassroom(c.id); setError(''); refresh(); }
+                        catch (e) { setError(classroomError(e, 'Impossible de quitter la classe.')); }
                       }}
                     />
                   ))}
@@ -248,7 +247,14 @@ function ClassroomCard({
   onLeave?: () => void;
 }) {
   return (
-    <div className="fd-card p-5 cursor-pointer" onClick={onOpen}>
+    <div
+      className="fd-card p-5 cursor-pointer"
+      role="link"
+      tabIndex={0}
+      aria-label={`Ouvrir la classe ${classroom.name}`}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(); } }}
+    >
       <div className="flex items-start justify-between mb-3">
         <div
           className="inline-flex items-center justify-center"
@@ -262,8 +268,10 @@ function ClassroomCard({
         {onDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c', padding: 4 }}
-            aria-label="Supprimer"
+            className="inline-flex items-center justify-center"
+            style={{ width: 36, height: 36, margin: '-4px -8px 0 0', background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}
+            aria-label={`Supprimer la classe ${classroom.name}`}
+            title="Supprimer la classe"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -272,7 +280,8 @@ function ClassroomCard({
           <button
             onClick={(e) => { e.stopPropagation(); onLeave(); }}
             className="fd-btn-ghost"
-            style={{ padding: '4px 10px', fontSize: 11 }}
+            style={{ padding: '6px 12px', fontSize: 11, minHeight: 32 }}
+            aria-label={`Quitter la classe ${classroom.name}`}
           >
             Quitter
           </button>
@@ -320,8 +329,16 @@ function ClassroomCard({
 
 /* ───────── Modals ───────── */
 function ModalShell({ title, onClose, children, width = 480 }: { title: string; onClose: () => void; children: React.ReactNode; width?: number }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
         background: 'rgba(20,18,16,.4)', backdropFilter: 'blur(4px)',
@@ -339,7 +356,9 @@ function ModalShell({ title, onClose, children, width = 480 }: { title: string; 
           <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{title}</h3>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862', padding: 4 }}
+            aria-label="Fermer"
+            className="inline-flex items-center justify-center flex-shrink-0"
+            style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}
           >
             <X className="w-5 h-5" />
           </button>

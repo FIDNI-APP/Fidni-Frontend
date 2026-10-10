@@ -202,14 +202,19 @@ export async function quickAddToRevision(objectId: number): Promise<{ list_id: n
   return response.data;
 }
 
-/** Plusieurs d'un coup (une requête, 50 au plus par envoi) : plus de boucle d'ajouts côté navigateur. */
+/** Plusieurs d'un coup (une requête, 50 au plus par envoi) : plus de boucle d'ajouts côté navigateur.
+ *  Un lot sans aucun contenu valable (supprimés entre-temps) répond 404 : on passe au suivant. */
 export async function quickAddManyToRevision(objectIds: number[]): Promise<{ list_id: number | null; added_count: number }> {
   let listId: number | null = null;
   let added = 0;
   for (let i = 0; i < objectIds.length; i += 50) {
-    const response = await api.post('/revision-lists/quick_add/', { object_ids: objectIds.slice(i, i + 50) });
-    listId = response.data.list_id ?? listId;
-    added += response.data.added_count ?? 0;
+    try {
+      const response = await api.post('/revision-lists/quick_add/', { object_ids: objectIds.slice(i, i + 50) });
+      listId = response.data.list_id ?? listId;
+      added += response.data.added_count ?? 0;
+    } catch (error) {
+      if ((error as { response?: { status?: number } })?.response?.status !== 404) throw error;
+    }
   }
   return { list_id: listId, added_count: added };
 }

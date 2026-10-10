@@ -48,6 +48,7 @@ import type { FlexibleExerciseStructure } from '@/components/content/editor/Flex
 import { DifficultyBars } from '@/components/common/DifficultyBars';
 import { api } from '@/lib/api/apiClient';
 import { assessQuestions, type AssessSource } from '@/lib/api/contentItemApi';
+import { markSolutionViewed } from '@/lib/api/statisticsApi';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import type { AssessmentStatus } from '@/types/content';
 import { trackAction } from '@/lib/usage';
@@ -101,9 +102,7 @@ export const RevisionListDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
-  const usernameRef = useRef(user?.username);
-  usernameRef.current = user?.username;
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [params, setParams] = useSearchParams();
   const view: View = params.get('vue') === 'feuille' ? 'feuille' : 'revision';
   const [list, setList] = useState<RevisionList | null>(null);
@@ -112,6 +111,8 @@ export const RevisionListDetail: React.FC = () => {
   const statusesRef = useRef(statuses);
   statusesRef.current = statuses;
   const [loading, setLoading] = useState(true);
+  // Liste absente (404) ou chargement impossible (réseau) : deux messages différents.
+  const [loadError, setLoadError] = useState<'missing' | 'failed' | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -123,6 +124,7 @@ export const RevisionListDetail: React.FC = () => {
   progressRef.current = progress;
   const [busy, setBusy] = useState(false);
   const tracked = useRef(false);
+  const solutionSeen = useRef(new Set<number>());
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const setView = (v: View) => {
@@ -135,6 +137,7 @@ export const RevisionListDetail: React.FC = () => {
     if (!id) return;
     try {
       if (!keepPosition) setLoading(true);
+      setLoadError(null);
       const data = await getRevisionList(parseInt(id));
       setList(data);
       setEditName(data.name);
@@ -158,13 +161,22 @@ export const RevisionListDetail: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load revision list:', error);
-      navigate(usernameRef.current ? `/profile/${usernameRef.current}` : '/');
+      // Après un retrait ou un renommage, on garde la liste affichée ; sinon on dit ce qui se passe.
+      if (!keepPosition) {
+        const code = (error as { response?: { status?: number } })?.response?.status;
+        setLoadError(code === 404 || code === 403 ? 'missing' : 'failed');
+      }
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  // Réservé aux membres (comme la page des listes) : un visiteur va à la connexion.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) { navigate('/login'); return; }
+    load();
+  }, [authLoading, isAuthenticated, load, navigate]);
 
   const items = useMemo(() => (list?.items || []).filter((i) => i.content_object) as (RevisionListItem & { content_object: Content })[], [list]);
   const item = current !== null ? items[current] : undefined;
@@ -285,7 +297,15 @@ export const RevisionListDetail: React.FC = () => {
     }
   };
 
-  if (loading) {
+  // Solution ouverte en mode révision : comptée une fois par exercice (« résolu seul », rattrapage), comme sur sa page.
+  const solutionOpened = (content: Content) => {
+    const cid = Number(content.id);
+    if (solutionSeen.current.has(cid)) return;
+    solutionSeen.current.add(cid);
+    markSolutionViewed(content.type === 'exam' ? 'exam' : 'exercise', String(cid)).catch(() => { solutionSeen.current.delete(cid); });
+  };
+
+  if (authLoading || (loading && !loadError)) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4">
@@ -297,17 +317,28 @@ export const RevisionListDetail: React.FC = () => {
   }
 
   if (!list) {
+    const failed = loadError === 'failed';
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-10 text-center max-w-md w-full border border-line">
+        <div className="bg-white rounded-2xl px-6 py-10 sm:px-10 text-center max-w-md w-full border border-line" role="alert">
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
             <ListX className="w-8 h-8 text-red-500" />
           </div>
-          <h2 className="text-xl font-bold text-ink mb-2">Liste introuvable</h2>
-          <p className="text-ink-faint mb-6 text-sm">Cette liste n’existe pas ou a été supprimée.</p>
-          <Button onClick={() => navigate('/revision-lists?onglet=listes')} className="bg-[#1a7a4a] hover:bg-[#15633c] text-white">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Mes listes
-          </Button>
+          <h2 className="text-xl font-bold text-ink mb-2">{failed ? 'La liste n’a pas pu être chargée' : 'Liste introuvable'}</h2>
+          <p className="text-ink-faint mb-6 text-sm">
+            {failed ? 'Vérifie ta connexion, puis réessaie.' : 'Cette liste n’existe pas ou a été supprimée.'}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {failed && (
+              <button type="button" onClick={() => load()} className="fd-btn-primary" style={{ minHeight: 40 }}>
+                <RotateCcw className="w-4 h-4" /> Réessayer
+              </button>
+            )}
+            <Button onClick={() => navigate('/revision-lists?onglet=listes')}
+              className={failed ? 'border border-line bg-white text-ink-soft hover:bg-[#f7f6f3]' : 'bg-[#1a7a4a] hover:bg-[#15633c] text-white'}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Mes listes
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -469,6 +500,7 @@ export const RevisionListDetail: React.FC = () => {
                       [path]: progressRef.current[Number(item.content_object.id)]?.[path]?.status === status ? null : status,
                     }, source)}
                     onAssessMany={(changes, source) => assess(item.content_object, changes, source)}
+                    onSolutionOpen={() => solutionOpened(item.content_object)}
                   />
                 ) : (
                   <p className="text-sm italic text-ink-faint">L’énoncé n’est pas disponible ici : ouvre l’exercice.</p>

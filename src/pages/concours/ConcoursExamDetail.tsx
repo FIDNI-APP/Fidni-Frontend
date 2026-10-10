@@ -2,13 +2,13 @@
  * Non-simulation view of a single concours exam.
  * Shows every question with correct answer + explanation.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useScrollToHash } from '@/hooks/useScrollToHash';
 import {
   ArrowLeft, Bookmark, MessageSquare, Loader2,
   Check, Lightbulb, Clock, ListChecks, Trash2, Play, ChevronDown, ChevronUp, ChevronRight,
-  BookOpen, BarChart3, Trophy,
+  BookOpen, BarChart3, Trophy, type LucideIcon,
 } from 'lucide-react';
 import {
   getConcoursExam, toggleSaveExam, startSimulation,
@@ -16,6 +16,8 @@ import {
   type ConcoursExam, type ConcoursComment,
 } from '@/lib/api/concoursApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthModal } from '@/components/auth/AuthController';
+import { TABBAR_OFFSET } from '@/components/layout/nav';
 import { isModerator } from '@/lib/features';
 import { SEO } from '@/components/layout/SEO';
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
@@ -34,6 +36,7 @@ export default function ConcoursExamDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { openModal } = useAuthModal();
 
   const [exam, setExam] = useState<ConcoursExam | null>(null);
   useScrollToHash(!!exam);  // « #commentaires » : lien d'une notification
@@ -43,23 +46,29 @@ export default function ConcoursExamDetailPage() {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<ExamTab>('navigation');
 
-  const refresh = async () => {
+  useEffect(() => {
     if (!id) return;
-    try { setLoading(true); setExam(await getConcoursExam(id)); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { refresh(); }, [id]);
+    let alive = true;
+    setLoading(true);
+    getConcoursExam(id)
+      .then((e) => { if (alive) setExam(e); })
+      .catch((e) => { console.error(e); if (alive) setExam(null); })  // « Examen introuvable »
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [id]);
 
   const onSave = async () => {
     if (!exam || saving) return;
+    if (!isAuthenticated) { openModal('favori'); return; }
     setSaving(true);
     try { const r = await toggleSaveExam(exam.id); setExam({ ...exam, is_saved: r.is_saved }); }
+    catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
 
   const onStartSimulation = async () => {
     if (!exam || starting) return;
-    if (!isAuthenticated) { navigate('/login'); return; }
+    if (!isAuthenticated) { openModal('simulation'); return; }
     setStarting(true);
     try {
       const r = await startSimulation({ mode: 'exam', concours_type: exam.concours_type, exam_id: exam.id });
@@ -131,8 +140,10 @@ export default function ConcoursExamDetailPage() {
             <rect width="100%" height="100%" fill="url(#concoursGrid)" />
           </svg>
         </div>
-        {/* Glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        {/* Glow (dans un cadre qui le rogne : sinon il élargit la page de 192 px, défilement horizontal) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        </div>
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
           {/* Top row: breadcrumb + actions */}
@@ -140,6 +151,7 @@ export default function ConcoursExamDetailPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/concours')}
+                aria-label="Retour aux concours"
                 className="p-2 -ml-2 rounded-xl text-white/75 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -163,6 +175,7 @@ export default function ConcoursExamDetailPage() {
               <button
                 onClick={onStartSimulation}
                 disabled={starting}
+                aria-label="Lancer la simulation"
                 className="rounded-xl flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white hover:bg-white/90 transition-colors disabled:opacity-70"
                 style={{ color: theme.text }}
               >
@@ -172,6 +185,8 @@ export default function ConcoursExamDetailPage() {
               <button
                 onClick={onSave}
                 disabled={saving}
+                aria-label={exam.is_saved ? 'Retirer des enregistrés' : 'Enregistrer'}
+                aria-pressed={exam.is_saved}
                 className={`rounded-xl flex items-center gap-2 px-4 py-2 text-sm font-medium text-white/85 hover:text-white hover:bg-white/10 transition-colors ${exam.is_saved ? 'bg-white/20' : ''}`}
               >
                 {saving
@@ -206,7 +221,7 @@ export default function ConcoursExamDetailPage() {
               { id: 'navigation', label: 'Navigation', icon: BookOpen },
               { id: 'stats',      label: 'Statistiques', icon: BarChart3 },
               { id: 'activity',   label: 'Activité', icon: Trophy },
-            ] as { id: ExamTab; label: string; icon: any }[]).map(({ id, label, icon: Icon }) => {
+            ] as { id: ExamTab; label: string; icon: LucideIcon }[]).map(({ id, label, icon: Icon }) => {
               const isActive = activeTab === id;
               return (
                 <button
@@ -259,12 +274,11 @@ export default function ConcoursExamDetailPage() {
               return (
                 <div
                   key={q.id || idx}
-                  className="concours-question-card animate-fade-up"
+                  className="concours-question-card animate-fade-up px-4 py-5 sm:px-7 sm:py-[26px]"
                   style={{
                     background: '#fff', borderRadius: 18,
                     border: '1px solid #e7e3dc',
                     boxShadow: '0 1px 3px rgba(20,18,16,.05)',
-                    padding: '26px 28px',
                   }}
                 >
                   {/* Question header line */}
@@ -398,23 +412,25 @@ export default function ConcoursExamDetailPage() {
         )}
 
         {/* Comments */}
-        <div id="commentaires" className="mt-10 scroll-mt-20" style={{
-          background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc', padding: '24px 28px',
+        <div id="commentaires" className="mt-10 scroll-mt-20 px-4 py-5 sm:px-7 sm:py-6" style={{
+          background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc',
         }}>
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="w-4 h-4" style={{ color: '#000000' }} />
             <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>
           </div>
-          <CommentsBlock examId={exam.id} currentUserId={user?.id} canModerate={isModerator(user)} />
+          <CommentsBlock examId={exam.id} currentUserId={user?.id} canModerate={isModerator(user)}
+                         onLogin={isAuthenticated ? undefined : () => openModal('commentaire')} />
         </div>
         </div>
         )}
       </div>
 
-      {/* ───── Floating action bar (navigation tab only) ───── */}
+      {/* ───── Floating action bar (navigation tab only) ─────
+          Au-dessus de la barre d'onglets du téléphone (TABBAR_OFFSET vaut 0 sur ordinateur). */}
       {activeTab === 'navigation' && questions.length > 0 && (
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
+          position: 'fixed', bottom: TABBAR_OFFSET, left: 0, right: 0, zIndex: 40,
           display: 'flex', justifyContent: 'center',
           padding: '0 16px 18px', pointerEvents: 'none',
         }}>
@@ -424,20 +440,20 @@ export default function ConcoursExamDetailPage() {
             background: '#fff', borderRadius: 16,
             border: '1px solid #e8e5f7',
             boxShadow: '0 8px 30px rgba(60,40,160,.16)',
-            padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 16,
+            padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
           }}>
             {/* Progress */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#6b6862' }}>
-                  {revealedCount}/{questions.length} corrigés révélés
+              <div className="flex items-center justify-between gap-2" style={{ marginBottom: 6 }}>
+                <span className="truncate" style={{ fontSize: 12, fontWeight: 600, color: '#6b6862' }}>
+                  {revealedCount}/{questions.length} <span className="hidden sm:inline">corrigés </span>révélés
                 </span>
                 <button
                   onClick={() => allRevealed ? setRevealed({}) : revealAll()}
                   style={{
-                    fontSize: 11, fontWeight: 700, color: theme.from,
-                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700, color: theme.from, whiteSpace: 'nowrap',
+                    background: 'none', border: 'none', cursor: 'pointer', minHeight: 28,
                   }}
                 >
                   {allRevealed ? 'Tout masquer' : 'Tout révéler'}
@@ -458,7 +474,7 @@ export default function ConcoursExamDetailPage() {
               disabled={starting}
               style={{
                 flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
-                padding: '11px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                padding: '11px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
                 background: `linear-gradient(135deg,${theme.from},${theme.to})`,
                 color: '#fff', fontSize: 14, fontWeight: 700,
                 boxShadow: `0 4px 14px ${theme.from}44`,
@@ -466,7 +482,8 @@ export default function ConcoursExamDetailPage() {
               }}
             >
               {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              <span className="hidden sm:inline">Lancer la</span> simulation
+              <span className="hidden sm:inline">Lancer la simulation</span>
+              <span className="sm:hidden">Simulation</span>
             </button>
           </div>
         </div>
@@ -477,37 +494,53 @@ export default function ConcoursExamDetailPage() {
 
 /* ────────── Comments ────────── */
 
-function CommentsBlock({ examId, currentUserId, canModerate = false }: { examId: number; currentUserId?: number | string; canModerate?: boolean }) {
+function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: {
+  examId: number; currentUserId?: number | string; canModerate?: boolean;
+  /** Visiteur : ouvre la fenêtre de connexion au lieu du champ de saisie. */
+  onLogin?: () => void;
+}) {
   const [comments, setComments] = useState<ConcoursComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
+  const [err, setErr] = useState('');
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try { setLoading(true); setComments(await listExamComments(examId)); }
+    catch (e) { console.error(e); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { refresh(); }, [examId]);
+  }, [examId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const post = async () => {
     if (!text.trim() || posting) return;
-    setPosting(true);
+    setPosting(true); setErr('');
     try { await postExamComment(examId, text.trim()); setText(''); await refresh(); }
+    catch (e) { console.error(e); setErr("Ton commentaire n'a pas pu être publié. Réessaie."); }
     finally { setPosting(false); }
   };
 
   const remove = async (cid: number) => {
     if (!window.confirm('Supprimer ce commentaire ?')) return;
-    await deleteConcoursComment(cid); await refresh();
+    try { await deleteConcoursComment(cid); await refresh(); }
+    catch (e) { console.error(e); setErr("Le commentaire n'a pas pu être supprimé."); }
   };
 
   return (
     <div className="flex flex-col gap-3">
+      {onLogin ? (
+        <div className="flex flex-wrap items-center justify-between gap-3"
+             style={{ background: '#faf9f7', border: '1px solid #e7e3dc', borderRadius: 10, padding: '12px 14px' }}>
+          <p style={{ fontSize: 13, color: '#6b6862' }}>Connecte-toi pour poser une question ou partager une astuce.</p>
+          <button onClick={onLogin} className="fd-btn-primary">Se connecter</button>
+        </div>
+      ) : (
       <div className="flex gap-2">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Pose une question ou partage une astuce…"
+          aria-label="Ton commentaire"
           rows={2}
           style={{
             flex: 1, padding: '10px 14px', borderRadius: 10,
@@ -525,6 +558,8 @@ function CommentsBlock({ examId, currentUserId, canModerate = false }: { examId:
           {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Publier'}
         </button>
       </div>
+      )}
+      {err && <p role="alert" style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
 
       {loading ? (
         <div className="text-center" style={{ padding: 16 }}>
@@ -559,7 +594,9 @@ function CommentsBlock({ examId, currentUserId, canModerate = false }: { examId:
               </div>
               {(canModerate || (currentUserId !== undefined && Number(currentUserId) === c.author.id)) && (
                 <button onClick={() => remove(c.id)}
-                        style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer', flexShrink: 0 }}>
+                        aria-label="Supprimer le commentaire" title="Supprimer le commentaire"
+                        className="inline-flex items-center justify-center"
+                        style={{ width: 32, height: 32, margin: '-6px -6px 0 0', background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer', flexShrink: 0 }}>
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}

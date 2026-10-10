@@ -34,7 +34,10 @@ function googleErrorMessage(err: ApiError): string {
     return 'La connexion avec Google a échoué ou a expiré. Recommence avec le bouton Google, ou utilise ton e-mail.';
   }
   if (code === 'account_disabled') return `Ce compte Fidni est désactivé. Si c’est une erreur, écris à ${LEGAL.contactEmail}.`;
-  if (code === 'google_unavailable') return 'Google ne répond pas pour le moment. Réessaie dans un instant.';
+  // 503 : les clés de Google sont injoignables depuis le serveur (pas la faute du jeton).
+  if (code === 'google_unavailable' || err?.response?.status === 503) {
+    return 'La connexion avec Google est momentanément indisponible. Réessaie dans un instant, ou utilise ton e-mail.';
+  }
   return apiErrorMessage(err, 'La connexion avec Google a échoué. Réessaie.');
 }
 
@@ -68,7 +71,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
   // « Mot de passe oublié » : sous-écran de l'onglet Connexion.
   const [forgot, setForgot] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  // Connexion avec Google : jeton en cours de vérification, puis étape « Encore une chose » pour un nouveau compte.
+  // Connexion avec Google : jeton en cours de vérification, puis étape « Encore une chose » (conditions à accepter).
   const [googleBusy, setGoogleBusy] = useState(false);
   const [googleConsent, setGoogleConsent] = useState<{ credential: string; email: string; name: string } | null>(null);
 
@@ -189,7 +192,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     }
   };
 
-  /** Jeton Google → session. Nouveau compte : le serveur demande d'abord les deux cases (consent_required). */
+  /** Jeton Google → session. Nouveau compte, ou inscription jamais confirmée à cette adresse : le serveur
+   *  demande d'abord les deux cases (consent_required), puis on renvoie le même jeton. */
   const handleGoogle = async (credential: string, consents?: SignupConsents) => {
     setGoogleBusy(true);
     setError('');
@@ -226,7 +230,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     if (!googleConsent) return;
     if (!acceptTerms || !ageOk) {
       setError(!acceptTerms
-        ? 'Accepte les conditions d’utilisation et la politique de confidentialité pour créer ton compte.'
+        ? 'Accepte les conditions d’utilisation et la politique de confidentialité pour continuer.'
         : 'Coche la case sur l’âge : si tu as moins de 15 ans, demande d’abord l’accord d’un parent.');
       return;
     }
@@ -310,7 +314,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
           </h2>
           <p className="mt-1 text-[#b8b4ac] text-sm">
             {googleConsent
-              ? 'Deux cases à cocher, et ton compte est prêt.'
+              ? 'Deux cases à cocher, et c’est parti.'
               : activeTab === 'signup'
                 ? 'Crée un compte pour commencer à apprendre.'
                 : forgot
@@ -410,19 +414,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
             </div>
           )}
 
-          {/* Nouveau compte avec Google : les deux cases de l'inscription, puis le même jeton renvoyé */}
+          {/* Conditions à accepter (nouveau compte, ou inscription jamais confirmée à cette adresse) : les deux
+              cases de l'inscription, puis le même jeton renvoyé. Pas de « nouveau compte » promis. */}
           {googleConsent && !pendingEmail && (
             <form onSubmit={handleGoogleConsent} className="space-y-4">
               <p className="text-sm text-ink-soft leading-relaxed">
                 {googleConsent.name ? <>Bienvenue, <strong className="text-ink">{googleConsent.name}</strong> ! </> : null}
-                Tu vas créer ton compte Fidni avec ton adresse Google
-                {googleConsent.email ? <> <strong className="text-ink break-words">{googleConsent.email}</strong></> : null}.
+                Pour utiliser Fidni avec ton adresse Google
+                {googleConsent.email ? <> <strong className="text-ink break-words">{googleConsent.email}</strong></> : null},
+                coche d’abord les deux cases.
               </p>
               {consentFields}
               <Button type="submit" disabled={googleBusy}
                 className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg flex items-center justify-center">
-                {googleBusy ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Création du compte…</>)
-                            : (<><UserPlus className="mr-2 h-4 w-4" />Créer mon compte</>)}
+                {googleBusy ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion…</>)
+                            : (<><LogIn className="mr-2 h-4 w-4" />Continuer</>)}
               </Button>
               <div className="text-center text-sm">
                 <button type="button" disabled={googleBusy} onClick={() => { setGoogleConsent(null); setError(''); }}

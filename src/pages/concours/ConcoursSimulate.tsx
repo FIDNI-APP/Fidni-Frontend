@@ -1,6 +1,8 @@
 /**
  * Live simulation runner. Timed, no solutions visible.
  * Auto-saves each answer. Auto-submits on timeout.
+ * Une réponse dont l'enregistrement a échoué (réseau) est signalée et renvoyée avant la remise de la
+ * copie : sinon le serveur noterait la question comme non répondue.
  *
  * Layout:
  *   Top bar (collante) : titre + chrono + Soumettre ; sur téléphone, bande défilante des questions 1…N
@@ -28,6 +30,10 @@ const ghostDark: CSSProperties = {
 const barBtn: CSSProperties = {
   minHeight: 44, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
 };
+
+/** Le serveur refuse les réponses : temps écoulé (délai de grâce compris). */
+const isTimeOver = (e: unknown) =>
+  (e as { response?: { data?: { code?: string } } })?.response?.data?.code === 'time_over';
 
 /** Pastille d'une question (grille de droite et bande du téléphone). */
 function QuestionPill({ index, current, answered, onClick, square = false }: {
@@ -70,8 +76,21 @@ export default function ConcoursSimulatePage() {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const submittedRef = useRef(false);
   const stripRef = useRef<HTMLDivElement>(null);
+  // Dernière réponse choisie par question (lue par les envois en cours) et réponses à renvoyer.
+  const answersRef = useRef<Record<number, string>>({});
+  const unsavedRef = useRef<Set<number>>(new Set());
+  const [unsaved, setUnsaved] = useState<ReadonlySet<number>>(() => new Set());
+
+  const markUnsaved = useCallback((p: number, on: boolean) => {
+    if (unsavedRef.current.has(p) === on) return;
+    const next = new Set(unsavedRef.current);
+    if (on) next.add(p); else next.delete(p);
+    unsavedRef.current = next;
+    setUnsaved(next);
+  }, []);
 
   // Load session
   useEffect(() => {
@@ -81,7 +100,8 @@ export default function ConcoursSimulatePage() {
         setLoading(true);
         const s = await getSimulationSession(sessionId);
         setSess(s);
-        setAnswers(s.answers || {});
+        answersRef.current = s.answers || {};
+        setAnswers(answersRef.current);
         // Compute seconds left from started_at + duration_minutes
         const startMs = new Date(s.started_at).getTime();
         const endMs = startMs + s.duration_minutes * 60 * 1000;
@@ -106,15 +126,28 @@ export default function ConcoursSimulatePage() {
     }
     submittedRef.current = true;
     setSubmitting(true);
+    setSubmitError('');
     try {
+      // Réponses restées en échec : renvoyées d'abord, sinon elles compteraient comme non répondues.
+      for (const p of Array.from(unsavedRef.current)) {
+        try {
+          await answerSimulationQuestion(sess.session_id, p, answersRef.current[p] ?? '');
+          markUnsaved(p, false);
+        } catch (e) {
+          if (!isTimeOver(e)) throw e;  // temps écoulé : la copie part avec ce qui est enregistré
+        }
+      }
       await submitSimulation(sess.session_id);
       navigate(`/concours/sessions/${sess.session_id}/recap`, { replace: true });
     } catch (e) {
       console.error(e);
       submittedRef.current = false;
       setSubmitting(false);
+      setSubmitError(unsavedRef.current.size > 0
+        ? "Certaines réponses ne sont pas encore enregistrées. Vérifie ta connexion, puis réessaie."
+        : "Ta copie n'a pas pu être envoyée. Vérifie ta connexion, puis réessaie.");
     }
-  }, [sess, navigate]);
+  }, [sess, navigate, markUnsaved]);
 
   // Compte à rebours recalculé depuis l'heure de fin à chaque tic : les navigateurs ralentissent
   // les minuteries des onglets en arrière-plan, et un simple « -1 par seconde » dérivait alors
@@ -145,14 +178,21 @@ export default function ConcoursSimulatePage() {
 
   const choose = async (key: string) => {
     if (!sess) return;
-    setAnswers((prev) => ({ ...prev, [pos]: key }));
+    const p = pos;
+    answersRef.current = { ...answersRef.current, [p]: key };
+    setAnswers(answersRef.current);
     try {
-      await answerSimulationQuestion(sess.session_id, pos, key);
+      await answerSimulationQuestion(sess.session_id, p, key);
+      // Seule la dernière réponse choisie compte (un envoi plus ancien peut aboutir après).
+      if ((answersRef.current[p] ?? '') === key) markUnsaved(p, false);
     } catch (e) {
       console.error('answer save failed', e);
       // Temps écoulé côté serveur (horloge de l'appareil en retard, onglet endormi…) : on rend la copie.
-      const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
-      if (code === 'time_over' && !submittedRef.current) handleSubmit(true);
+      if (isTimeOver(e)) {
+        if (!submittedRef.current) handleSubmit(true);
+        return;
+      }
+      if ((answersRef.current[p] ?? '') === key) markUnsaved(p, true);
     }
   };
 
@@ -272,6 +312,29 @@ export default function ConcoursSimulatePage() {
             <QuestionPill key={i} index={i} current={i === pos} answered={answered.has(i)} onClick={() => goTo(i)} />
           ))}
         </div>
+
+        {submitError && (
+          <div
+            role="alert"
+            className="flex items-center gap-3 flex-wrap mt-2.5"
+            style={{
+              background: 'rgba(220,38,38,.16)', border: '1px solid rgba(220,38,38,.4)',
+              borderRadius: 10, padding: '8px 12px', fontSize: 13, color: '#fecaca',
+            }}
+          >
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1 min-w-0">{submitError}</span>
+            <button
+              onClick={() => handleSubmit(true)}
+              disabled={submitting}
+              className="fd-btn-primary"
+              style={{ background: '#16a34a', padding: '7px 12px', fontSize: 12 }}
+            >
+              {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Réessayer
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 lg:py-6 grid gap-5 content-start lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -337,6 +400,13 @@ export default function ConcoursSimulatePage() {
               );
             })}
           </div>
+
+          {unsaved.has(pos) && (
+            <p role="status" className="flex items-start gap-1.5 mt-3" style={{ fontSize: 12, color: '#fcd34d' }}>
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ marginTop: 2 }} />
+              Réponse pas encore enregistrée (connexion ?). Elle sera renvoyée quand tu rendras ta copie.
+            </p>
+          )}
 
           {/* Nav (ordinateur ; sur téléphone, barre collée en bas) */}
           <div className="hidden lg:flex items-center justify-between mt-6">
@@ -468,6 +538,13 @@ export default function ConcoursSimulatePage() {
               Tu as répondu à <strong style={{ color: '#1a1a1a' }}>{answered.size}</strong> question{answered.size > 1 ? 's' : ''} sur {sess.total_questions}.
               Les questions non répondues compteront comme fausses.
             </p>
+            {unsaved.size > 0 && (
+              <p style={{ fontSize: 13, color: '#b45309', marginTop: 6 }}>
+                {unsaved.size > 1
+                  ? `${unsaved.size} réponses ne sont pas encore enregistrées : elles seront renvoyées avec ta copie.`
+                  : "1 réponse n'est pas encore enregistrée : elle sera renvoyée avec ta copie."}
+              </p>
+            )}
             <div className="flex justify-end gap-2 mt-4">
               <button className="fd-btn-ghost" onClick={() => setShowConfirm(false)}>Continuer</button>
               <button

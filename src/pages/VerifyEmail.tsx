@@ -5,7 +5,7 @@ import { verifyEmail } from '@/lib/api/authApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 
-type State = 'verifying' | 'success' | 'already' | 'expired' | 'invalid';
+type State = 'verifying' | 'success' | 'already' | 'expired' | 'invalid' | 'new-email';
 
 /**
  * Target of the confirmation link emailed on signup: /verify-email?token=...
@@ -29,6 +29,8 @@ export const VerifyEmail: React.FC = () => {
 
     verifyEmail(token)
       .then(async (data) => {
+        // Nouvelle adresse d'un compte existant (changée dans les réglages) : confirmée, sans ouvrir de session.
+        if (data?.detail === 'new_email_verified') { setState('new-email'); await refreshUser().catch(() => {}); return; }
         if (!data?.access) { setState('already'); return; }
         setState('success');
         await refreshUser();
@@ -54,6 +56,19 @@ export const VerifyEmail: React.FC = () => {
             <Loader2 className="w-9 h-9 mx-auto mb-4 animate-spin text-brand" />
             <h1 className="fd-display text-ink" style={{ fontSize: 22, fontWeight: 600 }}>Confirmation…</h1>
             <p className="text-ink-faint text-sm mt-2">On vérifie ton lien, un instant.</p>
+          </>
+        )}
+
+        {state === 'new-email' && (
+          <>
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-soft flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-brand-hover" />
+            </div>
+            <h1 className="fd-display text-ink" style={{ fontSize: 23, fontWeight: 600 }}>Nouvelle adresse confirmée</h1>
+            <p className="text-ink-faint text-sm mt-2 mb-6">C’est désormais elle qui sert pour te connecter et recevoir nos e-mails.</p>
+            <button type="button" onClick={goLogin} className="fd-btn-primary inline-flex">
+              {user ? 'Aller à l’accueil' : 'Se connecter'} <ArrowRight className="w-4 h-4" />
+            </button>
           </>
         )}
 

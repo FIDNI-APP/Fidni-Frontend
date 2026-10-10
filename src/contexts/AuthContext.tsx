@@ -15,7 +15,8 @@ interface AuthContextType {
   /** Connexion avec Google (jeton d'identité) ; `consents` pour créer un compte. Renvoie aussi `created`. */
   loginWithGoogle: (credential: string, consents?: SignupConsents) => Promise<GoogleLoginResult>;
   logout: () => Promise<void>;
-  register: (username: string, email: string, password: string, consents: SignupConsents) => Promise<any>;
+  /** Inscription sans connexion : { detail: 'verification_email_sent' | 'verification_email_failed', email }. */
+  register: (username: string, email: string, password: string, consents: SignupConsents) => Promise<{ detail?: string; email?: string }>;
   refreshUser: () => Promise<void>;
 }
 

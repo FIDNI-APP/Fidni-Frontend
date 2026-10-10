@@ -2,6 +2,7 @@
  * Dashboard API - User statistics and learning path data
  */
 import { api } from './apiClient';
+import type { Content } from '@/types';
 
 export interface ContentTypeStats {
   total_seconds: number;
@@ -55,10 +56,12 @@ export interface LearningPathProgress {
  * (things/for_you.py). Chaque contenu porte `reason` : « À retravailler », « Suite de ton travail · Limites »,
  * « Apprécié des élèves », « Au programme de ton DS »… (null sans raison particulière).
  */
+export type RecommendedItem = Content & { reason?: string | null; is_national_exam?: boolean };
+
 export interface RecommendedContent {
-  exercises: any[];
-  lessons: any[];
-  exams: any[];
+  exercises: RecommendedItem[];
+  lessons: RecommendedItem[];
+  exams: RecommendedItem[];
   /** Niveau de l'élève (les recommandations en viennent), null s'il n'est pas renseigné. */
   level: string | null;
 }
@@ -82,13 +85,13 @@ export async function getLearningPathProgress(): Promise<LearningPathProgress> {
 /**
  * Get recommended content (exercises, lessons, exams)
  */
-function normalizeList(items: any[]): any[] {
+function normalizeList(items: Record<string, unknown>[]): RecommendedItem[] {
   return items.map(item => {
     if ('json_content' in item) {
       const { json_content, ...rest } = item;
-      return { ...rest, structure: json_content };
+      return { ...rest, structure: json_content } as unknown as RecommendedItem;
     }
-    return item;
+    return item as unknown as RecommendedItem;
   });
 }
 

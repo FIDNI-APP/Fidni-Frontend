@@ -162,8 +162,8 @@ export const RevisionLists = () => {
       setLists([newList, ...lists]);
       closeModal();
       navigate(`/profile/revision-lists/${newList.id}`);
-    } catch (err: any) {
-      setError(err?.response?.data?.name?.[0] || 'La liste n’a pas pu être créée.');
+    } catch (err) {
+      setError((err as { response?: { data?: { name?: string[] } } })?.response?.data?.name?.[0] || 'La liste n’a pas pu être créée.');
     } finally {
       setCreating(false);
     }

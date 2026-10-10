@@ -138,6 +138,7 @@ export async function getWeeklyProgress(classroomId?: number | string): Promise<
 
 export interface TDListItem {
   id: number;
+  /** Écriture seule côté serveur : absent des réponses (se fier à content_display_id). */
   content_id?: number;
   content_title: string;
   content_display_id: number;

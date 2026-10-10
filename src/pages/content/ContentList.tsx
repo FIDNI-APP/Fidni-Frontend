@@ -7,6 +7,8 @@
  *   (sessionStorage, par adresse).
  * - Mode Cartes : énoncés allégés par le serveur (view=card), progression de l'élève dans chaque ligne
  *   (user_progress) ; le mode Énoncés (ordinateur seulement) charge le détail de chaque contenu.
+ * - Liens « S'entraîner » (Ma progression, plan de DS, quiz) : ?sort=easiest&todo=true, lus dans l'adresse
+ *   comme les autres filtres (pages de niveau et de chapitre comprises).
  */
 
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
@@ -34,8 +36,8 @@ import {
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
-import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
-import type { PaginatedResponse } from '@/lib/api/contentItemApi';
+import { exerciseContentAPI, examContentAPI, lessonContentAPI, markSolutionViewed } from '@/lib/api';
+import type { AssessSource, PaginatedResponse } from '@/lib/api/contentItemApi';
 import { ContentListCard } from '@/components/content/ContentListCard';
 import {
   ContentCardBanner, getSubjectTheme, DIFFICULTY_CFG,
@@ -55,6 +57,7 @@ import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import { SignupStrip } from '@/components/auth/SignupPrompt';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { isModerator } from '@/lib/features';
 import type { Difficulty } from '@/types';
 import type {
@@ -104,7 +107,8 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     api: exerciseContentAPI,
   },
   exam: {
-    title: 'Examens',
+    // Mêmes mots que le menu : la section ne montre que les devoirs (le Bac national a sa page).
+    title: 'Devoirs (DS)',
     subtitle: 'Devoirs surveillés et devoirs maison, pour te mettre en conditions.',
     createLabel: 'Ajouter un examen',
     emptyMessage: 'Aucun examen trouvé',
@@ -158,9 +162,9 @@ interface ContentListProps {
   national?: boolean;
 }
 
-// Section « Examens nationaux » : textes propres (la liste et ses filtres restent les mêmes).
+// Section « Bac national » (examens nationaux) : textes propres (la liste et ses filtres restent les mêmes).
 const NATIONAL = {
-  title: 'Examens nationaux',
+  title: 'Bac national',
   subtitle: 'Les sujets du Bac national, corrigés, pour t’entraîner en conditions réelles.',
   seoTitle: 'Examens nationaux de maths corrigés – Bac Maroc | Fidni',
   seoDescription: 'Sujets d’examen national de mathématiques du Bac marocain (2ème Bac SM et PC), avec corrigé détaillé et épreuve chronométrée.',
@@ -402,6 +406,18 @@ export const ContentList: React.FC<ContentListProps> = ({
   // « Tous les niveaux » : la liste générale, sans cette redirection.
   const allLevelsPath = contentType === 'exercise' && isAuthenticated && myLevel ? '/exercises?niveau=tous' : config.basePath;
 
+  // Page de niveau / chapitre : fil de la barre du haut (sur téléphone, « ‹ 2ème Bac SM » ramène au niveau ;
+  // sans lui, « ‹ Exercices » renvoyait l'élève… sur la page de son niveau).
+  const { setCrumbs } = useBreadcrumb();
+  useEffect(() => {
+    if (!hub) return;
+    const root = { label: config.title, to: allLevelsPath };
+    setCrumbs(hub.chapter
+      ? [root, { label: hub.level.name, to: hub.level.url }, { label: hub.chapter.name }]
+      : [root, { label: hub.level.name }], config.basePath);
+    return () => setCrumbs(null);
+  }, [hub, config.title, config.basePath, allLevelsPath, setCrumbs]);
+
   const [showAllSolutions] = useState(false);
   const [itemProgress, setItemProgress] = useState<Record<string, Record<string, AssessmentStatus>>>({});
   const [itemValidations, setItemValidations] = useState<Record<string, Record<string, string | null>>>({});
@@ -574,9 +590,8 @@ export const ContentList: React.FC<ContentListProps> = ({
 
   // Update URL params when filters change
   const handleFilterChange = useCallback((newFilters: FilterState, slugs?: FilterSlugs) => {
+    // Statut « À faire » compris (filtre-statut, valeur « statut:todo »).
     trackFilterChange(filtersRef.current as unknown as Record<string, unknown>, newFilters as unknown as Record<string, unknown>, contentType);
-    // « À faire » n'est pas (encore) dans les filtres suivis par trackFilterChange.
-    if (newFilters.todo && !filtersRef.current.todo) trackAction('filtre-statut');
 
     const params = new URLSearchParams();
     const setList = (name: string, values: string[]) => { if (values.length > 0) params.set(name, values.join(',')); };
@@ -672,8 +687,8 @@ export const ContentList: React.FC<ContentListProps> = ({
     navigate(`${config.basePath}/new`);
   }, [isAuthenticated, navigate, openModal, config.basePath]);
 
-  // Handle assessment for items in full view
-  const handleAssess = useCallback(async (itemId: string, path: string, status: AssessmentStatus) => {
+  // Handle assessment for items in full view (source : « Tu avais trouvé ? » sous une solution → apres_solution).
+  const handleAssess = useCallback(async (itemId: string, path: string, status: AssessmentStatus, source: AssessSource = 'question') => {
     if (!isAuthenticated) {
       openModal('auto-evaluation');
       return;
@@ -691,7 +706,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       if (isToggleOff) {
         await config.api.removeAssessment(itemId, { item_path: path });
       } else {
-        await config.api.assess(itemId, { item_path: path, assessment: status });
+        await config.api.assess(itemId, { item_path: path, assessment: status, source });
       }
     } catch (err) {
       console.error('Assessment failed:', err);
@@ -704,6 +719,13 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
   }, [isAuthenticated, openModal, config.api, itemProgress]);
 
+  // Mode Énoncés : solution ouverte enregistrée une fois par contenu, comme sur sa page (ContentDetail).
+  const solutionMarked = useRef(new Set<string>());
+  const handleSolutionOpen = useCallback((itemId: string) => {
+    if (!isAuthenticated || contentType === 'lesson' || solutionMarked.current.has(itemId)) return;
+    solutionMarked.current.add(itemId);
+    markSolutionViewed(contentType, itemId).catch(() => { solutionMarked.current.delete(itemId); });
+  }, [isAuthenticated, contentType]);
 
   // Handle vote
   const handleVote = useCallback(async (itemId: string, voteValue: 1 | -1) => {
@@ -1074,8 +1096,9 @@ export const ContentList: React.FC<ContentListProps> = ({
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4">
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
+            {/* Téléphone : la barre du haut porte déjà le retour (« ‹ 2ème Bac SM ») ; la liste commence plus haut. */}
             {hub && (
-              <nav aria-label="Fil d’Ariane" className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
+              <nav aria-label="Fil d’Ariane" className="mb-1.5 hidden sm:flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
                 <Link to={allLevelsPath} className="hover:text-ink">{config.title}</Link>
                 <span aria-hidden>›</span>
                 {hub.chapter ? <Link to={hub.level.url} className="hover:text-ink">{hub.level.name}</Link> : <span className="text-ink-soft">{hub.level.name}</span>}
@@ -1484,7 +1507,8 @@ export const ContentList: React.FC<ContentListProps> = ({
                             <ExerciseRenderer
                               structure={item.structure as unknown as FlexibleExerciseStructure}
                               progress={progressData}
-                              onAssess={(path, status) => handleAssess(String(item.id), path, status)}
+                              onAssess={(path, status, source) => handleAssess(String(item.id), path, status, source)}
+                              onSolutionOpen={() => handleSolutionOpen(String(item.id))}
                               interactive={isAuthenticated}
                               showAllSolutions={showAllSolutions}
                               compact={false}

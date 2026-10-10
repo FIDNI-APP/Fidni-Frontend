@@ -1,5 +1,5 @@
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type SortOption = 'recommended' | 'newest' | 'oldest' | 'most_upvoted' | 'most_commented';
+export type SortOption = 'recommended' | 'newest' | 'oldest' | 'most_upvoted' | 'most_commented' | 'easiest';
 export type VoteValue = 1 | -1 | 0;
 export type CompleteValue = 'success' | 'review';
 export type ContentKind = 'exercise' | 'lesson' | 'exam';
@@ -124,6 +124,10 @@ export interface User {
   is_self?: boolean;
   isAuthenticated: boolean;
   is_superuser: boolean;
+  /** Renvoyés au seul propriétaire (10/10/2026). false : aucun mot de passe (compte créé avec Google). */
+  has_password?: boolean;
+  /** Compte relié à un compte Google (« Continuer avec Google »). */
+  google_linked?: boolean;
 }
 
 // =====================

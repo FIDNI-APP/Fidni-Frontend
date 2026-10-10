@@ -15,15 +15,13 @@ export const login = async (identifier : string, password : string) => {
 /** Réponse d'une connexion réussie avec Google : comme `login`, plus `created` (compte créé à l'instant). */
 export interface GoogleLoginResult {
   access: string; refresh: string; created: boolean;
-  user: Omit<User, 'isAuthenticated'> & AccountFlags;
+  user: Omit<User, 'isAuthenticated'>;
 }
 
-/** Champs du compte renvoyés à son seul propriétaire (réglages) : connexion Google, mot de passe défini. */
-export interface AccountFlags { has_password?: boolean; google_linked?: boolean }
-
 /**
- * Connexion (ou inscription) avec le jeton d'identité Google. Sans compte existant, le serveur répond
- * 400 {code:'consent_required', email, name} : renvoyer le même jeton avec les deux cases cochées.
+ * Connexion (ou inscription) avec le jeton d'identité Google. Sans compte existant, ou pour un compte jamais
+ * confirmé à cette adresse, le serveur répond 400 {code:'consent_required', email, name} : renvoyer le même
+ * jeton avec les deux cases cochées.
  * Autres refus : 400 {code:'invalid_token'}, 403 {code:'account_disabled'}, 503 {code:'google_unavailable'}.
  */
 export const loginWithGoogle = async (credential: string, consents?: SignupConsents): Promise<GoogleLoginResult> => {
@@ -103,7 +101,7 @@ export const getCurrentUser = async () => {
   try {
     const response = await api.get('/auth/user/');
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     // Jeton refusé et non renouvelable : l'intercepteur de apiClient a déjà vidé la session.
     console.error("Error getting current user:", error);
     return null;

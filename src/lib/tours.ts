@@ -83,13 +83,15 @@ export const TOURS: Tour[] = [
     id: 'accueil',
     match: /^\/$/,
     requires: 'home-accueil',
-    version: 2, // menu du 10/10/2026 (Travailler / Mon suivi), barre d'onglets mobile
-    autoSteps: ['home-reprendre', 'nav-suivi', 'barre-mobile', 'aide'],
+    version: 3, // menu du 10/10/2026 (Travailler / Mon suivi), barre d'onglets mobile, « Tes 3 premiers pas »
+    // Nouvel élève : « Tes 3 premiers pas » d'abord (absent ensuite : l'étape est sautée).
+    autoSteps: ['home-premiers-pas', 'home-reprendre', 'nav-suivi', 'barre-mobile', 'aide'],
     steps: [
       {
         title: 'Bienvenue sur Fidni',
         body: 'Un tour d’une minute pour trouver tes repères. Tu pourras le revoir à tout moment avec le bouton ?.',
       },
+      { target: 'home-premiers-pas', title: 'Tes 3 premiers pas', body: 'Pour bien démarrer : fais un premier exercice, annonce ton prochain DS, puis passe un quiz de chapitre. Chaque pas se coche tout seul.' },
       { target: 'home-reprendre', title: 'Ton prochain pas', body: 'Reprends là où tu t’es arrêté, ou commence par l’exercice proposé : un clic et tu travailles.' },
       { target: 'nav-travailler', title: 'Travailler', body: 'Leçons, exercices, devoirs (DS), sujets du Bac national et concours, rangés par niveau et par chapitre.' },
       { target: 'nav-suivi', title: 'Mon suivi', body: 'Ta progression, la préparation de ton prochain DS, tes révisions, les quiz par chapitre, tes cahiers et tes favoris.' },
@@ -288,7 +290,12 @@ export const TOURS: Tour[] = [
     id: 'revision-liste',
     match: /^\/(profile\/)?revision-lists\/\d+\/?$/,
     requires: 'revision-pdf',
+    version: 2, // « Mode révision » et « Feuille à imprimer »
     steps: [
+      {
+        target: 'revision-mode', title: 'Deux façons de réviser',
+        body: 'Mode révision : un exercice à la fois, tu dis « Réussi » ou « À revoir », puis « Exercice suivant ». Feuille à imprimer : tous les énoncés, les solutions et le PDF.',
+      },
       { target: 'revision-solutions', title: 'Solutions', body: 'Affiche ou masque toutes les solutions de la liste.' },
       { target: 'revision-pdf', title: 'Feuille de TD', body: 'Exporte la liste en PDF, avec ou sans corrigé, prête à imprimer.' },
       { target: 'revision-modifier', title: 'Modifier', body: 'Renomme la liste ou change sa description.' },
@@ -369,14 +376,14 @@ export const TOURS: Tour[] = [
     id: 'classe',
     match: /^\/classrooms\/\d+\/?$/,
     requires: 'classe-onglets',
-    version: 2, // plus de classement entre élèves
+    version: 3, // plus de classement entre élèves ; « Mes compétences » côté élève
     steps: [
       { target: 'classe-code', title: 'Le code de la classe', body: 'Partage-le pour inviter des élèves.', when: (c) => c.isTeacher },
       {
         target: 'classe-onglets', title: 'Les onglets',
         body: (c) => (c.isTeacher
           ? 'Élèves pour suivre leurs progrès, TD listes pour le travail que tu donnes, Matières pour les profs de la classe.'
-          : 'TD listes : le travail donné par ton prof. Tu y vois aussi où tu en es.'),
+          : 'TD listes : le travail donné par ton prof. Mes compétences : où tu en es, d’après ton travail sur Fidni (tes camarades ne la voient pas).'),
       },
     ],
   },

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Users, Hash, Copy, Check, RefreshCw, BookOpen, Plus,
@@ -151,6 +151,8 @@ export default function ClassroomDetailPage() {
       const r = await regenerateJoinCode(classroom.id);
       setCode(r.join_code);
       await refresh();
+    } catch (e) {
+      alert(classroomError(e, 'Impossible de régénérer le code.'));
     } finally { setBusy(false); }
   };
 
@@ -298,10 +300,9 @@ export default function ClassroomDetailPage() {
             isOwner={isOwner}
             members={members}
             onRemoveMember={async (sid) => {
-              if (window.confirm('Retirer cet élève ?')) {
-                await removeMember(classroom.id, sid);
-                await refresh();
-              }
+              if (!window.confirm('Retirer cet élève de la classe ?')) return;
+              try { await removeMember(classroom.id, sid); await refresh(); }
+              catch (e) { alert(classroomError(e, "Impossible de retirer cet élève.")); }
             }}
           />
         )}
@@ -749,11 +750,11 @@ function TDListsTab({
   const [activeId, setActiveId] = useState<number | null>(null);
   const active = tdLists.find(t => t.id === activeId) || null;
 
-  // Un TD sans matière vaut pour toutes : il reste affiché quel que soit le filtre.
+  // Un TD sans matière vaut pour toutes : il reste affiché quel que soit le filtre. L'id de la pastille
+  // vient d'une correspondance par nom avec /subjects/ : on accepte l'id OU le nom de la matière.
   const shown = activeSubject
-    ? tdLists.filter(td => (td.subject != null
-      ? td.subject === activeSubject.id
-      : !td.subject_name || td.subject_name === activeSubject.name))
+    ? tdLists.filter(td => (td.subject == null && !td.subject_name)
+      || td.subject === activeSubject.id || td.subject_name === activeSubject.name)
     : tdLists;
 
   return (
@@ -895,15 +896,23 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<ContentT[]>([]);
   const [busy, setBusy] = useState(false);
+  const searchSeq = useRef(0);
 
   const doSearch = async (q: string) => {
     setSearch(q);
-    if (!q.trim()) { setResults([]); return; }
+    // Frappe rapide : seule la réponse de la dernière recherche s'affiche.
+    const seq = ++searchSeq.current;
+    if (!q.trim()) { setResults([]); setSearching(false); return; }
     try {
       setSearching(true);
       const r = await getExercises({ search: q, per_page: 8 });
-      setResults(r.results || []);
-    } finally { setSearching(false); }
+      if (seq === searchSeq.current) setResults(r.results || []);
+    } catch (e) {
+      console.error(e);
+      if (seq === searchSeq.current) setResults([]);
+    } finally {
+      if (seq === searchSeq.current) setSearching(false);
+    }
   };
 
   const add = async (id: string | number) => {
@@ -917,7 +926,15 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
     if (!window.confirm('Retirer cet exercice du TD ?')) return;
     setBusy(true);
     try { await removeTDListItem(classroomId, td.id, itemId); await onChanged(); }
+    catch (e) { alert(classroomError(e, "Impossible de retirer cet exercice.")); }
     finally { setBusy(false); }
+  };
+
+  const destroy = async () => {
+    if (!window.confirm('Supprimer ce TD ?')) return;
+    setBusy(true);
+    try { await deleteTDList(classroomId, td.id); onClose(); await onChanged(); }
+    catch (e) { alert(classroomError(e, 'Impossible de supprimer ce TD.')); setBusy(false); }
   };
 
   return (
@@ -939,13 +956,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
         <div className="flex items-center gap-1 flex-shrink-0">
           {isOwner && (
             <button
-              onClick={async () => {
-                if (window.confirm('Supprimer ce TD ?')) {
-                  await deleteTDList(classroomId, td.id);
-                  onClose();
-                  await onChanged();
-                }
-              }}
+              onClick={destroy}
+              disabled={busy}
               aria-label="Supprimer le TD"
               title="Supprimer le TD"
               className="inline-flex items-center justify-center"
@@ -1024,12 +1036,17 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
         <div>
           <h4 style={sectionTitle}>Ajouter un exercice</h4>
           <input
+            type="search"
             value={search}
             onChange={e => doSearch(e.target.value)}
             placeholder="Rechercher un exercice…"
+            aria-label="Rechercher un exercice à ajouter"
             style={inputStyle}
           />
           {searching && <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>Recherche…</p>}
+          {!searching && search.trim() && results.length === 0 && (
+            <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>Aucun exercice trouvé.</p>
+          )}
           {results.length > 0 && (
             <div className="flex flex-col gap-1 mt-3">
               {results.map(r => {
@@ -1399,6 +1416,12 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
     catch (e) { alert(classroomError(e, "Impossible d'ajouter cette matière.")); }
   };
 
+  const removeS = async (id: number, name: string) => {
+    if (!window.confirm(`Retirer ${name} de la classe ?`)) return;
+    try { await removeSubject(classroom.id, id); await onChanged(); }
+    catch (e) { alert(classroomError(e, 'Impossible de retirer cette matière.')); }
+  };
+
   return (
     // La liste des élèves (et leurs e-mails) est réservée au prof.
     <div className={isOwner ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'max-w-xl'}>
@@ -1418,8 +1441,8 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
                   <span className="truncate" style={{ fontSize: 11, color: '#6b6862' }}>· {cs.teacher_username}</span>
                 </div>
                 {isOwner && (
-                  <button onClick={async () => { await removeSubject(classroom.id, cs.id); await onChanged(); }}
-                          aria-label="Retirer la matière"
+                  <button onClick={() => removeS(cs.id, cs.subject_name)}
+                          aria-label={`Retirer ${cs.subject_name}`}
                           className="inline-flex items-center justify-center flex-shrink-0"
                           style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}>
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1431,7 +1454,8 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
         )}
         {isOwner && availableSubjects.length > 0 && (
           <div className="flex items-center gap-2 mt-3">
-            <select value={newSubjectId} onChange={e => setNewSubjectId(e.target.value)} style={{ ...inputStyle, padding: '8px 10px', flex: 1 }}>
+            <select value={newSubjectId} onChange={e => setNewSubjectId(e.target.value)} aria-label="Matière à ajouter"
+                    style={{ ...inputStyle, padding: '8px 10px', flex: 1, minWidth: 0 }}>
               <option value="">Ajouter une matière…</option>
               {availableSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>

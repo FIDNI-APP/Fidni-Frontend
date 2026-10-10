@@ -84,7 +84,8 @@ export default function TestPlanPage() {
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = plan ? testTitle(plan.test) : null;
   useEffect(() => {
-    setCrumbs([{ label: 'Révisions', to: '/revision-lists?onglet=ds' }, { label: crumbTitle ?? 'Préparation du DS' }]);
+    // Même mot que le menu (« Mon suivi › Préparer un DS »), qui reste surligné.
+    setCrumbs([{ label: 'Préparer un DS', to: '/revision-lists?onglet=ds' }, { label: crumbTitle ?? 'Préparation du DS' }]);
   }, [crumbTitle, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
 
@@ -106,7 +107,7 @@ export default function TestPlanPage() {
         <p className="text-[15px] text-ink-soft">{error === 'missing' ? 'Ce DS n’existe plus.' : 'Le plan n’a pas pu être chargé.'}</p>
         <div className="mt-4 flex justify-center gap-2">
           {error === 'failed' && <button type="button" className="fd-btn-ghost" onClick={load}>Réessayer</button>}
-          <Link to="/revision-lists" className="fd-btn-primary">Mes révisions</Link>
+          <Link to="/revision-lists?onglet=ds" className="fd-btn-primary">Mes DS</Link>
         </div>
       </div>
     );

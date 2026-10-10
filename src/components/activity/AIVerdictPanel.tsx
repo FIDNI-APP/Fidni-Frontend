@@ -1,7 +1,7 @@
 /**
  * Panneau de correction IA — réservé au superuser.
  * Upload d'une photo de copie → verdict par question (test du pipeline IA).
- * À terme : pré-remplira l'auto-évaluation de l'étudiant (human-in-the-loop).
+ * À terme : pré-remplira l'auto-évaluation de l'élève (human-in-the-loop).
  */
 import React, { useRef, useState } from 'react';
 import { Upload, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
@@ -10,10 +10,11 @@ import { aiCorrectionAPI, type AICorrectionResult } from '@/lib/api';
 const INK = '#1a1a1a';
 const GREEN = '#1a7a4a';
 
+// Mêmes mots que l'auto-évaluation : Réussi / En partie / À revoir (plus d'« Échoué »).
 const VERDICT: Record<string, { label: string; bg: string; color: string }> = {
   success:       { label: 'Réussi',      bg: '#eaf3ed', color: '#15633c' },
-  partial:       { label: 'Partiel',     bg: '#fdf4dc', color: '#8a6116' },
-  failed:        { label: 'Échoué',      bg: '#fdeceb', color: '#a23b34' },
+  partial:       { label: 'En partie',   bg: '#fdf4dc', color: '#8a6116' },
+  failed:        { label: 'À revoir',    bg: '#fdeceb', color: '#a23b34' },
   not_attempted: { label: 'Non traitée', bg: '#f2f1ee', color: '#6b6862' },
 };
 

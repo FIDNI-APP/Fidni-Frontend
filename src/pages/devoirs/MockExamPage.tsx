@@ -9,13 +9,14 @@
  *    qui met à jour la préparation du DS et Ma progression.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Clock, Flag, Loader2, Timer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { api } from '@/lib/api/apiClient';
 import { devoirsApi, plural, testTitle, type MockExam, type UpcomingTest } from '@/lib/api/devoirsApi';
 import { ExerciseRenderer, type AssessChanges } from '@/components/content/viewer/ExerciseRenderer';
+import { assessQuestions, type AssessSource } from '@/lib/api/contentItemApi';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import type { AssessmentStatus } from '@/types/content';
@@ -41,6 +42,7 @@ const minutesLabel = (s: number) => {
 export default function MockExamPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function MockExamPage() {
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = data ? testTitle(data.test) : null;
   useEffect(() => {
-    setCrumbs([{ label: 'Révisions', to: '/revision-lists' },
+    setCrumbs([{ label: 'Préparer un DS', to: '/revision-lists?onglet=ds' },
       { label: crumbTitle ?? 'Préparation du DS', to: `/revisions/ds/${id}` }, { label: 'DS blanc' }]);
   }, [crumbTitle, id, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
@@ -117,8 +119,9 @@ export default function MockExamPage() {
     }
   };
 
-  // Correction d'une question (même enregistrement que sur la page de l'exercice).
-  const assess = async (exerciseId: number, structure: FlexibleExerciseStructure, changes: AssessChanges) => {
+  // Correction d'une question (même enregistrement que sur la page de l'exercice, avec son origine :
+  // question, « Tout réussi », « Tu avais trouvé ? »).
+  const assess = async (exerciseId: number, structure: FlexibleExerciseStructure, changes: AssessChanges, source?: AssessSource) => {
     const before = progressRef.current[exerciseId] ?? {};
     const next: Progress = { ...before };
     for (const [path, s] of Object.entries(changes)) {
@@ -129,7 +132,7 @@ export default function MockExamPage() {
     const complete = leaves.length > 0 && leaves.every((p) => next[p]);
     const completion = complete ? (leaves.every((p) => next[p].status === 'success') ? 'success' : 'review') : undefined;
     try {
-      await api.post(`/contents/${exerciseId}/assess_many/`, completion ? { assessments: changes, completion } : { assessments: changes });
+      await assessQuestions(exerciseId, changes, { source, ...(completion ? { completion } : {}) });
     } catch {
       setProgress((cur) => ({ ...cur, [exerciseId]: before }));
     }
@@ -252,13 +255,13 @@ export default function MockExamPage() {
                 locked={phase === 'running'}
                 interactive={phase === 'review'}
                 progress={progress[e.id]}
-                onAssess={(path, status) => assess(e.id, e.structure, {
+                onAssess={(path, status, source) => assess(e.id, e.structure, {
                   [path]: progressRef.current[e.id]?.[path]?.status === status ? null : status,
-                })}
-                onAssessMany={(changes) => assess(e.id, e.structure, changes)}
+                }, source)}
+                onAssessMany={(changes, source) => assess(e.id, e.structure, changes, source)}
               />
               {phase === 'review' && (
-                <Link to={`/exercises/${e.id}`} className="mt-4 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
+                <Link to={`/exercises/${e.id}`} state={{ from: location.pathname + location.search }} className="mt-4 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
                   Ouvrir l’exercice (commentaires, solutions des élèves) <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               )}

@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { trackAction } from '@/lib/usage';
+import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { lessonsUrl, practiceUrl } from '@/pages/progression/links';
 
 interface Chapter { id: number; name: string; }
@@ -56,7 +57,8 @@ const MathText: React.FC<{ text: string; className?: string }> = ({ text, classN
 const frDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
 export const SkillIQSection: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const openSignup = useOpenSignup('quiz');
   const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
   const [assessments, setAssessments] = useState<SkillAssessment[]>([]);
   const [available, setAvailable] = useState<Record<string, number>>({});
@@ -70,6 +72,7 @@ export const SkillIQSection: React.FC = () => {
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizResult, setQuizResult] = useState<SkillAssessment | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   // Arrivée depuis le plan d'un DS : gardé pour le bouton « Retour à mon DS » (l'adresse est nettoyée ensuite).
   const [retour] = useState(() => safeReturn(searchParams.get('retour')));
@@ -114,6 +117,7 @@ export const SkillIQSection: React.FC = () => {
   const startQuiz = async (chapterId: number, chapterName: string, subjectName?: string) => {
     setActiveQuiz({ chapterId, chapterName, subjectName });
     setQuizResult(null);
+    setSubmitError(false);
     setQuizLoading(true);
     try {
       const r = await api.get(`/skill-assessments/quiz/${chapterId}/`);
@@ -128,7 +132,10 @@ export const SkillIQSection: React.FC = () => {
 
   const submitQuiz = async () => {
     if (!quizState || !activeQuiz) return;
+    // Visiteur : le score se garde dans un compte ; ses réponses restent là pendant qu'il se connecte.
+    if (!isAuthenticated) { openSignup(); return; }
     setSubmitting(true);
+    setSubmitError(false);
     try {
       const r = await api.post(`/skill-assessments/submit/${activeQuiz.chapterId}/`, {
         answers: quizState.answers,
@@ -136,14 +143,17 @@ export const SkillIQSection: React.FC = () => {
       });
       setQuizResult(r.data);
       setQuizState(null);
-      const mine = await api.get('/skill-assessments/my/');
-      setAssessments(mine.data || []);
+    } catch {
+      setSubmitError(true);
+      return;
     } finally {
       setSubmitting(false);
     }
+    // Les cartes des chapitres (dernier score, « avant : X % ») : un échec ici n'empêche pas le résultat.
+    api.get('/skill-assessments/my/').then((mine) => setAssessments(mine.data || [])).catch(() => {});
   };
 
-  const closeQuiz = () => { setActiveQuiz(null); setQuizState(null); setQuizResult(null); };
+  const closeQuiz = () => { setActiveQuiz(null); setQuizState(null); setQuizResult(null); setSubmitError(false); };
 
   // « Refaire » : nouvelle tentative sur un chapitre déjà passé (mesurée).
   const redoQuiz = (chapterId: number, chapterName: string, subjectName?: string) => {
@@ -369,6 +379,11 @@ export const SkillIQSection: React.FC = () => {
             </button>
           )}
         </div>
+        {submitError && (
+          <p role="alert" className="rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-[13.5px] text-[#9c3b2e]">
+            Ton quiz n’a pas pu être envoyé : vérifie ta connexion, puis appuie à nouveau sur « Terminer ».
+          </p>
+        )}
       </div>
     );
   }
