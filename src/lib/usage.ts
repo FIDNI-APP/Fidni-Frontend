@@ -19,6 +19,7 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/lessons/:id', label: 'Page d’une leçon', group: 'Leçons' },
   { pattern: '/exams', label: 'Liste des examens', group: 'Examens' },
   { pattern: '/exams/nationaux', label: 'Examens nationaux', group: 'Examens' },
+  { pattern: '/exams/nationaux/:annee', label: 'Bac national : une année', group: 'Examens' },
   { pattern: '/exams/niveau/:level/:chapter?', label: 'Examens d’un niveau', group: 'Examens' },
   { pattern: '/exams/:id/pdf', label: 'Examen : impression', group: 'Examens' },
   { pattern: '/exams/:id', label: 'Page d’un examen', group: 'Examens' },
@@ -72,7 +73,9 @@ export type UsageAction =
   | 'ressenti' | 'cloche' | 'retour-liste' | 'sommaire-lecon' | 'affichage-enonces' | 'charger-plus' | 'recherche-vide'
   | 'accueil-reprendre' | 'accueil-pour-toi' | 'annoncer-ds' | 'prog-entrainer' | 'prog-cours' | 'prog-quiz'
   | 'quiz-refait' | 'mode-revision' | 'barre-mobile' | 'visite-auto' | 'visite-passee' | 'visite-finie'
-  | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google';
+  | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google'
+  // Dossiers des listes (10/10/2026)
+  | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee';
 
 function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.

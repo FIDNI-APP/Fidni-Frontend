@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
-import { hubPath, profileLevel, type HubInfo } from '@/lib/api/hubApi';
+import { hubPath, type HubInfo } from '@/lib/api/hubApi';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
   Plus,
@@ -68,6 +68,7 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
 import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
+import { LIST_SEO, NATIONAL } from './sections';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -139,36 +140,15 @@ const ITEMS_PER_PAGE = 20;
 // « Recommandés » (nouveautés et plus aimés).
 const DEFAULT_SORT: ListSort = 'recommended';
 
-const LIST_SEO: Record<ContentType, { title: string; description: string }> = {
-  exercise: {
-    title: 'Exercices de maths corrigés – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
-    description: 'Exercices de maths corrigés pour le lycée au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC (BIOF). Classés par chapitre, avec solutions détaillées. Gratuit.',
-  },
-  lesson: {
-    title: 'Cours de maths – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
-    description: 'Cours de maths du lycée au Maroc : définitions, théorèmes, propriétés et méthodes, du Tronc commun au 2ème Bac SM. Leçons claires, à imprimer ou à ranger dans ton cahier. Gratuit.',
-  },
-  exam: {
-    title: 'Devoirs surveillés et examens de maths corrigés – Bac Maroc | Fidni',
-    description: 'Devoirs surveillés et sujets d’examen de maths corrigés pour le Bac au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC. Barème, durée, corrigé détaillé et épreuve chronométrée.',
-  },
-};
-
 interface ContentListProps {
   contentType?: ContentType;
   /** Page par niveau / chapitre : filtres imposés, titre et introduction propres (ContentHub). */
   hub?: HubInfo;
   /** Examens : true = section « Examens nationaux », sinon la section « Examens » ne montre que les devoirs. */
   national?: boolean;
+  /** Dossier d'une année du Bac national (/exams/nationaux/:annee) : « 2024 », ou « aucune » (sans année). */
+  nationalYear?: string;
 }
-
-// Section « Bac national » (examens nationaux) : textes propres (la liste et ses filtres restent les mêmes).
-const NATIONAL = {
-  title: 'Bac national',
-  subtitle: 'Les sujets du Bac national, corrigés, pour t’entraîner en conditions réelles.',
-  seoTitle: 'Examens nationaux de maths corrigés – Bac Maroc | Fidni',
-  seoDescription: 'Sujets d’examen national de mathématiques du Bac marocain (2ème Bac SM et PC), avec corrigé détaillé et épreuve chronométrée.',
-};
 
 type FilterState = ListFilters;
 
@@ -245,17 +225,20 @@ export const ContentList: React.FC<ContentListProps> = ({
   contentType = 'exercise',
   hub,
   national = false,
+  nationalYear,
 }) => {
   const isNationalSection = contentType === 'exam' && national;
+  // Dossier d'une année du Bac national : la liste de l'année (le filtre « Année du Bac » disparaît).
+  const yearFolder = isNationalSection && nationalYear ? nationalYear : null;
+  const yearLabel = yearFolder === 'aucune' ? 'année non précisée' : yearFolder;
   const config = CONTENT_TYPE_CONFIG[contentType];
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { openModal } = useAuthModal();
   const phone = usePhone();
-  const myLevel = profileLevel(user);
   // Publier : auteurs (profs) et modérateurs ; pour un élève, le bouton ne servait à rien.
   const canPublish = isModerator(user) || user?.profile?.user_type === 'teacher';
 
@@ -357,14 +340,16 @@ export const ContentList: React.FC<ContentListProps> = ({
     // Examens : chaque section ne montre que les siens ; la période porte sur l'année du Bac.
     if (contentType === 'exam') {
       params.is_national = isNationalSection;
-      if (isNationalSection) {
+      if (yearFolder) {
+        params.national_year = yearFolder === 'aucune' ? 'aucune' : Number(yearFolder);
+      } else if (isNationalSection) {
         if (filters.dateStart) params.national_year_min = Number(filters.dateStart);
         if (filters.dateEnd) params.national_year_max = Number(filters.dateEnd);
       }
     }
 
     return params;
-  }, [filters, sortBy, contentType, isNationalSection, viewMode]);
+  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder]);
   // Mêmes paramètres = même objet : des filtres relus de l'adresse à l'identique ne rechargent pas la liste.
   const queryJson = JSON.stringify(rawQuery);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -394,29 +379,25 @@ export const ContentList: React.FC<ContentListProps> = ({
   // Étiquettes des filtres actifs (barre de filtres) : « Retirer … × » quand la liste est vide.
   const [chips, setChips] = useState<ActiveChip[]>([]);
 
-  // Élève connecté arrivé sur /exercises sans paramètre : la page de son niveau. Décidé une fois, à l'arrivée :
-  // un visiteur qui filtre puis se connecte reste sur sa liste.
-  const [bareArrival, setBareArrival] = useState(() => contentType === 'exercise' && !hub && !national && !location.search);
-  const levelHome = bareArrival && !authLoading && isAuthenticated && myLevel ? hubPath('exercises', myLevel.slug) : null;
-  const holdForAuth = bareArrival && authLoading;
-  useEffect(() => {
-    if (levelHome) navigate(levelHome, { replace: true });
-    else if (bareArrival && (!authLoading || location.search)) setBareArrival(false);
-  }, [levelHome, navigate, bareArrival, authLoading, location.search]);
-  // « Tous les niveaux » : la liste générale, sans cette redirection.
-  const allLevelsPath = contentType === 'exercise' && isAuthenticated && myLevel ? '/exercises?niveau=tous' : config.basePath;
+  // « Tous les niveaux » : les dossiers de niveaux, sans renvoyer l'élève dans le sien (ContentFolders).
+  // L'arrivée sur /exercises sans paramètre est gérée par les dossiers (ContentHub.tsx, ContentSection).
+  const allLevelsPath = `${config.basePath}?niveau=tous`;
 
   // Page de niveau / chapitre : fil de la barre du haut (sur téléphone, « ‹ 2ème Bac SM » ramène au niveau ;
   // sans lui, « ‹ Exercices » renvoyait l'élève… sur la page de son niveau).
   const { setCrumbs } = useBreadcrumb();
   useEffect(() => {
+    if (yearFolder) {
+      setCrumbs([{ label: NATIONAL.title, to: '/exams/nationaux' }, { label: `Bac ${yearLabel}` }], '/exams/nationaux');
+      return () => setCrumbs(null);
+    }
     if (!hub) return;
     const root = { label: config.title, to: allLevelsPath };
     setCrumbs(hub.chapter
       ? [root, { label: hub.level.name, to: hub.level.url }, { label: hub.chapter.name }]
       : [root, { label: hub.level.name }], config.basePath);
     return () => setCrumbs(null);
-  }, [hub, config.title, config.basePath, allLevelsPath, setCrumbs]);
+  }, [hub, config.title, config.basePath, allLevelsPath, setCrumbs, yearFolder, yearLabel]);
 
   const [showAllSolutions] = useState(false);
   const [itemProgress, setItemProgress] = useState<Record<string, Record<string, AssessmentStatus>>>({});
@@ -508,11 +489,10 @@ export const ContentList: React.FC<ContentListProps> = ({
   // tant que ses paramètres ne changent pas.
   const skipKey = useRef<string | null>(restored ? listKey : null);
   useEffect(() => {
-    if (holdForAuth || levelHome) return;
     if (skipKey.current === listKey) return;
     skipKey.current = null;
     load(1);
-  }, [load, listKey, holdForAuth, levelHome]);
+  }, [load, listKey]);
 
   // Liste restaurée : ses statuts ont pu changer pendant que l'élève était sur un contenu (réussi,
   // à revoir, questions évaluées) ; une requête rafraîchit ces champs, sans toucher à l'ordre.
@@ -915,15 +895,6 @@ export const ContentList: React.FC<ContentListProps> = ({
     [items],
   );
 
-  // Pastilles des chapitres (téléphone : une ligne qui défile) : la pastille de la page ramenée en vue.
-  const pillsRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const row = pillsRef.current;
-    const active = row?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (!row || !active || row.scrollWidth <= row.clientWidth) return;
-    row.scrollLeft = Math.max(0, active.offsetLeft - row.offsetLeft - (row.clientWidth - active.offsetWidth) / 2);
-  }, [hub?.chapter?.id]);
-
   const viewToggle = (
             <div data-tour="liste-vue" role="radiogroup" aria-label="Affichage" className="inline-flex p-[3px] rounded-[10px] bg-[#f2f1ee]">
               {([
@@ -994,6 +965,10 @@ export const ContentList: React.FC<ContentListProps> = ({
     } else if (hub) {
       title = `Pas encore ${ofNoun} pour ce niveau`;
       text = 'Ça arrive bientôt.';
+    } else if (yearFolder) {
+      title = 'Aucun sujet pour cette année';
+      text = 'Les autres années du Bac national sont dans leurs dossiers.';
+      actions = <Link to="/exams/nationaux" className="fd-btn-primary inline-flex">Toutes les années</Link>;
     } else if (isNationalSection) {
       title = 'Les sujets nationaux arrivent bientôt';
       text = 'Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.';
@@ -1087,6 +1062,9 @@ export const ContentList: React.FC<ContentListProps> = ({
       {/* Mêmes titres que les pages pré-remplies par le serveur (backend/src/config/seo.py). */}
       {hub ? (
         <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
+      ) : yearFolder ? (
+        <SEO title={`Bac national ${yearLabel} : sujets de maths corrigés – Maroc | Fidni`} description={NATIONAL.seoDescription}
+          canonicalUrl={`/exams/nationaux/${yearFolder}`} noindex={yearFolder === 'aucune'} />
       ) : isNationalSection ? (
         <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux" />
       ) : (
@@ -1096,13 +1074,14 @@ export const ContentList: React.FC<ContentListProps> = ({
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4">
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
-            {/* Téléphone : la barre du haut porte déjà le retour (« ‹ 2ème Bac SM ») ; la liste commence plus haut. */}
+            {/* Dossiers : Maths › niveau › chapitre, chaque cran remonte d'un dossier. Téléphone : la barre du haut
+                porte déjà le retour (« ‹ 2ème Bac SM ») ; la liste commence plus haut. */}
             {hub && (
               <nav aria-label="Fil d’Ariane" className="mb-1.5 hidden sm:flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
-                <Link to={allLevelsPath} className="hover:text-ink">{config.title}</Link>
+                <Link to={allLevelsPath} className="hover:text-ink">{hub.subject || 'Mathématiques'}</Link>
                 <span aria-hidden>›</span>
                 {hub.chapter ? <Link to={hub.level.url} className="hover:text-ink">{hub.level.name}</Link> : <span className="text-ink-soft">{hub.level.name}</span>}
-                {hub.chapter && <><span aria-hidden>›</span><span className="text-ink-soft">{hub.chapter.name}</span></>}
+                {hub.chapter && <><span aria-hidden>›</span><span className="text-ink-soft" aria-current="page">{hub.chapter.name}</span></>}
                 {!hub.chapter && (
                   <>
                     <span aria-hidden>·</span>
@@ -1111,8 +1090,16 @@ export const ContentList: React.FC<ContentListProps> = ({
                 )}
               </nav>
             )}
+            {yearFolder && (
+              <nav aria-label="Fil d’Ariane" className="mb-1.5 hidden sm:flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
+                <Link to="/exams/nationaux" className="hover:text-ink">{NATIONAL.title}</Link>
+                <span aria-hidden>›</span>
+                <span className="text-ink-soft" aria-current="page">{yearFolder === 'aucune' ? 'Année non précisée' : yearFolder}</span>
+              </nav>
+            )}
             <h1 className="fd-display text-ink flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-              {hub ? hub.h1 : isNationalSection ? NATIONAL.title : config.title}
+              {hub ? hub.h1 : yearFolder ? (yearFolder === 'aucune' ? 'Bac national : année non précisée' : `Bac national ${yearFolder}`)
+                : isNationalSection ? NATIONAL.title : config.title}
               <span className="fd-nums text-[15px] font-medium text-ink-faint" style={{ letterSpacing: 0 }}>
                 {totalCount > 0 ? totalCount : ''}
               </span>
@@ -1136,30 +1123,21 @@ export const ContentList: React.FC<ContentListProps> = ({
         </div>
       </div>
 
-      {/* Page de niveau / chapitre : les chapitres du niveau et les autres rubriques, en liens. */}
-      {hub && (hub.chapters.length > 0 || hub.related.length > 0) && (
-        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3 sm:pb-4">
-          {hub.chapters.length > 0 && (
-            // Téléphone : une seule ligne qui défile (avant, une quinzaine de pastilles sur 6 à 8 lignes).
-            <nav ref={pillsRef} aria-label="Chapitres"
-              className="-mx-4 px-4 md:mx-0 md:px-0 flex gap-1.5 overflow-x-auto sm:flex-wrap sm:overflow-visible scrollbar-hide">
-              <Link to={hub.level.url} aria-current={!hub.chapter ? 'page' : undefined}
-                className={`inline-flex h-9 sm:h-auto shrink-0 items-center whitespace-nowrap rounded-full border px-3 sm:py-1 text-[12.5px] transition-colors ${!hub.chapter ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-ink'}`}>
-                Tous les chapitres
-              </Link>
-              {hub.chapters.map((ch) => {
-                const active = hub.chapter?.id === ch.id;
-                return (
-                  <Link key={ch.id} to={ch.url} aria-current={active ? 'page' : undefined}
-                    className={`inline-flex h-9 sm:h-auto shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 sm:py-1 text-[12.5px] transition-colors ${active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-ink'}`}>
-                    {ch.name} <span className={`fd-nums ${active ? 'text-white/70' : 'text-ink-faint'}`}>{ch.count}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+      {/* Dossier d'un chapitre (ou d'une année du Bac) : remonter d'un cran ; les autres rubriques du niveau. */}
+      {(hub || yearFolder) && (
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3 sm:pb-4 flex flex-col gap-1.5">
+          {hub?.chapter && (
+            <Link to={hub.level.url} className="self-start text-[13px] font-medium text-brand-hover hover:underline">
+              ‹ Tous les chapitres du {hub.level.name}
+            </Link>
           )}
-          {hub.related.length > 0 && (
-            <p className="mt-2.5 text-[12.5px] text-ink-faint">
+          {yearFolder && (
+            <Link to="/exams/nationaux" className="self-start text-[13px] font-medium text-brand-hover hover:underline">
+              ‹ Toutes les années du Bac
+            </Link>
+          )}
+          {hub && hub.related.length > 0 && (
+            <p className="text-[12.5px] text-ink-faint">
               Aussi pour {hub.chapter ? `« ${hub.chapter.name} »` : `le ${hub.level.name}`} :{' '}
               {hub.related.map((r, i) => (
                 <React.Fragment key={r.url}>
@@ -1184,6 +1162,8 @@ export const ContentList: React.FC<ContentListProps> = ({
           onSortChange={handleSortChange}
           accentColor={contentType === 'exam' ? 'violet' : contentType === 'lesson' ? 'emerald' : 'blue'}
           nationalSection={isNationalSection}
+          inFolder={hub?.chapter ? 'chapter' : yearFolder ? 'year' : undefined}
+          nationalYear={yearFolder ?? undefined}
           fixed={fixed}
           resultCount={totalCount}
           resultLoading={isLoading}

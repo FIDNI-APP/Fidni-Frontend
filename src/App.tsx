@@ -97,8 +97,11 @@ const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'
 const SkillIQSection = page(() => import('@/components/profile/SkillIQSection'), 'SkillIQSection');
 const ProgressionPage = page(() => import('./pages/progression/Progression'), 'default');
 const LogsConsole = page(() => import('./pages/admin/LogsConsole'), 'LogsConsole');
-const ContentList = page(() => import('./pages/content/ContentList'), 'ContentList');
 const ContentHub = page(() => import('./pages/content/ContentHub'), 'ContentHub');
+// Rubriques en dossiers (10/10/2026) : niveaux → chapitres → contenus ; Bac national par année.
+const ContentSection = page(() => import('./pages/content/ContentHub'), 'ContentSection');
+const NationalSection = page(() => import('./pages/content/ContentHub'), 'NationalSection');
+const NationalYear = page(() => import('./pages/content/ContentHub'), 'NationalYear');
 const ContentDetail = page(() => import('./pages/content/ContentDetail'), 'ContentDetail');
 const ContentCreate = page(() => import('./pages/content/ContentCreate'), 'ContentCreate');
 
@@ -411,7 +414,7 @@ function App() {
                     ================================ */}
                     <Route path="/exercises" element={
                       <NavbarWrapper>
-                        <ContentList />
+                        <ContentSection contentType="exercise" />
                       </NavbarWrapper>
                     } />
                     {/* Pages par niveau et par chapitre (référencement) : la liste, déjà filtrée. */}
@@ -461,13 +464,18 @@ function App() {
                     ================================ */}
                     <Route path="/exams" element={
                       <NavbarWrapper>
-                        <ContentList contentType="exam" />
+                        <ContentSection contentType="exam" />
                       </NavbarWrapper>
                     } />
                     {/* Examens nationaux : section à part (la section Examens ne garde que les devoirs). */}
                     <Route path="/exams/nationaux" element={
                       <NavbarWrapper>
-                        <ContentList key="nationaux" contentType="exam" national />
+                        <NationalSection />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/exams/nationaux/:annee" element={
+                      <NavbarWrapper>
+                        <NationalYear />
                       </NavbarWrapper>
                     } />
                     <Route path="/exams/new" element={
@@ -494,7 +502,7 @@ function App() {
                     ================================ */}
                     <Route path="/lessons" element={
                       <NavbarWrapper>
-                        <ContentList contentType="lesson" />
+                        <ContentSection contentType="lesson" />
                       </NavbarWrapper>
                     } />
                     <Route path="/lessons/new" element={

@@ -108,14 +108,16 @@ export const TOURS: Tour[] = [
   },
 
   // ───────────────────────────────────────────── Listes : exercices, examens, leçons (et leurs pages de niveau)
+  // Depuis le 10/10/2026, les rubriques s'ouvrent en dossiers (niveaux, chapitres, années du Bac) : la visite
+  // ne se lance que dans un dossier ouvert, là où la liste et ses filtres (« liste-filtres ») sont affichés.
   {
     id: 'liste',
-    match: /^\/(exercises|exams|lessons)(\/nationaux|\/niveau\/[^/]+(\/[^/]+)?)?\/?$/,
+    match: /^\/(exercises|exams|lessons)(\/nationaux(\/[^/]+)?|\/niveau\/[^/]+(\/[^/]+)?)?\/?$/,
     requires: 'liste-filtres',
     version: 2, // « Publier » réservé aux profs, nouveaux mots du statut et du menu
     autoSteps: ['liste-filtres', 'liste-tri', 'liste-ouvrir'],
     steps: [
-      { target: 'liste-filtres', title: 'Filtrer', body: 'Niveau, chapitre, théorème, difficulté : ne garde que ce qui t’intéresse.' },
+      { target: 'liste-filtres', title: 'Filtrer', body: 'Difficulté, statut (à faire, à revoir, réussis), théorème : ne garde que ce qui t’intéresse dans ce dossier.' },
       { target: 'liste-tri', title: 'Trier', body: '« Pour toi » met en tête ce qui te fera progresser. Tu peux aussi trier du plus facile au plus difficile, ou par nouveauté.' },
       { target: 'liste-vue', title: 'Deux affichages', body: 'Cartes : un aperçu de chaque contenu (le début de l’énoncé, les exercices d’un sujet, le sommaire d’une leçon). Énoncés : le texte complet, avec chrono et auto-évaluation.' },
       { target: 'liste-chrono', title: 'Chronomètre', body: 'Lance-le avant de commencer, puis enregistre ton temps pour suivre tes progrès.' },

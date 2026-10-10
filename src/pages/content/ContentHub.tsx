@@ -1,38 +1,74 @@
-// Page par niveau ou par chapitre : la liste habituelle, déjà filtrée, avec un titre et une
-// introduction qui répondent aux recherches des élèves (« exercices corrigés 2 bac sm »).
+// Rubriques Exercices / Leçons / Devoirs / Bac national, rangées en dossiers (10/10/2026) :
+//  - /exercises (/lessons, /exams)        → dossiers de niveaux (ContentFolders « levels ») ;
+//  - /exercises/niveau/:level             → dossiers de chapitres du niveau (« chapters ») ;
+//  - /exercises/niveau/:level/:chapter    → le dossier ouvert : les cartes habituelles (ContentList) ;
+//  - /exams/nationaux                     → dossiers par année ; /exams/nationaux/:annee → les sujets de l'année.
+// Une adresse avec des paramètres de liste (anciens liens, « S'entraîner », recherche) garde la liste filtrée.
+// Titres et textes des pages de niveau et de chapitre : backend (apps/caracteristics/hubs.py), identiques à la
+// page pré-remplie que lisent les moteurs de recherche (config/seo.py).
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { ContentList } from './ContentList';
+import { ContentFolders } from './ContentFolders';
 import { NotFound } from '@/pages/NotFound';
+import { useAuth } from '@/contexts/AuthContext';
 import { getHub, type HubInfo } from '@/lib/api/hubApi';
+import { SECTION_OF, hasListParams, type ContentKind } from './sections';
 
-const SECTION = { exercise: 'exercises', lesson: 'lessons', exam: 'exams' } as const;
+const Loading: React.FC = () => (
+  <div className="flex items-center justify-center py-24" role="status" aria-label="Chargement de la page">
+    <div className="h-6 w-6 rounded-full border-2 border-line border-t-brand animate-spin" />
+  </div>
+);
 
-export const ContentHub: React.FC<{ contentType: 'exercise' | 'lesson' | 'exam' }> = ({ contentType }) => {
+export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType }) => {
   const { level = '', chapter } = useParams<{ level: string; chapter?: string }>();
+  const location = useLocation();
+  const { user } = useAuth();
   const [hub, setHub] = useState<HubInfo | null>(null);
   const [missing, setMissing] = useState(false);
+  // Page d'un niveau sans paramètre de liste : ses chapitres en dossiers.
+  const folders = !chapter && !hasListParams(location.search);
+  // Dossiers : rechargés à la connexion (ce que l'élève a terminé dans chaque chapitre).
+  const viewer = folders ? user?.id ?? null : null;
 
   useEffect(() => {
     let cancelled = false;
-    setHub(null);
     setMissing(false);
-    getHub(SECTION[contentType], level, chapter)
+    getHub(SECTION_OF[contentType], level, chapter)
       .then((data) => { if (!cancelled) setHub(data); })
       .catch(() => { if (!cancelled) setMissing(true); });
     return () => { cancelled = true; };
-  }, [contentType, level, chapter]);
+  }, [contentType, level, chapter, viewer]);
 
   if (missing) return <NotFound />;
-  if (!hub) {
-    return (
-      <div className="flex items-center justify-center py-24" role="status" aria-label="Chargement de la page">
-        <div className="h-6 w-6 rounded-full border-2 border-line border-t-brand animate-spin" />
-      </div>
-    );
-  }
+  // Autre niveau ou chapitre : rien de l'ancien pendant le chargement.
+  const current = hub && hub.level.slug === level && (hub.chapter?.slug ?? undefined) === (chapter || undefined) ? hub : null;
+  if (!current) return <Loading />;
+  if (folders) return <ContentFolders key={current.url} view="chapters" contentType={contentType} hub={current} />;
   // key : un autre niveau ou chapitre repart d'une liste neuve (filtres de la nouvelle page).
-  return <ContentList key={hub.url} contentType={contentType} hub={hub} />;
+  return <ContentList key={current.url} contentType={contentType} hub={current} />;
+};
+
+/** /exercises, /lessons, /exams : les dossiers de niveaux (la liste filtrée si l'adresse a des filtres). */
+export const ContentSection: React.FC<{ contentType: ContentKind }> = ({ contentType }) => {
+  const location = useLocation();
+  if (hasListParams(location.search)) return <ContentList key={`${contentType}-liste`} contentType={contentType} />;
+  return <ContentFolders key={contentType} view="levels" contentType={contentType} />;
+};
+
+/** /exams/nationaux : les dossiers par année (la liste filtrée si l'adresse a des filtres). */
+export const NationalSection: React.FC = () => {
+  const location = useLocation();
+  if (hasListParams(location.search)) return <ContentList key="nationaux" contentType="exam" national />;
+  return <ContentFolders view="years" />;
+};
+
+/** /exams/nationaux/:annee : les sujets d'une année (« aucune » : sujets sans année). */
+export const NationalYear: React.FC = () => {
+  const { annee = '' } = useParams<{ annee: string }>();
+  if (!/^(\d{4}|aucune)$/.test(annee)) return <NotFound />;
+  return <ContentList key={`nationaux-${annee}`} contentType="exam" national nationalYear={annee} />;
 };
 
 export default ContentHub;

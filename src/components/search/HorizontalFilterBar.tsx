@@ -40,6 +40,11 @@ interface HorizontalFilterBarProps {
   trailing?: React.ReactNode;
   /** Section « Examens nationaux » : filtre par année du Bac. */
   nationalSection?: boolean;
+  /** Liste ouverte depuis un dossier (10/10/2026) : « chapter » = le dossier fixe niveau et chapitre (lignes
+   *  Niveau, Matière, Chapitre masquées) ; « year » = une année du Bac (ligne « Année du Bac » masquée). */
+  inFolder?: 'chapter' | 'year';
+  /** Dossier d'une année du Bac : compteurs de difficulté de cette année. */
+  nationalYear?: string;
   /** Filtres imposés par la page (niveau, chapitre d'une page de niveau) : ni étiquette ni compteur. */
   fixed?: FixedFilters;
   /** Nombre de résultats (bouton « Voir les N exercices » du tiroir sur téléphone). */
@@ -80,6 +85,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   onSortChange,
   trailing,
   nationalSection = false,
+  inFolder,
+  nationalYear,
   fixed,
   resultCount,
   resultLoading = false,
@@ -128,7 +135,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   }, [levelsKey, subjectsKey, contentType]);
 
   useEffect(() => {
-    if (!filters.classLevels.length) { setChapters([]); return; }
+    // Dossier d'un chapitre : pas de ligne Chapitre, rien à charger.
+    if (!filters.classLevels.length || inFolder === 'chapter') { setChapters([]); return; }
     let cancelled = false;
     // Chapitres du niveau directement (le serveur n'exige ni matière ni sous-domaine).
     getChapters(filters.subjects[0] ?? '', filters.classLevels, filters.subfields, contentType)
@@ -140,7 +148,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       .catch((e) => console.error('Chapitres', e));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [levelsKey, subfieldsKey, contentType]);
+  }, [levelsKey, subfieldsKey, contentType, inFolder]);
 
   useEffect(() => {
     if (!filters.chapters.length || !filters.classLevels.length || !subjectId) { setTheorems([]); return; }
@@ -160,12 +168,13 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       classLevels: filters.classLevels, subjects: filters.subjects, subfields: filters.subfields,
       chapters: filters.chapters, theorems: filters.theorems,
       isNationalExam: contentType === 'exam' ? nationalSection : undefined,
+      nationalYear,
     })
       .then((d) => { if (!cancelled) setDifficultyCounts(d); })
       .catch((e) => console.error('Compteurs de difficulté', e));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentType, nationalSection, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(',')]);
+  }, [contentType, nationalSection, nationalYear, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(',')]);
 
   // Chapitres de l'adresse absents de la liste chargée : leur nom pour l'étiquette, leur slug pour leur page.
   useEffect(() => {
@@ -296,15 +305,18 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   const rows = (
     <div className="space-y-0">
-      <FilterRow title="Niveau">
-        {visible(classLevels, filters.classLevels).map((o) => (
-          <OptionButton key={o.id} option={o} selected={filters.classLevels.includes(String(o.id))} className={pill(filters.classLevels.includes(String(o.id)))}
-            onClick={() => toggle('classLevels', String(o.id))} />
-        ))}
-      </FilterRow>
+      {/* Dans le dossier d'un chapitre, niveau et chapitre sont ceux du dossier : pas de ligne pour les changer. */}
+      {inFolder !== 'chapter' && (
+        <FilterRow title="Niveau">
+          {visible(classLevels, filters.classLevels).map((o) => (
+            <OptionButton key={o.id} option={o} selected={filters.classLevels.includes(String(o.id))} className={pill(filters.classLevels.includes(String(o.id)))}
+              onClick={() => toggle('classLevels', String(o.id))} />
+          ))}
+        </FilterRow>
+      )}
 
       {/* Matière : seulement s'il y en a plusieurs (sinon choisie d'office). */}
-      {filters.classLevels.length > 0 && subjects.length > 1 && (
+      {inFolder !== 'chapter' && filters.classLevels.length > 0 && subjects.length > 1 && (
         <FilterRow title="Matière">
           {visible(subjects, filters.subjects).map((o) => (
             <OptionButton key={o.id} option={o} selected={filters.subjects.includes(String(o.id))} className={pill(filters.subjects.includes(String(o.id)))}
@@ -314,7 +326,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       )}
 
       {/* Chapitres juste après le niveau, par sous-domaine. */}
-      {filters.classLevels.length > 0 && chapterGroups.length > 0 && (
+      {inFolder !== 'chapter' && filters.classLevels.length > 0 && chapterGroups.length > 0 && (
         <FilterRow title="Chapitre">
           <div className="flex flex-col gap-2.5 w-full">
             {chapterGroups.map(([group, options]) => (
@@ -394,7 +406,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       )}
 
       {/* Examens nationaux : filtre par année du Bac (la section décide national / devoirs). */}
-      {contentType === 'exam' && nationalSection && (
+      {contentType === 'exam' && nationalSection && inFolder !== 'year' && (
         <FilterRow title="Année du Bac" last>
           <div className="flex items-center gap-3">
             <select
