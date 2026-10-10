@@ -434,6 +434,11 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     </div>
   );
 
+  // Une ligne au moins dans le panneau ? Dans le dossier d'un chapitre de leçons, il ne reste parfois que le
+  // théorème : sans lui, le bouton « Filtres » ouvrirait un panneau vide.
+  const hasRows = inFolder !== 'chapter' || contentType !== 'lesson'
+    || (filters.chapters.length > 0 && visible(theorems, filters.theorems).length > 0);
+
   const [the, many] = NOUN[contentType];
   const seeLabel = resultLoading || resultCount == null ? 'Voir les résultats'
     : resultCount === 0 ? 'Aucun résultat'
@@ -446,7 +451,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       <div className="px-3 py-2.5 sm:p-4">
         <div className="flex flex-row items-center gap-2 sm:gap-3">
           <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-            <button
+            {hasRows && <button
               ref={toggleRef}
               type="button"
               onClick={() => setIsPanelOpen(!isPanelOpen)}
@@ -469,7 +474,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 </span>
               )}
               <ChevronDown className={`hidden sm:block w-4 h-4 transition-transform duration-200 ${isPanelOpen ? 'rotate-180' : ''}`} />
-            </button>
+            </button>}
 
             {/* Étiquettes actives (ordinateur : à la suite du bouton). */}
             {chips.length > 0 && <div className="hidden sm:flex flex-wrap items-center gap-2">{chips.map(renderChip)}</div>}

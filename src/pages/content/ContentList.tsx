@@ -68,7 +68,7 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
 import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
-import { LIST_SEO, NATIONAL } from './sections';
+import { LIST_SEO, NATIONAL, hasListParams } from './sections';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -230,12 +230,14 @@ export const ContentList: React.FC<ContentListProps> = ({
   const isNationalSection = contentType === 'exam' && national;
   // Dossier d'une année du Bac national : la liste de l'année (le filtre « Année du Bac » disparaît).
   const yearFolder = isNationalSection && nationalYear ? nationalYear : null;
-  const yearLabel = yearFolder === 'aucune' ? 'année non précisée' : yearFolder;
+  const yearLabel = yearFolder === 'aucune' ? 'Année non précisée' : `Bac ${yearFolder}`;
   const config = CONTENT_TYPE_CONFIG[contentType];
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
   const [searchParams, setSearchParams] = useSearchParams();
+  // Dossier « Sans chapitre » d'un niveau (contenus rangés dans aucun de ses chapitres, hubs.py `unfiled`).
+  const unfiledOnly = searchParams.get('sansChapitre') === 'true';
   const { isAuthenticated, user } = useAuth();
   const { openModal } = useAuthModal();
   const phone = usePhone();
@@ -333,6 +335,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (filters.showCompleted) params.showCompleted = true;
     if (filters.showFailed) params.showFailed = true;
     if (filters.todo) params.todo = true;
+    if (unfiledOnly) params.sans_chapitre = true;
 
     // Mode Cartes : sans solutions ni énoncé complet (les leçons gardent leur texte : durée de lecture, sommaire).
     if (viewMode === 'card' && contentType !== 'lesson') params.view = 'card';
@@ -349,7 +352,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
 
     return params;
-  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder]);
+  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder, unfiledOnly]);
   // Mêmes paramètres = même objet : des filtres relus de l'adresse à l'identique ne rechargent pas la liste.
   const queryJson = JSON.stringify(rawQuery);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,7 +391,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   const { setCrumbs } = useBreadcrumb();
   useEffect(() => {
     if (yearFolder) {
-      setCrumbs([{ label: NATIONAL.title, to: '/exams/nationaux' }, { label: `Bac ${yearLabel}` }], '/exams/nationaux');
+      setCrumbs([{ label: NATIONAL.title, to: '/exams/nationaux' }, { label: yearLabel ?? '' }], '/exams/nationaux');
       return () => setCrumbs(null);
     }
     if (!hub) return;
@@ -590,13 +593,14 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (newFilters.dateStart) params.set('dateStart', newFilters.dateStart);
     if (newFilters.dateEnd) params.set('dateEnd', newFilters.dateEnd);
     if (sortBy !== DEFAULT_SORT) params.set('sort', sortBy);
+    if (unfiledOnly) params.set('sansChapitre', 'true');
 
     // Un seul niveau (± un chapitre) : la page de ce niveau ou de ce chapitre (pastilles des chapitres,
     // lien vers le cours, vraie adresse). Pas pour les examens nationaux (pas de page par niveau).
     const lv = newFilters.classLevels;
     const chs = newFilters.chapters;
     let target: string | null = null;
-    if (!isNationalSection && lv.length === 1 && chs.length <= 1) {
+    if (!isNationalSection && !unfiledOnly && lv.length === 1 && chs.length <= 1) {
       const onHubLevel = !!hub && lv[0] === String(hub.level.id);
       const levelSlug = onHubLevel ? hub!.level.slug : slugs?.level;
       let chapterSlug: string | undefined;
@@ -620,7 +624,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
     if (!target && hub) {
       // Plusieurs niveaux ou chapitres : la liste générale, filtrée (sans renvoyer l'élève à son niveau).
-      if (contentType === 'exercise' && !params.has('classLevels')) params.set('niveau', 'tous');
+      if (!params.has('classLevels')) params.set('niveau', 'tous');
       navigate(`${config.basePath}?${params.toString()}`);
       return;
     }
@@ -631,10 +635,13 @@ export const ContentList: React.FC<ContentListProps> = ({
     } else {
       const keep = searchParams.get('niveau');
       if (keep) params.set('niveau', keep);
+      // Plus aucun filtre : l'adresse nue afficherait les dossiers et renverrait l'élève dans son niveau ;
+      // « niveau=tous » montre les dossiers de tous les niveaux, là où il était.
+      if (!hub && !hasListParams(`?${params}`)) params.set('niveau', 'tous');
     }
     setSearchParams(params, { replace: true });
     scrollToList();
-  }, [sortBy, setSearchParams, searchParams, hub, location.pathname, navigate, config.basePath, contentType, isNationalSection, scrollToList]);
+  }, [sortBy, setSearchParams, searchParams, hub, location.pathname, navigate, config.basePath, contentType, isNationalSection, scrollToList, unfiledOnly]);
 
   const handleSortChange = useCallback((newSortOption: ListSort) => {
     trackAction('tri');
@@ -647,10 +654,12 @@ export const ContentList: React.FC<ContentListProps> = ({
       params.set('sort', newSortOption);
     } else {
       params.delete('sort');
+      // Liste générale sans plus aucun paramètre : dossiers de tous les niveaux (voir handleFilterChange).
+      if (!hub && !hasListParams(`?${params}`)) params.set('niveau', 'tous');
     }
     setSearchParams(params, { replace: true });
     scrollToList();
-  }, [searchParams, setSearchParams, contentType, scrollToList]);
+  }, [searchParams, setSearchParams, contentType, scrollToList, hub]);
 
   const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore) {
@@ -1063,8 +1072,9 @@ export const ContentList: React.FC<ContentListProps> = ({
       {hub ? (
         <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
       ) : yearFolder ? (
-        <SEO title={`Bac national ${yearLabel} : sujets de maths corrigés – Maroc | Fidni`} description={NATIONAL.seoDescription}
-          canonicalUrl={`/exams/nationaux/${yearFolder}`} noindex={yearFolder === 'aucune'} />
+        <SEO title={`${yearFolder === 'aucune' ? 'Bac national, année non précisée' : `Bac national ${yearFolder}`} : sujets de maths corrigés – Maroc | Fidni`}
+          description={NATIONAL.seoDescription} canonicalUrl={`/exams/nationaux/${yearFolder}`}
+          noindex={yearFolder === 'aucune' || (!isLoading && totalCount === 0)} />
       ) : isNationalSection ? (
         <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux" />
       ) : (
@@ -1099,12 +1109,13 @@ export const ContentList: React.FC<ContentListProps> = ({
             )}
             <h1 className="fd-display text-ink flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
               {hub ? hub.h1 : yearFolder ? (yearFolder === 'aucune' ? 'Bac national : année non précisée' : `Bac national ${yearFolder}`)
-                : isNationalSection ? NATIONAL.title : config.title}
+                : isNationalSection ? NATIONAL.title : unfiledOnly ? `${config.title} sans chapitre` : config.title}
               <span className="fd-nums text-[15px] font-medium text-ink-faint" style={{ letterSpacing: 0 }}>
                 {totalCount > 0 ? totalCount : ''}
               </span>
             </h1>
-            <p className="text-[13.5px] text-ink-faint mt-1.5 max-w-3xl line-clamp-2 sm:line-clamp-none">{hub ? hub.intro : isNationalSection ? NATIONAL.subtitle : config.subtitle}</p>
+            <p className="text-[13.5px] text-ink-faint mt-1.5 max-w-3xl line-clamp-2 sm:line-clamp-none">{hub ? hub.intro : isNationalSection ? NATIONAL.subtitle
+              : unfiledOnly ? 'Ces contenus ne sont encore rangés dans aucun chapitre de ce niveau.' : config.subtitle}</p>
           </div>
 
           {/* Publier : réservé aux auteurs et aux modérateurs. */}

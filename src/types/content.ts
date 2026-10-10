@@ -435,6 +435,8 @@ export interface ContentFilters {
   national_year_max?: number;
   /** Dossier d'une année du Bac national (« aucune » : sujets sans année). */
   national_year?: number | 'aucune';
+  /** Dossier « Sans chapitre » d'un niveau : contenus rangés dans aucun de ses chapitres. */
+  sans_chapitre?: boolean;
 }
 
 export interface ContentExamFilters extends ContentFilters {

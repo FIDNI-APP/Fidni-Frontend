@@ -22,6 +22,8 @@ export interface HubInfo {
   chapters: HubChapter[];
   /** Absents d'un serveur plus ancien. */
   folders?: HubFolder[];
+  /** Contenus du niveau rangés dans aucun de ses chapitres (dossier « Sans chapitre »). */
+  unfiled?: number;
   subject?: string | null;
   related: { section: string; label: string; count: number; url: string }[];
 }

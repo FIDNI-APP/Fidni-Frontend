@@ -8,8 +8,8 @@
  * Dans un dossier de chapitre ou d'année, les « fichiers » sont les cartes habituelles (ContentList).
  * Données : GET /api/hubs/niveaux/, /api/hubs/ (folders), /api/hubs/nationaux/ (backend caracteristics/hubs.py).
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { ArrowRight, Landmark, Plus, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -25,6 +25,25 @@ import { trackAction, trackHubChoice } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, SECTION_OF, SECTION_TEXT, plural, type ContentKind } from './sections';
 
 const SUBJECT = 'Mathématiques';
+// Lien « remonter d'un cran » : une vraie cible au doigt (40 px de haut).
+const UP_LINK = 'inline-flex min-h-10 items-center text-[13px] font-medium text-brand-hover hover:underline';
+
+/** Retour (« Précédent ») sur une page de dossiers : la même hauteur qu'au départ (comme ContentList). */
+function useScrollMemory(ready: boolean) {
+  const { pathname, search } = useLocation();
+  const navigationType = useNavigationType();
+  const key = `fidni:dossiers:${pathname}${search}`;
+  useLayoutEffect(() => {
+    if (!ready || navigationType !== 'POP') return;
+    try {
+      const y = Number(sessionStorage.getItem(key));
+      if (y > 0) window.scrollTo(0, y);
+    } catch { /* stockage indisponible */ }
+  }, [ready, key, navigationType]);
+  useEffect(() => () => {
+    try { sessionStorage.setItem(key, String(window.scrollY)); } catch { /* stockage indisponible */ }
+  }, [key]);
+}
 
 /** En-tête commun : fil d'Ariane (chaque cran remonte d'un dossier), titre, phrase, résumé. */
 const Header: React.FC<{
@@ -111,9 +130,10 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [section, redirect, attempt]);
+  useScrollMemory(!!data && !redirect);
 
   // Élève qui a indiqué sa classe : directement les chapitres de son niveau (il remonte d'un cran pour les autres).
-  if (redirect) return <Navigate to={redirect} replace />;
+  if (redirect) return <Navigate to={redirect} replace state={{ auto: true }} />;
 
   const subject = data?.subject || SUBJECT;
   const groups: FolderGroup[] = data ? [{
@@ -177,10 +197,11 @@ function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
   return groups;
 }
 
-const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo }> = ({ kind, hub }) => {
+const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () => void }> = ({ kind, hub, onProgress }) => {
   const t = SECTION_TEXT[kind];
   const section = SECTION_OF[kind];
   const location = useLocation();
+  const navigationType = useNavigationType();
   const { isAuthenticated } = useAuth();
   const { setCrumbs } = useBreadcrumb();
   const levelsPath = `${t.basePath}?niveau=tous`;
@@ -192,18 +213,31 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo }> = ({ kind, hub
     return () => setCrumbs(null);
   }, [hub.level.name, t.title, t.basePath, levelsPath, setCrumbs]);
 
-  // Niveau choisi depuis le site (pas une arrivée directe, location.key « default ») : mesuré comme un filtre.
+  // Niveau choisi depuis le site, mesuré comme un filtre. Pas une arrivée directe (location.key « default »), ni un
+  // retour (« Précédent »), ni la redirection automatique de l'élève vers son niveau (state.auto).
   useEffect(() => {
-    if (location.key !== 'default') trackHubChoice(kind, hub.level.id);
+    const auto = (location.state as { auto?: boolean } | null)?.auto;
+    if (location.key !== 'default' && navigationType !== 'POP' && !auto) trackHubChoice(kind, hub.level.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hub.level.id, kind]);
+  useScrollMemory(true);
 
   // Serveur plus ancien (sans `folders`) : les chapitres qui ont du contenu.
   const folders: HubFolder[] = useMemo(
     () => hub.folders ?? hub.chapters.map((c) => ({ ...c, subfield: null })),
     [hub.folders, hub.chapters],
   );
-  const groups = useMemo(() => groupFolders(folders, kind), [folders, kind]);
+  const groups = useMemo(() => {
+    const g = groupFolders(folders, kind);
+    // Contenus du niveau rangés dans aucun de ses chapitres : un dossier à part, sinon introuvables d'ici.
+    if (hub.unfiled) {
+      g.push({ title: 'Autres', items: [{
+        key: 'sans-chapitre', name: 'Sans chapitre', count: hub.unfiled, countLabel: plural(hub.unfiled, t.noun),
+        to: `${t.basePath}?classLevels=${hub.level.id}&sansChapitre=true`, onOpen: () => trackAction('dossier-chapitre'),
+      }] });
+    }
+    return g;
+  }, [folders, kind, hub.unfiled, hub.level.id, t.noun, t.basePath]);
   const filled = folders.filter((f) => f.count > 0).length;
 
   return (
@@ -216,11 +250,10 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo }> = ({ kind, hub
         summary={`${plural(folders.length, ['chapitre', 'chapitres'])} · ${filled} avec des ${t.noun[1]} · ${plural(hub.count, t.noun)}`}
         action={<CreateButton kind={kind} />}
       />
-      <Link to={levelsPath} className="mb-4 inline-flex items-center gap-1 text-[13px] font-medium text-brand-hover hover:underline">
-        ‹ Tous les niveaux
-      </Link>
+      <Link to={levelsPath} className={`mb-2 ${UP_LINK}`}>‹ Tous les niveaux</Link>
+      {/* À évaluer : seulement ce niveau ; une évaluation met à jour les dossiers (« 3 faits »). */}
       {isAuthenticated && kind !== 'lesson' && (
-        <div className="mb-4"><CatchUpBanner kind={kind} /></div>
+        <div className="mb-4"><CatchUpBanner kind={kind} level={hub.level.id} onEvaluated={onProgress} /></div>
       )}
       {folders.length === 0 ? (
         <p className="fd-card p-6 text-center text-[13.5px] text-ink-faint">Aucun chapitre n’est encore rattaché à ce niveau.</p>
@@ -263,6 +296,7 @@ const YearsView: React.FC = () => {
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [attempt]);
+  useScrollMemory(!!data);
 
   const groups: FolderGroup[] = data ? [{
     title: null,
@@ -302,12 +336,12 @@ const YearsView: React.FC = () => {
 
 type Props =
   | { view: 'levels'; contentType: ContentKind }
-  | { view: 'chapters'; contentType: ContentKind; hub: HubInfo }
+  | { view: 'chapters'; contentType: ContentKind; hub: HubInfo; onProgress?: () => void }
   | { view: 'years' };
 
 export const ContentFolders: React.FC<Props> = (props) => {
   if (props.view === 'years') return <YearsView />;
-  if (props.view === 'chapters') return <ChaptersView kind={props.contentType} hub={props.hub} />;
+  if (props.view === 'chapters') return <ChaptersView kind={props.contentType} hub={props.hub} onProgress={props.onProgress} />;
   return <LevelsView kind={props.contentType} />;
 };
 

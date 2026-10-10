@@ -72,6 +72,10 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
           {item.sub && <> · {item.sub}</>}
           {p && done > 0 && <> · <span className="text-ink-soft">{done} {(item.doneWord ?? ['fait', 'faits'])[done > 1 ? 1 : 0]}</span></>}
         </span>
+        {/* Barre : réussis (vert) et à revoir (or) ; la même chose en mots pour les lecteurs d'écran. */}
+        {p && done > 0 && (
+          <span className="sr-only"> : {success} réussi{success > 1 ? 's' : ''}, {done - success} à revoir</span>
+        )}
         {p && done > 0 && (
           <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
             <span className="h-full bg-brand" style={{ width: `${(success / item.count) * 100}%` }} />

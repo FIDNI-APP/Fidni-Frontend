@@ -137,8 +137,8 @@ const LoginRedirect = () => <AuthRedirect tab="login" />;
 
 // Une page qui plante affiche un message (la barre latérale et le menu restent) ; une autre adresse réessaie.
 const PageBoundary = ({ children }: { children: React.ReactNode }) => {
-  const { pathname } = useLocation();
-  return <ErrorBoundary variant="page" resetKey={pathname}>{children}</ErrorBoundary>;
+  const { pathname, search } = useLocation();
+  return <ErrorBoundary variant="page" resetKey={`${pathname}${search}`}>{children}</ErrorBoundary>;
 };
 
 // Layout wrapper: the app shell (sidebar + top bar) for normal pages,

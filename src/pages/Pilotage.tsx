@@ -289,12 +289,12 @@ const OverviewTab: React.FC<{ data: Overview; onOpenTodo: () => void; todoCount:
 
       <section className="fd-card p-5" aria-label={def.label}>
         <h2 className="fd-display mb-3 text-[16px] text-ink">{def.label}</h2>
-        <ErrorBoundary variant="block" label={def.label} resetKey={`${metric}-${data.days}`}>
+        <ErrorBoundary variant="block" label={def.label} resetKey={`${metric}-${data.generated_at}`}>
           <DayChart key={`${metric}-${data.days}`} series={data.series} def={def} headline={headline} viewsSince={data.views_since} />
         </ErrorBoundary>
       </section>
 
-      {data.funnel && <ErrorBoundary variant="block" label="Entonnoir"><FunnelCard funnel={data.funnel} days={data.days} /></ErrorBoundary>}
+      {data.funnel && <ErrorBoundary variant="block" label="Entonnoir" resetKey={data.generated_at}><FunnelCard funnel={data.funnel} days={data.days} /></ErrorBoundary>}
 
       <section className="fd-card p-5">
         <h2 className="fd-display text-[16px] text-ink">Contenus les plus vus</h2>
@@ -493,11 +493,11 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
         )}
       </section>
 
-      {data.auth_doors && <ErrorBoundary variant="block" label="Portes d’inscription"><AuthDoorsCard doors={data.auth_doors} days={data.days} /></ErrorBoundary>}
+      {data.auth_doors && <ErrorBoundary variant="block" label="Portes d’inscription" resetKey={data.generated_at}><AuthDoorsCard doors={data.auth_doors} days={data.days} /></ErrorBoundary>}
 
       </div>
     </div>
-    <ErrorBoundary variant="block" label="Ce que les élèves choisissent dans les listes">
+    <ErrorBoundary variant="block" label="Ce que les élèves choisissent dans les listes" resetKey={data.generated_at}>
       <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
     </ErrorBoundary>
     </div>
@@ -955,8 +955,8 @@ export default function Pilotage() {
       <ErrorBoundary variant="block" label="Cet onglet" resetKey={`${tab}-${days}-${data?.generated_at ?? ''}`}>
       {tab === 'membres' ? (
         <>
-          <ErrorBoundary variant="block" label="Un membre n’arrive pas à se connecter ?"><LoginDiagnostic /></ErrorBoundary>
-          <ErrorBoundary variant="block" label="Membres"><MembersTab days={days} /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="Un membre n’arrive pas à se connecter ?" resetKey={days}><LoginDiagnostic /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="Membres" resetKey={days}><MembersTab days={days} /></ErrorBoundary>
         </>
       ) : tab === 'ia' ? (
         <IATab />
@@ -968,10 +968,10 @@ export default function Pilotage() {
         <VisitorsTab data={data.anonymes} days={data.days} />
       ) : tab === 'a-traiter' ? (
         <div>
-          <ErrorBoundary variant="block" label="Signalements"><ReportsPanel onOpenCountChange={setReportsOpen} /></ErrorBoundary>
-          <ErrorBoundary variant="block" label="À vérifier"><VerifyPanel items={data.todo.a_verifier} validated={validated} onToggle={toggleVerified} /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="Signalements" resetKey={data.generated_at}><ReportsPanel onOpenCountChange={setReportsOpen} /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="À vérifier" resetKey={data.generated_at}><VerifyPanel items={data.todo.a_verifier} validated={validated} onToggle={toggleVerified} /></ErrorBoundary>
           {data.todo.difficulty_gaps && (
-            <ErrorBoundary variant="block" label="Écarts de difficulté"><DifficultyGapsPanel items={data.todo.difficulty_gaps} /></ErrorBoundary>
+            <ErrorBoundary variant="block" label="Écarts de difficulté" resetKey={data.generated_at}><DifficultyGapsPanel items={data.todo.difficulty_gaps} /></ErrorBoundary>
           )}
         </div>
       ) : (

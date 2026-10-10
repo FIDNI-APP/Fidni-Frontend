@@ -42,8 +42,10 @@ export const CatchUpBanner: React.FC<{
   kind: Kind;
   /** Page d'un chapitre : seulement les contenus de ce chapitre. */
   chapter?: number | null;
+  /** Dossiers d'un niveau : seulement les contenus de ce niveau. */
+  level?: number | null;
   onEvaluated?: (id: number, result: Result) => void;
-}> = ({ kind, chapter, onEvaluated }) => {
+}> = ({ kind, chapter, level, onEvaluated }) => {
   const location = useLocation();
   const [items, setItems] = useState<PendingItem[]>([]);
   const [count, setCount] = useState(0);
@@ -57,7 +59,7 @@ export const CatchUpBanner: React.FC<{
     let cancelled = false;
     setAnswers({});
     setClosed(false);
-    api.get('/contents/a-evaluer/', { params: { type: kind, chapter: chapter || undefined } })
+    api.get('/contents/a-evaluer/', { params: { type: kind, chapter: chapter || undefined, level: level || undefined } })
       .then((r) => {
         if (cancelled) return;
         setItems(r.data.items || []);
@@ -65,7 +67,7 @@ export const CatchUpBanner: React.FC<{
       })
       .catch(() => { if (!cancelled) setItems([]); });
     return () => { cancelled = true; };
-  }, [kind, chapter]);
+  }, [kind, chapter, level]);
 
   const answered = items.filter((x) => answers[x.id]).length;
   const allDone = items.length > 0 && answered === items.length;
