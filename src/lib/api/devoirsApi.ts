@@ -47,6 +47,8 @@ export interface PlanChapter {
   done: number;
   review: { id: number; title: string; url: string }[];
   notions: { best: { label: string; pct: number }[]; worst: { label: string; pct: number }[] };
+  /** Page d'exercices du chapitre au niveau de l'élève (« S'entraîner ») ; null hors de son niveau. */
+  hub_url?: string | null;
 }
 
 export interface PlanExercise {

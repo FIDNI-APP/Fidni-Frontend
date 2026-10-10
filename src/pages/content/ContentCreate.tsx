@@ -32,6 +32,24 @@ const TYPE_CONFIG: Record<ContentType, { label: string; basePath: string; newTit
   lesson:   { label: 'Leçon',    basePath: '/lessons',   newTitle: 'Nouvelle leçon',  editTitle: 'Modifier la leçon' },
 };
 
+const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+type DifficultyValue = (typeof DIFFICULTIES)[number];
+const isDifficulty = (v: unknown): v is DifficultyValue => DIFFICULTIES.includes(v as DifficultyValue);
+
+/** Message d'un refus du serveur (400) : celui du champ difficulté d'abord, sinon le premier message lisible. */
+function saveErrorMessage(err: unknown): string {
+  const res = (err as { response?: { status?: number; data?: unknown } } | null)?.response;
+  const data = res?.status === 400 && res.data && typeof res.data === 'object' ? res.data as Record<string, unknown> : null;
+  const text = (v: unknown) => (Array.isArray(v) ? (typeof v[0] === 'string' ? v[0] : null) : typeof v === 'string' ? v : null);
+  if (data) {
+    const difficulty = text(data.difficulty);
+    if (difficulty) return `Difficulté : ${difficulty}`;
+    const other = text(data.detail) ?? text(data.error) ?? text(data.non_field_errors);
+    if (other) return other;
+  }
+  return 'L’enregistrement a échoué. Réessaie.';
+}
+
 const getAPI = (t: ContentType) => {
   if (t === 'exam')   return examContentAPI;
   if (t === 'lesson') return lessonContentAPI;
@@ -245,7 +263,7 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
         });
       }
     } catch {
-      setError('Erreur lors du chargement');
+      setError('Le contenu n’a pas pu être chargé. Réessaie.');
     } finally {
       setIsLoading(false);
     }
@@ -261,13 +279,13 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
   });
 
   const handleSaveExercise = async (editorState: FlexibleEditorState) => {
-    if (!validate()) return;
+    if (!validate(editorState.difficulty)) return;
     setIsSaving(true); setError(null);
     try {
       const payload: any = { ...buildPayloadBase(), title: editorState.title, structure: editorState.structure, difficulty: editorState.difficulty };
       const result = isEditing && id ? await contentAPI.update(id, payload) : await contentAPI.create(payload);
       navigate(`${config.basePath}/${result.id}`);
-    } catch { setError("Erreur lors de l'enregistrement"); }
+    } catch (err) { setError(saveErrorMessage(err)); }
     finally { setIsSaving(false); }
   };
 
@@ -278,23 +296,34 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
       const payload: any = { ...buildPayloadBase(), title: editorState.title, structure: editorState.structure };
       const result = isEditing && id ? await contentAPI.update(id, payload) : await contentAPI.create(payload);
       navigate(`${config.basePath}/${result.id}`);
-    } catch { setError("Erreur lors de l'enregistrement"); }
+    } catch (err) { setError(saveErrorMessage(err)); }
     finally { setIsSaving(false); }
   };
 
-  const validate = () => {
-    if (!selectedSubject) { setError('Veuillez sélectionner une matière'); return false; }
-    if (selectedClassLevels.length === 0) { setError('Veuillez sélectionner au moins un niveau'); return false; }
+  // Exercice ou examen : la difficulté est obligatoire (plus de « Moyen » par défaut, souvent faux ;
+  // les élèves voient aussi leur ressenti, mais l'étiquette annoncée reste celle de l'auteur).
+  const validate = (difficulty?: string) => {
+    if (!selectedSubject) { setError('Choisis une matière.'); return false; }
+    if (selectedClassLevels.length === 0) { setError('Choisis au moins un niveau.'); return false; }
+    if (contentType !== 'lesson' && !isDifficulty(difficulty)) {
+      setError('Choisis une difficulté sous le titre (Facile, Moyen ou Difficile), pour un élève du niveau qui découvre le chapitre.');
+      return false;
+    }
     return true;
   };
 
   // ─── JSON import ─────────────────────────────────────────────────────────
+  // Difficulté : seulement celle du fichier (sinon l'auteur la choisit ; plus de « Moyen » par défaut).
   const handleJsonImport = useCallback((data: any) => {
     if (!data) return;
     if (contentType === 'lesson') {
       setLessonData({ title: data.title || '', structure: data.structure || { sections: [] } });
     } else {
-      setExerciseData({ title: data.title || '', difficulty: data.difficulty || 'medium', structure: data.structure || { blocks: [] } });
+      setExerciseData({
+        title: data.title || '',
+        difficulty: isDifficulty(data.difficulty) ? data.difficulty : undefined,
+        structure: data.structure || { blocks: [] },
+      });
     }
   }, [contentType]);
 
@@ -312,7 +341,7 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
   if (!user) return (
     <div className="min-h-screen bg-paper flex items-center justify-center">
       <div className="text-center">
-        <p className="text-ink-muted mb-4">Vous devez être connecté pour créer du contenu.</p>
+        <p className="text-ink-muted mb-4">Connecte-toi pour créer du contenu.</p>
         <button onClick={() => navigate('/login')} className="fd-btn-primary">
           Se connecter
         </button>
@@ -520,13 +549,13 @@ export const ContentCreate: React.FC<ContentCreateProps> = ({ contentType = 'exe
               liveLesson?.structure ? (
                 <LessonRenderer structure={liveLesson.structure} />
               ) : (
-                <p className="text-[#9a958c] text-sm text-center mt-12">Ajoutez des sections pour voir l'aperçu.</p>
+                <p className="text-[#9a958c] text-sm text-center mt-12">Ajoute des sections pour voir l'aperçu.</p>
               )
             ) : (
               liveExercise?.structure?.blocks?.length ? (
                 <ExerciseRenderer structure={liveExercise.structure} interactive={false} showAllSolutions={false} />
               ) : (
-                <p className="text-[#9a958c] text-sm text-center mt-12">Ajoutez des blocs pour voir l'aperçu.</p>
+                <p className="text-[#9a958c] text-sm text-center mt-12">Ajoute des blocs pour voir l'aperçu.</p>
               )
             )}
           </div>

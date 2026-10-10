@@ -13,6 +13,7 @@ import { getClassLevels, getSubjects, updateUserProfile } from '@/lib/api';
 import { removeAvatar, updateUserInfo, uploadAvatar } from '@/lib/api/userApi';
 import { IdentityFields } from '@/components/profile/IdentityForm';
 import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
+import { TABBAR_OFFSET } from '@/components/layout/nav';
 
 interface Grade {
   subject: string;
@@ -393,8 +394,10 @@ export function EditProfile() {
         </div>
         <div id="bas">{errorFor('bas')}</div>
 
-        {/* ── Barre d'enregistrement : collée en bas de l'écran tant que le formulaire défile ── */}
-        <div className="sticky bottom-0 z-30 -mx-4 mt-6 border-t border-line bg-white/95 backdrop-blur md:-mx-6 md:rounded-t-2xl md:border-x">
+        {/* ── Barre d'enregistrement : collée en bas de l'écran tant que le formulaire défile ──
+            (au-dessus de la barre d'onglets du téléphone ; TABBAR_OFFSET vaut 0 sur ordinateur) */}
+        <div className="sticky bottom-0 z-30 -mx-4 mt-6 border-t border-line bg-white/95 backdrop-blur md:-mx-6 md:rounded-t-2xl md:border-x"
+          style={{ bottom: TABBAR_OFFSET }}>
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 md:px-6">
             <p className="hidden items-center gap-1.5 text-xs text-ink-faint sm:flex">
               <User className="h-3.5 w-3.5" /> Connecté en tant que <span className="font-semibold text-ink-soft">{user.username}</span>

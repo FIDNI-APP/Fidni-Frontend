@@ -1,14 +1,19 @@
 // « Mon programme » (08/10/2026) : les chapitres du niveau, ceux à renforcer d'abord, et le détail du
 // chapitre choisi à côté (ordinateur) ou juste dessous (téléphone). Un clic sur un autre chapitre change
 // le détail directement : plus de fenêtre à fermer avant d'en ouvrir une autre.
+// 10/10/2026 : « S'entraîner » ouvre la page du chapitre à son niveau (les plus faciles d'abord, sans les réussis),
+// « Le cours » ses leçons ; « Indique ton niveau » mène à la scolarité du profil (plus à l'onboarding, déjà fait).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, Brain, ChevronDown, ChevronRight, Clock, RotateCcw } from 'lucide-react';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackAction } from '@/lib/usage';
 import type { ChapterProgress, ChapterStatus } from './types';
 import { STATUS } from './status';
 import { Meter } from './ui';
 import { daysAgo, duration, plural } from './format';
+import { lessonsUrl, practiceUrl, quizUrl } from './links';
 
 // Ordre de travail : ce qui est à renforcer d'abord, puis ce qui est en cours, puis ce qui est acquis.
 const GROUPS: { key: string; label: string; statuses: ChapterStatus[] }[] = [
@@ -32,6 +37,7 @@ export function Programme({ chapters, levelName, initial }: { chapters: ChapterP
   const [expanded, setExpanded] = useState<number | null>(initial);
   const [showTodo, setShowTodo] = useState(() => !!initial && chapters.find((c) => c.id === initial)?.status === 'todo');
   const current = chapters.find((c) => c.id === selected) ?? ordered[0];
+  const { user } = useAuth();
   const rowRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
   // Arrivée avec « ?chapitre=12 » : le chapitre est choisi et amené à l'écran.
@@ -50,7 +56,7 @@ export function Programme({ chapters, levelName, initial }: { chapters: ChapterP
     return (
       <section className="rounded-2xl border border-dashed border-line bg-white px-5 py-8 text-center text-[14px] text-ink-faint">
         Ton programme apparaîtra ici dès tes premiers exercices.{' '}
-        <Link to="/complete-profile" className="font-semibold text-brand-hover hover:underline">Indique ton niveau</Link> pour le voir en entier.
+        <Link to={user ? `/profile/${user.username}/edit#scolarite` : '/complete-profile'} className="font-semibold text-brand-hover hover:underline">Indique ton niveau</Link> pour le voir en entier.
       </section>
     );
   }
@@ -204,12 +210,12 @@ export function ChapterDetail({ chapter: c, compact = false }: { chapter: Chapte
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link to={`/exercises?chapters=${c.id}`} className="fd-btn-primary">
+        <Link to={practiceUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-entrainer')} className="fd-btn-primary" style={{ minHeight: 40 }}>
           S’entraîner <ArrowRight className="h-4 w-4" />
         </Link>
-        <Link to={`/lessons?chapters=${c.id}`} className="fd-btn-ghost"><BookOpen className="h-4 w-4" /> Le cours</Link>
+        <Link to={lessonsUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-cours')} className="fd-btn-ghost" style={{ minHeight: 40 }}><BookOpen className="h-4 w-4" /> Le cours</Link>
         {c.quiz_ready && (
-          <Link to={`/skill-iq?chapitre=${c.id}`} className="fd-btn-ghost"><Brain className="h-4 w-4" /> {c.skilliq ? 'Refaire le quiz' : 'Quiz'}</Link>
+          <Link to={quizUrl(c.id)} onClick={() => trackAction('prog-quiz')} className="fd-btn-ghost" style={{ minHeight: 40 }}><Brain className="h-4 w-4" /> {c.skilliq ? 'Refaire le quiz' : 'Quiz'}</Link>
         )}
       </div>
     </div>

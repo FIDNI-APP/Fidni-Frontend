@@ -187,6 +187,10 @@ export const removeAvatar = async (): Promise<void> => {
 };
 
 // Change password
+/**
+ * Changer de mot de passe (l'actuel est exigé). Un compte sans mot de passe (créé avec Google) en définit un
+ * par le lien « Mot de passe oublié » (authApi.requestPasswordReset), plus depuis les réglages.
+ */
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
   const response = await api.post('/auth/password/change/', {
     current_password: currentPassword,
@@ -202,7 +206,8 @@ export const updateUserInfo = async (data: {
   first_name?: string;
   last_name?: string;
   email?: string;
-  /** Obligatoire quand l'e-mail change. */
+  /** Obligatoire quand l'e-mail change. Compte sans mot de passe (Google) : 400 {code:'set_password_first'}.
+   *  La nouvelle adresse est à confirmer : réponse avec email_verification_sent: true. */
   current_password?: string;
   /** Établissement de la liste officielle, ou nom libre (school_id vide). */
   school_id?: number | '';
@@ -212,7 +217,7 @@ export const updateUserInfo = async (data: {
   birth_date?: string;
   /** Acceptation des CGU et de la politique de confidentialité en vigueur. */
   accept_terms?: boolean;
-}): Promise<any> => {
+}): Promise<{ message?: string; email_verification_sent?: boolean; [key: string]: unknown }> => {
   const response = await api.patch('/auth/user/update/', data);
   return response.data;
 };
@@ -243,9 +248,10 @@ export const downloadMyData = async (username: string) => {
   URL.revokeObjectURL(url);
 };
 
-/** Supprime son propre compte (mot de passe exigé). Les contributions restent sous « Compte supprimé ». */
-export const deleteMyAccount = async (password: string) => {
-  await api.post('/auth/delete-account/', { password });
+/** Supprime son propre compte (mot de passe exigé s'il en a un : pas pour un compte créé avec Google).
+ *  Les contributions restent sous « Compte supprimé ». */
+export const deleteMyAccount = async (password?: string) => {
+  await api.post('/auth/delete-account/', password ? { password } : {});
 };
 
 /** Modération (admin) : supprime un compte ET son contenu. `confirm` = nom du compte recopié. */

@@ -1,4 +1,6 @@
 // src/components/profile/ProgressSection.tsx
+// Exercices réussis / à revoir de l'élève. 10/10/2026 : mêmes mots que partout ailleurs (« Réussi », « À revoir »,
+// plus de « Validé / Échoué »), tutoiement.
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Content } from '@/types';
@@ -14,7 +16,7 @@ import {
   Layers,
   FileText,
   BarChart3,
-  X,
+  RotateCcw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -53,8 +55,8 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
   const [sortBy, setSortBy] = useState<'date' | 'time' | 'subject'>('date');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
-  const safeSuccessExercises = Array.isArray(successExercises) ? successExercises : [];
-  const safeReviewExercises = Array.isArray(reviewExercises) ? reviewExercises : [];
+  const safeSuccessExercises = useMemo(() => (Array.isArray(successExercises) ? successExercises : []), [successExercises]);
+  const safeReviewExercises = useMemo(() => (Array.isArray(reviewExercises) ? reviewExercises : []), [reviewExercises]);
 
   const totalExercises = safeSuccessExercises.length + safeReviewExercises.length;
   const successRate = totalExercises > 0
@@ -113,9 +115,9 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         if (ex.status === 'success') stats.success++;
         else stats.review++;
       } else {
-        chapters.forEach((chapter: any) => {
-          const chapterName = chapter.name || chapter;
-          const chapterId = chapter.id || chapter;
+        chapters.forEach((chapter: { id?: number | string; name?: string } | string) => {
+          const chapterName = typeof chapter === 'string' ? chapter : chapter.name || '';
+          const chapterId = typeof chapter === 'string' ? chapter : chapter.id ?? chapterName;
           const key = `${chapterId}`;
           if (!chapterMap.has(key)) {
             chapterMap.set(key, {
@@ -210,15 +212,15 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-xs text-slate-500 font-medium">Validés</span>
+            <span className="text-xs text-slate-500 font-medium">Réussis</span>
           </div>
           <div className="text-2xl font-bold text-slate-900">{safeSuccessExercises.length}</div>
         </div>
 
         <div className="fd-card p-5">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="text-xs text-slate-500 font-medium">Échoués</span>
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="text-xs text-slate-500 font-medium">À revoir</span>
           </div>
           <div className="text-2xl font-bold text-slate-900">{safeReviewExercises.length}</div>
         </div>
@@ -268,18 +270,19 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         </div>
 
         {/* Status + search */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {viewMode === 'list' && (
             <>
               <div className="flex bg-slate-100 rounded-full p-1">
                 {[
                   { id: 'all', label: 'Tous', count: totalExercises },
-                  { id: 'success', label: 'Validés', count: safeSuccessExercises.length },
-                  { id: 'review', label: 'Échoués', count: safeReviewExercises.length }
+                  { id: 'success', label: 'Réussis', count: safeSuccessExercises.length },
+                  { id: 'review', label: 'À revoir', count: safeReviewExercises.length }
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    aria-pressed={activeTab === tab.id}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
                       activeTab === tab.id
                         ? 'bg-white text-slate-900 shadow-sm'
@@ -303,13 +306,15 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                   placeholder="Rechercher..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-40"
+                  aria-label="Rechercher un exercice"
+                className="pl-9 pr-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-40"
                 />
               </div>
 
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                aria-label="Trier"
                 className="px-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="date">Récents</option>
@@ -340,7 +345,8 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                   <h3 className="font-semibold text-slate-900 truncate">{stat.name}</h3>
                   <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
                     <span>{stat.total} exercice{stat.total > 1 ? 's' : ''}</span>
-                    <span className="text-emerald-600 font-medium">{stat.success} validés</span>
+                    <span className="text-emerald-600 font-medium">{stat.success} réussi{stat.success > 1 ? 's' : ''}</span>
+                    {stat.review > 0 && <span className="text-amber-700 font-medium">{stat.review} à revoir</span>}
                   </div>
                 </div>
 
@@ -379,15 +385,15 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                           className={`flex items-center gap-3 p-3 rounded-lg border-l-4 hover:bg-slate-50 transition-colors group ${
                             exercise.status === 'success'
                               ? 'border-l-emerald-400 bg-emerald-50/30'
-                              : 'border-l-red-400 bg-red-50/30'
+                              : 'border-l-amber-400 bg-amber-50/30'
                           }`}
                         >
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                            exercise.status === 'success' ? 'bg-emerald-100' : 'bg-red-100'
+                            exercise.status === 'success' ? 'bg-emerald-100' : 'bg-amber-100'
                           }`}>
                             {exercise.status === 'success'
                               ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                              : <X className="w-3.5 h-3.5 text-red-600" />
+                              : <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
                             }
                           </div>
                           <div className="flex-1 min-w-0">
@@ -416,7 +422,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
               </div>
               <h3 className="font-semibold text-slate-900 mb-2">Aucune donnée</h3>
               <p className="text-slate-500 text-sm">
-                Commencez à faire des exercices pour voir votre progression
+                Fais des exercices et dis si tu les as réussis : ta progression apparaîtra ici.
               </p>
             </div>
           )}
@@ -433,7 +439,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
               </div>
               <h3 className="font-semibold text-slate-900 mb-2">Aucun exercice trouvé</h3>
               <p className="text-slate-500 text-sm mb-5">
-                {searchQuery ? 'Essayez une autre recherche' : 'Commencez à faire des exercices'}
+                {searchQuery ? 'Essaie avec d’autres mots.' : 'Fais un exercice et dis si tu l’as réussi : il apparaîtra ici.'}
               </p>
               <Link
                 to="/exercises"
@@ -467,9 +473,9 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                       exercise.status === 'success'
                         ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-red-50 text-red-700'
+                        : 'bg-amber-50 text-amber-800'
                     }`}>
-                      {exercise.status === 'success' ? 'Validé' : 'Échoué'}
+                      {exercise.status === 'success' ? 'Réussi' : 'À revoir'}
                     </span>
                   </div>
                 </Link>

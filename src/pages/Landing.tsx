@@ -6,9 +6,18 @@ import {
 } from 'lucide-react';
 import { SEO } from '@/components/layout/SEO';
 import { HomeContentCard } from '@/components/content/HomeContentCard';
-import { getExercises } from '@/lib/api';
+import { getClassLevels, getExercises } from '@/lib/api';
+import { getHub, hubPath, type HubInfo } from '@/lib/api/hubApi';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import type { Content } from '@/types';
+
+interface Level { id: string; name: string; slug: string }
+
+/** Dernier niveau choisi par le visiteur (sommaire du programme). */
+const LEVEL_KEY = 'fidni:accueil:niveau';
+const DEFAULT_LEVEL = '2eme-bac-sm';
+const rememberLevel = (slug: string) => { try { localStorage.setItem(LEVEL_KEY, slug); } catch { /* préférence facultative */ } };
+const rememberedLevel = () => { try { return localStorage.getItem(LEVEL_KEY); } catch { return null; } };
 
 /**
  * Public homepage (shown to logged-out visitors).
@@ -24,6 +33,19 @@ import type { Content } from '@/types';
 export function Landing() {
   const [popular, setPopular] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+  // Les niveaux (Tronc commun → 2ème Bac) : « Tu es en : » et le sommaire. null = en chargement.
+  const [levels, setLevels] = useState<Level[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getClassLevels('exercise')
+      .then((data) => {
+        if (cancelled) return;
+        setLevels(data.map((l) => ({ id: String(l.id), name: l.name, slug: (l as { slug?: string }).slug ?? '' })).filter((l) => l.slug));
+      })
+      .catch(() => { if (!cancelled) setLevels([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +63,7 @@ export function Landing() {
   }, []);
 
   // Voting requires an account — nudge visitors to sign up.
-  const openSignup = useOpenSignup();
+  const openSignup = useOpenSignup('vote');
   const handleVote = () => openSignup();
 
   return (
@@ -54,11 +76,11 @@ export function Landing() {
         canonicalUrl="/"
       />
 
-      <Hero />
+      <Hero levels={levels} />
       <TrustRow />
       <Pillars />
       <HowItWorks />
-      <Curriculum />
+      <Curriculum levels={levels} />
       <PopularPreview items={popular} loading={loading} onVote={handleVote} />
       <FinalCTA />
     </div>
@@ -68,13 +90,13 @@ export function Landing() {
 /* ═══════════════════════════════ Hero ═══════════════════════════════ */
 
 /** Le lien garde /signup (clic molette, partage) ; un clic simple ouvre la fenêtre sur place. */
-function useSignupClick() {
-  const openSignup = useOpenSignup();
+function useSignupClick(source: string) {
+  const openSignup = useOpenSignup(source);
   return (e: React.MouseEvent) => { e.preventDefault(); openSignup(); };
 }
 
-function Hero() {
-  const onSignupClick = useSignupClick();
+function Hero({ levels }: { levels: Level[] | null }) {
+  const onSignupClick = useSignupClick('hero');
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-10 md:pb-14">
       <div className="grid lg:grid-cols-[1fr_1.02fr] gap-10 lg:gap-14 items-center">
@@ -107,7 +129,9 @@ function Hero() {
             </Link>
           </div>
 
-          <div className="flex items-center" style={{ gap: 9, fontSize: 13, color: FAINT }}>
+          <LevelPicker levels={levels} />
+
+          <div className="flex items-center" style={{ gap: 9, fontSize: 13, color: FAINT, marginTop: 22 }}>
             <Check className="w-4 h-4" style={{ color: ACCENT }} />
             <span>Gratuit · inscription en moins d'une minute</span>
           </div>
@@ -117,6 +141,27 @@ function Hero() {
         <WorkedExample />
       </div>
     </section>
+  );
+}
+
+/** « Tu es en : » — chaque niveau mène à sa page d'exercices, classés par chapitre. */
+function LevelPicker({ levels }: { levels: Level[] | null }) {
+  if (levels && levels.length === 0) return null; // niveaux indisponibles : on n'affiche rien
+  return (
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: SOFT, marginBottom: 9 }}>Tu es en :</div>
+      <div className="flex flex-wrap" style={{ gap: 8 }}>
+        {levels === null
+          ? [0, 1, 2, 3].map((i) => <span key={i} className="animate-pulse" style={{ ...levelChip, width: 110, background: LINE, borderColor: LINE }} />)
+          : levels.map((l) => (
+            <Link key={l.id} to={hubPath('exercises', l.slug)} onClick={() => rememberLevel(l.slug)} style={levelChip}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = INK; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = LINE; }}>
+              {l.name}
+            </Link>
+          ))}
+      </div>
+    </div>
   );
 }
 
@@ -248,11 +293,11 @@ const PILLARS = [
   },
   {
     icon: FileText,
-    title: "Sujets d'examen",
-    desc: 'Annales et sujets de bac corrigés pour t\'entraîner en conditions réelles, le chrono en main.',
-    sample: 'Brevet · Bac · Concours',
-    link: '/exams',
-    cta: "S'entraîner aux examens",
+    title: 'Bac national corrigé',
+    desc: 'Les sujets du Bac national corrigés en détail, pour t\'entraîner en conditions réelles, le chrono en main.',
+    sample: '2ème Bac SM · 2ème Bac PC',
+    link: '/exams/nationaux',
+    cta: 'Voir les sujets du Bac',
   },
 ];
 
@@ -322,12 +367,38 @@ function HowItWorks() {
 
 /* ═══════════════════════════════ Curriculum (table of contents) ═══════════════════════════════ */
 
-const CHAPTERS = [
-  'Analyse', 'Algèbre', 'Géométrie', 'Probabilités',
-  'Statistiques', 'Arithmétique', 'Suites numériques', 'Nombres complexes',
-];
+const MAX_CHAPTERS = 10;
 
-function Curriculum() {
+/** Le vrai sommaire d'un niveau : ses chapitres et leur nombre d'exercices, chacun vers sa page. */
+function Curriculum({ levels }: { levels: Level[] | null }) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [hub, setHub] = useState<HubInfo | null>(null);
+  // Niveau dont le sommaire n'a pas pu être chargé (pas d'attente infinie).
+  const [failed, setFailed] = useState<string | null>(null);
+
+  // Niveau affiché : celui choisi ici, sinon le dernier choisi, sinon le 2ème Bac SM.
+  const slug = levels?.length
+    ? [chosen, rememberedLevel(), DEFAULT_LEVEL].find((s) => s && levels.some((l) => l.slug === s)) ?? levels[0].slug
+    : null;
+
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    getHub('exercises', slug)
+      .then((data) => { if (!cancelled) { setHub(data); setFailed((f) => (f === slug ? null : f)); } })
+      .catch(() => { if (!cancelled) setFailed(slug); });
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  const choose = (s: string) => { setChosen(s); rememberLevel(s); };
+  const level = levels?.find((l) => l.slug === slug);
+  const ready = !!slug && hub?.level.slug === slug;
+  const chapters = ready && hub ? hub.chapters : [];
+  // En attente : les niveaux, puis le sommaire du niveau affiché (sans afficher « bientôt » entre les deux).
+  const waiting = levels === null || (!!slug && !ready && failed !== slug);
+  const unavailable = !slug || failed === slug;
+  const levelUrl = slug ? hubPath('exercises', slug) : '/exercises';
+
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-20">
       <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
@@ -336,33 +407,70 @@ function Curriculum() {
             align="left"
             eyebrow="Le programme"
             title="Du Tronc commun au Bac, ton sommaire de maths"
-            subtitle="Choisis un chapitre pour trouver exactement les exercices, leçons et examens qui vont avec."
+            subtitle="Choisis ton niveau, puis un chapitre : tu tombes directement sur ses exercices corrigés."
           />
-          <Link to="/exercises" style={{ ...btnSecondary, marginTop: 22 }}>
-            Tout explorer <ArrowRight className="w-4 h-4" />
+          <Link to={levelUrl} style={{ ...btnSecondary, marginTop: 22 }}>
+            {level ? `Tous les exercices · ${level.name}` : 'Tout explorer'} <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
-        {/* Numbered index — like the front matter of a textbook */}
-        <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {CHAPTERS.map((c, i) => (
-            <li key={c}>
-              <Link to="/exercises" className="group" style={chapterRow}
-                onMouseEnter={(e) => { e.currentTarget.style.background = SURFACE; e.currentTarget.style.borderColor = LINE; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
-              >
-                <span className="fd-nums" style={{ fontFamily: MONO, fontSize: 12, color: '#9a958c', width: 26 }}>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className="fd-display" style={{ fontSize: 18, fontWeight: 500, color: INK, flexGrow: 1, letterSpacing: '-0.01em' }}>
-                  {c}
-                </span>
-                <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: ACCENT }} />
-              </Link>
-              {i < CHAPTERS.length - 1 && <div style={{ height: 1, background: LINE }} />}
-            </li>
-          ))}
-        </ol>
+        <div>
+          {levels && levels.length > 0 && (
+            <div role="tablist" aria-label="Niveau" className="flex flex-wrap" style={{ gap: 8, marginBottom: 14 }}>
+              {levels.map((l) => {
+                const on = l.slug === slug;
+                return (
+                  <button key={l.id} type="button" role="tab" aria-selected={on} onClick={() => choose(l.slug)}
+                    style={{ ...levelChip, cursor: 'pointer', background: on ? INK : SURFACE, color: on ? '#fff' : SOFT, borderColor: on ? INK : LINE }}>
+                    {l.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Numbered index — like the front matter of a textbook */}
+          {waiting ? (
+            <div aria-hidden>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="animate-pulse" style={{ height: 22, margin: '14px', borderRadius: 6, background: LINE, width: `${70 - i * 8}%` }} />
+              ))}
+            </div>
+          ) : chapters.length === 0 ? (
+            <p style={{ fontSize: 14, color: FAINT, padding: '14px' }}>
+              {unavailable ? 'Le sommaire n’a pas pu s’afficher.' : 'Les exercices de ce niveau arrivent bientôt.'}{' '}
+              <Link to="/exercises" style={{ color: ACCENT, fontWeight: 600 }}>Voir tous les exercices</Link>
+            </p>
+          ) : (
+            <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {chapters.slice(0, MAX_CHAPTERS).map((c, i, shown) => (
+                <li key={c.id}>
+                  <Link to={c.url} className="group" style={chapterRow}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = SURFACE; e.currentTarget.style.borderColor = LINE; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                  >
+                    <span className="fd-nums" style={{ fontFamily: MONO, fontSize: 12, color: '#9a958c', width: 26, flexShrink: 0 }}>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span className="fd-display" style={{ fontSize: 18, fontWeight: 500, color: INK, flexGrow: 1, letterSpacing: '-0.01em', minWidth: 0 }}>
+                      {c.name}
+                    </span>
+                    <span className="fd-nums" style={{ fontSize: 12.5, color: FAINT, whiteSpace: 'nowrap' }}>
+                      {c.count} exercice{c.count > 1 ? 's' : ''}
+                    </span>
+                    <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: ACCENT, flexShrink: 0 }} />
+                  </Link>
+                  {i < shown.length - 1 && <div style={{ height: 1, background: LINE }} />}
+                </li>
+              ))}
+            </ol>
+          )}
+          {chapters.length > MAX_CHAPTERS && (
+            <Link to={levelUrl} className="fd-btn-ghost" style={{ marginTop: 12 }}>
+              Les {chapters.length} chapitres <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -402,7 +510,7 @@ function PopularPreview({ items, loading, onVote }: {
 /* ═══════════════════════════════ Final CTA ═══════════════════════════════ */
 
 function FinalCTA() {
-  const onSignupClick = useSignupClick();
+  const onSignupClick = useSignupClick('cta');
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24">
       <div style={{ borderRadius: 20, padding: '52px 32px', color: '#fff', background: ACCENT_HOVER, textAlign: 'center' }}>
@@ -500,6 +608,11 @@ const pillarIcon: React.CSSProperties = {
 const pillarCta: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6,
   fontSize: 13, fontWeight: 600, color: ACCENT,
+};
+const levelChip: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', minHeight: 40, padding: '0 14px',
+  borderRadius: 99, border: `1px solid ${LINE}`, background: SURFACE, color: INK,
+  fontSize: 13.5, fontWeight: 600, textDecoration: 'none', transition: 'border-color .15s, background .15s',
 };
 const chapterRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 14px',

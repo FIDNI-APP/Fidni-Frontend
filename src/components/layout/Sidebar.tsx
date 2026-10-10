@@ -1,18 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User, Bookmark as BookmarkIcon, Settings, LogOut,
   X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, TrendingUp, Target, Gauge, Landmark,
+  NotebookPen, Brain, ListChecks, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/auth/AuthController';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
+import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
 import { canSeeParcours } from '@/lib/features';
+import { revisionTab, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
 
 interface NavItem {
@@ -22,53 +24,63 @@ interface NavItem {
   match?: string[];
   /** Chemins qui ne l'activent pas malgré `match` (sous-section qui a sa propre entrée). */
   exclude?: string[];
+  /** Règle sur mesure quand l'adresse seule ne suffit pas (deux onglets d'une même page). */
+  isActive?: (pathname: string, search: string) => boolean;
   /** Content type for the class-level quick-link dropdown (singular API form). */
   dropdown?: 'exercise' | 'lesson' | 'exam';
 }
 
 interface NavGroup {
   title?: string;
+  /** Repère des visites guidées (lib/tours.ts). */
+  tour?: string;
   items: NavItem[];
 }
 
-// Grouped information architecture — turns 7 flat tabs into 3 clear intents.
-const NAV_GROUPS: NavGroup[] = [
-  { items: [{ to: '/', label: 'Accueil', icon: Home, match: ['/'] }] },
-  {
-    title: 'Apprendre',
-    items: [
-      { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], dropdown: 'lesson' },
-      { to: '/learning-path', label: 'Parcours', icon: Route, match: ['/learning-path'] },
-    ],
-  },
-  {
-    title: "S'entraîner",
-    items: [
-      { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], dropdown: 'exercise' },
-      { to: '/exams', label: 'Examens', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux'], dropdown: 'exam' },
-      { to: '/exams/nationaux', label: 'Examens nationaux', icon: Landmark, match: ['/exams/nationaux'] },
-      { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
-    ],
-  },
-  {
-    title: 'Ma classe',
-    items: [
-      { to: '/classrooms', label: 'Classes', icon: GraduationCap, match: ['/classrooms'] },
-    ],
-  },
-];
+const under = (p: string, base: string) => p === base || p.startsWith(`${base}/`);
 
-// Personal workspace — only shown to authenticated users. Groups the tools that
-// used to be buried in the profile page so they're reachable in one click.
-const MON_ESPACE_GROUP: NavGroup = {
-  title: 'Mon espace',
+// Menu du 10/10/2026 : ce qu'on fait (Travailler), puis où on en est (Mon suivi). Les libellés disent
+// ce que contient la page : « Examens » ne contenait que des DS, « Révisions » cachait la préparation d'un DS.
+const HOME_GROUP: NavGroup = { items: [{ to: '/', label: 'Accueil', icon: Home, match: ['/'] }] };
+
+const WORK_GROUP: NavGroup = {
+  title: 'Travailler',
+  tour: 'nav-travailler',
+  items: [
+    { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], dropdown: 'lesson' },
+    { to: '/learning-path', label: 'Parcours', icon: Route, match: ['/learning-path'] },
+    { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], dropdown: 'exercise' },
+    { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux'], dropdown: 'exam' },
+    { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
+    { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
+  ],
+};
+
+// Suivi personnel : seulement pour un membre connecté.
+const FOLLOW_GROUP: NavGroup = {
+  title: 'Mon suivi',
+  tour: 'nav-suivi',
   items: [
     { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
+    {
+      to: '/revision-lists?onglet=ds', label: 'Préparer un DS', icon: CalendarCheck,
+      isActive: (p, s) => under(p, '/revisions/ds') || (p === '/revision-lists' && revisionTab(s) === 'ds'),
+    },
+    {
+      to: '/revision-lists?onglet=listes', label: 'Mes révisions', icon: ListChecks,
+      isActive: (p, s) => (p === '/revision-lists' ? revisionTab(s) === 'listes'
+        : under(p, '/revision-lists') || under(p, '/profile/revision-lists')),
+    },
+    { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'] },
     { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
-    { to: '/skill-iq', label: 'Skill IQ', icon: Brain, match: ['/skill-iq'] },
-    { to: '/revision-lists', label: 'Révisions', icon: ListChecks, match: ['/revision-lists', '/profile/revision-lists', '/revisions'] },
     { to: '/saved', label: 'Favoris', icon: BookmarkIcon, match: ['/saved'] },
   ],
+};
+
+// Prof, ou élève inscrit dans au moins une classe (sinon « Rejoindre une classe » dans le menu du compte).
+const CLASS_GROUP: NavGroup = {
+  tour: 'nav-classe',
+  items: [{ to: '/classrooms', label: 'Classes', icon: GraduationCap, match: ['/classrooms'] }],
 };
 
 interface SidebarProps {
@@ -96,26 +108,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <SidebarInner collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
       </aside>
 
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-[60]">
-          <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(20,18,16,.4)', backdropFilter: 'blur(2px)' }}
-            onClick={onCloseMobile}
-          />
-          <aside
-            className="absolute left-0 top-0 h-full flex flex-col"
-            style={{
-              width: 264, background: '#fff', borderRight: '1px solid #e7e3dc',
-              animation: 'slideIn .25s ease both',
-            }}
-          >
-            <SidebarInner collapsed={false} onCloseMobile={onCloseMobile} showClose />
-          </aside>
-        </div>
-      )}
+      {mobileOpen && <MobileDrawer onClose={onCloseMobile} />}
     </>
+  );
+};
+
+/**
+ * Tiroir du téléphone : une vraie fenêtre (annoncée comme telle, Échap pour fermer, focus dedans
+ * puis rendu au bouton qui l'a ouverte).
+ */
+const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const panelRef = useRef<HTMLElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const panel = panelRef.current;
+    panel?.querySelector<HTMLElement>('[data-drawer-close]')?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); closeRef.current(); return; }
+      if (e.key !== 'Tab' || !panel || !panel.contains(document.activeElement)) return;
+      // Le focus reste dans le tiroir (Tab en boucle).
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter((el) => el.offsetParent !== null);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (previous && document.contains(previous)) previous.focus({ preventScroll: true });
+    };
+  }, []);
+
+  return (
+    <div className="md:hidden fixed inset-0 z-[60]">
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ background: 'rgba(20,18,16,.4)', backdropFilter: 'blur(2px)' }}
+        onClick={onClose}
+      />
+      <aside
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        className="absolute left-0 top-0 h-full flex flex-col"
+        style={{
+          width: 'min(288px, 86vw)', background: '#fff', borderRight: '1px solid #e7e3dc',
+          animation: 'slideIn .25s ease both',
+        }}
+      >
+        <SidebarInner collapsed={false} onCloseMobile={onClose} showClose />
+      </aside>
+    </div>
   );
 };
 
@@ -129,25 +180,31 @@ const SidebarInner: React.FC<{
 }> = ({ collapsed, onToggleCollapsed, onCloseMobile, showClose }) => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+  const { crumbs, section: forcedSection } = useBreadcrumb();
   const showParcours = canSeeParcours(user);
+  const hasClassroom = useHasClassroom();
 
-  // Insert "Mon espace" right after "S'entraîner" for signed-in users.
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
-    const base = NAV_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter((it) => showParcours || it.to !== '/learning-path'),
-    }));
-    if (!isAuthenticated) return base;
-    const next = [...base];
-    next.splice(3, 0, MON_ESPACE_GROUP);
-    return next;
-  }, [isAuthenticated, showParcours]);
+    const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/learning-path') };
+    if (!isAuthenticated) return [HOME_GROUP, work];
+    return hasClassroom ? [HOME_GROUP, work, FOLLOW_GROUP, CLASS_GROUP] : [HOME_GROUP, work, FOLLOW_GROUP];
+  }, [isAuthenticated, showParcours, hasClassroom]);
+
+  // Section imposée par la page (ex. un sujet du Bac national, sous /exams/123 comme un DS) :
+  // explicite (BreadcrumbContext.section), sinon l'adresse du premier élément du fil d'Ariane.
+  const section = useMemo(() => {
+    const wanted = forcedSection ?? crumbs?.[0]?.to ?? null;
+    return wanted && groups.some((g) => g.items.some((it) => it.to === wanted)) ? wanted : null;
+  }, [forcedSection, crumbs, groups]);
 
   const isActive = (item: NavItem) => {
-    if (item.to === '/') return location.pathname === '/';
-    if (item.exclude?.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))) return false;
-    return item.match?.some(p => location.pathname === p || location.pathname.startsWith(p + '/')) ?? false;
+    if (section) return item.to === section;
+    const p = location.pathname;
+    if (item.isActive) return item.isActive(p, location.search);
+    if (item.to === '/') return p === '/';
+    if (item.exclude?.some(x => under(p, x))) return false;
+    return item.match?.some(x => under(p, x)) ?? false;
   };
 
   return (
@@ -167,7 +224,7 @@ const SidebarInner: React.FC<{
           </Link>
         )}
         {showClose ? (
-          <button onClick={onCloseMobile} aria-label="Fermer le menu" style={iconBtnStyle}>
+          <button onClick={onCloseMobile} aria-label="Fermer le menu" data-drawer-close style={{ ...iconBtnStyle, width: 40, height: 40 }}>
             <X className="w-5 h-5" />
           </button>
         ) : (
@@ -185,7 +242,7 @@ const SidebarInner: React.FC<{
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3" style={{ padding: collapsed ? '12px 10px' : '12px' }}>
         {groups.map((group, gi) => (
-          <div key={gi} className={gi > 0 ? 'mt-4' : ''} data-tour={group.title ? TOUR_GROUP[group.title] : undefined}>
+          <div key={gi} className={gi > 0 ? 'mt-4' : ''} data-tour={group.tour}>
             {group.title && !collapsed && (
               <div
                 style={{
@@ -211,17 +268,13 @@ const SidebarInner: React.FC<{
 
       {/* User / auth footer */}
       <div data-tour="nav-compte" style={{ borderTop: '1px solid #faf9f7', padding: collapsed ? '10px' : '12px', flexShrink: 0 }}>
-        <SidebarUser collapsed={collapsed} onNavigate={onCloseMobile} />
+        <SidebarUser collapsed={collapsed} onNavigate={onCloseMobile} canJoinClass={isAuthenticated && !hasClassroom} inline={showClose} />
       </div>
     </>
   );
 };
 
 const INK = '#1a1a1a';
-/** Repères des visites guidées (lib/tours.ts). */
-const TOUR_GROUP: Record<string, string> = {
-  Apprendre: 'nav-apprendre', "S'entraîner": 'nav-entrainer', 'Ma classe': 'nav-classe', 'Mon espace': 'nav-espace',
-};
 // Entrée active : fond encre, tuile d'icône dorée.
 const rowLinkStyle = (active: boolean, collapsed: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', gap: 10,
@@ -275,7 +328,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
     let cancelled = false;
     setLoading(true);
     getClassLevels(item.dropdown)
-      .then(data => { if (!cancelled) setLevels(data.map((l: any) => ({ id: String(l.id), name: l.name, slug: l.slug }))); })
+      .then(data => { if (!cancelled) setLevels(data.map((l) => ({ id: String(l.id), name: l.name, slug: (l as { slug?: string }).slug }))); })
       .catch(e => console.error('Sidebar: failed to load class levels', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -286,6 +339,8 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
     return (
       <Link
         to={item.to} onClick={onClick} title={collapsed ? item.label : undefined}
+        aria-label={collapsed ? item.label : undefined}
+        aria-current={active ? 'page' : undefined}
         style={rowLinkStyle(active, collapsed)}
         onMouseEnter={(e) => hoverIn(e.currentTarget)}
         onMouseLeave={(e) => hoverOut(e.currentTarget)}
@@ -306,6 +361,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
       >
         <Link
           to={item.to} onClick={onClick}
+          aria-current={active ? 'page' : undefined}
           style={{
             flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
             padding: '5px 4px 5px 5px',
@@ -322,7 +378,7 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
           aria-expanded={open}
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 32, height: 36, border: 'none', background: 'transparent',
+            width: 40, height: 40, border: 'none', background: 'transparent',
             color: active ? 'rgba(255,255,255,.7)' : '#6b6862', cursor: 'pointer', flexShrink: 0,
           }}
         >
@@ -351,7 +407,9 @@ const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean;
           {!loading && levels && levels.length === 0 && (
             <div style={{ padding: '7px 10px', color: '#6b6862', fontSize: 12 }}>Aucun niveau</div>
           )}
-          {!loading && <SubLink to={item.to} label="Tout voir" onClick={onClick} muted active={onBase && !currentLevel} />}
+          {/* « Tout voir » : la liste de tous les niveaux (sans ?niveau=tous, un élève qui a indiqué sa classe
+              serait renvoyé à la page de son niveau, voir ContentList). */}
+          {!loading && <SubLink to={`${item.to}?niveau=tous`} label="Tout voir" onClick={onClick} muted active={onBase && !currentLevel} />}
         </div>
       )}
     </div>
@@ -369,7 +427,7 @@ const SubLink: React.FC<{ to: string; label: string; onClick?: () => void; muted
       to={to} onClick={onClick} className="truncate"
       aria-current={active ? 'page' : undefined}
       style={{
-        padding: '7px 10px', borderRadius: 8, fontSize: 12.5, ...rest,
+        padding: '9px 10px', borderRadius: 8, fontSize: 12.5, ...rest,
         boxShadow: active ? 'inset 3px 0 0 #c0892f' : 'none',
         fontWeight: active ? 700 : muted ? 600 : 500,
         textDecoration: 'none', transition: 'background .12s, color .12s',
@@ -384,10 +442,12 @@ const SubLink: React.FC<{ to: string; label: string; onClick?: () => void; muted
 
 /* ────── User footer ────── */
 
-const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = ({ collapsed, onNavigate }) => {
+const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void; canJoinClass?: boolean; inline?: boolean }> = ({
+  collapsed, onNavigate, canJoinClass, inline,
+}) => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
-  const { openModal, setInitialTab } = useAuthModal();
+  const openSignup = useOpenSignup('sidebar');
   const [menuOpen, setMenuOpen] = React.useState(false);
   const accountRef = React.useRef<HTMLDivElement>(null);
 
@@ -400,7 +460,7 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
     if (collapsed) {
       return (
         <button
-          onClick={() => { setInitialTab('login'); openModal(); }}
+          onClick={() => openSignup('login')}
           aria-label="Connexion" title="Connexion"
           style={{ ...iconBtnStyle, width: '100%', height: 38 }}
         >
@@ -410,10 +470,10 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
     }
     return (
       <div className="flex flex-col gap-2">
-        <button className="fd-btn-ghost" style={{ justifyContent: 'center' }} onClick={() => { setInitialTab('login'); openModal(); }}>
+        <button className="fd-btn-ghost" style={{ justifyContent: 'center', minHeight: 40 }} onClick={() => openSignup('login')}>
           Connexion
         </button>
-        <button className="fd-btn-primary" style={{ justifyContent: 'center' }} onClick={() => { setInitialTab('signup'); openModal(); }}>
+        <button className="fd-btn-primary" style={{ justifyContent: 'center', minHeight: 40 }} onClick={() => openSignup('signup')}>
           S'inscrire
         </button>
       </div>
@@ -440,10 +500,37 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
     );
   }
 
+  // Compte : profil et réglages seulement (la progression et les révisions sont dans « Mon suivi »).
+  const items = (
+    <>
+      <MenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => go(`/profile/${user.username}`)} />
+      <MenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => go(`/profile/${user.username}?tab=settings`)} />
+      {canJoinClass && (
+        <MenuItem icon={<UserPlus className="w-4 h-4" />} label="Rejoindre une classe" onClick={() => go('/classrooms')} />
+      )}
+      {user.is_superuser && (
+        <MenuItem icon={<Gauge className="w-4 h-4" />} label="Pilotage" onClick={() => go('/pilotage')} />
+      )}
+      {user.is_superuser && (
+        <MenuItem icon={<Trophy className="w-4 h-4" />} label="Admin concours" onClick={() => go('/concours/admin')} />
+      )}
+      <div style={{ height: 1, background: '#faf9f7', margin: '4px 0' }} />
+      <MenuItem icon={<LogOut className="w-4 h-4" />} label="Se déconnecter" onClick={handleLogout} danger />
+    </>
+  );
+
   return (
     <div className="relative" ref={accountRef}>
+      {/* Dans le tiroir du téléphone, le menu s'ouvre sur place (il reste dans la fenêtre du tiroir). */}
+      {inline && menuOpen && (
+        <div style={{ marginBottom: 8, padding: 6, borderRadius: 12, border: '1px solid #e7e3dc', background: '#fff' }}>
+          {items}
+        </div>
+      )}
       <button
         onClick={() => setMenuOpen(v => !v)}
+        aria-expanded={menuOpen}
+        aria-label={`Compte de ${user.username}`}
         style={{
           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
           padding: 8, borderRadius: 12, border: '1px solid #e7e3dc',
@@ -458,27 +545,18 @@ const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void }> = (
         </div>
       </button>
 
-      <FloatingPanel anchorRef={accountRef} open={menuOpen} onClose={() => setMenuOpen(false)} placement="top-start"
-        offset={8} matchWidth
+      {!inline && (
+        <FloatingPanel anchorRef={accountRef} open={menuOpen} onClose={() => setMenuOpen(false)} placement="top-start"
+          offset={8} matchWidth
           style={{
             background: '#fff', borderRadius: 12, border: '1px solid #e7e3dc',
             boxShadow: '0 14px 40px rgba(20,18,16,.18)', padding: 6,
             animation: 'fadeUp .18s ease',
           }}
         >
-          <MenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => go(`/profile/${user.username}`)} />
-          <MenuItem icon={<TrendingUp className="w-4 h-4" />} label="Ma progression" onClick={() => go('/progression')} />
-          <MenuItem icon={<Target className="w-4 h-4" />} label="Réussis / à revoir" onClick={() => go(`/profile/${user.username}?tab=progress`)} />
-          <MenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => go(`/profile/${user.username}?tab=settings`)} />
-          {user.is_superuser && (
-            <MenuItem icon={<Gauge className="w-4 h-4" />} label="Pilotage" onClick={() => go('/pilotage')} />
-          )}
-          {user.is_superuser && (
-            <MenuItem icon={<Trophy className="w-4 h-4" />} label="Admin concours" onClick={() => go('/concours/admin')} />
-          )}
-          <div style={{ height: 1, background: '#faf9f7', margin: '4px 0' }} />
-          <MenuItem icon={<LogOut className="w-4 h-4" />} label="Se déconnecter" onClick={handleLogout} danger />
-      </FloatingPanel>
+          {items}
+        </FloatingPanel>
+      )}
     </div>
   );
 };
@@ -489,7 +567,7 @@ const MenuItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => 
   <button
     onClick={onClick}
     style={{
-      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+      display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 38,
       padding: '8px 10px', borderRadius: 9, border: 'none',
       background: 'transparent', color: danger ? '#b91c1c' : '#33302b',
       fontSize: 12.5, fontWeight: 500, fontFamily: 'DM Sans', cursor: 'pointer', textAlign: 'left',

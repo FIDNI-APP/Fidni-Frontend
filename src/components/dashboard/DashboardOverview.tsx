@@ -5,17 +5,29 @@
  *   3. à faire maintenant (reprendre / à revoir / notions faibles, dans un seul encart, s'il y a quelque chose)
  * Le détail (maîtrise du programme, évolution, temps d'étude) est sur la page « Ma progression » (/progression).
  * Palette encre / vert / or, pas de dégradé ; vert = progression, or = à consolider.
+ *
+ * 10/10/2026 : un nouvel élève (aucune question évaluée) voit « Tes 3 premiers pas » au lieu d'une bande de zéros ;
+ * « À refaire » ne garde que ce qui a été raté il y a au moins 2 jours (« raté il y a 5 j »), du plus ancien au plus
+ * récent ; les notions faibles ouvrent leur chapitre dans Ma progression ; sans DS annoncé, une carte propose d'en
+ * annoncer un (formulaire ouvert sur place, puis le plan de révision).
  */
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight, ArrowUpRight, ArrowDownRight, Minus, Flame, Target, ListChecks,
-  RotateCcw, PlayCircle, BookOpen, Brain,
+  RotateCcw, PlayCircle, BookOpen, Brain, Check, CalendarPlus, Dumbbell,
 } from 'lucide-react';
 import { getDashboardOverview, type DashboardOverview as Overview } from '@/lib/api';
-import { getRevisionSuggestions, quickAddToRevision } from '@/lib/api/revisionListApi';
+import { getRevisionSuggestions, quickAddManyToRevision } from '@/lib/api/revisionListApi';
 import { Loader2 } from 'lucide-react';
 import { NextTestReminder } from '@/components/devoirs/NextTestReminder';
+import { useNextTest, type NextTestState } from '@/components/devoirs/useNextTest';
+import { trackAction } from '@/lib/usage';
+import { useAuth } from '@/contexts/AuthContext';
+import { lessonsHub, quizUrl } from '@/pages/progression/links';
+
+// Le formulaire « Annoncer un DS » n'est chargé qu'à l'ouverture (taxonomie, animations).
+const TestFormModal = lazy(() => import('@/components/devoirs/TestFormModal').then((m) => ({ default: m.TestFormModal })));
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -23,17 +35,34 @@ const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Sa
 export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?: { id: string | number; title: string } }> = ({
   username, fallbackExercise,
 }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  // Un prof n'a ni « premiers pas » d'élève ni DS à annoncer.
+  const isTeacher = user?.profile?.user_type === 'teacher';
   const [data, setData] = useState<Overview | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const ds = useNextTest();
+  // Formulaire « Annoncer un DS » : monté au premier clic, gardé ensuite (animation de fermeture).
+  const [announce, setAnnounce] = useState<'closed' | 'open' | 'never'>('never');
+  const openAnnounce = () => { trackAction('annoncer-ds'); setAnnounce('open'); };
 
   useEffect(() => {
-    getDashboardOverview().then(setData).catch(() => setFailed(true));
-  }, []);
+    let alive = true;
+    getDashboardOverview()
+      .then((d) => { if (alive) { setData(d); setFailed(false); } })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [attempt]);
 
   if (failed) {
     return (
-      <div className="rounded-2xl border border-line bg-white p-6 text-sm text-ink-faint">
-        Ton tableau de bord n’a pas pu être chargé. Recharge la page dans un instant.
+      <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-5 text-sm text-ink-faint sm:p-6">
+        <span className="min-w-0 flex-1 basis-[220px]">Ton tableau de bord n’a pas pu être chargé : vérifie ta connexion.</span>
+        <button type="button" onClick={() => { setFailed(false); setAttempt((n) => n + 1); }}
+          className="fd-btn-ghost shrink-0" style={{ minHeight: 40 }}>
+          <RotateCcw className="h-4 w-4" /> Réessayer
+        </button>
       </div>
     );
   }
@@ -42,17 +71,94 @@ export const DashboardOverview: React.FC<{ username?: string; fallbackExercise?:
   const next = data.resume[0];
   const levelQuery = data.level ? `?classLevels=${data.level.id}` : '';
   const hasTodo = data.resume.length > 0 || data.review.length > 0 || data.weak_notions.length > 0;
+  const steps = firstSteps(data, ds);
+  // Nouvel élève : ses premiers pas plutôt que « Série 0 jour · Questions 0 · Réussite — ».
+  const newcomer = !isTeacher && data.totals.questions === 0 && steps.some((x) => !x.done);
 
   return (
     <div className="flex flex-col gap-5">
-      <Header username={username} data={data} next={next} levelQuery={levelQuery} fallbackExercise={fallbackExercise} />
-      {/* Prochain DS (« Mon prochain DS ») : le rappel juste sous le bonjour. */}
-      <NextTestReminder />
-      <WeekStrip data={data} />
+      <Header username={username} data={data} next={next} levelQuery={levelQuery} fallbackExercise={fallbackExercise} newcomer={newcomer} />
+      {/* Prochain DS (« Mon prochain DS ») : le rappel juste sous le bonjour ; sans DS, l'invitation à en annoncer un
+          (sauf pour un nouvel élève : c'est déjà l'un de ses 3 premiers pas). */}
+      <NextTestReminder state={ds} invite={!newcomer && !isTeacher} onAnnounce={openAnnounce} />
+      {newcomer ? <FirstSteps steps={steps} data={data} onAnnounce={openAnnounce} /> : <WeekStrip data={data} />}
       {hasTodo && <NextSteps data={data} />}
+      {announce !== 'never' && (
+        <Suspense fallback={null}>
+          <TestFormModal open={announce === 'open'} onClose={() => setAnnounce('closed')}
+            onSaved={(t) => { setAnnounce('closed'); ds.reload(); navigate(`/revisions/ds/${t.id}`); }} />
+        </Suspense>
+      )}
     </div>
   );
 };
+
+/* ───────────────────────────── Tes 3 premiers pas (nouvel élève) ───────────────────────────── */
+
+type FirstStep = { key: 'exercice' | 'ds' | 'quiz'; done: boolean };
+
+/** Chaque pas se coche d'après les données déjà là (tableau de bord, DS annoncés). */
+function firstSteps(data: Overview, ds: NextTestState): FirstStep[] {
+  const t = data.totals;
+  return [
+    { key: 'exercice', done: t.questions > 0 || t.exercises_done + t.exams_done > 0 || data.resume.length + data.review.length > 0 },
+    { key: 'ds', done: ds.announced },
+    { key: 'quiz', done: data.chapters.some((c) => c.skilliq_pct !== null) },
+  ];
+}
+
+function FirstSteps({ steps, data, onAnnounce }: { steps: FirstStep[]; data: Overview; onAnnounce: () => void }) {
+  const exercises = data.level_hub_url ? `${data.level_hub_url}?sort=easiest` : `/exercises${data.level ? `?classLevels=${data.level.id}` : ''}`;
+  const done = steps.filter((x) => x.done).length;
+  const action = 'inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors';
+  const primary = `${action} bg-brand text-white hover:bg-brand-hover`;
+  const ghost = `${action} border border-line bg-white text-ink-soft hover:border-ink`;
+  const content: Record<FirstStep['key'], { title: string; text: string; cta: React.ReactNode }> = {
+    exercice: {
+      title: 'Fais un exercice et dis si tu l’as réussi',
+      text: 'Sous chaque question : « Réussi » ou « À revoir ». C’est ce qui remplit ton tableau de bord.',
+      cta: <Link to={exercises} className={primary}><Dumbbell className="h-4 w-4" /> Choisir un exercice</Link>,
+    },
+    ds: {
+      title: 'Annonce ton prochain DS',
+      text: 'La date et les chapitres : on te prépare une révision ciblée et un DS blanc.',
+      cta: <button type="button" onClick={onAnnounce} className={ghost}><CalendarPlus className="h-4 w-4" /> Annoncer mon DS</button>,
+    },
+    quiz: {
+      title: 'Passe un quiz de chapitre',
+      text: 'Une dizaine de questions corrigées tout de suite : tu sais où tu en es.',
+      cta: <Link to="/skill-iq" className={ghost}><Brain className="h-4 w-4" /> Choisir un quiz</Link>,
+    },
+  };
+  return (
+    <section aria-labelledby="premiers-pas" data-tour="home-premiers-pas" className="rounded-2xl border border-line bg-white px-5 py-4 sm:px-6">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="premiers-pas" className="text-[15px] font-bold text-ink">Tes 3 premiers pas</h2>
+        <span className="fd-nums text-[12.5px] font-semibold text-ink-faint">{done} / 3</span>
+      </div>
+      <ol className="mt-1 divide-y divide-line">
+        {steps.map((x, i) => {
+          const c = content[x.key];
+          return (
+            <li key={x.key} className="grid grid-cols-[28px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 py-3 sm:grid-cols-[28px_minmax(0,1fr)_auto]">
+              <span aria-hidden className={`fd-nums inline-flex h-7 w-7 items-center justify-center rounded-full text-[12.5px] font-bold ${
+                x.done ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-soft'}`}>
+                {x.done ? <Check className="h-4 w-4" /> : i + 1}
+              </span>
+              <div className="min-w-0">
+                <p className={`text-[14px] font-semibold leading-snug ${x.done ? 'text-ink-faint line-through decoration-line' : 'text-ink'}`}>
+                  {c.title}<span className="sr-only">{x.done ? ' (fait)' : ''}</span>
+                </p>
+                {!x.done && <p className="mt-0.5 text-[12.5px] leading-snug text-ink-faint">{c.text}</p>}
+              </div>
+              {!x.done && <div className="col-start-2 sm:col-start-auto">{c.cta}</div>}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
 
 /* ───────────────────────────── Ta semaine (une seule bande) ───────────────────────────── */
 
@@ -103,9 +209,12 @@ function Stat({ icon, label, value, note }: { icon: React.ReactNode; label: stri
 function NextSteps({ data }: { data: Overview }) {
   const resume = data.resume.slice(0, 3);
   const review = data.review.slice(0, 3);
+  const weak = data.weak_notions.slice(0, 3);
+  const quizChapter = weak.find((n) => n.chapter_id)?.chapter_id ?? null;
   return (
     <section className="rounded-2xl border border-line bg-white">
-      <div className={`grid ${resume.length && review.length ? 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : ''}`}>
+      {/* minmax(0,…) : un titre long se tronque au lieu d'élargir la page sur téléphone. */}
+      <div className={`grid grid-cols-[minmax(0,1fr)] ${resume.length && review.length ? 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : ''}`}>
         {resume.length > 0 && (
           <div className="p-5 sm:p-6">
             <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><PlayCircle className="w-4 h-4 text-ink-faint" /> Reprendre</h2>
@@ -114,7 +223,7 @@ function NextSteps({ data }: { data: Overview }) {
                 const pct = c.total ? Math.round(((c.assessed ?? 0) / c.total) * 100) : 0;
                 return (
                   <li key={c.id}>
-                    <Link to={c.url} className="group flex items-center gap-4 py-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                    <Link to={c.url} onClick={() => trackAction('accueil-reprendre')} className="group flex items-center gap-4 py-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                       <div className="min-w-0 flex-1">
                         <p className="text-[14px] font-semibold text-ink truncate group-hover:underline">{c.title}</p>
                         <div className="mt-1.5 flex items-center gap-3">
@@ -135,16 +244,19 @@ function NextSteps({ data }: { data: Overview }) {
         {review.length > 0 && (
           <div className={`p-5 sm:p-6 ${resume.length ? 'border-t lg:border-t-0 lg:border-l border-line' : ''}`}>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><RotateCcw className="w-4 h-4 text-ink-faint" /> À revoir</h2>
+              <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink"><RotateCcw className="w-4 h-4 text-ink-faint" /> À refaire</h2>
               <Link to="/revision-lists?onglet=listes" className="text-[12.5px] font-semibold text-brand-hover hover:underline">Mes listes</Link>
             </div>
-            <ul className="mt-2 flex flex-col">
+            <p className="mt-1 text-[12.5px] leading-snug text-ink-faint">Ratés il y a quelques jours : c’est le bon moment pour les refaire.</p>
+            <ul className="mt-1.5 flex flex-col">
               {review.map((c) => (
                 <li key={c.id}>
-                  <Link to={c.url} className="flex items-center gap-2.5 py-2 group">
+                  <Link to={c.url} className="flex min-h-[40px] items-center gap-2.5 py-2 group">
                     <span className="w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" aria-hidden />
                     <span className="min-w-0 flex-1 text-[13.5px] font-medium text-ink truncate group-hover:underline">{c.title}</span>
-                    <span className="text-[11.5px] text-ink-faint flex-shrink-0">{typeLabel(c.type)}</span>
+                    <span className="text-[11.5px] text-ink-faint flex-shrink-0 fd-nums">
+                      {c.days_ago != null ? `raté il y a ${c.days_ago} j` : typeLabel(c.type)}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -153,11 +265,17 @@ function NextSteps({ data }: { data: Overview }) {
           </div>
         )}
       </div>
-      {data.weak_notions.length > 0 && (
+      {weak.length > 0 && (
         <div className="px-5 sm:px-6 py-3 border-t border-line bg-[#fcfbf9] rounded-b-2xl flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px]">
           <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><Target className="w-4 h-4 text-gold-strong" /> À retravailler :</span>
-          <span className="text-ink-soft min-w-0">{data.weak_notions.slice(0, 3).map((n) => n.label).join(', ')}</span>
-          <Link to="/skill-iq" className="ml-auto inline-flex items-center gap-1.5 font-semibold text-brand-hover hover:underline">
+          {/* Chaque notion ouvre son chapitre dans Ma progression : de quoi s'entraîner, le cours, le quiz. */}
+          {weak.map((n) => (
+            <Link key={n.slug} to={n.chapter_id ? `/progression?chapitre=${n.chapter_id}` : '/progression'}
+              className="inline-flex min-h-[36px] max-w-full items-center rounded-full border border-gold-line bg-white px-3 font-medium text-ink hover:border-ink">
+              <span className="truncate">{n.label}</span>
+            </Link>
+          ))}
+          <Link to={quizChapter ? quizUrl(quizChapter) : '/skill-iq'} className="ml-auto inline-flex min-h-[36px] items-center gap-1.5 font-semibold text-brand-hover hover:underline">
             <Brain className="w-4 h-4" /> Me tester
           </Link>
         </div>
@@ -168,9 +286,9 @@ function NextSteps({ data }: { data: Overview }) {
 
 /* ───────────────────────────── En-tête ───────────────────────────── */
 
-function Header({ username, data, next, levelQuery, fallbackExercise }: {
+function Header({ username, data, next, levelQuery, fallbackExercise, newcomer }: {
   username?: string; data: Overview; next?: Overview['resume'][number]; levelQuery: string;
-  fallbackExercise?: { id: string | number; title: string };
+  fallbackExercise?: { id: string | number; title: string }; newcomer: boolean;
 }) {
   const now = new Date();
   const hello = now.getHours() >= 18 || now.getHours() < 6 ? 'Bonsoir' : 'Bonjour';
@@ -180,12 +298,15 @@ function Header({ username, data, next, levelQuery, fallbackExercise }: {
       + (w.success_rate !== null ? `, ${w.success_rate} % réussies` : '') + '.'
     : data.totals.questions
       ? 'Pas encore d’activité cette semaine : reprends là où tu t’étais arrêté.'
-      : 'Bienvenue ! Fais un premier exercice : ton tableau de bord se remplira au fil de ton travail.';
+      : newcomer
+        ? 'Bienvenue ! Commence par tes 3 premiers pas : ton tableau de bord se remplira au fil de ton travail.'
+        : 'Bienvenue ! Fais un premier exercice : ton tableau de bord se remplira au fil de ton travail.';
   const primary = next
     ? { to: next.url, label: 'Reprendre', detail: next.title }
     : fallbackExercise
       ? { to: `/exercises/${fallbackExercise.id}`, label: 'Commencer', detail: fallbackExercise.title }
-      : { to: `/exercises${levelQuery}`, label: 'Choisir un exercice', detail: undefined };
+      : { to: data.level_hub_url ?? `/exercises${levelQuery}`, label: 'Choisir un exercice', detail: undefined };
+  const lessons = lessonsHub(data.level_hub_url) ?? `/lessons${levelQuery}`;
 
   return (
     <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
@@ -200,12 +321,14 @@ function Header({ username, data, next, levelQuery, fallbackExercise }: {
         <p className="text-[14.5px] text-ink-faint mt-2.5 max-w-xl leading-relaxed">{summary}</p>
       </div>
       <div className="flex flex-wrap gap-2.5">
-        <Link to={primary.to}
+        {/* Le bouton principal de l'accueil (1re étape de la visite courte) : mesuré quelle que soit sa forme
+            (« Reprendre », « Commencer » l'exercice proposé, ou « Choisir un exercice »). */}
+        <Link to={primary.to} onClick={() => trackAction('accueil-reprendre')} data-tour="home-reprendre"
           className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-brand text-white text-[14px] font-semibold hover:bg-brand-hover transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand max-w-[340px]">
           <PlayCircle className="w-4 h-4 flex-shrink-0" />
           <span className="truncate">{primary.label}{primary.detail ? ` : ${primary.detail}` : ''}</span>
         </Link>
-        <Link to={`/lessons${levelQuery}`}
+        <Link to={lessons}
           className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-line bg-white text-[14px] font-semibold text-ink-soft hover:border-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
           <BookOpen className="w-4 h-4" /> Leçons
         </Link>
@@ -260,7 +383,7 @@ function RevisionCta() {
   const add = async () => {
     setState('busy');
     try {
-      for (const id of ids) await quickAddToRevision(id);
+      await quickAddManyToRevision(ids);  // une seule requête pour toute la liste
       setState('done');
     } catch {
       setState('idle');

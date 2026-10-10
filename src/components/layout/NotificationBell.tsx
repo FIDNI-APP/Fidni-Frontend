@@ -10,6 +10,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, CornerDownRight, Loader2, MessageCircle } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackAction } from '@/lib/usage';
 
 interface Notif {
   id: number;
@@ -104,6 +105,7 @@ export const NotificationBell: React.FC = () => {
     const next = !open;
     setOpen(next);
     if (!next) return;
+    trackAction('cloche');
     setLoading(true);
     api.get('/notifications/')
       .then((r) => { setItems(r.data.results ?? []); setUnread(r.data.unread ?? 0); })

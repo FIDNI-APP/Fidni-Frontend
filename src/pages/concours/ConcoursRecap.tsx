@@ -1,15 +1,16 @@
 /**
  * Result/recap page for a submitted simulation.
  *
- * Layout matches the screenshot:
+ * Layout:
  *   - Top hero: overall score
  *   - "Breakdown by Domain" tile grid (per subfield, with %)
- *   - Domain detail card: domain title + question selector grid + selected question review
+ *   - Domain detail : grille des questions (280 px à gauche sur ordinateur, au-dessus sur téléphone)
+ *     + correction de la question choisie, y compris quand elle a été laissée sans réponse
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Loader2, Trophy, Check, X, Lightbulb, ArrowLeft, EyeOff, Zap,
+  Loader2, Trophy, Check, X, Lightbulb, ArrowLeft, Zap, ChevronLeft, ChevronRight, MinusCircle,
 } from 'lucide-react';
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
 import {
@@ -23,31 +24,69 @@ export default function ConcoursRecapPage() {
 
   const [recap, setRecap] = useState<SimulationRecap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [activeDomainKey, setActiveDomainKey] = useState<string | null>(null);
   const [activePos, setActivePos] = useState<number | null>(null);
+  const reviewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sessionId) return;
+    let alive = true;
     (async () => {
       try {
         setLoading(true);
+        setFailed(false);
         const r = await getSimulationRecap(sessionId);
+        if (!alive) return;
+        // Simulation pas encore rendue (lien de l'historique, retour arrière…) : on y retourne.
+        if (r.status === 'in_progress') {
+          navigate(`/concours/simulate/${sessionId}`, { replace: true });
+          return;
+        }
         setRecap(r);
         if (r.breakdown.length > 0) {
           const first = r.breakdown[0];
           setActiveDomainKey(`${first.subject_id || ''}-${first.subfield_id || ''}`);
           if (first.positions.length > 0) setActivePos(first.positions[0]);
         }
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) {
+        // 409 : simulation encore en cours (le serveur ne donne pas le corrigé avant la fin).
+        if ((e as { response?: { status?: number } })?.response?.status === 409) {
+          if (alive) navigate(`/concours/simulate/${sessionId}`, { replace: true });
+          return;
+        }
+        console.error(e);
+        if (alive) setFailed(true);
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
-  }, [sessionId]);
+    return () => { alive = false; };
+  }, [sessionId, navigate]);
 
   const activeBreakdown = useMemo<BreakdownEntry | null>(() => {
     if (!recap || !activeDomainKey) return null;
     return recap.breakdown.find(b => `${b.subject_id || ''}-${b.subfield_id || ''}` === activeDomainKey) || null;
   }, [recap, activeDomainKey]);
 
+  if (!loading && (failed || !recap)) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#1a1a1a' }} className="flex items-center justify-center px-4">
+        <div className="text-center" style={{ maxWidth: 360 }}>
+          <p style={{ color: '#d8d4cc', fontSize: 14 }}>
+            Impossible d'afficher ce résultat pour le moment. Vérifie ta connexion et réessaie.
+          </p>
+          <button
+            onClick={() => navigate('/concours/sessions')}
+            className="fd-btn-ghost mt-4 inline-flex"
+            style={{ background: 'rgba(255,255,255,.08)', color: '#d8d4cc', border: '1px solid rgba(255,255,255,.15)' }}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Mon historique
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (loading || !recap) {
     return (
       <div style={{ minHeight: '100vh', background: '#1a1a1a' }} className="flex items-center justify-center">
@@ -55,6 +94,14 @@ export default function ConcoursRecapPage() {
       </div>
     );
   }
+
+  /** Choix d'une question dans la grille : sur téléphone (une colonne), on descend jusqu'à sa correction. */
+  const pick = (p: number) => {
+    setActivePos(p);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      requestAnimationFrame(() => reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  };
 
   const overall = Math.round(recap.score_percentage);
   const overallColor = overall >= 75 ? '#16a34a' : overall >= 50 ? '#f59e0b' : '#dc2626';
@@ -93,11 +140,10 @@ export default function ConcoursRecapPage() {
           style={{
             background: 'linear-gradient(135deg,#1a1a1a 0%,#1a1a1a 50%,#1a1a1a 100%)',
             borderRadius: 24,
-            padding: '32px 36px',
             position: 'relative',
             overflow: 'hidden',
           }}
-          className="mb-6"
+          className="mb-6 px-5 py-6 sm:px-9 sm:py-8"
         >
           <div aria-hidden style={{
             position: 'absolute', right: -40, bottom: -60, width: 240, height: 240,
@@ -159,13 +205,14 @@ export default function ConcoursRecapPage() {
           </div>
 
           <div
+            className="p-3 sm:p-[22px]"
             style={{
               background: 'rgba(255,255,255,.04)',
               border: '1px solid rgba(255,255,255,.08)',
-              borderRadius: 16, padding: 22,
+              borderRadius: 16,
             }}
           >
-            <div className="grid gap-x-6 gap-y-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            <div className="grid gap-x-6 gap-y-2 sm:gap-y-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))' }}>
               {recap.breakdown.map((b, i) => {
                 const key = `${b.subject_id || ''}-${b.subfield_id || ''}`;
                 const pct = b.total ? Math.round((b.correct * 100) / b.total) : 0;
@@ -223,16 +270,14 @@ export default function ConcoursRecapPage() {
 
         {/* Domain detail */}
         {activeBreakdown && (
-          <div
-            className="grid gap-5"
-            style={{ gridTemplateColumns: 'minmax(0, 280px) minmax(0, 1fr)' }}
-          >
+          <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
             {/* Left: domain summary + question grid */}
             <div
+              className="p-4 sm:p-[22px]"
               style={{
                 background: 'rgba(255,255,255,.04)',
                 border: '1px solid rgba(255,255,255,.08)',
-                borderRadius: 16, padding: 22,
+                borderRadius: 16,
               }}
             >
               <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
@@ -253,24 +298,22 @@ export default function ConcoursRecapPage() {
               <div className="flex flex-wrap gap-1.5">
                 {activeBreakdown.positions.map(p => {
                   const ans = recap.answers[p];
-                  const isAnswered = ans && ans.chosen_key;
-                  const isCorrect = ans?.is_correct;
+                  const kind = !ans?.chosen_key ? 'skipped' : ans.is_correct ? 'correct' : 'wrong';
+                  const st = PILL[kind];
                   const isCurrent = p === activePos;
-                  let bg = 'transparent';
-                  let border = 'rgba(255,255,255,.18)';
-                  let color = '#d8d4cc';
-                  if (isCurrent) { bg = 'rgba(180,176,168,.25)'; border = '#9a958c'; color = '#fff'; }
-                  else if (isAnswered && isCorrect) { bg = 'rgba(34,197,94,.15)'; border = 'rgba(34,197,94,.4)'; color = '#86efac'; }
-                  else if (isAnswered && !isCorrect) { bg = 'rgba(220,38,38,.15)'; border = 'rgba(220,38,38,.4)'; color = '#fca5a5'; }
                   return (
                     <button
                       key={p}
-                      onClick={() => setActivePos(p)}
+                      onClick={() => pick(p)}
+                      aria-label={`Question ${p + 1} : ${st.label}`}
+                      aria-current={isCurrent ? 'true' : undefined}
                       style={{
-                        minWidth: 38, padding: '7px 10px', borderRadius: 8,
-                        background: bg,
-                        border: `1.5px solid ${border}`,
-                        color, fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono', cursor: 'pointer',
+                        minWidth: 40, minHeight: 38, padding: '7px 10px', borderRadius: 8,
+                        background: st.bg,
+                        border: `1.5px ${kind === 'skipped' ? 'dashed' : 'solid'} ${st.border}`,
+                        // La question ouverte garde sa couleur de résultat, entourée de blanc.
+                        boxShadow: isCurrent ? '0 0 0 2px #1a1a1a, 0 0 0 4px #fff' : undefined,
+                        color: st.color, fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono', cursor: 'pointer',
                       }}
                     >
                       {p + 1}
@@ -278,10 +321,28 @@ export default function ConcoursRecapPage() {
                   );
                 })}
               </div>
+              <div className="flex items-center gap-x-3 gap-y-1 flex-wrap mt-3" style={{ fontSize: 11, color: '#b8b4ac' }}>
+                {(['correct', 'wrong', 'skipped'] as const).map(k => (
+                  <span key={k} className="inline-flex items-center gap-1.5">
+                    <span style={{
+                      width: 12, height: 12, borderRadius: 4, background: PILL[k].bg,
+                      border: `1.5px ${k === 'skipped' ? 'dashed' : 'solid'} ${PILL[k].border}`,
+                    }} />
+                    {PILL[k].label}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Right: selected question review */}
-            <QuestionReview recap={recap} pos={activePos} />
+            <div ref={reviewRef} style={{ scrollMarginTop: 72 }} className="min-w-0">
+              <QuestionReview
+                recap={recap}
+                pos={activePos}
+                positions={activeBreakdown.positions}
+                onGo={pick}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -291,7 +352,19 @@ export default function ConcoursRecapPage() {
 
 /* ───────────── Single question review ───────────── */
 
-function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | null }) {
+/** Couleurs des pastilles de la grille : juste, faux, sans réponse (pointillés gris). */
+const PILL = {
+  correct: { label: 'Correcte', bg: 'rgba(34,197,94,.15)', border: 'rgba(34,197,94,.45)', color: '#86efac' },
+  wrong:   { label: 'Fausse', bg: 'rgba(220,38,38,.15)', border: 'rgba(220,38,38,.45)', color: '#fca5a5' },
+  skipped: { label: 'Non répondue', bg: 'rgba(255,255,255,.06)', border: 'rgba(255,255,255,.35)', color: '#b8b4ac' },
+} as const;
+
+function QuestionReview({ recap, pos, positions, onGo }: {
+  recap: SimulationRecap; pos: number | null;
+  /** Questions du domaine affiché, pour passer à la précédente / suivante. */
+  positions: number[];
+  onGo: (p: number) => void;
+}) {
   if (pos === null) {
     return (
       <div
@@ -311,41 +384,25 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
   if (!item) return null;
   const q = item.question;
   const ans = recap.answers[pos];
-  const answered = !!(ans && ans.chosen_key);
+  const chosen = ans?.chosen_key || null;
+  const kind = !chosen ? 'skipped' : ans.is_correct ? 'correct' : 'wrong';
+  const at = positions.indexOf(pos);
+  const prev = at > 0 ? positions[at - 1] : null;
+  const next = at >= 0 && at < positions.length - 1 ? positions[at + 1] : null;
 
-  if (!answered) {
-    return (
-      <div
-        style={{
-          background: 'rgba(255,255,255,.04)',
-          border: '1px solid rgba(255,255,255,.08)',
-          borderRadius: 16, padding: 22,
-        }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Question {pos + 1}</h3>
-          <span style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
-            color: '#b8b4ac', background: 'rgba(255,255,255,.08)',
-            padding: '3px 9px', borderRadius: 99, textTransform: 'uppercase',
-          }}>
-            Non répondue
-          </span>
-        </div>
-        <div className="text-center" style={{ padding: 60 }}>
-          <EyeOff className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(255,255,255,.3)' }} />
-          <p style={{ color: '#b8b4ac', fontSize: 13 }}>Détail indisponible pour les questions non répondues.</p>
-        </div>
-      </div>
-    );
-  }
+  const navBtn: CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 38, padding: '0 12px', borderRadius: 10,
+    background: 'transparent', color: '#d8d4cc', border: '1px solid rgba(255,255,255,.18)',
+    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+  };
 
   return (
     <div
+      className="p-4 sm:p-[22px]"
       style={{
         background: 'rgba(255,255,255,.04)',
         border: '1px solid rgba(255,255,255,.08)',
-        borderRadius: 16, padding: 22,
+        borderRadius: 16,
       }}
     >
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -353,11 +410,13 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase',
-          color: ans.is_correct ? '#86efac' : '#fca5a5',
-          background: ans.is_correct ? 'rgba(34,197,94,.15)' : 'rgba(220,38,38,.15)',
+          color: PILL[kind].color,
+          background: kind === 'skipped' ? 'rgba(255,255,255,.08)' : PILL[kind].bg,
           padding: '4px 10px', borderRadius: 99,
         }}>
-          {ans.is_correct ? <><Check className="w-3 h-3" /> Correct</> : <><X className="w-3 h-3" /> Incorrect</>}
+          {kind === 'correct' && <><Check className="w-3 h-3" /> Correct</>}
+          {kind === 'wrong' && <><X className="w-3 h-3" /> Incorrect</>}
+          {kind === 'skipped' && <><MinusCircle className="w-3 h-3" /> Non répondue</>}
         </span>
       </div>
 
@@ -365,14 +424,20 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
         <ConcoursContentRenderer html={q.statement} />
       </div>
 
+      {kind === 'skipped' && (
+        <p style={{ fontSize: 12, color: '#b8b4ac', marginBottom: 10 }}>
+          Tu n'as pas répondu : la bonne réponse est en vert.
+        </p>
+      )}
+
       <div className="flex flex-col gap-2">
         {q.options.map(opt => {
           const isCorrect = opt.key === q.correct_key;
-          const isChosen = opt.key === ans.chosen_key;
+          const isChosen = opt.key === chosen;
           let bg = 'rgba(255,255,255,.04)';
           let border = 'rgba(255,255,255,.08)';
           if (isCorrect) { bg = 'rgba(34,197,94,.12)'; border = 'rgba(34,197,94,.4)'; }
-          else if (isChosen && !isCorrect) { bg = 'rgba(220,38,38,.12)'; border = 'rgba(220,38,38,.4)'; }
+          else if (isChosen) { bg = 'rgba(220,38,38,.12)'; border = 'rgba(220,38,38,.4)'; }
           return (
             <div
               key={opt.key}
@@ -395,7 +460,7 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
               >
                 {opt.key}
               </span>
-              <div className="flex-1 concours-dark-prose concours-recap-option" style={{ fontSize: 15, lineHeight: 1.65 }}>
+              <div className="flex-1 min-w-0 concours-dark-prose concours-recap-option" style={{ fontSize: 15, lineHeight: 1.65 }}>
                 <ConcoursContentRenderer html={opt.text} />
               </div>
               {isCorrect && <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#86efac' }} />}
@@ -420,6 +485,25 @@ function QuestionReview({ recap, pos }: { recap: SimulationRecap; pos: number | 
           <div className="concours-dark-prose concours-recap-explanation" style={{ fontSize: 15, color: '#fff', lineHeight: 1.7 }}>
             <ConcoursContentRenderer html={q.explanation} />
           </div>
+        </div>
+      )}
+
+      {(prev !== null || next !== null) && (
+        <div className="flex items-center justify-between gap-2 mt-4">
+          <button
+            onClick={() => prev !== null && onGo(prev)}
+            disabled={prev === null}
+            style={{ ...navBtn, opacity: prev === null ? .35 : 1 }}
+          >
+            <ChevronLeft className="w-3.5 h-3.5" /> Précédente
+          </button>
+          <button
+            onClick={() => next !== null && onGo(next)}
+            disabled={next === null}
+            style={{ ...navBtn, opacity: next === null ? .35 : 1 }}
+          >
+            Suivante <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

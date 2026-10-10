@@ -42,11 +42,14 @@ const FEATURES_CONFIG: FeatureConfig[] = [
   // Profil = qui je suis. La progression a sa propre page (/progression, barre latérale).
   { id: 'overview', title: 'Profil', icon: User, forUserType: ['student', 'teacher'] },
   // Exercices réussis et à revoir (« Ma progression » est une page à part : /progression).
-  { id: 'progress', title: 'Réussis / à revoir', icon: Target, forUserType: ['student'] },
-  // Skill IQ, Cahiers, Révisions et Favoris ont été déplacés vers la sidebar ("Mon espace").
+  // Propriétaire seulement : le serveur refuse cette liste aux autres (l'onglet restait vide).
+  { id: 'progress', title: 'Réussis / à revoir', icon: Target, forUserType: ['student'], ownerOnly: true },
+  // Quiz par chapitre, Cahiers, Révisions et Favoris sont dans la barre latérale (« Mon suivi »).
   { id: 'students', title: 'Mes élèves', icon: Users, forUserType: ['teacher'], ownerOnly: true },
   { id: 'settings', title: 'Paramètres', icon: Settings, forUserType: ['student', 'teacher'], ownerOnly: true },
 ];
+
+const OWNER_ONLY = FEATURES_CONFIG.filter(f => f.ownerOnly).map(f => f.id);
 
 interface SavedData {
   exercises: any[];
@@ -62,7 +65,7 @@ interface ProgressData {
 export const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [activeSection, setActiveSection] = useState<string>(searchParams.get('tab') || 'overview');
@@ -123,6 +126,11 @@ export const ProfilePage: React.FC = () => {
       loadSavedData();
     }
   }, [activeSection, username, isOwner]);
+
+  // Une fois la session connue : un onglet réservé au propriétaire ramène les autres au profil.
+  useEffect(() => {
+    if (!authLoading && !isOwner && OWNER_ONLY.includes(activeSection)) setActiveSection('overview');
+  }, [authLoading, isOwner, activeSection]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -215,9 +223,12 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  // Onglet réservé au propriétaire demandé dans l'adresse (?tab=settings) par quelqu'un d'autre : le profil.
+  const shownSection = !isOwner && OWNER_ONLY.includes(activeSection) ? 'overview' : activeSection;
+
   const panel = (id: string, node: React.ReactNode) =>
-    visited.has(id) || activeSection === id ? (
-      <div key={id} hidden={activeSection !== id}>{node}</div>
+    (id === shownSection || (visited.has(id) && !(OWNER_ONLY.includes(id) && !isOwner))) ? (
+      <div key={id} hidden={shownSection !== id}>{node}</div>
     ) : null;
 
   const handleSectionChange = (sectionId: string) => {
@@ -360,7 +371,7 @@ export const ProfilePage: React.FC = () => {
           <div className="flex gap-6 overflow-x-auto" style={{ marginBottom: -1, scrollbarWidth: 'none' }}>
             {availableFeatures.map((feature) => {
               const Icon = feature.icon;
-              const isActive = activeSection === feature.id;
+              const isActive = shownSection === feature.id;
               return (
                 <button
                   key={feature.id}

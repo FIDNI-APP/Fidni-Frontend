@@ -1,3 +1,5 @@
+// Temps enregistrés sur un contenu ; pour une épreuve d'examen corrigée, la note du passage
+// (« 13/20 en 2 h 47 »), pour voir sa progression d'un passage à l'autre.
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, Clock, Calendar, TrendingUp, TrendingDown, Trash2 } from 'lucide-react';
 
@@ -9,6 +11,9 @@ interface SessionData {
   created_at: string;
   session_type: string;
   notes: string;
+  /** Note d'une épreuve corrigée (null : pas encore corrigée, ou simple chrono). */
+  score?: number | null;
+  max_score?: number | null;
 }
 
 interface SessionHistoryModalProps {
@@ -32,6 +37,19 @@ const formatDuration = (seconds: number): string => {
   }
   return `${secs} s`;
 };
+
+/** Durée d'une épreuve, comme sur une copie : « 2 h 47 », « 45 min ». */
+const shortDuration = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h} h ${String(m).padStart(2, '0')}`;
+  return m > 0 ? `${m} min` : `${seconds} s`;
+};
+
+const fmtScore = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
+const hasScore = (s: SessionData) => typeof s.score === 'number' && typeof s.max_score === 'number' && s.max_score > 0;
+/** Note ramenée sur 20 (pour comparer deux passages). */
+const on20 = (s: SessionData) => (hasScore(s) ? ((s.score as number) / (s.max_score as number)) * 20 : null);
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -57,13 +75,17 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
   const stats = useMemo(() => {
     const durations = sessions.map(s => s.session_duration);
     const totalTime = durations.reduce((sum, d) => sum + d, 0);
+    const scored = sessions.filter(hasScore);
+    const bestScore = scored.reduce<SessionData | null>((b, s) => (!b || (on20(s) ?? 0) > (on20(b) ?? 0) ? s : b), null);
     return {
       total: sessions.length,
       totalTime,
       average: sessions.length ? Math.floor(totalTime / sessions.length) : 0,
       best: sessions.length ? Math.min(...durations) : 0,
+      bestScore,
     };
   }, [sessions]);
+  const allExams = sessions.length > 0 && sessions.every((s) => s.session_type === 'exam');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -87,11 +109,14 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
   if (!isOpen) return null;
 
   // Ne pas utiliser de dégradé Tailwind ici : index.css les force en noir (bandeau noir, texte illisible).
+  const best = stats.bestScore;
   const tiles = [
-    { label: 'Sessions', value: String(stats.total) },
-    { label: 'Temps total', value: formatDuration(stats.totalTime) },
+    { label: allExams ? 'Passages' : 'Sessions', value: String(stats.total) },
+    best
+      ? { label: 'Meilleure note', value: `${fmtScore(best.score as number)}/${fmtScore(best.max_score as number)}`, highlight: true }
+      : { label: 'Temps total', value: formatDuration(stats.totalTime) },
     { label: 'Moyenne', value: formatDuration(stats.average) },
-    { label: 'Plus rapide', value: formatDuration(stats.best), highlight: true },
+    { label: 'Plus rapide', value: formatDuration(stats.best), highlight: !best },
   ];
 
   return (
@@ -104,10 +129,12 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* En-tête */}
-        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-line flex items-center justify-between">
           <div>
-            <h2 id="session-history-title" className="fd-display text-xl font-bold text-ink">Temps enregistrés</h2>
-            <p className="text-sm text-ink-faint mt-0.5">Tes sessions sur ce contenu, de la plus récente à la plus ancienne.</p>
+            <h2 id="session-history-title" className="fd-display text-xl font-bold text-ink">{allExams ? 'Tes passages' : 'Temps enregistrés'}</h2>
+            <p className="text-sm text-ink-faint mt-0.5">
+              {allExams ? 'Tes épreuves sur ce sujet, de la plus récente à la plus ancienne.' : 'Tes sessions sur ce contenu, de la plus récente à la plus ancienne.'}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -120,7 +147,7 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
 
         {/* Résumé */}
         {sessions.length > 0 && (
-          <div className="px-6 py-4 border-b border-line bg-[#faf9f7]">
+          <div className="px-4 sm:px-6 py-4 border-b border-line bg-[#faf9f7]">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {tiles.map((t) => (
                 <div key={t.label} className="rounded-xl border border-line bg-white px-3 py-2.5">
@@ -150,19 +177,38 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
                 const previous = sessions[index + 1];
                 const faster = previous && session.session_duration < previous.session_duration;
                 const slower = previous && session.session_duration > previous.session_duration;
+                // Note : comparée au passage noté précédent (sur 20, pour comparer des barèmes différents).
+                const scored = hasScore(session);
+                const before = sessions.slice(index + 1).find(hasScore);
+                const delta = scored && before ? Math.round(((on20(session) ?? 0) - (on20(before) ?? 0)) * 10) / 10 : 0;
 
                 return (
-                  <li key={session.id} className="px-6 py-3.5 hover:bg-[#faf9f7] transition-colors">
+                  <li key={session.id} className="px-4 sm:px-6 py-3.5 hover:bg-[#faf9f7] transition-colors">
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="fd-nums font-semibold text-ink">{formatDuration(session.session_duration)}</span>
-                          {faster && (
+                          {scored ? (
+                            <span className="fd-nums font-semibold text-ink">
+                              {fmtScore(session.score as number)}/{fmtScore(session.max_score as number)}
+                              <span className="font-normal text-ink-soft"> en {shortDuration(session.session_duration)}</span>
+                            </span>
+                          ) : (
+                            <span className="fd-nums font-semibold text-ink">{formatDuration(session.session_duration)}</span>
+                          )}
+                          {delta !== 0 && (
+                            <span className={`fd-nums inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                              delta > 0 ? 'text-brand-hover bg-brand-soft border border-brand-line' : 'text-ink-faint bg-[#f2f1ee]'}`}
+                              title="Écart avec le passage précédent, ramené sur 20">
+                              {delta > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                              {delta > 0 ? '+' : '−'}{fmtScore(Math.abs(delta))} sur 20
+                            </span>
+                          )}
+                          {!scored && faster && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-hover bg-brand-soft border border-brand-line px-2 py-0.5 rounded-full">
                               <TrendingUp className="w-3 h-3" /> Plus rapide
                             </span>
                           )}
-                          {slower && (
+                          {!scored && slower && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-faint bg-[#f2f1ee] px-2 py-0.5 rounded-full">
                               <TrendingDown className="w-3 h-3" /> Plus lent
                             </span>
@@ -172,7 +218,7 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
                           <Calendar className="w-3.5 h-3.5" />
                           {formatDate(session.created_at)}
                           <span aria-hidden>·</span>
-                          {session.session_type === 'exam' ? 'Examen' : 'Étude'}
+                          {session.session_type === 'exam' ? (scored ? 'Épreuve corrigée' : 'Épreuve') : 'Étude'}
                         </div>
                         {session.notes && (
                           <p className="mt-1.5 text-sm text-ink-soft italic">« {session.notes} »</p>

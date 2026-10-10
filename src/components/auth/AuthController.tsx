@@ -5,10 +5,16 @@ import React, { Suspense, createContext, lazy, useState, useContext, useEffect }
 const AuthModal = lazy(() => import('./AuthModal').then((m) => ({ default: m.AuthModal })));
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackAuthOpen } from '@/lib/usage';
 
 interface AuthModalContextType {
   isOpen: boolean;
-  openModal: () => void;
+  /**
+   * Ouvre la fenêtre de connexion / inscription. `source` = la porte d'entrée, mesurée dans le Pilotage
+   * (« vote », « favori », « bandeau », « barre-haut »…) ; sans source, elle compte comme « autre ».
+   * Accepte aussi d'être branchée telle quelle sur un onClick (l'événement est alors ignoré).
+   */
+  openModal: (source?: string | React.SyntheticEvent) => void;
   closeModal: () => void;
   initialTab?: 'login' | 'signup';
   setInitialTab: (tab: 'login' | 'signup') => void;
@@ -47,7 +53,9 @@ export const AuthModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [user, isOpen, initialTab, navigate]);
 
-  const openModal = () => {
+  const openModal = (source?: string | React.SyntheticEvent) => {
+    // Fenêtre déjà ouverte : pas une nouvelle ouverture.
+    if (!isOpen) trackAuthOpen(typeof source === 'string' && source ? source : 'autre');
     setIsOpen(true);
   };
 

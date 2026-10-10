@@ -20,6 +20,8 @@ export interface ChapterProgress {
   review: { id: number; title: string; url: string }[];
   notions: { best: NotionStat[]; worst: NotionStat[] };
   last_at: string | null;
+  /** Page d'exercices du chapitre au niveau de l'élève ; null si le chapitre n'est pas de son niveau. */
+  hub_url?: string | null;
 }
 
 export interface RatedItem {
@@ -30,6 +32,7 @@ export interface RatedItem {
   source: 'notion' | 'skilliq';
   questions: number | null;
   url: string;
+  hub_url?: string | null;
 }
 
 export interface EvolutionPoint { start: string; label: string; questions_ok: number; exercises: number; exam_avg: number | null }

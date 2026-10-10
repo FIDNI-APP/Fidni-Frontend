@@ -1,4 +1,50 @@
-import type { ClassLevelModel, SubjectModel, ChapterModel, Theorem, Subfield, User, Difficulty } from './index';
+import type { ClassLevelModel, SubjectModel, ChapterModel, Theorem, Subfield, User, Difficulty, SortOption } from './index';
+
+// =====================
+// RESSENTI DES ÉLÈVES, PROGRESSION (listes et détail)
+// =====================
+
+export type FeltLevel = 'easy' | 'medium' | 'hard';
+
+/**
+ * Ressenti des élèves sur la difficulté (backend apps/things/difficulty.py). null côté API = pas assez de
+ * données. `differs` : le ressenti n'est pas la difficulté annoncée par l'auteur.
+ */
+export interface Felt {
+  level: FeltLevel;
+  declared: FeltLevel | null;
+  differs: boolean;
+  /** Élèves retenus pour la réussite. */
+  n: number;
+  success_pct: number | null;
+  votes: { easier: number; as_said: number; harder: number };
+  basis: 'avis' | 'reussite' | 'annonce';
+}
+
+/** Questions évaluées par l'élève connecté (liste /api/contents/). */
+export interface UserProgress {
+  assessed: number;
+  success: number;
+  total: number;
+}
+
+/** Tris des listes : ceux de SortOption + « Du plus facile au plus difficile ». */
+export type ListSort = SortOption | 'easiest';
+
+/** Niveau d'une carte de liste : le slug mène à la page du niveau (/exercises/niveau/<slug>). */
+export type ListClassLevel = ClassLevelModel & { slug?: string };
+/** Chapitre d'une carte de liste (slug : page du chapitre). */
+export interface ListChapter { id: number; name: string; slug?: string }
+
+/** Champs ajoutés à chaque ligne des listes (et au détail pour `felt`). */
+interface ListExtras {
+  felt?: Felt | null;
+  user_progress?: UserProgress | null;
+  /** « ≈ N min » : somme des meta.expected_seconds des questions, null si aucune. */
+  expected_minutes?: number | null;
+  /** Tri « Pour toi » : pourquoi ce contenu est proposé. */
+  recommendation_reason?: string | null;
+}
 
 // =====================
 // CONTENT BLOCK TYPES
@@ -121,6 +167,9 @@ export interface ContentBase {
   total_points?: number;
   item_count?: number;
   section_count?: number;
+  /** Ressenti des élèves (exercices et examens), null s'il n'y a pas assez de données. */
+  felt?: Felt | null;
+  expected_minutes?: number | null;
 }
 
 export interface ContentExercise extends ContentBase {
@@ -145,7 +194,7 @@ export interface ContentLesson extends ContentBase {
 // LIST ITEM TYPES
 // =====================
 
-export interface ExerciseListItem {
+export interface ExerciseListItem extends ListExtras {
   id: number;
   display_id?: number;
   type: 'exercise';
@@ -154,8 +203,8 @@ export interface ExerciseListItem {
   structure?: ExerciseStructure;
   author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   subject: SubjectModel;
-  class_levels: ClassLevelModel[];
-  chapters?: { id: number; name: string }[];
+  class_levels: ListClassLevel[];
+  chapters?: ListChapter[];
   theorems?: { id: number; name: string }[];
   comment_count?: number;
   user_complete?: 'success' | 'review' | null;
@@ -170,7 +219,7 @@ export interface ExerciseListItem {
   item_count?: number;
 }
 
-export interface ExamListItem {
+export interface ExamListItem extends ListExtras {
   id: number;
   display_id?: number;
   type: 'exam';
@@ -179,8 +228,8 @@ export interface ExamListItem {
   structure?: ExerciseStructure;
   author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   subject: SubjectModel;
-  class_levels: ClassLevelModel[];
-  chapters?: { id: number; name: string }[];
+  class_levels: ListClassLevel[];
+  chapters?: ListChapter[];
   theorems?: { id: number; name: string }[];
   comment_count?: number;
   user_complete?: 'success' | 'review' | null;
@@ -196,9 +245,11 @@ export interface ExamListItem {
   is_national_exam?: boolean;
   national_year?: number | null;
   duration_minutes?: number | null;
+  /** Nombre de parties (blocs « section ») : en mode Cartes, la structure n'en garde que le début. */
+  section_count?: number;
 }
 
-export interface LessonListItem {
+export interface LessonListItem extends ListExtras {
   id: number;
   display_id?: number;
   type: 'lesson';
@@ -206,8 +257,8 @@ export interface LessonListItem {
   structure?: LessonStructure;
   author: Pick<User, 'id' | 'username' | 'is_deleted'>;
   subject: SubjectModel;
-  class_levels: ClassLevelModel[];
-  chapters?: { id: number; name: string }[];
+  class_levels: ListClassLevel[];
+  chapters?: ListChapter[];
   theorems?: { id: number; name: string }[];
   comment_count?: number;
   user_complete?: 'success' | 'review' | null;
@@ -372,6 +423,12 @@ export interface ContentFilters {
   hideViewed?: boolean;
   showCompleted?: boolean;
   showFailed?: boolean;
+  /** « À faire » : tout sauf ce que l'élève a déjà réussi. */
+  todo?: boolean;
+  /** Mode Cartes : énoncé allégé, sans solutions (6 premiers blocs). */
+  view?: 'card' | 'full';
+  /** Taille de page (20 par défaut côté serveur, 100 au plus). */
+  page_size?: number;
   /** Examens : nationaux (true) ou devoirs (false) ; années d'un examen national. */
   is_national?: boolean;
   national_year_min?: number;

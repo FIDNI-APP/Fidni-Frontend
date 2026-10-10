@@ -9,8 +9,10 @@
  *   s'affichent toujours, formules comprises.
  * - Arrivée depuis une notification (« ?commentaire=… ») : le commentaire est mis en valeur et le
  *   champ de réponse est ouvert juste dessous.
+ * - L'éditeur (lourd : ~140 Ko) n'est téléchargé que quand on veut écrire (10/10/2026) : à sa place, un
+ *   faux champ « Écris un message… » ; la plupart des élèves lisent sans écrire.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, CornerDownRight, FileIcon, Image as ImageIcon, Loader2, MessageSquare, Paperclip, Pencil, Send, Trash2, X } from 'lucide-react';
 import type { Comment, VoteValue } from '@/types';
@@ -21,8 +23,22 @@ import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
-import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
+
+// Chargé à la demande (au premier survol / toucher du champ, ou à l'ouverture d'une réponse).
+const loadEditor = () => import('@/components/editor/CompactTipTapEditor');
+const CompactTipTapEditor = lazy(loadEditor);
+const preloadEditor = () => { loadEditor().catch(() => {}); };
+
+/** Faux champ, à la place de l'éditeur tant qu'on n'écrit pas (ou pendant son chargement). */
+const FakeField: React.FC<{ placeholder: string; onActivate?: () => void; minHeight?: string }> = ({ placeholder, onActivate, minHeight = '60px' }) => (
+  <button type="button" onClick={onActivate} onFocus={preloadEditor} onPointerEnter={preloadEditor} onPointerDown={preloadEditor}
+    disabled={!onActivate} aria-label={placeholder}
+    className="block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-left text-[15px] text-ink-faint transition-colors hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-wait"
+    style={{ minHeight }}>
+    {placeholder}
+  </button>
+);
 
 interface CommentSectionProps {
   comments: Comment[];
@@ -99,7 +115,10 @@ const Composer: React.FC<{
   /** Joindre des images ou des fichiers (nouveau commentaire seulement). */
   attachments?: boolean;
   hint?: React.ReactNode;
-}> = ({ initial = '', placeholder, submitLabel, onSubmit, onCancel, autoFocus, attachments, hint }) => {
+  /** Faux champ jusqu'au premier toucher (nouveau commentaire) : l'éditeur n'est chargé qu'à ce moment. */
+  deferred?: boolean;
+}> = ({ initial = '', placeholder, submitLabel, onSubmit, onCancel, autoFocus, attachments, hint, deferred }) => {
+  const [active, setActive] = useState(!deferred);
   const [html, setHtml] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,8 +147,17 @@ const Composer: React.FC<{
     fileAPI.delete(id).catch(() => {});
   };
 
+  if (!active) {
+    return (
+      <div>
+        <FakeField placeholder="Écris un message…" onActivate={() => setActive(true)} />
+      </div>
+    );
+  }
+
   return (
     <div>
+      <Suspense fallback={<FakeField placeholder={placeholder} />}>
       <CompactTipTapEditor
         variant="comment"
         content={html}
@@ -137,7 +165,7 @@ const Composer: React.FC<{
         placeholder={placeholder}
         ariaLabel={placeholder}
         minHeight="60px"
-        autoFocus={autoFocus}
+        autoFocus={autoFocus || deferred}
         onSubmit={submit}
         footer={(
           <>
@@ -163,6 +191,7 @@ const Composer: React.FC<{
           </>
         )}
       />
+      </Suspense>
       {files.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-2">
           {files.map((f) => (
@@ -232,7 +261,7 @@ export function CommentSection({
   };
 
   const startReply = (c: Comment) => {
-    if (!isAuthenticated) { openModal(); return; }
+    if (!isAuthenticated) { openModal('commentaire'); return; }
     setEditing(null);
     setReplyingTo(String(c.id));
   };
@@ -433,6 +462,7 @@ export function CommentSection({
       {isAuthenticated ? (
         <div className="mb-6">
           <Composer
+            deferred
             placeholder="Pose une question ou partage une astuce…"
             submitLabel="Publier"
             attachments
@@ -443,7 +473,7 @@ export function CommentSection({
       ) : (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3.5">
           <p className="text-[13.5px] text-ink-soft">Connecte-toi pour poser une question ou répondre à un camarade.</p>
-          <button type="button" onClick={openModal}
+          <button type="button" onClick={() => openModal('commentaire')}
             className="rounded-lg bg-brand px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-brand-hover">
             Se connecter
           </button>

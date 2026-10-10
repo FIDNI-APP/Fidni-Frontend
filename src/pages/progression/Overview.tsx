@@ -1,5 +1,7 @@
 // « Où j'en suis » : une seule phrase et la barre du programme (08/10/2026). Le reste est dans le
 // programme et l'activité, en dessous.
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import type { ProgressionData } from './types';
 import { STATUS } from './status';
 import { plural } from './format';
@@ -13,6 +15,9 @@ const LEGEND: Record<(typeof PARTS)[number] | 'todo', [string, string]> = {
 export function Overview({ data }: { data: ProgressionData }) {
   const ch = data.summary.chapters;
   const s = data.summary;
+  const { user } = useAuth();
+  // Niveau manquant : il se règle dans la scolarité du profil (l'onboarding, déjà fait, renverrait à l'accueil).
+  const levelLink = user ? `/profile/${user.username}/edit#scolarite` : '/complete-profile';
   return (
     <section aria-label="Où j’en suis" data-tour="prog-resume" className="rounded-2xl border border-line bg-white px-5 py-5 sm:px-6">
       <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
@@ -22,7 +27,7 @@ export function Overview({ data }: { data: ProgressionData }) {
         </p>
         <p className="pb-1 text-[15px] leading-snug text-ink-soft">
           {ch.total === 0
-            ? 'Indique ton niveau pour voir ton programme.'
+            ? <><Link to={levelLink} className="font-semibold text-brand-hover hover:underline">Indique ton niveau</Link> pour voir ton programme.</>
             : ch.mastered
               ? <>chapitre{ch.mastered > 1 ? 's' : ''} maîtrisé{ch.mastered > 1 ? 's' : ''}{ch.good ? <>, <b className="font-semibold text-ink">{ch.good}</b> en bonne voie</> : null}.</>
               : <>chapitre maîtrisé pour l’instant{ch.good ? <> — <b className="font-semibold text-ink">{ch.good}</b> en bonne voie</> : null}.</>}

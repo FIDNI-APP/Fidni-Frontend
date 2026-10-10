@@ -9,9 +9,11 @@ import {
   getRecommendedContent,
   getWeeklyProgress, type WeeklyProgress,
 } from '@/lib/api';
+import type { RecommendedItem } from '@/lib/api/dashboardApi';
 import { Content, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
+import { trackAction } from '@/lib/usage';
 
 /**
  * Homepage at "/". Branches on auth:
@@ -21,6 +23,9 @@ import { SEO } from '@/components/layout/SEO';
  * Dashboard design — same "ink & paper" system as Landing: Fraunces display,
  * tabular DM Mono figures, flat + bordered, green only for action/progress,
  * one warm amber accent reserved for the streak. No emojis, no gradients.
+ *
+ * « Pour toi » (10/10/2026) : les recommandations suivent le même classement que les listes (chapitres
+ * travaillés, à retravailler, DS annoncé…) au lieu des plus aimés, avec la raison sous chaque carte.
  */
 export function Home() {
   const navigate = useNavigate();
@@ -31,6 +36,7 @@ export function Home() {
   const [recExams, setRecExams] = useState<Content[]>([]);
   const [recLevel, setRecLevel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recFailed, setRecFailed] = useState(false);
   const [progress, setProgress] = useState<WeeklyProgress | null>(null);
   const [, setProgressLoading] = useState(false);
 
@@ -58,6 +64,7 @@ export function Home() {
   const fetchRecs = async () => {
     try {
       setLoading(true);
+      setRecFailed(false);
       const data = await getRecommendedContent();
       setRecExercises(data.exercises || []);
       setRecLessons(data.lessons || []);
@@ -65,6 +72,7 @@ export function Home() {
       setRecLevel(data.level);
     } catch (err) {
       console.error('Home: fetchRecs failed', err);
+      setRecFailed(true);
     } finally {
       setLoading(false);
     }
@@ -79,9 +87,11 @@ export function Home() {
         else if (recLessons.some(i => i.id.toString() === id)) type = 'lesson';
         else if (recExams.some(i => i.id.toString() === id)) type = 'exam';
       }
-      if (type === 'exercise') { updated = await voteExercise(id, value); setRecExercises(p => p.map(i => i.id.toString() === id ? updated : i)); }
-      else if (type === 'lesson') { updated = await voteLesson(id, value); setRecLessons(p => p.map(i => i.id.toString() === id ? updated : i)); }
-      else if (type === 'exam') { updated = await voteExam(id, value); setRecExams(p => p.map(i => i.id.toString() === id ? updated : i)); }
+      // Fusion : le contenu renvoyé par le vote n'a pas la raison « Pour toi » (`reason`), on la garde.
+      const merge = (i: Content) => (i.id.toString() === id ? { ...i, ...updated } : i);
+      if (type === 'exercise') { updated = await voteExercise(id, value); setRecExercises(p => p.map(merge)); }
+      else if (type === 'lesson') { updated = await voteLesson(id, value); setRecLessons(p => p.map(merge)); }
+      else if (type === 'exam') { updated = await voteExam(id, value); setRecExams(p => p.map(merge)); }
     } catch (err) { console.error('Vote failed', err); }
   };
 
@@ -136,7 +146,8 @@ export function Home() {
 
         {/* Recommendations */}
         <div data-tour="home-reco" className="mt-9">
-          <RecTabs loading={loading} level={recLevel} exercises={recExercises} lessons={recLessons} exams={recExams} onVote={handleVote} />
+          <RecTabs loading={loading} failed={recFailed} onRetry={fetchRecs} level={recLevel}
+            exercises={recExercises} lessons={recLessons} exams={recExams} onVote={handleVote} />
         </div>
       </div>
     </div>
@@ -197,44 +208,35 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Titre de l'encart des exercices : « les plus aimés » seulement s'il y a vraiment des j'aime. */
-function likedHeading(items: Content[], level: string | null, kind: 'exercise' | 'lesson' | 'exam' = 'exercise'): { title: string; hint: string } {
-  const where = level ? ` en ${level}` : '';
-  const liked = items.slice(0, 3).some((i) => ((i as any).like_count ?? 0) > 0);
-  const noun = kind === 'lesson' ? ['Les leçons les plus aimées', 'Leçons à découvrir']
-    : kind === 'exam' ? ['Les examens les plus aimés', 'Examens à découvrir']
-      : ['Les exercices les plus aimés', 'Exercices à découvrir'];
-  return liked
-    ? { title: `${noun[0]}${where}`, hint: 'Classés par les j’aime des élèves. Un contenu t’a aidé ? Mets-lui un j’aime pour guider les autres.' }
-    : { title: `${noun[1]}${where}`, hint: 'Pas encore de j’aime : sois le premier à recommander ce qui t’a aidé, ça remontera ici pour les autres.' };
-}
-
 type RecKind = 'exercise' | 'lesson' | 'exam';
-const REC_TABS: { key: RecKind; label: string; link: string }[] = [
-  { key: 'exercise', label: 'Exercices', link: '/exercises?sort=most_upvoted' },
-  { key: 'lesson', label: 'Leçons', link: '/lessons?sort=most_upvoted' },
-  { key: 'exam', label: 'Examens', link: '/exams?sort=most_upvoted' },
+const REC_TABS: { key: RecKind; label: string; link: string; title: string }[] = [
+  { key: 'exercise', label: 'Exercices', link: '/exercises', title: 'Exercices choisis pour toi' },
+  { key: 'lesson', label: 'Leçons', link: '/lessons', title: 'Leçons choisies pour toi' },
+  { key: 'exam', label: 'Examens', link: '/exams', title: 'Examens choisis pour toi' },
 ];
 
-/** Les plus aimés du niveau, en trois onglets (une seule rangée de cartes à l'écran). */
-function RecTabs({ loading, level, exercises, lessons, exams, onVote }: {
-  loading: boolean; level: string | null; exercises: Content[]; lessons: Content[]; exams: Content[];
+/** « Pour toi » : exercices, leçons et examens classés pour l'élève (une seule rangée de cartes à l'écran). */
+function RecTabs({ loading, failed, onRetry, level, exercises, lessons, exams, onVote }: {
+  loading: boolean; failed: boolean; onRetry: () => void; level: string | null; exercises: Content[]; lessons: Content[]; exams: Content[];
   onVote: (id: string, value: VoteValue, contentType?: RecKind) => void;
 }) {
   const [tab, setTab] = useState<RecKind>('exercise');
   const items = tab === 'exercise' ? exercises : tab === 'lesson' ? lessons : exams;
   const tabs = REC_TABS.filter((t) => t.key === 'exercise' || (t.key === 'lesson' ? lessons.length : exams.length) > 0);
   const current = REC_TABS.find((t) => t.key === tab)!;
-  const { title, hint } = likedHeading(items, level, tab);
+  // Sujets du bac national : « Voir tout » mène à leur page (la liste des examens ne les montre pas).
+  const shown = items.slice(0, 3) as RecommendedItem[];
+  const link = tab === 'exam' && shown.length && shown.every((c) => c.is_national_exam) ? '/exams/nationaux' : current.link;
+  const hint = `D’après ce que tu as travaillé, ce qui est à retravailler${level ? ` et ton niveau (${level})` : ''}.`;
   return (
-    <RecSection title={title} hint={hint} eyebrow="Tu ne sais pas quoi travailler ?" link={current.link}
-      loading={loading} items={items}
+    <RecSection title={current.title} hint={hint} eyebrow="Pour toi" link={link}
+      loading={loading} failed={failed} onRetry={onRetry} items={items}
       onVote={(id, v) => onVote(id, v, tab)}
       tabs={tabs.length > 1 ? (
         <div role="tablist" aria-label="Type de contenu" className="inline-flex rounded-xl bg-[#f2f1ee] p-1">
           {tabs.map((t) => (
             <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-              className={`h-8 rounded-lg px-3 text-[13px] transition-colors ${tab === t.key ? 'bg-white font-semibold text-ink shadow-sm' : 'font-medium text-ink-faint hover:text-ink'}`}>
+              className={`h-9 rounded-lg px-3 text-[13px] transition-colors ${tab === t.key ? 'bg-white font-semibold text-ink shadow-sm' : 'font-medium text-ink-faint hover:text-ink'}`}>
               {t.label}
             </button>
           ))}
@@ -243,9 +245,24 @@ function RecTabs({ loading, level, exercises, lessons, exams, onVote }: {
   );
 }
 
-function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }: {
+/** Raison d'une recommandation : « À retravailler », « Suite de ton travail · Limites », « Au programme de ton DS »… */
+function ReasonTag({ reason }: { reason?: string | null }) {
+  if (!reason) return null;
+  const tone = reason === 'À retravailler' ? 'bg-[#fbecea] text-[#a23b34]'
+    : reason.startsWith('Suite de ton travail') || reason.includes('DS') ? 'bg-brand-soft text-brand-hover'
+      : 'bg-gold-soft text-[#8a6318]';
+  return (
+    <p className="mt-2 px-1">
+      <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[12px] font-semibold ${tone}`}>
+        <span className="truncate">{reason}</span>
+      </span>
+    </p>
+  );
+}
+
+function RecSection({ title, hint, eyebrow, link, loading, failed, onRetry, items, onVote, tabs }: {
   title: string; hint?: string; eyebrow: string; link: string;
-  loading: boolean; items: Content[];
+  loading: boolean; failed?: boolean; onRetry?: () => void; items: Content[];
   onVote: (id: string, value: VoteValue, contentType?: 'exercise' | 'lesson' | 'exam') => void;
   tabs?: React.ReactNode;
 }) {
@@ -280,6 +297,15 @@ function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }
             </div>
           ))}
         </div>
+      ) : failed ? (
+        <div role="alert" className="fd-card p-8 text-center">
+          <p style={{ color: FAINT, fontSize: 13 }}>Les contenus choisis pour toi n’ont pas pu être chargés.</p>
+          {onRetry && (
+            <div className="mt-3 flex justify-center">
+              <button type="button" onClick={onRetry} className="fd-btn-ghost" style={{ minHeight: 40 }}>Réessayer</button>
+            </div>
+          )}
+        </div>
       ) : items.length === 0 ? (
         <div className="fd-card p-8 text-center">
           <p style={{ color: FAINT, fontSize: 13 }}>Aucune recommandation pour le moment.</p>
@@ -287,7 +313,18 @@ function RecSection({ title, hint, eyebrow, link, loading, items, onVote, tabs }
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.slice(0, 3).map((item) => (
-            <HomeContentCard key={item.id} content={item} onVote={onVote} />
+            // Mesure : un contenu ouvert depuis « Pour toi ». La carte navigue au clic ; ses autres zones (vote,
+            // aperçu, favori) arrêtent la propagation, et « Commencer » (seul bouton principal) aussi : vu à la capture.
+            <div key={item.id} className="flex flex-col">
+              <div className="flex-1 min-h-0"
+                onClick={() => trackAction('accueil-pour-toi')}
+                onClickCapture={(e) => {
+                  if ((e.target as HTMLElement).closest('button')?.classList.contains('fd-btn-primary')) trackAction('accueil-pour-toi');
+                }}>
+                <HomeContentCard content={item} onVote={onVote} />
+              </div>
+              <ReasonTag reason={(item as RecommendedItem).reason} />
+            </div>
           ))}
         </div>
       )}

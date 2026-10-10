@@ -22,7 +22,17 @@ interface SavedItem {
     id?: number;
     name?: string;
   } | string;
+  /** Les cartes de l'API donnent la liste des niveaux (class_level : anciennes réponses). */
+  class_levels?: ({ id?: number; name?: string } | string)[];
 }
+
+/** Réponse d'une liste de favoris : tableau, ou page paginée. */
+type SavedResponse = SavedItem[] | { results?: SavedItem[] } | null | undefined;
+const asList = (data: SavedResponse): SavedItem[] => (Array.isArray(data) ? data : data?.results || []);
+const levelName = (item: SavedItem) => {
+  const lv = item.class_levels?.[0] ?? item.class_level;
+  return !lv ? null : typeof lv === 'string' ? lv : lv.name || null;
+};
 
 type FilterType = 'all' | 'exercise' | 'lesson' | 'exam';
 
@@ -32,10 +42,14 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string
   exam: { icon: FileCheck, label: 'Examen', route: 'exams' },
 };
 
-const DIFFICULTY_DOT: Record<string, string> = {
-  facile: '#1a7a4a',
-  moyen: '#b7791f',
-  difficile: '#b91c1c',
+// L'API renvoie easy / medium / hard (anciennes données : facile / moyen / difficile) : libellé en français.
+const DIFFICULTY: Record<string, { label: string; color: string }> = {
+  easy: { label: 'Facile', color: '#1a7a4a' },
+  medium: { label: 'Moyen', color: '#b7791f' },
+  hard: { label: 'Difficile', color: '#b91c1c' },
+  facile: { label: 'Facile', color: '#1a7a4a' },
+  moyen: { label: 'Moyen', color: '#b7791f' },
+  difficile: { label: 'Difficile', color: '#b91c1c' },
 };
 
 export const SavedItems = () => {
@@ -46,6 +60,7 @@ export const SavedItems = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -60,30 +75,22 @@ export const SavedItems = () => {
     const fetchSavedItems = async () => {
       try {
         setLoading(true);
+        setError(null);
         if (user?.username) {
-          // Fetch all types of saved items in parallel
-          const [exercisesData, lessonsData, examsData] = await Promise.all([
-            getUserSavedExercises(user.username).catch(() => []),
-            getUserSavedLessons(user.username).catch(() => []),
-            getUserSavedExams(user.username).catch(() => [])
+          // Les trois types en parallèle ; un type en échec n'empêche pas d'afficher les autres.
+          const results = await Promise.allSettled([
+            getUserSavedExercises(user.username),
+            getUserSavedLessons(user.username),
+            getUserSavedExams(user.username),
           ]);
-
-          // Handle both array and paginated response formats
-          const exercises = Array.isArray(exercisesData) ? exercisesData : exercisesData?.results || [];
-          const lessons = Array.isArray(lessonsData) ? lessonsData : lessonsData?.results || [];
-          const exams = Array.isArray(examsData) ? examsData : examsData?.results || [];
-
-          // Combine and mark each item type
-          const allItems = [
-            ...exercises.map((item: any) => ({ ...item, content_type: 'exercise' })),
-            ...lessons.map((item: any) => ({ ...item, content_type: 'lesson' })),
-            ...exams.map((item: any) => ({ ...item, content_type: 'exam' }))
-          ];
-
-          setSavedItems(allItems || []);
+          if (results.every((r) => r.status === 'rejected')) throw new Error('favoris indisponibles');
+          const types = ['exercise', 'lesson', 'exam'] as const;
+          setSavedItems(results.flatMap((r, i) => (r.status === 'fulfilled'
+            ? asList(r.value as SavedResponse).map((item) => ({ ...item, content_type: types[i] }))
+            : [])));
         }
       } catch (err) {
-        setError('Erreur lors du chargement des éléments enregistrés');
+        setError('Tes favoris n’ont pas pu être chargés : vérifie ta connexion.');
         console.error('Error fetching saved items:', err);
       } finally {
         setLoading(false);
@@ -91,7 +98,7 @@ export const SavedItems = () => {
     };
 
     fetchSavedItems();
-  }, [user, isAuthenticated, authLoading, navigate]);
+  }, [user, isAuthenticated, authLoading, navigate, attempt]);
 
   const filteredItems = savedItems.filter(item => {
     const matchesType = filterType === 'all' || item.content_type === filterType;
@@ -131,7 +138,7 @@ export const SavedItems = () => {
         <div className="min-w-0">
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>Favoris</h1>
           <p style={{ fontSize: 13.5, color: '#6b6862', marginTop: 1 }}>
-            Tous vos contenus sauvegardés, réunis au même endroit
+            Tous tes contenus enregistrés, réunis au même endroit
           </p>
         </div>
       </header>
@@ -142,7 +149,8 @@ export const SavedItems = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9a958c' }} />
           <input
             type="text"
-            placeholder="Rechercher dans vos favoris…"
+            placeholder="Rechercher dans tes favoris…"
+            aria-label="Rechercher dans tes favoris"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -182,7 +190,10 @@ export const SavedItems = () => {
           style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}
         >
           <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#b91c1c' }} />
-          <span style={{ color: '#991b1b', fontSize: 14 }}>{error}</span>
+          <span className="min-w-0 flex-1" style={{ color: '#991b1b', fontSize: 14 }}>{error}</span>
+          <button type="button" className="fd-btn-ghost shrink-0" style={{ minHeight: 40 }} onClick={() => setAttempt((n) => n + 1)}>
+            Réessayer
+          </button>
         </div>
       ) : filteredItems.length === 0 ? (
         <div
@@ -200,8 +211,8 @@ export const SavedItems = () => {
           </h3>
           <p style={{ fontSize: 13.5, color: '#6b6862', marginBottom: 20, maxWidth: 360, marginInline: 'auto' }}>
             {searchQuery
-              ? 'Essayez avec d\'autres mots-clés.'
-              : 'Enregistrez des exercices, leçons et examens pour les retrouver ici en un clin d\'œil.'}
+              ? 'Essaie avec d’autres mots.'
+              : 'Enregistre des exercices, leçons et examens pour les retrouver ici en un clin d’œil.'}
           </p>
           {!searchQuery && (
             <button className="fd-btn-primary" style={{ margin: '0 auto' }} onClick={() => navigate('/exercises')}>
@@ -270,15 +281,11 @@ export const SavedItems = () => {
                       {typeof item.subject === 'string' ? item.subject : item.subject?.name || 'Matière'}
                     </span>
                   )}
-                  {item.class_level && (
-                    <span style={chipStyle}>
-                      {typeof item.class_level === 'string' ? item.class_level : item.class_level?.name || 'Niveau'}
-                    </span>
-                  )}
-                  {item.difficulty && (
+                  {levelName(item) && <span style={chipStyle}>{levelName(item)}</span>}
+                  {DIFFICULTY[diffKey] && (
                     <span style={{ ...chipStyle, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ display: 'inline-flex', color: DIFFICULTY_DOT[diffKey] || '#9a958c' }}><DifficultyBars difficulty={diffKey} /></span>
-                      {item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1)}
+                      <span style={{ display: 'inline-flex', color: DIFFICULTY[diffKey].color }}><DifficultyBars difficulty={diffKey} /></span>
+                      {DIFFICULTY[diffKey].label}
                     </span>
                   )}
                 </div>

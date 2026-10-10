@@ -2,6 +2,7 @@
  * Pilotage › Membres › « Un membre n'arrive pas à se connecter ? » (09/10/2026).
  * Un e-mail ou un pseudo → comptes correspondants, blocage après trop d'essais, journaux d'authentification
  * en échec et erreurs serveur. Backend : GET /api/pilotage/connexion/?q= (apps/users/login_diagnostic.py).
+ * Depuis le 10/10/2026 : connexion avec Google (compte lié ou non, essais refusés).
  */
 import React, { useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, KeyRound, Loader2, Search, XCircle } from 'lucide-react';
@@ -10,6 +11,8 @@ import { api } from '@/lib/api/apiClient';
 interface Account {
   id: number; username: string; email: string; is_active: boolean; email_verified: boolean; email_verified_at: string | null;
   has_password: boolean; date_joined: string; last_login: string | null; used_for_login: boolean;
+  /** Compte lié à un compte Google (connexion avec Google). Absent d'un serveur plus ancien. */
+  google?: boolean;
 }
 interface LogRow {
   at: string; method: string; endpoint: string; status: number; ip: string | null; user: string | null;
@@ -33,7 +36,7 @@ const ROUTE: [RegExp, string][] = [
   [/password-reset\/confirm/, 'Nouveau mot de passe (lien reçu)'], [/password-reset/, 'Mot de passe oublié'],
   [/password\/change/, 'Changement de mot de passe'], [/resend-verification/, 'Renvoi de l’e-mail de confirmation'],
   [/verify-email/, 'Confirmation d’e-mail'], [/register/, 'Inscription'], [/token\/refresh/, 'Renouvellement de session'],
-  [/login|\/token\/$/, 'Connexion'],
+  [/auth\/google/, 'Connexion avec Google'], [/login|\/token\/$/, 'Connexion'],
 ];
 const routeLabel = (endpoint: string) => ROUTE.find(([re]) => re.test(endpoint))?.[1] ?? endpoint;
 
@@ -112,7 +115,13 @@ export const LoginDiagnostic: React.FC = () => {
                         </span>
                         <Flag ok={a.is_active} yes="Actif" no="Inactif" />
                         <Flag ok={a.email_verified} yes="E-mail confirmé" no="E-mail non confirmé" />
-                        <Flag ok={a.has_password} yes="Mot de passe défini" no="Pas de mot de passe" />
+                        {/* Compte Google sans mot de passe : normal, pas une anomalie. */}
+                        {!a.has_password && a.google
+                          ? <span className="inline-flex items-center gap-1 text-ink-soft"><KeyRound className="h-3.5 w-3.5" /> Sans mot de passe</span>
+                          : <Flag ok={a.has_password} yes="Mot de passe défini" no="Pas de mot de passe" />}
+                        {a.google
+                          ? <span className="inline-flex items-center gap-1 text-brand-hover"><CheckCircle2 className="h-3.5 w-3.5" /> Google</span>
+                          : a.google === false && <span className="text-ink-faint">Pas de Google</span>}
                         <span className="w-full text-[12px] text-ink-faint">Inscrit le {when(a.date_joined)} · dernière connexion : {when(a.last_login)}</span>
                       </li>
                     ))}

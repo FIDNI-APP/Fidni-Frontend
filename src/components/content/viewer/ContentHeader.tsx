@@ -1,12 +1,18 @@
 import React, { useState, useRef } from 'react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Share2, Bookmark, MoreHorizontal, Printer, BookOpen, Lightbulb, BarChart3, ArrowLeft, Loader2,
-  Pencil, Trash2, User, Calendar, Eye, GraduationCap, Flag, ShieldQuestion, ShieldCheck } from 'lucide-react';
+  Pencil, Trash2, User, Users, Calendar, Eye, GraduationCap, Flag, ShieldQuestion, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
 import { DifficultyBars } from '@/components/common/DifficultyBars';
+import { useAuth } from '@/contexts/AuthContext';
+import { hubPath } from '@/lib/api/hubApi';
+import { studentLevelSlug } from '@/components/layout/nav';
+import { feltTooltip } from '@/components/content/listing/listingUtils';
+import { trackAction } from '@/lib/usage';
+import { contentHub } from './pageHelpers';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -76,22 +82,40 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   solutionCount = 0,
 }) => {
   const navigate = useNavigate();
-  // Un examen national revient à sa section ; les autres examens, à la section Examens (devoirs).
-  const isNational = contentType === 'exam' && !!(content as any)?.is_national_exam;
-  const backPath = isNational ? '/exams/nationaux' : basePath;
+  const location = useLocation();
+  const { user } = useAuth();
+  const isNational = contentType === 'exam' && !!(content as ContentExam).is_national_exam;
   const [showDropdown, setShowDropdown] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
+  // Retour : arrivé depuis une liste (ou un autre contenu), on y revient tel quel (filtres, position) ;
+  // sinon, page du chapitre au niveau de l'élève. Un examen national revient à sa section.
+  const from = (location.state as { from?: string } | null)?.from;
+  const hub = contentHub(content, studentLevelSlug(user));
+  const back = (() => {
+    if (isNational) return { to: '/exams/nationaux', label: 'Bac national' };
+    const { level, chapter } = hub;
+    const section = basePath.replace(/^\//, '');
+    if (level && chapter) return { to: hubPath(section, level.slug, chapter.slug), label: chapter.name };
+    if (level) return { to: hubPath(section, level.slug), label: level.name };
+    return { to: basePath, label: contentType === 'lesson' ? 'Leçons' : contentType === 'exam' ? 'Devoirs (DS)' : 'Exercices' };
+  })();
+  const goBack = () => {
+    trackAction('retour-liste');
+    if (from) navigate(-1); else navigate(back.to);
+  };
+
   const handleShare = () => {
+    trackAction('partager');
     if (navigator.share) {
       navigator.share({
-        title: content?.title || 'Content',
-        text: `Découvrez: ${content?.title}`,
+        title: content?.title || 'Fidni',
+        text: `${content?.title} – sur Fidni`,
         url: window.location.href
-      }).catch(err => console.error('Error sharing:', err));
+      }).catch(() => { /* partage annulé */ });
     } else {
       navigator.clipboard.writeText(window.location.href)
-        .then(() => alert('Lien copié!'))
+        .then(() => alert('Lien copié !'))
         .catch(err => console.error('Error copying link:', err));
     }
   };
@@ -108,16 +132,18 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   return (
     <div style={{ background: '#fff', borderBottom: '1px solid #e7e3dc' }}>
       {/* Même largeur que le contenu en dessous (l'en-tête était plus étroit, donc décalé). */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4">
         {/* Retour nommé + actions */}
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center justify-between gap-3 mb-2 sm:mb-4">
           <div className="flex items-center min-w-0">
             <button
-              onClick={() => navigate(backPath)}
-              className="inline-flex items-center gap-1.5 py-1.5 -ml-1 pr-2 rounded-lg text-sm text-[#6b6862] hover:text-[#1a1a1a] transition-colors flex-shrink-0"
+              type="button"
+              onClick={goBack}
+              title={from ? 'Revenir à la page précédente' : back.label}
+              className="inline-flex items-center gap-1.5 min-h-9 py-1.5 -ml-1 pr-2 rounded-lg text-sm text-[#6b6862] hover:text-[#1a1a1a] transition-colors min-w-0"
             >
-              <ArrowLeft className="w-4 h-4" />
-              {contentType === 'lesson' ? 'Leçons' : isNational ? 'Examens nationaux' : contentType === 'exam' ? 'Examens' : 'Exercices'}
+              <ArrowLeft className="w-4 h-4 shrink-0" />
+              <span className="truncate max-w-[52vw] sm:max-w-xs">{from ? 'Retour' : back.label}</span>
             </button>
           </div>
 
@@ -152,6 +178,14 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
 
               <FloatingPanel anchorRef={moreRef} open={showDropdown} onClose={() => setShowDropdown(false)} placement="bottom-end"
                 className="min-w-48 w-max max-w-[300px] bg-white rounded-xl shadow-xl py-2 border border-[#e7e3dc] overflow-hidden">
+                    {/* Téléphone : date, vues et numéro sont ici plutôt que sous le titre (l'énoncé arrive plus haut). */}
+                    <p className="sm:hidden px-4 pt-1 pb-2.5 mb-1 border-b border-line text-[12.5px] text-ink-faint fd-nums">
+                      {[
+                        content.created_at ? `Publié ${timeAgo(content.created_at).toLowerCase()}` : null,
+                        typeof content.view_count === 'number' ? `${content.view_count} vue${content.view_count > 1 ? 's' : ''}` : null,
+                        `n° ${content.id}`,
+                      ].filter(Boolean).join(' · ')}
+                    </p>
                     <button
                       onClick={() => { handleShare(); setShowDropdown(false); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
@@ -222,15 +256,22 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
           const credit: string | undefined = c.structure?.credit;
           const aVerifier: boolean = !!c.structure?.a_verifier;
           const diff = c.difficulty ? DIFFICULTY[c.difficulty] : null;
-          const chapters: { id: string | number; name: string; slug?: string }[] = c.chapters || [];
-          const level = c.class_levels?.[0];
+          const chapters: { id: string | number; name: string; slug?: string; class_levels?: { slug?: string }[] }[] = c.chapters || [];
+          // Niveau affiché : celui de l'élève quand le contenu en relève, sinon le premier.
+          const level = hub.level ?? c.class_levels?.[0];
           const levelName = level ? (typeof level === 'string' ? level : level.name) : null;
-          // Étiquettes cliquables : page du niveau, page du chapitre (même rubrique).
+          // Étiquettes cliquables : page du niveau, page du chapitre (même rubrique), seulement si le
+          // chapitre existe à ce niveau (sinon la page serait vide).
           const levelSlug: string | undefined = level && typeof level !== 'string' ? level.slug : undefined;
           const levelUrl = levelSlug ? `${basePath}/niveau/${levelSlug}` : null;
+          const chapterAtLevel = (ch: (typeof chapters)[number]) =>
+            !ch.class_levels?.length || ch.class_levels.some((l) => l.slug === levelSlug);
+          // Ressenti des élèves (exercices ; l'examen l'affiche dans sa fiche) : dès qu'il y a assez de données.
+          const felt = contentType === 'exercise' ? content.felt : null;
+          const feltDiff = felt?.differs ? DIFFICULTY[felt.level] : null;
           return (
-            <div className="mb-4">
-              <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex flex-wrap items-center gap-1.5 mb-2 sm:mb-2.5">
                 {diff && (
                   <span style={{ ...chipStyle, background: diff.bg, color: diff.text }}>
                     <DifficultyBars difficulty={c.difficulty} />
@@ -242,7 +283,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                     Examen national{c.national_year ? ` ${c.national_year}` : ''}
                   </span>
                 )}
-                {chapters.slice(0, 2).map((ch) => (levelUrl && ch.slug ? (
+                {chapters.slice(0, 2).map((ch) => (levelUrl && ch.slug && chapterAtLevel(ch) ? (
                   <Link key={ch.id} to={`${levelUrl}/${ch.slug}`} title={`Tous les contenus : ${ch.name}`}
                     className="hover:!bg-[#e7e3dc] transition-colors" style={{ ...chipStyle, background: '#f2f1ee', color: '#4b4843' }}>{ch.name}</Link>
                 ) : (
@@ -255,10 +296,10 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                   ? <Link to={levelUrl} className="hover:!text-[#1a1a1a] transition-colors" style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</Link>
                   : <span style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</span>)}
               </div>
-              <h1 className="fd-display" style={{ fontSize: 'clamp(26px, 3.6vw, 36px)', lineHeight: 1.15, color: '#1a1a1a' }}>
+              <h1 className="fd-display" style={{ fontSize: 'clamp(22px, 3.6vw, 36px)', lineHeight: 1.15, color: '#1a1a1a' }}>
                 {content.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 text-sm" style={{ color: '#6b6862' }}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 sm:mt-2.5 text-sm" style={{ color: '#6b6862' }}>
                 {content.author?.username && (content.author.is_deleted ? (
                   <span className="inline-flex items-center gap-1.5 italic">
                     <User className="w-4 h-4" /> Compte supprimé
@@ -273,23 +314,32 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                     <GraduationCap className="w-4 h-4" /> Proposé par {credit}
                   </span>
                 )}
+                {felt && (
+                  <span className="inline-flex items-center gap-1.5" title={feltTooltip(felt)}>
+                    <Users className="w-4 h-4" /> Ressenti des élèves :{' '}
+                    {feltDiff
+                      ? <b className="font-semibold" style={{ color: feltDiff.text }}>{feltDiff.label}</b>
+                      : <span>comme annoncé</span>}
+                  </span>
+                )}
                 {c.created_at && (
-                  <span className="inline-flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {timeAgo(c.created_at)}</span>
+                  <span className="hidden sm:inline-flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {timeAgo(c.created_at)}</span>
                 )}
                 {typeof c.view_count === 'number' && (
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="hidden sm:inline-flex items-center gap-1.5">
                     <Eye className="w-4 h-4" /> {c.view_count} vue{c.view_count > 1 ? 's' : ''}
                   </span>
                 )}
-                <span className="fd-nums" style={{ color: '#9a958c' }}>#{content.id}</span>
+                <span className="hidden sm:inline fd-nums" style={{ color: '#9a958c' }}>#{content.id}</span>
               </div>
               {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}
               {aVerifier && contentType !== 'lesson' && (
-                <p className="mt-3 inline-flex items-start gap-2 rounded-xl border border-[#ecdcb4] bg-gold-soft px-3 py-2 text-[13px] text-gold-strong">
+                <p className="mt-2 sm:mt-3 inline-flex items-start gap-2 rounded-xl border border-[#ecdcb4] bg-gold-soft px-3 py-1.5 sm:py-2 text-[13px] text-gold-strong"
+                  title="L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la en bas de la page.">
                   <ShieldQuestion className="w-4 h-4 mt-px shrink-0" aria-hidden />
                   <span>
                     <strong className="font-semibold">Correction en cours de vérification.</strong>{' '}
-                    L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la en bas de la page.
+                    <span className="hidden sm:inline">L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la en bas de la page.</span>
                   </span>
                 </p>
               )}
@@ -300,7 +350,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
         {/* Onglets : celui qui est ouvert est en vert plein, impossible à manquer. */}
         {tabs.length > 1 && (
           <div role="tablist" aria-label="Sections" data-tour="detail-onglets"
-            className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-4 scrollbar-hide sm:mx-0 sm:px-0">
+            className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-3 sm:pb-4 scrollbar-hide sm:mx-0 sm:px-0">
             {tabs.map(({ id, label, short, icon: Icon, count }) => {
               const active = activeTab === id;
               return (

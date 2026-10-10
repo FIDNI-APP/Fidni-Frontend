@@ -1,12 +1,12 @@
 // Onglet « Solutions » : les élèves partagent leur démarche, rédigée dans l'éditeur
 // (maths en $…$) et/ou en photos de leur copie. Les autres votent ; l'auteur peut modifier
 // ou supprimer la sienne. La correction officielle reste dans l'onglet « Exercice ».
-import React, { useEffect, useRef, useState } from 'react';
+// L'éditeur (lourd) n'est téléchargé qu'à l'ouverture de « Proposer ma solution ».
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { isModerator } from '@/lib/features';
 import { Camera, Edit3, ImagePlus, Loader2, PenLine, Trash2, X, Lightbulb } from 'lucide-react';
-import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { fileAPI } from '@/lib/api/contentItemApi';
@@ -14,6 +14,10 @@ import {
   compressImage, createProposedSolution, deleteProposedSolution, updateProposedSolution, voteProposedSolution,
   type ProposedSolution, type SolutionAttachment,
 } from '@/lib/api/proposedSolutionsApi';
+
+// Éditeur chargé à la demande (survol ou clic sur « Proposer ma solution »).
+const loadEditor = () => import('@/components/editor/CompactTipTapEditor');
+const CompactTipTapEditor = lazy(loadEditor);
 
 const MAX_PHOTOS = 6;
 
@@ -108,12 +112,19 @@ const Composer: React.FC<{
         </button>
       </div>
 
-      <CompactTipTapEditor
-        content={body}
-        onChange={setBody}
-        placeholder="Rédige ta démarche… Les maths s'écrivent entre $ $, par exemple $f'(x) = 2x$."
-        minHeight="150px"
-      />
+      <Suspense fallback={(
+        <div aria-busy="true" className="rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink-faint" style={{ minHeight: 150 }}>
+          Rédige ta démarche…
+        </div>
+      )}>
+        <CompactTipTapEditor
+          content={body}
+          onChange={setBody}
+          placeholder="Rédige ta démarche… Les maths s'écrivent entre $ $, par exemple $f'(x) = 2x$."
+          minHeight="150px"
+          autoFocus
+        />
+      </Suspense>
 
       {/* Photos de la copie */}
       <div className="mt-4">
@@ -310,7 +321,7 @@ export const ProposedSolutions: React.FC<{
           </p>
         </div>
         {!composing && !editing && (
-          <button onClick={start} className="fd-btn-primary">
+          <button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary">
             <PenLine className="w-4 h-4" /> {mine ? 'Proposer une autre solution' : 'Proposer ma solution'}
           </button>
         )}

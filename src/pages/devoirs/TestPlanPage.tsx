@@ -7,11 +7,13 @@
  *   2. des exercices choisis pour toi dans ces chapitres ;
  *   3. le DS blanc chronométré.
  * Backend : apps/interactions/devoirs.py.
+ * 10/10/2026 : « S'entraîner » ouvre la page du chapitre au niveau de l'élève (les plus faciles d'abord, sans les
+ * réussis) ; le quiz d'un chapitre ramène ici (« Retour à mon DS »).
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Brain, Check, ChevronDown, Clock, Dumbbell, Loader2, Pencil, RefreshCw, RotateCcw, Timer,
+  ArrowLeft, ArrowRight, BookOpen, Brain, Check, ChevronDown, Clock, Dumbbell, Loader2, Pencil, RefreshCw, RotateCcw, Timer,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -24,6 +26,7 @@ import { Meter } from '@/pages/progression/ui';
 import { TestFormModal } from '@/components/devoirs/TestFormModal';
 import { GradeForm } from '@/components/devoirs/GradeForm';
 import { Card, Countdown, DateTile, DifficultyDot, GradeBadge, ReadinessRing } from '@/components/devoirs/ui';
+import { lessonsUrl, practiceUrl, quizUrl } from '@/pages/progression/links';
 
 const scrollTo = (id: string) => (e: React.MouseEvent) => {
   e.preventDefault();
@@ -45,7 +48,7 @@ function advice(p: TestPlan): { text: string; to?: string; anchor?: string; labe
   const quizChapter = p.chapters.find((c) => c.quiz_ready && !prep.quiz_done.includes(c.id));
   if (noData && quizChapter) {
     return { text: `Commence par le quiz « ${quizChapter.name} » : en quelques minutes, tu sauras où tu en es.`,
-      to: `/skill-iq?chapitre=${quizChapter.id}`, label: 'Passer le quiz' };
+      to: quizUrl(quizChapter.id, `/revisions/ds/${t.id}`), label: 'Passer le quiz' };
   }
   const mockReady = !!p.mock?.exercises.length && !prep.mock;
   if (t.days_left <= 1 && mockReady) {
@@ -81,7 +84,8 @@ export default function TestPlanPage() {
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = plan ? testTitle(plan.test) : null;
   useEffect(() => {
-    setCrumbs([{ label: 'Révisions', to: '/revision-lists?onglet=ds' }, { label: crumbTitle ?? 'Préparation du DS' }]);
+    // Même mot que le menu (« Mon suivi › Préparer un DS »), qui reste surligné.
+    setCrumbs([{ label: 'Préparer un DS', to: '/revision-lists?onglet=ds' }, { label: crumbTitle ?? 'Préparation du DS' }]);
   }, [crumbTitle, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
 
@@ -103,7 +107,7 @@ export default function TestPlanPage() {
         <p className="text-[15px] text-ink-soft">{error === 'missing' ? 'Ce DS n’existe plus.' : 'Le plan n’a pas pu être chargé.'}</p>
         <div className="mt-4 flex justify-center gap-2">
           {error === 'failed' && <button type="button" className="fd-btn-ghost" onClick={load}>Réessayer</button>}
-          <Link to="/revision-lists" className="fd-btn-primary">Mes révisions</Link>
+          <Link to="/revision-lists?onglet=ds" className="fd-btn-primary">Mes DS</Link>
         </div>
       </div>
     );
@@ -195,7 +199,7 @@ export default function TestPlanPage() {
         <h2 className="fd-display mb-3 text-[20px] leading-tight text-ink">Tes chapitres</h2>
         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
           {plan.chapters.map((c, i) => (
-            <ChapterRow key={c.id} chapter={c} defaultOpen={i === 0 && c.status !== 'mastered'} quizDone={prep.quiz_done.includes(c.id)} />
+            <ChapterRow key={c.id} chapter={c} testId={t.id} defaultOpen={i === 0 && c.status !== 'mastered'} quizDone={prep.quiz_done.includes(c.id)} />
           ))}
         </ul>
       </section>
@@ -276,11 +280,11 @@ function Step({ done, icon: Icon, label, anchor }: { done: boolean; icon: typeof
   );
 }
 
-function ChapterRow({ chapter: c, defaultOpen, quizDone }: { chapter: PlanChapter; defaultOpen: boolean; quizDone: boolean }) {
+function ChapterRow({ chapter: c, testId, defaultOpen, quizDone }: { chapter: PlanChapter; testId: number; defaultOpen: boolean; quizDone: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const st = STATUS[c.status];
   const Icon = st.icon;
-  const pill = 'inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-hover';
+  const pill = 'inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-hover';
   return (
     <li id={`chapitre-${c.id}`} className="scroll-mt-24">
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
@@ -311,9 +315,10 @@ function ChapterRow({ chapter: c, defaultOpen, quizDone }: { chapter: PlanChapte
             {c.status === 'started' && <p className="text-ink-faint">Encore quelques questions évaluées et tu auras ton pourcentage.</p>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link to={`/exercises?chapters=${c.id}`} className={pill}><Dumbbell className="h-3.5 w-3.5" /> S’entraîner</Link>
+            <Link to={practiceUrl(c.hub_url, c.id)} className={pill}><Dumbbell className="h-3.5 w-3.5" /> S’entraîner</Link>
+            <Link to={lessonsUrl(c.hub_url, c.id)} className={pill}><BookOpen className="h-3.5 w-3.5" /> Le cours</Link>
             {c.quiz_ready && (
-              <Link to={`/skill-iq?chapitre=${c.id}`} className={pill}>
+              <Link to={quizUrl(c.id, `/revisions/ds/${testId}`)} className={pill}>
                 <Brain className="h-3.5 w-3.5" />{quizDone ? 'Quiz fait ✓' : c.skilliq?.pct != null ? `Refaire le quiz (${c.skilliq.pct} %)` : 'Quiz'}
               </Link>
             )}

@@ -226,7 +226,7 @@ export const getFilterCounts = async (params: {
       difficulties: params.difficulties,
       subfields: params.subfields,
       theorems: params.theorems,
-      per_page: 1 // We only need the count, not the actual results
+      page_size: 1 // Seul le nombre compte (le serveur lit page_size, pas per_page)
     }
   });
 

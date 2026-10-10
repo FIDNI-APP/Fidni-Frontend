@@ -16,7 +16,7 @@ export const getClassLevels = async (contentType?: string): Promise<ClassLevelMo
 };
 
 export const getSubjects = async (classLevelId?: string[], contentType?: string): Promise<SubjectModel[]> => {
-  const params: Record<string, any> = {};
+  const params: Record<string, string | string[]> = {};
   if (classLevelId) params.class_level = classLevelId;
   if (contentType) params.content_type = contentType;
   const response = await api.get('/subjects/', { params });
@@ -29,7 +29,7 @@ export const getSubjects = async (classLevelId?: string[], contentType?: string)
 };
 
 export const getSubfields = async (subjectId: string, classLevelIds: string[], contentType?: string): Promise<Subfield[]> => {
-  const params: Record<string, any> = classLevelIds ? { class_level: classLevelIds, subject: subjectId } : {};
+  const params: Record<string, string | string[]> = classLevelIds ? { class_level: classLevelIds, subject: subjectId } : {};
   if (contentType) params.content_type = contentType;
   const response = await api.get('/subfields/', { params });
 
@@ -41,7 +41,7 @@ export const getSubfields = async (subjectId: string, classLevelIds: string[], c
 };
 
 export const getChapters = async (subjectId: string, classLevelIds: string[], subfieldIds: string[], contentType?: string): Promise<ChapterModel[]> => {
-  const params: any = {};
+  const params: Record<string, string | string[]> = {};
 
   // Ensure proper format for parameters
   if (subjectId) {
@@ -67,7 +67,7 @@ export const getChapters = async (subjectId: string, classLevelIds: string[], su
   return response.data.results || [];
 };
 export const getTheorems = async (subjectId: string, classLevelIds: string[], subfieldId: string[], chaptersId: string[], contentType?: string): Promise<Theorem[]> => {
-  const params: Record<string, any> = classLevelIds ? { class_level: classLevelIds, subject: subjectId, subfields: subfieldId, chapters: chaptersId } : {};
+  const params: Record<string, string | string[]> = classLevelIds ? { class_level: classLevelIds, subject: subjectId, subfields: subfieldId, chapters: chaptersId } : {};
   if (contentType) params.content_type = contentType;
   const response = await api.get('/theorems/', { params });
 
@@ -97,7 +97,7 @@ export const getChaptersForSubfield = async (
   subfieldId: number | string,
 ): Promise<ChapterModel[]> => {
   // ChapterViewSet expects `subject[]` and `subfields[]`
-  const params: any = { 'subject[]': subjectId, 'subfields[]': subfieldId };
+  const params: Record<string, string | number> = { 'subject[]': subjectId, 'subfields[]': subfieldId };
   const response = await api.get('/chapters/', { params });
   return Array.isArray(response.data) ? response.data : (response.data.results || []);
 };
@@ -117,6 +117,8 @@ export const getDifficultyCounts = async (
     subfields?: string[];
     chapters?: string[];
     theorems?: string[];
+    /** Examens : nationaux (true) ou devoirs (false), comme la liste affichée. */
+    isNationalExam?: boolean;
   }
 ): Promise<Record<string, number>> => {
   const params = new URLSearchParams();
@@ -126,6 +128,7 @@ export const getDifficultyCounts = async (
   filters.subfields?.forEach(id => params.append('subfields[]', id));
   filters.chapters?.forEach(id => params.append('chapters[]', id));
   filters.theorems?.forEach(id => params.append('theorems[]', id));
+  if (filters.isNationalExam !== undefined) params.append('is_national_exam', String(filters.isNationalExam));
   const response = await api.get(`/difficulty-counts/?${params}`);
   return response.data;
 };
