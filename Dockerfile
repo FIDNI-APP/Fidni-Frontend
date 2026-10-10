@@ -20,7 +20,7 @@ COPY . .
 
 # Build the app (skip tsc type check, Vite handles it)
 ENV NODE_ENV=production
-RUN npx vite build
+RUN npx vite build && node scripts/check-build.mjs
 
 # Production stage
 FROM nginx:alpine

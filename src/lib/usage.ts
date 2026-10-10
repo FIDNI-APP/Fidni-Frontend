@@ -76,19 +76,29 @@ export type UsageAction =
 
 function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.
-  api.post('/usage/', { kind, name }).catch(() => {});
+  try {
+    api.post('/usage/', { kind, name }).catch(() => {});
+  } catch { /* rien */ }
 }
+
+// Pas de `import.meta.env.DEV` ici : en production, l'obfuscation (vite.config.ts) le réécrit en
+// import.meta['env']['DEV'], que Vite ne remplace plus → « Cannot read properties of undefined » à chaque
+// page non suivie, page blanche (Pilotage, édition d'un contenu, 404…, 10/10/2026).
+// scripts/check-build.mjs refuse désormais tout bundle qui contient encore `import.meta`.
+const ON_LOCALHOST = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
 
 let lastPath = '';
 export function trackPage(pathname: string) {
   if (pathname === lastPath) return; // même adresse (double rendu, simple changement de paramètres)
   lastPath = pathname;
-  const hit = PAGES.find((p) => matchPath({ path: p.pattern, end: true }, pathname));
-  if (hit) send('page', hit.pattern);
-  // Pages d'administration et d'édition : volontairement non suivies.
-  else if (import.meta.env.DEV && !/^\/(pilotage|logs|admin|import)|\/(new|edit)\/?$/.test(pathname)) {
-    console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
-  }
+  try {
+    const hit = PAGES.find((p) => matchPath({ path: p.pattern, end: true }, pathname));
+    if (hit) send('page', hit.pattern);
+    // Pages d'administration et d'édition : volontairement non suivies.
+    else if (ON_LOCALHOST && !/^\/(pilotage|logs|admin|import|apercu-import|concours\/admin)|\/(new|edit|create)\/?$/.test(pathname)) {
+      console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
+    }
+  } catch { /* la mesure ne doit jamais casser une page */ }
 }
 
 export function trackAction(name: UsageAction) {
