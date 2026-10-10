@@ -35,6 +35,8 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/notebooks', label: 'Cahiers', group: 'Mon espace' },
   { pattern: '/notebooks/:id/pdf', label: 'Cahier : impression', group: 'Mon espace' },
   { pattern: '/revision-lists', label: 'Révisions', group: 'Mon espace' },
+  { pattern: '/revisions/ds/:id', label: 'Plan de révision d’un DS', group: 'Mon espace' },
+  { pattern: '/revisions/ds/:id/blanc', label: 'DS blanc', group: 'Mon espace' },
   { pattern: '/revision-lists/:id/pdf', label: 'Liste de révision : impression', group: 'Mon espace' },
   { pattern: '/profile/revision-lists/:id', label: 'Une liste de révision', group: 'Mon espace' },
   { pattern: '/saved', label: 'Favoris', group: 'Mon espace' },
@@ -45,9 +47,13 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/classrooms/:id', label: 'Une classe', group: 'Classes' },
   { pattern: '/learning-path', label: 'Parcours', group: 'Parcours' },
   { pattern: '/learning-path/:id', label: 'Un parcours', group: 'Parcours' },
+  { pattern: '/learning-path/:pathId/chapters/:chapterId/videos/:videoId', label: 'Vidéo d’un parcours', group: 'Parcours' },
+  { pattern: '/learning-path/:pathId/chapters/:chapterId/quiz', label: 'Quiz d’un parcours', group: 'Parcours' },
   { pattern: '/search', label: 'Recherche', group: 'Autres' },
   { pattern: '/login', label: 'Connexion', group: 'Compte' },
   { pattern: '/signup', label: 'Inscription', group: 'Compte' },
+  { pattern: '/verify-email', label: 'Confirmation de l’e-mail', group: 'Compte' },
+  { pattern: '/reset-password', label: 'Nouveau mot de passe', group: 'Compte' },
   { pattern: '/mentions-legales', label: 'Mentions légales', group: 'Autres' },
   { pattern: '/privacy-policy', label: 'Confidentialité', group: 'Autres' },
   { pattern: '/terms-of-service', label: 'Conditions d’utilisation', group: 'Autres' },
@@ -60,7 +66,13 @@ export type UsageAction =
   | 'voir-solution' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'rattrapage-liste' | 'imprimer'
   | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
-  | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri';
+  | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri'
+  // Audit du 10/10/2026 (même liste fermée que apps/users/usage.py ACTIONS)
+  | 'partager' | 'chrono-demarre' | 'epreuve-demarree' | 'epreuve-terminee' | 'similaire' | 'suivant-apres-resultat'
+  | 'ressenti' | 'cloche' | 'retour-liste' | 'sommaire-lecon' | 'affichage-enonces' | 'charger-plus' | 'recherche-vide'
+  | 'accueil-reprendre' | 'accueil-pour-toi' | 'annoncer-ds' | 'prog-entrainer' | 'prog-cours' | 'prog-quiz'
+  | 'quiz-refait' | 'mode-revision' | 'barre-mobile' | 'visite-auto' | 'visite-passee' | 'visite-finie'
+  | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google';
 
 function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.
@@ -73,6 +85,8 @@ export function trackPage(pathname: string) {
   lastPath = pathname;
   const hit = PAGES.find((p) => matchPath({ path: p.pattern, end: true }, pathname));
   if (hit) send('page', hit.pattern);
+  // eslint-disable-next-line no-console
+  else if (import.meta.env.DEV) console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
 }
 
 export function trackAction(name: UsageAction) {
@@ -134,4 +148,12 @@ export function trackFilterChange(before: Filters, after: Filters, kind?: ListKi
     else if (isSet(a) && a !== b) sendValue(kind, name, a);
   }
   for (const key of STATUS_KEYS) if (after[key] === true && before[key] !== true) sendValue(kind, 'statut', key);
+}
+
+/** Porte d'entrée de la fenêtre de connexion / inscription (10/10/2026) : « vote », « bandeau », « barre-haut »…
+ *  Liste ouverte côté front, mais le serveur n'accepte que [a-z0-9-]{1,30} (apps/users/usage.py FILTER_RE). */
+export function trackAuthOpen(source: string) {
+  trackAction('auth-ouverte');
+  const s = source.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 30);
+  if (s) send('filtre', `auth:porte:${s}`);
 }
