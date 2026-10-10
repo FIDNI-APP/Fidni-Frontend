@@ -29,6 +29,7 @@ import { FunnelCard, type Funnel } from '@/components/pilotage/FunnelCard';
 import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
 import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
 import { PAGES, pageInfo } from '@/lib/usage';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface ContentRef { id: number; type: string; title: string; url: string }
 type MetricKey = 'views' | 'active' | 'signups' | 'work';
@@ -64,6 +65,86 @@ interface ActivityEvent { at: string; kind: string; username: string | null; lab
 
 const PERIODS = [7, 30, 90];
 type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'visiteurs' | 'ia';
+
+/* Réponse de /api/pilotage/ remise en forme une seule fois (10/10/2026) : un champ absent, nul ou d'un autre
+ * type (serveur plus ancien ou plus récent que la page) devient une valeur vide au lieu de faire planter
+ * l'affichage. Les blocs facultatifs (funnel, auth_doors, difficulty_gaps) restent absents s'ils le sont. */
+type Json = Record<string, unknown>;
+const isObj = (v: unknown): v is Json => !!v && typeof v === 'object' && !Array.isArray(v);
+const obj = (v: unknown): Json => (isObj(v) ? v : {});
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const numOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const str = (v: unknown, fallback = '') => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : fallback);
+const list = <T,>(v: unknown, item: (x: Json) => T | null): T[] =>
+  (Array.isArray(v) ? v.filter(isObj).map(item).filter((x): x is T => x !== null) : []);
+const contentRef = (x: Json): ContentRef => ({ id: num(x.id), type: str(x.type), title: str(x.title, 'Sans titre'), url: str(x.url, '/') });
+const totals = (v: unknown) => {
+  const t = obj(v);
+  return { visits: num(t.visits), member_visits: num(t.member_visits), pages: num(t.pages), contents: num(t.contents), contents_all: num(t.contents_all) };
+};
+
+function normalizeOverview(raw: unknown, requestedDays: number): Overview {
+  if (!isObj(raw)) throw new Error('Réponse inattendue du serveur.');
+  const metrics = obj(raw.metrics);
+  const todo = obj(raw.todo);
+  const anon = obj(raw.anonymes);
+  const days = PERIODS.includes(num(raw.days)) ? num(raw.days) : requestedDays;
+  const metric = (k: MetricKey): Metric => ({ value: num(obj(metrics[k]).value), previous: numOrNull(obj(metrics[k]).previous) });
+  const page = (x: Json) => ({ page: str(x.page), views: num(x.views), visits: num(x.visits) });
+  return {
+    generated_at: str(raw.generated_at, new Date().toISOString()),
+    days,
+    views_since: str(raw.views_since, '2026-10-05'),
+    members_total: num(raw.members_total),
+    todo: {
+      reports_open: num(todo.reports_open),
+      a_verifier: list(todo.a_verifier, contentRef),
+      difficulty_gaps: Array.isArray(todo.difficulty_gaps)
+        ? list(todo.difficulty_gaps, (g) => ({
+          ...contentRef(g), edit_url: str(g.edit_url) || undefined, declared: str(g.declared) || null, felt: str(g.felt) || null,
+          n: num(g.n), success_pct: numOrNull(g.success_pct), basis: str(g.basis) || null,
+          votes: isObj(g.votes) ? { easier: num(g.votes.easier), as_said: num(g.votes.as_said), harder: num(g.votes.harder) } : null,
+        }))
+        : undefined,
+    },
+    metrics: { views: metric('views'), active: metric('active'), signups: metric('signups'), work: metric('work') },
+    series: list(raw.series, (d) => (typeof d.date === 'string' ? {
+      date: d.date, views: numOrNull(d.views), active: numOrNull(d.active), signups: numOrNull(d.signups), work: numOrNull(d.work),
+    } : null)),
+    top_contents: list(raw.top_contents, (c) => ({ ...contentRef(c), views: num(c.views), readers: num(c.readers) })),
+    usage_since: str(raw.usage_since, '2026-10-06'),
+    features: list(raw.features, (f) => ({
+      key: str(f.key), label: str(f.label, str(f.key)),
+      source: (['base', 'navigateur', 'filtre'].includes(str(f.source)) ? f.source : 'base') as Overview['features'][number]['source'],
+      actions: num(f.actions), users: numOrNull(f.users), visits: num(f.visits), previous: numOrNull(f.previous),
+    })),
+    pages: list(raw.pages, page),
+    filter_values: list(raw.filter_values, (v) => ({
+      filter: str(v.filter), type: str(v.type) as FilterValue['type'], value: str(v.value), label: str(v.label, str(v.value)),
+      count: num(v.count), visits: num(v.visits), anon: num(v.anon),
+    })),
+    anonymes: {
+      since: str(anon.since, str(raw.usage_since, '2026-10-09')),
+      current: totals(anon.current),
+      previous: isObj(anon.previous) ? totals(anon.previous) : null,
+      signups: num(anon.signups),
+      series: list(anon.series, (d) => (typeof d.date === 'string' ? {
+        date: d.date, anon: numOrNull(d.anon), members: numOrNull(d.members), anon_pages: numOrNull(d.anon_pages), anon_contents: numOrNull(d.anon_contents),
+      } : null)),
+      pages: list(anon.pages, page),
+      top_contents: list(anon.top_contents, (c) => ({ ...contentRef(c), views: num(c.views), total: num(c.total) })),
+      actions: list(anon.actions, (a) => ({ key: str(a.key), label: str(a.label, str(a.key)), count: num(a.count), total: num(a.total), visits: num(a.visits) })),
+    },
+    funnel: isObj(raw.funnel) ? {
+      signups: num(raw.funnel.signups), verified: num(raw.funnel.verified), onboarded: num(raw.funnel.onboarded),
+      first_view: num(raw.funnel.first_view), first_work: num(raw.funnel.first_work), back_d7: num(raw.funnel.back_d7),
+      d7_eligible: num(raw.funnel.d7_eligible),
+    } : undefined,
+    auth_doors: Array.isArray(raw.auth_doors)
+      ? list(raw.auth_doors, (d) => ({ source: str(d.source, 'autre'), count: num(d.count), visits: num(d.visits), anon: num(d.anon) }))
+      : undefined,
+  };
+}
 
 const METRICS: { key: MetricKey; label: string; hint: string; unit: [string, string]; color: string; icon: React.ElementType }[] = [
   { key: 'views', label: 'Vues des contenus', unit: ['vue', 'vues'], color: '#1a1a1a', icon: Eye,
@@ -208,10 +289,12 @@ const OverviewTab: React.FC<{ data: Overview; onOpenTodo: () => void; todoCount:
 
       <section className="fd-card p-5" aria-label={def.label}>
         <h2 className="fd-display mb-3 text-[16px] text-ink">{def.label}</h2>
-        <DayChart key={`${metric}-${data.days}`} series={data.series} def={def} headline={headline} viewsSince={data.views_since} />
+        <ErrorBoundary variant="block" label={def.label} resetKey={`${metric}-${data.days}`}>
+          <DayChart key={`${metric}-${data.days}`} series={data.series} def={def} headline={headline} viewsSince={data.views_since} />
+        </ErrorBoundary>
       </section>
 
-      {data.funnel && <FunnelCard funnel={data.funnel} days={data.days} />}
+      {data.funnel && <ErrorBoundary variant="block" label="Entonnoir"><FunnelCard funnel={data.funnel} days={data.days} /></ErrorBoundary>}
 
       <section className="fd-card p-5">
         <h2 className="fd-display text-[16px] text-ink">Contenus les plus vus</h2>
@@ -410,11 +493,13 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
         )}
       </section>
 
-      {data.auth_doors && <AuthDoorsCard doors={data.auth_doors} days={data.days} />}
+      {data.auth_doors && <ErrorBoundary variant="block" label="Portes d’inscription"><AuthDoorsCard doors={data.auth_doors} days={data.days} /></ErrorBoundary>}
 
       </div>
     </div>
-    <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
+    <ErrorBoundary variant="block" label="Ce que les élèves choisissent dans les listes">
+      <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
+    </ErrorBoundary>
     </div>
   );
 };
@@ -796,8 +881,10 @@ export default function Pilotage() {
     setRefreshing(true);
     try {
       const r = await api.get('/pilotage/', { params: { jours: days } });
-      setData(r.data);
-      setReportsOpen(r.data.todo.reports_open);
+      // Mis en forme AVANT d'être gardé : une réponse inattendue donne le message d'erreur, pas une page blanche.
+      const next = normalizeOverview(r.data, days);
+      setData(next);
+      setReportsOpen(next.todo.reports_open);
       setValidated(new Set());
       setError(null);
     } catch {
@@ -863,28 +950,34 @@ export default function Pilotage() {
 
       {error && <p role="alert" className="mb-5 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">{error}</p>}
 
+      {/* Chaque onglet et chaque carte dans son filet (ErrorBoundary) : un bloc qui plante affiche son erreur,
+          le reste du Pilotage reste utilisable (avant le 10/10/2026, toute la page devenait blanche). */}
+      <ErrorBoundary variant="block" label="Cet onglet" resetKey={`${tab}-${days}-${data?.generated_at ?? ''}`}>
       {tab === 'membres' ? (
         <>
-          <LoginDiagnostic />
-          <MembersTab days={days} />
+          <ErrorBoundary variant="block" label="Un membre n’arrive pas à se connecter ?"><LoginDiagnostic /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="Membres"><MembersTab days={days} /></ErrorBoundary>
         </>
       ) : tab === 'ia' ? (
         <IATab />
       ) : !data ? (
-        <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-ink-faint" /></div>
+        error ? null : <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-ink-faint" /></div>
       ) : tab === 'usage' ? (
         <UsageTab data={data} />
       ) : tab === 'visiteurs' ? (
         <VisitorsTab data={data.anonymes} days={data.days} />
       ) : tab === 'a-traiter' ? (
         <div>
-          <ReportsPanel onOpenCountChange={setReportsOpen} />
-          <VerifyPanel items={data.todo.a_verifier} validated={validated} onToggle={toggleVerified} />
-          {data.todo.difficulty_gaps && <DifficultyGapsPanel items={data.todo.difficulty_gaps} />}
+          <ErrorBoundary variant="block" label="Signalements"><ReportsPanel onOpenCountChange={setReportsOpen} /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="À vérifier"><VerifyPanel items={data.todo.a_verifier} validated={validated} onToggle={toggleVerified} /></ErrorBoundary>
+          {data.todo.difficulty_gaps && (
+            <ErrorBoundary variant="block" label="Écarts de difficulté"><DifficultyGapsPanel items={data.todo.difficulty_gaps} /></ErrorBoundary>
+          )}
         </div>
       ) : (
         <OverviewTab data={data} todoCount={todoCount} onOpenTodo={() => setParam('onglet', 'a-traiter')} />
       )}
+      </ErrorBoundary>
     </div>
   );
 }

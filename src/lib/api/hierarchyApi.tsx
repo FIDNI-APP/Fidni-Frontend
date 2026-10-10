@@ -119,6 +119,8 @@ export const getDifficultyCounts = async (
     theorems?: string[];
     /** Examens : nationaux (true) ou devoirs (false), comme la liste affichée. */
     isNationalExam?: boolean;
+    /** Dossier d'une année du Bac national (« aucune » : sujets sans année). */
+    nationalYear?: string;
   }
 ): Promise<Record<string, number>> => {
   const params = new URLSearchParams();
@@ -129,6 +131,7 @@ export const getDifficultyCounts = async (
   filters.chapters?.forEach(id => params.append('chapters[]', id));
   filters.theorems?.forEach(id => params.append('theorems[]', id));
   if (filters.isNationalExam !== undefined) params.append('is_national_exam', String(filters.isNationalExam));
+  if (filters.nationalYear) params.append('national_year', filters.nationalYear);
   const response = await api.get(`/difficulty-counts/?${params}`);
   return response.data;
 };

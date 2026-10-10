@@ -682,12 +682,16 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     };
     const crumbs: { label: string; to?: string }[] = [];
     if (national) {
+      // Bac national en dossiers par année (10/10/2026) : Bac national › Bac 2024.
+      const year = (content as ContentExam).national_year;
       crumbs.push({ label: 'Bac national', to: '/exams/nationaux' });
-      if (cl) crumbs.push({ label: cl.name, to: `/exams/nationaux?${query({ classLevels: String(cl.id) })}` });
+      crumbs.push(year ? { label: `Bac ${year}`, to: `/exams/nationaux/${year}` }
+        : { label: 'Année non précisée', to: '/exams/nationaux/aucune' });
     } else {
       const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Devoirs (DS)' : 'Leçons';
-      // Élève qui a indiqué sa classe : /exercises le renverrait à la page de son niveau (élément suivant du fil).
-      const sectionTo = contentType === 'exercise' && studentLevel ? `${config.basePath}?niveau=tous` : config.basePath;
+      // Élève qui a indiqué sa classe : la rubrique le renverrait dans le dossier de son niveau (élément suivant du
+      // fil) ; « ?niveau=tous » montre les dossiers de tous les niveaux.
+      const sectionTo = studentLevel ? `${config.basePath}?niveau=tous` : config.basePath;
       crumbs.push({ label: sectionLabel, to: sectionTo });
       if (cl) crumbs.push({ label: cl.name, to: level ? hubPath(section, level.slug) : `${config.basePath}?${query({ classLevels: String(cl.id) })}` });
       if (chap) {

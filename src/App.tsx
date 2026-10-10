@@ -16,6 +16,7 @@ import LegalRedirector from './components/layout/LegalRedirector';
 import ConsentBanner from './components/ads/ConsentBanner';
 import { TourProvider } from '@/components/tour/TourProvider';
 import Footer from './components/layout/Footer';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Learning paths
 
@@ -26,7 +27,6 @@ import Footer from './components/layout/Footer';
 
 // Pages chargées à la demande : l'accueil s'affiche sans télécharger l'éditeur, l'admin,
 // les concours… (avant, tout arrivait d'un bloc : ~2 Mo de JavaScript avant la première page).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 // Après une mise en ligne, un onglet ouvert avant demande d'anciens fichiers de page (nom haché) qui
 // n'existent plus : le chargement échoue et la page restait blanche jusqu'à un rafraîchissement.
 // On recharge alors une fois le site (nouvelle version) ; le drapeau évite une boucle si le serveur
@@ -54,6 +54,7 @@ const page = <M,>(loader: () => Promise<M>, name: keyof M) =>
     });
     // undefined : rechargement en cours (ici ou via « vite:preloadError ») → on attend sans erreur.
     if (!mod) return new Promise<never>(() => {});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { default: mod[name] as unknown as React.ComponentType<any> };
   });
 
@@ -96,8 +97,11 @@ const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'
 const SkillIQSection = page(() => import('@/components/profile/SkillIQSection'), 'SkillIQSection');
 const ProgressionPage = page(() => import('./pages/progression/Progression'), 'default');
 const LogsConsole = page(() => import('./pages/admin/LogsConsole'), 'LogsConsole');
-const ContentList = page(() => import('./pages/content/ContentList'), 'ContentList');
 const ContentHub = page(() => import('./pages/content/ContentHub'), 'ContentHub');
+// Rubriques en dossiers (10/10/2026) : niveaux → chapitres → contenus ; Bac national par année.
+const ContentSection = page(() => import('./pages/content/ContentHub'), 'ContentSection');
+const NationalSection = page(() => import('./pages/content/ContentHub'), 'NationalSection');
+const NationalYear = page(() => import('./pages/content/ContentHub'), 'NationalYear');
 const ContentDetail = page(() => import('./pages/content/ContentDetail'), 'ContentDetail');
 const ContentCreate = page(() => import('./pages/content/ContentCreate'), 'ContentCreate');
 
@@ -131,18 +135,24 @@ const AuthRedirect = ({ tab }: { tab: 'login' | 'signup' }) => {
 const SignUpRedirect = () => <AuthRedirect tab="signup" />;
 const LoginRedirect = () => <AuthRedirect tab="login" />;
 
+// Une page qui plante affiche un message (la barre latérale et le menu restent) ; une autre adresse réessaie.
+const PageBoundary = ({ children }: { children: React.ReactNode }) => {
+  const { pathname } = useLocation();
+  return <ErrorBoundary variant="page" resetKey={pathname}>{children}</ErrorBoundary>;
+};
+
 // Layout wrapper: the app shell (sidebar + top bar) for normal pages,
 // or a bare full-width frame for chrome-less pages (legal, etc.).
 const NavbarWrapper = ({ children, showNavbar = true, showFooter = true }: { children: React.ReactNode, showNavbar?: boolean, showFooter?: boolean }) => {
   if (!showNavbar) {
     return (
       <div className="flex flex-col min-h-screen">
-        <main className="flex-grow"><Suspense fallback={<PageLoader />}>{children}</Suspense></main>
+        <main className="flex-grow"><PageBoundary><Suspense fallback={<PageLoader />}>{children}</Suspense></PageBoundary></main>
         {showFooter && <Footer />}
       </div>
     );
   }
-  return <AppShell showFooter={showFooter}><Suspense fallback={<PageLoader />}>{children}</Suspense></AppShell>;
+  return <AppShell showFooter={showFooter}><PageBoundary><Suspense fallback={<PageLoader />}>{children}</Suspense></PageBoundary></AppShell>;
 };
 
 // Redirect helpers for legacy /structured/* routes
@@ -404,7 +414,7 @@ function App() {
                     ================================ */}
                     <Route path="/exercises" element={
                       <NavbarWrapper>
-                        <ContentList />
+                        <ContentSection contentType="exercise" />
                       </NavbarWrapper>
                     } />
                     {/* Pages par niveau et par chapitre (référencement) : la liste, déjà filtrée. */}
@@ -454,13 +464,18 @@ function App() {
                     ================================ */}
                     <Route path="/exams" element={
                       <NavbarWrapper>
-                        <ContentList contentType="exam" />
+                        <ContentSection contentType="exam" />
                       </NavbarWrapper>
                     } />
                     {/* Examens nationaux : section à part (la section Examens ne garde que les devoirs). */}
                     <Route path="/exams/nationaux" element={
                       <NavbarWrapper>
-                        <ContentList key="nationaux" contentType="exam" national />
+                        <NationalSection />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/exams/nationaux/:annee" element={
+                      <NavbarWrapper>
+                        <NationalYear />
                       </NavbarWrapper>
                     } />
                     <Route path="/exams/new" element={
@@ -487,7 +502,7 @@ function App() {
                     ================================ */}
                     <Route path="/lessons" element={
                       <NavbarWrapper>
-                        <ContentList contentType="lesson" />
+                        <ContentSection contentType="lesson" />
                       </NavbarWrapper>
                     } />
                     <Route path="/lessons/new" element={

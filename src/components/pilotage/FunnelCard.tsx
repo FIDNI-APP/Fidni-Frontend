@@ -19,7 +19,7 @@ const STEPS: { key: StepKey; label: string }[] = [
   { key: 'back_d7', label: 'Revenus à J+7' },
 ];
 
-const fmt = (n: number) => n.toLocaleString('fr-FR');
+const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString('fr-FR');
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : null);
 
 export const FunnelCard: React.FC<{ funnel: Funnel; days: number }> = ({ funnel, days }) => {

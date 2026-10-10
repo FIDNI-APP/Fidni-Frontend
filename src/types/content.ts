@@ -433,11 +433,12 @@ export interface ContentFilters {
   is_national?: boolean;
   national_year_min?: number;
   national_year_max?: number;
+  /** Dossier d'une année du Bac national (« aucune » : sujets sans année). */
+  national_year?: number | 'aucune';
 }
 
 export interface ContentExamFilters extends ContentFilters {
   is_national?: boolean;
-  national_year?: number;
 }
 
 // =====================

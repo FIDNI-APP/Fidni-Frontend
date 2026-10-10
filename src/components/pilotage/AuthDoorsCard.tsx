@@ -28,7 +28,7 @@ const doorLabel = (s: string) => (Object.prototype.hasOwnProperty.call(DOOR_LABE
 export const AuthDoorsCard: React.FC<{ doors: AuthDoor[]; days: number }> = ({ doors, days }) => {
   // Déjà triées par le serveur ; retriées ici au cas où (la plus utilisée en tête).
   const sorted = [...doors].sort((a, b) => b.count - a.count);
-  const total = doors.reduce((n, d) => n + d.count, 0);
+  const total = doors.reduce((n, d) => n + (d.count ?? 0), 0);
   const max = Math.max(1, ...doors.map((d) => d.count));
   return (
     <section className="fd-card p-5" aria-labelledby="pilotage-portes">
@@ -49,7 +49,7 @@ export const AuthDoorsCard: React.FC<{ doors: AuthDoor[]; days: number }> = ({ d
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
                 <span className="min-w-0 truncate text-ink">{doorLabel(d.source)}</span>
                 <span className="fd-nums shrink-0 text-ink-faint">
-                  <b className="text-ink">{d.count.toLocaleString('fr-FR')}</b> · {Math.round((d.count / Math.max(total, 1)) * 100)} %
+                  <b className="text-ink">{(d.count ?? 0).toLocaleString('fr-FR')}</b> · {Math.round((d.count / Math.max(total, 1)) * 100)} %
                 </span>
               </div>
               <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">

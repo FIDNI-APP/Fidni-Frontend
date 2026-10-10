@@ -19,6 +19,7 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/lessons/:id', label: 'Page d’une leçon', group: 'Leçons' },
   { pattern: '/exams', label: 'Liste des examens', group: 'Examens' },
   { pattern: '/exams/nationaux', label: 'Examens nationaux', group: 'Examens' },
+  { pattern: '/exams/nationaux/:annee', label: 'Bac national : une année', group: 'Examens' },
   { pattern: '/exams/niveau/:level/:chapter?', label: 'Examens d’un niveau', group: 'Examens' },
   { pattern: '/exams/:id/pdf', label: 'Examen : impression', group: 'Examens' },
   { pattern: '/exams/:id', label: 'Page d’un examen', group: 'Examens' },
@@ -72,23 +73,35 @@ export type UsageAction =
   | 'ressenti' | 'cloche' | 'retour-liste' | 'sommaire-lecon' | 'affichage-enonces' | 'charger-plus' | 'recherche-vide'
   | 'accueil-reprendre' | 'accueil-pour-toi' | 'annoncer-ds' | 'prog-entrainer' | 'prog-cours' | 'prog-quiz'
   | 'quiz-refait' | 'mode-revision' | 'barre-mobile' | 'visite-auto' | 'visite-passee' | 'visite-finie'
-  | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google';
+  | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google'
+  // Dossiers des listes (10/10/2026)
+  | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee';
 
 function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.
-  api.post('/usage/', { kind, name }).catch(() => {});
+  try {
+    api.post('/usage/', { kind, name }).catch(() => {});
+  } catch { /* rien */ }
 }
+
+// Pas de `import.meta.env.DEV` ici : en production, l'obfuscation (vite.config.ts) le réécrit en
+// import.meta['env']['DEV'], que Vite ne remplace plus → « Cannot read properties of undefined » à chaque
+// page non suivie, page blanche (Pilotage, édition d'un contenu, 404…, 10/10/2026).
+// scripts/check-build.mjs refuse désormais tout bundle qui contient encore `import.meta`.
+const ON_LOCALHOST = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
 
 let lastPath = '';
 export function trackPage(pathname: string) {
   if (pathname === lastPath) return; // même adresse (double rendu, simple changement de paramètres)
   lastPath = pathname;
-  const hit = PAGES.find((p) => matchPath({ path: p.pattern, end: true }, pathname));
-  if (hit) send('page', hit.pattern);
-  // Pages d'administration et d'édition : volontairement non suivies.
-  else if (import.meta.env.DEV && !/^\/(pilotage|logs|admin|import)|\/(new|edit)\/?$/.test(pathname)) {
-    console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
-  }
+  try {
+    const hit = PAGES.find((p) => matchPath({ path: p.pattern, end: true }, pathname));
+    if (hit) send('page', hit.pattern);
+    // Pages d'administration et d'édition : volontairement non suivies.
+    else if (ON_LOCALHOST && !/^\/(pilotage|logs|admin|import|apercu-import|concours\/admin)|\/(new|edit|create)\/?$/.test(pathname)) {
+      console.warn(`[usage] route non suivie : ${pathname} — l'ajouter à PAGES`);
+    }
+  } catch { /* la mesure ne doit jamais casser une page */ }
 }
 
 export function trackAction(name: UsageAction) {

@@ -4,6 +4,9 @@
 import { api } from './apiClient';
 
 export interface HubChapter { id: number; name: string; slug: string; count: number; url: string }
+/** Dossier de chapitre (10/10/2026) : TOUS les chapitres du niveau, `count` = 0 pour un dossier vide ;
+ *  `mine` (élève connecté) = contenus du chapitre qu'il a terminés. */
+export interface HubFolder extends HubChapter { subfield: string | null; mine?: { done: number; success: number } }
 export interface HubInfo {
   section: 'exercises' | 'lessons' | 'exams';
   type: 'exercise' | 'lesson' | 'exam';
@@ -17,8 +20,32 @@ export interface HubInfo {
   h1: string;
   intro: string;
   chapters: HubChapter[];
+  /** Absents d'un serveur plus ancien. */
+  folders?: HubFolder[];
+  subject?: string | null;
   related: { section: string; label: string; count: number; url: string }[];
 }
+
+export type HubSection = 'exercises' | 'lessons' | 'exams';
+
+/** Dossier de niveau d'une rubrique (GET /api/hubs/niveaux/). */
+export interface LevelFolder {
+  id: number; name: string; slug: string; url: string;
+  count: number; chapters_total: number; chapters_filled: number;
+}
+export interface LevelFolders { section: HubSection; type: string; subject: string | null; label: string; levels: LevelFolder[] }
+
+/** Dossier d'une année du Bac national (GET /api/hubs/nationaux/) ; year = null : sujets sans année. */
+export interface YearFolder { year: number | null; count: number; levels: string[] }
+export interface YearFolders { subject: string | null; years: YearFolder[] }
+
+export const getLevelFolders = async (section: HubSection) =>
+  (await api.get('/hubs/niveaux/', { params: { section } })).data as LevelFolders;
+
+export const getNationalYears = async () => (await api.get('/hubs/nationaux/')).data as YearFolders;
+
+/** Adresse du dossier d'une année du Bac national (« aucune » : sujets sans année). */
+export const yearPath = (year: number | null) => `/exams/nationaux/${year ?? 'aucune'}`;
 
 export const getHub = async (section: string, level: string, chapter?: string) =>
   (await api.get('/hubs/', { params: { section, level, chapter: chapter || undefined } })).data as HubInfo;

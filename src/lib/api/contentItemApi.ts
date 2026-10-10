@@ -76,8 +76,8 @@ function buildQueryParams(filters: ContentFilters | ContentExamFilters): URLSear
   }
   if (filters.national_year_min) params.append('national_year_min', String(filters.national_year_min));
   if (filters.national_year_max) params.append('national_year_max', String(filters.national_year_max));
-  if ('national_year' in filters && (filters as ContentExamFilters).national_year) {
-    params.append('national_year', String((filters as ContentExamFilters).national_year));
+  if (filters.national_year) {
+    params.append('national_year', String(filters.national_year));
   }
 
   return params;
