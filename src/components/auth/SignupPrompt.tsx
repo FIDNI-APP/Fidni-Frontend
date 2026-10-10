@@ -4,22 +4,28 @@ import React, { useEffect, useState } from 'react';
 import { Check, Sparkles, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
+import { TABBAR_OFFSET } from '@/components/layout/nav';
 
-export function useOpenSignup() {
+/**
+ * Ouvre la fenêtre de connexion / inscription. `source` = la porte d'entrée (vote, favori, solution,
+ * evaluer, commentaire, liste, cahier, bandeau, carte, sidebar, barre-haut, hero, cta…), comptée dans
+ * le Pilotage (lib/usage.ts trackAuthOpen, via AuthController.openModal).
+ */
+export function useOpenSignup(source = 'autre') {
   const { openModal, setInitialTab } = useAuthModal();
-  return (tab: 'signup' | 'login' = 'signup') => { setInitialTab(tab); openModal(); };
+  return (tab: 'signup' | 'login' = 'signup') => { setInitialTab(tab); openModal(source); };
 }
 
 const BENEFITS = [
   'Ta progression suivie, question par question',
   'Tes listes de révision et tes cahiers de cours',
-  'Tes favoris, tes quiz Skill IQ et ta note aux examens',
+  'Tes favoris, tes quiz par chapitre et ta note aux examens',
 ];
 
 /** Version large, pour une liste : le texte à gauche, les boutons à droite. */
-export const SignupStrip: React.FC<{ className?: string }> = ({ className = '' }) => {
+export const SignupStrip: React.FC<{ className?: string; source?: string }> = ({ className = '', source = 'carte' }) => {
   const { isAuthenticated } = useAuth();
-  const openSignup = useOpenSignup();
+  const openSignup = useOpenSignup(source);
   if (isAuthenticated) return null;
   return (
     <div className={`rounded-2xl border border-brand-line bg-brand-soft/50 px-5 py-4 flex flex-col md:flex-row md:items-center gap-4 ${className}`}>
@@ -40,11 +46,11 @@ export const SignupStrip: React.FC<{ className?: string }> = ({ className = '' }
 };
 
 /** Carte d'invitation (colonne latérale, liste, fin de page). */
-export const SignupCard: React.FC<{ title?: string; text?: string; benefits?: boolean; className?: string; tour?: string }> = ({
-  title = 'Garde une trace de ton travail', text, benefits = true, className = '', tour,
+export const SignupCard: React.FC<{ title?: string; text?: string; benefits?: boolean; className?: string; tour?: string; source?: string }> = ({
+  title = 'Garde une trace de ton travail', text, benefits = true, className = '', tour, source = 'carte',
 }) => {
   const { isAuthenticated } = useAuth();
-  const openSignup = useOpenSignup();
+  const openSignup = useOpenSignup(source);
   if (isAuthenticated) return null;
   return (
     <div className={`rounded-2xl border border-brand-line bg-brand-soft/50 p-5 ${className}`} data-tour={tour}>
@@ -80,7 +86,7 @@ const DISMISS_KEY = 'fidni:bandeau-inscription';
  */
 export const SignupBanner: React.FC<{ contentId?: string | number }> = ({ contentId }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const openSignup = useOpenSignup();
+  const openSignup = useOpenSignup('bandeau');
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -103,7 +109,9 @@ export const SignupBanner: React.FC<{ contentId?: string | number }> = ({ conten
     setShow(false);
   };
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur shadow-[0_-8px_24px_rgba(20,18,16,.06)]">
+    // Au-dessus de la barre d'onglets du téléphone (sa hauteur, 0 sur ordinateur : MobileTabBar).
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur shadow-[0_-8px_24px_rgba(20,18,16,.06)] print:hidden"
+      style={{ bottom: TABBAR_OFFSET }}>
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 pr-12 sm:pr-4">
         <p className="min-w-0 flex-1 text-[13.5px] text-ink-soft">
           <b className="text-ink">Tu révises sur Fidni ?</b> Crée ton compte gratuit pour garder ta progression, tes révisions et tes cahiers.
@@ -112,7 +120,7 @@ export const SignupBanner: React.FC<{ contentId?: string | number }> = ({ conten
           <button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary">Créer mon compte</button>
           <button type="button" onClick={() => openSignup('login')} className="hidden sm:inline-flex px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">Se connecter</button>
         </div>
-        <button type="button" onClick={dismiss} aria-label="Fermer" className="absolute right-3 top-3 sm:static p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
+        <button type="button" onClick={dismiss} aria-label="Fermer" className="absolute right-2 top-2 sm:static inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
           <X className="h-4 w-4" />
         </button>
       </div>

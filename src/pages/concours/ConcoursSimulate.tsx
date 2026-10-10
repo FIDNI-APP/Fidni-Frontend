@@ -3,10 +3,11 @@
  * Auto-saves each answer. Auto-submits on timeout.
  *
  * Layout:
- *   Top bar: title + countdown timer + submit button
- *   Body: current question (left ~70%) + question grid sidebar (right)
+ *   Top bar (collante) : titre + chrono + Soumettre ; sur téléphone, bande défilante des questions 1…N
+ *   Ordinateur (lg) : question à gauche + grille des questions à droite (280 px)
+ *   Téléphone : question pleine largeur + barre Précédente / Suivante collée en bas, à portée de pouce
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Loader2, Clock, AlertTriangle, Check, ChevronLeft, ChevronRight, Send,
@@ -17,6 +18,46 @@ import {
   type SimulationSessionView,
 } from '@/lib/api/concoursApi';
 import { SEO } from '@/components/layout/SEO';
+
+const ghostDark: CSSProperties = {
+  background: 'transparent', color: '#d8d4cc',
+  border: '1px solid rgba(255,255,255,.18)',
+};
+
+/** Boutons de la barre du bas (téléphone). */
+const barBtn: CSSProperties = {
+  minHeight: 44, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+};
+
+/** Pastille d'une question (grille de droite et bande du téléphone). */
+function QuestionPill({ index, current, answered, onClick, square = false }: {
+  index: number; current: boolean; answered: boolean; onClick: () => void;
+  /** Grille de l'ordinateur : case carrée qui remplit sa colonne. */
+  square?: boolean;
+}) {
+  return (
+    <button
+      data-pos={index}
+      onClick={onClick}
+      aria-label={`Question ${index + 1}${answered ? ', répondue' : ''}`}
+      aria-current={current ? 'step' : undefined}
+      className={square ? undefined : 'flex-shrink-0'}
+      style={{
+        ...(square ? { aspectRatio: '1 / 1', minWidth: 36 } : { width: 38, height: 38 }),
+        borderRadius: 8,
+        border: `1.5px solid ${current ? '#d8d4cc' : answered ? 'rgba(34,197,94,.4)' : 'rgba(255,255,255,.12)'}`,
+        background: current
+          ? 'rgba(180,176,168,.3)'
+          : answered ? 'rgba(34,197,94,.15)' : 'transparent',
+        color: current ? '#fff' : answered ? '#86efac' : '#d8d4cc',
+        fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono',
+        cursor: 'pointer',
+      }}
+    >
+      {index + 1}
+    </button>
+  );
+}
 
 export default function ConcoursSimulatePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -30,6 +71,7 @@ export default function ConcoursSimulatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const submittedRef = useRef(false);
+  const stripRef = useRef<HTMLDivElement>(null);
 
   // Load session
   useEffect(() => {
@@ -57,6 +99,23 @@ export default function ConcoursSimulatePage() {
     })();
   }, [sessionId, navigate]);
 
+  const handleSubmit = useCallback(async (silent = false) => {
+    if (!sess || submittedRef.current) return;
+    if (!silent && !window.confirm('Soumettre la simulation maintenant ?')) {
+      return;
+    }
+    submittedRef.current = true;
+    setSubmitting(true);
+    try {
+      await submitSimulation(sess.session_id);
+      navigate(`/concours/sessions/${sess.session_id}/recap`, { replace: true });
+    } catch (e) {
+      console.error(e);
+      submittedRef.current = false;
+      setSubmitting(false);
+    }
+  }, [sess, navigate]);
+
   // Compte à rebours recalculé depuis l'heure de fin à chaque tic : les navigateurs ralentissent
   // les minuteries des onglets en arrière-plan, et un simple « -1 par seconde » dérivait alors
   // de plusieurs minutes. Au retour sur l'onglet, l'affichage est juste immédiatement.
@@ -74,35 +133,33 @@ export default function ConcoursSimulatePage() {
     const t = setInterval(tick, 1000);
     document.addEventListener('visibilitychange', tick);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
-  }, [sess]);
+  }, [sess, handleSubmit]);
+
+  // Bande des questions (téléphone) : la pastille courante reste en vue.
+  useEffect(() => {
+    const strip = stripRef.current;
+    const pill = strip?.querySelector<HTMLElement>(`[data-pos="${pos}"]`);
+    if (!strip || !pill) return;
+    strip.scrollTo({ left: pill.offsetLeft - (strip.clientWidth - pill.offsetWidth) / 2, behavior: 'smooth' });
+  }, [pos, sess]);
 
   const choose = async (key: string) => {
     if (!sess) return;
     setAnswers((prev) => ({ ...prev, [pos]: key }));
     try {
       await answerSimulationQuestion(sess.session_id, pos, key);
-    } catch (e: any) {
+    } catch (e) {
       console.error('answer save failed', e);
       // Temps écoulé côté serveur (horloge de l'appareil en retard, onglet endormi…) : on rend la copie.
-      if (e?.response?.data?.code === 'time_over' && !submittedRef.current) handleSubmit(true);
+      const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      if (code === 'time_over' && !submittedRef.current) handleSubmit(true);
     }
   };
 
-  const handleSubmit = async (silent = false) => {
-    if (!sess || submittedRef.current) return;
-    if (!silent && !window.confirm('Soumettre la simulation maintenant ?')) {
-      return;
-    }
-    submittedRef.current = true;
-    setSubmitting(true);
-    try {
-      await submitSimulation(sess.session_id);
-      navigate(`/concours/sessions/${sess.session_id}/recap`, { replace: true });
-    } catch (e) {
-      console.error(e);
-      submittedRef.current = false;
-      setSubmitting(false);
-    }
+  /** Change de question et remonte au début de l'énoncé (utile sur téléphone, où l'on a défilé). */
+  const goTo = (i: number) => {
+    setPos(i);
+    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const formatTime = (s: number) => {
@@ -129,9 +186,11 @@ export default function ConcoursSimulatePage() {
   const item = sess.questions_snapshot[pos];
   if (!item) return null;
   const q = item.question;
+  const isLast = pos === sess.total_questions - 1;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', paddingBottom: 32 }}>
+    // Colonne flexible : sur téléphone, la barre Précédente / Suivante reste en bas même si la question est courte.
+    <div className="flex flex-col lg:pb-8" style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff' }}>
       <SEO title="Simulation - Fidni" description="Simulation de concours" />
 
       {/* Dark-mode + bigger LaTeX for the simulation runner. */}
@@ -146,72 +205,90 @@ export default function ConcoursSimulatePage() {
         .concours-sim-option .katex-display { font-size: 1.1em; }
         .concours-dark-prose .ProseMirror p { margin: 0 0 .35em; }
         .concours-dark-prose .ProseMirror p:last-child { margin-bottom: 0; }
+        .concours-sim-strip { scrollbar-width: none; }
+        .concours-sim-strip::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* Top bar */}
       <div
         style={{
           position: 'sticky', top: 0, zIndex: 30,
-          background: 'rgba(20,18,16,.92)',
+          background: 'rgba(20,18,16,.94)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(255,255,255,.08)',
-          padding: '14px 24px',
         }}
-        className="flex items-center justify-between gap-3 flex-wrap"
+        className="px-4 py-2.5 lg:px-6 lg:py-3.5"
       >
-        <div>
-          <div style={{ fontSize: 11, letterSpacing: '.06em', color: '#b8b4ac', textTransform: 'uppercase', fontWeight: 700 }}>
-            Simulation · {sess.concours_type.toUpperCase()}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate" style={{ fontSize: 11, letterSpacing: '.06em', color: '#b8b4ac', textTransform: 'uppercase', fontWeight: 700 }}>
+              <span className="hidden sm:inline">Simulation · </span>{sess.concours_type.toUpperCase()}
+            </div>
+            <div className="whitespace-nowrap" style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginTop: 2 }}>
+              <span className="sm:hidden">Q. </span><span className="hidden sm:inline">Question </span>{pos + 1} / {sess.total_questions}
+            </div>
           </div>
-          <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginTop: 2 }}>
-            Question {pos + 1} / {sess.total_questions}
+          <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
+            <div
+              data-tour="simulation-chrono"
+              role="timer"
+              aria-label="Temps restant"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 12px', borderRadius: 10,
+                background: lowTime ? 'rgba(220,38,38,.2)' : 'rgba(255,255,255,.1)',
+                color: lowTime ? '#fca5a5' : '#d8d4cc',
+                border: `1px solid ${lowTime ? 'rgba(220,38,38,.4)' : 'rgba(255,255,255,.18)'}`,
+                animation: lowTime ? 'pulse 1.5s infinite' : undefined,
+              }}
+            >
+              {lowTime ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+              <span style={{ fontFamily: 'DM Mono', fontSize: 16, fontWeight: 700, letterSpacing: '.05em' }}>
+                {formatTime(secondsLeft)}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowConfirm(true)}
+              data-tour="simulation-soumettre"
+              disabled={submitting}
+              className="fd-btn-primary"
+              style={{ background: '#16a34a', padding: '9px 14px' }}
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Soumettre
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div
-            data-tour="simulation-chrono"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 10,
-              background: lowTime ? 'rgba(220,38,38,.2)' : 'rgba(255,255,255,.1)',
-              color: lowTime ? '#fca5a5' : '#d8d4cc',
-              border: `1px solid ${lowTime ? 'rgba(220,38,38,.4)' : 'rgba(255,255,255,.18)'}`,
-              animation: lowTime ? 'pulse 1.5s infinite' : undefined,
-            }}
-          >
-            {lowTime ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-            <span style={{ fontFamily: 'DM Mono', fontSize: 16, fontWeight: 700, letterSpacing: '.05em' }}>
-              {formatTime(secondsLeft)}
-            </span>
-          </div>
-          <button
-            onClick={() => setShowConfirm(true)}
-            data-tour="simulation-soumettre"
-            disabled={submitting}
-            className="fd-btn-primary"
-            style={{ background: '#16a34a' }}
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Soumettre
-          </button>
+
+        {/* Téléphone : bande défilante des questions, collée sous le chrono. */}
+        <div
+          ref={stripRef}
+          data-tour="simulation-grille"
+          className="lg:hidden concours-sim-strip flex gap-1.5 overflow-x-auto mt-2.5 -mx-4 px-4 pb-0.5"
+          style={{ position: 'relative', WebkitOverflowScrolling: 'touch' }}
+          aria-label="Questions"
+        >
+          {sess.questions_snapshot.map((_, i) => (
+            <QuestionPill key={i} index={i} current={i === pos} answered={answered.has(i)} onClick={() => goTo(i)} />
+          ))}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 grid gap-5" style={{ gridTemplateColumns: 'minmax(0, 1fr) 280px' }}>
+      <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 lg:py-6 grid gap-5 content-start lg:grid-cols-[minmax(0,1fr)_280px]">
         {/* Question card */}
         <div
+          className="p-4 sm:p-6 min-w-0"
           style={{
             background: 'rgba(255,255,255,.04)',
             border: '1px solid rgba(255,255,255,.08)',
             borderRadius: 16,
-            padding: 24,
           }}
         >
-          <div className="flex items-start gap-4 mb-5">
+          <div className="flex items-start gap-3 sm:gap-4 mb-5">
             <div
               className="inline-flex items-center justify-center flex-shrink-0"
               style={{
-                width: 44, height: 44, borderRadius: 11,
+                width: 40, height: 40, borderRadius: 11,
                 background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
                 fontSize: 16, fontWeight: 800, fontFamily: 'DM Mono',
               }}
@@ -230,9 +307,10 @@ export default function ConcoursSimulatePage() {
                 <button
                   key={opt.key}
                   onClick={() => choose(opt.key)}
+                  aria-pressed={selected}
                   style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 14,
-                    padding: '14px 16px', borderRadius: 12,
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    padding: '12px 14px', borderRadius: 12,
                     background: selected ? 'rgba(180,176,168,.18)' : 'rgba(255,255,255,.04)',
                     border: `1.5px solid ${selected ? '#9a958c' : 'rgba(255,255,255,.08)'}`,
                     color: '#fff',
@@ -252,7 +330,7 @@ export default function ConcoursSimulatePage() {
                   >
                     {opt.key}
                   </span>
-                  <div className="flex-1 concours-dark-prose concours-sim-option" style={{ fontSize: 16, lineHeight: 1.65 }}>
+                  <div className="flex-1 min-w-0 concours-dark-prose concours-sim-option" style={{ fontSize: 16, lineHeight: 1.65 }}>
                     <ConcoursContentRenderer html={opt.text} />
                   </div>
                 </button>
@@ -260,42 +338,38 @@ export default function ConcoursSimulatePage() {
             })}
           </div>
 
-          {/* Nav */}
-          <div className="flex items-center justify-between mt-6">
+          {/* Nav (ordinateur ; sur téléphone, barre collée en bas) */}
+          <div className="hidden lg:flex items-center justify-between mt-6">
             <button
-              onClick={() => setPos(p => Math.max(0, p - 1))}
+              onClick={() => goTo(Math.max(0, pos - 1))}
               disabled={pos === 0}
               className="fd-btn-ghost"
-              style={{
-                background: 'transparent', color: '#d8d4cc',
-                border: '1px solid rgba(255,255,255,.18)',
-              }}
+              style={{ ...ghostDark, opacity: pos === 0 ? .4 : 1 }}
             >
               <ChevronLeft className="w-3.5 h-3.5" /> Précédente
             </button>
             <button
               onClick={() => choose('')}
               className="fd-btn-ghost"
-              style={{
-                background: 'transparent', color: '#d8d4cc',
-                border: '1px solid rgba(255,255,255,.18)',
-              }}
+              style={ghostDark}
             >
               Effacer
             </button>
             <button
-              onClick={() => setPos(p => Math.min(sess.total_questions - 1, p + 1))}
-              disabled={pos === sess.total_questions - 1}
+              onClick={() => goTo(Math.min(sess.total_questions - 1, pos + 1))}
+              disabled={isLast}
               className="fd-btn-primary"
+              style={{ opacity: isLast ? .4 : 1 }}
             >
               Suivante <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Sidebar — question grid */}
+        {/* Sidebar — question grid (ordinateur) */}
         <div
           data-tour="simulation-grille"
+          className="hidden lg:block"
           style={{
             background: 'rgba(255,255,255,.04)',
             border: '1px solid rgba(255,255,255,.08)',
@@ -310,30 +384,9 @@ export default function ConcoursSimulatePage() {
             Questions
           </div>
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-            {sess.questions_snapshot.map((_, i) => {
-              const isAnswered = answered.has(i);
-              const isCurrent = i === pos;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setPos(i)}
-                  style={{
-                    aspectRatio: '1 / 1',
-                    minWidth: 36,
-                    borderRadius: 8,
-                    border: `1.5px solid ${isCurrent ? '#9a958c' : isAnswered ? 'rgba(34,197,94,.4)' : 'rgba(255,255,255,.12)'}`,
-                    background: isCurrent
-                      ? 'rgba(180,176,168,.25)'
-                      : isAnswered ? 'rgba(34,197,94,.15)' : 'transparent',
-                    color: isCurrent ? '#fff' : isAnswered ? '#86efac' : '#d8d4cc',
-                    fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {i + 1}
-                </button>
-              );
-            })}
+            {sess.questions_snapshot.map((_, i) => (
+              <QuestionPill key={i} index={i} square current={i === pos} answered={answered.has(i)} onClick={() => goTo(i)} />
+            ))}
           </div>
           <div className="flex flex-col gap-1.5 mt-4" style={{ fontSize: 11, color: '#d8d4cc' }}>
             <div className="flex items-center gap-2">
@@ -348,8 +401,60 @@ export default function ConcoursSimulatePage() {
         </div>
       </div>
 
+      {/* Téléphone : Précédente / Suivante à portée de pouce. */}
+      <div
+        className="lg:hidden flex items-center gap-2"
+        style={{
+          position: 'sticky', bottom: 0, zIndex: 30,
+          background: 'rgba(20,18,16,.96)',
+          backdropFilter: 'blur(12px)',
+          borderTop: '1px solid rgba(255,255,255,.1)',
+          padding: '10px 12px calc(10px + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        {/* Pas de .fd-btn-ghost ici : son :hover clair reste « collé » après un toucher. */}
+        <button
+          onClick={() => goTo(Math.max(0, pos - 1))}
+          disabled={pos === 0}
+          className="flex-1 inline-flex items-center justify-center gap-1.5"
+          style={{ ...ghostDark, ...barBtn, opacity: pos === 0 ? .4 : 1 }}
+        >
+          <ChevronLeft className="w-4 h-4" /> Précédente
+        </button>
+        {answers[pos] && (
+          <button
+            onClick={() => choose('')}
+            className="inline-flex items-center justify-center"
+            style={{ ...ghostDark, ...barBtn, padding: '0 12px' }}
+          >
+            Effacer
+          </button>
+        )}
+        {isLast ? (
+          <button
+            onClick={() => setShowConfirm(true)}
+            disabled={submitting}
+            className="fd-btn-primary flex-1 justify-center"
+            style={{ minHeight: 44, background: '#16a34a' }}
+          >
+            <Send className="w-4 h-4" /> Terminer
+          </button>
+        ) : (
+          <button
+            onClick={() => goTo(Math.min(sess.total_questions - 1, pos + 1))}
+            className="fd-btn-primary flex-1 justify-center"
+            style={{ minHeight: 44 }}
+          >
+            Suivante <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       {showConfirm && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Soumettre la simulation"
           style={{
             position: 'fixed', inset: 0, zIndex: 60,
             background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)',

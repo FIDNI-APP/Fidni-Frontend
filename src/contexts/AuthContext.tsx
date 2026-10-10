@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User } from '@/types';
 import { getCurrentUser, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/lib/api';
-import type { SignupConsents } from '@/lib/api/authApi';
+import { loginWithGoogle as apiLoginWithGoogle, type GoogleLoginResult, type SignupConsents } from '@/lib/api/authApi';
 import { SESSION_EXPIRED_EVENT } from '@/lib/api/apiClient';
 
 
@@ -12,6 +12,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
+  /** Connexion avec Google (jeton d'identité) ; `consents` pour créer un compte. Renvoie aussi `created`. */
+  loginWithGoogle: (credential: string, consents?: SignupConsents) => Promise<GoogleLoginResult>;
   logout: () => Promise<void>;
   register: (username: string, email: string, password: string, consents: SignupConsents) => Promise<any>;
   refreshUser: () => Promise<void>;
@@ -83,6 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
+  const loginWithGoogle = async (credential: string, consents?: SignupConsents) => {
+    // Pas de isLoading ici : un refus « consent_required » est attendu et ne doit pas faire clignoter l'app.
+    const data = await apiLoginWithGoogle(credential, consents);
+    if (data?.user) setUser({ ...data.user, isAuthenticated: true });
+    else await refreshUser();
+    return data;
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -112,6 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginWithGoogle,
         logout,
         register,
         refreshUser

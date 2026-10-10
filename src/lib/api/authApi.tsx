@@ -1,4 +1,5 @@
 import {api, clearTokens, storeTokens} from './apiClient';
+import type { User } from '@/types';
 
 
 /** Connexion par e-mail OU nom d'utilisateur. Renvoie { access, refresh, user }. */
@@ -7,6 +8,26 @@ export const login = async (identifier : string, password : string) => {
     identifier: identifier.trim(),
     password,
   });
+  storeTokens(response.data.access, response.data.refresh);
+  return response.data;
+};
+
+/** Réponse d'une connexion réussie avec Google : comme `login`, plus `created` (compte créé à l'instant). */
+export interface GoogleLoginResult {
+  access: string; refresh: string; created: boolean;
+  user: Omit<User, 'isAuthenticated'> & AccountFlags;
+}
+
+/** Champs du compte renvoyés à son seul propriétaire (réglages) : connexion Google, mot de passe défini. */
+export interface AccountFlags { has_password?: boolean; google_linked?: boolean }
+
+/**
+ * Connexion (ou inscription) avec le jeton d'identité Google. Sans compte existant, le serveur répond
+ * 400 {code:'consent_required', email, name} : renvoyer le même jeton avec les deux cases cochées.
+ * Autres refus : 400 {code:'invalid_token'}, 403 {code:'account_disabled'}, 503 {code:'google_unavailable'}.
+ */
+export const loginWithGoogle = async (credential: string, consents?: SignupConsents): Promise<GoogleLoginResult> => {
+  const response = await api.post('/auth/google/', { credential, ...(consents ?? {}) });
   storeTokens(response.data.access, response.data.refresh);
   return response.data;
 };

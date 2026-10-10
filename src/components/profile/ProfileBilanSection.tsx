@@ -15,6 +15,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Brain, RotateCcw, Sparkles, Target } from 'lucide-react';
+import { practiceUrl, quizUrl } from '@/pages/progression/links';
 
 export interface SkillAssessment {
   id: number;
@@ -25,6 +26,12 @@ export interface SkillAssessment {
   max_score: number;
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   completed_at: string;
+  /** Passage précédent (null au premier) et nombre de passages (10/10/2026). */
+  previous_score?: number | null;
+  previous_max?: number | null;
+  attempts?: number;
+  /** Page d'exercices du chapitre au niveau de l'élève (« S'entraîner ») ; null hors de son niveau. */
+  hub_url?: string | null;
 }
 
 interface ProfileBilanSectionProps {
@@ -118,7 +125,7 @@ const ChapterRow: React.FC<{ record: ChapterRecord }> = ({ record }) => {
 
   return (
     <Link
-      to={`/exercises?chapters=${record.id}`}
+      to={practiceUrl(record.assessment?.hub_url, record.id)}
       className="grid items-center gap-3 group"
       style={{ gridTemplateColumns: 'minmax(0,1fr) 96px', padding: '9px 0', textDecoration: 'none' }}
     >
@@ -172,7 +179,7 @@ function buildPriorities(records: ChapterRecord[]) {
       key: `review-${r.id}`,
       chapter: r.name,
       reason: `${r.toReview} exercice${r.toReview > 1 ? 's' : ''} marqué${r.toReview > 1 ? 's' : ''} à revoir`,
-      to: `/exercises?chapters=${r.id}`,
+      to: practiceUrl(r.assessment?.hub_url, r.id),
       cta: 'Reprendre',
       icon: RotateCcw,
     }));
@@ -184,7 +191,7 @@ function buildPriorities(records: ChapterRecord[]) {
       key: `weak-${r.id}`,
       chapter: r.name,
       reason: `Niveau ${LEVEL_STYLE[r.assessment!.level].label.toLowerCase()} au test`,
-      to: `/exercises?chapters=${r.id}`,
+      to: practiceUrl(r.assessment!.hub_url, r.id),
       cta: "S'entraîner",
       icon: Sparkles,
     }));
@@ -196,7 +203,7 @@ function buildPriorities(records: ChapterRecord[]) {
       key: `untested-${r.id}`,
       chapter: r.name,
       reason: 'Jamais évalué — situe ton niveau',
-      to: '/skill-iq',
+      to: quizUrl(r.id),
       cta: 'Passer le test',
       icon: Brain,
     }));

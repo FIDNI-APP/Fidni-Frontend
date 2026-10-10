@@ -2,27 +2,41 @@
 //   - Fiche du sujet : durée, barème, nombre d'exercices, niveau.
 //   - Une seule feuille : la fiche en tête, puis les exercices séparés par un intertitre avec leur barème
 //     (la numérotation repart à 1, comme sur papier).
-//   - Épreuve : compte à rebours sur la durée du sujet ; solutions et auto-évaluation masquées
-//     jusqu'à la fin, puis le temps est enregistré.
-//   - Ta copie : note estimée d'après l'auto-évaluation (réussi = tous les points, partiel = la
-//     moitié), exercice par exercice. Aucun chiffre inventé : tout vient du barème et de l'élève.
+//   - Épreuve : compte à rebours sur la durée du sujet ; solutions, auto-évaluation, copie et points
+//     masqués jusqu'à la fin, puis le temps est enregistré (et la note du passage, une fois corrigé).
+//   - Ta copie : note estimée d'après l'auto-évaluation (Réussi = tous les points, En partie = la
+//     moitié, À revoir = 0), exercice par exercice. Aucun chiffre inventé : tout vient du barème et de
+//     l'élève. Une épreuve refaite ne compte que les évaluations faites depuis son départ (comme le DS blanc).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, EyeOff, Flag, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import type { AssessmentStatus, ContentExam } from '@/types/content';
 import type { ExerciseBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { AdSlot } from '@/components/ads/AdSlot';
-import ExerciseRenderer, { type AssessChanges } from './ExerciseRenderer';
+import ExerciseRenderer, { type AssessHandler, type AssessManyHandler } from './ExerciseRenderer';
 import { SignupCard } from '@/components/auth/SignupPrompt';
+import { useHideMobileTabBar } from '@/components/layout/nav';
+import { DIFFICULTY, feltTooltip } from '@/components/content/listing/listingUtils';
 import { trackAction } from '@/lib/usage';
+
+/** L'examen propose « En partie » (la moitié des points) ; l'exercice garde Réussi / À revoir. */
+const EXAM_OPTIONS: AssessmentStatus[] = ['success', 'partial', 'review'];
 
 interface Props {
   content: ContentExam;
   isAuthenticated: boolean;
   questionProgress?: Record<string, AssessmentStatus>;
-  onQuestionAssess?: (path: string, status: AssessmentStatus) => void;
-  onAssessMany?: (changes: AssessChanges) => void;
-  onSaveSession?: (seconds: number) => Promise<void>;
+  /** Date de chaque auto-évaluation (ISO) : une épreuve refaite ne compte que celles faites depuis son départ. */
+  questionDates?: Record<string, string>;
+  onQuestionAssess?: AssessHandler;
+  /** Statuts posés tels quels (null = effacer) : l'examen décide lui-même de ce qu'est « re-cliquer ». */
+  onAssessMany?: AssessManyHandler;
+  /** Épreuve terminée : enregistre sa durée, renvoie l'id de la session (pour y rattacher la note). */
+  onSaveSession?: (seconds: number) => Promise<string | number | null | void>;
+  /** Note du passage, mise à jour pendant la correction. */
+  onSaveScore?: (sessionId: string | number, score: number, maxScore: number) => Promise<unknown>;
+  /** Une solution vient d'être ouverte (« * » : toutes). */
+  onSolutionOpen?: (path: string) => void;
   sessionCount: number;
   onOpenHistory: () => void;
   /** Votes, affichés en haut à droite de la fiche du sujet. */
@@ -31,6 +45,8 @@ interface Props {
   footer?: React.ReactNode;
   /** Signaler une erreur sur une question précise. */
   onReport?: (path: string) => void;
+  /** Épreuve en cours (vrai) ou non : la page cache ce qui détournerait de la copie (« Où en es-tu ? »). */
+  onAttemptChange?: (running: boolean) => void;
 }
 
 // ───────────────────────────── Découpage du sujet
@@ -61,6 +77,14 @@ function splitExam(structure?: FlexibleExerciseStructure): { intro: ExerciseBloc
       else part.questions.push({ path: b.id, points: Number(b.points) || 0 });
     }
   }
+  // Partie notée (« Exercice 2 — 5 pts ») dont les questions n'ont pas de points : le barème est réparti
+  // à parts égales, sinon l'élève s'évaluerait sans que sa note bouge.
+  for (const part of parts) {
+    if (part.declared > 0 && part.questions.length && part.questions.every((q) => !q.points)) {
+      const each = part.declared / part.questions.length;
+      part.questions.forEach((q) => { q.points = each; });
+    }
+  }
   return { intro, parts };
 }
 
@@ -80,8 +104,19 @@ function clock(sec: number) {
 // ───────────────────────────── Épreuve (chrono), retenue si la page est rechargée
 
 type EpreuveStatus = 'idle' | 'running' | 'paused' | 'done';
-interface EpreuveState { status: EpreuveStatus; elapsed: number; startedAt: number | null; auto?: boolean }
+interface EpreuveState {
+  status: EpreuveStatus;
+  elapsed: number;
+  /** Début du segment en cours (repart à chaque reprise après une pause). */
+  startedAt: number | null;
+  auto?: boolean;
+  /** Départ du passage (ms) : seules les évaluations faites depuis comptent dans sa note. */
+  attemptStart?: number | null;
+  /** Session enregistrée à la fin (TimeSession) : la note du passage s'y rattache. */
+  sessionId?: string | number | null;
+}
 
+// Clé lue aussi par la barre d'onglets du téléphone (MobileTabBar : cachée pendant l'épreuve).
 function useEpreuve(examId: number | string, durationMin: number, onDone: (seconds: number) => void) {
   const key = `fidni:epreuve:${examId}`;
   const [state, setState] = useState<EpreuveState>(() => {
@@ -117,9 +152,10 @@ function useEpreuve(examId: number | string, durationMin: number, onDone: (secon
     if (s.status !== 'running' && s.status !== 'paused') return;
     const total = s.elapsed + (s.status === 'running' && s.startedAt ? (Date.now() - s.startedAt) / 1000 : 0);
     const seconds = Math.round(limit ? Math.min(total, limit) : total);
-    const done: EpreuveState = { status: 'done', elapsed: seconds, startedAt: null, auto };
+    const done: EpreuveState = { status: 'done', elapsed: seconds, startedAt: null, auto, attemptStart: s.attemptStart ?? null };
     stateRef.current = done;
     setState(done);
+    trackAction('epreuve-terminee');
     doneRef.current(seconds);
   }, [limit]);
 
@@ -133,8 +169,16 @@ function useEpreuve(examId: number | string, durationMin: number, onDone: (secon
     elapsed,
     remaining: limit ? Math.max(0, limit - elapsed) : null,
     timeUp: state.auto === true,
-    start: () => { setNow(Date.now()); setState({ status: 'running', elapsed: 0, startedAt: Date.now() }); },
-    pause: () => setState((s) => (s.status === 'running' && s.startedAt ? { status: 'paused', elapsed: s.elapsed + (Date.now() - s.startedAt) / 1000, startedAt: null } : s)),
+    attemptStart: state.attemptStart ?? null,
+    sessionId: state.sessionId ?? null,
+    setSessionId: (id: string | number) => setState((s) => (s.status === 'done' ? { ...s, sessionId: id } : s)),
+    start: () => {
+      const t = Date.now();
+      trackAction('epreuve-demarree');
+      setNow(t);
+      setState({ status: 'running', elapsed: 0, startedAt: t, attemptStart: t });
+    },
+    pause: () => setState((s) => (s.status === 'running' && s.startedAt ? { ...s, status: 'paused', elapsed: s.elapsed + (Date.now() - s.startedAt) / 1000, startedAt: null } : s)),
     resume: () => { setNow(Date.now()); setState((s) => (s.status === 'paused' ? { ...s, status: 'running', startedAt: Date.now() } : s)); },
     finish: () => finish(false),
     reset: () => setState({ status: 'idle', elapsed: 0, startedAt: null }),
@@ -144,32 +188,78 @@ function useEpreuve(examId: number | string, durationMin: number, onDone: (secon
 // ───────────────────────────── Vue
 
 export const ExamView: React.FC<Props> = ({
-  content, isAuthenticated, questionProgress, onQuestionAssess, onAssessMany,
-  onSaveSession, sessionCount, onOpenHistory, votes, footer, onReport,
+  content, isAuthenticated, questionProgress, questionDates, onQuestionAssess, onAssessMany,
+  onSaveSession, onSaveScore, onSolutionOpen, sessionCount, onOpenHistory, votes, footer, onReport, onAttemptChange,
 }) => {
   const structure = content.structure as unknown as FlexibleExerciseStructure | undefined;
   const { intro, parts } = useMemo(() => splitExam(structure), [structure]);
   const durationMin = Number(content.duration_minutes) || 0;
   const [showAll, setShowAll] = useState(false);
 
+  const setSessionIdRef = useRef<(id: string | number) => void>(() => {});
   const epreuve = useEpreuve(content.id, durationMin, (seconds) => {
-    if (isAuthenticated && seconds > 0) onSaveSession?.(seconds).catch(() => {});
+    if (!isAuthenticated || seconds <= 0 || !onSaveSession) return;
+    onSaveSession(seconds)
+      .then((id) => { if (id !== null && id !== undefined) setSessionIdRef.current(id); })
+      .catch(() => {});
   });
+  setSessionIdRef.current = epreuve.setSessionId;
   const locked = epreuve.status === 'running' || epreuve.status === 'paused';
+  // Pendant l'épreuve, rien ne doit inviter à quitter sa copie (barre d'onglets du téléphone cachée).
+  useHideMobileTabBar(locked);
+  const attemptRef = useRef(onAttemptChange);
+  attemptRef.current = onAttemptChange;
+  useEffect(() => { attemptRef.current?.(locked); }, [locked]);
+  useEffect(() => () => attemptRef.current?.(false), []);
+
+  // Passage en cours ou terminé : seules ses évaluations comptent (les anciennes restent en base). Les
+  // évaluations faites ici depuis le départ comptent toujours (horloge du téléphone et du serveur décalées).
+  const [freshPaths, setFreshPaths] = useState<Set<string>>(() => new Set());
+  const attemptStart = epreuve.status === 'idle' ? null : epreuve.attemptStart;
+  useEffect(() => { setFreshPaths(new Set()); }, [attemptStart]);
+  const progress = useMemo(() => {
+    if (!questionProgress || !attemptStart) return questionProgress;
+    const out: Record<string, AssessmentStatus> = {};
+    for (const [path, st] of Object.entries(questionProgress)) {
+      const at = questionDates?.[path];
+      if (freshPaths.has(path) || (at && Date.parse(at) >= attemptStart)) out[path] = st;
+    }
+    return out;
+  }, [questionProgress, questionDates, attemptStart, freshPaths]);
+
+  const remember = (changes: Record<string, AssessmentStatus | null>) => {
+    if (!attemptStart) return;
+    setFreshPaths((prev) => {
+      const next = new Set(prev);
+      for (const [p, st] of Object.entries(changes)) { if (st) next.add(p); else next.delete(p); }
+      return next;
+    });
+  };
+  // Re-cliquer le choix affiché l'efface ; une évaluation d'un ancien passage est remplacée (pas effacée).
+  const assessOne: AssessHandler = (path, status, source) => {
+    const change = { [path]: progress?.[path] === status ? null : status };
+    remember(change);
+    if (onAssessMany) onAssessMany(change, source);
+    else onQuestionAssess?.(path, status, source);
+  };
+  const assessMany: AssessManyHandler = (changes, source) => {
+    remember(changes);
+    onAssessMany?.(changes, source);
+  };
 
   // Barème et note estimée, exercice par exercice.
   const scores = useMemo(() => parts.map((p) => {
     const max = p.questions.reduce((s, q) => s + q.points, 0);
     let got = 0, corrected = 0, assessed = 0;
     for (const q of p.questions) {
-      const st = questionProgress?.[q.path];
+      const st = progress?.[q.path];
       if (!st) continue;
       assessed++;
       corrected += q.points;
       got += q.points * (WEIGHT[st] ?? 0);
     }
     return { id: p.id, max: max || p.declared, questionMax: max, got, corrected, assessed, count: p.questions.length };
-  }), [parts, questionProgress]);
+  }), [parts, progress]);
   const total = scores.reduce((s, x) => s + x.max, 0);
   const got = scores.reduce((s, x) => s + x.got, 0);
   const corrected = scores.reduce((s, x) => s + x.corrected, 0);
@@ -178,12 +268,40 @@ export const ExamView: React.FC<Props> = ({
   const solutionCount = useMemo(() => parts.reduce((n, p) => n + p.blocks.reduce((m, b) =>
     m + (b.subQuestions?.length ? b.subQuestions.filter((sq) => sq.solution?.html).length : b.solution?.html ? 1 : 0), 0), 0), [parts]);
 
-  const progressData = questionProgress
-    ? Object.fromEntries(Object.entries(questionProgress).map(([path, status]) => [path, {
-      status, assessed_at: new Date().toISOString(),
-    }]))
-    : undefined;
+  const progressData = useMemo(() => (progress
+    ? Object.fromEntries(Object.entries(progress).map(([path, status]) => [path, { status, assessed_at: questionDates?.[path] }]))
+    : undefined), [progress, questionDates]);
 
+  // Note du passage : enregistrée avec sa session dès que la correction commence, puis mise à jour.
+  const sessionId = epreuve.sessionId;
+  const sentRef = useRef<string | null>(null);
+  // Note en attente d'envoi : partie quand même si l'élève quitte la page juste après sa dernière évaluation.
+  const pendingRef = useRef<{ sig: string; send: () => void } | null>(null);
+  useEffect(() => {
+    pendingRef.current = null;
+    if (epreuve.status !== 'done' || sessionId === null || !onSaveScore || !isAuthenticated || total <= 0 || corrected <= 0) return;
+    const score = Math.round(got * 100) / 100;
+    const max = Math.round(total * 100) / 100;
+    const sig = `${sessionId}:${score}/${max}`;
+    if (sentRef.current === sig) return;
+    const send = () => {
+      pendingRef.current = null;
+      sentRef.current = sig;
+      onSaveScore(sessionId, score, max).catch(() => { sentRef.current = null; });
+    };
+    pendingRef.current = { sig, send };
+    const t = window.setTimeout(send, 1200);
+    return () => window.clearTimeout(t);
+  }, [epreuve.status, sessionId, onSaveScore, isAuthenticated, got, total, corrected]);
+  useEffect(() => () => {
+    const p = pendingRef.current;
+    if (p && sentRef.current !== p.sig) p.send();
+  }, []);
+
+  const felt = content.felt;
+  const feltLabel = felt ? (felt.differs ? DIFFICULTY[felt.level]?.label : 'Comme annoncé') : null;
+
+  const confirmFinish = () => { if (window.confirm('Terminer l’épreuve et passer à la correction ?')) epreuve.finish(); };
   const goTo = (id: string) => document.getElementById(`exam-part-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const levelName = content.class_levels?.[0]?.name;
 
@@ -230,7 +348,7 @@ export const ExamView: React.FC<Props> = ({
             {epreuve.status === 'running'
               ? <button type="button" onClick={epreuve.pause} className="fd-btn-ghost justify-center"><Pause className="w-4 h-4" /> Pause</button>
               : <button type="button" onClick={epreuve.resume} className="fd-btn-ghost justify-center"><Play className="w-4 h-4" /> Reprendre</button>}
-            <button type="button" onClick={() => { if (window.confirm('Terminer l’épreuve et passer à la correction ?')) epreuve.finish(); }}
+            <button type="button" onClick={confirmFinish}
               className="fd-btn-primary justify-center"><Flag className="w-4 h-4" /> Terminer</button>
           </div>
         </>
@@ -243,7 +361,7 @@ export const ExamView: React.FC<Props> = ({
             {epreuve.timeUp ? 'Temps écoulé' : `Terminée en ${clock(epreuve.elapsed)}`}
           </p>
           <p className="mt-1 text-[13px] text-ink-faint leading-relaxed">
-            À toi de corriger : ouvre la solution de chaque question et indique si tu l’as réussie.
+            À toi de corriger : ouvre la solution de chaque question et indique Réussi, En partie ou À revoir.
           </p>
           <button type="button" onClick={epreuve.reset} className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint hover:text-ink">
             <RotateCcw className="w-3.5 h-3.5" /> Refaire l’épreuve
@@ -267,12 +385,14 @@ export const ExamView: React.FC<Props> = ({
             {total > 0 && total !== 20 && <span className="ml-auto text-[12px] text-ink-faint fd-nums">soit {fmtPts(Math.round((got / total) * 200) / 10)} / 20</span>}
           </div>
           <p className="mt-1.5 text-[12px] text-ink-faint leading-snug">
-            Note estimée d’après ton auto-évaluation{corrected < total ? `, sur ${fmtPts(corrected)} points corrigés` : ''}.
+            Note estimée d’après ton auto-évaluation{attemptStart ? ' de ce passage' : ''}{corrected < total ? `, sur ${fmtPts(corrected)} points corrigés` : ''}.
           </p>
         </>
       ) : (
         <p className="mt-2 text-[13px] text-ink-faint leading-relaxed">
-          Après l’épreuve, évalue chaque question (réussi, partiel…) : ta note estimée s’affiche ici.
+          {attemptStart
+            ? 'Corrige ce passage question par question (Réussi, En partie, À revoir) : ta note s’affiche ici.'
+            : 'Après l’épreuve, évalue chaque question (Réussi, En partie, À revoir) : ta note estimée s’affiche ici.'}
         </p>
       )}
 
@@ -311,15 +431,23 @@ export const ExamView: React.FC<Props> = ({
         {/* Téléphone : épreuve et copie avant le sujet ; compte à rebours collé en haut pendant l'épreuve. */}
         <div className="lg:hidden flex flex-col gap-4">
           {locked && (
-            <div className="sticky top-[68px] z-20 -mx-1 px-4 py-2.5 rounded-xl border border-line bg-white/95 backdrop-blur flex items-center justify-between shadow-sm">
+            <div className="sticky top-[68px] z-20 -mx-1 pl-4 pr-1.5 py-1.5 rounded-xl border border-line bg-white/95 backdrop-blur flex items-center justify-between gap-2 shadow-sm">
               <span className="fd-nums font-semibold text-ink">{clock(epreuve.remaining ?? epreuve.elapsed)}</span>
-              <button type="button" onClick={epreuve.status === 'running' ? epreuve.pause : epreuve.resume} className="text-[13px] font-medium text-ink-faint">
-                {epreuve.status === 'running' ? 'Pause' : 'Reprendre'}
-              </button>
+              <span className="flex items-center gap-1">
+                <button type="button" onClick={epreuve.status === 'running' ? epreuve.pause : epreuve.resume}
+                  className="h-9 px-3 rounded-lg text-[13px] font-medium text-ink-faint hover:bg-[#f2f1ee]">
+                  {epreuve.status === 'running' ? 'Pause' : 'Reprendre'}
+                </button>
+                <button type="button" onClick={confirmFinish}
+                  className="h-9 px-3 rounded-lg text-[13px] font-semibold text-brand-hover hover:bg-brand-soft">
+                  Terminer
+                </button>
+              </span>
             </div>
           )}
           {epreuvePanel}
-          {(corrected > 0 || !isAuthenticated) && copiePanel}
+          {/* La copie (note, points) n'apparaît pas pendant l'épreuve. */}
+          {!locked && (corrected > 0 || !isAuthenticated) && copiePanel}
         </div>
 
         {/* Le sujet : une seule feuille, la fiche en tête puis les exercices. */}
@@ -331,11 +459,15 @@ export const ExamView: React.FC<Props> = ({
               {parts.length > 0 && parts[0].id !== 'sujet' && <Fact label="Exercices" value={String(parts.length)} />}
               {levelName && <Fact label="Niveau" value={levelName} />}
               {content.is_national_exam && <Fact label="Session" value={`Bac national${content.national_year ? ` ${content.national_year}` : ''}`} />}
+              {felt && feltLabel && <Fact label="Ressenti des élèves" value={feltLabel} title={feltTooltip(felt)} />}
             </dl>
             <div className="flex flex-col items-end gap-2.5 ml-auto">
             {votes}
             {solutionCount > 0 && (
-              <button type="button" disabled={locked} onClick={() => { if (!showAll) trackAction('toutes-solutions'); setShowAll((v) => !v); }} data-tour="detail-solutions"
+              <button type="button" disabled={locked} onClick={() => {
+                if (!showAll) { trackAction('toutes-solutions'); onSolutionOpen?.('*'); }
+                setShowAll((v) => !v);
+              }} data-tour="detail-solutions"
                 title={locked ? 'Disponible à la fin de l’épreuve' : undefined}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
                   showAll && !locked ? 'bg-brand-soft text-brand-hover border-brand-line' : 'bg-white text-ink-soft border-line hover:border-ink'}`}>
@@ -365,7 +497,7 @@ export const ExamView: React.FC<Props> = ({
                 <div className="flex items-baseline justify-between gap-3 mb-4">
                   <h2 className="fd-display text-[19px] text-ink min-w-0 [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
                   <span className="flex items-center gap-2 shrink-0">
-                    {s.corrected > 0 && (
+                    {s.corrected > 0 && !locked && (
                       <span className="fd-nums text-[12.5px] font-semibold px-2.5 py-1 rounded-full bg-brand-soft text-brand-hover" title="Tes points (auto-évaluation)">
                         {fmtPts(s.got)} / {fmtPts(s.max)}
                       </span>
@@ -380,8 +512,10 @@ export const ExamView: React.FC<Props> = ({
                 <ExerciseRenderer
                   structure={{ version: structure?.version || '2.1', blocks: p.blocks }}
                   progress={progressData}
-                  onAssess={onQuestionAssess}
-                  onAssessMany={onAssessMany}
+                  onAssess={assessOne}
+                  onAssessMany={assessMany}
+                  assessOptions={EXAM_OPTIONS}
+                  onSolutionOpen={onSolutionOpen}
                   interactive={isAuthenticated}
                   showAllSolutions={showAll}
                   compact={false}
@@ -399,17 +533,19 @@ export const ExamView: React.FC<Props> = ({
 
       <aside className="hidden lg:flex flex-col gap-4 sticky top-20">
         {epreuvePanel}
-        {copiePanel}
+        {!locked && copiePanel}
       </aside>
     </div>
   );
 };
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
-    <div>
+    <div title={title}>
       <dt className="text-[11px] font-semibold uppercase tracking-[.1em] text-ink-faint">{label}</dt>
       <dd className="mt-0.5 text-[15px] font-semibold text-ink fd-nums">{value}</dd>
+      {/* Au toucher, pas d'infobulle : le détail est écrit dessous. */}
+      {title && <dd className="mt-0.5 max-w-[220px] text-[11.5px] leading-snug text-ink-faint [@media(hover:hover)]:hidden">{title}</dd>}
     </div>
   );
 }

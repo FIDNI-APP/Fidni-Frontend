@@ -4,7 +4,10 @@
  *
  * - Démarrage automatique la première fois qu'une page (ou un état de page) est vue, une fois la page
  *   chargée et stable, et jamais par-dessus une fenêtre ouverte (cookies, conditions, connexion…).
- * - Rejouable avec le bouton « ? » (TourHelpButton).
+ *   Seulement pour un membre connecté qui a fini son onboarding (un visiteur venu de Google veut lire
+ *   l'énoncé, pas un voile sombre), et en version courte : 3 étapes au plus (`autoSteps`).
+ * - Visite complète avec le bouton « ? » (TourHelpButton).
+ * - Mesure (Pilotage › Usage) : lancements automatiques, « Passer » et visites menées au bout.
  * - « Déjà vu » est retenu sur l'appareil (localStorage) : simple confort, rien de grave s'il se perd.
  */
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -14,7 +17,7 @@ import { useLocation } from 'react-router-dom';
 import { HelpCircle, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
-import { TOURS, resolveText, type Tour, type TourContext } from '@/lib/tours';
+import { TOURS, resolveText, stepKey, type Tour, type TourContext, type TourStep } from '@/lib/tours';
 
 const SEEN_KEY = 'fidni.visites-vues';
 
@@ -46,8 +49,26 @@ export function findTarget(names: string | string[] | undefined): HTMLElement | 
 /** Une fenêtre est ouverte (bandeau cookies, conditions, connexion, menu mobile…) : on attend. */
 const somethingOpen = () =>
   document.body.classList.contains('mobile-menu-open')
+  // Une autre demande est déjà à l'écran (« Tu avais trouvé ? ») : une seule à la fois.
+  || !!findTarget('trouve')
   || Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [aria-modal="true"]'))
     .some((el) => !el.closest('[data-tour-card]') && el.getBoundingClientRect().height > 0);
+
+/** Visite en cours : ses étapes retenues (selon le membre), courte au lancement automatique. */
+interface ActiveTour { tour: Tour; steps: TourStep[]; short: boolean }
+
+function prepare(tour: Tour, context: TourContext, auto: boolean): ActiveTour {
+  const steps = tour.steps.filter((s) => !s.when || s.when(context));
+  if (!auto) return { tour, steps, short: false };
+  const wanted = tour.autoSteps;
+  const pool = wanted
+    ? steps.filter((s) => wanted.includes(stepKey(s) ?? '')).sort((a, b) => wanted.indexOf(stepKey(a) ?? '') - wanted.indexOf(stepKey(b) ?? ''))
+    : steps;
+  const visible = (list: TourStep[]) => list.filter((s) => !s.target || findTarget(s.target)).slice(0, 3);
+  const chosen = visible(pool);
+  const short = chosen.length ? chosen : visible(steps);
+  return { tour, steps: short, short: short.length < steps.length };
+}
 
 interface TourApi {
   /** Une visite existe pour la page affichée (le bouton « ? » ne s'affiche que dans ce cas). */
@@ -62,7 +83,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user } = useAuth();
   // Fenêtre de connexion / inscription ouverte : la visite se met en pause (elle la masquait).
   const { isOpen: authOpen } = useAuthModal();
-  const [active, setActive] = useState<Tour | null>(null);
+  const [active, setActive] = useState<ActiveTour | null>(null);
   const [available, setAvailable] = useState<Tour | null>(null);
   const stableSince = useRef<Record<string, number>>({});
 
@@ -70,6 +91,14 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
     kind: /^\/exams/.test(pathname) ? 'exam' : /^\/lessons/.test(pathname) ? 'lesson' : 'exercise',
     isTeacher: user?.profile?.user_type === 'teacher',
   }), [pathname, user]);
+  // Lus par la surveillance ci-dessous sans la relancer à chaque changement.
+  const contextRef = useRef(context);
+  contextRef.current = context;
+  // Membre connecté qui a fini son onboarding (sinon une seule demande à la fois : choisir sa classe).
+  const canAutoRef = useRef(false);
+  canAutoRef.current = !!user && user.profile?.onboarding_completed !== false;
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   // Changement de page : la visite en cours n'a plus de sens.
   useEffect(() => { setActive(null); stableSince.current = {}; }, [pathname]);
@@ -87,24 +116,42 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
       for (const id of Object.keys(stableSince.current)) if (!present.has(id)) delete stableSince.current[id];
       for (const t of candidates) stableSince.current[t.id] ??= now;
 
-      if (active || document.visibilityState !== 'visible' || somethingOpen()) return;
+      // Lancement automatique : membres connectés seulement.
+      if (active || !canAutoRef.current || document.visibilityState !== 'visible' || somethingOpen()) return;
       const next = candidates.find((t) => t.auto !== false && !isSeen(t) && now - stableSince.current[t.id] >= 1200);
-      if (next) setActive(next);
+      const prepared = next && prepare(next, contextRef.current, true);
+      // Rien d'affichable pour l'instant (cibles pas encore là) : on réessaie au prochain passage.
+      if (prepared && prepared.steps.some((s) => !s.target || findTarget(s.target))) {
+        setActive(prepared);
+        trackAction('visite-auto');
+      }
     };
     tick();
     const id = window.setInterval(tick, 700);
     return () => window.clearInterval(id);
   }, [pathname, active]);
 
-  const start = useCallback(() => { if (available) { setActive(available); trackAction('visite-guidee'); } }, [available]);
-  const finish = useCallback(() => {
-    setActive((t) => { if (t) markSeen(t); return null; });
+  const start = useCallback(() => {
+    if (!available) return;
+    setActive(prepare(available, contextRef.current, false));
+    trackAction('visite-guidee');
+  }, [available]);
+
+  /** `done` : vrai = menée au bout, faux = passée (croix, « Passer », Échap) ; absent = rien à montrer. */
+  const finish = useCallback((done?: boolean) => {
+    const current = activeRef.current;
+    if (current) markSeen(current.tour);
+    if (current && done !== undefined) trackAction(done ? 'visite-finie' : 'visite-passee');
+    setActive(null);
   }, []);
 
   return (
     <TourCtx.Provider value={{ hasTour: !!available, start }}>
       {children}
-      {active && !authOpen && createPortal(<TourOverlay tour={active} context={context} onClose={finish} />, document.body)}
+      {active && !authOpen && createPortal(
+        <TourOverlay key={`${active.tour.id}-${active.short ? 'courte' : 'complete'}`} active={active} context={context} onClose={finish} />,
+        document.body,
+      )}
     </TourCtx.Provider>
   );
 };
@@ -142,19 +189,23 @@ const TOP_BAR = 60;  // barre du haut collante : ne pas cacher l'élément desso
 
 interface Placement { top: number; left: number; arrow: 'up' | 'down' | null; arrowLeft: number }
 
-const TourOverlay: React.FC<{ tour: Tour; context: TourContext; onClose: () => void }> = ({ tour, context, onClose }) => {
-  const [index, setIndex] = useState(() => nextVisible(tour, 0, 1));
+/** Hauteur de la barre d'onglets du téléphone (un élément dessous serait caché). */
+const bottomInset = () => document.querySelector<HTMLElement>('[data-tour="barre-mobile"]')?.getBoundingClientRect().height ?? 0;
+
+const TourOverlay: React.FC<{ active: ActiveTour; context: TourContext; onClose: (done?: boolean) => void }> = ({ active, context, onClose }) => {
+  const { tour, steps, short } = active;
+  const [index, setIndex] = useState(() => nextVisible(steps, 0, 1));
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [cardSize, setCardSize] = useState({ w: 340, h: 180 });
   const cardRef = useRef<HTMLDivElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
 
   // Étapes réellement affichables (pour « 2 / 5 ») : recalculées à chaque étape, la page peut bouger.
-  const visibleSteps = tour.steps.map((s, i) => ({ s, i })).filter(({ s }) => !s.target || findTarget(s.target));
+  const visibleSteps = steps.map((s, i) => ({ s, i })).filter(({ s }) => !s.target || findTarget(s.target));
   const position = visibleSteps.findIndex(({ i }) => i === index);
-  const step = index >= 0 ? tour.steps[index] : null;
-  const isLast = index >= 0 && nextVisible(tour, index + 1, 1) === -1;
-  const isFirst = index >= 0 && nextVisible(tour, index - 1, -1) === -1;
+  const step = index >= 0 ? steps[index] : null;
+  const isLast = index >= 0 && nextVisible(steps, index + 1, 1) === -1;
+  const isFirst = index >= 0 && nextVisible(steps, index - 1, -1) === -1;
 
   useEffect(() => { if (index === -1) onClose(); }, [index, onClose]);
 
@@ -162,9 +213,10 @@ const TourOverlay: React.FC<{ tour: Tour; context: TourContext; onClose: () => v
   useLayoutEffect(() => {
     if (!step) return;
     const el = findTarget(step.target);
-    if (el) {
+    // Un élément fixé (barre du bas…) est déjà à l'écran : rien à faire défiler.
+    if (el && getComputedStyle(el).position !== 'fixed') {
       const r = el.getBoundingClientRect();
-      if (r.top < TOP_BAR + PAD || r.bottom > window.innerHeight - PAD) {
+      if (r.top < TOP_BAR + PAD || r.bottom > window.innerHeight - PAD - bottomInset()) {
         el.scrollIntoView({ block: r.height > window.innerHeight * 0.6 ? 'start' : 'center', inline: 'nearest' });
       }
     }
@@ -191,12 +243,12 @@ const TourOverlay: React.FC<{ tour: Tour; context: TourContext; onClose: () => v
   useEffect(() => { primaryRef.current?.focus({ preventScroll: true }); }, [index]);
 
   const go = useCallback((dir: 1 | -1) => {
-    setIndex((i) => nextVisible(tour, i + dir, dir) === -1 && dir === -1 ? i : nextVisible(tour, i + dir, dir));
-  }, [tour]);
+    setIndex((i) => nextVisible(steps, i + dir, dir) === -1 && dir === -1 ? i : nextVisible(steps, i + dir, dir));
+  }, [steps]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if (e.key === 'Escape') { e.preventDefault(); onClose(false); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
     };
@@ -261,29 +313,33 @@ const TourOverlay: React.FC<{ tour: Tour; context: TourContext; onClose: () => v
             style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
             {visibleSteps.length > 1 ? `${position + 1} / ${visibleSteps.length}` : 'Guide'}
           </span>
-          <button type="button" onClick={onClose} aria-label="Fermer le guide"
-            className="-mt-1 -mr-1.5 p-1 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
+          <button type="button" onClick={() => onClose(false)} aria-label="Fermer le guide"
+            className="-mt-2 -mr-2.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
             <X className="w-4 h-4" />
           </button>
         </div>
         <h2 id={titleId} className="mt-1 text-[15.5px] font-bold text-ink leading-snug">{resolveText(step.title, context)}</h2>
         <p className="mt-1 text-[13.5px] text-ink-soft leading-relaxed">{resolveText(step.body, context)}</p>
+        {/* Version courte : le reste est sur « ? » (sauf si l'étape en parle déjà). */}
+        {short && isLast && stepKey(step) !== 'aide' && (
+          <p className="mt-2 text-[12.5px] text-ink-faint">Le guide complet de la page : bouton ? en haut.</p>
+        )}
 
         <div className="mt-3.5 flex items-center gap-2">
           {!isLast && (
-            <button type="button" onClick={onClose} className="text-[12.5px] font-medium text-ink-faint hover:text-ink">
+            <button type="button" onClick={() => onClose(false)} className="min-h-[36px] text-[12.5px] font-medium text-ink-faint hover:text-ink">
               Passer
             </button>
           )}
           <span className="flex-1" />
           {!isFirst && (
             <button type="button" onClick={() => go(-1)}
-              className="px-3 py-1.5 rounded-lg border border-line text-[13px] font-medium text-ink-soft hover:border-ink">
+              className="min-h-[36px] px-3 py-1.5 rounded-lg border border-line text-[13px] font-medium text-ink-soft hover:border-ink">
               Précédent
             </button>
           )}
-          <button ref={primaryRef} type="button" onClick={() => (isLast ? onClose() : go(1))}
-            className="px-3.5 py-1.5 rounded-lg bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover">
+          <button ref={primaryRef} type="button" onClick={() => (isLast ? onClose(true) : go(1))}
+            className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover">
             {isLast ? 'C’est compris' : 'Suivant'}
           </button>
         </div>
@@ -293,9 +349,9 @@ const TourOverlay: React.FC<{ tour: Tour; context: TourContext; onClose: () => v
 };
 
 /** Prochaine étape affichable à partir de `from` dans le sens `dir` (-1 s'il n'y en a pas). */
-function nextVisible(tour: Tour, from: number, dir: 1 | -1): number {
-  for (let i = from; i >= 0 && i < tour.steps.length; i += dir) {
-    const s = tour.steps[i];
+function nextVisible(steps: TourStep[], from: number, dir: 1 | -1): number {
+  for (let i = from; i >= 0 && i < steps.length; i += dir) {
+    const s = steps[i];
     if (!s.target || findTarget(s.target)) return i;
   }
   return -1;

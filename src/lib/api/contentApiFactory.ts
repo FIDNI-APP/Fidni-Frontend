@@ -90,7 +90,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
      * Get paginated list of content with optional filters
      */
     getList: async (params: BaseContentQueryParams): Promise<ContentListResponse<T>> => {
-      const queryParams: Record<string, any> = {
+      const queryParams: Record<string, unknown> = {
         type: resourceName,
         class_levels: params.classLevels,
         subjects: params.subjects,
@@ -100,7 +100,8 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
         theorems: params.theorems,
         sort: params.sort,
         page: params.page,
-        per_page: params.per_page,
+        // Le serveur lit page_size (things/views.py) : per_page seul était ignoré (toujours 20 lignes).
+        page_size: params.per_page,
         search: params.search,
       };
 

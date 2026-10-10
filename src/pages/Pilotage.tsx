@@ -8,6 +8,8 @@
  *  - Visiteurs (09/10/2026) : les visiteurs non connectés, à part (components/pilotage/VisitorsTab) ;
  *  - Membres : aussi « Un membre n'arrive pas à se connecter ? » (components/pilotage/LoginDiagnostic) ;
  *  - IA : un document (PDF, Word, photos) → fiches préparées par l'IA, relues puis publiées (components/pilotage/IATab).
+ * Audit du 10/10/2026 : « Entonnoir » dans l'Aperçu (components/pilotage/FunnelCard), « Écarts de difficulté » dans
+ * À traiter (DifficultyGapsPanel), « Portes d'inscription » dans Usage (AuthDoorsCard).
  * Données : /api/pilotage/?jours=7|30|90, /api/pilotage/utilisateurs/ (+ /<id>/) — backend apps/users/admin_dashboard.py.
  * Les comptes maison (admins, compte éditorial, compte de test) sont exclus des chiffres.
  */
@@ -23,6 +25,9 @@ import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { IATab } from '@/components/pilotage/IATab';
 import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
 import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
+import { FunnelCard, type Funnel } from '@/components/pilotage/FunnelCard';
+import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
+import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
 import { PAGES, pageInfo } from '@/lib/usage';
 
 interface ContentRef { id: number; type: string; title: string; url: string }
@@ -34,7 +39,7 @@ interface Overview {
   days: number;
   views_since: string;
   members_total: number;
-  todo: { reports_open: number; a_verifier: ContentRef[] };
+  todo: { reports_open: number; a_verifier: ContentRef[]; difficulty_gaps?: DifficultyGap[] };
   metrics: Record<MetricKey, Metric>;
   series: Day[];
   top_contents: (ContentRef & { views: number; readers: number })[];
@@ -43,6 +48,9 @@ interface Overview {
   pages: { page: string; views: number; visits: number }[];
   filter_values: FilterValue[];
   anonymes: AnonymousStats;
+  /** Absents d'un serveur plus ancien : les blocs correspondants ne s'affichent pas. */
+  funnel?: Funnel;
+  auth_doors?: AuthDoor[];
 }
 interface FilterValue { filter: string; type: 'exercise' | 'exam' | 'lesson'; value: string; label: string; count: number; visits: number; anon: number }
 interface UserRow {
@@ -203,6 +211,8 @@ const OverviewTab: React.FC<{ data: Overview; onOpenTodo: () => void; todoCount:
         <DayChart key={`${metric}-${data.days}`} series={data.series} def={def} headline={headline} viewsSince={data.views_since} />
       </section>
 
+      {data.funnel && <FunnelCard funnel={data.funnel} days={data.days} />}
+
       <section className="fd-card p-5">
         <h2 className="fd-display text-[16px] text-ink">Contenus les plus vus</h2>
         <p className="mt-0.5 text-[12px] text-ink-faint">Sur les {data.days} derniers jours, visiteurs compris.</p>
@@ -298,6 +308,9 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
 
   return (
     <div className="space-y-4">
+    <p className="rounded-xl border border-line bg-[#faf9f7] px-4 py-2.5 text-[12.5px] text-ink-soft">
+      Tes clics d’administrateur ne sont pas comptés : pour tester une mesure, ouvre une fenêtre de navigation privée.
+    </p>
     <div className="grid gap-4 lg:grid-cols-2 items-start">
       <div className="flex flex-col gap-4">
       <section className="fd-card p-5">
@@ -396,6 +409,8 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
           </p>
         )}
       </section>
+
+      {data.auth_doors && <AuthDoorsCard doors={data.auth_doors} days={data.days} />}
 
       </div>
     </div>
@@ -865,6 +880,7 @@ export default function Pilotage() {
         <div>
           <ReportsPanel onOpenCountChange={setReportsOpen} />
           <VerifyPanel items={data.todo.a_verifier} validated={validated} onToggle={toggleVerified} />
+          {data.todo.difficulty_gaps && <DifficultyGapsPanel items={data.todo.difficulty_gaps} />}
         </div>
       ) : (
         <OverviewTab data={data} todoCount={todoCount} onOpenTodo={() => setParam('onglet', 'a-traiter')} />

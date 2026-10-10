@@ -1,5 +1,6 @@
-// Politique de confidentialité (RGPD, art. 13 et 14). Toute modification : changer LEGAL.updated
-// et TERMS_VERSION (backend) pour redemander l'accord des comptes existants.
+// Politique de confidentialité (RGPD, art. 13 et 14). Toute modification : changer LEGAL.updated, et
+// TERMS_VERSION (backend) si elle est importante, pour redemander l'accord des comptes existants
+// (10/10/2026, connexion avec Google : date seule, voir lib/legal.ts).
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { LegalLayout, LegalTable, type LegalSection } from '@/components/legal/LegalLayout';
@@ -35,6 +36,9 @@ const sections: LegalSection[] = [
             ['Nom d’utilisateur, e-mail, mot de passe (chiffré, jamais lisible)',
               'Créer et sécuriser votre compte, vous envoyer les e-mails indispensables (vérification, mot de passe oublié)',
               'Exécution du contrat (CGU)', 'Jusqu’à la suppression du compte'],
+            ['Identifiant Google et adresse e-mail Google, uniquement en cas de connexion avec Google (prénom et nom repris à la création du compte)',
+              'Relier le compte Google au compte Fidni pour la connexion, sans mot de passe. Fidni ne reçoit jamais le mot de passe Google',
+              'Exécution du contrat', 'Jusqu’à la suppression du compte'],
             ['Prénom, nom, établissement, niveau, profil élève ou enseignant',
               'Personnaliser les feuilles d’exercices en PDF, les classes et le suivi. Visibles de vous seul, sauf des enseignants de vos classes',
               'Exécution du contrat', 'Jusqu’à la suppression du compte'],
@@ -110,6 +114,13 @@ const sections: LegalSection[] = [
           <li><strong>Cloudflare, Inc.</strong> (États-Unis) : acheminement sécurisé du site et protection contre les attaques.</li>
           <li><strong>Brevo</strong> (Sendinblue SAS, France) : envoi des e-mails du compte.</li>
           <li>
+            <strong>Google</strong> (Google Ireland Ltd) — connexion avec Google, seulement pour qui choisit ce bouton :
+            Google confirme l’identité et transmet à Fidni un identifiant de compte, l’adresse e-mail, le prénom et le
+            nom. Google agit comme responsable de traitement distinct pour cette connexion :{' '}
+            <a href="https://policies.google.com/privacy?hl=fr" target="_blank" rel="noopener noreferrer"
+              className="text-[#1a7a4a] underline">règles de confidentialité de Google</a>.
+          </li>
+          <li>
             <strong>Google AdSense</strong> (Google Ireland Ltd) : affichage des publicités, uniquement si vous
             les acceptez. Google agit alors comme responsable de traitement distinct pour ses cookies :{' '}
             <a href="https://policies.google.com/technologies/partner-sites?hl=fr" target="_blank" rel="noopener noreferrer"
@@ -135,7 +146,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         Vos données sont stockées dans l’Union européenne (Gravelines, France). Certains prestataires sont établis aux États-Unis
-        (Cloudflare, Google pour les publicités si vous les acceptez, et OpenAI si la fonction d’IA est utilisée) : ces transferts sont encadrés par le cadre de
+        (Cloudflare, Google pour les publicités si vous les acceptez et pour la connexion avec Google si elle est choisie, et OpenAI si la fonction d’IA est utilisée) : ces transferts sont encadrés par le cadre de
         protection des données UE–États-Unis (Data Privacy Framework) et par les clauses contractuelles types de la
         Commission européenne.
       </p>
@@ -161,9 +172,15 @@ const sections: LegalSection[] = [
           n’est utilisé.
         </p>
         <p>
+          <strong>Connexion avec Google.</strong> Le script de Google qui affiche le bouton « Continuer avec Google »
+          n’est chargé qu’à l’ouverture de la fenêtre de connexion, jamais sur les autres pages. Il sert uniquement à
+          la connexion, pas à la publicité : Google y utilise ses propres cookies de session pour reconnaître un compte
+          Google déjà ouvert dans le navigateur.
+        </p>
+        <p>
           <strong>Publicités.</strong> Fidni est gratuit et se finance par des annonces Google AdSense. Un bandeau vous
           demande votre accord à la première visite : tant que vous n’avez pas cliqué « Accepter », aucun script ni
-          cookie de Google n’est chargé. Si vous refusez, vous n’avez pas de publicité et le site fonctionne de la
+          cookie publicitaire de Google n’est chargé. Si vous refusez, vous n’avez pas de publicité et le site fonctionne de la
           même façon. Si vous acceptez, Google peut choisir les annonces selon vos centres d’intérêt, déduits de votre
           navigation sur les sites partenaires de Google (jamais de vos données de compte Fidni), et utilise des
           cookies pour limiter leur répétition, mesurer leur affichage et lutter contre la fraude. Vous pouvez aussi

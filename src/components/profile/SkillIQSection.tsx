@@ -2,15 +2,21 @@
 // Skill IQ : des quiz courts par chapitre, corrigés tout de suite. Vue principale = les chapitres
 // d'une matière du niveau d'un coup d'œil (un onglet par matière dès qu'il y en a plusieurs) ;
 // les quiz qui n'existent pas encore sont annoncés comme tels au lieu d'échouer au clic.
+// 10/10/2026 : après le résultat, la suite (« S'entraîner » sur la page du chapitre, « Le cours », « Ma progression »,
+// « Retour à mon DS » si on vient du plan de DS : ?retour=/revisions/ds/12) et l'écart avec le passage précédent
+// (« 40 % → 80 % » : le serveur garde previous_score / previous_max).
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Brain, CheckCircle2, XCircle, Play, RotateCcw, ArrowLeft, Loader2, Clock, Award, Hourglass,
+  Brain, CheckCircle2, XCircle, Play, RotateCcw, ArrowLeft, ArrowRight, Loader2, Clock, Award, Hourglass, BookOpen,
+  Dumbbell, LineChart,
 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
+import { trackAction } from '@/lib/usage';
+import { lessonsUrl, practiceUrl } from '@/pages/progression/links';
 
 interface Chapter { id: number; name: string; }
 interface Subject { id: number; name: string; chapters: Chapter[]; }
@@ -19,6 +25,10 @@ interface ClassLevel { id: number; name: string; subjects: Subject[]; }
 interface SkillAssessment {
   id: number; chapter: number; chapter_name: string; subject_name: string;
   score: number; max_score: number; level: Level; completed_at: string;
+  /** Passage précédent (null au premier) et nombre de passages. */
+  previous_score?: number | null; previous_max?: number | null; attempts?: number;
+  /** Page d'exercices du chapitre au niveau de l'élève ; null hors de son niveau. */
+  hub_url?: string | null;
   correction?: { id: number; your_answer: number | null; correct_answer: number; is_correct: boolean; explanation: string }[];
 }
 type Level = 'beginner' | 'intermediate' | 'advanced' | 'expert';
@@ -34,6 +44,10 @@ const LEVEL: Record<Level, { label: string; className: string }> = {
 const DIFFICULTY = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' } as const;
 
 const pct = (a: SkillAssessment) => (a.max_score ? Math.round((a.score / a.max_score) * 100) : 0);
+/** Score du passage précédent en %, null au premier passage. */
+const previousPct = (a: SkillAssessment) => (a.previous_score != null && a.previous_max ? Math.round((a.previous_score / a.previous_max) * 100) : null);
+/** « Retour à mon DS » : seulement vers un plan de DS du site (jamais une adresse extérieure). */
+const safeReturn = (r: string | null) => (r && /^\/revisions\/ds\/\d+$/.test(r) ? r : null);
 // Texte d'un quiz (écrit à la main, peut contenir $…$) : échappé puis rendu avec KaTeX et filtré.
 const mathHtml = (s: string) => renderContentHtml(s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
 const MathText: React.FC<{ text: string; className?: string }> = ({ text, className }) => (
@@ -56,6 +70,9 @@ export const SkillIQSection: React.FC = () => {
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizResult, setQuizResult] = useState<SkillAssessment | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Arrivée depuis le plan d'un DS : gardé pour le bouton « Retour à mon DS » (l'adresse est nettoyée ensuite).
+  const [retour] = useState(() => safeReturn(searchParams.get('retour')));
 
   useEffect(() => {
     (async () => {
@@ -128,12 +145,17 @@ export const SkillIQSection: React.FC = () => {
 
   const closeQuiz = () => { setActiveQuiz(null); setQuizState(null); setQuizResult(null); };
 
+  // « Refaire » : nouvelle tentative sur un chapitre déjà passé (mesurée).
+  const redoQuiz = (chapterId: number, chapterName: string, subjectName?: string) => {
+    trackAction('quiz-refait');
+    startQuiz(chapterId, chapterName, subjectName);
+  };
+
   // « Passer le quiz » depuis Ma progression : /skill-iq?chapitre=<id> lance directement ce quiz.
-  const [searchParams, setSearchParams] = useSearchParams();
   const wanted = Number(searchParams.get('chapitre')) || null;
   useEffect(() => {
     if (loading || !wanted) return;
-    setSearchParams((p) => { const next = new URLSearchParams(p); next.delete('chapitre'); return next; }, { replace: true });
+    setSearchParams((p) => { const next = new URLSearchParams(p); next.delete('chapitre'); next.delete('retour'); return next; }, { replace: true });
     for (const lv of classLevels) {
       for (const s of lv.subjects) {
         const c = s.chapters.find((x) => x.id === wanted);
@@ -155,7 +177,9 @@ export const SkillIQSection: React.FC = () => {
   /* ─────────────── Résultat + correction ─────────────── */
   if (activeQuiz && quizResult) {
     const score = pct(quizResult);
+    const before = previousPct(quizResult);
     const lv = LEVEL[quizResult.level] ?? LEVEL.beginner;
+    const chapterId = activeQuiz.chapterId;
     const byId = new Map(lastQuestions.map((q) => [q.id, q]));
     const correction = (quizResult.correction ?? []).filter((c) => byId.has(c.id));
     return (
@@ -172,9 +196,42 @@ export const SkillIQSection: React.FC = () => {
               </p>
               <h2 className="fd-display text-[22px] font-semibold text-ink mt-1">{activeQuiz.chapterName}</h2>
               <p className="text-[13.5px] text-ink-faint mt-1 fd-nums">{quizResult.score} / {quizResult.max_score} points (facile 1, moyen 2, difficile 3)</p>
+              {before !== null && (
+                <p className="mt-1.5 text-[13.5px] text-ink-soft fd-nums">
+                  <span className="sr-only">Passage précédent : </span>{before} % <span aria-hidden>→</span><span className="sr-only">, maintenant : </span> <b className="text-ink">{score} %</b>
+                  {score !== before && (
+                    <span className={`ml-1.5 font-semibold ${score > before ? 'text-brand-hover' : 'text-ink-faint'}`}>
+                      ({score > before ? '+' : '−'}{Math.abs(score - before)} point{Math.abs(score - before) > 1 ? 's' : ''})
+                    </span>
+                  )}
+                </p>
+              )}
               <span className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-[12.5px] font-semibold ${lv.className}`}>
                 <Award className="w-3.5 h-3.5" /> {lv.label}
               </span>
+            </div>
+          </div>
+
+          {/* La suite : s'entraîner sur ce chapitre (les plus faciles d'abord), le cours, sa progression. */}
+          <div className="px-6 py-4 border-b border-line">
+            <p className="text-[13px] font-semibold text-ink mb-2.5">
+              {score >= 80 ? 'Bien joué ! Pour ancrer tout ça :' : score >= 50 ? 'Pour consolider ce chapitre :' : 'Pour progresser sur ce chapitre :'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {retour && (
+                <Link to={retour} className="fd-btn-primary" style={{ minHeight: 40 }}>
+                  <ArrowLeft className="w-4 h-4" /> Retour à mon DS
+                </Link>
+              )}
+              <Link to={practiceUrl(quizResult.hub_url, chapterId)} className={retour ? 'fd-btn-ghost' : 'fd-btn-primary'} style={{ minHeight: 40 }}>
+                <Dumbbell className="w-4 h-4" /> S’entraîner <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link to={lessonsUrl(quizResult.hub_url, chapterId)} className="fd-btn-ghost" style={{ minHeight: 40 }}>
+                <BookOpen className="w-4 h-4" /> Le cours
+              </Link>
+              <Link to={`/progression?chapitre=${chapterId}`} className="fd-btn-ghost" style={{ minHeight: 40 }}>
+                <LineChart className="w-4 h-4" /> Ma progression
+              </Link>
             </div>
           </div>
 
@@ -209,10 +266,10 @@ export const SkillIQSection: React.FC = () => {
           )}
 
           <div className="px-6 py-4 border-t border-line flex flex-wrap gap-2.5 justify-end">
-            <button className="fd-btn-ghost" onClick={() => startQuiz(activeQuiz.chapterId, activeQuiz.chapterName, activeQuiz.subjectName)}>
+            <button className="fd-btn-ghost" style={{ minHeight: 40 }} onClick={() => redoQuiz(activeQuiz.chapterId, activeQuiz.chapterName, activeQuiz.subjectName)}>
               <RotateCcw className="w-4 h-4" /> Refaire (nouvelles questions)
             </button>
-            <button className="fd-btn-primary" onClick={closeQuiz}>Autres chapitres</button>
+            <button className="fd-btn-ghost" style={{ minHeight: 40 }} onClick={closeQuiz}>Autres chapitres</button>
           </div>
         </section>
       </div>
@@ -404,7 +461,10 @@ export const SkillIQSection: React.FC = () => {
               {a && score !== null ? (
                 <div>
                   <div className="flex items-baseline justify-between text-[12px] text-ink-faint">
-                    <span><b className="text-[18px] text-ink fd-nums">{score} %</b> au dernier quiz</span>
+                    <span>
+                      <b className="text-[18px] text-ink fd-nums">{score} %</b> au dernier quiz
+                      {previousPct(a) !== null && <span className="fd-nums"> (avant : {previousPct(a)} %)</span>}
+                    </span>
                     <span>{frDate(a.completed_at)}</span>
                   </div>
                   <div className="mt-1.5 h-1.5 rounded-full bg-[#f2f1ee] overflow-hidden">
@@ -420,7 +480,7 @@ export const SkillIQSection: React.FC = () => {
 
               <div className="mt-auto">
                 {n ? (
-                  <button type="button" onClick={() => startQuiz(c.id, c.name, subject?.name)}
+                  <button type="button" onClick={() => (a ? redoQuiz : startQuiz)(c.id, c.name, subject?.name)}
                     className={`${a ? 'fd-btn-ghost' : 'fd-btn-primary'} w-full justify-center`} style={{ minHeight: 40 }}>
                     {a ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4" />} {a ? 'Refaire le quiz' : 'Passer le quiz'}
                   </button>

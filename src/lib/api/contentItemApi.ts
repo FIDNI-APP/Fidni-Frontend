@@ -21,6 +21,8 @@ import type {
   CreateLessonRequest,
   ContentFilters,
   ContentExamFilters,
+  AssessmentStatus,
+  Felt,
 } from '@/types/content';
 import type { FileAttachment, FileUploadResponse } from '@/types/fileAttachment';
 
@@ -64,6 +66,10 @@ function buildQueryParams(filters: ContentFilters | ContentExamFilters): URLSear
   if (filters.hideViewed) params.append('hideViewed', 'true');
   if (filters.showCompleted) params.append('showCompleted', 'true');
   if (filters.showFailed) params.append('showFailed', 'true');
+  if (filters.todo) params.append('todo', 'true');
+  // Mode Cartes : le serveur allège l'énoncé (ni solutions ni blocs au-delà du 6e).
+  if (filters.view === 'card') params.append('view', 'card');
+  if (filters.page_size) params.append('page_size', String(filters.page_size));
 
   if (filters.is_national !== undefined) {
     params.append('is_national_exam', String(filters.is_national));
@@ -86,6 +92,80 @@ export interface PaginatedResponse<T> {
   count: number;
   next: string | null;
   previous: string | null;
+}
+
+// =====================
+// SESSIONS, AUTO-ÉVALUATION, RESSENTI (exercices et examens)
+// =====================
+
+/** Une session chronométrée (étude ou épreuve d'examen) ; score / max_score : note d'une épreuve corrigée. */
+export interface TimerSession {
+  id: string;
+  session_duration: number;
+  started_at: string;
+  ended_at: string;
+  created_at: string;
+  session_type: string;
+  notes: string;
+  score?: number | null;
+  max_score?: number | null;
+}
+
+/** Réponse de save_session : l'id sert ensuite à enregistrer la note (saveSessionScore). */
+export interface SavedSession {
+  id: number;
+  message?: string;
+  session?: { id: number; duration_seconds: number; created_at: string; score: number | null; max_score: number | null };
+}
+
+/** D'où vient une auto-évaluation (QuestionProgress.source) : question, « Tout réussi », après la solution, rattrapage. */
+export type AssessSource = 'question' | 'tout' | 'apres_solution' | 'rattrapage';
+
+/** Plusieurs questions d'un coup : chemin → statut (null = effacer) ; `completion` : résultat du contenu. */
+export async function assessQuestions(
+  id: string | number,
+  assessments: Record<string, AssessmentStatus | null>,
+  opts: { completion?: 'success' | 'review' | null; source?: AssessSource } = {},
+): Promise<{ item_progress: Record<string, { status: AssessmentStatus; assessed_at: string }>; completion: 'success' | 'review' | null }> {
+  const body: Record<string, unknown> = { assessments, source: opts.source ?? 'question' };
+  if (opts.completion !== undefined) body.completion = opts.completion;
+  const response = await api.post(`/contents/${id}/assess_many/`, body);
+  return response.data;
+}
+
+/** Note d'une épreuve corrigée, rattachée à sa session (la sienne seulement). */
+export async function saveSessionScore(id: string | number, sessionId: string | number, score: number, maxScore: number) {
+  const response = await api.post(`/contents/${id}/session_score/`, { session_id: sessionId, score, max_score: maxScore });
+  return response.data as { id: number; score: number; max_score: number };
+}
+
+/** Ressenti donné par l'élève : « Plus facile », « Comme annoncé », « Plus dur ». */
+export type FeltVote = 'easier' | 'as_said' | 'harder';
+
+/** Enregistre son ressenti ; renvoie le ressenti des élèves recalculé (null s'il n'y a pas assez de données). */
+export async function sendRessenti(id: string | number, felt: FeltVote) {
+  const response = await api.post(`/contents/${id}/ressenti/`, { felt });
+  return response.data as { felt: FeltVote; declared: string | null; ressenti: Felt | null };
+}
+
+export async function removeRessenti(id: string | number): Promise<void> {
+  await api.delete(`/contents/${id}/ressenti/`);
+}
+
+/** Contenus semblables (« Pour continuer ») ; `apres` : après un résultat (« Exercice suivant »). */
+export interface RecommendedItem {
+  id: number;
+  type: 'exercise' | 'exam' | 'lesson';
+  title: string;
+  difficulty?: string | null;
+  reason?: string;
+  felt?: Felt | null;
+  [key: string]: unknown;
+}
+
+export async function getRecommendations(id: string | number, apres?: 'review' | 'success'): Promise<RecommendedItem[]> {
+  const response = await api.get(`/contents/${id}/recommendations/`, { params: apres ? { apres } : undefined });
+  return response.data?.items ?? [];
 }
 
 // =====================
@@ -179,8 +259,8 @@ export const exerciseContentAPI = {
     const response = await api.post(`/contents/${id}/comment/`, { content, parent_id: parentId, file_ids: fileIds });
     return response.data;
   },
-  assess: async (id: string, data: { item_path: string; assessment: string }): Promise<unknown> => {
-    const response = await api.post(`/contents/${id}/assess_question/`, { question_path: data.item_path, status: data.assessment });
+  assess: async (id: string, data: { item_path: string; assessment: string; source?: AssessSource }): Promise<unknown> => {
+    const response = await api.post(`/contents/${id}/assess_question/`, { question_path: data.item_path, status: data.assessment, source: data.source ?? 'question' });
     return response.data;
   },
   removeAssessment: async (id: string, data: { item_path: string }): Promise<unknown> => {
@@ -195,7 +275,7 @@ export const exerciseContentAPI = {
     const response = await api.get(`/contents/${id}/question_progress/`);
     return { item_progress: response.data };
   },
-  saveTimerSession: async (id: string, durationSeconds: number, sessionType = 'study', notes = ''): Promise<unknown> => {
+  saveTimerSession: async (id: string, durationSeconds: number, sessionType = 'study', notes = ''): Promise<SavedSession> => {
     const response = await api.post(`/contents/${id}/save_session/`, { duration_seconds: durationSeconds, session_type: sessionType, notes });
     return response.data;
   },
@@ -203,7 +283,7 @@ export const exerciseContentAPI = {
     const response = await api.get(`/contents/${id}/session_stats/`);
     return response.data;
   },
-  getSessionHistory: async (id: string): Promise<{ sessions: Array<{ id: string; session_duration: number; started_at: string; ended_at: string; created_at: string; session_type: string; notes: string }> }> => {
+  getSessionHistory: async (id: string): Promise<{ sessions: TimerSession[] }> => {
     const response = await api.get(`/contents/${id}/session_history/`);
     return response.data;
   },
@@ -292,8 +372,8 @@ export const examContentAPI = {
     const r = await api.post(`/contents/${id}/comment/`, { content, parent_id: parentId, file_ids: fileIds });
     return r.data;
   },
-  assess: async (id: string, data: { item_path: string; assessment: string }) => {
-    const r = await api.post(`/contents/${id}/assess_question/`, { question_path: data.item_path, status: data.assessment });
+  assess: async (id: string, data: { item_path: string; assessment: string; source?: AssessSource }) => {
+    const r = await api.post(`/contents/${id}/assess_question/`, { question_path: data.item_path, status: data.assessment, source: data.source ?? 'question' });
     return r.data;
   },
   removeAssessment: async (id: string, data: { item_path: string }) => {
@@ -308,12 +388,12 @@ export const examContentAPI = {
     const r = await api.get(`/contents/${id}/question_progress/`);
     return { item_progress: r.data };
   },
-  saveTimerSession: async (id: string, durationSeconds: number, sessionType = 'exam', notes = '') => {
+  saveTimerSession: async (id: string, durationSeconds: number, sessionType = 'exam', notes = ''): Promise<SavedSession> => {
     const r = await api.post(`/contents/${id}/save_session/`, { duration_seconds: durationSeconds, session_type: sessionType, notes });
     return r.data;
   },
   getSessionStats: async (id: string) => { const r = await api.get(`/contents/${id}/session_stats/`); return r.data; },
-  getSessionHistory: async (id: string) => { const r = await api.get(`/contents/${id}/session_history/`); return r.data; },
+  getSessionHistory: async (id: string): Promise<{ sessions: TimerSession[] }> => { const r = await api.get(`/contents/${id}/session_history/`); return r.data; },
   deleteSession: async (id: string, sessionId: string) => { const r = await api.delete(`/contents/${id}/delete_session/${sessionId}/`); return r.data; },
   recordView: async (id: string) => { const r = await api.post(`/contents/${id}/view/`); return r.data; },
 };
@@ -382,13 +462,13 @@ export const lessonContentAPI = {
     const r = await api.post(`/contents/${id}/comment/`, { content, parent_id: parentId, file_ids: fileIds });
     return r.data;
   },
-  assess: async (_id: string, _data: { item_path: string; assessment: string }) => ({}),
+  assess: async (_id: string, _data: { item_path: string; assessment: string; source?: AssessSource }) => ({}),
   // Manquait : décocher une auto-évaluation sur une leçon appelait une fonction inexistante.
   removeAssessment: async (_id: string, _data: { item_path: string }) => ({}),
   validateSolution: async (_id: string, _data: { item_path: string; validation: string | null }) => ({}),
   getProgress: async (_id: string) => ({ item_progress: {} as Record<string, { status: string; solution_validation?: string; assessed_at: string }> }),
-  saveTimerSession: async (_id: string, _d: number, _t = 'study', _n = '') => ({}),
-  getSessionHistory: async (_id: string) => ({ sessions: [] as any[] }),
+  saveTimerSession: async (_id: string, _d: number, _t = 'study', _n = ''): Promise<SavedSession | null> => null,
+  getSessionHistory: async (_id: string) => ({ sessions: [] as TimerSession[] }),
   deleteSession: async (_id: string, _sid: string) => ({}),
   recordView: async (id: string) => { const r = await api.post(`/contents/${id}/view/`); return r.data; },
 };

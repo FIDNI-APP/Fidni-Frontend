@@ -6,6 +6,7 @@ import { api } from './apiClient';
 export interface UserMini {
   id: number;
   username: string;
+  /** Donné au seul propriétaire de la classe (jamais à un élève). */
   email?: string;
   avatar?: string | null;
 }
@@ -48,6 +49,17 @@ export interface WeeklyProgress {
 }
 
 const BASE = '/classrooms/';
+
+/** Message d'erreur renvoyé par l'API (champ detail), sinon le texte par défaut. */
+export function classroomError(e: unknown, fallback: string): string {
+  const d = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  return typeof d === 'string' ? d : fallback;
+}
+
+/** Code HTTP d'une erreur d'API (403, 404…), ou undefined (réseau coupé…). */
+export function errorStatus(e: unknown): number | undefined {
+  return (e as { response?: { status?: number } })?.response?.status;
+}
 
 export async function listClassrooms(): Promise<Classroom[]> {
   const r = await api.get(BASE);
@@ -140,6 +152,8 @@ export interface TDList {
   classroom: number;
   title: string;
   description: string;
+  /** Id de la matière (null : toutes matières). */
+  subject?: number | null;
   subject_name?: string | null;
   created_by_username?: string;
   due_date?: string | null;
@@ -147,7 +161,30 @@ export interface TDList {
   updated_at: string;
   items: TDListItem[];
   item_count: number;
+  /** Avancement de l'utilisateur connecté (l'élève). */
   progress: { completed: number; total: number } | null;
+  /** Propriétaire seulement : élèves qui ont réussi tout le TD, sur les élèves de la classe. */
+  class_progress?: { finished: number; total: number } | null;
+}
+
+/** Suivi d'un TD par le prof : élèves × exercices (GET …/td-lists/<id>/suivi/, propriétaire seulement). */
+export type TDCellStatus = 'success' | 'review' | null;
+
+export interface TDSuiviCell {
+  status: TDCellStatus;
+  /** Questions marquées « à revoir » par l'élève dans cet exercice. */
+  review_questions: number;
+  /** Dernière activité (ISO) ou null. */
+  at: string | null;
+}
+
+export interface TDSuivi {
+  students: { id: number; username: string; full_name: string }[];
+  items: { object_id: number; type: string; title: string }[];
+  /** cells["<student_id>"]["<object_id>"] */
+  cells: Record<string, Record<string, TDSuiviCell>>;
+  summary: { finished: number; total: number };
+  hardest: { object_id: number; title: string | null; question_path: string; label: string; review_count: number }[];
 }
 
 export async function listTDLists(classroomId: number | string): Promise<TDList[]> {
@@ -182,6 +219,11 @@ export async function addTDListItem(
   contentId: number | string,
 ): Promise<TDListItem> {
   const r = await api.post(`${BASE}${classroomId}/td-lists/${tdId}/items/`, { content_id: contentId });
+  return r.data;
+}
+
+export async function getTDSuivi(classroomId: number | string, tdId: number | string): Promise<TDSuivi> {
+  const r = await api.get(`${BASE}${classroomId}/td-lists/${tdId}/suivi/`);
   return r.data;
 }
 
@@ -227,7 +269,7 @@ export async function getStudentStats(
   classroomId: number | string,
   options: { studentId?: number; subjectId?: number | null } = {},
 ): Promise<StudentSkillStats> {
-  const params: Record<string, any> = {};
+  const params: Record<string, number> = {};
   if (options.studentId) params.student_id = options.studentId;
   if (options.subjectId) params.subject_id = options.subjectId;
   const r = await api.get(`${BASE}${classroomId}/student-stats/`, { params });
@@ -238,7 +280,7 @@ export async function getRosterStats(
   classroomId: number | string,
   subjectId?: number | null,
 ): Promise<RosterStats> {
-  const params: Record<string, any> = {};
+  const params: Record<string, number> = {};
   if (subjectId) params.subject_id = subjectId;
   const r = await api.get(`${BASE}${classroomId}/roster-stats/`, { params });
   return r.data;

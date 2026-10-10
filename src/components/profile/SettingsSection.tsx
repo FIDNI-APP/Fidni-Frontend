@@ -6,6 +6,8 @@ import { deleteMyAccount, downloadMyData } from '@/lib/api/userApi';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import type { User as AppUser } from '@/types';
+import type { AccountFlags } from '@/lib/api/authApi';
 import {
   uploadAvatar,
   removeAvatar,
@@ -22,6 +24,9 @@ import {
 } from 'lucide-react';
 
 type SettingsTab = 'profile' | 'account' | 'notifications' | 'appearance' | 'danger';
+/** Erreur axios telle que lue ici. */
+type ApiError = { response?: { data?: { error?: string; code?: string } } };
+const apiData = (err: unknown) => (err as ApiError)?.response?.data;
 
 const SETTINGS_TABS = [
   { id: 'profile', label: 'Profil', icon: User },
@@ -134,6 +139,12 @@ export const SettingsSection: React.FC = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
+  // Compte créé avec Google (10/10/2026) : peut n'avoir aucun mot de passe. Champ absent : comme avant.
+  const account = user as (AppUser & AccountFlags) | null;
+  const hasPassword = account?.has_password !== false;
+  const googleLinked = !!account?.google_linked;
+  const SET_PASSWORD_FIRST = 'Définis d’abord un mot de passe (ci-dessous) pour changer d’adresse e-mail.';
+
   // Load user data on mount
   useEffect(() => {
     if (user) {
@@ -169,6 +180,11 @@ export const SettingsSection: React.FC = () => {
 
       // Update user info
       const emailChanged = profileData.email.trim().toLowerCase() !== (user.email || '').toLowerCase();
+      if (emailChanged && !hasPassword) {
+        setActiveTab('account');
+        setError(SET_PASSWORD_FIRST);
+        return;
+      }
       if (emailChanged && !emailPassword) {
         setActiveTab('account');
         setError('Indique ton mot de passe actuel pour changer d’adresse e-mail.');
@@ -200,8 +216,13 @@ export const SettingsSection: React.FC = () => {
       await refreshUser();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Erreur lors de la sauvegarde');
+    } catch (err) {
+      if (apiData(err)?.code === 'set_password_first') {
+        setActiveTab('account');
+        setError(SET_PASSWORD_FIRST);
+      } else {
+        setError(apiData(err)?.error || 'Erreur lors de la sauvegarde');
+      }
     } finally {
       setSaving(false);
     }
@@ -225,7 +246,7 @@ export const SettingsSection: React.FC = () => {
       setProfileData(prev => ({ ...prev, avatarPreview: '' }));
       setAvatarFile(null);
       await refreshUser();
-    } catch (err) {
+    } catch {
       setError('Erreur lors de la suppression de l\'avatar');
     }
   };
@@ -246,7 +267,9 @@ export const SettingsSection: React.FC = () => {
     setChangingPassword(true);
 
     try {
-      await changePassword(passwordData.currentPassword, passwordData.newPassword);
+      // Sans mot de passe (compte Google) : on en définit un, sans « mot de passe actuel ».
+      await changePassword(hasPassword ? passwordData.currentPassword : null, passwordData.newPassword);
+      if (!hasPassword) await refreshUser();
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -254,8 +277,8 @@ export const SettingsSection: React.FC = () => {
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Erreur lors du changement de mot de passe');
+    } catch (err) {
+      setError(apiData(err)?.error || 'Erreur lors du changement de mot de passe');
     } finally {
       setChangingPassword(false);
     }
@@ -271,16 +294,16 @@ export const SettingsSection: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== user?.username || !deletePassword) return;
+    if (deleteConfirmText !== user?.username || (hasPassword && !deletePassword)) return;
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deleteMyAccount(deletePassword);
+      await deleteMyAccount(hasPassword ? deletePassword : undefined);
       // Le serveur a déjà révoqué les sessions : on efface les jetons locaux et on repart à l'accueil.
       await logout().catch(() => undefined);
       navigate('/');
-    } catch (err: any) {
-      setDeleteError(err.response?.data?.error || 'La suppression a échoué. Réessaie.');
+    } catch (err) {
+      setDeleteError(apiData(err)?.error || 'La suppression a échoué. Réessaie.');
     } finally {
       setDeleting(false);
     }
@@ -292,7 +315,7 @@ export const SettingsSection: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-ink-faint text-sm">
-            Gérez votre compte et personnalisez votre expérience
+            Gère ton compte et personnalise ton expérience
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -353,6 +376,10 @@ export const SettingsSection: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as SettingsTab)}
+              // Sur téléphone, seule l'icône est visible : le nom reste lisible par les lecteurs d'écran.
+              aria-label={tab.label}
+              aria-pressed={isActive}
+              title={tab.label}
               className={`
                 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all
                 ${isActive ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink-soft'}
@@ -456,7 +483,7 @@ export const SettingsSection: React.FC = () => {
                       onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                       rows={3}
                       className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all resize-none"
-                      placeholder="Parlez-nous de vous..."
+                      placeholder="Parle un peu de toi…"
                       maxLength={500}
                     />
                     <p className="text-xs text-ink-faint mt-1">{profileData.bio.length}/500 caractères</p>
@@ -469,22 +496,47 @@ export const SettingsSection: React.FC = () => {
           {/* Account Tab */}
           {activeTab === 'account' && (
             <div className="space-y-6">
+              {/* Connexion avec Google */}
+              {googleLinked && (
+                <div className="fd-card p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-brand-soft rounded-lg mt-0.5">
+                      <Check className="w-4 h-4 text-brand-hover" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-ink">Connecté avec Google</h3>
+                      <p className="text-sm text-ink-faint mt-1">
+                        Tu te connectes avec le bouton « Continuer avec Google ».{' '}
+                        {hasPassword
+                          ? 'Ton e-mail (ou ton pseudo) et ton mot de passe marchent aussi.'
+                          : 'Ton compte n’a pas encore de mot de passe : tu peux en définir un ci-dessous.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Email */}
               <div className="fd-card p-6">
                 <h3 className="font-semibold text-ink mb-4">Adresse email</h3>
                 <div>
-                  <label className="block text-sm font-medium text-ink-soft mb-1.5">
+                  <label htmlFor="settings-email" className="block text-sm font-medium text-ink-soft mb-1.5">
                     Email
                   </label>
                   <input
+                    id="settings-email"
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
-                    placeholder="votre@email.com"
+                    disabled={!hasPassword}
+                    className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder="ton.email@exemple.com"
                   />
+                  {!hasPassword && (
+                    <p className="text-xs text-ink-faint mt-1.5">Pour changer d’adresse, définis d’abord un mot de passe ci-dessous.</p>
+                  )}
                 </div>
-                {profileData.email.trim().toLowerCase() !== (user?.email || '').toLowerCase() && (
+                {hasPassword && profileData.email.trim().toLowerCase() !== (user?.email || '').toLowerCase() && (
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-ink-soft mb-1.5">
                       Mot de passe actuel
@@ -502,10 +554,17 @@ export const SettingsSection: React.FC = () => {
                 )}
               </div>
 
-              {/* Password */}
+              {/* Password (compte Google sans mot de passe : « Définir un mot de passe », sans l'actuel) */}
               <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-4">Mot de passe</h3>
+                <h3 className="font-semibold text-ink mb-4">{hasPassword ? 'Mot de passe' : 'Définir un mot de passe'}</h3>
+                {!hasPassword && (
+                  <p className="text-sm text-ink-faint -mt-2 mb-4">
+                    Ton compte a été créé avec Google. Un mot de passe te permet aussi de te connecter avec ton e-mail
+                    (ou ton pseudo), et de changer d’adresse e-mail.
+                  </p>
+                )}
                 <div className="space-y-4">
+                  {hasPassword && (
                   <div>
                     <label className="block text-sm font-medium text-ink-soft mb-1.5">
                       Mot de passe actuel
@@ -515,6 +574,7 @@ export const SettingsSection: React.FC = () => {
                         type={showPasswords.current ? 'text' : 'password'}
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        autoComplete="current-password"
                         className="w-full px-4 py-2.5 pr-12 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
                         placeholder="••••••••"
                       />
@@ -527,6 +587,7 @@ export const SettingsSection: React.FC = () => {
                       </button>
                     </div>
                   </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-ink-soft mb-1.5">
@@ -537,6 +598,7 @@ export const SettingsSection: React.FC = () => {
                         type={showPasswords.new ? 'text' : 'password'}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        autoComplete="new-password"
                         className="w-full px-4 py-2.5 pr-12 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
                         placeholder="••••••••"
                       />
@@ -559,6 +621,7 @@ export const SettingsSection: React.FC = () => {
                         type={showPasswords.confirm ? 'text' : 'password'}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        autoComplete="new-password"
                         className="w-full px-4 py-2.5 pr-12 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
                         placeholder="••••••••"
                       />
@@ -574,10 +637,10 @@ export const SettingsSection: React.FC = () => {
 
                   <button
                     onClick={handlePasswordChange}
-                    disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword}
+                    disabled={changingPassword || (hasPassword && !passwordData.currentPassword) || !passwordData.newPassword}
                     className="px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {changingPassword ? 'Changement...' : 'Changer le mot de passe'}
+                    {changingPassword ? 'Enregistrement…' : hasPassword ? 'Changer le mot de passe' : 'Définir le mot de passe'}
                   </button>
                 </div>
               </div>
@@ -589,7 +652,7 @@ export const SettingsSection: React.FC = () => {
             <div className="space-y-6">
               <div className="fd-card p-6">
                 <h3 className="font-semibold text-ink mb-2">Notifications par email</h3>
-                <p className="text-sm text-ink-faint mb-6">Choisissez quelles notifications vous souhaitez recevoir</p>
+                <p className="text-sm text-ink-faint mb-6">Choisis les notifications que tu veux recevoir</p>
 
                 <div className="space-y-1">
                   <SettingRow
@@ -606,7 +669,7 @@ export const SettingsSection: React.FC = () => {
                   <SettingRow
                     icon={Bell}
                     title="Notifications de commentaires"
-                    description="Alertes quand quelqu'un commente votre contenu"
+                    description="Alertes quand quelqu'un commente ton contenu"
                   >
                     <ToggleSwitch
                       enabled={notifications.commentNotifications}
@@ -636,7 +699,7 @@ export const SettingsSection: React.FC = () => {
             <div className="space-y-6">
               <div className="fd-card p-6">
                 <h3 className="font-semibold text-ink mb-2">Thème</h3>
-                <p className="text-sm text-ink-faint mb-6">Personnalisez l'apparence de l'application</p>
+                <p className="text-sm text-ink-faint mb-6">Personnalise l'apparence de l'application</p>
 
                 <div className="grid grid-cols-3 gap-3">
                   {[
@@ -650,7 +713,7 @@ export const SettingsSection: React.FC = () => {
                     return (
                       <button
                         key={themeOption.id}
-                        onClick={() => setTheme(themeOption.id as any)}
+                        onClick={() => setTheme(themeOption.id as Parameters<typeof setTheme>[0])}
                         className={`
                           flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all
                           ${isActive
@@ -710,7 +773,7 @@ export const SettingsSection: React.FC = () => {
                   <div className="flex-1">
                     <h3 className="font-semibold text-ink">Se déconnecter</h3>
                     <p className="text-sm text-ink-faint mt-1">
-                      Vous serez déconnecté de votre compte sur cet appareil.
+                      Tu seras déconnecté de ton compte sur cet appareil.
                     </p>
                     <button
                       onClick={() => setShowLogoutModal(true)}
@@ -771,7 +834,7 @@ export const SettingsSection: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-ink mb-2">Se déconnecter ?</h3>
                 <p className="text-sm text-ink-faint mb-6">
-                  Vous devrez vous reconnecter pour accéder à votre compte.
+                  Tu devras te reconnecter pour accéder à ton compte.
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -814,7 +877,7 @@ export const SettingsSection: React.FC = () => {
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Trash2 className="w-6 h-6 text-red-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-ink mb-2">Supprimer votre compte ?</h3>
+                <h3 className="text-lg font-semibold text-ink mb-2">Supprimer ton compte ?</h3>
                 <p className="text-sm text-ink-faint mb-3">
                   Cette action est irréversible. Ton profil, ta progression, tes favoris, tes cahiers,
                   tes listes de révision et tes fichiers seront définitivement effacés.
@@ -826,7 +889,7 @@ export const SettingsSection: React.FC = () => {
 
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-left">
                   <p className="text-sm text-red-700 mb-2">
-                    Pour confirmer, tapez <strong>{user?.username}</strong> ci-dessous :
+                    Pour confirmer, tape <strong>{user?.username}</strong> ci-dessous :
                   </p>
                   <input
                     type="text"
@@ -835,14 +898,19 @@ export const SettingsSection: React.FC = () => {
                     className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     placeholder={user?.username}
                   />
-                  <p className="text-sm text-red-700 mt-3 mb-2">Ton mot de passe :</p>
-                  <input
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    autoComplete="current-password"
-                    className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
+                  {/* Compte créé avec Google, sans mot de passe : le pseudo recopié suffit. */}
+                  {hasPassword && (
+                    <>
+                      <p className="text-sm text-red-700 mt-3 mb-2">Ton mot de passe :</p>
+                      <input
+                        type="password"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        autoComplete="current-password"
+                        className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                      />
+                    </>
+                  )}
                   {deleteError && <p className="text-sm text-red-700 mt-2">{deleteError}</p>}
                 </div>
 
@@ -860,7 +928,7 @@ export const SettingsSection: React.FC = () => {
                   </button>
                   <button
                     onClick={handleDeleteAccount}
-                    disabled={deleteConfirmText !== user?.username || !deletePassword || deleting}
+                    disabled={deleteConfirmText !== user?.username || (hasPassword && !deletePassword) || deleting}
                     className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {deleting ? 'Suppression…' : 'Supprimer définitivement'}

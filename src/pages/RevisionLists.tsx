@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  getRevisionLists, deleteRevisionList, createRevisionList, getRevisionSuggestions, quickAddToRevision,
+  getRevisionLists, deleteRevisionList, createRevisionList, getRevisionSuggestions, quickAddManyToRevision,
   type RevisionList, type RevisionSuggestion,
 } from '@/lib/api/revisionListApi';
 import { AlertCircle, BookmarkPlus, CalendarCheck, ChevronDown, ChevronRight, ListChecks, ListPlus, Loader2, Plus, Printer, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
@@ -22,8 +22,8 @@ type Tab = 'ds' | 'listes';
 const TAB_KEY = 'fidni:revisions:onglet';
 const LIST_STEPS = [
   { icon: BookmarkPlus, title: 'Range des exercices', text: 'Bouton « Liste » sur un exercice ou un examen, ou en un clic depuis tes exercices ratés.' },
-  { icon: RotateCcw, title: 'Refais-les à la suite', text: 'Ouvre la liste : la barre montre ce que tu as réussi et ce qui reste à revoir.' },
-  { icon: Printer, title: 'Imprime une feuille', text: 'Exporte la liste en PDF, avec ou sans corrigé, pour travailler sur papier.' },
+  { icon: RotateCcw, title: 'Refais-les à la suite', text: 'Ouvre la liste : un exercice à la fois, tu dis ce que tu as réussi, et on reprend au premier qui n’est pas encore réussi.' },
+  { icon: Printer, title: 'Imprime une feuille', text: 'Feuille à imprimer : exporte la liste en PDF, avec ou sans corrigé, pour travailler sur papier.' },
 ];
 
 function storedTab(): Tab | null {
@@ -107,7 +107,7 @@ export const RevisionLists = () => {
   const addSuggestion = async (ids: number[], key: number | 'all') => {
     setAddingId(key);
     try {
-      for (const id of ids) await quickAddToRevision(id);
+      await quickAddManyToRevision(ids);  // une requête, même pour « Tout ranger »
       setSuggestions((prev) => prev.filter((x) => !ids.includes(x.id)));
       setSuggestionCount((n) => Math.max(0, n - ids.length));
       await fetchLists();

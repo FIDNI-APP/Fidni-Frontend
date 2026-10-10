@@ -12,6 +12,7 @@ import {
   deleteClassroom,
   joinClassroom,
   leaveClassroom,
+  classroomError,
   type Classroom,
 } from '@/lib/api/classroomApi';
 
@@ -32,7 +33,7 @@ export function ClassroomsPage() {
       setLoading(true);
       const data = await listClassrooms();
       setClassrooms(data);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setError("Impossible de charger les classes.");
     } finally {
@@ -206,9 +207,10 @@ export function ClassroomsPage() {
       {showJoin && (
         <JoinClassroomModal
           onClose={() => setShowJoin(false)}
-          onJoined={async () => {
+          onJoined={(c) => {
+            // Direct dans la classe : l'élève y arrive sur ses TD.
             setShowJoin(false);
-            await refresh();
+            navigate(`/classrooms/${c.id}`);
           }}
         />
       )}
@@ -361,8 +363,8 @@ function CreateClassroomModal({ onClose, onCreated }: { onClose: () => void; onC
       setBusy(true); setErr('');
       const c = await createClassroom({ name: name.trim(), description: description.trim() });
       onCreated(c);
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'Erreur lors de la création.');
+    } catch (e) {
+      setErr(classroomError(e, 'Erreur lors de la création.'));
     } finally {
       setBusy(false);
     }
@@ -398,7 +400,7 @@ function CreateClassroomModal({ onClose, onCreated }: { onClose: () => void; onC
   );
 }
 
-function JoinClassroomModal({ onClose, onJoined }: { onClose: () => void; onJoined: () => void }) {
+function JoinClassroomModal({ onClose, onJoined }: { onClose: () => void; onJoined: (c: Classroom) => void }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -408,10 +410,10 @@ function JoinClassroomModal({ onClose, onJoined }: { onClose: () => void; onJoin
     if (!code.trim()) return;
     try {
       setBusy(true); setErr('');
-      await joinClassroom(code);
-      onJoined();
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'Code invalide.');
+      const c = await joinClassroom(code);
+      onJoined(c);
+    } catch (e) {
+      setErr(classroomError(e, 'Code invalide.'));
     } finally {
       setBusy(false);
     }

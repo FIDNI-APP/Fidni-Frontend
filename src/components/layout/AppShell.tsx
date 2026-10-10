@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { OnboardingBanner } from './OnboardingBanner';
+import { MobileTabBar } from './MobileTabBar';
+import { TABBAR_OFFSET } from './nav';
 import { IdentityGate } from '@/components/profile/IdentityForm';
 import Footer from './Footer';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
@@ -15,15 +17,15 @@ interface AppShellProps {
 }
 
 /**
- * Application shell: persistent left rail + slim contextual top bar.
+ * Application shell: persistent left rail + slim contextual top bar, and a bottom tab bar on phones.
  * Every page that previously rendered <Navbar/> now routes through here,
  * so navigation chrome lives in exactly one place.
  */
 export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true }) => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState<boolean>(
-    () => typeof window !== 'undefined' && localStorage.getItem(COLLAPSE_KEY) === '1'
-  );
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; }
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Neutralize any legacy `body { padding-top }` (old fixed-navbar offset that
@@ -35,8 +37,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true 
     return () => { document.body.style.paddingTop = prev; };
   }, []);
 
-  // Close the mobile drawer on navigation.
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+  // Close the mobile drawer on navigation (y compris un simple changement d'onglet : ?onglet=ds).
+  useEffect(() => { setMobileOpen(false); }, [location.pathname, location.search]);
 
   // Lock body scroll while the mobile drawer is open.
   useEffect(() => {
@@ -47,7 +49,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true 
   const toggleCollapsed = () => {
     setCollapsed(prev => {
       const next = !prev;
-      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      try { localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0'); } catch { /* préférence facultative */ }
       return next;
     });
   };
@@ -61,13 +63,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true 
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
         />
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Sur téléphone, la barre d'onglets du bas ne doit cacher ni la fin de la page ni le pied de page. */}
+        <div className="flex-1 flex flex-col min-w-0" style={{ paddingBottom: TABBAR_OFFSET }}>
           <OnboardingBanner />
           <IdentityGate />
           <TopBar onOpenMobile={() => setMobileOpen(true)} />
           <main className="flex-grow">{children}</main>
           {showFooter && <Footer />}
         </div>
+        <MobileTabBar menuOpen={mobileOpen} onOpenMenu={() => setMobileOpen(true)} />
       </div>
     </BreadcrumbProvider>
   );

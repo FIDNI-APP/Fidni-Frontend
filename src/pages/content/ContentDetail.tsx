@@ -1,25 +1,30 @@
 /**
  * ContentDetail - Detail page for structured content (exercises, exams, lessons)
  * Uses the structured API endpoints
+ *
+ * 10/10/2026 : chargement après l'authentification, contenu et progression en parallèle, squelette au
+ * lieu du spinner ; solution ouverte enregistrée (SolutionView, une fois par contenu) ; chaque
+ * auto-évaluation dit d'où elle vient ; examen national rangé sous « Examens nationaux ».
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import {
   exerciseContentAPI,
   examContentAPI,
   lessonContentAPI,
   getContentStatistics,
+  markSolutionViewed,
   undoSolutionViewed,
   voteComment,
   updateComment,
   deleteComment,
   type ContentStatistics
 } from '@/lib/api';
+import { assessQuestions, saveSessionScore, type AssessSource, type TimerSession } from '@/lib/api/contentItemApi';
 import type { VoteValue, Comment } from '@/types';
-import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus } from '@/types/content';
+import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus, Felt } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { isModerator } from '@/lib/features';
@@ -45,6 +50,9 @@ import { assessablePaths } from '@/lib/utils/contentHelpers';
 import { questionNumbering } from '@/lib/reportTargets';
 import { trackAction } from '@/lib/usage';
 import { SimilarContents } from '@/components/content/viewer/SimilarContents';
+import { contentHub } from '@/components/content/viewer/pageHelpers';
+import { hubPath } from '@/lib/api/hubApi';
+import { studentLevelSlug } from '@/components/layout/nav';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -62,21 +70,21 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   exercise: {
     title: 'Exercice',
     backLabel: 'Retour aux exercices',
-    deleteConfirm: 'Etes-vous sur de vouloir supprimer cet exercice ?',
+    deleteConfirm: 'Supprimer cet exercice ? C’est définitif.',
     basePath: '/exercises',
     api: exerciseContentAPI,
   },
   exam: {
     title: 'Examen',
     backLabel: 'Retour aux examens',
-    deleteConfirm: 'Etes-vous sur de vouloir supprimer cet examen ?',
+    deleteConfirm: 'Supprimer cet examen ? C’est définitif.',
     basePath: '/exams',
     api: examContentAPI,
   },
   lesson: {
-    title: 'Lecon',
-    backLabel: 'Retour aux lecons',
-    deleteConfirm: 'Etes-vous sur de vouloir supprimer cette lecon ?',
+    title: 'Leçon',
+    backLabel: 'Retour aux leçons',
+    deleteConfirm: 'Supprimer cette leçon ? C’est définitif.',
     basePath: '/lessons',
     api: lessonContentAPI,
   },
@@ -86,12 +94,14 @@ interface ContentDetailProps {
   contentType?: ContentType;
 }
 
-// Timer hook
-const useTimer = (contentId: string | undefined, contentType: ContentType, api: ContentAPI) => {
+// Timer hook (enabled : élève connecté, les sessions sont à lui)
+const useTimer = (contentId: string | undefined, contentType: ContentType, api: ContentAPI, enabled: boolean) => {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const timerRef = useRef(timer);
+  timerRef.current = timer;
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -108,7 +118,7 @@ const useTimer = (contentId: string | undefined, contentType: ContentType, api: 
   // Load session count on mount
   useEffect(() => {
     const loadCount = async () => {
-      if (!contentId || contentType === 'lesson') return;
+      if (!contentId || contentType === 'lesson' || !enabled) { setSessionCount(0); return; }
       try {
         const history = await api.getSessionHistory(contentId);
         setSessionCount(history.sessions?.length || 0);
@@ -117,9 +127,12 @@ const useTimer = (contentId: string | undefined, contentType: ContentType, api: 
       }
     };
     loadCount();
-  }, [contentId, contentType, api]);
+  }, [contentId, contentType, api, enabled]);
 
-  const startTimer = useCallback(() => setIsTimerRunning(true), []);
+  const startTimer = useCallback(() => {
+    if (timerRef.current === 0) trackAction('chrono-demarre');
+    setIsTimerRunning(true);
+  }, []);
   const stopTimer = useCallback(() => setIsTimerRunning(false), []);
   const resetTimer = useCallback(() => {
     setIsTimerRunning(false);
@@ -152,19 +165,25 @@ const useTimer = (contentId: string | undefined, contentType: ContentType, api: 
 
   const getSessionCount = useCallback(() => sessionCount, [sessionCount]);
 
-  /** Épreuve d'examen terminée : sa durée est enregistrée comme session « exam ». */
+  /** Épreuve d'examen terminée : sa durée est enregistrée comme session « exam » ; renvoie son id (pour la note). */
   const saveExamSession = useCallback(async (seconds: number) => {
-    if (!contentId || contentType !== 'exam' || seconds <= 0) return;
-    await api.saveTimerSession(contentId, seconds, 'exam');
-    const history = await api.getSessionHistory(contentId);
-    setSessionCount(history.sessions?.length || 0);
+    if (!contentId || contentType !== 'exam' || seconds <= 0) return null;
+    const saved = await api.saveTimerSession(contentId, seconds, 'exam');
+    setSessionCount((n) => n + 1);
+    return saved?.id ?? saved?.session?.id ?? null;
   }, [contentId, contentType, api]);
+
+  /** Note du passage, mise à jour pendant la correction. */
+  const saveExamScore = useCallback(async (sessionId: string | number, score: number, maxScore: number) => {
+    if (!contentId || contentType !== 'exam') return;
+    await saveSessionScore(contentId, sessionId, score, maxScore);
+  }, [contentId, contentType]);
 
   const loadHistory = useCallback(async () => {
     setShowHistoryModal(true);
   }, []);
 
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (): Promise<TimerSession[]> => {
     if (!contentId || contentType === 'lesson') return [];
     try {
       const history = await api.getSessionHistory(contentId);
@@ -184,6 +203,7 @@ const useTimer = (contentId: string | undefined, contentType: ContentType, api: 
     saveSession,
     getSessionCount,
     saveExamSession,
+    saveExamScore,
     loadHistory,
     showHistoryModal,
     setShowHistoryModal,
@@ -200,22 +220,23 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Lien d'une notification : « ?commentaire=<id>#discussion » ouvre ce commentaire, réponse prête.
   const [searchParams] = useSearchParams();
   const focusCommentId = searchParams.get('commentaire');
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { openModal, setInitialTab } = useAuthModal();
   const [showReport, setShowReport] = useState(false);
   // Signaler une erreur demande un compte (évite les signalements anonymes en masse).
   // path : question choisie depuis son drapeau (sinon l'élève la choisit dans la fenêtre).
   const [reportPath, setReportPath] = useState('');
   const openReport = (path?: string) => {
-    if (!isAuthenticated) { setInitialTab('login'); openModal(); return; }
+    if (!isAuthenticated) { setInitialTab('login'); openModal('signaler'); return; }
+    trackAction('signaler-ouvert');
     setReportPath(typeof path === 'string' ? path : '');
     setShowReport(true);
   };
 
   const [content, setContent] = useState<ContentItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showSolution, setShowSolution] = useState(false);
+  const [error, setError] = useState<'notfound' | 'error' | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
@@ -223,10 +244,19 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const [userVote, setUserVote] = useState<1 | -1 | 0>(0);
   const [activeTab, setActiveTab] = useState<ContentTab>('exercise');
   const [questionProgress, setQuestionProgress] = useState<Record<string, AssessmentStatus>>({});
+  // Date de chaque auto-évaluation (serveur) : une épreuve d'examen refaite ne compte que les siennes.
+  const [questionDates, setQuestionDates] = useState<Record<string, string>>({});
   const [savingSession, setSavingSession] = useState(false);
   const [completionStatus, setCompletionStatus] = useState<'success' | 'review' | null>(null);
   // Question ratée (ou exercice échoué) : proposer de le ranger dans « À revoir ».
   const [revisionNudge, setRevisionNudge] = useState(0);
+  // La proposition « À revoir » attend une réponse : le ressenti attend son tour (une demande à la fois).
+  const [nudgeAsking, setNudgeAsking] = useState(false);
+  // Épreuve d'examen en cours : « Où en es-tu ? » est masqué (rien ne doit détourner de la copie).
+  const [examRunning, setExamRunning] = useState(false);
+  // Résultat donné pendant cette visite (pas celui chargé) : c'est là que le ressenti est demandé.
+  const [statusChosen, setStatusChosen] = useState(false);
+  useEffect(() => { setStatusChosen(false); }, [id]);
 
   // Statistics state
   const [statistics, setStatistics] = useState<ContentStatistics | null>(null);
@@ -236,10 +266,10 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const [comments, setComments] = useState<Comment[]>([]);
 
   // Session history state
-  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<TimerSession[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const timerHook = useTimer(id, contentType, config.api);
+  const timerHook = useTimer(id, contentType, config.api, isAuthenticated && !authLoading);
 
   // Page time tracking - automatic time tracking when viewing content
   usePageTimeTracker({
@@ -248,62 +278,69 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     enabled: isAuthenticated
   });
 
-  // Load content
+  // Chargement : on attend de savoir si l'élève est connecté (sinon tout se chargeait deux fois), puis
+  // contenu et progression en parallèle. Une connexion en cours de route recharge sans squelette.
+  const loadedIdRef = useRef<string | null>(null);
   useEffect(() => {
-    const loadContent = async () => {
-      if (!id) return;
-      setIsLoading(true);
-      setError(null);
+    if (!id || authLoading) return;
+    let alive = true;
+    const fresh = loadedIdRef.current !== id;
+    if (fresh) setIsLoading(true);
+    setError(null);
+    const wantProgress = isAuthenticated && contentType !== 'lesson';
+    Promise.all([
+      config.api.get(id),
+      wantProgress ? config.api.getProgress(id).catch(() => null) : Promise.resolve(null),
+    ])
+      .then(([data, progress]) => {
+        if (!alive) return;
+        loadedIdRef.current = id;
+        const d = data as ContentItem & { comments?: Comment[] };
+        setContent(d);
+        setVoteCount(typeof d.vote_count === 'number' ? d.vote_count : 0);
+        setLikeCounts({ likes: d.like_count ?? 0, dislikes: d.dislike_count ?? 0 });
+        setUserVote(((d.user_vote ?? 0) as 1 | -1 | 0));
+        setIsSaved(Boolean(d.user_save));
+        setCompletionStatus(d.user_complete || null);
+        completionRef.current = d.user_complete || null;
+        // La discussion est dans la même réponse : plus de second appel au chargement.
+        setComments(Array.isArray(d.comments) ? d.comments : []);
 
-      try {
-        const data = await config.api.get(id);
-        setContent(data as ContentItem);
-        if ('vote_count' in data && typeof data.vote_count === 'number') setVoteCount(data.vote_count);
-        setLikeCounts({ likes: (data as any).like_count ?? 0, dislikes: (data as any).dislike_count ?? 0 });
-        if ('user_vote' in data) setUserVote((data.user_vote as 1 | -1 | 0) ?? 0);
-        if ('user_save' in data) setIsSaved(Boolean(data.user_save));
-        if ('user_complete' in data) setCompletionStatus((data as any).user_complete || null);
+        const statuses: Record<string, AssessmentStatus> = {};
+        const dates: Record<string, string> = {};
+        for (const [path, v] of Object.entries(progress?.item_progress ?? {})) {
+          if (v && typeof v === 'object' && 'status' in v) {
+            statuses[path] = (v as { status: AssessmentStatus }).status;
+            const at = (v as { assessed_at?: string }).assessed_at;
+            if (at) dates[path] = at;
+          }
+        }
+        progressRef.current = statuses;
+        setQuestionProgress(statuses);
+        setQuestionDates(dates);
 
         // Vue : un envoi par contenu et par jour depuis ce navigateur (le serveur dédoublonne aussi).
-        try {
-          const key = `fidni:vue:${id}`;
-          const last = Number(localStorage.getItem(key) || 0);
-          if (Date.now() - last > 24 * 3600 * 1000) {
-            localStorage.setItem(key, String(Date.now()));
-            config.api.recordView(id).catch(() => {});
-          }
-        } catch {
-          config.api.recordView(id).catch(() => {});
-        }
-
-        // Load existing progress if authenticated
-        if (isAuthenticated && contentType !== 'lesson') {
+        if (fresh) {
           try {
-            const progress = await config.api.getProgress(id);
-            if (progress && 'item_progress' in progress && progress.item_progress) {
-              // Convert item_progress to questionProgress format
-              const converted: Record<string, AssessmentStatus> = {};
-              for (const [path, data] of Object.entries(progress.item_progress)) {
-                if (data && typeof data === 'object' && 'status' in data) {
-                  converted[path] = (data as { status: AssessmentStatus }).status;
-                }
-              }
-              setQuestionProgress(converted);
+            const key = `fidni:vue:${id}`;
+            const last = Number(localStorage.getItem(key) || 0);
+            if (Date.now() - last > 24 * 3600 * 1000) {
+              localStorage.setItem(key, String(Date.now()));
+              config.api.recordView(id).catch(() => {});
             }
           } catch {
-            // Progress not started yet, ignore
+            config.api.recordView(id).catch(() => {});
           }
         }
-      } catch (err) {
-        setError('Erreur lors du chargement');
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setError(err?.response?.status === 404 ? 'notfound' : 'error');
         console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadContent();
-  }, [id, config, isAuthenticated, contentType]);
+      })
+      .finally(() => { if (alive) setIsLoading(false); });
+    return () => { alive = false; };
+  }, [id, config, isAuthenticated, authLoading, contentType, reloadKey]);
 
   useEffect(() => { setActiveTab('exercise'); }, [id]);
   // Statistiques : chargées à l'ouverture de l'onglet Activité.
@@ -338,23 +375,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   }, [id, contentType]);
   useEffect(() => { loadProposedSolutions(); }, [loadProposedSolutions]);
 
-  // Load comments on mount to show count in tab
-  useEffect(() => {
-    const loadComments = async () => {
-      if (!id) return;
-
-      try {
-        const commentsData = await config.api.getComments(id);
-        setComments(commentsData as Comment[]);
-      } catch (err) {
-        console.error('Failed to load comments:', err);
-        setComments([]);
-      }
-    };
-
-    loadComments();
-  }, [id, config.api]);
-
   // Handle delete
   // Administrateurs : correction relue → retirer (ou remettre) le bandeau « à vérifier ».
   const handleSetVerified = async (verifie: boolean) => {
@@ -387,7 +407,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Handle vote
   const handleVote = async (value: VoteValue) => {
     if (!isAuthenticated) {
-      openModal();
+      openModal('vote');
       return;
     }
     if (!id) return;
@@ -405,7 +425,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Handle save/unsave
   const handleSave = async () => {
     if (!isAuthenticated) {
-      openModal();
+      openModal('favori');
       return;
     }
     if (!id) return;
@@ -426,14 +446,14 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
   };
 
-  // Handle solution toggle
-  const handleToggleSolution = () => {
-    if (!isAuthenticated) {
-      openModal();
-      return;
-    }
-    setShowSolution(!showSolution);
-  };
+  // Solution ouverte : enregistrée une fois par contenu (statistiques « sans regarder la solution »,
+  // onglet Activité, rattrapage). Les visiteurs ne laissent pas de trace.
+  const solutionMarked = useRef<Set<string>>(new Set());
+  const handleSolutionOpen = useCallback(() => {
+    if (!isAuthenticated || !id || contentType === 'lesson' || solutionMarked.current.has(id)) return;
+    solutionMarked.current.add(id);
+    markSolutionViewed(contentType, id).catch(() => { solutionMarked.current.delete(id); });
+  }, [isAuthenticated, id, contentType]);
 
   // Auto-évaluation : un clic par question, « Tout réussi », et le résultat du contenu se déduit tout
   // seul quand toutes les questions sont évaluées (toutes réussies → Réussi, sinon → À revoir).
@@ -445,8 +465,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const completionRef = useRef(completionStatus);
   completionRef.current = completionStatus;
 
-  const applyAssessments = async (changes: AssessChanges, completion?: 'success' | 'review' | null) => {
-    if (!isAuthenticated) { openModal(); return; }
+  // source : d'où vient l'évaluation (question, « Tout réussi », « Tu avais trouvé ? »).
+  const applyAssessments = async (changes: AssessChanges, completion?: 'success' | 'review' | null, source: AssessSource = 'question') => {
+    if (!isAuthenticated) { openModal('evaluer'); return; }
     if (!id) return;
     const before = progressRef.current;
     const beforeCompletion = completionRef.current;
@@ -464,10 +485,15 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     if (sendCompletion) {
       completionRef.current = target ?? null;
       setCompletionStatus(target ?? null);
+      if (target) setStatusChosen(true);
     }
     if (Object.values(changes).some((s) => s && s !== 'success')) setRevisionNudge((n) => n + 1);
     try {
-      await api.post(`/contents/${id}/assess_many/`, sendCompletion ? { assessments: changes, completion: target } : { assessments: changes });
+      const r = await assessQuestions(id, changes, { source, ...(sendCompletion ? { completion: target } : {}) });
+      if (r?.item_progress) {
+        setQuestionDates(Object.fromEntries(Object.entries(r.item_progress)
+          .filter(([, v]) => v?.assessed_at).map(([p, v]) => [p, String(v.assessed_at)])));
+      }
     } catch (err) {
       console.error('Assessment failed:', err);
       setQuestionProgress((cur) => {
@@ -486,18 +512,20 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   };
 
   // Re-cliquer le choix actif l'efface.
-  const handleQuestionAssess = (path: string, status: AssessmentStatus) =>
-    applyAssessments({ [path]: progressRef.current[path] === status ? null : status });
+  const handleQuestionAssess = (path: string, status: AssessmentStatus, source: AssessSource = 'question') =>
+    applyAssessments({ [path]: progressRef.current[path] === status ? null : status }, undefined, source);
+  const handleAssessMany = (changes: AssessChanges, source: AssessSource = 'question') =>
+    applyAssessments(changes, undefined, source);
 
   // « Où en es-tu ? » : « Tout réussi » coche toutes les questions (re-cliquer les efface) ;
   // « À revoir » ne touche qu'au résultat du contenu. Leçon : « Marquer comme lue ».
   const handleSetCompletion = async (status: 'success' | 'review' | null) => {
-    if (!isAuthenticated) { openModal(); return; }
+    if (!isAuthenticated) { openModal('evaluer'); return; }
     if (!id) return;
     if (leafPaths.length) {
       if (status === 'success') {
         trackAction('tout-reussi');
-        await applyAssessments(Object.fromEntries(leafPaths.map((p) => [p, 'success'])), 'success');
+        await applyAssessments(Object.fromEntries(leafPaths.map((p) => [p, 'success'])), 'success', 'tout');
         return;
       }
       if (status === null && completionRef.current === 'success') {
@@ -507,6 +535,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
     const prev = completionStatus;
     setCompletionStatus(status);
+    if (status) setStatusChosen(true);
     if (status === 'review') setRevisionNudge((n) => n + 1);
     try {
       if (status === null) {
@@ -564,6 +593,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     if (!id || contentType === 'lesson') return;
     try {
       await undoSolutionViewed(contentType, id);
+      // La prochaine solution ouverte compte de nouveau.
+      solutionMarked.current.delete(id);
       if (statistics) {
         setStatistics({ ...statistics, user_viewed_solution: false });
       }
@@ -575,7 +606,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Comment handlers
   const handleAddComment = async (commentContent: string, parentId?: string, fileIds?: string[]) => {
     if (!isAuthenticated) {
-      openModal();
+      openModal('commentaire');
       return;
     }
     if (!id) return;
@@ -593,7 +624,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
   const handleVoteComment = async (commentId: string, value: VoteValue) => {
     if (!isAuthenticated || !id) {
-      openModal();
+      openModal('vote');
       return;
     }
     try {
@@ -631,53 +662,63 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
   };
 
-  // Feed the rich breadcrumb (Section › Niveau › Matière › Chapitre) up to the
-  // app TopBar; cleared on unmount so other pages fall back to the route label.
+  // Fil d'Ariane de la barre du haut : Section › Niveau › Chapitre (matière unique : pas de « Mathématiques »),
+  // vers les pages de niveau et de chapitre. Un sujet du Bac national est rangé sous « Examens nationaux »
+  // (et c'est cette entrée du menu qui s'allume). Effacé en quittant la page.
   const { setCrumbs } = useBreadcrumb();
+  const studentLevel = studentLevelSlug(user);
   useEffect(() => {
     if (!content) { setCrumbs(null); return; }
-    const cl = content.class_levels?.[0];
-    const subj = content.subject;
-    const subf = content.subfields?.[0];
-    const chap = content.chapters?.[0];
-    const buildUrl = (f: { classLevel?: string; subject?: string; subfield?: string; chapter?: string }) => {
+    const national = contentType === 'exam' && !!(content as ContentExam).is_national_exam;
+    const section = config.basePath.replace(/^\//, '');
+    const { level, chapter } = contentHub(content, studentLevel);
+    const cl = level ?? content.class_levels?.[0];
+    const chap = chapter ?? content.chapters?.[0];
+    const query = (f: Record<string, string | undefined>) => {
       const p = new URLSearchParams();
-      if (f.classLevel) p.set('classLevels', f.classLevel);
-      if (f.subject) p.set('subjects', f.subject);
-      if (f.subfield) p.set('subfields', f.subfield);
-      if (f.chapter) p.set('chapters', f.chapter);
-      return `${config.basePath}?${p.toString()}`;
+      Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); });
+      return p.toString();
     };
-    const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Examens' : 'Leçons';
-    const cid = cl ? String(cl.id) : undefined;
-    const sid = subj ? String(subj.id) : undefined;
-    const fid = subf ? String(subf.id) : undefined;
-    const crumbs: { label: string; to?: string }[] = [{ label: sectionLabel, to: config.basePath }];
-    if (cl) crumbs.push({ label: cl.name, to: buildUrl({ classLevel: cid }) });
-    if (subj) crumbs.push({ label: subj.name, to: buildUrl({ classLevel: cid, subject: sid }) });
-    if (chap) crumbs.push({ label: chap.name, to: buildUrl({ classLevel: cid, subject: sid, subfield: fid, chapter: String(chap.id) }) });
-    setCrumbs(crumbs);
+    const crumbs: { label: string; to?: string }[] = [];
+    if (national) {
+      crumbs.push({ label: 'Examens nationaux', to: '/exams/nationaux' });
+      if (cl) crumbs.push({ label: cl.name, to: `/exams/nationaux?${query({ classLevels: String(cl.id) })}` });
+    } else {
+      const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Examens' : 'Leçons';
+      crumbs.push({ label: sectionLabel, to: config.basePath });
+      if (cl) crumbs.push({ label: cl.name, to: level ? hubPath(section, level.slug) : `${config.basePath}?${query({ classLevels: String(cl.id) })}` });
+      if (chap) {
+        crumbs.push({
+          label: chap.name,
+          to: level && chapter ? hubPath(section, level.slug, chapter.slug)
+            : `${config.basePath}?${query({ classLevels: cl ? String(cl.id) : undefined, chapters: String(chap.id) })}`,
+        });
+      }
+    }
+    setCrumbs(crumbs, national ? '/exams/nationaux' : null);
     return () => setCrumbs(null);
-  }, [content, contentType, config.basePath, setCrumbs]);
+  }, [content, contentType, config.basePath, setCrumbs, studentLevel]);
 
-  if (isLoading) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1a1a1a' }} />
-      </div>
-    );
+  if (isLoading || (authLoading && !content)) {
+    return <DetailSkeleton />;
   }
 
   if (error || !content) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#b91c1c', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-            {error || 'Contenu non trouvé'}
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-start justify-center px-4 pt-16">
+        <div className="fd-card p-8 text-center max-w-md" role="alert">
+          <p className="text-[15px] font-semibold text-ink">
+            {error === 'error' ? 'Ce contenu n’a pas pu être chargé.' : 'Ce contenu n’existe pas ou a été retiré.'}
           </p>
-          <Link to={config.basePath} className="fd-btn-primary inline-flex">
-            {config.backLabel}
-          </Link>
+          {error === 'error' && <p className="mt-1 text-[13.5px] text-ink-faint">Vérifie ta connexion et réessaie.</p>}
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {error === 'error' && (
+              <button type="button" className="fd-btn-primary inline-flex" onClick={() => setReloadKey((k) => k + 1)}>Réessayer</button>
+            )}
+            <Link to={config.basePath} className={error === 'error' ? 'fd-btn-ghost inline-flex' : 'fd-btn-primary inline-flex'}>
+              {config.backLabel}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -711,14 +752,21 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         solutionCount={proposedSolutions?.length ?? 0}
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-6 sm:py-6">
         {activeTab === 'exercise' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* « Où en es-tu ? » en haut de la page, visible dès l'arrivée (Natsu). */}
-            {isAuthenticated && (
-              <FinishPanel content={content} contentType={contentType} completionStatus={completionStatus}
+            {isAuthenticated && !examRunning && (
+              <FinishPanel key={content.id} content={content} contentType={contentType} completionStatus={completionStatus}
                 onSetCompletion={handleSetCompletion}
-                progress={{ assessed: leafPaths.filter((p) => questionProgress[p]).length, total: leafPaths.length }} />
+                progress={{ assessed: leafPaths.filter((p) => questionProgress[p]).length, total: leafPaths.length }}
+                statusChosen={statusChosen}
+                canAsk={!nudgeAsking}
+                onFelt={(felt: Felt | null) => setContent((prev) => (prev ? { ...prev, felt } as ContentItem : prev))} />
+            )}
+            {/* « Ce sujet te résiste ? » : carte sous « Où en es-tu ? » sur téléphone, en bas à droite sur ordinateur. */}
+            {isAuthenticated && contentType !== 'lesson' && id && (
+              <RevisionNudge contentId={id} trigger={revisionNudge} kind={contentType} onAskingChange={setNudgeAsking} />
             )}
 
             <ContentMainCard
@@ -729,8 +777,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               dislikeCount={likeCounts.dislikes}
               userVote={userVote}
               onVote={handleVote}
-              showSolution={showSolution}
-              onToggleSolution={handleToggleSolution}
               isAuthenticated={isAuthenticated}
               timer={timerHook.timer}
               isTimerRunning={timerHook.isTimerRunning}
@@ -743,10 +789,14 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               loadHistory={timerHook.loadHistory}
               saving={savingSession}
               questionProgress={questionProgress}
+              questionDates={questionDates}
               onQuestionAssess={handleQuestionAssess}
-              onAssessMany={applyAssessments}
+              onAssessMany={handleAssessMany}
               onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
+              onSaveExamScore={isAuthenticated ? timerHook.saveExamScore : undefined}
+              onSolutionOpen={handleSolutionOpen}
               onReport={openReport}
+              onExamAttemptChange={setExamRunning}
             />
 
             {/* Contenus semblables : ce qu'on peut faire ensuite (mêmes notions, même chapitre). */}
@@ -771,7 +821,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             contentId={id}
             solutions={proposedSolutions}
             isAuthenticated={isAuthenticated}
-            onRequireLogin={openModal}
+            onRequireLogin={() => openModal('solution')}
             onChanged={loadProposedSolutions}
           />
         )}
@@ -797,9 +847,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         )}
       </div>
 
-      {isAuthenticated && contentType !== 'lesson' && id && (
-        <RevisionNudge contentId={id} trigger={revisionNudge} kind={contentType} />
-      )}
       <SignupBanner contentId={id} />
 
       <ReportContentModal
@@ -823,5 +870,41 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     </div>
   );
 };
+
+/** Forme de la page pendant le chargement (en-tête, « Où en es-tu ? », trois questions). */
+const DetailSkeleton: React.FC = () => (
+  <div style={{ minHeight: '100vh', background: '#faf9f7' }} aria-busy="true" aria-label="Chargement">
+    <div className="bg-white border-b border-line">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-28 rounded bg-[#efece6]" />
+          <div className="flex gap-2"><div className="h-8 w-8 rounded-xl bg-[#f2f1ee]" /><div className="h-8 w-8 rounded-xl bg-[#f2f1ee]" /></div>
+        </div>
+        <div className="mt-4 flex gap-1.5"><div className="h-5 w-16 rounded-full bg-[#f2f1ee]" /><div className="h-5 w-28 rounded-full bg-[#f2f1ee]" /></div>
+        <div className="mt-3 h-7 w-4/5 max-w-xl rounded bg-[#efece6]" />
+        <div className="mt-2.5 h-4 w-40 rounded bg-[#f2f1ee]" />
+        <div className="mt-5 flex gap-1.5"><div className="h-10 w-28 rounded-xl bg-[#f2f1ee]" /><div className="h-10 w-28 rounded-xl bg-[#f2f1ee]" /></div>
+      </div>
+    </div>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 animate-pulse">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+        <div className="space-y-4">
+          <div className="h-14 rounded-2xl border border-line bg-white" />
+          <div className="rounded-2xl border border-line bg-white p-5 sm:p-7 space-y-6">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-4 w-full rounded bg-[#f2f1ee]" />
+                <div className="h-4 w-11/12 rounded bg-[#f2f1ee]" />
+                <div className="h-4 w-2/3 rounded bg-[#f2f1ee]" />
+                <div className="h-6 w-40 rounded-full bg-[#f5f4f1]" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="hidden lg:block h-48 rounded-2xl border border-line bg-white" />
+      </div>
+    </div>
+  </div>
+);
 
 export default ContentDetail;

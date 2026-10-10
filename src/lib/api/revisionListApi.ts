@@ -61,6 +61,8 @@ export interface AddItemData {
   notes?: string;
 }
 
+export type ItemStatus = 'success' | 'review' | null;
+
 export interface RevisionListStatistics {
   total_items: number;
   completed: number;
@@ -69,6 +71,8 @@ export interface RevisionListStatistics {
   review: number;
   progress_percentage: number;
   total_time_seconds: number;
+  /** Résultat de chaque élément (clé : object_id en texte) : la pastille de la carte (10/10/2026). */
+  statuses?: Record<string, ItemStatus>;
 }
 
 /**
@@ -196,6 +200,18 @@ export async function getRevisionListStatistics(listId: number): Promise<Revisio
 export async function quickAddToRevision(objectId: number): Promise<{ list_id: number; list_name: string; created_list: boolean; added: boolean }> {
   const response = await api.post('/revision-lists/quick_add/', { object_id: objectId });
   return response.data;
+}
+
+/** Plusieurs d'un coup (une requête, 50 au plus par envoi) : plus de boucle d'ajouts côté navigateur. */
+export async function quickAddManyToRevision(objectIds: number[]): Promise<{ list_id: number | null; added_count: number }> {
+  let listId: number | null = null;
+  let added = 0;
+  for (let i = 0; i < objectIds.length; i += 50) {
+    const response = await api.post('/revision-lists/quick_add/', { object_ids: objectIds.slice(i, i + 50) });
+    listId = response.data.list_id ?? listId;
+    added += response.data.added_count ?? 0;
+  }
+  return { list_id: listId, added_count: added };
 }
 
 /** Exercices à retravailler, pas encore rangés dans une liste. */

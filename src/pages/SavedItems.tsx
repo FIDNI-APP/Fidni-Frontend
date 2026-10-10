@@ -32,10 +32,14 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string
   exam: { icon: FileCheck, label: 'Examen', route: 'exams' },
 };
 
-const DIFFICULTY_DOT: Record<string, string> = {
-  facile: '#1a7a4a',
-  moyen: '#b7791f',
-  difficile: '#b91c1c',
+// L'API renvoie easy / medium / hard (anciennes données : facile / moyen / difficile) : libellé en français.
+const DIFFICULTY: Record<string, { label: string; color: string }> = {
+  easy: { label: 'Facile', color: '#1a7a4a' },
+  medium: { label: 'Moyen', color: '#b7791f' },
+  hard: { label: 'Difficile', color: '#b91c1c' },
+  facile: { label: 'Facile', color: '#1a7a4a' },
+  moyen: { label: 'Moyen', color: '#b7791f' },
+  difficile: { label: 'Difficile', color: '#b91c1c' },
 };
 
 export const SavedItems = () => {
@@ -275,10 +279,10 @@ export const SavedItems = () => {
                       {typeof item.class_level === 'string' ? item.class_level : item.class_level?.name || 'Niveau'}
                     </span>
                   )}
-                  {item.difficulty && (
+                  {DIFFICULTY[diffKey] && (
                     <span style={{ ...chipStyle, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ display: 'inline-flex', color: DIFFICULTY_DOT[diffKey] || '#9a958c' }}><DifficultyBars difficulty={diffKey} /></span>
-                      {item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1)}
+                      <span style={{ display: 'inline-flex', color: DIFFICULTY[diffKey].color }}><DifficultyBars difficulty={diffKey} /></span>
+                      {DIFFICULTY[diffKey].label}
                     </span>
                   )}
                 </div>
