@@ -67,9 +67,9 @@ const FavoriCard: React.FC<{
           <div className="relative z-10 mt-2 -ml-2">
             {inNotebook ? (
               <Link to={`/notebooks?nb=${inNotebook.notebookId}&chapitre=${inNotebook.sectionId}`}
-                className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-lg px-2 text-[12.5px] font-semibold text-brand-hover hover:bg-brand-soft">
+                className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-semibold text-brand-hover hover:bg-brand-soft">
                 <BookMarked className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 truncate">Dans ton cahier « {inNotebook.title} »</span>
+                <span className="min-w-0 line-clamp-2">Dans ton cahier « {inNotebook.title} »</span>
                 <ArrowRight className="h-3.5 w-3.5 shrink-0" />
               </Link>
             ) : (
@@ -142,8 +142,10 @@ export const FavorisPanel: React.FC<{
       ) : GROUPS.map((g) => {
         const list = (shown ?? []).filter((x) => x.kind === g.kind);
         if (!list.length) return null;
+        // « Range-les dans ton cahier » : seulement s'il reste une leçon à ranger.
+        const hint = g.kind === 'lesson' && !list.some((x) => !inNotebooks.has(String(x.id))) ? undefined : g.hint;
         return (
-          <Section key={g.kind} id={`favoris-${g.kind}`} title={g.title} count={list.length} hint={g.hint}>
+          <Section key={g.kind} id={`favoris-${g.kind}`} title={g.title} count={list.length} hint={hint}>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {list.map((x) => (
                 <FavoriCard key={savedKey(x)} item={x} inNotebook={inNotebooks.get(String(x.id))}

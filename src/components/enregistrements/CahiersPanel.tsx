@@ -1,9 +1,11 @@
 // Onglet « Cahiers » de Mes enregistrements : l'étagère des cahiers, leur création en un clic (petite fenêtre
-// pré-remplie) et, quand il n'y en a pas, comment on en remplit un.
+// pré-remplie) et, quand il n'y en a pas, comment on en remplit un. Une seule action « Nouveau cahier » visible
+// (la case pointillée ; sur téléphone, le bouton de la section) et une seule explication, sous l'étagère.
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowRight, BookMarked, BookOpen, FolderTree, Loader2, Plus, Printer } from 'lucide-react';
+import { ArrowRight, BookMarked, FolderTree, Loader2, Plus, Printer } from 'lucide-react';
+import { LessonIcon } from '@/components/icons/LessonIcon';
 import { CardsSkeleton, EmptyState, Section } from '@/components/space/Page';
 import type { profileLevel } from '@/lib/api/hubApi';
 import { summarize, type NbNotebook } from '@/components/notebook/notebookModel';
@@ -15,7 +17,7 @@ import { lessonsHome, type NotebooksState } from './useNotebooks';
 type Level = ReturnType<typeof profileLevel>;
 
 const STEPS: [React.ComponentType<{ className?: string }>, string, string][] = [
-  [BookOpen, 'Ouvre une leçon', 'puis « Ajouter à mon cahier ».'],
+  [LessonIcon, 'Ouvre une leçon', 'puis « Ajouter à mon cahier ».'],
   [FolderTree, 'Elle se range seule', 'dans le chapitre qui va bien.'],
   [Printer, 'Relis ou imprime', 'tout ton cours, chapitre par chapitre.'],
 ];
@@ -76,7 +78,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
 
   const lessonsLink = (
     <Link to={lessonsHome(level)} className="fd-btn-ghost min-h-10">
-      <BookOpen className="h-4 w-4" /> {level ? 'Voir les leçons de mon niveau' : 'Voir les leçons'}
+      <LessonIcon className="h-4 w-4" /> {level ? 'Voir les leçons de mon niveau' : 'Voir les leçons'}
     </Link>
   );
 
@@ -87,7 +89,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
       ) : list.length === 0 ? (
         <div className="flex flex-col gap-4">
           <EmptyState icon={BookMarked} title="Ton premier cahier de cours"
-            text="Ton cahier se remplit avec les leçons que tu y ranges depuis la page d’une leçon. Elles s’y classent par chapitre, prêtes à relire ou à imprimer."
+            text="Range-y les leçons que tu veux relire : elles se classent toutes seules par chapitre."
             action={(
               <button type="button" onClick={createFirst} disabled={quick} className="fd-btn-primary min-h-10" data-tour="cahiers-nouveau">
                 {quick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Créer mon cahier
@@ -97,10 +99,10 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
           <HowTo />
         </div>
       ) : (
-        <Section id="mes-cahiers" title="Mes cahiers" count={list.length}
-          hint="Tes leçons rangées par chapitre, à relire ou à imprimer."
+        <Section id="mes-cahiers" title="Mes cahiers"
           action={(
-            <button type="button" onClick={() => setCreating(true)} className="fd-btn-ghost min-h-10" data-tour="cahiers-nouveau">
+            // Téléphone seulement : sur grand écran, la case « Nouveau cahier » de l'étagère suffit.
+            <button type="button" onClick={() => setCreating(true)} className="fd-btn-ghost min-h-10 sm:hidden" data-tour="cahiers-nouveau">
               <Plus className="h-4 w-4" /> Nouveau cahier
             </button>
           )}>
@@ -110,7 +112,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
             ))}
             {/* Sur téléphone, le bouton de la section suffit. */}
             <li className="hidden sm:block">
-              <button type="button" onClick={() => setCreating(true)}
+              <button type="button" onClick={() => setCreating(true)} data-tour="cahiers-nouveau"
                 className="flex h-full min-h-[120px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d8d4cc] text-[13.5px] font-semibold text-ink-faint transition-colors hover:border-ink-faint hover:text-ink sm:min-h-[212px]">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft"><Plus className="h-5 w-5" /></span>
                 Nouveau cahier
@@ -120,7 +122,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
           <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-faint">
             <span className="inline-flex items-center gap-1.5">
               <BookMarked className="h-4 w-4 shrink-0 text-gold-strong" />
-              {anyEmpty ? 'Pour remplir un cahier' : 'Pour ajouter une leçon'} : ouvre-la, puis « Ajouter à mon cahier ».
+              {anyEmpty ? 'Pour remplir un cahier : ouvre une leçon' : 'Pour ajouter une leçon : ouvre-la'}, puis « Ajouter à mon cahier ».
             </span>
             <Link to={lessonsHome(level)} className="inline-flex min-h-10 items-center gap-1 font-semibold text-brand-hover hover:underline">
               {level ? 'Leçons de mon niveau' : 'Voir les leçons'} <ArrowRight className="h-3.5 w-3.5" />
@@ -130,7 +132,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
       )}
 
       <CreateNotebookModal open={creating} onClose={() => setCreating(false)} defaultLevelId={level?.id ?? null}
-        takenTitles={titles} create={create}
+        takenTitles={titles} existing={list ?? []} create={create}
         onCreated={(nb) => { setCreating(false); toast.success('Cahier créé'); open(nb); }} />
       <RenameNotebookModal notebook={renaming} onClose={() => setRenaming(null)}
         rename={async (title) => { if (renaming) { await rename(renaming.id, title); toast.success('Cahier renommé'); } }} />

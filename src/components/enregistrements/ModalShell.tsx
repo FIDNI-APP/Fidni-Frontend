@@ -1,5 +1,7 @@
 // Petite fenêtre (création, renommage d'un cahier) : voile, Échap, clic dehors, titre serif.
-import React, { useEffect } from 'react';
+// Clavier : le focus va au premier champ à l'ouverture, Tab tourne dans la fenêtre, et revient au bouton
+// d'origine à la fermeture.
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -13,12 +15,40 @@ export const ModalShell: React.FC<{
   onSubmit?: (e: React.FormEvent) => void;
   children: React.ReactNode;
 }> = ({ open, onClose, title, subtitle, labelId, onSubmit, children }) => {
+  const formRef = useRef<HTMLFormElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const raf = requestAnimationFrame(() => {
+      const form = formRef.current;
+      const first = form?.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), textarea:not([disabled])')
+        ?? form?.querySelector<HTMLElement>('button[type="submit"]:not([disabled])');
+      first?.focus();
+    });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { closeRef.current(); return; }
+      const form = formRef.current;
+      if (e.key !== 'Tab' || !form) return;
+      const items = Array.from(form.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ));
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const inside = form.contains(document.activeElement);
+      if (e.shiftKey && (!inside || document.activeElement === first)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (!inside || document.activeElement === last)) { e.preventDefault(); first.focus(); }
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('keydown', onKey);
+      if (before?.isConnected) before.focus();
+    };
+  }, [open]);
 
   if (typeof document === 'undefined') return null;
   return createPortal(
@@ -27,6 +57,7 @@ export const ModalShell: React.FC<{
         <div className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[2px] [align-items:safe_center]"
           onClick={onClose}>
           <motion.form
+            ref={formRef}
             onSubmit={(e) => { e.preventDefault(); onSubmit?.(e); }}
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

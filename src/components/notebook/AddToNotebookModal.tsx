@@ -35,7 +35,8 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [done, setDone] = useState<{ notebookId: string | number; chapter: string } | null>(null);
+  // Dernier ajout : « Ouvrir mon cahier » ouvre le cahier sur ce chapitre-là.
+  const [done, setDone] = useState<{ notebookId: string | number; sectionId: string | number; chapter: string } | null>(null);
   // Nom du cahier créé depuis la leçon : proposé, modifiable (avant : toujours « Matière - Niveau »).
   const [newTitle, setNewTitle] = useState('');
   useEffect(() => {
@@ -83,7 +84,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
       if (!section) section = await addChapterToNotebook(String(nb.id), String(chapter.id));
       await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
       toast.success(`Leçon ajoutée à « ${chapter.name} »`);
-      setDone({ notebookId: nb.id, chapter: chapter.name });
+      setDone({ notebookId: nb.id, sectionId: section!.id, chapter: chapter.name });
       onChanged?.();
       await load();
     } catch {
@@ -106,7 +107,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
         let section: { id: string | number } | undefined = nb.sections?.find((s) => same(s.chapter?.id, chapter.id));
         if (!section) section = await addChapterToNotebook(String(nb.id), String(chapter.id));
         await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
-        setDone({ notebookId: nb.id, chapter: chapter.name });
+        setDone({ notebookId: nb.id, sectionId: section!.id, chapter: chapter.name });
       }
       toast.success('Cahier créé, leçon ajoutée');
       onChanged?.();
@@ -206,7 +207,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
                 )}
 
                 {done && (
-                  <Link to={`/notebooks?nb=${done.notebookId}`} onClick={onClose}
+                  <Link to={`/notebooks?nb=${done.notebookId}&chapitre=${done.sectionId}`} onClick={onClose}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-[13.5px] font-semibold text-ink-soft hover:border-ink hover:text-ink">
                     Ouvrir mon cahier <ArrowRight className="w-4 h-4" />
                   </Link>

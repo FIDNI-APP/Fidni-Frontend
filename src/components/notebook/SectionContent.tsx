@@ -1,6 +1,8 @@
 // Un chapitre ouvert dans la liseuse du cahier : ses leçons en onglets, la leçon sur sa feuille, son sommaire,
 // « Leçon suivante » en bas. Menu « ⋯ » d'une leçon : ouvrir sa page, la retirer du cahier. « Annoter » n'est
-// proposé qu'avec une souris (les outils ne sont pas faits pour le doigt).
+// proposé qu'avec une souris (les outils ne sont pas faits pour le doigt), et seulement une fois les annotations
+// chargées : l'enregistrement remplace toutes celles de la leçon, il ne doit jamais partir d'une liste vide par erreur.
+// Sur téléphone, les annotations (placées à la largeur d'un ordinateur) ne sont pas affichées.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -42,9 +44,14 @@ const SectionContent: React.FC<{
   const next = entries[Math.min(index, entries.length - 1) + 1];
 
   const phone = usePhone();
+  const phoneRef = useRef(phone);
+  phoneRef.current = phone;
   const fine = useFinePointer();
   const [annotating, setAnnotating] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[] | undefined>(undefined);
+  const loaded = annotations !== undefined;
+  // Annoter : souris, écran assez large (sur téléphone les annotations ne sont pas affichées), annotations chargées.
+  const canAnnotate = fine && !phone && loaded;
   const [ready, setReady] = useState(false);
   const [menu, setMenu] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -66,7 +73,8 @@ const SectionContent: React.FC<{
     let cancelled = false;
     getLessonAnnotations(String(notebookId), String(section.id), String(entry.id))
       .then((a) => { if (!cancelled) setAnnotations(a as Annotation[]); })
-      .catch(() => { if (!cancelled) setAnnotations([]); });
+      // Échec : on ne fait pas comme s'il n'y en avait aucune (le prochain enregistrement les effacerait).
+      .catch(() => { if (!cancelled && !phoneRef.current) toast.error('Tes annotations n’ont pas pu se charger.'); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.id, notebookId, section.id]);
@@ -103,58 +111,76 @@ const SectionContent: React.FC<{
 
   if (!entry) return null;
   const item = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-[13.5px] font-medium transition-colors';
+  // Téléphone, une seule leçon : son titre répéterait le chapitre ; le sommaire prend sa place, à côté du « ⋯ ».
+  const merged = phone && entries.length === 1 && outline.items.length >= 2;
+
+  // « Annoter » (souris, annotations chargées) et le menu « ⋯ » de la leçon.
+  const tools = (
+    <>
+      {canAnnotate && (
+        <button type="button" onClick={() => setAnnotating((v) => !v)} aria-pressed={annotating} data-tour="cahier-annoter"
+          className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-semibold transition-colors ${
+            annotating ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:border-ink hover:text-ink'}`}>
+          <PenLine className="h-4 w-4" /> {annotating ? 'Terminer' : 'Annoter'}
+        </button>
+      )}
+      <button ref={menuBtn} type="button" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu}
+        aria-label="Actions de la leçon"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink">
+        {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
+      </button>
+      <FloatingPanel anchorRef={menuBtn} open={menu} onClose={() => setMenu(false)} placement="bottom-end" role="menu"
+        className="w-64 rounded-xl border border-line bg-white p-1.5 shadow-[0_12px_32px_rgba(20,18,16,.14)]">
+        <Link role="menuitem" to={`/lessons/${entry.lesson.id}`} onClick={() => setMenu(false)}
+          className={`${item} text-ink-soft hover:bg-[#f7f6f3] hover:text-ink`}>
+          <ExternalLink className="h-4 w-4 text-ink-faint" /> Ouvrir la page de la leçon
+        </Link>
+        <button type="button" role="menuitem" onClick={remove} className={`${item} text-[#a23b34] hover:bg-[#fbecea]`}>
+          <Trash2 className="h-4 w-4" /> Retirer du cahier
+        </button>
+      </FloatingPanel>
+    </>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Leçons du chapitre */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-white py-1.5 pl-3 pr-1.5 sm:pl-4">
-        {entries.length > 1 ? (
-          <div role="tablist" aria-label="Leçons du chapitre" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-0.5 scrollbar-hide">
-            {entries.map((e, i) => {
-              const on = e.id === entry.id;
-              return (
-                <button key={e.id} type="button" role="tab" aria-selected={on} onClick={() => setIndex(i)}
-                  className={`min-h-9 max-w-[240px] shrink-0 truncate rounded-full px-3 text-[12.5px] font-semibold transition-colors ${
-                    on ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-soft hover:text-ink'}`}>
-                  {e.lesson.title}
-                </button>
-              );
-            })}
+      {merged ? (
+        <div className="flex shrink-0 items-start gap-1.5 border-b border-line bg-white py-1.5 pl-3 pr-1.5">
+          <h2 className="sr-only">{entry.lesson.title}</h2>
+          <LessonOutlineBar outline={outline} storageKey={`lecon-${entry.lesson.id}`} className="min-w-0 flex-1" />
+          {tools}
+        </div>
+      ) : (
+        <>
+          {/* Leçons du chapitre */}
+          <div className="flex shrink-0 items-center gap-2 border-b border-line bg-white py-1.5 pl-3 pr-1.5 sm:pl-4">
+            {entries.length > 1 ? (
+              <div role="tablist" aria-label="Leçons du chapitre" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-0.5 scrollbar-hide">
+                {entries.map((e, i) => {
+                  const on = e.id === entry.id;
+                  return (
+                    <button key={e.id} type="button" role="tab" aria-selected={on} onClick={() => setIndex(i)}
+                      className={`min-h-10 max-w-[240px] shrink-0 truncate rounded-full px-3 text-[12.5px] font-semibold transition-colors ${
+                        on ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-soft hover:text-ink'}`}>
+                      {e.lesson.title}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <h2 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{entry.lesson.title}</h2>
+            )}
+            {tools}
           </div>
-        ) : (
-          <h2 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{entry.lesson.title}</h2>
-        )}
 
-        {fine && (
-          <button type="button" onClick={() => setAnnotating((v) => !v)} aria-pressed={annotating} data-tour="cahier-annoter"
-            className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-semibold transition-colors ${
-              annotating ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:border-ink hover:text-ink'}`}>
-            <PenLine className="h-4 w-4" /> {annotating ? 'Terminer' : 'Annoter'}
-          </button>
-        )}
-        <button ref={menuBtn} type="button" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu}
-          aria-label="Actions de la leçon"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink">
-          {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
-        </button>
-        <FloatingPanel anchorRef={menuBtn} open={menu} onClose={() => setMenu(false)} placement="bottom-end" role="menu"
-          className="w-64 rounded-xl border border-line bg-white p-1.5 shadow-[0_12px_32px_rgba(20,18,16,.14)]">
-          <Link role="menuitem" to={`/lessons/${entry.lesson.id}`} onClick={() => setMenu(false)}
-            className={`${item} text-ink-soft hover:bg-[#f7f6f3] hover:text-ink`}>
-            <ExternalLink className="h-4 w-4 text-ink-faint" /> Ouvrir la page de la leçon
-          </Link>
-          <button type="button" role="menuitem" onClick={remove} className={`${item} text-[#a23b34] hover:bg-[#fbecea]`}>
-            <Trash2 className="h-4 w-4" /> Retirer du cahier
-          </button>
-        </FloatingPanel>
-      </div>
-
-      {/* Sommaire de la leçon : barre repliable sur écran moyen. */}
-      <LessonOutlineBar outline={outline} storageKey={`lecon-${entry.lesson.id}`} className="mx-3 mt-2 shrink-0 xl:hidden" />
+          {/* Sommaire de la leçon : barre repliable jusqu'aux très grands écrans (la colonne mangerait la feuille). */}
+          <LessonOutlineBar outline={outline} storageKey={`lecon-${entry.lesson.id}`} className="mx-3 mt-2 shrink-0 2xl:hidden" />
+        </>
+      )}
 
       <div className="flex min-h-0 flex-1">
         {outline.items.length >= 2 && (
-          <aside className="hidden w-[230px] shrink-0 overflow-y-auto border-r border-line bg-[#fcfbf9] px-4 py-5 xl:block">
+          <aside className="hidden w-[230px] shrink-0 overflow-y-auto border-r border-line bg-[#fcfbf9] px-4 py-5 2xl:block">
             <LessonOutlinePanel outline={outline} storageKey={`lecon-${entry.lesson.id}`} title="Dans cette leçon" />
           </aside>
         )}
@@ -175,9 +201,10 @@ const SectionContent: React.FC<{
               className={phone ? 'py-1' : 'p-6'}
               notebookTheme={phone ? PhoneTheme : NOTEBOOK_THEME}
               onReady={onReady}
-              onSaveAnnotations={save}
+              onSaveAnnotations={loaded ? save : undefined}
               initialAnnotations={annotations}
-              annotating={annotating && fine}
+              annotating={annotating && canAnnotate}
+              showAnnotations={!phone}
             />
           </div>
           {ready && next && (

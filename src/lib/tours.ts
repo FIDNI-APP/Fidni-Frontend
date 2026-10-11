@@ -260,7 +260,7 @@ export const TOURS: Tour[] = [
     requires: 'cahier-sections',
     version: 2,
     steps: [
-      { target: 'cahier-sections', title: 'Les chapitres', body: 'Ceux qui ont des leçons d’abord. Un chapitre vide ? « Trouver une leçon » t’emmène à ses leçons ; sur sa page, « Ajouter à mon cahier ».' },
+      { target: 'cahier-sections', title: 'Les chapitres', body: 'Ceux qui ont des leçons d’abord. Un chapitre vide ? Touche-le pour trouver ses leçons ; sur sa page, « Ajouter à mon cahier ».' },
       { target: 'cahier-contenu', title: 'La lecture', body: 'Tes leçons s’affichent ici, comme dans un vrai cahier. Le menu ⋯ d’une leçon : ouvrir sa page ou la retirer du cahier.' },
       { target: 'cahier-annoter', title: 'Annoter', body: 'Surligne, écris une note ou dessine sur la feuille : c’est enregistré tout seul.' },
       { target: 'cahier-imprimer', title: 'Imprimer le cahier', body: 'Tout ton cahier en PDF, un chapitre par page.' },

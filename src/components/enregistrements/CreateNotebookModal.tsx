@@ -1,11 +1,13 @@
 // « Nouveau cahier » : petite fenêtre pré-remplie (niveau du profil, la matière du niveau, nom proposé).
-// Un clic suffit ; le cahier créé s'ouvre aussitôt.
+// Un clic suffit ; le cahier créé s'ouvre aussitôt. Si l'élève a déjà un cahier de ce niveau et de cette
+// matière, on le lui rappelle (avec un lien pour l'ouvrir) sans empêcher d'en créer un autre.
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookMarked, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, BookMarked, Loader2 } from 'lucide-react';
 import { getClassLevels } from '@/lib/api/hierarchyApi';
 import { ModalShell, FormError, fieldCls } from './ModalShell';
 import { subjectsFor, type SubjectChoice } from './useNotebooks';
-import type { Id, NbNotebook } from '@/components/notebook/notebookModel';
+import { sameId, type Id, type NbNotebook } from '@/components/notebook/notebookModel';
 
 interface Level { id: Id; name: string }
 
@@ -24,9 +26,11 @@ export const CreateNotebookModal: React.FC<{
   onClose: () => void;
   defaultLevelId?: string | null;
   takenTitles: string[];
+  /** Cahiers de l'élève : pour signaler celui qui a déjà ce niveau et cette matière. */
+  existing?: NbNotebook[];
   create: (args: { levelId: Id; subjectId?: Id | null; title?: string }) => Promise<NbNotebook>;
   onCreated: (nb: NbNotebook) => void;
-}> = ({ open, onClose, defaultLevelId, takenTitles, create, onCreated }) => {
+}> = ({ open, onClose, defaultLevelId, takenTitles, existing = [], create, onCreated }) => {
   const [levels, setLevels] = useState<Level[] | null>(null);
   const [levelId, setLevelId] = useState<string>('');
   const [subjects, setSubjects] = useState<SubjectChoice[] | null>(null);
@@ -65,6 +69,9 @@ export const CreateNotebookModal: React.FC<{
   }, [level, subject, touched, takenTitles]);
 
   const ready = Boolean(levelId && subjectId && title.trim()) && !busy;
+  const twin = levelId && subjectId
+    ? existing.find((n) => sameId(n.class_level?.id, levelId) && sameId(n.subject?.id, subjectId)) ?? null
+    : null;
 
   const submit = async () => {
     if (!ready) return;
@@ -114,6 +121,16 @@ export const CreateNotebookModal: React.FC<{
         <input value={title} maxLength={200} onChange={(e) => { setTouched(true); setTitle(e.target.value); }}
           placeholder="Ex. : Maths - 2ème Bac SM" className={fieldCls} />
       </label>
+
+      {twin && (
+        <p className="mt-4 flex flex-wrap items-center gap-x-2 rounded-xl bg-gold-soft px-3.5 py-2 text-[13px] text-ink-soft ring-1 ring-gold-line">
+          <span className="min-w-0">Tu as déjà « <b className="font-semibold text-ink">{twin.title}</b> » pour ce niveau.</span>
+          <Link to={`/notebooks?nb=${twin.id}`} onClick={onClose}
+            className="inline-flex min-h-10 items-center gap-1 font-semibold text-brand-hover hover:underline">
+            Ouvrir <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </p>
+      )}
 
       {error && <FormError>{error}</FormError>}
 

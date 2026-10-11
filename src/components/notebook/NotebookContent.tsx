@@ -1,6 +1,7 @@
 // Une leçon du cahier sur sa feuille, avec les annotations de l'élève (surlignages, traits, notes).
-// Les annotations existantes sont toujours visibles ; la barre d'outils n'apparaît qu'en mode « Annoter »
-// (bouton de SectionContent, proposé seulement avec une souris). Enregistrement automatique (1 s après un geste).
+// Les annotations existantes sont visibles (sauf `showAnnotations={false}` : téléphone) ; la barre d'outils
+// n'apparaît qu'en mode « Annoter » (bouton de SectionContent, proposé seulement avec une souris).
+// Enregistrement automatique, 1 s après un geste, et aussitôt si la leçon se ferme avant (autre leçon, autre page).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Eraser, Highlighter, Loader2, Pen, Redo2, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
@@ -29,6 +30,8 @@ interface NotebookContentProps {
   initialAnnotations?: Annotation[];
   /** Mode annotation : barre d'outils visible, la feuille répond aux gestes. */
   annotating?: boolean;
+  /** Afficher les annotations (positions en px à la largeur où elles ont été faites). */
+  showAnnotations?: boolean;
 }
 
 // Quatre couleurs du site : or, vert, brique, encre.
@@ -73,6 +76,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   onSaveAnnotations,
   initialAnnotations,
   annotating = false,
+  showAnnotations = true,
 }) => {
   const hasStructure = Boolean((structure as { sections?: unknown[] } | undefined)?.sections?.length);
   const [tool, setTool] = useState<Tool | null>(null);
@@ -80,7 +84,13 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations ?? []);
   const [history, setHistory] = useState<{ list: Annotation[][]; at: number }>({ list: [initialAnnotations ?? []], at: 0 });
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // Changements pas encore enregistrés ; `version` compte les gestes (un enregistrement fini ne « nettoie »
+  // que s'il n'y a rien eu depuis son départ).
   const dirty = useRef(false);
+  const version = useRef(0);
+  const touch = () => { dirty.current = true; version.current += 1; };
+  // Note qu'on vient de poser : seule celle-ci prend le focus.
+  const [fresh, setFresh] = useState<string | null>(null);
 
   // Drawing in progress
   const [drawing, setDrawing] = useState(false);
@@ -102,6 +112,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
 
   const commit = useCallback((next: Annotation[]) => {
     dirty.current = true;
+    version.current += 1;
     setAnnotations(next);
     setHistory((h) => {
       const list = [...h.list.slice(0, h.at + 1), next];
@@ -111,13 +122,13 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
 
   const undo = () => {
     if (history.at <= 0) return;
-    dirty.current = true;
+    touch();
     setAnnotations(history.list[history.at - 1]);
     setHistory((h) => ({ ...h, at: h.at - 1 }));
   };
   const redo = () => {
     if (history.at >= history.list.length - 1) return;
-    dirty.current = true;
+    touch();
     setAnnotations(history.list[history.at + 1]);
     setHistory((h) => ({ ...h, at: h.at + 1 }));
   };
@@ -126,10 +137,11 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   useEffect(() => {
     if (!dirty.current || !onSaveAnnotations) return;
     const timer = window.setTimeout(async () => {
+      const v = version.current;
       setSaveState('saving');
       try {
         await onSaveAnnotations(annotations);
-        dirty.current = false;
+        if (version.current === v) dirty.current = false;
         setSaveState('saved');
       } catch {
         setSaveState('error');
@@ -137,6 +149,24 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     }, 1000);
     return () => window.clearTimeout(timer);
   }, [annotations, onSaveAnnotations]);
+
+  // Leçon fermée avant l'enregistrement (autre leçon, autre chapitre, autre page) : on enregistre tout de suite.
+  const latest = useRef({ annotations, onSaveAnnotations });
+  latest.current = { annotations, onSaveAnnotations };
+  useEffect(() => () => {
+    const { annotations: list, onSaveAnnotations: saveNow } = latest.current;
+    if (dirty.current && saveNow) saveNow(list).catch(() => {});
+  }, []);
+  // Onglet fermé ou rechargé avec un geste pas encore enregistré : le navigateur demande confirmation.
+  useEffect(() => {
+    const onLeave = (e: BeforeUnloadEvent) => {
+      if (!dirty.current || !latest.current.onSaveAnnotations) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onLeave);
+    return () => window.removeEventListener('beforeunload', onLeave);
+  }, []);
 
   const point = (e: React.PointerEvent) => {
     const rect = layerRef.current!.getBoundingClientRect();
@@ -150,7 +180,11 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     e.preventDefault();
     const p = point(e);
     if (tool === 'note') {
-      commit([...annotations, { id: `note-${Date.now()}`, type: 'note', color, position: { x: p.x, y: p.y, width: 200, height: 96 }, content: '' }]);
+      // La note reste dans la feuille (le calque coupe ce qui dépasse).
+      const x = Math.max(0, Math.min(p.x, layerRef.current.clientWidth - 260));
+      const id = `note-${Date.now()}`;
+      commit([...annotations, { id, type: 'note', color, position: { x, y: p.y, width: 200, height: 96 }, content: '' }]);
+      setFresh(id);
       setTool(null);
       return;
     }
@@ -190,7 +224,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   // Texte d'une note : remplace l'état courant de l'historique (pas une étape par lettre tapée).
   const editNote = (id: string, text: string) => {
     const next = annotations.map((a) => (a.id === id ? { ...a, content: text } : a));
-    dirty.current = true;
+    touch();
     setAnnotations(next);
     setHistory((h) => ({ ...h, list: h.list.map((l, i) => (i === h.at ? next : l)) }));
   };
@@ -199,6 +233,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   };
 
   const erasing = annotating && tool === 'eraser';
+  const shown = showAnnotations ? annotations : [];
   const toolBtn = 'inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
 
   return (
@@ -255,14 +290,14 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
         {/* Calque des annotations : ne capte les gestes qu'en mode annotation avec un outil. */}
         <div
           ref={layerRef}
-          className={`absolute inset-0 z-20 ${annotating && tool && tool !== 'eraser' ? (tool === 'note' ? 'cursor-text' : 'cursor-crosshair') : ''}`}
+          className={`absolute inset-0 z-20 overflow-hidden ${annotating && tool && tool !== 'eraser' ? (tool === 'note' ? 'cursor-text' : 'cursor-crosshair') : ''}`}
           style={{ pointerEvents: annotating && tool ? 'auto' : 'none', touchAction: annotating && tool ? 'none' : undefined }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {annotations.filter((a) => a.type === 'highlight').map((a) => (
+          {shown.filter((a) => a.type === 'highlight').map((a) => (
             <div key={a.id} onClick={() => erase(a.id)}
               className={`absolute rounded-sm ${erasing ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#a23b34]' : ''}`}
               style={{
@@ -272,7 +307,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
           ))}
 
           <svg className="absolute inset-0 h-full w-full" style={{ pointerEvents: 'none' }} aria-hidden>
-            {annotations.filter((a) => a.type === 'pen').map((a) => (
+            {shown.filter((a) => a.type === 'pen').map((a) => (
               <g key={a.id} onClick={() => erase(a.id)} style={{ cursor: erasing ? 'pointer' : 'default' }}>
                 <path d={a.path || ''} stroke={a.color} strokeWidth={a.strokeWidth || 2} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                 {/* Zone de clic plus large que le trait, pour la gomme. */}
@@ -290,12 +325,13 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
               }} />
           )}
 
-          {annotations.filter((a) => a.type === 'note').map((a) => (
+          {/* Note posée sur un écran plus large : ramenée dans la feuille plutôt que coupée. */}
+          {shown.filter((a) => a.type === 'note').map((a) => (
             <div key={a.id} onClick={() => erase(a.id)}
               className={`absolute max-w-[260px] rounded-r-lg border-l-4 bg-[#fffbea] shadow-[0_4px_14px_rgba(20,18,16,.10)] ${erasing ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#a23b34]' : ''}`}
-              style={{ left: a.position.x, top: a.position.y, minWidth: 180, borderLeftColor: a.color, pointerEvents: annotating ? 'auto' : 'none' }}>
+              style={{ left: `max(0px, min(${a.position.x}px, 100% - 200px))`, top: a.position.y, minWidth: 180, borderLeftColor: a.color, pointerEvents: annotating ? 'auto' : 'none' }}>
               {annotating && !erasing ? (
-                <textarea value={a.content || ''} autoFocus={!a.content} rows={3}
+                <textarea value={a.content || ''} autoFocus={a.id === fresh} rows={3}
                   onChange={(e) => editNote(a.id, e.target.value)}
                   placeholder="Écris ta note…"
                   className="block w-full resize-y border-none bg-transparent p-2.5 text-[13px] leading-snug text-ink outline-none placeholder:text-ink-faint" />

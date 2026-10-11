@@ -56,10 +56,8 @@ export const NotebookCover: React.FC<{
                   <span className="block truncate font-medium text-ink-soft">{last.title}</span>
                 </>
               ) : (
-                <>
-                  <span className="block">Pas encore de leçon</span>
-                  <span className="block truncate font-medium text-ink-soft">Range-en une depuis sa page</span>
-                </>
+                // La façon de le remplir est dite une fois, sous l'étagère.
+                <span className="block">Pas encore de leçon</span>
               )}
             </span>
           </span>

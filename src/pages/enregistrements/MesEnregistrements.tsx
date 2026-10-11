@@ -9,7 +9,7 @@ import React, { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Bookmark, BookMarked, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Page, PageHeader, Segmented } from '@/components/space/Page';
+import { CardsSkeleton, Page, PageHeader, Segmented } from '@/components/space/Page';
 import { exercisesHome } from '@/components/layout/nav';
 import { profileLevel } from '@/lib/api/hubApi';
 import { useSaved } from '@/components/enregistrements/useSaved';
@@ -22,7 +22,7 @@ type Tab = 'favoris' | 'cahiers';
 const ErrorBanner: React.FC<{ text: string; onRetry: () => void }> = ({ text, onRetry }) => (
   <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
     <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{text}</p>
-    <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+    <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
   </div>
 );
 
@@ -54,7 +54,12 @@ export const MesEnregistrements: React.FC = () => {
     return map;
   }, [notebooks.list]);
 
-  if (!isAuthenticated) return null;
+  const header = <PageHeader eyebrow="Mon suivi" title="Mes enregistrements" subtitle="Ce que tu as mis de côté pour y revenir." />;
+
+  // Session en cours de vérification : la page en squelette plutôt qu'une page blanche.
+  if (!isAuthenticated) {
+    return authLoading ? <Page>{header}<CardsSkeleton n={4} className="sm:grid-cols-2" /></Page> : null;
+  }
 
   // Chargement en échec sans rien à montrer : pas d'état vide trompeur, seulement le bandeau.
   const savedDown = saved.failed && !saved.items?.length;
@@ -68,7 +73,7 @@ export const MesEnregistrements: React.FC = () => {
 
   return (
     <Page>
-      <PageHeader eyebrow="Mon suivi" title="Mes enregistrements" subtitle="Ce que tu as mis de côté pour y revenir." />
+      {header}
 
       <div className="mb-8" data-tour="enregistrements-onglets">
         <Segmented<Tab> label="Favoris ou cahiers" value={tab} onChange={setTab} options={[

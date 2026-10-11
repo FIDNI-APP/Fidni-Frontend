@@ -1,5 +1,5 @@
 // Chapitres d'un cahier ouvert : ceux qui ont des leçons d'abord (avec leur nombre), puis, repliés,
-// les chapitres sans leçon, chacun menant aux leçons de ce chapitre (« Trouver une leçon »).
+// les chapitres sans leçon, une ligne chacun qui mène aux leçons de ce chapitre (la consigne est dite une fois).
 // Ordinateur : colonne à gauche. Téléphone : un sélecteur pleine largeur qui ouvre une feuille du bas,
 // pour laisser toute la largeur à la leçon.
 import React, { useEffect, useState } from 'react';
@@ -51,15 +51,16 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
             <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" aria-hidden />
             Chapitres sans leçon ({empty.length})
           </summary>
-          <ul className="mt-1 flex flex-col gap-0.5">
+          <p className="px-3 pb-1 text-[12px] leading-snug text-ink-faint">Touche un chapitre pour trouver ses leçons.</p>
+          <ul className="flex flex-col gap-0.5">
             {empty.map((s) => (
               <li key={s.id}>
                 <Link to={chapterLessonsPath(notebook, s.chapter)} onClick={onPicked}
-                  className="group/ch block rounded-xl px-3 py-2 hover:bg-[#f7f6f3]">
-                  <span className="block truncate text-[13px] text-ink-faint group-hover/ch:text-ink">{s.chapter?.name}</span>
-                  <span className="mt-0.5 inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand-hover">
-                    Trouver une leçon <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                  </span>
+                  aria-label={`${s.chapter?.name} : trouver une leçon`}
+                  className="group/ch flex min-h-10 items-center gap-2 rounded-xl px-3 text-[13px] text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink focus-visible:bg-[#f7f6f3] focus-visible:text-ink">
+                  <span className="min-w-0 flex-1 truncate">{s.chapter?.name}</span>
+                  <span className="hidden shrink-0 text-[12px] font-semibold text-brand-hover group-hover/ch:inline group-focus-visible/ch:inline">Trouver une leçon</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#cfcdc8] group-hover/ch:text-brand-hover group-focus-visible/ch:text-brand-hover" aria-hidden />
                 </Link>
               </li>
             ))}

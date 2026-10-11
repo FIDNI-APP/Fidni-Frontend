@@ -133,7 +133,7 @@ const StudentNotebook: React.FC = () => {
             ) : (
               <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
                 <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ton cahier n’a pas pu se charger. Vérifie ta connexion.</p>
-                <button type="button" onClick={() => load()} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+                <button type="button" onClick={() => load()} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
               </div>
             )}
           </div>
@@ -158,7 +158,7 @@ const StudentNotebook: React.FC = () => {
                       </Link>
                     )} />
                   <p className="mt-4 text-center text-[12.5px] text-ink-faint">
-                    Ou choisis un chapitre <span className="md:hidden">ci-dessus</span><span className="hidden md:inline">à gauche</span> : « Trouver une leçon » t’emmène à ses leçons.
+                    Ou touche un chapitre <span className="md:hidden">ci-dessus</span><span className="hidden md:inline">à gauche</span> pour trouver ses leçons.
                   </p>
                 </div>
               </div>
