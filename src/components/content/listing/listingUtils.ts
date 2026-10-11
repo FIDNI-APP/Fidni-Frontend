@@ -36,8 +36,23 @@ export const DIFFICULTY: Record<string, { label: string; dot: string; text: stri
 
 const nameOf = (x: unknown): string => (typeof x === 'string' ? x : (x as { name?: string } | undefined)?.name ?? '');
 
-export function chapterLabel(item: ListItem): string | null {
+/** Niveau de la carte : celui de la page s'il fait partie des niveaux du contenu, sinon le premier. */
+function cardLevel(item: ListItem, levelSlug?: string | null) {
+  const levels = (item.class_levels ?? []).map((lv) => ({ id: lv.id, slug: lv.slug || (lv.name ? slugify(lv.name) : '') }))
+    .filter((lv) => lv.slug);
+  return (levelSlug && levels.find((lv) => lv.slug === levelSlug)) || levels[0] || null;
+}
+
+/** Chapitres du contenu, celui du niveau de la carte d'abord (un dossier qui existe à ce niveau). */
+function chaptersFor(item: ListItem, levelSlug?: string | null) {
   const ch = item.chapters ?? [];
+  const level = cardLevel(item, levelSlug);
+  const i = level ? ch.findIndex((c) => c.levels?.includes(Number(level.id))) : -1;
+  return i > 0 ? [ch[i], ...ch.slice(0, i), ...ch.slice(i + 1)] : ch;
+}
+
+export function chapterLabel(item: ListItem, levelSlug?: string | null): string | null {
+  const ch = chaptersFor(item, levelSlug);
   if (!ch.length) return null;
   return nameOf(ch[0]) + (ch.length > 1 ? ` +${ch.length - 1}` : '');
 }
@@ -47,12 +62,11 @@ export function chapterLabel(item: ListItem): string | null {
  * de la page affichée, s'il fait partie de ceux du contenu ; sinon le premier niveau du contenu.
  */
 export function chapterHref(item: ListItem, kind: ListKind, levelSlug?: string | null): string | null {
-  const ch = item.chapters?.[0];
+  const ch = chaptersFor(item, levelSlug)[0];
   if (!ch?.name) return null;
-  const levels = (item.class_levels ?? []).map((lv) => lv.slug || (lv.name ? slugify(lv.name) : '')).filter(Boolean);
-  const level = levelSlug && levels.includes(levelSlug) ? levelSlug : levels[0];
+  const level = cardLevel(item, levelSlug);
   if (!level) return null;
-  return hubPath(BASE_PATH[kind].slice(1), level, ch.slug || slugify(ch.name));
+  return hubPath(BASE_PATH[kind].slice(1), level.slug, ch.slug || slugify(ch.name));
 }
 
 export function levelLabel(item: ListItem): string | null {

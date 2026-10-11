@@ -135,7 +135,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const progress = progressOf(content);
   const started = contentType === 'lesson' ? null : questionProgress(content);
   const canManage = user?.id === content.author?.id || isModerator(user);
-  const chapter = chapterLabel(content);
+  const chapter = chapterLabel(content, levelSlug);
   const chapterTo = chapterHref(content, contentType, levelSlug);
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
   const structure = structureOf(content);

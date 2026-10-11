@@ -7,7 +7,7 @@
 // Titres et textes des pages de niveau et de chapitre : backend (apps/caracteristics/hubs.py), identiques à la
 // page pré-remplie que lisent les moteurs de recherche (config/seo.py).
 import React, { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ContentList } from './ContentList';
 import { ContentFolders } from './ContentFolders';
 import { NotFound } from '@/pages/NotFound';
@@ -29,6 +29,7 @@ const Loading: React.FC = () => (
 export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType }) => {
   const { level = '', chapter } = useParams<{ level: string; chapter?: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const section = SECTION_OF[contentType];
   // Page d'un niveau sans paramètre de liste : ses chapitres en dossiers.
@@ -48,6 +49,11 @@ export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType
     getHub(section, level, chapter)
       .then((data) => {
         if (cancelled) return;
+        // Chapitre renommé ou absorbé (programme officiel) : on remplace l'adresse, filtres compris.
+        if (data.redirect) {
+          navigate(data.redirect + location.search + location.hash, { replace: true });
+          return;
+        }
         hubCache.delete(cacheKey);
         hubCache.set(cacheKey, data);
         if (hubCache.size > HUB_CACHE_MAX) hubCache.delete(hubCache.keys().next().value as string);
@@ -55,6 +61,7 @@ export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType
       })
       .catch(() => { if (!cancelled) setMissing(true); });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section, level, chapter, cacheKey, reload]);
 
   if (missing) return <NotFound />;

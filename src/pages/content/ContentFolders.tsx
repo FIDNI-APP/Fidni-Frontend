@@ -174,7 +174,7 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
 
 /* ───────────────────────── Chapitres d'un niveau ───────────────────────── */
 
-/** Dossiers regroupés par sous-domaine, dans l'ordre reçu (le serveur les trie déjà). */
+/** Dossiers regroupés par sous-domaine, dans l'ordre reçu (le serveur les trie dans l'ordre du programme officiel). */
 function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
   const t = SECTION_TEXT[kind];
   const groups: FolderGroup[] = [];
@@ -190,6 +190,7 @@ function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
       countLabel: plural(f.count, t.noun),
       progress: f.mine ?? null,
       doneWord: t.doneWord,
+      aussi: f.aussi,
       // Le chapitre choisi est compté à l'ouverture de sa liste (ContentList, trackHubChoice).
       onOpen: () => trackAction('dossier-chapitre'),
     });

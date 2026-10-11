@@ -34,7 +34,10 @@ export type ListSort = SortOption | 'easiest';
 /** Niveau d'une carte de liste : le slug mène à la page du niveau (/exercises/niveau/<slug>). */
 export type ListClassLevel = ClassLevelModel & { slug?: string };
 /** Chapitre d'une carte de liste (slug : page du chapitre). */
-export interface ListChapter { id: number; name: string; slug?: string }
+/** `levels` : ids des niveaux auxquels le chapitre est rattaché (programme officiel, 11/10/2026) ; un contenu
+ *  de plusieurs niveaux peut porter le chapitre de chacun (« Calcul trigonométrique » au Tronc commun,
+ *  « Trigonométrie (formules de transformation) » en 1ère). */
+export interface ListChapter { id: number; name: string; slug?: string; levels?: number[] }
 
 /** Champs ajoutés à chaque ligne des listes (et au détail pour `felt`). */
 interface ListExtras {

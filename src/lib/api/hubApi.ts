@@ -6,8 +6,17 @@ import { api } from './apiClient';
 export interface HubChapter { id: number; name: string; slug: string; count: number; url: string }
 /** Dossier de chapitre (10/10/2026) : TOUS les chapitres du niveau, `count` = 0 pour un dossier vide ;
  *  `mine` (élève connecté) = contenus du chapitre qu'il a terminés. */
-export interface HubFolder extends HubChapter { subfield: string | null; mine?: { done: number; success: number } }
+export interface HubFolder extends HubChapter {
+  subfield: string | null;
+  mine?: { done: number; success: number };
+  /** Rang dans le programme officiel du niveau (les dossiers arrivent déjà dans cet ordre). */
+  ordre?: number;
+  /** Mots d'un ancien dossier absorbé par celui-ci (« Théorème des accroissements finis »), affichés discrètement. */
+  aussi?: string[];
+}
 export interface HubInfo {
+  /** Ancienne adresse de chapitre (programme officiel du 11/10/2026) : seul champ renvoyé, la page à ouvrir. */
+  redirect?: string;
   section: 'exercises' | 'lessons' | 'exams';
   type: 'exercise' | 'lesson' | 'exam';
   url: string;
