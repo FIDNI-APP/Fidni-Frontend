@@ -133,11 +133,11 @@ export const NotificationBell: React.FC = () => {
         aria-label={unread ? `Notifications : ${unread} non lue${unread > 1 ? 's' : ''}` : 'Notifications'}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="relative inline-flex h-[38px] w-[38px] items-center justify-center rounded-[10px] border border-line bg-white text-ink transition-colors hover:bg-[#f7f6f3]"
+        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-[#f2f1ee] hover:text-ink ${open ? 'bg-[#f2f1ee] text-ink' : ''}`}
       >
-        <Bell className="h-[18px] w-[18px]" />
+        <Bell className="h-5 w-5" />
         {unread > 0 && (
-          <span className="fd-nums absolute -right-1.5 -top-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#c43d33] px-1 text-[10.5px] font-bold leading-none text-white ring-2 ring-white">
+          <span className="fd-nums absolute right-0.5 top-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10.5px] font-bold leading-none text-white ring-2 ring-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -145,7 +145,7 @@ export const NotificationBell: React.FC = () => {
 
       {open && (
         <div role="dialog" aria-label="Notifications"
-          className="fixed inset-x-2 top-[64px] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_18px_48px_-12px_rgba(20,18,16,.22)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[46px] sm:w-[380px]">
+          className="fixed inset-x-2 top-[64px] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_18px_48px_-12px_rgba(20,18,16,.22)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[48px] sm:w-[380px]">
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
             <h2 className="text-[14.5px] font-bold text-ink">Notifications</h2>
             {unread > 0 && (
