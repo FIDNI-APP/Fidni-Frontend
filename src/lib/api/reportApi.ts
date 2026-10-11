@@ -22,6 +22,9 @@ export interface ContentReportRow {
   created_at: string;
   handled_at: string | null;
   handled_by: string | null;
+  /** Réponse envoyée à l'élève (notification de la cloche). */
+  response: string;
+  response_sent_at: string | null;
   user: string | null;
   content: { id: number; type: string; title: string; url: string };
 }
@@ -35,5 +38,6 @@ export const listReports = async (statut: ReportStatus | 'all' = 'open') =>
     results: ContentReportRow[];
   };
 
-export const updateReport = async (id: number, status: ReportStatus) =>
-  (await api.patch(`/pilotage/signalements/${id}/`, { status })).data as ContentReportRow;
+/** `reponse` + `prevenir` (vrai par défaut) : la réponse part dans la cloche de l'élève. */
+export const updateReport = async (id: number, status: ReportStatus, reply?: { reponse: string; prevenir: boolean }) =>
+  (await api.patch(`/pilotage/signalements/${id}/`, { status, ...(reply ?? {}) })).data as ContentReportRow & { notified?: boolean };

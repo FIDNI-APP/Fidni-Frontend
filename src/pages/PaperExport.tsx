@@ -821,8 +821,10 @@ const styles = (title: string) => `
       font-size: 8pt; color: #9a958c; }
   }
   @media print {
-    /* Tout ce qui entoure la feuille (fond du site, conteneurs) devient blanc. */
-    html, body, #root, #root div:not(.fp-sheet):not(.fp-sheet *) { background: #fff !important; min-height: 0 !important; }
+    /* Les conteneurs qui ENTOURENT la feuille (fond du site) deviennent blancs, et seulement eux : peindre tous
+       les blocs de la page rendait opaque un calque fixe et transparent (messages, visites…), qui recouvrait
+       alors le contenu de chaque page imprimée (PDF « blanc », 11/10/2026). */
+    html, body, #root, #root div:has(.fp-sheet) { background: #fff !important; min-height: 0 !important; }
     .fp-toolbar, .fp-panel, .fp-teaser, .fp-guest-cta { display: none !important; }
     .fp-guest-print { display: block; text-align: center; margin-top: 40mm; font-size: 14pt; }
     .fp-desk { background: none; padding: 0; min-height: 0; }
