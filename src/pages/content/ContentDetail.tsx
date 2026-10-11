@@ -59,7 +59,7 @@ import { assessablePaths } from '@/lib/utils/contentHelpers';
 import { questionNumbering } from '@/lib/reportTargets';
 import { trackAction } from '@/lib/usage';
 import { SimilarContents } from '@/components/content/viewer/SimilarContents';
-import { contentHub } from '@/components/content/viewer/pageHelpers';
+import { contentHub, DETAIL_MAX_WIDTH } from '@/components/content/viewer/pageHelpers';
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
 
@@ -730,7 +730,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   }, [content, contentType, config.basePath, setCrumbs, studentLevel]);
 
   if (isLoading || (authLoading && !content)) {
-    return <DetailSkeleton narrow={contentType === 'exercise'} />;
+    return <DetailSkeleton maxWidth={DETAIL_MAX_WIDTH[contentType]} />;
   }
 
   if (error || !content) {
@@ -809,8 +809,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     <div className="min-h-screen bg-paper pb-24">
       {/* Titre de l'onglet (le serveur envoie déjà le même titre aux moteurs de recherche : config/seo.py). */}
       <Helmet><title>{`${content.title} – ${config.title} | Fidni`}</title></Helmet>
-      {/* Exercice : une colonne de lecture ; examen et leçon : la feuille et sa colonne (copie, sommaire). */}
-      <div className={`mx-auto w-full px-4 pt-3 sm:pt-6 md:px-8 ${contentType === 'exercise' ? 'max-w-[768px]' : 'max-w-5xl'}`}>
+      {/* Exercice : une colonne de lecture ; examen et leçon : la feuille et sa colonne (copie, sommaire).
+          Largeur calculée pour que la feuille ait les proportions de la feuille A4 imprimée (pageHelpers). */}
+      <div className="mx-auto w-full px-4 pt-3 sm:pt-6 md:px-8" style={{ maxWidth: DETAIL_MAX_WIDTH[contentType] }}>
         <ContentHeader
           content={content}
           contentType={contentType}
@@ -956,9 +957,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 };
 
 /** Forme de la page pendant le chargement (en-tête, feuille, trois questions). */
-const DetailSkeleton: React.FC<{ narrow?: boolean }> = ({ narrow }) => (
+const DetailSkeleton: React.FC<{ maxWidth: number }> = ({ maxWidth }) => (
   <div className="min-h-screen bg-paper" aria-busy="true" aria-label="Chargement">
-    <div className={`mx-auto w-full animate-pulse px-4 pt-3 sm:pt-6 md:px-8 ${narrow ? 'max-w-[768px]' : 'max-w-5xl'}`}>
+    <div className="mx-auto w-full animate-pulse px-4 pt-3 sm:pt-6 md:px-8" style={{ maxWidth }}>
       <div className="flex items-center justify-between">
         <div className="h-4 w-28 rounded bg-[#efece6]" />
         <div className="flex gap-2"><div className="h-9 w-9 rounded-xl bg-[#f2f1ee]" /><div className="h-9 w-9 rounded-xl bg-[#f2f1ee]" /></div>

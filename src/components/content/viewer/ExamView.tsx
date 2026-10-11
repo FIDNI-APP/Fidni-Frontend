@@ -375,7 +375,7 @@ export const ExamView: React.FC<Props> = ({
         <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-hidden />
         {epreuve.timeUp ? 'Temps écoulé' : `Épreuve terminée en ${clock(epreuve.elapsed)}`}
         {corrected > 0 && (
-          <a href="#ta-copie" className="ml-auto shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums lg:hidden">
+          <a href="#ta-copie" className="ml-auto shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums fd-exam-narrow">
             {fmtPts(got)} / {fmtPts(total)}
           </a>
         )}
@@ -455,12 +455,14 @@ export const ExamView: React.FC<Props> = ({
 
   const noParts = parts.length === 1 && parts[0].id === 'sujet';
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_272px]">
-      <div className="flex min-w-0 flex-col gap-8 sm:gap-10">
+    // Deux colonnes seulement si la feuille garde la largeur du PDF (ReadingStyles : .fd-exam-*).
+    <div className="fd-exam-layout">
+    <div className="fd-exam-grid">
+      <div className="fd-exam-main flex min-w-0 flex-col gap-8 sm:gap-10">
         <div>
           {/* Téléphone : compte à rebours collé en haut pendant l'épreuve. */}
           {locked && (
-            <div className="sticky top-[68px] z-20 mb-3 flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/95 py-1 pl-4 pr-1 shadow-[0_2px_10px_rgba(20,18,16,.06)] backdrop-blur lg:hidden">
+            <div className="sticky top-[68px] z-20 mb-3 flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/95 py-1 pl-4 pr-1 shadow-[0_2px_10px_rgba(20,18,16,.06)] backdrop-blur fd-exam-narrow">
               <span className="flex items-baseline gap-1.5">
                 <span role="timer" className={`text-[17px] font-semibold fd-nums ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>{clockLabel}</span>
                 <span className="text-[12px] text-ink-faint">{epreuve.status === 'paused' ? 'en pause' : epreuve.remaining !== null ? 'restant' : ''}</span>
@@ -542,14 +544,15 @@ export const ExamView: React.FC<Props> = ({
         </div>
 
         {/* Téléphone : la copie (note, barème par exercice) après le sujet, dès qu'il y a une note (pas pendant l'épreuve). */}
-        {!locked && (corrected > 0 || !isAuthenticated) && <div id="ta-copie" className="scroll-mt-24 lg:hidden">{copiePanel}</div>}
+        {!locked && (corrected > 0 || !isAuthenticated) && <div id="ta-copie" className="scroll-mt-24 fd-exam-narrow">{copiePanel}</div>}
         <AdSlot />
         {children}
       </div>
 
-      <aside className="sticky top-20 hidden flex-col gap-4 lg:flex">
+      <aside className="fd-exam-aside sticky top-20 flex-col gap-4">
         {locked ? timerPanel : copiePanel}
       </aside>
+    </div>
     </div>
   );
 };

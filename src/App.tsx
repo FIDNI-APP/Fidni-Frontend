@@ -466,6 +466,7 @@ function App() {
                     <Route path="/revision-lists/:id/pdf" element={<PaperExport source="revision-list" />} />
                     <Route path="/lessons/:id/pdf" element={<PaperExport source="content" />} />
                     <Route path="/notebooks/:id/pdf" element={<PaperExport source="notebook" />} />
+                    <Route path="/pilotage/ia/:id/pdf" element={<PaperExport source="ia-draft" />} />
                     <Route path="/exercises/:id" element={
                       <NavbarWrapper>
                         <ContentDetail />

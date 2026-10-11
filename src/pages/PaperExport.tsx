@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getRevisionList } from '@/lib/api';
 import { getNotebookById } from '@/lib/api/notebookApi';
 import { exerciseAPI } from '@/lib/api/contentApiFactory';
+import { getJob } from '@/lib/api/iaApi';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { getDifficultyLabel } from '@/lib/utils/difficultyHelpers';
 import type { Difficulty } from '@/types';
@@ -252,8 +253,15 @@ const currentSchoolYear = () => {
 };
 
 interface PaperExportProps {
-  source: 'revision-list' | 'content' | 'notebook';
+  /** ia-draft : brouillon de Pilotage › IA, imprimable avant publication (un devoir pas encore donné). */
+  source: 'revision-list' | 'content' | 'notebook' | 'ia-draft';
 }
+
+const DRAFT_DIFFICULTY: Record<string, string> = { facile: 'easy', moyen: 'medium', difficile: 'hard' };
+
+const contentKindLabel = (item: PaperItem) => (item.kind === 'exam'
+  ? (item.nationalYear ? `Examen national ${item.nationalYear}` : 'Examen')
+  : item.kind === 'lesson' ? 'Leçon' : 'Exercice');
 
 export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   const { id } = useParams<{ id: string }>();
@@ -271,6 +279,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   const [overrides, setOverrides] = useState<Partial<PaperCustom>>(() => loadPrefs(userKey));
   const [withNotes, setWithNotes] = useState(true);
   useEffect(() => { setOverrides(loadPrefs(userKey)); }, [userKey]);
+  const fiche = searchParams.get('fiche'); // brouillon IA : une seule de ses fiches
   const mode = (['none', 'end', 'inline'].includes(searchParams.get('solutions') || '')
     ? searchParams.get('solutions') : 'none') as SolutionsMode;
 
@@ -306,20 +315,34 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
           });
           const sub = [nb.subject?.name, nb.class_level?.name].filter(Boolean).join(' · ');
           if (!cancelled) setData({ title: nb.title || 'Cahier de cours', description: sub, kindLabel: 'Cahier de cours', items, reading: true, isNotebook: true });
+        } else if (source === 'ia-draft') {
+          // Brouillon non publié : les fiches converties par le serveur (mêmes structures qu'un contenu publié).
+          const job = await getJob(Number(id));
+          const items = (job.apercus || [])
+            .filter((a) => a.structure && !a.erreur && (!fiche || a.cle === fiche))
+            .map((a) => toItem({
+              type: a.type, title: a.titre, structure: a.structure, class_levels: a.niveaux,
+              difficulty: DRAFT_DIFFICULTY[a.difficulte || ''], is_national_exam: a.examen?.national,
+              national_year: a.examen?.annee, duration_minutes: a.examen?.duree_minutes,
+            }, a.cle));
+          if (!items.length) throw new Error('aucune fiche imprimable');
+          const single = items.length === 1 ? items[0] : null;
+          if (!cancelled) {
+            setData(single
+              ? { title: single.title, kindLabel: contentKindLabel(single), items, reading: single.kind === 'lesson' }
+              : { title: job.document || 'Sujet', kindLabel: 'Sujet', items, reading: items.every((i) => i.kind === 'lesson') });
+          }
         } else {
           const c = await exerciseAPI.getById(id);
           const item = toItem(c, String(id));
-          const kindLabel = item.kind === 'exam'
-            ? (item.nationalYear ? `Examen national ${item.nationalYear}` : 'Examen')
-            : item.kind === 'lesson' ? 'Leçon' : 'Exercice';
-          if (!cancelled) setData({ title: item.title, kindLabel, items: [item], reading: item.kind === 'lesson' });
+          if (!cancelled) setData({ title: item.title, kindLabel: contentKindLabel(item), items: [item], reading: item.kind === 'lesson' });
         }
       } catch {
         if (!cancelled) setError('Impossible de charger ce contenu.');
       }
     })();
     return () => { cancelled = true; };
-  }, [id, source, user]);
+  }, [id, source, user, fiche]);
 
   // Valeurs par défaut tirées du compte : établissement, nom de l'enseignant, classe.
   const defaults = useMemo<PaperCustom | null>(() => {
@@ -386,7 +409,9 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
 
   const goBack = () => {
     if (window.history.length > 1) navigate(-1);
-    else navigate(source === 'revision-list' ? '/reviser#mes-listes' : source === 'notebook' ? (id ? `/notebooks?nb=${id}` : '/enregistrements?onglet=cahiers') : '/');
+    else navigate(source === 'revision-list' ? '/reviser#mes-listes'
+      : source === 'notebook' ? (id ? `/notebooks?nb=${id}` : '/enregistrements?onglet=cahiers')
+      : source === 'ia-draft' ? '/pilotage?onglet=ia' : '/');
   };
 
   // Cahiers et listes de révision sont privés : un visiteur voit directement l'invitation.

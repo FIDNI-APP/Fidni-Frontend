@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowLeft, Check, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Loader2, RotateCcw,
+  AlertTriangle, ArrowLeft, Check, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Loader2, Printer, RotateCcw,
   Send, Sparkles, Upload, X,
 } from 'lucide-react';
 import ExerciseRenderer from '@/components/content/viewer/ExerciseRenderer';
@@ -306,7 +306,16 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
                   {TYPE_LABEL[apercu.type ?? ''] ?? 'Fiche'} · {(apercu.niveaux ?? []).join(', ')}{apercu.difficulte ? ` · ${DIFF_LABEL[apercu.difficulte] ?? apercu.difficulte}` : ''}
                   {apercu.examen?.duree_minutes ? ` · ${apercu.examen.duree_minutes} min` : ''}
                 </p>
-                <h3 className="fd-display mt-1 text-[22px] leading-tight text-ink">{apercu.titre}</h3>
+                <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
+                  <h3 className="fd-display text-[22px] leading-tight text-ink">{apercu.titre}</h3>
+                  {!!apercu.structure && !apercu.erreur && (
+                    // Feuille A4 du brouillon, sans le publier (un devoir pas encore donné aux élèves).
+                    <Link to={`/pilotage/ia/${job.id}/pdf?fiche=${encodeURIComponent(apercu.cle)}`}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink hover:border-ink">
+                      <Printer className="h-3.5 w-3.5" /> Imprimer / PDF
+                    </Link>
+                  )}
+                </div>
                 <p className="mt-1 text-[12px] text-ink-faint">
                   {(apercu.chapitres ?? []).join(' · ')}{apercu.theoremes?.length ? ` — ${apercu.theoremes.join(', ')}` : ''}
                   <span className="ml-1 font-mono text-[11px]">({apercu.cle})</span>

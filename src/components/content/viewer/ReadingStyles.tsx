@@ -7,9 +7,11 @@
  * numérotés en vert, encadrés fins à filet coloré, mêmes couleurs par nature d'encadré.
  * Exercices et devoirs : énoncés, solutions, numéros des questions et titres des parties dans la même police
  * de LaTeX (`.fd-paper` pour les titres hors TipTap).
+ * Largeur (11/10/2026) : la feuille a les proportions de la feuille A4 imprimée (voir SHEET_TEXT_PX).
  */
 import React from 'react';
 import { PAPER_GLYPHS_FACE, PAPER_SERIF } from '@/lib/paperFont';
+import { EXAM_TWO_COLUMNS_PX, SHEET_TEXT_PX } from './pageHelpers';
 
 const CSS = `
 ${PAPER_GLYPHS_FACE}
@@ -86,6 +88,18 @@ ${PAPER_GLYPHS_FACE}
 
 @media print {
   .fd-lesson .tiptap-full-renderer [data-callout-type] { break-inside: avoid; }
+}
+
+/* Examen : la colonne « copie » à droite seulement s'il reste la place d'une feuille à la largeur du PDF
+   (mesuré sur la place réelle, barre latérale ouverte ou non) ; sinon elle passe sous le sujet, comme sur téléphone. */
+.fd-exam-layout { container-type: inline-size; }
+.fd-exam-grid { display: grid; align-items: start; gap: 2rem; }
+.fd-exam-aside { display: none; }
+.fd-exam-main { max-width: ${SHEET_TEXT_PX + 2 * 32 + 2}px; } /* une colonne : la feuille garde la largeur du PDF */
+@container (min-width: ${EXAM_TWO_COLUMNS_PX}px) {
+  .fd-exam-grid { grid-template-columns: minmax(0, 1fr) 272px; }
+  .fd-exam-aside { display: flex; }
+  .fd-exam-narrow { display: none !important; }
 }
 `;
 

@@ -23,6 +23,7 @@ import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/Lesson
 import { ExamView } from './ExamView';
 import { LessonReader } from './LessonReader';
 import { ReadingStyles } from './ReadingStyles';
+import { SHEET_TEXT_PX } from './pageHelpers';
 import { Chrono } from './Chrono';
 import { trackAction } from '@/lib/usage';
 
@@ -172,7 +173,8 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
             <LessonOutlinePanel outline={outline} storageKey={`lecon-${content.id}`} syncHash />
           </aside>
         )}
-        <div className="flex min-w-0 flex-col gap-8 sm:gap-10">
+        {/* La feuille garde la largeur du PDF, sommaire ou non (pageHelpers). */}
+        <div className="flex min-w-0 flex-col gap-8 sm:gap-10" style={{ maxWidth: SHEET_TEXT_PX + 2 * 48 + 2 }}>
           <div>
             {/* Téléphone / tablette : sommaire repliable, collé sous la barre du site. */}
             {withOutline && (
