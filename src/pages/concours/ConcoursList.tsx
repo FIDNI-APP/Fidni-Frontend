@@ -1,348 +1,270 @@
-import { useEffect, useMemo, useState } from 'react';
+/**
+ * Concours (/concours), refonte du 11/10/2026 : trois écoles (ENSA, ENSAM, médecine) et leurs annales.
+ * Tant qu'aucune annale n'est en ligne, la page le dit simplement (« Bientôt ») et propose le Bac national
+ * à la place, au lieu de cartes « 0 annale », d'un tableau vide et d'une simulation qui ne menait à rien.
+ * Les annales sont chargées en une fois : le nombre par école ne dépend plus du filtre choisi, et les
+ * filtres (école, années) s'appliquent ici, gardés dans l'adresse (?concours=ensa&year_min=2018).
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Clock, Calendar, ListChecks, Shuffle,
-  Loader2, BookOpen, Trophy, ArrowRight,
+  ArrowRight, Calendar, Check, Clock, Cog, Hourglass, Landmark, Lightbulb, ListChecks, Loader2,
+  RotateCcw, SearchX, Shuffle, Stethoscope, Wrench, X,
 } from 'lucide-react';
 import {
-  CONCOURS_TYPES, listConcoursExams, startSimulation,
+  CONCOURS_TYPES, listConcoursExams, listConcoursTips, startSimulation,
   type ConcoursType, type ConcoursExamListItem, type SimulationMode,
 } from '@/lib/api/concoursApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
-import { ConcoursHero } from './ConcoursHero';
+import { Page, Section, EmptyState, CardLink, CardsSkeleton } from '@/components/space/Page';
+import { ConcoursHeader } from './ConcoursHeader';
 
-const CONCOURS_THEME: Record<ConcoursType, { from: string; to: string; light: string; text: string; emoji: string; sub: string }> = {
-  // Couleurs tirées de la palette du site (encre, vert, or) : plus de turquoise ni de rose vif.
-  ensa:     { from: '#33302b', to: '#6b6862', light: '#f2f1ee', text: '#1a1a1a', emoji: '⚙️', sub: 'École Nationale des Sciences Appliquées' },
-  ensam:    { from: '#15633c', to: '#3d8f64', light: '#eaf3ed', text: '#15633c', emoji: '🛠️', sub: "École Nationale Supérieure d'Arts et Métiers" },
-  medecine: { from: '#9a6e1c', to: '#c0892f', light: '#faf3e2', text: '#9a6e1c', emoji: '🩺', sub: 'Concours commun de médecine' },
+type Icon = React.ComponentType<{ className?: string }>;
+
+/** Les écoles : nom complet et pictogramme (plus d'emoji ni de bandeau en dégradé). */
+const SCHOOLS: Record<ConcoursType, { full: string; icon: Icon }> = {
+  ensa: { full: 'École nationale des sciences appliquées', icon: Cog },
+  ensam: { full: 'École nationale supérieure d’arts et métiers', icon: Wrench },
+  medecine: { full: 'Concours commun des facultés de médecine', icon: Stethoscope },
 };
+
+const schoolLabel = (id: ConcoursType | null) => CONCOURS_TYPES.find((c) => c.id === id)?.label ?? '';
+
+/* ───────────────────────── Carte d'une école ───────────────────────── */
+
+const SchoolHead: React.FC<{ id: ConcoursType; label: string; status: React.ReactNode }> = ({ id, label, status }) => {
+  const s = SCHOOLS[id];
+  const I = s.icon;
+  return (
+    <>
+      {/* Téléphone : une ligne (pictogramme, nom, état) ; ordinateur : pictogramme et état en haut, nom dessous. */}
+      <span className="flex shrink-0 items-center justify-between gap-3 md:w-full">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+          <I className="h-5 w-5" />
+        </span>
+        <span className="hidden md:inline-flex">{status}</span>
+      </span>
+      <span className="min-w-0 flex-1 md:w-full">
+        <span className="fd-display block text-[20px] leading-tight text-ink">{label}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{s.full}</span>
+      </span>
+      <span className="shrink-0 md:hidden">{status}</span>
+    </>
+  );
+};
+
+const SchoolCard: React.FC<{
+  id: ConcoursType;
+  label: string;
+  /** null : pas encore chargé (ou chargement raté). */
+  count: number | null;
+  active: boolean;
+  onFilter: () => void;
+  onSimulate: () => void;
+}> = ({ id, label, count, active, onFilter, onSimulate }) => {
+  const layout = 'flex items-center gap-3 p-4 text-left md:flex-col md:items-start md:gap-4 md:p-5';
+
+  // Pas (encore) d'annale : une carte calme, sans bouton qui ne mène nulle part.
+  if (!count) {
+    const status = count === 0 ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-semibold text-gold-strong ring-1 ring-gold-line">
+        <Hourglass className="h-3.5 w-3.5" aria-hidden /> Bientôt<span className="sr-only"> : annales en préparation</span>
+      </span>
+    ) : null;
+    return (
+      <li className={`rounded-2xl border border-line bg-white ${layout}`}>
+        <SchoolHead id={id} label={label} status={status} />
+      </li>
+    );
+  }
+
+  const status = (
+    <span className="fd-nums inline-flex items-center rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12px] font-semibold text-ink-soft">
+      {count} annale{count > 1 ? 's' : ''}
+    </span>
+  );
+  return (
+    <li className={`flex flex-col overflow-hidden rounded-2xl border bg-white transition-[border-color,box-shadow] ${
+      active ? 'border-ink' : 'border-line hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)]'}`}>
+      <button type="button" onClick={onFilter} aria-pressed={active}
+        aria-label={active ? `Retirer le filtre ${label}` : `Voir les annales ${label}`}
+        className={`${layout} flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40`}>
+        <SchoolHead id={id} label={label} status={status} />
+        <span className={`hidden items-center gap-1 text-[12.5px] font-semibold md:inline-flex ${active ? 'text-ink' : 'text-brand-hover'}`}>
+          {active ? <><Check className="h-3.5 w-3.5" /> Filtre actif</> : <>Voir les annales <ArrowRight className="h-3.5 w-3.5" /></>}
+        </span>
+      </button>
+      <button type="button" onClick={onSimulate} data-tour="concours-simulation"
+        className="flex min-h-11 items-center justify-center gap-2 border-t border-line bg-[#fcfbf9] text-[13px] font-semibold text-ink-soft transition-colors hover:bg-[#f7f6f3] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40">
+        <Shuffle className="h-4 w-4" /> Lancer une simulation
+      </button>
+    </li>
+  );
+};
+
+/* ───────────────────────── Carte d'une annale ───────────────────────── */
+
+const ExamCard: React.FC<{ exam: ConcoursExamListItem }> = ({ exam: e }) => (
+  <li>
+    <CardLink to={`/concours/exams/${e.id}`} className="h-full">
+      <span className="flex h-full flex-col">
+        <span className="flex items-center justify-between gap-2">
+          <span className="rounded-full bg-[#f2f1ee] px-2.5 py-0.5 text-[11.5px] font-semibold text-ink-soft">{e.concours_type_display}</span>
+          <span className="fd-display fd-nums text-[22px] leading-none text-ink">{e.year}</span>
+        </span>
+        <span className="mt-3 block text-[14.5px] font-semibold leading-snug text-ink line-clamp-2">{e.title}</span>
+        {e.description && <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-faint line-clamp-2">{e.description}</span>}
+        <span className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-[12px] text-ink-faint">
+          <span className="inline-flex items-center gap-1"><ListChecks className="h-3.5 w-3.5" aria-hidden /> {e.question_count} questions</span>
+          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" aria-hidden /> {e.duration_minutes} min</span>
+          <span className="ml-auto inline-flex items-center gap-1 font-semibold text-brand-hover group-hover:underline">
+            Réviser <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </span>
+      </span>
+    </CardLink>
+  </li>
+);
+
+/* ───────────────────────── Page ───────────────────────── */
 
 export default function ConcoursListPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const concoursParam = (searchParams.get('concours') as ConcoursType | null) || null;
+  const raw = searchParams.get('concours');
+  const school = CONCOURS_TYPES.some((c) => c.id === raw) ? (raw as ConcoursType) : null;
   const yearMin = searchParams.get('year_min') || '';
   const yearMax = searchParams.get('year_max') || '';
 
-  const [exams, setExams] = useState<ConcoursExamListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [exams, setExams] = useState<ConcoursExamListItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [hasTips, setHasTips] = useState(false);
   const [showSimModal, setShowSimModal] = useState<ConcoursType | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const params: any = {};
-        if (concoursParam) params.concours_type = concoursParam;
-        if (yearMin) params.year_min = Number(yearMin);
-        if (yearMax) params.year_max = Number(yearMax);
-        const data = await listConcoursExams(params);
+  const load = useCallback(() => {
+    setFailed(false);
+    listConcoursExams()
+      .then((data) => {
         setExams(data);
-      } catch (e) {
-        console.error('listConcoursExams failed', e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [concoursParam, yearMin, yearMax]);
+        // Sans annale, les astuces (s'il y en a) valent une action dans l'état vide.
+        if (data.length === 0) listConcoursTips().then((t) => setHasTips(t.length > 0)).catch(() => undefined);
+      })
+      .catch((e) => { console.error('listConcoursExams failed', e); setFailed(true); });
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const setFilter = (k: string, v: string | null) => {
+  const setFilter = (changes: Record<string, string | null>, replace = false) => {
     const next = new URLSearchParams(searchParams);
-    if (v) next.set(k, v); else next.delete(k);
-    setSearchParams(next);
+    for (const [k, v] of Object.entries(changes)) { if (v) next.set(k, v); else next.delete(k); }
+    setSearchParams(next, { replace });
   };
 
-  const examsByConcours = useMemo(() => {
-    const map: Record<string, ConcoursExamListItem[]> = {};
-    for (const e of exams) {
-      (map[e.concours_type] ||= []).push(e);
-    }
-    return map;
+  const counts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of exams ?? []) m[e.concours_type] = (m[e.concours_type] ?? 0) + 1;
+    return m;
   }, [exams]);
 
-  const totalExams = exams.length;
-  const totalQuestions = useMemo(
-    () => exams.reduce((sum, e) => sum + (e.question_count || 0), 0),
-    [exams],
+  const years = useMemo(() => {
+    const set = new Set((exams ?? []).filter((e) => !school || e.concours_type === school).map((e) => e.year));
+    for (const y of [yearMin, yearMax]) if (y && !Number.isNaN(Number(y))) set.add(Number(y));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [exams, school, yearMin, yearMax]);
+
+  const shown = useMemo(() => (exams ?? []).filter((e) => (!school || e.concours_type === school)
+    && (!yearMin || e.year >= Number(yearMin))
+    && (!yearMax || e.year <= Number(yearMax))), [exams, school, yearMin, yearMax]);
+
+  const total = exams?.length ?? 0;
+  const empty = exams !== null && total === 0 && !failed;
+  const filtered = !!(school || yearMin || yearMax);
+  const clearAll = () => setFilter({ concours: null, year_min: null, year_max: null });
+
+  const yearSelect = (key: 'year_min' | 'year_max', value: string, label: string) => (
+    <label className="inline-flex items-center gap-2 text-[12.5px] text-ink-faint">
+      {label}
+      <select value={value} onChange={(ev) => setFilter({ [key]: ev.target.value || null }, true)}
+        className="fd-nums min-h-10 rounded-xl border border-line bg-white px-3 text-[13px] text-ink focus:border-ink-faint focus:outline-none">
+        <option value="">toutes</option>
+        {years.map((y) => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </label>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
-      <SEO title="Concours - Fidni" description="Préparation aux concours d'entrée des grandes écoles" />
-      <style>{`
-        .exam-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(20,18,16,.14) !important; }
-        .concours-card:hover { transform: translateY(-2px); }
-      `}</style>
+    <Page>
+      <SEO title="Concours - Fidni" description="Préparation aux concours d'entrée de l'ENSA, de l'ENSAM et de médecine." />
+      <ConcoursHeader />
 
-      <ConcoursHero
-        icon={Trophy}
-        badge="CONCOURS"
-        title="Préparation aux concours"
-        subtitle="Entraîne-toi sur les annales d'ENSA, ENSAM et Médecine dans les conditions réelles de l'examen."
-      />
+      {failed && (
+        <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Les annales n’ont pas pu se charger. Vérifie ta connexion.</p>
+          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+        </div>
+      )}
 
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
-
-        {/* Quick stats */}
-        {!loading && totalExams > 0 && (
-          <div className="flex items-center gap-3 mb-7 flex-wrap animate-fade-up">
-            <div className="inline-flex items-center gap-2.5" style={{
-              background: '#fff', borderRadius: 12, border: '1px solid #e7e3dc',
-              padding: '10px 16px', boxShadow: '0 1px 4px rgba(20,18,16,.05)',
-            }}>
-              <BookOpen className="w-4 h-4" style={{ color: '#1a1a1a' }} />
-              <span style={{ fontSize: 13, color: '#6b6862' }}>
-                <strong style={{ color: '#1a1a1a', fontWeight: 800, fontFamily: 'DM Mono' }}>{totalExams}</strong> annales
-              </span>
-            </div>
-            <div className="inline-flex items-center gap-2.5" style={{
-              background: '#fff', borderRadius: 12, border: '1px solid #e7e3dc',
-              padding: '10px 16px', boxShadow: '0 1px 4px rgba(20,18,16,.05)',
-            }}>
-              <ListChecks className="w-4 h-4" style={{ color: '#1a1a1a' }} />
-              <span style={{ fontSize: 13, color: '#6b6862' }}>
-                <strong style={{ color: '#1a1a1a', fontWeight: 800, fontFamily: 'DM Mono' }}>{totalQuestions}</strong> questions
-              </span>
-            </div>
-          </div>
+      <div className="flex flex-col gap-10">
+        {/* Aucune annale en ligne : le message d'abord (avec une vraie piste), les écoles ensuite. */}
+        {empty && (
+          <EmptyState icon={Hourglass} tone="gold" title="Les annales arrivent bientôt"
+            text="On prépare les sujets de l’ENSA, de l’ENSAM et de médecine, avec leurs corrigés et des simulations chronométrées. En attendant, le Bac national est le meilleur entraînement."
+            action={(
+              <Link to="/exams/nationaux" className="fd-btn-primary min-h-11">
+                <Landmark className="h-4 w-4" /> Réviser le Bac national
+              </Link>
+            )}
+            secondary={hasTips ? (
+              <Link to="/concours/tips" className="fd-btn-ghost min-h-11">
+                <Lightbulb className="h-4 w-4" /> En attendant : les astuces
+              </Link>
+            ) : undefined} />
         )}
 
-        {/* Concours type picker */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-9" data-tour="concours-types">
-          {CONCOURS_TYPES.map((c) => {
-            const t = CONCOURS_THEME[c.id];
-            const isActive = concoursParam === c.id;
-            const count = loading ? null : (examsByConcours[c.id] || []).length;
-            return (
-              <div
-                key={c.id}
-                className="concours-card animate-fade-up"
-                style={{
-                  borderRadius: 20, overflow: 'hidden', position: 'relative',
-                  border: `1.5px solid ${isActive ? t.from : '#e7e3dc'}`,
-                  background: '#fff',
-                  boxShadow: isActive
-                    ? `0 8px 28px ${t.from}28`
-                    : '0 2px 10px rgba(20,18,16,.06)',
-                  transition: 'box-shadow .2s, border-color .2s, transform .2s',
-                }}
-              >
-                {/* Top zone — filtre les annales */}
-                <div
-                  onClick={() => setFilter('concours', isActive ? null : c.id)}
-                  style={{ cursor: 'pointer', position: 'relative' }}
-                >
-                  {/* Colored banner */}
-                  <div style={{
-                    height: 64, position: 'relative', overflow: 'hidden',
-                    background: `linear-gradient(120deg,${t.from},${t.to})`,
-                  }}>
-                    <div style={{
-                      position: 'absolute', right: -20, top: -20, width: 110, height: 110,
-                      borderRadius: '50%', background: 'rgba(255,255,255,.14)',
-                    }} />
-                    <div style={{
-                      position: 'absolute', left: 18, bottom: -22,
-                      width: 56, height: 56, borderRadius: 16,
-                      background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 26, boxShadow: '0 4px 12px rgba(0,0,0,.1)',
-                    }}>
-                      {t.emoji}
-                    </div>
-                  </div>
+        <Section id="ecoles" title="Les écoles">
+          <ul className="grid gap-3 md:grid-cols-3" data-tour="concours-types">
+            {CONCOURS_TYPES.map((c) => (
+              <SchoolCard key={c.id} id={c.id} label={c.label}
+                count={exams === null ? null : counts[c.id] ?? 0}
+                active={school === c.id}
+                onFilter={() => setFilter({ concours: school === c.id ? null : c.id })}
+                onSimulate={() => (isAuthenticated ? setShowSimModal(c.id) : navigate('/login'))} />
+            ))}
+          </ul>
+        </Section>
 
-                  <div style={{ padding: '30px 20px 16px' }}>
-                    <div className="flex items-center justify-between">
-                      <div style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
-                        {c.label}
-                      </div>
-                      {count !== null && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, color: t.text, background: t.light,
-                          padding: '3px 10px', borderRadius: 99, fontFamily: 'DM Mono',
-                        }}>
-                          {count} annale{count !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#6b6862', marginTop: 4, lineHeight: 1.5 }}>
-                      {t.sub}
-                    </div>
-                    <div style={{
-                      fontSize: 12, fontWeight: 700, marginTop: 12,
-                      color: isActive ? t.from : '#9a958c',
-                      display: 'flex', alignItems: 'center', gap: 5,
-                    }}>
-                      {isActive ? 'Filtre actif' : 'Voir les annales'}
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom zone — lancer simulation */}
-                <button
-                  data-tour="concours-simulation"
-                  onClick={() => isAuthenticated ? setShowSimModal(c.id) : navigate('/login')}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '13px 20px', cursor: 'pointer',
-                    background: t.light, border: 'none', borderTop: `1px solid ${t.from}1f`,
-                    fontSize: 13, fontWeight: 700, color: t.text,
-                    transition: 'filter .15s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(.96)')}
-                  onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
-                >
-                  <Shuffle className="w-4 h-4" />
-                  Lancer une simulation
-                </button>
+        {exams === null ? (
+          !failed && <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+        ) : total === 0 ? null : (
+          <Section id="annales" title={school ? `Annales ${schoolLabel(school)}` : 'Annales'} count={shown.length}
+            hint="Ouvre un sujet pour le réviser question par question, avec la correction.">
+            {(years.length > 1 || filtered) && (
+              <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2" data-tour="concours-filtres">
+                {years.length > 1 || yearMin || yearMax ? (
+                  <>
+                    {yearSelect('year_min', yearMin, 'Depuis')}
+                    {yearSelect('year_max', yearMax, 'Jusqu’à')}
+                  </>
+                ) : null}
+                {filtered && shown.length > 0 && (
+                  <button type="button" onClick={clearAll} className="inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-ink-soft hover:text-ink">
+                    <X className="h-4 w-4" /> Effacer les filtres
+                  </button>
+                )}
               </div>
-            );
-          })}
-        </div>
-
-        {/* Section title + filters */}
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <h2 style={{ fontSize: 19, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
-            {concoursParam
-              ? `Annales ${CONCOURS_TYPES.find(c => c.id === concoursParam)?.label}`
-              : 'Tous les examens'}
-            {!loading && (
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#6b6862', fontFamily: 'DM Mono', marginLeft: 10 }}>
-                {exams.length} résultat{exams.length !== 1 ? 's' : ''}
-              </span>
             )}
-          </h2>
-
-          {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap" data-tour="concours-filtres">
-            {concoursParam && (
-              <button
-                className="fd-btn-ghost"
-                style={{ fontSize: 12, padding: '6px 12px' }}
-                onClick={() => setFilter('concours', null)}
-              >
-                ✕ {CONCOURS_TYPES.find(c => c.id === concoursParam)?.label}
-              </button>
+            {shown.length === 0 ? (
+              <EmptyState compact icon={SearchX} tone="ink" title="Aucune annale pour ce filtre"
+                text="Élargis les années ou choisis une autre école."
+                action={<button type="button" onClick={clearAll} className="fd-btn-ghost min-h-10">Effacer les filtres</button>} />
+            ) : (
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="concours-annales">
+                {shown.map((e) => <ExamCard key={e.id} exam={e} />)}
+              </ul>
             )}
-            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>Année</span>
-            <input
-              type="number"
-              placeholder="Depuis"
-              value={yearMin}
-              onChange={(e) => setFilter('year_min', e.target.value || null)}
-              style={{
-                width: 92, padding: '7px 10px', borderRadius: 10,
-                border: '1.5px solid #e7e3dc', background: '#fff',
-                fontSize: 12, fontFamily: 'DM Mono', color: '#1a1a1a', outline: 'none',
-              }}
-            />
-            <span style={{ color: '#6b6862', fontSize: 13 }}>–</span>
-            <input
-              type="number"
-              placeholder="Jusqu'à"
-              value={yearMax}
-              onChange={(e) => setFilter('year_max', e.target.value || null)}
-              style={{
-                width: 92, padding: '7px 10px', borderRadius: 10,
-                border: '1.5px solid #e7e3dc', background: '#fff',
-                fontSize: 12, fontFamily: 'DM Mono', color: '#1a1a1a', outline: 'none',
-              }}
-            />
-            {(yearMin || yearMax) && (
-              <button
-                className="fd-btn-ghost"
-                style={{ fontSize: 11, padding: '6px 10px' }}
-                onClick={() => { setFilter('year_min', null); setFilter('year_max', null); }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Exams grid */}
-        {loading ? (
-          <div className="flex justify-center" style={{ padding: '80px 0' }}>
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
-          </div>
-        ) : exams.length === 0 ? (
-          <div className="fd-card text-center" style={{ padding: 56 }}>
-            <BookOpen className="w-9 h-9 mx-auto mb-3" style={{ color: '#6b6862' }} />
-            <p style={{ fontSize: 14, color: '#6b6862' }}>Aucun examen pour le moment.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="concours-annales">
-            {exams.map((e) => {
-              const t = CONCOURS_THEME[e.concours_type];
-              return (
-                <Link
-                  key={e.id}
-                  to={`/concours/exams/${e.id}`}
-                  className="exam-card animate-fade-up"
-                  style={{
-                    overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column',
-                    background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc',
-                    boxShadow: '0 2px 10px rgba(20,18,16,.05)',
-                    transition: 'transform .2s, box-shadow .2s',
-                  }}
-                >
-                  {/* Year banner */}
-                  <div style={{
-                    position: 'relative', overflow: 'hidden', padding: '18px 20px 16px',
-                    background: `linear-gradient(120deg,${t.from},${t.to})`,
-                  }}>
-                    <div style={{
-                      position: 'absolute', right: -30, top: -30, width: 120, height: 120,
-                      borderRadius: '50%', background: 'rgba(255,255,255,.12)',
-                    }} />
-                    <div className="relative flex items-center justify-between">
-                      <span style={{
-                        fontSize: 10, fontWeight: 800, letterSpacing: '.06em',
-                        color: '#fff', background: 'rgba(255,255,255,.22)',
-                        padding: '3px 10px', borderRadius: 99, backdropFilter: 'blur(4px)',
-                      }}>
-                        {e.concours_type_display.toUpperCase()}
-                      </span>
-                      <span style={{ fontSize: 18 }}>{t.emoji}</span>
-                    </div>
-                    <div className="relative" style={{
-                      fontSize: 32, fontWeight: 800, color: '#fff',
-                      fontFamily: 'DM Mono', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 8,
-                    }}>
-                      {e.year}
-                    </div>
-                  </div>
-
-                  <div className="p-4 flex flex-col gap-2 flex-1">
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.35 }}>
-                      {e.title}
-                    </h3>
-                    {e.description && (
-                      <p style={{ fontSize: 12, color: '#6b6862', lineHeight: 1.5 }} className="line-clamp-2">
-                        {e.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-3 mt-auto pt-3" style={{ fontSize: 11, color: '#6b6862', borderTop: '1px solid #faf9f7' }}>
-                      <span className="inline-flex items-center gap-1">
-                        <ListChecks className="w-3.5 h-3.5" /> {e.question_count} Q
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" /> {e.duration_minutes} min
-                      </span>
-                      <span className="ml-auto inline-flex items-center gap-1" style={{ color: t.from, fontWeight: 700 }}>
-                        Réviser <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          </Section>
         )}
       </div>
 
@@ -353,22 +275,33 @@ export default function ConcoursListPage() {
           onStarted={(sessionId) => navigate(`/concours/simulate/${sessionId}`)}
         />
       )}
-    </div>
+    </Page>
   );
 }
 
-/* ───────────── Simulation start modal ───────────── */
+/* ───────────── Fenêtre « Lancer une simulation » ───────────── */
+
+const MODES: { id: SimulationMode; icon: Icon; label: string; desc: string }[] = [
+  { id: 'random_year', icon: Calendar, label: 'Annale aléatoire', desc: 'Une année tirée au hasard.' },
+  { id: 'random_mix', icon: Shuffle, label: 'Mix aléatoire', desc: 'Des questions piochées dans toutes les années.' },
+];
 
 function SimulationModal({ concoursType, onClose, onStarted }: {
   concoursType: ConcoursType;
   onClose: () => void;
   onStarted: (sessionId: string) => void;
 }) {
-  const t = CONCOURS_THEME[concoursType];
   const [mode, setMode] = useState<SimulationMode>('random_year');
   const [nQuestions, setNQuestions] = useState(30);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const SchoolIcon = SCHOOLS[concoursType].icon;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const start = async () => {
     try {
@@ -379,96 +312,60 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
         ...(mode === 'random_mix' ? { n_questions: nQuestions } : {}),
       });
       onStarted(r.session_id);
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'Impossible de lancer la simulation.');
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      setErr(typeof detail === 'string' ? detail : 'Impossible de lancer la simulation.');
     } finally { setBusy(false); }
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(15,12,50,.5)', backdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="fd-card animate-fade-up"
-        style={{ width: '100%', maxWidth: 480, padding: 28 }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Modal header */}
-        <div className="flex items-center gap-3 mb-5">
-          <div style={{
-            width: 42, height: 42, borderRadius: 11, flexShrink: 0,
-            background: `linear-gradient(135deg,${t.from},${t.to})`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-          }}>
-            {CONCOURS_TYPES.find(c => c.id === concoursType) && t.emoji}
+    <div role="dialog" aria-modal="true" aria-labelledby="simulation-titre"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[4px]"
+      onClick={onClose}>
+      <div className="fd-card animate-fade-up max-h-[90vh] w-full max-w-[480px] overflow-y-auto p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+            <SchoolIcon className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 id="simulation-titre" className="fd-display text-[20px] leading-tight text-ink">Lancer une simulation</h3>
+            <p className="text-[12.5px] text-ink-faint">{schoolLabel(concoursType)} · chronométrée, corrigés masqués pendant l’épreuve</p>
           </div>
-          <div>
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
-              Lancer une simulation
-            </h3>
-            <p style={{ fontSize: 12, color: '#6b6862', marginTop: 1 }}>
-              {CONCOURS_TYPES.find(c => c.id === concoursType)?.label}
-            </p>
-          </div>
+          <button type="button" onClick={onClose} aria-label="Fermer"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 14 }}>
-          Les solutions sont masquées pendant la session.
-        </p>
-
-        <div className="flex flex-col gap-2">
-          {([
-            { id: 'random_year', icon: Calendar, label: 'Annale aléatoire', desc: 'Une année tirée au hasard.' },
-            { id: 'random_mix',  icon: Shuffle,  label: 'Mix aléatoire',    desc: 'Questions piochées dans toutes les années.' },
-          ] as { id: SimulationMode; icon: any; label: string; desc: string }[]).map(({ id, icon: Icon, label, desc }) => (
-            <button
-              key={id}
-              onClick={() => setMode(id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '13px 16px', borderRadius: 12,
-                border: `1.5px solid ${mode === id ? t.from : '#e7e3dc'}`,
-                background: mode === id ? t.light : '#faf9f7',
-                color: '#1a1a1a', cursor: 'pointer', textAlign: 'left', transition: 'all .15s',
-              }}
-            >
-              <div style={{
-                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                background: mode === id ? t.from : '#e7e3dc',
-                color: mode === id ? '#fff' : '#6b6862',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{label}</div>
-                <div style={{ fontSize: 11, color: '#6b6862', marginTop: 1 }}>{desc}</div>
-              </div>
-              {mode === id && (
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.from, flexShrink: 0 }} />
-              )}
-            </button>
-          ))}
+        <div role="radiogroup" aria-label="Type de simulation" className="flex flex-col gap-2">
+          {MODES.map(({ id, icon: I, label, desc }) => {
+            const on = mode === id;
+            return (
+              <button key={id} type="button" role="radio" aria-checked={on} onClick={() => setMode(id)}
+                className={`flex min-h-14 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                  on ? 'border-brand bg-brand-soft ring-1 ring-brand-line' : 'border-line bg-white hover:border-[#cfc9bf]'}`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-faint'}`} aria-hidden>
+                  <I className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13.5px] font-semibold text-ink">{label}</span>
+                  <span className="mt-0.5 block text-[12px] text-ink-faint">{desc}</span>
+                </span>
+                {on && <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden />}
+              </button>
+            );
+          })}
         </div>
 
         {mode === 'random_mix' && (
-          <div className="mt-4" style={{ background: '#faf9f7', borderRadius: 12, padding: '14px 16px' }}>
-            <div className="flex items-center justify-between mb-2">
-              <label style={{ fontSize: 12, color: '#6b6862', fontWeight: 600 }}>Nombre de questions</label>
-              <span style={{ fontFamily: 'DM Mono', fontSize: 14, fontWeight: 800, color: t.from }}>{nQuestions}</span>
+          <div className="mt-4 rounded-xl bg-[#fcfbf9] px-4 py-3.5 ring-1 ring-line">
+            <div className="mb-2 flex items-center justify-between">
+              <label htmlFor="simulation-n" className="text-[12.5px] font-semibold text-ink-soft">Nombre de questions</label>
+              <span className="fd-nums text-[14px] font-bold text-ink">{nQuestions}</span>
             </div>
-            <input
-              type="range" min={5} max={200} step={5}
-              value={nQuestions}
-              onChange={(e) => setNQuestions(Number(e.target.value))}
-              style={{ width: '100%', accentColor: t.from }}
-            />
-            <div className="flex items-center justify-between" style={{ fontSize: 10, color: '#6b6862', marginTop: 4 }}>
+            <input id="simulation-n" type="range" min={5} max={200} step={5} value={nQuestions}
+              onChange={(e) => setNQuestions(Number(e.target.value))} className="w-full accent-[#1a7a4a]" />
+            <div className="mt-1 flex items-center justify-between text-[11px] text-ink-faint">
               <span>5 q</span>
               <span>~{Math.round(nQuestions * 1.5)} min estimées</span>
               <span>200 q</span>
@@ -476,19 +373,12 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
           </div>
         )}
 
-        {err && <p style={{ color: '#b91c1c', fontSize: 12, marginTop: 10 }}>{err}</p>}
+        {err && <p role="alert" className="mt-3 text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
 
-        <div className="flex gap-2 mt-6">
-          <button className="fd-btn-ghost flex-1" onClick={onClose} style={{ justifyContent: 'center' }}>
-            Annuler
-          </button>
-          <button
-            className="fd-btn-primary flex-1"
-            onClick={start}
-            disabled={busy}
-            style={{ background: t.from, justifyContent: 'center' }}
-          >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trophy className="w-4 h-4" />}
+        <div className="mt-6 flex gap-2">
+          <button type="button" className="fd-btn-ghost min-h-11 flex-1 justify-center" onClick={onClose}>Annuler</button>
+          <button type="button" className="fd-btn-primary min-h-11 flex-1 justify-center disabled:opacity-60" onClick={start} disabled={busy}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
             Lancer
           </button>
         </div>

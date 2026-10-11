@@ -6,9 +6,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useScrollToHash } from '@/hooks/useScrollToHash';
 import {
-  ArrowLeft, Bookmark, MessageSquare, Loader2,
-  Check, Lightbulb, Clock, ListChecks, Trash2, Play, ChevronDown, ChevronUp, ChevronRight,
-  BookOpen, BarChart3, Trophy, type LucideIcon,
+  Bookmark, MessageSquare, Loader2,
+  Check, Lightbulb, Clock, ListChecks, Trash2, Play, ChevronDown, ChevronUp,
+  BookOpen, BarChart3, Trophy, SearchX, type LucideIcon,
 } from 'lucide-react';
 import {
   getConcoursExam, toggleSaveExam, startSimulation,
@@ -20,17 +20,25 @@ import { useAuthModal } from '@/components/auth/AuthController';
 import { TABBAR_OFFSET } from '@/components/layout/nav';
 import { isModerator } from '@/lib/features';
 import { SEO } from '@/components/layout/SEO';
+import { Page, PageHeader, Segmented, EmptyState, CardsSkeleton } from '@/components/space/Page';
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
 import { ConcoursExamStatsTab } from './ConcoursExamStatsTab';
 import { ConcoursExamActivityTab } from './ConcoursExamActivityTab';
 
 type ExamTab = 'navigation' | 'stats' | 'activity';
 
-const CONCOURS_COLOR: Record<string, { from: string; to: string; light: string; text: string; headerVia: string }> = {
-  ensa:     { from: '#33302b', to: '#6b6862', light: '#f2f1ee', text: '#1a1a1a', headerVia: '#000000' },
-  ensam:    { from: '#15633c', to: '#3d8f64', light: '#eaf3ed', text: '#15633c', headerVia: '#0e7490' },
-  medecine: { from: '#9a6e1c', to: '#c0892f', light: '#faf3e2', text: '#9a6e1c', headerVia: '#db2777' },
+const CONCOURS_COLOR: Record<string, { from: string; to: string; light: string; text: string }> = {
+  ensa:     { from: '#33302b', to: '#6b6862', light: '#f2f1ee', text: '#1a1a1a' },
+  ensam:    { from: '#15633c', to: '#3d8f64', light: '#eaf3ed', text: '#15633c' },
+  medecine: { from: '#9a6e1c', to: '#c0892f', light: '#faf3e2', text: '#9a6e1c' },
 };
+
+/** Pictogramme d'onglet masqué sur téléphone : les trois onglets tiennent sur la largeur de l'écran. */
+const wideOnly = (I: LucideIcon) => {
+  const Wide = ({ className = '' }: { className?: string }) => <I className={`hidden sm:block ${className}`} aria-hidden />;
+  return Wide;
+};
+const TabIcons = { navigation: wideOnly(BookOpen), stats: wideOnly(BarChart3), activity: wideOnly(Trophy) };
 
 export default function ConcoursExamDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,18 +93,18 @@ export default function ConcoursExamDetailPage() {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-      <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
-    </div>
+    <Page>
+      <CardsSkeleton n={3} />
+    </Page>
   );
 
   if (!exam) return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-      <div className="fd-card p-8 text-center">
-        <p style={{ color: '#6b6862' }}>Examen introuvable.</p>
-        <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
-      </div>
-    </div>
+    <Page>
+      <PageHeader back={{ to: '/concours', label: 'Concours' }} title="Sujet introuvable" />
+      <EmptyState icon={SearchX} tone="ink" title="Ce sujet n’existe plus"
+        text="Il a peut-être été retiré. Retrouve les autres annales sur la page des concours."
+        action={<Link to="/concours" className="fd-btn-primary min-h-10">Voir les concours</Link>} />
+    </Page>
   );
 
   const theme = CONCOURS_COLOR[exam.concours_type] || CONCOURS_COLOR.ensa;
@@ -107,7 +115,7 @@ export default function ConcoursExamDetailPage() {
   const pct = questions.length > 0 ? Math.round((revealedCount / questions.length) * 100) : 0;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fbfaff' }}>
+    <div className="min-h-screen bg-paper">
       <SEO title={`${exam.title} - Fidni`} description={exam.description} />
       <style>{`
         .concours-question-card .ProseMirror p { margin: 0 0 .5em; }
@@ -120,129 +128,70 @@ export default function ConcoursExamDetailPage() {
         .concours-explanation-text .katex-display { font-size: 1.06em; }
         .concours-question-card .katex-display { margin: .5em 0; }
         .opt-row { transition: background .12s, border-color .12s; }
-        .opt-row:hover { background: #f4f2ff !important; }
+        .opt-row:hover { background: #f7f6f3 !important; }
         .reveal-btn { transition: all .15s; }
         .reveal-btn:hover { filter: brightness(.97); }
       `}</style>
 
-      {/* ═══════════ Header (gradient, full-width — ContentDetail style) ═══════════ */}
-      <div className="relative" style={{
-        background: `linear-gradient(110deg, ${theme.from} 0%, ${theme.headerVia} 55%, ${theme.to} 100%)`,
-      }}>
-        {/* Grid pattern */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="concoursGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#concoursGrid)" />
-          </svg>
-        </div>
-        {/* Glow (dans un cadre qui le rogne : sinon il élargit la page de 192 px, défilement horizontal) */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        </div>
-
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          {/* Top row: breadcrumb + actions */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/concours')}
-                aria-label="Retour aux concours"
-                className="p-2 -ml-2 rounded-xl text-white/75 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <nav className="flex items-center gap-1.5 text-sm">
-                <button onClick={() => navigate('/concours')}
-                        className="text-white/75 hover:text-white transition-colors">
-                  Examens
-                </button>
-                <ChevronRight className="w-4 h-4 text-white/40" />
-                <button onClick={() => navigate(`/concours?concours=${exam.concours_type}`)}
-                        className="text-white/75 hover:text-white transition-colors">
-                  {exam.concours_type_display}
-                </button>
-                <ChevronRight className="w-4 h-4 text-white/40" />
-                <span className="text-white font-medium">{exam.year}</span>
-              </nav>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onStartSimulation}
-                disabled={starting}
-                aria-label="Lancer la simulation"
-                className="rounded-xl flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white hover:bg-white/90 transition-colors disabled:opacity-70"
-                style={{ color: theme.text }}
-              >
+      {/* ═══════════ En-tête (refonte du 11/10/2026) : sur le papier, comme le reste de l'espace élève ═══════════ */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8">
+        <PageHeader
+          back={{ to: '/concours', label: 'Concours' }}
+          eyebrow={(
+            <>
+              <Link to={`/concours?concours=${exam.concours_type}`} className="hover:underline">{exam.concours_type_display}</Link>
+              <span aria-hidden>·</span>
+              <span className="fd-nums">{exam.year}</span>
+            </>
+          )}
+          title={exam.title}
+          subtitle={(
+            <>
+              {exam.description && <span className="block">{exam.description}</span>}
+              <span className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
+                <span className="inline-flex items-center gap-1.5"><ListChecks className="w-4 h-4" aria-hidden /> {exam.question_count} questions</span>
+                <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" aria-hidden /> {exam.duration_minutes} min</span>
+              </span>
+            </>
+          )}
+          actions={(
+            <>
+              <button type="button" onClick={onStartSimulation} disabled={starting} className="fd-btn-primary min-h-10 disabled:opacity-70">
                 {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                <span className="hidden sm:inline">Simulation</span>
+                Lancer la simulation
               </button>
               <button
+                type="button"
                 onClick={onSave}
                 disabled={saving}
-                aria-label={exam.is_saved ? 'Retirer des enregistrés' : 'Enregistrer'}
                 aria-pressed={exam.is_saved}
-                className={`rounded-xl flex items-center gap-2 px-4 py-2 text-sm font-medium text-white/85 hover:text-white hover:bg-white/10 transition-colors ${exam.is_saved ? 'bg-white/20' : ''}`}
+                className={`fd-btn-ghost min-h-10 ${exam.is_saved ? '!border-gold-line !bg-gold-soft !text-gold-strong' : ''}`}
               >
                 {saving
                   ? <Loader2 className="w-4 h-4 animate-spin" />
                   : <Bookmark className="w-4 h-4" fill={exam.is_saved ? 'currentColor' : 'none'} />}
-                <span className="hidden sm:inline">{exam.is_saved ? 'Enregistré' : 'Enregistrer'}</span>
+                {exam.is_saved ? 'Enregistré' : 'Enregistrer'}
               </button>
-            </div>
-          </div>
-
-          {/* Title */}
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-tight">
-            {exam.title}
-          </h1>
-          {exam.description && (
-            <p className="text-sm text-white/80 mt-2 max-w-2xl leading-relaxed">
-              {exam.description}
-            </p>
+            </>
           )}
-          <div className="flex items-center gap-4 mt-3 text-sm text-white/80">
-            <span className="inline-flex items-center gap-1.5">
-              <ListChecks className="w-4 h-4" /> {exam.question_count} questions
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="w-4 h-4" /> {exam.duration_minutes} min
-            </span>
+        >
+          <div className="mt-5" data-tour="concours-sujet-onglets">
+            <Segmented<ExamTab>
+              label="Vues du sujet"
+              value={activeTab}
+              onChange={setActiveTab}
+              options={[
+                { key: 'navigation', label: 'Navigation', icon: TabIcons.navigation },
+                { key: 'stats', label: 'Statistiques', icon: TabIcons.stats },
+                { key: 'activity', label: 'Activité', icon: TabIcons.activity },
+              ]}
+            />
           </div>
-
-          {/* Tabs */}
-          <div className="flex items-center gap-1 mt-5 -mb-px overflow-x-auto scrollbar-hide" data-tour="concours-sujet-onglets">
-            {([
-              { id: 'navigation', label: 'Navigation', icon: BookOpen },
-              { id: 'stats',      label: 'Statistiques', icon: BarChart3 },
-              { id: 'activity',   label: 'Activité', icon: Trophy },
-            ] as { id: ExamTab; label: string; icon: LucideIcon }[]).map(({ id, label, icon: Icon }) => {
-              const isActive = activeTab === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl transition-all whitespace-nowrap ${
-                    isActive ? 'bg-[#fbfaff]' : 'text-white/75 hover:text-white hover:bg-white/10'
-                  }`}
-                  style={isActive ? { color: theme.text } : undefined}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        </PageHeader>
       </div>
 
       {/* ───── Content ───── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-7" style={{ paddingBottom: 120 }}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8" style={{ paddingBottom: 120 }}>
 
         {/* ═════ TAB: Statistiques ═════ */}
         {activeTab === 'stats' && (
@@ -438,8 +387,8 @@ export default function ConcoursExamDetailPage() {
             pointerEvents: 'auto',
             width: '100%', maxWidth: 640,
             background: '#fff', borderRadius: 16,
-            border: '1px solid #e8e5f7',
-            boxShadow: '0 8px 30px rgba(60,40,160,.16)',
+            border: '1px solid #e7e3dc',
+            boxShadow: '0 8px 30px rgba(20,18,16,.10)',
             padding: '12px 14px',
             display: 'flex', alignItems: 'center', gap: 12,
           }}>

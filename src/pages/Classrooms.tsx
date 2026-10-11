@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+/**
+ * Mes classes (/classrooms), refonte du 11/10/2026.
+ *  - Élève sans classe : on lui dit d'où vient le code (« Ton prof te donne un code de classe ») et le
+ *    champ est là, dans la page (avant : un bouton, puis une fenêtre ; personne n'avait rejoint en 30 j).
+ *  - Élève avec classes : ses classes en cartes, et une tuile « Un autre code ? » pour en rejoindre une autre.
+ *  - Prof : « Créer une classe », puis ses classes avec l'effectif et le code à copier pour l'envoyer aux élèves.
+ */
+import React, { useCallback, useEffect, useId, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Plus, Users, Trash2, BookOpen,
-  LogIn, X, Loader2, Sparkles, GraduationCap, Hash,
+  ArrowRight, Check, Copy, GraduationCap, KeyRound, Loader2, LogIn, LogOut, Plus, RotateCcw, Trash2, Users, X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
+import { Page, PageHeader, Section, EmptyState, CardsSkeleton } from '@/components/space/Page';
 import {
   listClassrooms,
   createClassroom,
@@ -16,182 +23,173 @@ import {
   type Classroom,
 } from '@/lib/api/classroomApi';
 
+const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
+
 export function ClassroomsPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isTeacher = user?.profile?.user_type === 'teacher';
+  const userId = user?.id;
 
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [classrooms, setClassrooms] = useState<Classroom[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
-      setLoading(true);
-      setError('');
-      const data = await listClassrooms();
-      setClassrooms(data);
+      setFailed(false);
+      setClassrooms(await listClassrooms());
     } catch (e) {
       console.error(e);
-      setError("Impossible de charger les classes.");
-    } finally {
-      setLoading(false);
+      setClassrooms((c) => c ?? []);
+      setFailed(true);
     }
+  }, []);
+
+  useEffect(() => { if (userId) refresh(); }, [userId, refresh]);
+
+  // Direct dans la classe : l'élève y arrive sur ses TD.
+  const joined = (c: Classroom) => { setShowJoin(false); navigate(`/classrooms/${c.id}`); };
+
+  const remove = async (c: Classroom) => {
+    if (!window.confirm(`Supprimer la classe « ${c.name} » ? Ses TD et la liste de ses élèves seront perdus.`)) return;
+    setBusyId(c.id);
+    try { await deleteClassroom(c.id); setError(''); await refresh(); }
+    catch (e) { setError(classroomError(e, 'Impossible de supprimer la classe.')); }
+    finally { setBusyId(null); }
   };
 
-  useEffect(() => { refresh(); }, []);
+  const leave = async (c: Classroom) => {
+    if (!window.confirm(`Quitter la classe « ${c.name} » ?`)) return;
+    setBusyId(c.id);
+    try { await leaveClassroom(c.id); setError(''); await refresh(); }
+    catch (e) { setError(classroomError(e, 'Impossible de quitter la classe.')); }
+    finally { setBusyId(null); }
+  };
+
+  const header = (actions?: React.ReactNode) => (
+    <PageHeader
+      eyebrow="Classes"
+      title="Mes classes"
+      subtitle={isTeacher
+        ? 'Crée une classe, donne son code à tes élèves et suis leur travail.'
+        : 'Rejoins la classe de ton prof avec son code : tu y retrouves les TD qu’il te donne.'}
+      actions={actions}
+    />
+  );
 
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <div className="fd-card p-8 text-center">
-          <p style={{ color: '#6b6862', fontSize: 14 }}>Connecte-toi pour voir tes classes.</p>
-        </div>
-      </div>
+      <Page>
+        <SEO title="Mes classes - Fidni" description="Rejoindre la classe de son prof avec un code." />
+        {authLoading ? <CardsSkeleton n={2} /> : (
+          <>
+            {header()}
+            <EmptyState icon={GraduationCap} title="Connecte-toi pour voir tes classes"
+              text="Ton prof te donne un code de classe : une fois connecté, tu l’entres ici pour rejoindre sa classe."
+              action={<Link to="/login" className="fd-btn-primary min-h-11"><LogIn className="h-4 w-4" /> Me connecter</Link>} />
+          </>
+        )}
+      </Page>
     );
   }
 
-  const owned = classrooms.filter(c => c.is_owner);
-  const joined = classrooms.filter(c => !c.is_owner);
+  const owned = (classrooms ?? []).filter((c) => c.is_owner);
+  const member = (classrooms ?? []).filter((c) => !c.is_owner);
+  const none = classrooms !== null && classrooms.length === 0;
+
+  const teacherActions = (
+    <div className="flex flex-wrap items-center gap-2" data-tour="classes-actions">
+      <button type="button" className="fd-btn-primary min-h-10" onClick={() => setShowCreate(true)}>
+        <Plus className="h-4 w-4" /> Créer une classe
+      </button>
+      <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setShowJoin(true)}>
+        <KeyRound className="h-4 w-4" /> J’ai un code
+      </button>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
-      <SEO title="Mes classes - Fidni" description="Gérer mes classes et collaborer avec mes camarades." />
+    <Page>
+      <SEO title="Mes classes - Fidni" description="Mes classes : rejoindre la classe de son prof, ou créer la sienne." />
+      {header(isTeacher && classrooms !== null && (!none || failed) ? teacherActions : undefined)}
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-        {/* Header */}
-        <div className="mb-6 flex items-end justify-between flex-wrap gap-3">
-          <div>
-            <span
-              className="inline-flex items-center gap-1.5"
-              style={{
-                background: '#f2f1ee', color: '#000000',
-                padding: '4px 12px', borderRadius: 99,
-                fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
-              }}
-            >
-              <GraduationCap className="w-3 h-3" /> CLASSES
-            </span>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
-              Mes classes
-            </h1>
-            <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
-              {isTeacher
-                ? 'Crée une classe, ajoute des matières et invite tes élèves avec un code.'
-                : 'Rejoins une classe avec un code donné par ton enseignant·e.'}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2" data-tour="classes-actions">
-            {!isTeacher && (
-              <button className="fd-btn-primary" onClick={() => setShowJoin(true)}>
-                <LogIn className="w-4 h-4" /> Rejoindre une classe
-              </button>
-            )}
-            {isTeacher && (
-              <>
-                <button className="fd-btn-ghost" onClick={() => setShowJoin(true)}>
-                  <LogIn className="w-3 h-3" /> Rejoindre
-                </button>
-                <button className="fd-btn-primary" onClick={() => setShowCreate(true)}>
-                  <Plus className="w-4 h-4" /> Nouvelle classe
-                </button>
-              </>
-            )}
-          </div>
+      {(failed || error) && (
+        <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">
+            {error || 'Tes classes n’ont pas pu se charger. Vérifie ta connexion.'}
+          </p>
+          {failed ? (
+            <button type="button" onClick={refresh} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          ) : (
+            <button type="button" onClick={() => setError('')} aria-label="Fermer le message"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#a23b34] hover:bg-white/60">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+      )}
 
-        {error && (
-          <div
-            className="fd-card mb-4"
-            style={{ padding: 14, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 13 }}
-          >
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1a1a1a' }} />
-          </div>
-        ) : (
-          <>
-            {/* Owned classrooms (teacher) */}
-            {owned.length > 0 && (
-              <Section title="Classes que je gère" subtitle="Enseignement">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="classes-liste">
-                  {owned.map(c => (
-                    <ClassroomCard
-                      key={c.id}
-                      classroom={c}
-                      onOpen={() => navigate(`/classrooms/${c.id}`)}
-                      onDelete={async () => {
-                        if (!window.confirm(`Supprimer la classe « ${c.name} » ?`)) return;
-                        try { await deleteClassroom(c.id); setError(''); refresh(); }
-                        catch (e) { setError(classroomError(e, 'Impossible de supprimer la classe.')); }
-                      }}
-                    />
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {/* Joined classrooms */}
-            {joined.length > 0 && (
-              <Section title="Classes auxquelles je participe" subtitle="Apprentissage">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="classes-liste">
-                  {joined.map(c => (
-                    <ClassroomCard
-                      key={c.id}
-                      classroom={c}
-                      onOpen={() => navigate(`/classrooms/${c.id}`)}
-                      onLeave={async () => {
-                        if (!window.confirm(`Quitter la classe « ${c.name} » ?`)) return;
-                        try { await leaveClassroom(c.id); setError(''); refresh(); }
-                        catch (e) { setError(classroomError(e, 'Impossible de quitter la classe.')); }
-                      }}
-                    />
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {classrooms.length === 0 && (
-              <div className="fd-card text-center" style={{ padding: 60 }}>
-                <div
-                  className="inline-flex items-center justify-center mx-auto mb-4"
-                  style={{
-                    width: 72, height: 72, borderRadius: 18,
-                    background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)', color: '#6b6862',
-                  }}
-                >
-                  <GraduationCap className="w-8 h-8" />
-                </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
-                  {isTeacher ? "Crée ta première classe" : "Tu n'es dans aucune classe"}
-                </h3>
-                <p style={{ fontSize: 13, color: '#6b6862', marginTop: 8, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
-                  {isTeacher
-                    ? "Une classe te permet de regrouper tes élèves, d'y associer des matières et de suivre leurs progrès."
-                    : "Demande un code de classe à ton enseignant·e pour rejoindre une classe."}
-                </p>
-                <button
-                  className="fd-btn-primary"
-                  style={{ marginTop: 18 }}
-                  onClick={() => isTeacher ? setShowCreate(true) : setShowJoin(true)}
-                >
-                  {isTeacher ? <><Plus className="w-4 h-4" /> Créer une classe</> : <><LogIn className="w-4 h-4" /> Entrer un code</>}
+      {classrooms === null ? (
+        <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+      ) : none && !failed ? (
+        isTeacher ? (
+          <EmptyState icon={GraduationCap} title="Crée ta première classe"
+            text="Une classe regroupe tes élèves : tu leur donnes des TD et tu suis leur travail. Ils la rejoignent avec un code que tu leur envoies."
+            action={(
+              <div className="flex flex-wrap items-center justify-center gap-2" data-tour="classes-actions">
+                <button type="button" className="fd-btn-primary min-h-11" onClick={() => setShowCreate(true)}>
+                  <Plus className="h-4 w-4" /> Créer une classe
+                </button>
+                <button type="button" className="fd-btn-ghost min-h-11" onClick={() => setShowJoin(true)}>
+                  <KeyRound className="h-4 w-4" /> J’ai un code
                 </button>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            )} />
+        ) : (
+          <EmptyState icon={KeyRound} title="Ton prof te donne un code de classe"
+            text="Entre-le ici pour rejoindre sa classe : tu y retrouveras les TD qu’il te donne et ton avancement."
+            action={(
+              <div className="flex w-full max-w-sm flex-col items-center gap-4" data-tour="classes-actions">
+                <JoinForm onJoined={joined} />
+                <Link to="/reviser" className="inline-flex min-h-10 items-center gap-1 text-[13px] font-medium text-ink-faint hover:text-ink">
+                  Pas encore de code ? Révise seul en attendant <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )} />
+        )
+      ) : isTeacher ? (
+        <div className="flex flex-col gap-10">
+          {owned.length > 0 && (
+            <Section id="classes-gerees" title="Classes que je gère" count={owned.length}
+              hint="Envoie le code d’une classe à tes élèves : ils l’entrent dans « Mes classes » pour la rejoindre.">
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="classes-liste">
+                {owned.map((c) => <OwnedCard key={c.id} classroom={c} busy={busyId === c.id} onDelete={() => remove(c)} />)}
+              </ul>
+            </Section>
+          )}
+          {member.length > 0 && (
+            <Section id="classes-suivies" title="Classes que je suis" count={member.length}>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour={owned.length ? undefined : 'classes-liste'}>
+                {member.map((c) => <MemberCard key={c.id} classroom={c} busy={busyId === c.id} onLeave={() => leave(c)} />)}
+              </ul>
+            </Section>
+          )}
+        </div>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="classes-liste">
+          {member.map((c) => <MemberCard key={c.id} classroom={c} busy={busyId === c.id} onLeave={() => leave(c)} />)}
+          <li className="flex flex-col justify-center gap-3 rounded-2xl border border-dashed border-[#d8d4cc] p-4 sm:p-5" data-tour="classes-actions">
+            <p className="text-[13.5px] font-semibold text-ink-soft">Un autre code ?</p>
+            <JoinForm onJoined={joined} compact />
+          </li>
+        </ul>
+      )}
 
-      {/* Modals */}
       {showCreate && (
         <CreateClassroomModal
           onClose={() => setShowCreate(false)}
@@ -204,163 +202,182 @@ export function ClassroomsPage() {
       )}
 
       {showJoin && (
-        <JoinClassroomModal
-          onClose={() => setShowJoin(false)}
-          onJoined={(c) => {
-            // Direct dans la classe : l'élève y arrive sur ses TD.
-            setShowJoin(false);
-            navigate(`/classrooms/${c.id}`);
-          }}
-        />
+        <ModalShell title="Rejoindre une classe" onClose={() => setShowJoin(false)}>
+          <p className="mb-4 text-[13px] leading-relaxed text-ink-faint">Entre le code que t’a donné le prof de la classe.</p>
+          <JoinForm onJoined={joined} autoFocus />
+        </ModalShell>
       )}
-    </div>
+    </Page>
   );
 }
 
-/* ───────── Section header ───────── */
-function Section({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6">
-      <div className="mb-3">
-        <span style={{ fontSize: 10, color: '#6b6862', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>
-          {subtitle}
-        </span>
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em', marginTop: 2 }}>
-          {title}
-        </h2>
-      </div>
-      {children}
-    </section>
-  );
-}
+/* ───────── Formulaire « Rejoindre » (dans la page, ou dans la fenêtre du prof) ───────── */
 
-/* ───────── Classroom card ───────── */
-function ClassroomCard({
-  classroom,
-  onOpen,
-  onDelete,
-  onLeave,
-}: {
-  classroom: Classroom;
-  onOpen: () => void;
-  onDelete?: () => void;
-  onLeave?: () => void;
+function JoinForm({ onJoined, compact = false, autoFocus = false }: {
+  onJoined: (c: Classroom) => void;
+  /** Tuile « Un autre code ? » : champ et bouton toujours sur une ligne. */
+  compact?: boolean;
+  autoFocus?: boolean;
 }) {
+  const id = useId();
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim() || busy) return;
+    try {
+      setBusy(true); setErr('');
+      const c = await joinClassroom(code.trim());
+      onJoined(c);
+    } catch (e) {
+      setErr(classroomError(e, 'Ce code ne correspond à aucune classe. Vérifie-le avec ton prof.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div
-      className="fd-card p-5 cursor-pointer"
-      role="link"
-      tabIndex={0}
-      aria-label={`Ouvrir la classe ${classroom.name}`}
-      onClick={onOpen}
-      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(); } }}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className="inline-flex items-center justify-center"
-          style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-          }}
-        >
-          <Users className="w-4 h-4" />
-        </div>
-        {onDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="inline-flex items-center justify-center"
-            style={{ width: 36, height: 36, margin: '-4px -8px 0 0', background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}
-            aria-label={`Supprimer la classe ${classroom.name}`}
-            title="Supprimer la classe"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-        {onLeave && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onLeave(); }}
-            className="fd-btn-ghost"
-            style={{ padding: '6px 12px', fontSize: 11, minHeight: 32 }}
-            aria-label={`Quitter la classe ${classroom.name}`}
-          >
-            Quitter
-          </button>
-        )}
+    <form onSubmit={submit} className="w-full" noValidate>
+      <div className={`flex gap-2 ${compact ? '' : 'flex-col sm:flex-row'}`}>
+        <label htmlFor={`${id}-code`} className="sr-only">Code de la classe</label>
+        <input
+          id={`${id}-code`}
+          value={code}
+          onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/\s+/g, '')); if (err) setErr(''); }}
+          maxLength={12}
+          autoFocus={autoFocus}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          placeholder={compact ? 'Le code' : 'Code de la classe'}
+          aria-invalid={!!err}
+          aria-describedby={err ? `${id}-err` : undefined}
+          className={`min-h-11 w-full min-w-0 flex-1 rounded-xl border bg-white px-4 font-mono text-[16px] font-bold uppercase tracking-[.14em] text-ink placeholder:font-sans placeholder:text-[14px] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
+            err ? 'border-[#e3b7b1]' : 'border-line focus:border-ink-faint'} ${compact ? '' : 'text-center sm:text-left'}`}
+        />
+        <button type="submit" disabled={busy || !code.trim()} className="fd-btn-primary min-h-11 shrink-0 justify-center disabled:cursor-not-allowed disabled:opacity-60">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+          Rejoindre
+        </button>
       </div>
-
-      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>
-        {classroom.name}
-      </h3>
-      {classroom.class_level_name && (
-        <p style={{ fontSize: 11, color: '#6b6862', marginTop: 2 }}>{classroom.class_level_name}</p>
-      )}
-
-      <div className="flex items-center gap-3 mt-4 text-xs">
-        <span className="inline-flex items-center gap-1" style={{ color: '#6b6862' }}>
-          <Users className="w-3 h-3" /> {classroom.student_count} élève{classroom.student_count > 1 ? 's' : ''}
-        </span>
-        <span className="inline-flex items-center gap-1" style={{ color: '#6b6862' }}>
-          <BookOpen className="w-3 h-3" /> {classroom.subjects.length} matière{classroom.subjects.length > 1 ? 's' : ''}
-        </span>
-      </div>
-
-      <div
-        className="flex items-center justify-between mt-4 pt-3"
-        style={{ borderTop: '1px dashed #e7e3dc' }}
-      >
-        <div className="inline-flex items-center gap-1.5">
-          <Hash className="w-3 h-3" style={{ color: '#6b6862' }} />
-          <span
-            style={{
-              fontFamily: 'DM Mono', fontSize: 13, fontWeight: 700,
-              color: '#000000', letterSpacing: '.06em',
-            }}
-          >
-            {classroom.join_code}
-          </span>
-        </div>
-        <span style={{ fontSize: 10, color: '#6b6862' }}>
-          {classroom.is_owner ? 'Propriétaire' : `par ${classroom.owner.username}`}
-        </span>
-      </div>
-    </div>
+      {err && <p id={`${id}-err`} role="alert" className="mt-2 text-left text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
+    </form>
   );
 }
 
-/* ───────── Modals ───────── */
-function ModalShell({ title, onClose, children, width = 480 }: { title: string; onClose: () => void; children: React.ReactNode; width?: number }) {
+/* ───────── Cartes ───────── */
+
+/** Code de la classe et bouton « Copier » (le prof l'envoie à ses élèves). */
+function CopyCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch (e) { console.error(e); }
+  };
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">Code</span>
+      <span className="fd-nums truncate font-mono text-[15px] font-bold tracking-[.12em] text-ink">{code}</span>
+      <button type="button" onClick={copy} aria-label={copied ? 'Code copié' : `Copier le code ${code}`}
+        className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        <span aria-live="polite">{copied ? 'Copié' : 'Copier'}</span>
+      </button>
+    </span>
+  );
+}
+
+const cardCls = 'rounded-2xl border border-line bg-white transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)]';
+const linkFocus = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40';
+
+/** Classe du prof : effectif en avant, code à copier, suppression discrète. */
+function OwnedCard({ classroom: c, busy, onDelete }: { classroom: Classroom; busy: boolean; onDelete: () => void }) {
+  const n = c.student_count;
+  const subjects = c.subjects.length;
+  return (
+    <li className={`flex flex-col overflow-hidden ${cardCls}`}>
+      <Link to={`/classrooms/${c.id}`} className={`group block flex-1 p-4 sm:p-5 ${linkFocus}`}>
+        <span className="block truncate text-[16px] font-semibold text-ink">{c.name}</span>
+        {c.class_level_name && <span className="mt-0.5 block text-[12.5px] text-ink-faint">{c.class_level_name}</span>}
+        <span className="mt-4 flex items-baseline gap-1.5 text-[13px] text-ink-faint">
+          <b className="fd-nums text-[26px] font-bold leading-none text-ink">{n}</b>
+          {plural(n, 'élève', 'élèves')}
+          {subjects > 0 && <> · {subjects} {plural(subjects, 'matière', 'matières')}</>}
+        </span>
+        {n === 0 ? (
+          <span className="mt-2.5 inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-medium text-gold-strong">
+            Envoie le code pour qu’ils te rejoignent
+          </span>
+        ) : (
+          <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover group-hover:underline">
+            Voir la classe <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        )}
+      </Link>
+      <div className="flex items-center gap-2 border-t border-dashed border-line px-4 py-1.5 sm:px-5">
+        <CopyCode code={c.join_code} />
+        <button type="button" onClick={onDelete} disabled={busy} aria-label={`Supprimer la classe ${c.name}`} title="Supprimer la classe"
+          className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34]">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/** Classe suivie (élève, ou prof inscrit chez un collègue) : le prof, l'effectif, « Voir mes TD ». */
+function MemberCard({ classroom: c, busy, onLeave }: { classroom: Classroom; busy: boolean; onLeave: () => void }) {
+  return (
+    <li className={`relative ${cardCls}`}>
+      <Link to={`/classrooms/${c.id}`} className={`group flex h-full flex-col rounded-2xl p-4 pr-14 sm:p-5 sm:pr-14 ${linkFocus}`}>
+        <span className="flex items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+            <GraduationCap className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[16px] font-semibold text-ink">{c.name}</span>
+            {c.class_level_name && <span className="block text-[12.5px] text-ink-faint">{c.class_level_name}</span>}
+          </span>
+        </span>
+        <span className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-ink-faint">
+          <span>Prof : <b className="font-semibold text-ink-soft">{c.owner.username}</b></span>
+          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden /><span className="fd-nums">{c.student_count}</span> {plural(c.student_count, 'élève', 'élèves')}</span>
+        </span>
+        <span className="mt-auto inline-flex items-center gap-1 pt-4 text-[13px] font-semibold text-brand-hover group-hover:underline">
+          Voir mes TD <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      </Link>
+      <button type="button" onClick={onLeave} disabled={busy} aria-label={`Quitter la classe ${c.name}`} title="Quitter la classe"
+        className="absolute right-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34]">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+      </button>
+    </li>
+  );
+}
+
+/* ───────── Fenêtres ───────── */
+
+function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(20,18,16,.4)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-        animation: 'fadeIn .15s ease',
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="fd-card animate-fade-up"
-        style={{ width: '100%', maxWidth: width, padding: 22, maxHeight: '88vh', overflowY: 'auto' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{title}</h3>
-          <button
-            onClick={onClose}
-            aria-label="Fermer"
-            className="inline-flex items-center justify-center flex-shrink-0"
-            style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}
-          >
-            <X className="w-5 h-5" />
+    <div role="dialog" aria-modal="true" aria-label={title}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[4px]"
+      onClick={onClose}>
+      <div className="fd-card animate-fade-up max-h-[88vh] w-full max-w-[480px] overflow-y-auto p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="fd-display text-[20px] leading-tight text-ink">{title}</h3>
+          <button type="button" onClick={onClose} aria-label="Fermer"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+            <X className="h-5 w-5" />
           </button>
         </div>
         {children}
@@ -368,6 +385,8 @@ function ModalShell({ title, onClose, children, width = 480 }: { title: string; 
     </div>
   );
 }
+
+const fieldCls = 'w-full rounded-xl border border-line bg-[#fcfbf9] px-3 py-2.5 text-[14px] text-ink outline-none transition-colors focus:border-ink-faint focus:bg-white';
 
 function CreateClassroomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Classroom) => void }) {
   const [name, setName] = useState('');
@@ -391,105 +410,28 @@ function CreateClassroomModal({ onClose, onCreated }: { onClose: () => void; onC
 
   return (
     <ModalShell title="Nouvelle classe" onClose={onClose}>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <Field label="Nom de la classe">
-          <input
-            value={name} onChange={e => setName(e.target.value)} required autoFocus
-            placeholder="Ex. 2ème Bac SM A"
-            style={inputStyle}
-          />
-        </Field>
-        <Field label="Description (facultatif)">
-          <textarea
-            value={description} onChange={e => setDescription(e.target.value)}
-            rows={3} placeholder="Ex. Classe de mathématiques avancées"
-            style={{ ...inputStyle, resize: 'vertical', minHeight: 70 }}
-          />
-        </Field>
-        {err && <p style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
-        <div className="flex justify-end gap-2 mt-2">
-          <button type="button" className="fd-btn-ghost" onClick={onClose}>Annuler</button>
-          <button type="submit" className="fd-btn-primary" disabled={busy}>
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            Créer
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12.5px] font-semibold text-ink-soft">Nom de la classe</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus
+            placeholder="Ex. 2ème Bac SM A" className={`${fieldCls} min-h-11`} />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12.5px] font-semibold text-ink-soft">Description <span className="font-normal text-ink-faint">(facultatif)</span></span>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+            placeholder="Ex. Groupe de mathématiques, lycée Ibn Sina" className={`${fieldCls} min-h-[76px] resize-y`} />
+        </label>
+        <p className="text-[12.5px] leading-relaxed text-ink-faint">Un code est créé avec la classe : envoie-le à tes élèves pour qu’ils la rejoignent.</p>
+        {err && <p role="alert" className="text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
+        <div className="mt-1 flex justify-end gap-2">
+          <button type="button" className="fd-btn-ghost min-h-11" onClick={onClose}>Annuler</button>
+          <button type="submit" className="fd-btn-primary min-h-11 disabled:opacity-60" disabled={busy || !name.trim()}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Créer la classe
           </button>
         </div>
       </form>
     </ModalShell>
-  );
-}
-
-function JoinClassroomModal({ onClose, onJoined }: { onClose: () => void; onJoined: (c: Classroom) => void }) {
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    try {
-      setBusy(true); setErr('');
-      const c = await joinClassroom(code);
-      onJoined(c);
-    } catch (e) {
-      setErr(classroomError(e, 'Code invalide.'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <ModalShell title="Rejoindre une classe" onClose={onClose}>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <Field label="Code de la classe">
-          <input
-            value={code}
-            onChange={e => setCode(e.target.value.toUpperCase())}
-            required autoFocus maxLength={12}
-            placeholder="ABCDEF"
-            style={{
-              ...inputStyle,
-              fontFamily: 'DM Mono',
-              fontSize: 18, fontWeight: 700, letterSpacing: '.12em',
-              textAlign: 'center',
-            }}
-          />
-        </Field>
-        <p style={{ fontSize: 11, color: '#6b6862' }}>
-          Le code te sera donné par ton enseignant·e.
-        </p>
-        {err && <p style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
-        <div className="flex justify-end gap-2 mt-2">
-          <button type="button" className="fd-btn-ghost" onClick={onClose}>Annuler</button>
-          <button type="submit" className="fd-btn-primary" disabled={busy}>
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-            Rejoindre
-          </button>
-        </div>
-      </form>
-    </ModalShell>
-  );
-}
-
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  border: '1.5px solid #e7e3dc',
-  borderRadius: 10,
-  fontSize: 13,
-  fontFamily: 'DM Sans',
-  color: '#1a1a1a',
-  background: '#f9f8ff',
-  outline: 'none',
-};
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>{label}</span>
-      {children}
-    </label>
   );
 }
 
