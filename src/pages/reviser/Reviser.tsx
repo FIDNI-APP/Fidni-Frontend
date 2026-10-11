@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Page, PageHeader, Section, EmptyState, SplitBar, CardsSkeleton } from '@/components/space/Page';
-import { Countdown, DateTile, GradeBadge, ReadinessRing } from '@/components/devoirs/ui';
+import { Countdown, DateTile, GradeBadge } from '@/components/devoirs/ui';
 import { GradeForm } from '@/components/devoirs/GradeForm';
 import { TestFormModal } from '@/components/devoirs/TestFormModal';
 import { CreateListModal } from '@/components/revision/CreateListModal';
@@ -66,24 +66,17 @@ const NextTestHero: React.FC<{ test: UpcomingTest; others: UpcomingTest[]; onEdi
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-3 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-        <div className="flex items-center gap-3">
-          <ReadinessRing value={test.readiness ?? null} size={64} />
-          <p className="text-[13px] leading-snug text-ink-soft">
-            {test.readiness == null ? <>Pas encore de mesure : quelques exercices suffisent.</>
-              : test.weak_chapters?.length ? <>À renforcer : <b className="font-semibold text-ink">{test.weak_chapters[0]}</b></>
-                : <>Tu es sur la bonne voie.</>}
-          </p>
-        </div>
-        <Link to={`/revisions/ds/${test.id}`} className="fd-btn-primary min-h-11 w-full justify-center" data-tour="reviser-preparer">
-          Continuer ma préparation <ArrowRight className="h-4 w-4" />
+      {/* 11/10/2026 : le DS blanc est l'action principale (avant : « Continuer ma préparation », DS blanc en petit). */}
+      <div className="flex flex-col gap-2 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+        <Link to={`/revisions/ds/${test.id}/blanc`} className="fd-btn-primary min-h-12 w-full justify-center text-[15px]" data-tour="reviser-preparer">
+          <Timer className="h-4 w-4" /> {test.mock_done_at ? 'Un autre DS blanc' : 'Lancer le DS blanc'}
+        </Link>
+        <Link to={`/revisions/ds/${test.id}`} className="inline-flex min-h-10 items-center justify-center gap-1 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
+          Réviser chapitre par chapitre <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     </div>
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] sm:px-6">
-      <Link to={`/revisions/ds/${test.id}/blanc`} className="inline-flex min-h-9 items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
-        <Timer className="h-4 w-4" /> DS blanc chronométré
-      </Link>
       <button type="button" onClick={() => onEdit(test)} className="inline-flex min-h-9 items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
         <Pencil className="h-3.5 w-3.5" /> Modifier
       </button>

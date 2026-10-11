@@ -298,7 +298,7 @@ export const TOURS: Tour[] = [
     version: 4, // page « Réviser » du 11/10/2026 : prochain DS, à refaire, mes listes
     autoSteps: ['revisions-ds', 'revisions-suggestions', 'revisions-nouvelle'],
     steps: [
-      { target: 'revisions-ds', title: 'Ton prochain DS', body: 'Annonce ton prochain DS (date, chapitres) : Fidni te prépare une révision ciblée — tes chapitres fragiles d’abord, des exercices choisis pour toi, un DS blanc chronométré — et te le rappelle sur l’accueil. Après le DS, note ta note.' },
+      { target: 'revisions-ds', title: 'Ton prochain DS', body: 'Annonce ton prochain DS (date, chapitres) : Fidni te compose un DS blanc chronométré sur ces chapitres (durée et difficulté réglables), et t’aide à réviser chapitre par chapitre. Après le DS, note ta note.' },
       { target: 'revisions-suggestions', title: 'À refaire', body: 'Les exercices que tu as ratés ou marqués « À revoir », les plus anciens d’abord. Refais-en un, ou range-les tous dans une liste en un clic.' },
       { target: 'revisions-liste', title: 'Mes listes', body: 'Ouvre une liste pour refaire ses exercices à la suite ; la barre montre ce qui est réussi (vert) et ce qui reste à revoir (or).' },
       { target: 'revisions-nouvelle', title: 'Nouvelle liste', body: 'Regroupe des exercices à retravailler (ex. « Limites – DS 1 »). On en ajoute depuis leur page ou leur carte, bouton « Liste ».' },

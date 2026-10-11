@@ -1,21 +1,19 @@
 /**
- * Plan de révision d'un DS (« Mon prochain DS », 08/10/2026 ; refonte du 11/10/2026) : /revisions/ds/:id
+ * Préparation d'un DS (« Mon prochain DS ») : /revisions/ds/:id
  *
- * On y arrive depuis Réviser (« Continuer ma préparation ») : même en-tête, même carte héros.
- * En haut, ta préparation : « Prêt à … % » (maîtrise des chapitres, comme Ma progression), UNE prochaine
- * étape conseillée, et les étapes (exercices, quiz s'il y en a, DS blanc). Puis :
- *   1. tes chapitres, du plus fragile au plus solide (notions à renforcer, contenus à revoir) ;
- *   2. des exercices choisis pour toi dans ces chapitres ;
- *   3. le DS blanc chronométré.
- * Backend : apps/interactions/devoirs.py.
- * 10/10/2026 : « S'entraîner » ouvre la page du chapitre au niveau de l'élève (les plus faciles d'abord, sans les
- * réussis) ; le quiz d'un chapitre ramène ici (« Retour à mon DS »).
+ * Refonte du 11/10/2026 (« trop d'infos, même moi j'ai du mal ») : deux blocs seulement.
+ *   1. Le DS blanc, en vedette : un grand bouton, deux réglages discrets (durée, difficulté), la composition du
+ *      sujet en une ligne ; une fois fait, ton temps, « Ma correction » et « Un autre DS blanc ».
+ *      DS passé : à la place, ta note.
+ *   2. « Réviser avant » : une ligne par chapitre (maîtrise, S'entraîner, le cours, le quiz), du plus fragile au
+ *      plus solide ; les exercices conseillés, repliés.
+ * Backend : apps/interactions/devoirs.py (plan, ds-blanc).
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowRight, BookOpen, Brain, CalendarCheck, CalendarX, Check, ChevronDown, ClipboardCheck, Clock, Dumbbell, Loader2,
-  Pencil, RefreshCw, RotateCcw, Timer, WifiOff,
+  Pencil, RefreshCw, RotateCcw, SlidersHorizontal, Timer, WifiOff,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -28,108 +26,19 @@ import { STATUS } from '@/pages/progression/status';
 import { Meter } from '@/pages/progression/ui';
 import { TestFormModal } from '@/components/devoirs/TestFormModal';
 import { GradeForm } from '@/components/devoirs/GradeForm';
-import { Countdown, DateTile, DifficultyDot, GradeBadge, ReadinessRing } from '@/components/devoirs/ui';
+import { Countdown, DifficultyDot, GradeBadge } from '@/components/devoirs/ui';
 import { lessonsUrl, practiceUrl, quizUrl } from '@/pages/progression/links';
 
 const BACK = { to: '/reviser', label: 'Réviser' };
-const EXERCISES_SHOWN = 3;
-
-const scrollTo = (id: string) => (e: React.MouseEvent) => {
-  e.preventDefault();
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
-
-/** Le chapitre ouvert d'office : le plus fragile, s'il reste du travail. */
-const firstOpen = (p: TestPlan) => {
-  const c = p.chapters[0];
-  return c && c.status !== 'mastered' && c.status !== 'good' ? c.id : null;
-};
 
 const minutesLabel = (s: number) => {
   const m = Math.max(1, Math.round(s / 60));
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
 };
-
-const durationChoice = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
+const durationLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
 const MOCK_DIFFICULTIES: { key: MockDifficulty; label: string }[] = [
   { key: '', label: 'Mélangée' }, { key: 'easy', label: 'Facile' }, { key: 'medium', label: 'Moyenne' }, { key: 'hard', label: 'Difficile' },
 ];
-
-/** Réglages du DS blanc : durée visée et difficulté ; un changement tire un nouveau sujet. */
-const MockSettings: React.FC<{
-  settings: NonNullable<TestPlan['mock']>['settings'] & object; busy: boolean; respected: boolean; started: boolean;
-  onChange: (minutes: number, difficulty: MockDifficulty) => void;
-}> = ({ settings, busy, respected, started, onChange }) => {
-  const pick = (minutes: number, difficulty: MockDifficulty) => {
-    if (minutes === settings.minutes && difficulty === settings.difficulty) return;
-    if (started && !window.confirm('Ton DS blanc est commencé : le changer en tire un nouveau. Continuer ?')) return;
-    onChange(minutes, difficulty);
-  };
-  const seg = (on: boolean) => `min-h-9 rounded-lg px-3 text-[13px] font-medium transition-colors disabled:opacity-60 ${
-    on ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`;
-  return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2.5 rounded-2xl border border-line bg-[#faf9f7] px-4 py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12.5px] font-semibold text-ink">Durée</span>
-        <div className="inline-flex flex-wrap rounded-xl bg-[#f2f1ee] p-1" role="group" aria-label="Durée du DS blanc">
-          {settings.choices.map((m) => (
-            <button key={m} type="button" aria-pressed={settings.minutes === m} disabled={busy} onClick={() => pick(m, settings.difficulty)}
-              className={seg(settings.minutes === m)}>{durationChoice(m)}</button>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12.5px] font-semibold text-ink">Difficulté</span>
-        <div className="inline-flex flex-wrap rounded-xl bg-[#f2f1ee] p-1" role="group" aria-label="Difficulté du DS blanc">
-          {MOCK_DIFFICULTIES.map((d) => (
-            <button key={d.key || 'mix'} type="button" aria-pressed={settings.difficulty === d.key} disabled={busy}
-              onClick={() => pick(settings.minutes, d.key)} className={seg(settings.difficulty === d.key)}>{d.label}</button>
-          ))}
-        </div>
-      </div>
-      {busy && <Loader2 className="h-4 w-4 animate-spin text-ink-faint" aria-label="Nouveau sujet…" />}
-      {!respected && (
-        <p className="w-full text-[12.5px] text-gold-strong">
-          Pas assez d’exercices longs de cette difficulté dans ces chapitres : d’autres difficultés complètent le sujet.
-        </p>
-      )}
-    </div>
-  );
-};
-
-/** La prochaine étape, une seule : la plus utile maintenant. */
-function advice(p: TestPlan): { text: string; to?: string; anchor?: string; label?: string } {
-  const t = p.test;
-  const prep = p.preparation;
-  const blanc = `/revisions/ds/${t.id}/blanc`;
-  if (t.days_left < 0) return { text: 'Ton DS est passé : note ta note pour suivre tes résultats au fil de l’année.' };
-  const noData = p.chapters.every((c) => c.mastery === null);
-  const quizChapter = p.chapters.find((c) => c.quiz_ready && !prep.quiz_done.includes(c.id));
-  if (noData && quizChapter) {
-    return { text: `Commence par le quiz «\u00a0${quizChapter.name}\u00a0» : en quelques minutes, tu sauras où tu en es.`,
-      to: quizUrl(quizChapter.id, `/revisions/ds/${t.id}`), label: 'Passer le quiz' };
-  }
-  const mockReady = !!p.mock?.exercises.length && !prep.mock;
-  if (t.days_left <= 1 && mockReady) {
-    return { text: `Ton DS est ${t.days_left === 0 ? 'aujourd’hui' : 'demain'} : fais le DS blanc, en conditions réelles.`, to: blanc, label: 'Lancer le DS blanc' };
-  }
-  const weakest = p.chapters[0];
-  if (weakest && (weakest.status === 'weak' || weakest.status === 'todo') && prep.exercises < prep.exercises_goal) {
-    return { text: weakest.status === 'todo'
-      ? `Commence par «\u00a0${weakest.name}\u00a0» : tu ne l’as pas encore travaillé.`
-      : `Commence par «\u00a0${weakest.name}\u00a0» : c’est ton chapitre le plus fragile.`,
-    anchor: `chapitre-${weakest.id}`, label: 'Voir ce chapitre' };
-  }
-  if (prep.exercises < prep.exercises_goal) {
-    const left = prep.exercises_goal - prep.exercises;
-    return { text: prep.mock
-      ? `Encore ${plural(left, 'exercice', 'exercices')} dans les chapitres du DS pour consolider.`
-      : `Encore ${plural(left, 'exercice', 'exercices')} dans les chapitres du DS, et tu seras prêt pour le DS blanc.`,
-    anchor: 'exercices', label: 'Voir les exercices' };
-  }
-  if (mockReady) return { text: 'Tu as bien travaillé : place au DS blanc, en conditions réelles.', to: blanc, label: 'Lancer le DS blanc' };
-  return { text: 'Belle préparation ! La veille, refais un exercice «\u00a0à revoir\u00a0», puis repose-toi.' };
-}
 
 export default function TestPlanPage() {
   const { id } = useParams();
@@ -139,10 +48,9 @@ export default function TestPlanPage() {
   const [error, setError] = useState<'missing' | 'failed' | null>(null);
   const [editing, setEditing] = useState(false);
   const [editingGrade, setEditingGrade] = useState(false);
-  const [renewing, setRenewing] = useState(false);
-  const [moreExercises, setMoreExercises] = useState(false);
-  // Un seul chapitre ouvert à la fois (undefined : pas encore choisi, on ouvre le plus fragile).
-  const [openChapter, setOpenChapter] = useState<number | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showExercises, setShowExercises] = useState(false);
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = plan ? testTitle(plan.test) : null;
   useEffect(() => {
@@ -155,7 +63,7 @@ export default function TestPlanPage() {
     if (!id) return;
     setError(null);
     devoirsApi.plan(Number(id))
-      .then((p) => { setPlan(p); setError(null); setOpenChapter((cur) => (cur === undefined || (cur !== null && !p.chapters.some((c) => c.id === cur)) ? firstOpen(p) : cur)); })
+      .then((p) => { setPlan(p); setError(null); })
       .catch((e) => setError(e?.response?.status === 404 ? 'missing' : 'failed'));
   }, [id]);
 
@@ -187,7 +95,7 @@ export default function TestPlanPage() {
         <PageHeader back={BACK} eyebrow="Préparation du DS"
           title={<><span className="sr-only">Chargement de la préparation…</span><span aria-hidden className="inline-block h-[0.9em] w-72 max-w-full animate-pulse rounded-lg bg-[#efece6] align-middle" /></>} />
         <div className="flex flex-col gap-10" aria-busy>
-          <div className="h-48 animate-pulse rounded-3xl border border-line bg-white" />
+          <div className="h-56 animate-pulse rounded-3xl border border-line bg-white" />
           <CardsSkeleton n={3} />
         </div>
       </Page>
@@ -196,28 +104,14 @@ export default function TestPlanPage() {
 
   const t = plan.test;
   const past = t.days_left < 0;
-  const a = advice(plan);
-  const weakCount = plan.chapters.filter((c) => c.status === 'weak').length;
-  const setTest = (next: UpcomingTest) => setPlan((p) => (p ? { ...p, test: { ...p.test, ...next } } : p));
-  const renew = async () => {
-    setRenewing(true);
-    try {
-      await devoirsApi.mockAction(t.id, 'new');
-      load();
-    } finally {
-      setRenewing(false);
-    }
-  };
-  // « Voir ce chapitre » : on l'ouvre, puis on y descend.
-  const goToAnchor = (anchor: string) => (e: React.MouseEvent) => {
-    const m = /^chapitre-(\d+)$/.exec(anchor);
-    if (m) setOpenChapter(Number(m[1]));
-    scrollTo(anchor)(e);
-  };
-
   const mock = plan.mock;
-  const prep = plan.preparation;
-  const shownExercises = moreExercises ? plan.exercises : plan.exercises.slice(0, EXERCISES_SHOWN);
+  const setTest = (next: UpcomingTest) => setPlan((p) => (p ? { ...p, test: { ...p.test, ...next } } : p));
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    try { await fn(); load(); } finally { setBusy(false); }
+  };
+  const blancUrl = `/revisions/ds/${t.id}/blanc`;
+  const chapterNames = [...new Set((mock?.exercises ?? []).map((e) => e.chapter).filter(Boolean))] as string[];
 
   return (
     <Page>
@@ -236,156 +130,125 @@ export default function TestPlanPage() {
       />
 
       <div className="flex flex-col gap-10">
-        {/* Héros (comme sur Réviser) : la date et la prochaine étape, où j'en suis ; puis les étapes de la préparation */}
-        <section aria-labelledby="etape-titre" className="overflow-hidden rounded-3xl border border-line bg-white">
-          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-            <div className="flex items-start gap-4 sm:flex-1">
-              <DateTile date={t.date} size="lg" urgent={!past && t.days_left <= 1} />
-              <div className="min-w-0">
-                <h2 id="etape-titre" className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
-                  {past ? 'Après le DS' : 'Prochaine étape'}
-                </h2>
-                <p className="mt-1.5 text-[16.5px] font-semibold leading-snug text-ink sm:text-[17px]">
-                  {past ? 'Comment s’est passé ton DS\u00a0?' : a.text}
-                </p>
-                {past && <p className="mt-1 text-[13px] leading-relaxed text-ink-faint">Note ta note pour suivre tes résultats au fil de l’année.</p>}
-                {/* Les chapitres et leur état sont juste dessous (« Tes chapitres ») : pas de pastilles en double ici. */}
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-              <div className="flex items-center gap-3">
-                <ReadinessRing value={plan.readiness} size={64} />
-                <p className="text-[13px] leading-snug text-ink-faint">
-                  {plan.readiness === null ? <>Pas encore de mesure : quelques exercices corrigés suffisent.</>
-                    : <>
-                      <span className="block text-ink-soft">Prêt à <b className="fd-nums font-semibold text-ink">{plan.readiness} %</b></span>
-                      {weakCount > 0
-                        ? `${plural(weakCount, 'chapitre', 'chapitres')} à renforcer`
-                        : 'Tu es sur la bonne voie.'}
-                    </>}
-                </p>
-              </div>
-              {past ? (
-                t.grade !== null && !editingGrade ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12.5px] text-ink-faint">Ma note</span>
-                    <GradeBadge grade={t.grade} />
-                    <button type="button" onClick={() => setEditingGrade(true)} className="inline-flex min-h-10 items-center px-1 text-[12.5px] font-semibold text-brand-hover hover:underline">
-                      Changer
-                    </button>
-                  </div>
-                ) : (
-                  <GradeForm test={t} autoFocus={editingGrade} onSaved={(n) => { setTest(n); setEditingGrade(false); }} />
-                )
-              ) : a.label && (a.to ? (
-                <Link to={a.to} className="fd-btn-primary min-h-11 w-full justify-center">{a.label} <ArrowRight className="h-4 w-4" /></Link>
+        {/* ───────────── 1. Le DS blanc, en vedette (DS passé : la note) */}
+        {past ? (
+          <section aria-labelledby="note-titre" className="rounded-3xl border border-line bg-white p-5 sm:p-7">
+            <h2 id="note-titre" className="fd-display text-[22px] leading-tight text-ink">Comment s’est passé ton DS ?</h2>
+            <p className="mt-1 text-[13.5px] text-ink-faint">Note ta note pour suivre tes résultats au fil de l’année.</p>
+            <div className="mt-4">
+              {t.grade !== null && !editingGrade ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] text-ink-faint">Ma note</span>
+                  <GradeBadge grade={t.grade} />
+                  <button type="button" onClick={() => setEditingGrade(true)} className="inline-flex min-h-10 items-center px-1 text-[13px] font-semibold text-brand-hover hover:underline">Changer</button>
+                </div>
               ) : (
-                <a href={`#${a.anchor}`} onClick={goToAnchor(a.anchor!)} className="fd-btn-primary min-h-11 w-full justify-center">
-                  {a.label} <ArrowRight className="h-4 w-4" />
-                </a>
-              ))}
+                <GradeForm test={t} autoFocus={editingGrade} onSaved={(n) => { setTest(n); setEditingGrade(false); }} />
+              )}
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-[#fcfbf9] px-5 py-3 sm:px-6">
-            <span className="text-[12px] font-semibold text-ink-faint">Ta préparation</span>
-            <ul className="flex flex-wrap gap-2" aria-label="Ta préparation depuis l’ajout de ce DS">
-              <Step done={prep.exercises >= prep.exercises_goal} icon={Dumbbell}
-                label={`Exercices ${Math.min(prep.exercises, prep.exercises_goal)}/${prep.exercises_goal}`} anchor="exercices" />
-              {prep.quizzes_total > 0 && (
-                <Step done={prep.quizzes >= prep.quizzes_total} icon={Brain} label={`Quiz ${prep.quizzes}/${prep.quizzes_total}`} anchor="chapitres" />
-              )}
-              <Step done={prep.mock} icon={Timer} label={prep.mock ? 'DS blanc fait' : 'DS blanc'} anchor="ds-blanc" />
-            </ul>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <section aria-labelledby="blanc-titre" className="overflow-hidden rounded-3xl bg-[#14583a] text-white shadow-[0_18px_40px_-18px_rgba(20,88,58,.6)]">
+            <div className="p-6 sm:p-8">
+              <p className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[.12em] text-white/70">
+                <Timer className="h-4 w-4" aria-hidden /> DS blanc
+              </p>
+              <h2 id="blanc-titre" className="fd-display mt-2 text-[26px] leading-tight sm:text-[30px]">
+                {mock?.done_at ? 'DS blanc terminé' : mock?.started_at ? 'Ton DS blanc t’attend' : 'Entraîne-toi en conditions réelles'}
+              </h2>
+              <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-white/80">
+                {mock?.done_at
+                  ? `Fait le ${new Date(mock.done_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}${mock.seconds !== null ? ` en ${minutesLabel(mock.seconds)}` : ''}. Corrige-toi question par question, puis tente un autre sujet.`
+                  : mock?.started_at ? 'Le chronomètre tourne toujours : reprends là où tu en étais.'
+                    : 'Un vrai sujet sur les chapitres de ton DS, chronométré, sans solution avant la fin. Puis tu te corriges.'}
+              </p>
 
-        {/* Chapitres : une ligne chacun, un seul ouvert à la fois */}
-        <Section id="chapitres" title="Tes chapitres" count={plan.chapters.length}
-          hint="Du plus fragile au plus solide. Ouvre un chapitre pour savoir quoi travailler.">
-          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
-            {plan.chapters.map((c) => (
-              <ChapterRow key={c.id} chapter={c} testId={t.id} open={openChapter === c.id} quizDone={prep.quiz_done.includes(c.id)}
-                onToggle={() => setOpenChapter((cur) => (cur === c.id ? null : c.id))} />
-            ))}
-          </ul>
-        </Section>
-
-        {/* Exercices pour toi : trois d'abord */}
-        <Section id="exercices" title="Exercices pour toi" count={plan.exercises.length}
-          hint={plan.exercises.length ? 'Choisis dans les chapitres du DS, les plus utiles d’abord.' : undefined}>
-          {plan.exercises.length ? (
-            <>
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {shownExercises.map((e) => <ExerciseCard key={e.id} exercise={e} />)}
-              </ul>
-              {plan.exercises.length > EXERCISES_SHOWN && (
-                <button type="button" onClick={() => setMoreExercises((v) => !v)} aria-expanded={moreExercises}
-                  className="mt-3 inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
-                  {moreExercises ? 'Voir moins' : `Voir ${plural(plan.exercises.length - EXERCISES_SHOWN, 'autre exercice', 'autres exercices')}`}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${moreExercises ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-            </>
-          ) : (
-            <EmptyState compact icon={Check} title="Tout est réussi dans ces chapitres"
-              text={mock?.exercises.length
-                ? 'Refais ceux que tu as marqués «\u00a0à revoir\u00a0», ou lance le DS blanc pour te tester en conditions réelles.'
-                : 'Refais ceux que tu as marqués «\u00a0à revoir\u00a0» : c’est le meilleur moyen de garder la main.'} />
-          )}
-        </Section>
-
-        {/* DS blanc */}
-        <Section id="ds-blanc" title="DS blanc" hint="Un sujet chronométré tiré des chapitres du DS (exercices de 3 questions au moins), puis ta correction.">
-          {mock?.settings && !past && (
-            <MockSettings settings={mock.settings} busy={renewing} respected={mock.difficulty_respected !== false}
-              started={!!mock.started_at && !mock.done_at}
-              onChange={async (minutes, difficulty) => {
-                setRenewing(true);
-                try { await devoirsApi.mockSettings(t.id, minutes, difficulty); load(); } finally { setRenewing(false); }
-              }} />
-          )}
-          {mock?.exercises.length ? (
-            <div className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
-              <div className="flex min-w-0 flex-1 items-start gap-4">
-                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ${
-                  mock.done_at ? 'bg-brand-soft text-brand-hover ring-brand-line' : 'bg-[#f2f1ee] text-ink-soft ring-line'}`} aria-hidden>
-                  {mock.done_at ? <ClipboardCheck className="h-5 w-5" /> : <Timer className="h-5 w-5" />}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold text-ink">
-                    {plural(mock.exercises.length, 'exercice', 'exercices')} · <span className="fd-nums">{mock.minutes} min</span>
+              {mock?.exercises.length ? (
+                <>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    {mock.done_at ? (
+                      <>
+                        <Link to={blancUrl} className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-6 text-[15px] font-semibold text-[#14583a] hover:bg-[#eef6f1]">
+                          <ClipboardCheck className="h-5 w-5" /> Ma correction
+                        </Link>
+                        <button type="button" onClick={() => run(() => devoirsApi.mockAction(t.id, 'new'))} disabled={busy}
+                          className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-white/30 px-5 text-[14.5px] font-semibold text-white hover:bg-white/10 disabled:opacity-60">
+                          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Un autre DS blanc
+                        </button>
+                      </>
+                    ) : (
+                      <Link to={blancUrl} className="inline-flex min-h-14 items-center gap-2.5 rounded-2xl bg-white px-7 text-[16px] font-semibold text-[#14583a] shadow-sm hover:bg-[#eef6f1]">
+                        {mock.started_at ? 'Reprendre' : 'Lancer le DS blanc'}
+                        <span className="fd-nums rounded-lg bg-[#14583a]/10 px-2 py-0.5 text-[13px]">{durationLabel(mock.minutes)}</span>
+                        <ArrowRight className="h-5 w-5" />
+                      </Link>
+                    )}
+                  </div>
+                  <p className="mt-4 text-[13px] text-white/70">
+                    {plural(mock.exercises.length, 'exercice', 'exercices')} de 3 questions au moins
+                    {chapterNames.length > 0 && <> · {chapterNames.join(' · ')}</>}
                   </p>
-                  <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">
-                    {mock.done_at
-                      ? `Fait le ${new Date(mock.done_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}${mock.seconds !== null ? ` en ${minutesLabel(mock.seconds)}` : ''}.`
-                      : mock.started_at ? 'Commencé : le chronomètre tourne toujours.'
-                        : 'Chronomètre, pas de solution avant la fin, puis tu te corriges question par question.'}
-                  </p>
-                  {!mock.done_at && mock.exercises.some((e) => e.chapter) && (
-                    <p className="mt-2 truncate text-[12px] text-ink-faint">
-                      {mock.exercises.map((e) => e.chapter).filter(Boolean).join(' · ')}
+                  {mock.settings && mock.minutes < mock.settings.minutes - 10 && (
+                    <p className="mt-1 text-[12.5px] text-[#f3dca9]">
+                      Sujet plus court que {durationLabel(mock.settings.minutes)} : il n’y a pas encore assez d’exercices longs dans ces chapitres.
                     </p>
                   )}
-                </div>
-              </div>
-              {mock.done_at ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link to={`/revisions/ds/${t.id}/blanc`} className="fd-btn-ghost min-h-10"><ClipboardCheck className="h-4 w-4" /> Ma correction</Link>
-                  <button type="button" onClick={renew} disabled={renewing} className="fd-btn-ghost min-h-10 disabled:opacity-60">
-                    {renewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Un autre DS blanc
-                  </button>
-                </div>
+                </>
               ) : (
-                <Link to={`/revisions/ds/${t.id}/blanc`} className="fd-btn-primary min-h-11 justify-center">
-                  {mock.started_at ? 'Reprendre' : 'Lancer le DS blanc'} <ArrowRight className="h-4 w-4" />
-                </Link>
+                <p className="mt-5 rounded-2xl bg-white/10 px-4 py-3 text-[13.5px] text-white/90">
+                  {mock?.settings?.difficulty
+                    ? 'Pas d’exercice long (3 questions au moins) de cette difficulté dans ces chapitres : essaie « Mélangée ».'
+                    : 'Pas encore assez d’exercices longs (3 questions au moins) dans ces chapitres pour composer un sujet.'}
+                </p>
               )}
             </div>
-          ) : (
-            <EmptyState compact icon={Timer} tone="ink" title="Pas encore de DS blanc"
-              text={mock?.settings?.difficulty
-                ? 'Pas d’exercice long (3 questions au moins) de cette difficulté dans ces chapitres : essaie « Mélangée ».'
-                : 'Il n’y a pas encore assez d’exercices longs (3 questions au moins) dans ces chapitres pour en composer un.'} />
+
+            {/* Réglages : discrets, repliés ; un changement tire un nouveau sujet. */}
+            {mock?.settings && (
+              <div className="border-t border-white/15 bg-black/10 px-6 py-3 sm:px-8">
+                <button type="button" onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}
+                  className="inline-flex min-h-10 items-center gap-2 text-[13.5px] font-medium text-white/85 hover:text-white">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Durée : <b className="font-semibold text-white">{durationLabel(mock.settings.minutes)}</b> · Difficulté :{' '}
+                  <b className="font-semibold text-white">{MOCK_DIFFICULTIES.find((d) => d.key === mock.settings!.difficulty)?.label}</b>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showSettings ? 'rotate-180' : ''}`} />
+                </button>
+                {showSettings && (
+                  <MockSettings settings={mock.settings} busy={busy} started={!!mock.started_at && !mock.done_at}
+                    onChange={(minutes, difficulty) => run(() => devoirsApi.mockSettings(t.id, minutes, difficulty))} />
+                )}
+                {mock.difficulty_respected === false && (
+                  <p className="pb-1 text-[12.5px] text-[#f3dca9]">Pas assez d’exercices longs de cette difficulté : d’autres complètent le sujet.</p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ───────────── 2. Réviser avant : une ligne par chapitre, ses boutons directs */}
+        <Section id="chapitres" title={past ? 'Tes chapitres' : 'Réviser avant'}
+          hint={plan.readiness !== null
+            ? `Prêt à ${plan.readiness} % d’après tes exercices corrigés. Le plus fragile d’abord.`
+            : 'Du plus fragile au plus solide. Quelques exercices corrigés suffisent pour mesurer où tu en es.'}>
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+            {plan.chapters.map((c) => (
+              <ChapterRow key={c.id} chapter={c} testId={t.id} quizDone={plan.preparation.quiz_done.includes(c.id)} />
+            ))}
+          </ul>
+
+          {plan.exercises.length > 0 && (
+            <div className="mt-4">
+              <button type="button" onClick={() => setShowExercises((v) => !v)} aria-expanded={showExercises}
+                className="inline-flex min-h-10 items-center gap-1.5 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
+                <Dumbbell className="h-4 w-4" /> Exercices conseillés pour ce DS ({plan.exercises.length})
+                <ChevronDown className={`h-4 w-4 transition-transform ${showExercises ? 'rotate-180' : ''}`} />
+              </button>
+              {showExercises && (
+                <ul className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {plan.exercises.map((e) => <ExerciseCard key={e.id} exercise={e} />)}
+                </ul>
+              )}
+            </div>
           )}
         </Section>
       </div>
@@ -397,86 +260,85 @@ export default function TestPlanPage() {
   );
 }
 
-function Step({ done, icon: Icon, label, anchor }: { done: boolean; icon: typeof Dumbbell; label: string; anchor: string }) {
+/** Réglages du DS blanc (sur fond vert) : durée et difficulté ; un changement tire un nouveau sujet. */
+function MockSettings({ settings, busy, started, onChange }: {
+  settings: NonNullable<NonNullable<TestPlan['mock']>['settings']>; busy: boolean; started: boolean;
+  onChange: (minutes: number, difficulty: MockDifficulty) => void;
+}) {
+  const pick = (minutes: number, difficulty: MockDifficulty) => {
+    if (minutes === settings.minutes && difficulty === settings.difficulty) return;
+    if (started && !window.confirm('Ton DS blanc est commencé : le changer en tire un nouveau. Continuer ?')) return;
+    onChange(minutes, difficulty);
+  };
+  const seg = (on: boolean) => `min-h-9 rounded-lg px-3 text-[13px] font-medium transition-colors disabled:opacity-60 ${
+    on ? 'bg-white text-[#14583a] shadow-sm' : 'text-white/80 hover:text-white'}`;
   return (
-    <li>
-      <a href={`#${anchor}`} onClick={scrollTo(anchor)}
-        className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold transition-colors sm:min-h-9 ${
-          done ? 'bg-brand-soft text-brand-hover' : 'border border-line bg-white text-ink-soft hover:border-ink-faint hover:text-ink'}`}>
-        {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />} {label}
-        {done && <span className="sr-only"> (fait)</span>}
-      </a>
-    </li>
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pb-2 pt-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12.5px] font-semibold text-white/80">Durée</span>
+        <div className="inline-flex flex-wrap rounded-xl bg-white/10 p-1" role="group" aria-label="Durée du DS blanc">
+          {settings.choices.map((m) => (
+            <button key={m} type="button" aria-pressed={settings.minutes === m} disabled={busy} onClick={() => pick(m, settings.difficulty)}
+              className={seg(settings.minutes === m)}>{durationLabel(m)}</button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12.5px] font-semibold text-white/80">Difficulté</span>
+        <div className="inline-flex flex-wrap rounded-xl bg-white/10 p-1" role="group" aria-label="Difficulté du DS blanc">
+          {MOCK_DIFFICULTIES.map((d) => (
+            <button key={d.key || 'mix'} type="button" aria-pressed={settings.difficulty === d.key} disabled={busy}
+              onClick={() => pick(settings.minutes, d.key)} className={seg(settings.difficulty === d.key)}>{d.label}</button>
+          ))}
+        </div>
+      </div>
+      {busy && <Loader2 className="h-4 w-4 animate-spin text-white/80" aria-label="Nouveau sujet…" />}
+    </div>
   );
 }
 
-function ChapterRow({ chapter: c, testId, open, onToggle, quizDone }: {
-  chapter: PlanChapter; testId: number; open: boolean; onToggle: () => void; quizDone: boolean;
-}) {
+/** Un chapitre : où j'en suis, et les trois façons de le travailler (rien à déplier). */
+function ChapterRow({ chapter: c, testId, quizDone }: { chapter: PlanChapter; testId: number; quizDone: boolean }) {
   const st = STATUS[c.status];
   const Icon = st.icon;
-  const panelId = `chapitre-${c.id}-detail`;
-  const hasDetail = c.notions.worst.length > 0 || c.review.length > 0;
-  const link = 'inline-flex min-h-10 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold transition-colors';
+  const link = 'inline-flex min-h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-semibold transition-colors';
   return (
-    <li id={`chapitre-${c.id}`} className="scroll-mt-24">
-      <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={panelId}
-        className="flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#fcfbf9] focus:outline-none focus-visible:bg-[#fcfbf9] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40 sm:px-5">
+    <li id={`chapitre-${c.id}`} className="scroll-mt-24 px-4 py-3.5 sm:px-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Icon className={`h-[18px] w-[18px] shrink-0 ${st.text}`} aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14.5px] font-semibold text-ink">{c.name}</span>
-          <span className="block text-[12px] text-ink-faint">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14.5px] font-semibold text-ink">{c.name}</p>
+          <p className="text-[12px] text-ink-faint">
             <span className={c.status === 'weak' ? st.text : ''}>{st.label}</span>
+            {c.mastery !== null && <> · <span className="fd-nums">{c.mastery} %</span></>}
             {c.review.length > 0 && <> · {plural(c.review.length, 'exercice', 'exercices')} à revoir</>}
-          </span>
-        </span>
-        {c.mastery !== null && <Meter pct={c.mastery} status={c.status} className="hidden w-24 sm:block" />}
-        <span className="fd-nums w-11 shrink-0 text-right text-[13px] font-semibold text-ink-soft">{c.mastery !== null ? `${c.mastery} %` : '—'}</span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-ink-faint transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-      </button>
-      {open && (
-        <div id={panelId} className="px-4 pb-4 sm:pl-[50px] sm:pr-5">
-          <div className={`text-[13px] leading-relaxed text-ink-soft ${hasDetail ? 'space-y-2.5 rounded-xl bg-[#fcfbf9] px-4 py-3 ring-1 ring-inset ring-[#efece6]' : ''}`}>
-            {c.notions.worst.length > 0 && (
-              <p><span className="font-semibold text-gold-strong">À renforcer :</span> {c.notions.worst.map((n) => `${n.label} (${n.pct} %)`).join(', ')}</p>
-            )}
-            {c.review.length > 0 && (
-              <div>
-                <p className="font-semibold text-ink">À revoir</p>
-                <ul className="mt-0.5">
-                  {c.review.map((r) => (
-                    <li key={r.id}>
-                      <Link to={r.url} className="inline-flex min-h-9 items-center gap-1.5 text-ink-soft underline decoration-line underline-offset-2 hover:text-ink hover:decoration-ink-faint">
-                        <RotateCcw className="h-3.5 w-3.5 shrink-0 text-gold-strong" aria-hidden /> {r.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {c.status === 'todo' && (
-              <p className="text-ink-faint">Pas encore travaillé : commence par un exercice facile{c.quiz_ready ? ' ou par le quiz' : ''}.</p>
-            )}
-            {c.status === 'started' && <p className="text-ink-faint">Encore quelques questions corrigées et tu auras ton pourcentage.</p>}
-            {(c.status === 'mastered' || c.status === 'good') && !hasDetail && (
-              <p className="text-ink-faint">Rien d’urgent ici : un exercice de temps en temps suffit à garder la main.</p>
-            )}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <Link to={practiceUrl(c.hub_url, c.id)} className={`${link} bg-brand-soft text-brand-hover hover:bg-[#dcece2]`}>
-              <Dumbbell className="h-4 w-4" /> S’entraîner
-            </Link>
-            <Link to={lessonsUrl(c.hub_url, c.id)} className={`${link} text-ink-soft hover:bg-[#f2f1ee] hover:text-ink`}>
-              <BookOpen className="h-4 w-4" /> Le cours
-            </Link>
-            {c.quiz_ready && (
-              <Link to={quizUrl(c.id, `/revisions/ds/${testId}`)} className={`${link} text-ink-soft hover:bg-[#f2f1ee] hover:text-ink`}>
-                {quizDone ? <Check className="h-4 w-4 text-brand" /> : <Brain className="h-4 w-4" />}
-                {quizDone ? 'Quiz fait' : c.skilliq?.pct != null ? `Refaire le quiz (${c.skilliq.pct} %)` : 'Le quiz'}
-              </Link>
-            )}
-          </div>
+          </p>
         </div>
+        {c.mastery !== null && <Meter pct={c.mastery} status={c.status} className="hidden w-24 md:block" />}
+        <div className="flex flex-wrap items-center gap-1">
+          <Link to={practiceUrl(c.hub_url, c.id)} className={`${link} bg-brand-soft text-brand-hover hover:bg-[#dcece2]`}>
+            <Dumbbell className="h-4 w-4" /> S’entraîner
+          </Link>
+          <Link to={lessonsUrl(c.hub_url, c.id)} className={`${link} text-ink-soft hover:bg-[#f2f1ee] hover:text-ink`}>
+            <BookOpen className="h-4 w-4" /> Cours
+          </Link>
+          {c.quiz_ready && (
+            <Link to={quizUrl(c.id, `/revisions/ds/${testId}`)} className={`${link} text-ink-soft hover:bg-[#f2f1ee] hover:text-ink`}>
+              {quizDone ? <Check className="h-4 w-4 text-brand" /> : <Brain className="h-4 w-4" />} Quiz
+            </Link>
+          )}
+        </div>
+      </div>
+      {c.review.length > 0 && (
+        <ul className="mt-1.5 flex flex-wrap gap-x-4 pl-[30px]">
+          {c.review.slice(0, 3).map((r) => (
+            <li key={r.id}>
+              <Link to={r.url} className="inline-flex min-h-8 items-center gap-1.5 text-[12.5px] text-ink-soft underline decoration-line underline-offset-2 hover:text-ink">
+                <RotateCcw className="h-3.5 w-3.5 shrink-0 text-gold-strong" aria-hidden /> {r.title}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </li>
   );
