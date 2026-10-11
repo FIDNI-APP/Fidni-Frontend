@@ -14,6 +14,7 @@ import type { Difficulty } from '@/types';
 import { TourHelpButton } from '@/components/tour/TourProvider';
 import { SignupCard, useOpenSignup } from '@/components/auth/SignupPrompt';
 import { trackAction } from '@/lib/usage';
+import { PAPER_GLYPHS_FACE, PAPER_SERIF, ROMAN } from '@/lib/paperFont';
 
 type SolutionsMode = 'none' | 'end' | 'inline';
 
@@ -154,7 +155,6 @@ const ExerciseBody: React.FC<{ item: PaperItem; inlineSolutions: boolean }> = ({
   );
 };
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
 const stripHtml = (h?: string) => (h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 /** Leçon : parties numérotées I, II… et sous-parties 1, 2…, encadrés (définitions, théorèmes) conservés. */
@@ -653,9 +653,8 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
 
 /** Styles de la feuille : écran (aperçu posé sur un bureau) et impression (A4 paginé). */
 const styles = (title: string) => `
-  /* La police des maths (KaTeX_Main) dessine mal °, « », № : ces seuls caractères viennent d'une serif classique. */
-  @font-face { font-family: 'FidniPaperGlyphs'; src: local('Times New Roman'), local('Georgia'), local('Noto Serif'),
-    local('DejaVu Serif'); unicode-range: U+00AB, U+00B0, U+00BB, U+2116, U+20AC; }
+  /* Police de LaTeX (KaTeX_Main) ; °, « », № et € d'une serif classique (lib/paperFont). */
+  ${PAPER_GLYPHS_FACE}
   .fp-desk { min-height: 100vh; background: #e9e7e3; padding: 0 16px 48px; }
   .fp-center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
@@ -693,7 +692,7 @@ const styles = (title: string) => `
 
   .fp-sheet { box-sizing: border-box; width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto;
     padding: 16mm 17mm 18mm; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
-    color: #1a1a1a; font-family: 'FidniPaperGlyphs', 'KaTeX_Main', 'Latin Modern Roman', 'Times New Roman', serif;
+    color: #1a1a1a; font-family: ${PAPER_SERIF};
     font-size: 11pt; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @media (max-width: 820px) { .fp-sheet { padding: 20px 18px; min-height: 0; } }
 

@@ -693,7 +693,7 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
             {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
           </div>
           {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} solution={block.solution} {...common} />}
-          {/* « Tout réussi » d'une question n'est pas repris ici : « Tu as fini ? » (bas de page) le fait pour tout le contenu. */}
+          {/* « Tout réussi » d'une question n'est pas repris ici : « Où en es-tu ? » (haut de page, rappel en bas) le fait pour tout le contenu. */}
           {subs.length > 0 && (
             <>
               {subs.map((sq, i) => {

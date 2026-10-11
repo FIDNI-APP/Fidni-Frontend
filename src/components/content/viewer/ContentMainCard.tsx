@@ -1,9 +1,10 @@
 /**
  * La feuille d'un contenu (refaite le 11/10/2026) : une colonne de lecture calme, sans colonne de côté.
  *  - Exercice : une barre fine (toutes les solutions, chrono), l'énoncé en variante « lecture », puis le pied
- *    de la feuille (j'aime, signaler). La progression est en bas de page (« Tu as fini ? »), le chrono dans la
- *    barre (avant : deux cartes à droite, sous l'exercice sur téléphone).
- *  - Leçon : feuille de cours (LessonReader), sommaire collant à gauche (ordinateur) ou en barre (téléphone).
+ *    de la feuille (j'aime, signaler). La progression est au-dessus de la feuille (« Où en es-tu ? », rappel
+ *    « Tu as fini ? » en bas), le chrono dans la barre (avant : deux cartes à droite, sous l'exercice sur téléphone).
+ *  - Leçon : feuille de cours (LessonReader, police et encadrés de la leçon imprimée), sommaire collant à
+ *    gauche (ordinateur) ou en barre (téléphone).
  *  - Examen : ExamView (fiche du sujet, épreuve chronométrée, copie).
  * `children` : ce qui suit la feuille (« Tu as fini ? », pour continuer, discussion), dans la même colonne.
  */

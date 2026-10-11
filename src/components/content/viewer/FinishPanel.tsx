@@ -9,9 +9,11 @@
  * 10/10/2026 : sur téléphone, une seule ligne (l'énoncé arrive plus haut). Une fois le résultat donné :
  * « C'était : Plus facile · Comme annoncé · Plus dur » (ressenti des élèves, une seule demande à la fois
  * sur la page) et la suite adaptée au résultat (« Exercice suivant », le cours après un échec).
- * 11/10/2026 : en bas de la feuille, là où l'élève finit (plus en haut de page) ; titre serif, barre des
- * questions réussies / à revoir, « Ranger dans une liste » (ou le cahier) en lien discret. Les fenêtres de
- * rangement sont dans la page (aussi ouvertes depuis le menu « ⋯ »).
+ * 11/10/2026 : deux blocs. En haut (`placement="top"`), le bandeau « Où en es-tu ? » au-dessus de la
+ * feuille, avec la barre des questions réussies / à revoir ; en bas (`"bottom"`), un rappel discret
+ * « Tu as fini ? » et « Ranger dans une liste » (ou le cahier). Les suites (ressenti, « Exercice suivant »)
+ * s'affichent dans le bloc où l'élève vient d'agir (`followUps`) : une seule demande à la fois sur la page.
+ * Les fenêtres de rangement sont dans la page (aussi ouvertes depuis le menu « ⋯ »).
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -40,6 +42,10 @@ interface FinishPanelProps {
   onFelt?: (felt: Felt | null) => void;
   /** Ranger : liste de révision (exercice, examen) ou cahier (leçon) ; les fenêtres sont dans la page. */
   onCollect?: () => void;
+  /** En haut de la page (bandeau) ou en bas (rappel). */
+  placement: 'top' | 'bottom';
+  /** Ce bloc affiche les suites du résultat (ressenti, contenu suivant) : celui où l'élève vient d'agir. */
+  followUps?: boolean;
 }
 
 const QUESTION: Record<FinishPanelProps['contentType'], string> = {
@@ -68,12 +74,14 @@ const rememberGiven = (id: number | string, v: FeltVote) => {
 
 export const FinishPanel: React.FC<FinishPanelProps> = ({
   content, contentType, completionStatus = null, onSetCompletion, progress, statusChosen, canAsk = true, onFelt, onCollect,
+  placement, followUps = false,
 }) => {
   const isLesson = contentType === 'lesson';
+  const top = placement === 'top';
   const toggle = (s: Exclude<Status, null>) => onSetCompletion(completionStatus === s ? null : s);
   const location = useLocation();
 
-  const btn = 'inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
+  const btn = 'inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-2 sm:px-3.5 text-[13px] sm:text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
   const success = completionStatus === 'success';
   const review = completionStatus === 'review';
 
@@ -81,12 +89,9 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
   const assessed = progress?.assessed ?? 0;
   const title = success ? (isLesson ? 'Leçon lue' : 'Réussi, c’est noté')
     : review ? 'À revoir dans 2-3 jours' : QUESTION[contentType];
-  const sub = success ? (isLesson ? 'Elle compte dans ta progression.' : 'Il compte dans ta progression.')
-    : review ? 'On te le rappellera sur l’accueil, avec les autres contenus à reprendre.'
-      : isLesson ? 'Marque-la comme lue : elle compte dans ta progression.'
-        : total >= 2 && assessed > 0 && assessed < total ? 'Continue question par question, ou indique ton résultat d’un coup ici.'
-          : total >= 2 ? 'Ouvre la solution de chaque question et dis si tu avais trouvé, ou indique ton résultat d’un coup ici.'
-            : 'Indique ton résultat : il compte dans ta progression.';
+  const tone = success ? 'text-brand-hover' : review ? 'text-gold-strong' : 'text-ink';
+  const statusIcon = success ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+    : review ? <RotateCcw className="h-4 w-4 shrink-0" aria-hidden /> : null;
 
   // ── Ressenti : quand l'élève vient de donner son résultat (pas à chaque visite d'un contenu déjà fait),
   // si aucune autre question ne l'attend.
@@ -96,13 +101,15 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
   const chosen = statusChosen ?? completionStatus !== initialStatus;
   const declared = content.difficulty ? DECLARED[content.difficulty] : null;
   const [given, setGiven] = useState<FeltVote | null>(() => readGiven(content.id));
+  // L'avis a pu être donné depuis l'autre bloc (haut / bas) : relu quand les suites arrivent ici.
+  useEffect(() => { if (followUps) setGiven((g) => g ?? readGiven(content.id)); }, [followUps, content.id]);
   const [thanks, setThanks] = useState(false);
   useEffect(() => {
     if (!thanks) return;
     const t = window.setTimeout(() => setThanks(false), 4000);
     return () => window.clearTimeout(t);
   }, [thanks]);
-  const askFelt = !isLesson && !!completionStatus && chosen && !!declared && !given && canAsk && !promptOpen;
+  const askFelt = followUps && !isLesson && !!completionStatus && chosen && !!declared && !given && canAsk && !promptOpen;
   const giveFelt = async (v: FeltVote) => {
     setGiven(v);
     setThanks(true);
@@ -118,9 +125,10 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
   };
 
   // ── La suite, selon le résultat : après un échec, pas plus dur et le cours d'abord ; après une réussite, pas plus facile.
+  // Chargée seulement dans le bloc qui l'affiche.
   const [next, setNext] = useState<RecommendedItem[]>([]);
   useEffect(() => {
-    if (isLesson || !completionStatus) { setNext([]); return; }
+    if (isLesson || !completionStatus || !followUps) { setNext([]); return; }
     let alive = true;
     getRecommendations(content.id, completionStatus)
       .then((items) => {
@@ -133,70 +141,48 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
       })
       .catch(() => { if (alive) setNext([]); });
     return () => { alive = false; };
-  }, [content.id, contentType, completionStatus, isLesson]);
+  }, [content.id, contentType, completionStatus, isLesson, followUps]);
 
   const feltChip = 'inline-flex min-h-10 items-center rounded-full border border-line bg-white px-3.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
   const successCount = progress?.success ?? 0;
   const reviewCount = progress?.review ?? 0;
 
-  return (
-    <section id="fin" className="scroll-mt-24 rounded-2xl border border-line bg-white p-5 sm:p-6" data-tour="detail-terminer" aria-labelledby="fin-titre">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="min-w-0">
-          <h2 id="fin-titre" className={`fd-display flex items-center gap-2 text-[19px] leading-tight ${success ? 'text-brand-hover' : review ? 'text-gold-strong' : 'text-ink'}`}>
-            {success && <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />}
-            {review && <RotateCcw className="h-[18px] w-[18px] shrink-0" aria-hidden />}
-            {title}
-          </h2>
-          <p className="mt-1 max-w-md text-[13.5px] leading-relaxed text-ink-faint">{sub}</p>
-        </div>
-        <div className={`grid shrink-0 gap-2 sm:flex ${isLesson ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          <button type="button" onClick={() => toggle('success')} aria-pressed={success}
-            title={success ? 'Clique pour annuler' : undefined}
-            className={`${btn} ${success ? 'border-brand bg-brand text-white hover:bg-brand-hover' : 'border-brand-line bg-white text-brand-hover hover:bg-brand-soft'}`}>
-            {success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <CheckCheck className="h-4 w-4 shrink-0" />}
-            {isLesson ? (success ? 'Lue' : 'Marquer comme lue') : 'Tout réussi'}
-          </button>
-          {!isLesson && (
-            <button type="button" onClick={() => toggle('review')} aria-pressed={review}
-              title={review ? 'Clique pour annuler' : undefined}
-              className={`${btn} ${review ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
-              <RotateCcw className="h-4 w-4 shrink-0" /> À revoir
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Questions évaluées : réussies (vert), à revoir (or), le reste. */}
-      {!isLesson && total >= 2 && (
-        <div className="mt-4" data-tour="detail-progression">
-          <SplitBar success={successCount} review={reviewCount} total={total} />
-          <p className="mt-1.5 text-[12.5px] text-ink-faint fd-nums">
-            {assessed === 0 ? `${total} questions à évaluer`
-              : `${assessed} / ${total} question${total > 1 ? 's' : ''} évaluée${assessed > 1 ? 's' : ''}`}
-            {successCount > 0 && <> · <span className="text-brand-hover">{successCount} réussie{successCount > 1 ? 's' : ''}</span></>}
-            {reviewCount > 0 && <> · <span className="text-gold-strong">{reviewCount} à revoir</span></>}
-          </p>
-        </div>
+  const buttons = (
+    <div className={`grid gap-2 sm:flex sm:shrink-0 ${isLesson ? 'grid-cols-1' : 'grid-cols-2'} ${top && !isLesson ? 'min-w-0 flex-1 sm:flex-none' : ''}`}>
+      <button type="button" onClick={() => toggle('success')} aria-pressed={success}
+        title={success ? 'Clique pour annuler' : undefined}
+        className={`${btn} ${success ? 'border-brand bg-brand text-white hover:bg-brand-hover' : 'border-brand-line bg-white text-brand-hover hover:bg-brand-soft'}`}>
+        {success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <CheckCheck className="h-4 w-4 shrink-0" />}
+        {isLesson ? (success ? 'Lue' : 'Marquer comme lue') : 'Tout réussi'}
+      </button>
+      {!isLesson && (
+        <button type="button" onClick={() => toggle('review')} aria-pressed={review}
+          title={review ? 'Clique pour annuler' : undefined}
+          className={`${btn} ${review ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+          <RotateCcw className="h-4 w-4 shrink-0" /> À revoir
+        </button>
       )}
+    </div>
+  );
 
-      {/* Ressenti : un geste, puis un merci qui s'efface. */}
+  // Ressenti (un geste, puis un merci qui s'efface) et contenu suivant.
+  const after = (
+    <>
       {askFelt && (
-        <div role="group" aria-label="La difficulté annoncée était-elle juste ?" className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line pt-4">
+        <div role="group" aria-label="La difficulté annoncée était-elle juste ?" className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
           <span className="mr-1 text-[13.5px] font-medium text-ink-soft">C’était :</span>
           <button type="button" className={feltChip} onClick={() => giveFelt('easier')}>Plus facile</button>
           <button type="button" className={feltChip} onClick={() => giveFelt('as_said')}>Comme annoncé ({declared})</button>
           <button type="button" className={feltChip} onClick={() => giveFelt('harder')}>Plus dur</button>
         </div>
       )}
-      {thanks && given && (
-        <p role="status" className="mt-4 flex items-center gap-1.5 border-t border-line pt-4 text-[13px] font-medium text-brand-hover">
+      {followUps && thanks && given && (
+        <p role="status" className="mt-3 flex items-center gap-1.5 border-t border-line pt-3 text-[13px] font-medium text-brand-hover">
           <Check className="h-3.5 w-3.5" /> Merci, ton avis aide à mieux annoncer la difficulté.
         </p>
       )}
-
       {next.length > 0 && (
-        <div className="mt-4 flex flex-col gap-0.5 border-t border-line pt-3">
+        <div className="mt-3 flex flex-col gap-0.5 border-t border-line pt-2 sm:flex-row sm:flex-wrap sm:gap-x-6">
           {next.map((item) => {
             const label = item.type === 'lesson' ? 'Revoir le cours' : item.type === 'exam' ? 'Sujet suivant' : 'Exercice suivant';
             return (
@@ -213,9 +199,62 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
           })}
         </div>
       )}
+    </>
+  );
 
+  // ── En haut : bandeau compact (téléphone : une ligne, l'énoncé arrive vite).
+  if (top) {
+    return (
+      <section id="ou-en-es-tu" className="scroll-mt-24 rounded-2xl border border-line bg-white px-3 py-2.5 sm:px-5 sm:py-3.5" data-tour="detail-terminer" aria-labelledby="ou-titre">
+        <div className="flex items-center gap-2.5 sm:justify-between sm:gap-6">
+          <div className="hidden min-w-0 flex-1 sm:block">
+            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">Où en es-tu ?</p>
+            <h2 id="ou-titre" className={`mt-0.5 flex items-center gap-1.5 text-[15px] font-semibold leading-snug ${tone}`}>
+              {statusIcon}{title}
+            </h2>
+            {!isLesson && total >= 2 && (
+              <div className="mt-2 flex max-w-md items-center gap-3" data-tour="detail-progression">
+                <SplitBar success={successCount} review={reviewCount} total={total} className="w-28 shrink-0 lg:w-36" />
+                <p className="min-w-0 truncate text-[12.5px] text-ink-faint fd-nums">
+                  {assessed === 0 ? `${total} questions à évaluer` : `${assessed} / ${total} évaluée${assessed > 1 ? 's' : ''}`}
+                  {successCount > 0 && <> · <span className="text-brand-hover">{successCount} réussie{successCount > 1 ? 's' : ''}</span></>}
+                  {reviewCount > 0 && <> · <span className="text-gold-strong">{reviewCount} à revoir</span></>}
+                </p>
+              </div>
+            )}
+          </div>
+          {/* Téléphone : questions évaluées (ou la question, pour une leçon), puis les boutons. */}
+          {isLesson && (
+            <p className={`flex min-w-0 flex-1 items-center gap-1.5 text-[13.5px] font-semibold leading-snug sm:hidden ${tone}`}>{statusIcon}{title}</p>
+          )}
+          {!isLesson && total >= 2 && (
+            <p className="shrink-0 text-center leading-tight sm:hidden max-[379px]:hidden" title="Questions évaluées">
+              <span className="block text-[13px] font-semibold text-ink-soft fd-nums">{assessed}/{total}</span>
+              <span className="block text-[10.5px] text-ink-faint">évaluées</span>
+            </p>
+          )}
+          {buttons}
+        </div>
+        {!isLesson && (success || review) && (
+          <p className={`mt-2 flex items-center gap-1.5 text-[13px] font-medium leading-snug sm:hidden ${tone}`}>{statusIcon}{title}</p>
+        )}
+        {after}
+      </section>
+    );
+  }
+
+  // ── En bas : rappel, là où l'élève finit, et « Ranger ».
+  return (
+    <section id="fin" className="scroll-mt-24 rounded-2xl border border-line bg-white px-4 py-3.5 sm:px-6 sm:py-4" aria-labelledby="fin-titre">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <h2 id="fin-titre" className={`flex min-w-0 items-center gap-1.5 text-[15px] font-semibold leading-snug ${tone}`}>
+          {statusIcon}{title}
+        </h2>
+        {buttons}
+      </div>
+      {after}
       {onCollect && (
-        <div className="mt-4 border-t border-line pt-2">
+        <div className="mt-3 border-t border-line pt-1.5">
           <button type="button" onClick={onCollect} data-tour={isLesson ? 'detail-cahier' : 'detail-liste'}
             className="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink">
             {isLesson ? <BookMarked className="h-4 w-4 text-ink-faint" aria-hidden /> : <ListPlus className="h-4 w-4 text-ink-faint" aria-hidden />}
