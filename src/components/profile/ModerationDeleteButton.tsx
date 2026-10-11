@@ -1,6 +1,6 @@
 // Modération (admins) : supprime un compte ET tout son contenu, pour un contenu inapproprié.
 // Une suppression demandée par l'utilisateur, elle, garde ses contributions sous « Compte supprimé ».
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { moderationDeleteAccount } from '@/lib/api/userApi';
@@ -14,15 +14,24 @@ export const ModerationDeleteButton: React.FC<{ username: string }> = ({ usernam
 
   const close = () => { setOpen(false); setConfirm(''); setError(null); };
 
-  const submit = async () => {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) { setOpen(false); setConfirm(''); setError(null); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, busy]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (confirm !== username || busy) return;
     setBusy(true);
     setError(null);
     try {
       await moderationDeleteAccount(username, confirm);
       close();
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'La suppression a échoué.');
+    } catch (err) {
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'La suppression a échoué.');
     } finally {
       setBusy(false);
     }
@@ -30,33 +39,36 @@ export const ModerationDeleteButton: React.FC<{ username: string }> = ({ usernam
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="fd-btn-ghost" style={{ flexShrink: 0, color: '#a23b34' }}
-        title="Réservé aux administrateurs">
-        <ShieldAlert className="w-3.5 h-3.5" /> Supprimer (modération)
+      <button type="button" onClick={() => setOpen(true)} title="Réservé aux administrateurs"
+        className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-[10px] border border-[#f0d5d1] bg-[#fbecea] px-3.5 text-[13px] font-semibold text-[#a23b34] transition-colors hover:border-[#a23b34]">
+        <ShieldAlert className="h-4 w-4" /> Supprimer (modération)
       </button>
 
       {open && (
-        <div className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-[100] bg-black/50 flex items-center justify-center p-4" onClick={close}
-          role="dialog" aria-modal="true">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-[#1a1a1a] mb-2">Supprimer « {username} » et son contenu ?</h3>
-            <p className="text-sm text-[#6b6862] mb-4 leading-relaxed">
-              Modération : le compte <strong>et tout ce qu’il a publié</strong> (exercices, leçons, examens,
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/40 p-4 [align-items:safe_center]" onClick={() => !busy && close()}>
+          <form role="dialog" aria-modal="true" aria-labelledby="moderation-titre" onSubmit={submit} onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-line bg-white p-5 shadow-xl sm:p-6">
+            <h2 id="moderation-titre" className="fd-display text-[20px] leading-tight text-ink">Supprimer « {username} » et son contenu ?</h2>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-faint">
+              Modération : le compte <b className="font-semibold text-ink-soft">et tout ce qu’il a publié</b> (exercices, leçons, examens,
               commentaires, solutions, fichiers) seront définitivement effacés. À réserver au contenu inapproprié.
             </p>
-            <label className="block text-sm text-[#a23b34] mb-1.5">Recopie <strong>{username}</strong> pour confirmer :</label>
-            <input value={confirm} onChange={(e) => setConfirm(e.target.value)} autoFocus
-              className="w-full px-3 py-2 border border-[#f3c9c5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#c2564f]/30" />
-            {error && <p className="text-sm text-[#a23b34] mt-2">{error}</p>}
-            <div className="flex gap-3 mt-5">
-              <button onClick={close} className="flex-1 fd-btn-ghost justify-center" disabled={busy}>Annuler</button>
-              <button onClick={submit} disabled={confirm !== username || busy}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-xl disabled:opacity-50"
-                style={{ background: '#a23b34' }}>
-                {busy && <Loader2 className="w-4 h-4 animate-spin" />} Supprimer définitivement
+            <div className="mt-4 rounded-xl border border-[#f0d5d1] bg-[#fbecea] p-3.5">
+              <label htmlFor="moderation-confirm" className="mb-1.5 block text-[13px] text-[#a23b34]">
+                Recopie <b className="font-semibold">{username}</b> pour confirmer :
+              </label>
+              <input id="moderation-confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoFocus autoComplete="off"
+                className="h-11 w-full rounded-xl border border-line bg-white px-3.5 text-[14px] text-ink focus:border-[#a23b34] focus:outline-none focus:ring-2 focus:ring-[#a23b34]/25" />
+              {error && <p role="alert" className="mt-2 text-[13px] font-medium text-[#a23b34]">{error}</p>}
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
+              <button type="button" onClick={close} className="fd-btn-ghost min-h-11 flex-1 justify-center" disabled={busy}>Annuler</button>
+              <button type="submit" disabled={confirm !== username || busy}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#a23b34] px-4 text-[13px] font-semibold text-white hover:bg-[#8a312b] disabled:cursor-not-allowed disabled:opacity-50">
+                {busy && <Loader2 className="h-4 w-4 animate-spin" />} Supprimer définitivement
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </>

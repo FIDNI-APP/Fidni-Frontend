@@ -2,18 +2,20 @@
  * EditProfile — tout ce qui décrit la personne, sur une seule page :
  * photo et présentation (publiques), identité (privée), scolarité, objectifs de notes (privés).
  * Pseudo, e-mail, mot de passe et notifications restent dans Profil → Paramètres.
+ * 11/10/2026 : mêmes briques que l'espace élève (Page, PageHeader), squelette au chargement, rouge sobre.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  ArrowLeft, Camera, Check, Eye, Loader2, Lock, Plus, Settings, Trash2, User,
+  Camera, Check, Eye, Loader2, Lock, Plus, Settings, Trash2, User,
 } from 'lucide-react';
 import { getClassLevels, getSubjects, updateUserProfile } from '@/lib/api';
 import { removeAvatar, updateUserInfo, uploadAvatar } from '@/lib/api/userApi';
 import { IdentityFields } from '@/components/profile/IdentityForm';
 import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
 import { TABBAR_OFFSET } from '@/components/layout/nav';
+import { CardsSkeleton, Page, PageHeader } from '@/components/space/Page';
 
 interface Grade {
   subject: string;
@@ -33,21 +35,21 @@ const idOf = (v: unknown): string =>
   v != null && typeof v === 'object' ? String((v as { id?: string | number }).id ?? '') : String(v ?? '');
 
 /** Carte de section : titre + explication à gauche, champs à droite (empilés sur mobile). */
-const Section: React.FC<{
+const FormSection: React.FC<{
   id: string;
   title: string;
   hint: string;
   visibility: 'public' | 'private';
   children: React.ReactNode;
 }> = ({ id, title, hint, visibility, children }) => (
-  <section id={id} className="fd-card p-5 md:p-6 scroll-mt-24">
-    <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
+  <section id={id} aria-labelledby={`${id}-titre`} className="scroll-mt-24 rounded-2xl border border-line bg-white p-5 md:p-6">
+    <div className="grid gap-5 md:grid-cols-[200px_minmax(0,1fr)] md:gap-8">
       <div>
-        <h2 className="fd-display text-[17px] text-ink">{title}</h2>
+        <h2 id={`${id}-titre`} className="fd-display text-[20px] leading-tight text-ink">{title}</h2>
         <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">{hint}</p>
         <span
           className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-            visibility === 'public' ? 'bg-brand-soft text-brand' : 'bg-[#f2f1ee] text-ink-soft'
+            visibility === 'public' ? 'bg-brand-soft text-brand-hover' : 'bg-[#f2f1ee] text-ink-soft'
           }`}
         >
           {visibility === 'public'
@@ -83,6 +85,8 @@ export function EditProfile() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [avatarRemoved, setAvatarRemoved] = useState(false);
+  // Photo enregistrée qui ne se charge plus : l'initiale à la place.
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [classLevels, setClassLevels] = useState<{ id: string; name: string }[]>([]);
@@ -103,7 +107,8 @@ export function EditProfile() {
     setClassLevel(p.class_level ? idOf(p.class_level) : '');
     setTargetSubjects(Array.isArray(p.target_subjects) ? p.target_subjects.map(idOf) : []);
     // L'API renvoie l'identifiant de la matière (un nombre) : on le garde en chaîne pour les <select>.
-    setGrades((p.subject_grades || []).map((g: any) => ({
+    type RawGrade = { subject: unknown; min_grade?: number | string; max_grade?: number | string; current_grade?: number | string; target_grade?: number | string };
+    setGrades(((p.subject_grades || []) as RawGrade[]).map((g) => ({
       subject: idOf(g.subject),
       min_grade: Number(g.min_grade ?? g.current_grade ?? 0),
       max_grade: Number(g.max_grade ?? g.target_grade ?? 20),
@@ -115,8 +120,9 @@ export function EditProfile() {
   useEffect(() => {
     Promise.all([getClassLevels(), getSubjects()])
       .then(([levels, subs]) => {
-        setClassLevels(levels.map((l: any) => ({ id: String(l.id), name: l.name })));
-        setSubjects(subs.map((s: any) => ({ id: String(s.id), name: s.name })));
+        type Named = { id: string | number; name: string };
+        setClassLevels((levels as Named[]).map((l) => ({ id: String(l.id), name: l.name })));
+        setSubjects((subs as Named[]).map((s) => ({ id: String(s.id), name: s.name })));
       })
       .catch(() => setError({ section: 'scolarite', message: 'Impossible de charger les niveaux et les matières.' }))
       .finally(() => setIsLoading(false));
@@ -147,6 +153,7 @@ export function EditProfile() {
     setError(null);
     setAvatarFile(file);
     setAvatarRemoved(false);
+    setAvatarBroken(false);
     const reader = new FileReader();
     reader.onloadend = () => setAvatarPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -192,8 +199,8 @@ export function EditProfile() {
       await refreshUser();
       setSaved(true);
       setTimeout(() => navigate(profileUrl), 900);
-    } catch (err: any) {
-      const message = err.response?.data?.error || 'Impossible d’enregistrer le profil. Réessaie dans un instant.';
+    } catch (err) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Impossible d’enregistrer le profil. Réessaie dans un instant.';
       setError({ section: 'bas', message });
     } finally {
       setIsSaving(false);
@@ -202,15 +209,16 @@ export function EditProfile() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-paper">
-        <Loader2 className="h-7 w-7 animate-spin text-ink-faint" />
-      </div>
+      <Page width="narrow">
+        <PageHeader back={{ to: profileUrl, label: 'Mon profil' }} eyebrow="Mon profil" title="Modifier mon profil" />
+        <CardsSkeleton n={3} />
+      </Page>
     );
   }
 
   const errorFor = (section: string) =>
     error?.section === section ? (
-      <p role="alert" className="mt-4 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-sm text-[#9c3b2e]">
+      <p role="alert" className="mt-4 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3 text-[13.5px] font-medium text-[#a23b34]">
         {error.message}
       </p>
     ) : null;
@@ -218,40 +226,34 @@ export function EditProfile() {
   const initial = (identity.firstName || user.username || '?').charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-paper">
-      <form onSubmit={handleSubmit} className="mx-auto max-w-4xl px-4 pt-6 md:px-6 md:pt-8">
-        <Link to={profileUrl} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Retour au profil
-        </Link>
-        <div className="mb-6 mt-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="fd-display text-[26px] leading-tight text-ink md:text-[30px]">Modifier mon profil</h1>
-            <p className="mt-1 text-sm text-ink-soft">
-              Ce que les autres voient, et ce qui reste entre toi et Fidni.
-            </p>
-          </div>
-          <Link
-            to={`${profileUrl}?tab=settings`}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:text-brand-hover"
-          >
-            <Settings className="h-3.5 w-3.5" /> Pseudo, e-mail et mot de passe
-          </Link>
-        </div>
+    <Page width="narrow">
+      <form onSubmit={handleSubmit}>
+        <PageHeader
+          back={{ to: profileUrl, label: 'Mon profil' }}
+          eyebrow="Mon profil"
+          title="Modifier mon profil"
+          subtitle="Ce que les autres voient, et ce qui reste entre toi et Fidni."
+          actions={(
+            <Link to={`${profileUrl}?tab=settings`} className="fd-btn-ghost min-h-10">
+              <Settings className="h-4 w-4" /> Pseudo, e-mail et mot de passe
+            </Link>
+          )}
+        />
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {/* ── Photo et présentation ── */}
-          <Section id="photo" title="Photo et présentation" visibility="public"
+          <FormSection id="photo" title="Photo et présentation" visibility="public"
             hint="Ce qui accompagne ton pseudo sur ton profil, tes publications et tes commentaires.">
             <div className="flex flex-wrap items-center gap-5">
-              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-ink text-3xl font-bold text-white ring-4 ring-white shadow-[0_2px_10px_rgba(26,26,26,.08)]">
-                {avatarPreview
-                  ? <img src={avatarPreview} alt="Ta photo de profil" className="h-full w-full object-cover" />
+              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-ink text-3xl font-bold text-white ring-1 ring-line">
+                {avatarPreview && !avatarBroken
+                  ? <img src={avatarPreview} alt="Ta photo de profil" onError={() => setAvatarBroken(true)} className="h-full w-full object-cover" />
                   : <span className="flex h-full w-full items-center justify-center" aria-hidden>{initial}</span>}
               </div>
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="fd-btn-ghost" onClick={() => fileInput.current?.click()}>
-                    <Camera className="h-3.5 w-3.5" /> {avatarPreview ? 'Changer la photo' : 'Ajouter une photo'}
+                  <button type="button" className="fd-btn-ghost min-h-10" onClick={() => fileInput.current?.click()}>
+                    <Camera className="h-4 w-4" /> {avatarPreview ? 'Changer la photo' : 'Ajouter une photo'}
                   </button>
                   {avatarPreview && (
                     <button type="button" onClick={dropAvatar}
@@ -285,18 +287,18 @@ export function EditProfile() {
               </div>
             </div>
             {errorFor('photo')}
-          </Section>
+          </FormSection>
 
           {/* ── Identité ── */}
-          <Section id="identite" title="Identité" visibility="private"
+          <FormSection id="identite" title="Identité" visibility="private"
             hint="Sert à tes feuilles d’exercices en PDF et à tes classes. Ton pseudo reste ton seul nom public.">
             <IdentityFields value={identity} onChange={(v) => { setIdentity(v); setError(null); }} isTeacher={isTeacher} />
             {errorFor('identite')}
-          </Section>
+          </FormSection>
 
           {/* ── Scolarité ── */}
           {!isTeacher && (
-            <Section id="scolarite" title="Scolarité" visibility="public"
+            <FormSection id="scolarite" title="Scolarité" visibility="public"
               hint="Ton niveau règle les contenus proposés sur l’accueil et dans les listes.">
               <div className="space-y-5">
                 <div>
@@ -327,12 +329,12 @@ export function EditProfile() {
                 )}
               </div>
               {errorFor('scolarite')}
-            </Section>
+            </FormSection>
           )}
 
           {/* ── Objectifs ── */}
           {!isTeacher && (
-            <Section id="objectifs" title="Objectifs de notes" visibility="private"
+            <FormSection id="objectifs" title="Objectifs de notes" visibility="private"
               hint="Ta moyenne actuelle et celle que tu vises, sur 20. Elles t’aident à mesurer le chemin parcouru.">
               {grades.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line px-4 py-6 text-center">
@@ -383,28 +385,28 @@ export function EditProfile() {
                 </ul>
               )}
               {freeChoices.length > 0 && (
-                <button type="button" className="fd-btn-ghost mt-3"
+                <button type="button" className="fd-btn-ghost mt-3 min-h-10"
                   onClick={() => setGrades(prev => [...prev, { subject: freeChoices[0], min_grade: 10, max_grade: 14 }])}>
-                  <Plus className="h-3.5 w-3.5" /> Ajouter un objectif
+                  <Plus className="h-4 w-4" /> Ajouter un objectif
                 </button>
               )}
               {errorFor('objectifs')}
-            </Section>
+            </FormSection>
           )}
         </div>
         <div id="bas">{errorFor('bas')}</div>
 
         {/* ── Barre d'enregistrement : collée en bas de l'écran tant que le formulaire défile ──
             (au-dessus de la barre d'onglets du téléphone ; TABBAR_OFFSET vaut 0 sur ordinateur) */}
-        <div className="sticky bottom-0 z-30 -mx-4 mt-6 border-t border-line bg-white/95 backdrop-blur md:-mx-6 md:rounded-t-2xl md:border-x"
+        <div className="sticky bottom-0 z-30 -mx-4 mt-6 border-t border-line bg-white/95 backdrop-blur md:-mx-8 md:rounded-t-2xl md:border-x"
           style={{ bottom: TABBAR_OFFSET }}>
-          <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 md:px-6">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-8">
             <p className="hidden items-center gap-1.5 text-xs text-ink-faint sm:flex">
               <User className="h-3.5 w-3.5" /> Connecté en tant que <span className="font-semibold text-ink-soft">{user.username}</span>
             </p>
             <div className="ml-auto flex items-center gap-2">
-              <button type="button" className="fd-btn-ghost" onClick={() => navigate(profileUrl)}>Annuler</button>
-              <button type="submit" className="fd-btn-primary min-w-[150px] justify-center" disabled={isSaving || saved}>
+              <button type="button" className="fd-btn-ghost min-h-10" onClick={() => navigate(profileUrl)}>Annuler</button>
+              <button type="submit" className="fd-btn-primary min-h-10 min-w-[150px] justify-center" disabled={isSaving || saved}>
                 {saved ? <><Check className="h-4 w-4" /> Enregistré</>
                   : isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Enregistrement…</>
                   : 'Enregistrer'}
@@ -413,7 +415,7 @@ export function EditProfile() {
           </div>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }
 

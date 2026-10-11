@@ -39,7 +39,7 @@ export const IdentityFields: React.FC<{
         {([['M', 'Monsieur'], ['F', 'Madame'], ['N', 'Je préfère ne pas le dire']] as const).map(([g, label]) => (
           <button key={g} type="button" role="radio" aria-checked={value.gender === g}
             onClick={() => onChange({ ...value, gender: g })}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`min-h-10 px-4 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
               value.gender === g ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
             {label}
           </button>
@@ -115,8 +115,8 @@ export const IdentityGate: React.FC = () => {
     try {
       await updateUserInfo({ ...identityPayload(current), ...(mustAccept ? { accept_terms: true } : {}) });
       await refreshUser();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Enregistrement impossible. Réessaie.');
+    } catch (err) {
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Enregistrement impossible. Réessaie.');
     } finally {
       setSaving(false);
     }
@@ -153,9 +153,9 @@ export const IdentityGate: React.FC = () => {
           {error && <p className="mt-4 text-sm text-[#a23b34]">{error}</p>}
         </div>
         <div className="px-6 sm:px-7 py-4 border-t border-line flex items-center justify-between gap-3">
-          <button onClick={() => logout()} className="text-sm text-ink-faint hover:text-ink">Se déconnecter</button>
-          <button onClick={save} disabled={saving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand text-white rounded-lg font-semibold text-sm hover:bg-brand-hover disabled:opacity-50">
+          <button type="button" onClick={() => logout()} className="min-h-10 px-1 text-sm text-ink-faint hover:text-ink">Se déconnecter</button>
+          <button type="button" onClick={save} disabled={saving}
+            className="inline-flex min-h-10 items-center gap-2 px-5 bg-brand text-white rounded-lg font-semibold text-sm hover:bg-brand-hover disabled:opacity-50">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Enregistrer
           </button>

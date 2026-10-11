@@ -1,503 +1,270 @@
 // src/components/profile/ProgressSection.tsx
-// Exercices réussis / à revoir de l'élève. 10/10/2026 : mêmes mots que partout ailleurs (« Réussi », « À revoir »,
-// plus de « Validé / Échoué »), tutoiement.
-import React, { useState, useMemo } from 'react';
+// Onglet « Réussis / à revoir » du profil (refonte du 11/10/2026) : les exercices que l'élève a notés.
+// Un bilan (réussis · à revoir), un filtre, un classement (à revoir d'abord, par chapitre, par matière, temps),
+// une recherche quand la liste est longue. Les « à revoir » renvoient à Réviser › À refaire.
+// Ordre du serveur : le plus récemment noté d'abord, dans chaque liste (GET /users/<u>/success_thing/, review_thing/).
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Content } from '@/types';
-import {
-  CheckCircle,
-  Clock,
-  Target,
-  ChevronRight,
-  BookOpen,
-  Search,
-  TrendingUp,
-  ChevronDown,
-  Layers,
-  FileText,
-  BarChart3,
-  RotateCcw,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ProgressRing } from '@/components/ui/ProgressRing';
+import { ArrowRight, Check, ChevronRight, Clock, Dumbbell, RotateCcw, Search, Target, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { CardsSkeleton, EmptyState, Segmented, SplitBar } from '@/components/space/Page';
+import { hubPath, profileLevel } from '@/lib/api/hubApi';
+import { duration } from '@/pages/progression/format';
+import type { Content } from '@/types';
 
 interface ProgressSectionProps {
   successExercises: Content[];
   reviewExercises: Content[];
   isLoading: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
 }
 
-type ViewMode = 'list' | 'by-subject' | 'by-chapter';
+type Status = 'success' | 'review';
+type Filter = 'all' | Status;
+type Order = 'default' | 'chapter' | 'subject' | 'time';
+type Rated = Content & { status: Status };
 
-interface ExerciseWithStatus extends Content {
-  status: 'success' | 'review';
+interface Group { key: string; name: string; success: number; review: number; seconds: number; items: Rated[] }
+
+const SHOWN = 12;
+const SEARCH_FROM = 8;
+/** En dessous, ni filtre ni classement : la liste se lit d'un coup d'œil. */
+const TOOLS_FROM = 5;
+
+const pathOf = (c: Content) => `/${c.type === 'exam' ? 'exams' : c.type === 'lesson' ? 'lessons' : 'exercises'}/${c.id}`;
+const timeOf = (c: Content) => (c.user_timespent && c.user_timespent >= 60 ? duration(c.user_timespent) : null);
+const chapterOf = (c: Content) => c.chapters?.[0]?.name;
+
+function groupBy(items: Rated[], keyOf: (c: Rated) => { key: string; name: string }[]): Group[] {
+  const map = new Map<string, Group>();
+  items.forEach((c) => keyOf(c).forEach(({ key, name }) => {
+    const g = map.get(key) ?? { key, name, success: 0, review: 0, seconds: 0, items: [] };
+    g[c.status] += 1;
+    g.seconds += c.user_timespent || 0;
+    g.items.push(c);
+    map.set(key, g);
+  }));
+  // Les groupes où il reste le plus à revoir d'abord, puis les plus fournis.
+  return [...map.values()].sort((a, b) => b.review - a.review || b.items.length - a.items.length || a.name.localeCompare(b.name, 'fr'));
 }
 
-interface TaxonomyStats {
-  name: string;
-  id: string | number;
-  success: number;
-  review: number;
-  total: number;
-  successRate: number;
-  totalTime: number;
-  exercises: ExerciseWithStatus[];
-}
+const byChapter = (c: Rated) => (c.chapters?.length
+  ? c.chapters.map((ch) => ({ key: `c${ch.id}`, name: ch.name }))
+  : [{ key: 'aucun', name: 'Sans chapitre' }]);
+const bySubject = (c: Rated) => [{ key: `s${c.subject?.id ?? 'aucune'}`, name: c.subject?.name || 'Sans matière' }];
+
+/** Pastille d'état : icône + mot (jamais la couleur seule). */
+const StatusTile: React.FC<{ status: Status; small?: boolean }> = ({ status, small }) => (
+  <span className={`flex shrink-0 items-center justify-center rounded-xl ${small ? 'h-8 w-8' : 'mt-0.5 h-9 w-9'} ${
+    status === 'success' ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-gold-strong'}`} aria-hidden>
+    {status === 'success' ? <Check className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
+  </span>
+);
+
+const StatusWord: React.FC<{ status: Status }> = ({ status }) => (
+  <span className={`font-semibold ${status === 'success' ? 'text-brand-hover' : 'text-gold-strong'}`}>
+    {status === 'success' ? 'Réussi' : 'À revoir'}
+  </span>
+);
+
+const ExerciseCard: React.FC<{ item: Rated }> = ({ item }) => {
+  const meta = [chapterOf(item), timeOf(item)].filter(Boolean).join(' · ');
+  return (
+    <li>
+      <Link to={pathOf(item)}
+        className="group flex h-full items-start gap-3 rounded-2xl border border-line bg-white p-4 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <StatusTile status={item.status} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold leading-snug text-ink line-clamp-2">{item.title}</span>
+          <span className="mt-1 block truncate text-[12.5px] text-ink-faint">
+            <StatusWord status={item.status} />{meta && <> · {meta}</>}
+          </span>
+        </span>
+        {item.status === 'review' && (
+          <span className="hidden shrink-0 items-center gap-1 self-center text-[12.5px] font-semibold text-brand-hover group-hover:underline sm:inline-flex">
+            Refaire <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        )}
+      </Link>
+    </li>
+  );
+};
+
+const GroupBlock: React.FC<{ group: Group }> = ({ group }) => (
+  <details className="group/g rounded-2xl border border-line bg-white">
+    <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+      <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-open/g:rotate-90" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-semibold text-ink">{group.name}</span>
+        <span className="mt-1.5 flex items-center gap-3">
+          <SplitBar success={group.success} review={group.review} total={group.items.length} className="w-24 shrink-0 sm:w-32" />
+          <span className="truncate text-[12.5px] text-ink-faint">
+            <b className="fd-nums font-semibold text-brand-hover">{group.success}</b> réussi{group.success > 1 ? 's' : ''}
+            {group.review > 0 && <> · <b className="fd-nums font-semibold text-gold-strong">{group.review}</b> à revoir</>}
+          </span>
+        </span>
+      </span>
+      {group.seconds >= 60 && <span className="fd-nums hidden shrink-0 text-[12.5px] text-ink-faint sm:inline">{duration(group.seconds)}</span>}
+    </summary>
+    <ul className="divide-y divide-line border-t border-line">
+      {group.items.map((c) => (
+        <li key={`${group.key}-${c.id}`}>
+          <Link to={pathOf(c)} className="flex min-h-12 items-center gap-3 px-4 py-2 hover:bg-[#fcfbf9] focus:outline-none focus-visible:bg-[#f7f6f3] sm:px-5">
+            <StatusTile status={c.status} small />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13.5px] font-medium text-ink">{c.title}</span>
+              <span className="block text-[12px] text-ink-faint"><StatusWord status={c.status} />{timeOf(c) && <> · {timeOf(c)}</>}</span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </details>
+);
 
 export const ProgressSection: React.FC<ProgressSectionProps> = ({
-  successExercises = [],
-  reviewExercises = [],
-  isLoading
+  successExercises = [], reviewExercises = [], isLoading, failed = false, onRetry,
 }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'success' | 'review'>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'time' | 'subject'>('date');
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
+  const level = profileLevel(user);
+  const startUrl = level ? hubPath('exercises', level.slug) : '/exercises';
+  const [filter, setFilter] = useState<Filter>('all');
+  const [order, setOrder] = useState<Order>('default');
+  const [query, setQuery] = useState('');
+  const [all, setAll] = useState(false);
 
-  const safeSuccessExercises = useMemo(() => (Array.isArray(successExercises) ? successExercises : []), [successExercises]);
-  const safeReviewExercises = useMemo(() => (Array.isArray(reviewExercises) ? reviewExercises : []), [reviewExercises]);
+  const success = useMemo(() => (Array.isArray(successExercises) ? successExercises : []), [successExercises]);
+  const review = useMemo(() => (Array.isArray(reviewExercises) ? reviewExercises : []), [reviewExercises]);
+  // À revoir d'abord (le plus récemment noté en tête), puis les réussis.
+  const items = useMemo<Rated[]>(() => [
+    ...review.map((c) => ({ ...c, status: 'review' as const })),
+    ...success.map((c) => ({ ...c, status: 'success' as const })),
+  ], [success, review]);
+  const total = items.length;
+  const seconds = items.reduce((n, c) => n + (c.user_timespent || 0), 0);
+  const subjects = new Set(items.map((c) => c.subject?.name || '')).size;
 
-  const totalExercises = safeSuccessExercises.length + safeReviewExercises.length;
-  const successRate = totalExercises > 0
-    ? Math.round((safeSuccessExercises.length / totalExercises) * 100)
-    : 0;
+  const q = query.trim().toLowerCase();
+  const visible = useMemo(() => {
+    const list = items.filter((c) => (filter === 'all' || c.status === filter) && (!q || c.title.toLowerCase().includes(q)));
+    return order === 'time' ? [...list].sort((a, b) => (b.user_timespent || 0) - (a.user_timespent || 0)) : list;
+  }, [items, filter, q, order]);
+  const groups = useMemo(() => (order === 'chapter' ? groupBy(visible, byChapter) : order === 'subject' ? groupBy(visible, bySubject) : null),
+    [visible, order]);
 
-  const totalTimeSpent = [...safeSuccessExercises, ...safeReviewExercises].reduce(
-    (sum, ex) => sum + (ex.user_timespent || 0), 0
-  );
+  if (isLoading) return <CardsSkeleton n={4} className="sm:grid-cols-2" />;
 
-  const allExercises = useMemo(() => [
-    ...safeSuccessExercises.map(ex => ({ ...ex, status: 'success' as const })),
-    ...safeReviewExercises.map(ex => ({ ...ex, status: 'review' as const }))
-  ], [safeSuccessExercises, safeReviewExercises]);
-
-  const subjectStats = useMemo((): TaxonomyStats[] => {
-    const subjectMap = new Map<string, TaxonomyStats>();
-    allExercises.forEach(ex => {
-      const subjectName = ex.subject?.name || 'Sans matière';
-      const subjectId = ex.subject?.id || 'none';
-      if (!subjectMap.has(subjectName)) {
-        subjectMap.set(subjectName, {
-          name: subjectName, id: subjectId,
-          success: 0, review: 0, total: 0, successRate: 0, totalTime: 0, exercises: []
-        });
-      }
-      const stats = subjectMap.get(subjectName)!;
-      stats.total++;
-      stats.totalTime += ex.user_timespent || 0;
-      stats.exercises.push(ex);
-      if (ex.status === 'success') stats.success++;
-      else stats.review++;
-    });
-    subjectMap.forEach(stats => {
-      stats.successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
-    });
-    return Array.from(subjectMap.values()).sort((a, b) => b.total - a.total);
-  }, [allExercises]);
-
-  const chapterStats = useMemo((): TaxonomyStats[] => {
-    const chapterMap = new Map<string, TaxonomyStats>();
-    allExercises.forEach(ex => {
-      const chapters = ex.chapters || [];
-      if (chapters.length === 0) {
-        const key = 'no-chapter';
-        if (!chapterMap.has(key)) {
-          chapterMap.set(key, {
-            name: 'Sans chapitre', id: 'none',
-            success: 0, review: 0, total: 0, successRate: 0, totalTime: 0, exercises: []
-          });
-        }
-        const stats = chapterMap.get(key)!;
-        stats.total++;
-        stats.totalTime += ex.user_timespent || 0;
-        stats.exercises.push(ex);
-        if (ex.status === 'success') stats.success++;
-        else stats.review++;
-      } else {
-        chapters.forEach((chapter: { id?: number | string; name?: string } | string) => {
-          const chapterName = typeof chapter === 'string' ? chapter : chapter.name || '';
-          const chapterId = typeof chapter === 'string' ? chapter : chapter.id ?? chapterName;
-          const key = `${chapterId}`;
-          if (!chapterMap.has(key)) {
-            chapterMap.set(key, {
-              name: chapterName, id: chapterId,
-              success: 0, review: 0, total: 0, successRate: 0, totalTime: 0, exercises: []
-            });
-          }
-          const stats = chapterMap.get(key)!;
-          stats.total++;
-          stats.totalTime += ex.user_timespent || 0;
-          stats.exercises.push(ex);
-          if (ex.status === 'success') stats.success++;
-          else stats.review++;
-        });
-      }
-    });
-    chapterMap.forEach(stats => {
-      stats.successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
-    });
-    return Array.from(chapterMap.values()).sort((a, b) => b.total - a.total);
-  }, [allExercises]);
-
-  const filteredExercises = allExercises
-    .filter(ex => {
-      if (activeTab === 'success') return ex.status === 'success';
-      if (activeTab === 'review') return ex.status === 'review';
-      return true;
-    })
-    .filter(ex => {
-      if (!searchQuery) return true;
-      return ex.title.toLowerCase().includes(searchQuery.toLowerCase());
-    })
-    .sort((a, b) => {
-      if (sortBy === 'time') return (b.user_timespent || 0) - (a.user_timespent || 0);
-      if (sortBy === 'subject') return (a.subject?.name || '').localeCompare(b.subject?.name || '');
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-
-  const formatTime = (seconds: number): string => {
-    if (!seconds || seconds === 0) return '-';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
-  const toggleExpanded = (id: string) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(id)) newExpanded.delete(id);
-    else newExpanded.add(id);
-    setExpandedItems(newExpanded);
-  };
-
-  if (isLoading) {
+  if (failed && total === 0) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
-        ))}
+      <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+        <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Tes exercices n’ont pas pu se charger. Vérifie ta connexion.</p>
+        {onRetry && <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>}
       </div>
     );
   }
 
+  if (total === 0) {
+    return (
+      <EmptyState icon={Target} title="Rien de noté pour l’instant"
+        text="Après un exercice, dis si tu l’as réussi ou s’il est à revoir : il apparaîtra ici, et ceux à revoir t’attendront dans Réviser."
+        action={<Link to={startUrl} className="fd-btn-primary min-h-10"><Dumbbell className="h-4 w-4" /> S’entraîner</Link>} />
+    );
+  }
+
+  const shown = all ? visible : visible.slice(0, SHOWN);
+  const orders: { key: Order; label: string }[] = [
+    { key: 'default', label: filter === 'all' ? 'À revoir d’abord' : 'Les plus récents' },
+    { key: 'chapter', label: 'Par chapitre' },
+    ...(subjects > 1 ? [{ key: 'subject' as const, label: 'Par matière' }] : []),
+    { key: 'time', label: 'Temps passé' },
+  ];
+
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Asymmetric Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        {/* Featured card */}
-        <div className="col-span-2 bg-indigo-600 rounded-2xl p-6 text-white flex items-center gap-5">
-          <ProgressRing
-            percentage={successRate}
-            size={80}
-            strokeWidth={6}
-            trackColor="rgba(255,255,255,0.2)"
-            progressColor="#ffffff"
-          >
-            <span className="text-lg font-bold text-white">{successRate}%</span>
-          </ProgressRing>
-          <div>
-            <div className="text-3xl font-bold">{totalExercises}</div>
-            <div className="text-indigo-200 text-sm">exercices au total</div>
-            <div className="mt-2 h-1.5 w-32 bg-indigo-500/40 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full transition-all"
-                style={{ width: `${successRate}%` }}
-              />
-            </div>
+    <div className="flex flex-col gap-6">
+      {/* Bilan : combien de notés, la part réussie, ce qui reste à refaire. */}
+      <div className="overflow-hidden rounded-2xl border border-line bg-white">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] text-ink-soft">
+              <b className="fd-nums text-[22px] font-bold text-ink">{total}</b> exercice{total > 1 ? 's' : ''} noté{total > 1 ? 's' : ''} :{' '}
+              <b className="fd-nums font-semibold text-brand-hover">{success.length}</b> réussi{success.length > 1 ? 's' : ''},{' '}
+              <b className="fd-nums font-semibold text-gold-strong">{review.length}</b> à revoir
+            </p>
+            <SplitBar success={success.length} review={review.length} total={total} className="mt-2.5 max-w-md" />
           </div>
+          {seconds >= 60 && (
+            <p className="inline-flex shrink-0 items-center gap-1.5 text-[13px] text-ink-faint">
+              <Clock className="h-4 w-4" aria-hidden /> <span className="fd-nums font-semibold text-ink-soft">{duration(seconds)}</span> passées dessus
+            </p>
+          )}
         </div>
-
-        {/* Smaller stat cards */}
-        <div className="fd-card p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-xs text-slate-500 font-medium">Réussis</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{safeSuccessExercises.length}</div>
-        </div>
-
-        <div className="fd-card p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500" />
-            <span className="text-xs text-slate-500 font-medium">À revoir</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{safeReviewExercises.length}</div>
-        </div>
-
-        <div className="fd-card p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-indigo-500" />
-            <span className="text-xs text-slate-500 font-medium">Réussite</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{successRate}%</div>
-        </div>
-
-        <div className="fd-card p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">Temps total</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-900">{formatTime(totalTimeSpent)}</div>
-        </div>
+        {review.length > 0 && (
+          <Link to="/reviser#a-refaire"
+            className="flex min-h-11 items-center gap-2 border-t border-line bg-gold-soft/60 px-4 text-[13px] font-semibold text-gold-strong hover:underline sm:px-5">
+            <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1">{review.length} à revoir : les refaire dans Réviser</span>
+            <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+          </Link>
+        )}
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="fd-card p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        {/* View mode pills */}
-        <div className="flex bg-slate-100 rounded-full p-1">
-          {[
-            { id: 'list', label: 'Liste', icon: FileText },
-            { id: 'by-subject', label: 'Par matière', icon: BookOpen },
-            { id: 'by-chapter', label: 'Par chapitre', icon: Layers }
-          ].map((mode) => {
-            const Icon = mode.icon;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => setViewMode(mode.id as ViewMode)}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                  viewMode === mode.id
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{mode.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Status + search */}
-        <div className="flex flex-wrap items-center gap-2">
-          {viewMode === 'list' && (
-            <>
-              <div className="flex bg-slate-100 rounded-full p-1">
-                {[
-                  { id: 'all', label: 'Tous', count: totalExercises },
-                  { id: 'success', label: 'Réussis', count: safeSuccessExercises.length },
-                  { id: 'review', label: 'À revoir', count: safeReviewExercises.length }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                    aria-pressed={activeTab === tab.id}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                      activeTab === tab.id
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    {tab.label}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      activeTab === tab.id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-500'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Rechercher un exercice"
-                className="pl-9 pr-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-40"
-                />
-              </div>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                aria-label="Trier"
-                className="px-3 py-2 bg-slate-50 border border-[#e7e3dc] rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="date">Récents</option>
-                <option value="time">Temps</option>
-                <option value="subject">Matière</option>
+      {/* Filtre, classement, recherche (seulement quand la liste est assez longue). */}
+      {total >= TOOLS_FROM && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Segmented<Filter> label="Afficher" value={filter} onChange={(v) => { setFilter(v); setAll(false); }}
+            options={[
+              { key: 'all', label: 'Tous', count: total },
+              { key: 'success', label: 'Réussis', count: success.length },
+              { key: 'review', label: 'À revoir', count: review.length },
+            ]} />
+          <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
+            {total > SEARCH_FROM && (
+              <label className="relative min-w-0 flex-1 sm:max-w-[240px]">
+                <span className="sr-only">Rechercher un exercice</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+                <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setAll(false); }} placeholder="Rechercher…"
+                  className="h-10 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
+              </label>
+            )}
+            <label className="inline-flex items-center gap-2 text-[13px] text-ink-faint">
+              <span className="shrink-0">Classer</span>
+              <select value={order} onChange={(e) => setOrder(e.target.value as Order)}
+                className="h-10 rounded-xl border border-line bg-white px-3 text-[13.5px] font-medium text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30">
+                {orders.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
               </select>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Taxonomy View */}
-      {(viewMode === 'by-subject' || viewMode === 'by-chapter') && (
-        <div className="space-y-3">
-          {(viewMode === 'by-subject' ? subjectStats : chapterStats).map((stat) => (
-            <div
-              key={`${stat.id}`}
-              className="fd-card overflow-hidden"
-            >
-              <button
-                onClick={() => toggleExpanded(`${stat.id}`)}
-                className="w-full flex items-center gap-4 p-5 hover:bg-slate-50 transition-colors"
-              >
-                <ProgressRing percentage={stat.successRate} size={44} strokeWidth={3}>
-                  <span className="text-xs font-bold text-slate-700">{stat.successRate}%</span>
-                </ProgressRing>
-                <div className="flex-1 min-w-0 text-left">
-                  <h3 className="font-semibold text-slate-900 truncate">{stat.name}</h3>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                    <span>{stat.total} exercice{stat.total > 1 ? 's' : ''}</span>
-                    <span className="text-emerald-600 font-medium">{stat.success} réussi{stat.success > 1 ? 's' : ''}</span>
-                    {stat.review > 0 && <span className="text-amber-700 font-medium">{stat.review} à revoir</span>}
-                  </div>
-                </div>
-
-                <div className="hidden md:block w-24">
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-600 rounded-full transition-all"
-                      style={{ width: `${stat.successRate}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="text-right hidden sm:block">
-                  <div className="text-sm font-semibold text-slate-900">{formatTime(stat.totalTime)}</div>
-                </div>
-
-                <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${
-                  expandedItems.has(`${stat.id}`) ? 'rotate-180' : ''
-                }`} />
-              </button>
-
-              <AnimatePresence>
-                {expandedItems.has(`${stat.id}`) && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="border-t border-[#faf9f7]"
-                  >
-                    <div className="p-2">
-                      {stat.exercises.map((exercise) => (
-                        <Link
-                          key={exercise.id}
-                          to={`/exercises/${exercise.id}`}
-                          className={`flex items-center gap-3 p-3 rounded-lg border-l-4 hover:bg-slate-50 transition-colors group ${
-                            exercise.status === 'success'
-                              ? 'border-l-emerald-400 bg-emerald-50/30'
-                              : 'border-l-amber-400 bg-amber-50/30'
-                          }`}
-                        >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                            exercise.status === 'success' ? 'bg-emerald-100' : 'bg-amber-100'
-                          }`}>
-                            {exercise.status === 'success'
-                              ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                              : <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
-                            }
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 truncate transition-colors">
-                              {exercise.title}
-                            </h4>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <Clock className="w-3 h-3" />
-                            {formatTime(exercise.user_timespent || 0)}
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-slate-300" />
-                        </Link>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
-
-          {(viewMode === 'by-subject' ? subjectStats : chapterStats).length === 0 && (
-            <div className="fd-card p-12 text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
-                <BarChart3 className="w-7 h-7 text-slate-400" />
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">Aucune donnée</h3>
-              <p className="text-slate-500 text-sm">
-                Fais des exercices et dis si tu les as réussis : ta progression apparaîtra ici.
-              </p>
-            </div>
-          )}
+            </label>
+          </div>
         </div>
       )}
 
-      {/* List View — Card Grid */}
-      {viewMode === 'list' && (
+      {visible.length === 0 ? (
+        q ? (
+          <EmptyState compact icon={Search} tone="ink" title="Aucun exercice ne correspond"
+            text={`Rien ne contient « ${query.trim()} »${filter !== 'all' ? ' dans ce filtre' : ''}.`}
+            action={<button type="button" onClick={() => setQuery('')} className="fd-btn-ghost min-h-10"><X className="h-4 w-4" /> Effacer la recherche</button>} />
+        ) : filter === 'review' ? (
+          <EmptyState compact icon={Check} title="Rien à revoir"
+            text="Tous les exercices que tu as notés sont réussis. Bravo !" />
+        ) : (
+          <EmptyState compact icon={RotateCcw} tone="gold" title="Pas encore de réussi"
+            text="Refais un exercice à revoir : quand tu le réussis, marque-le « Réussi »."
+            action={<Link to="/reviser#a-refaire" className="fd-btn-ghost min-h-10">Ouvrir Réviser</Link>} />
+        )
+      ) : groups ? (
+        <div className="flex flex-col gap-3">
+          {groups.map((g) => <GroupBlock key={g.key} group={g} />)}
+        </div>
+      ) : (
         <>
-          {filteredExercises.length === 0 ? (
-            <div className="fd-card p-12 text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
-                <Target className="w-7 h-7 text-slate-400" />
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">Aucun exercice trouvé</h3>
-              <p className="text-slate-500 text-sm mb-5">
-                {searchQuery ? 'Essaie avec d’autres mots.' : 'Fais un exercice et dis si tu l’as réussi : il apparaîtra ici.'}
-              </p>
-              <Link
-                to="/exercises"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
-              >
-                Explorer les exercices
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredExercises.map((exercise) => (
-                <Link
-                  key={exercise.id}
-                  to={`/exercises/${exercise.id}`}
-                  className="bg-white rounded-xl border border-[#e7e3dc] p-4 hover:border-indigo-300 hover:shadow-sm transition-all group"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="font-medium text-slate-900 text-sm leading-tight line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                      {exercise.title}
-                    </h4>
-                    <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                        {exercise.subject?.name || 'Sans matière'}
-                      </span>
-                      <span className="text-xs text-slate-400">{formatTime(exercise.user_timespent || 0)}</span>
-                    </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      exercise.status === 'success'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-amber-50 text-amber-800'
-                    }`}>
-                      {exercise.status === 'success' ? 'Réussi' : 'À revoir'}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Summary */}
-          {filteredExercises.length > 0 && (
-            <div className="fd-card p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <TrendingUp className="w-4 h-4 text-indigo-500" />
-                  <span>
-                    Temps total sur <span className="font-semibold text-slate-900">{filteredExercises.length}</span> exercice{filteredExercises.length > 1 ? 's' : ''}
-                  </span>
-                </div>
-                <span className="font-bold text-lg text-slate-900">
-                  {formatTime(filteredExercises.reduce((sum, ex) => sum + (ex.user_timespent || 0), 0))}
-                </span>
-              </div>
-            </div>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {shown.map((c) => <ExerciseCard key={`${c.status}-${c.id}`} item={c} />)}
+          </ul>
+          {visible.length > SHOWN && (
+            <button type="button" onClick={() => setAll((v) => !v)} className="-mt-3 min-h-10 self-start text-[13px] font-semibold text-brand-hover hover:underline">
+              {all ? 'Voir moins' : `Voir les ${visible.length} exercices`}
+            </button>
           )}
         </>
       )}
