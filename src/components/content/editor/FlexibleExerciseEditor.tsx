@@ -43,6 +43,8 @@ export interface SubQuestionBlock {
   id: string;
   content: ContentBlock;
   points?: number;
+  /** Indication : la « Méthode » de la solution, montrée avant elle (bouton « Indication »). */
+  hint?: ContentBlock;
   solution?: ContentBlock;
   meta?: QuestionMeta;
 }
@@ -52,6 +54,7 @@ export interface ExerciseBlock {
   type: BlockType;
   content?: ContentBlock;
   points?: number;
+  hint?: ContentBlock;
   solution?: ContentBlock;
   subQuestions?: SubQuestionBlock[];
   meta?: QuestionMeta;

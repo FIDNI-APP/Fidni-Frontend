@@ -11,7 +11,7 @@ import React, { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookMarked, Bookmark, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
-  Share2, ShieldCheck, ShieldQuestion, Trash2,
+  School, Share2, ShieldCheck, ShieldQuestion, Trash2,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
@@ -132,8 +132,9 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const pick = (fn?: () => void) => () => { setMenuOpen(false); fn?.(); };
 
   // ── Repère : nature · chapitre · niveau (liens vers la page du chapitre et du niveau, même rubrique).
-  const c = content as ContentItem & { structure?: { credit?: string; a_verifier?: boolean } };
+  const c = content as ContentItem & { structure?: { credit?: string; a_verifier?: boolean }; school?: { name: string; city?: string } | null };
   const credit = c.structure?.credit;
+  const school = c.school;
   const aVerifier = !!c.structure?.a_verifier && !isLesson;
   const level = (hub.level ?? content.class_levels?.[0]) as { name: string; slug?: string } | undefined;
   const levelSlug = level?.slug;
@@ -265,6 +266,12 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
             : content.author?.username && (
               <span className="hidden sm:inline">par <Link to={`/profile/${content.author.username}`} className="text-ink-soft hover:text-ink hover:underline">{content.author.username}</Link></span>
             )}
+        {/* Établissement d'origine (champ facultatif de l'assistant « Ajouter un contenu »). */}
+        {school?.name && (
+          <span className="inline-flex items-center gap-1"><School className="h-3.5 w-3.5" aria-hidden />
+            {contentType === 'lesson' ? 'Cours de' : 'Donné au'} {school.name}{school.city ? `, ${school.city}` : ''}
+          </span>
+        )}
       </div>
 
       {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}

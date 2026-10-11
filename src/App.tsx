@@ -106,7 +106,7 @@ const ContentSection = page(() => import('./pages/content/ContentHub'), 'Content
 const NationalSection = page(() => import('./pages/content/ContentHub'), 'NationalSection');
 const NationalYear = page(() => import('./pages/content/ContentHub'), 'NationalYear');
 const ContentDetail = page(() => import('./pages/content/ContentDetail'), 'ContentDetail');
-const ContentCreate = page(() => import('./pages/content/ContentCreate'), 'ContentCreate');
+const ContentWizard = page(() => import('./pages/content/ContentWizard'), 'ContentWizard');
 
 /** Pendant le chargement d'une page : un repère discret, la barre latérale reste en place. */
 const PageLoader = () => (
@@ -457,7 +457,7 @@ function App() {
                     } />
                     <Route path="/exercises/new" element={
                       <NavbarWrapper showFooter={false}>
-                        <ContentCreate />
+                        <ContentWizard />
                       </NavbarWrapper>
                     } />
                     {/* Feuilles A4 à exporter en PDF : pleine page, sans la barre latérale */}
@@ -474,7 +474,7 @@ function App() {
                     } />
                     <Route path="/exercises/:id/edit" element={
                       <NavbarWrapper showFooter={false}>
-                        <ContentCreate />
+                        <ContentWizard />
                       </NavbarWrapper>
                     } />
                     {/* Legacy redirect */}
@@ -503,7 +503,7 @@ function App() {
                     } />
                     <Route path="/exams/new" element={
                       <NavbarWrapper showFooter={false}>
-                        <ContentCreate contentType="exam" />
+                        <ContentWizard contentType="exam" />
                       </NavbarWrapper>
                     } />
                     <Route path="/exams/:id" element={
@@ -513,7 +513,7 @@ function App() {
                     } />
                     <Route path="/exams/:id/edit" element={
                       <NavbarWrapper showFooter={false}>
-                        <ContentCreate contentType="exam" />
+                        <ContentWizard contentType="exam" />
                       </NavbarWrapper>
                     } />
                     {/* Legacy redirect */}
@@ -530,7 +530,7 @@ function App() {
                     } />
                     <Route path="/lessons/new" element={
                       <NavbarWrapper showFooter={false}>
-                        <ContentCreate contentType="lesson" />
+                        <ContentWizard contentType="lesson" />
                       </NavbarWrapper>
                     } />
                     <Route path="/lessons/:id" element={
@@ -540,7 +540,7 @@ function App() {
                     } />
                     <Route path="/lessons/:id/edit" element={
                       <NavbarWrapper showFooter={false}>
-                        <ContentCreate contentType="lesson" />
+                        <ContentWizard contentType="lesson" />
                       </NavbarWrapper>
                     } />
                     {/* Legacy redirect */}

@@ -17,8 +17,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
   Activity, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GraduationCap, Loader2,
-  MessageSquare, PenLine, RefreshCw, RotateCcw, Search, ShieldCheck, UserPlus,
+  LineChart, MessageSquare, PenLine, RefreshCw, RotateCcw, Search, ShieldCheck, UserPlus,
 } from 'lucide-react';
+import { SerieModal, type SerieTarget } from '@/components/pilotage/SerieModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
@@ -355,7 +356,17 @@ const Trend: React.FC<{ now: number; before: number | null }> = ({ now, before }
 
 const TOP_PAGES = 15;
 
+/** Libellé d'une ligne d'usage : un clic ouvre sa courbe (jour par jour, semaine par semaine). */
+const SerieLabel: React.FC<{ label: string; onOpen: () => void }> = ({ label, onOpen }) => (
+  <button type="button" onClick={onOpen} title="Voir l’évolution"
+    className="group inline-flex min-w-0 items-center gap-1 text-left text-ink hover:text-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded">
+    <span className="truncate underline decoration-ink/20 decoration-dotted underline-offset-[3px] group-hover:decoration-brand">{label}</span>
+    <LineChart className="h-3.5 w-3.5 shrink-0 text-ink-faint group-hover:text-brand" aria-hidden />
+  </button>
+);
+
 const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
+  const [serie, setSerie] = useState<SerieTarget | null>(null);
   const [featSort, setFeatSort] = useState<'membres' | 'fois'>('membres');
   const [pageView, setPageView] = useState<'page' | 'rubrique'>('page');
   const [allPages, setAllPages] = useState(false);
@@ -415,7 +426,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
             return (
               <li key={`${f.source}:${f.key}`} className={users ? '' : 'opacity-60'}>
                 <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="min-w-0 truncate text-ink">{f.label}</span>
+                  <SerieLabel label={f.label} onOpen={() => setSerie({ source: 'base', cle: f.key, label: f.label })} />
                   <span className="fd-nums shrink-0 text-ink-faint">
                     <b className="text-ink">{fmt(users)}</b> {users > 1 ? 'membres' : 'membre'} · {fmt(f.actions)} fois
                     <span className="ml-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
@@ -440,7 +451,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
           {tracked.map((f) => (
             <li key={`${f.source}:${f.key}`} className={f.actions ? '' : 'opacity-60'}>
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                <span className="min-w-0 truncate text-ink">{f.label}</span>
+                <SerieLabel label={f.label} onOpen={() => setSerie({ source: 'navigateur', cle: f.key, label: f.label })} />
                 <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites</span>
               </div>
               <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
@@ -470,7 +481,10 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
               <li key={r.key}>
                 <div className="flex items-baseline gap-2 text-[13px]">
                   <span className="fd-nums w-5 shrink-0 text-[11.5px] text-ink-faint">{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate text-ink">{r.label}</span>
+                  {/* Par page : un clic ouvre sa courbe ; une rubrique (regroupement) n'en a pas. */}
+                  {pageView === 'page'
+                    ? <span className="min-w-0 flex-1"><SerieLabel label={r.label} onOpen={() => setSerie({ source: 'page', cle: r.key, label: r.label })} /></span>
+                    : <span className="min-w-0 flex-1 truncate text-ink">{r.label}</span>}
                   {r.sub && <span className="hidden shrink-0 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] text-ink-soft sm:inline">{r.sub}</span>}
                   <span className="fd-nums shrink-0 text-right text-ink-faint"><b className="text-ink">{fmt(r.views)}</b> vues · {fmt(r.visits)} visites</span>
                 </div>
@@ -498,8 +512,10 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       </div>
     </div>
     <ErrorBoundary variant="block" label="Ce que les élèves choisissent dans les listes" resetKey={data.generated_at}>
-      <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter} />
+      <FiltersCard filters={filters} values={data.filter_values} days={data.days} filterUses={filterUses} unusedFilters={unusedFilters} maxFilter={maxFilter}
+        onOpenSerie={(f) => setSerie({ source: 'filtre', cle: f.key, label: f.label })} />
     </ErrorBoundary>
+    {serie && <SerieModal target={serie} onClose={() => setSerie(null)} />}
     </div>
   );
 };
@@ -557,7 +573,8 @@ const ValueGroup: React.FC<{ label: string; values: FilterValue[] }> = ({ label,
  *  valeurs les plus choisies, par liste (09/10/2026). En dessous, repliés : les anciens compteurs par filtre. */
 const FiltersCard: React.FC<{
   filters: Feature[]; values: FilterValue[]; days: number; filterUses: number; unusedFilters: string[]; maxFilter: number;
-}> = ({ filters, values, days, filterUses, unusedFilters, maxFilter }) => {
+  onOpenSerie: (f: Feature) => void;
+}> = ({ filters, values, days, filterUses, unusedFilters, maxFilter, onOpenSerie }) => {
   const [kind, setKind] = useState<ListKind>('tout');
   const [showOld, setShowOld] = useState(false);
   // Valeurs de la liste choisie, regroupées par filtre (additionnées sur les listes si « Toutes »).
@@ -620,7 +637,7 @@ const FiltersCard: React.FC<{
             {[...filters].sort((a, b) => b.actions - a.actions).map((f) => (
               <li key={`${f.source}:${f.key}`} className={f.actions ? '' : 'opacity-60'}>
                 <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="min-w-0 truncate text-ink">{f.label}</span>
+                  <SerieLabel label={f.label} onOpen={() => onOpenSerie(f)} />
                   <span className="fd-nums shrink-0 text-ink-faint">
                     <b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites
                     <span className="ml-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>

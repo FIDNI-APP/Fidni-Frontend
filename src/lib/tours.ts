@@ -55,6 +55,11 @@ const le = (c: TourContext) => (c.kind === 'lesson' ? 'la leçon' : c.kind === '
 const un = (c: TourContext) => (c.kind === 'lesson' ? 'une leçon' : c.kind === 'exam' ? 'un examen' : 'un exercice');
 
 // Étapes communes aux listes et aux pages de contenu.
+const INDICATION: TourStep = {
+  target: 'indication',
+  title: 'Indication',
+  body: "Bloqué ? L'indication te donne la méthode, sans le calcul. La solution complète reste à côté.",
+};
 const SOLUTION: TourStep = {
   target: 'solution',
   title: 'Voir la solution',
@@ -140,8 +145,8 @@ export const TOURS: Tour[] = [
     id: 'exercice',
     match: /^\/exercises\/\d+\/?$/,
     requires: 'detail-onglets',
-    version: 3, // 11/10/2026 : « Où en es-tu ? » revient en haut de la page (rappel en bas)
-    autoSteps: ['solution', 'auto-eval', 'detail-solutions', 'detail-terminer'],
+    version: 4, // 11/10/2026 : bouton « Indication » (la méthode) avant « Voir la solution »
+    autoSteps: ['indication', 'solution', 'auto-eval', 'detail-solutions', 'detail-terminer'],
     steps: [
       {
         target: 'detail-onglets',
@@ -151,6 +156,7 @@ export const TOURS: Tour[] = [
       { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => `En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque ${le(c)} « À revoir ».` },
       { target: 'detail-progression', title: 'Ta progression', body: 'Elle se remplit à mesure que tu dis si tu avais trouvé : en vert les questions réussies, en or celles à revoir.' },
       { target: 'detail-solutions', title: 'Toutes les solutions', body: 'Affiche ou masque d’un coup la solution de chaque question.' },
+      INDICATION,
       SOLUTION,
       AUTO_EVAL,
       { target: 'detail-chrono', title: 'Chronomètre', body: 'Lance le chrono quand tu commences ; en pause, ✓ enregistre ton temps. Tes temps sont dans le menu ⋯.' },
@@ -167,11 +173,12 @@ export const TOURS: Tour[] = [
     id: 'examen',
     match: /^\/exams\/\d+\/?$/,
     requires: 'examen-fiche',
-    version: 3, // 11/10/2026 : « Où en es-tu ? » revient en haut de la page (rappel en bas)
-    autoSteps: ['examen-epreuve', 'solution', 'examen-copie'],
+    version: 4, // 11/10/2026 : bouton « Indication » (la méthode) avant « Voir la solution »
+    autoSteps: ['examen-epreuve', 'indication', 'solution', 'examen-copie'],
     steps: [
       { target: 'examen-fiche', title: 'Le sujet', body: 'Durée, barème, nombre d’exercices : comme la copie distribuée en classe.' },
       { target: 'examen-epreuve', title: 'L’épreuve', body: 'Lance le compte à rebours et compose sur une feuille : les solutions restent cachées jusqu’à la fin, et ton temps est enregistré.' },
+      INDICATION,
       SOLUTION,
       AUTO_EVAL,
       { target: 'examen-copie', title: 'Ta copie', body: 'Évalue chaque question après l’épreuve : ta note estimée se calcule avec le barème, exercice par exercice.' },
@@ -219,20 +226,21 @@ export const TOURS: Tour[] = [
     id: 'creer',
     match: /^\/(exercises|exams|lessons)\/(new|\d+\/edit)\/?$/,
     requires: 'creer-titre',
-    autoSteps: ['creer-classement', 'creer-blocs', 'creer-enregistrer'],
+    version: 2, // 11/10/2026 : assistant en 3 étapes (le contenu, écrire, vérifier et publier)
+    autoSteps: ['creer-titre', 'creer-classement', 'creer-blocs', 'creer-enregistrer'],
     steps: [
-      { target: 'creer-classement', title: 'Classement', body: 'Niveau, matière, chapitres, théorèmes : c’est ce qui permet aux élèves de trouver ton contenu.' },
-      { target: 'creer-importer', title: 'Importer', body: 'Déjà rédigé ailleurs ? Importe un fichier JSON ou un PDF.' },
       { target: 'creer-titre', title: 'Le titre', body: 'Dis de quoi il s’agit (« Suite homographique ») plutôt que « Exercice 3 ».' },
+      { target: 'creer-classement', title: 'Niveau et chapitre', body: 'C’est ce qui permet aux élèves de trouver ton contenu. La matière et le domaine se déduisent du chapitre.' },
       {
         target: 'creer-blocs',
-        title: 'Le contenu',
+        title: 'Écrire',
         body: (c) => c.kind === 'lesson'
-          ? 'Ajoute des sections, puis des encadrés (définition, théorème…). Les formules s’écrivent entre $…$.'
-          : 'Un contexte, puis des questions avec sous-questions, solution et barème. Les formules s’écrivent entre $…$.',
+          ? 'Une partie à la fois ; « Encarts » ajoute définitions et théorèmes. Les formules s’écrivent entre $…$.'
+          : 'Une carte par question : l’énoncé, puis, si tu veux, une indication, la solution, le barème ou des sous-questions.',
       },
-      { target: 'creer-apercu', title: 'Aperçu', body: 'Vérifie le rendu final à côté de l’éditeur.' },
-      { target: 'creer-enregistrer', title: 'Publier', body: 'Enregistre : ton contenu est en ligne, et tu peux le modifier à tout moment.' },
+      { target: 'creer-importer', title: 'Importer', body: 'Déjà rédigé ailleurs ? Importe un fichier JSON ou un PDF.' },
+      { target: 'creer-apercu', title: 'Aperçu', body: 'Le rendu tel que les élèves le verront.' },
+      { target: 'creer-enregistrer', title: 'Publier', body: 'Ton contenu est en ligne, et tu peux le modifier à tout moment.' },
     ],
   },
 

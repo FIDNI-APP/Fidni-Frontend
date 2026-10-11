@@ -24,7 +24,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Check, RotateCcw, Eye, EyeOff, Flag, CheckCheck, Contrast, ChevronDown } from 'lucide-react';
+import { Check, RotateCcw, Eye, EyeOff, Flag, CheckCheck, Contrast, ChevronDown, Lightbulb } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
@@ -323,11 +323,18 @@ function useSolutionState(path: string, globalShow: boolean, locked: boolean, on
 // INLINE SOLUTION
 // =====================
 
-const InlineSolution: React.FC<{ solution?: ContentBlock; isVisible: boolean; onReport?: () => void }> = ({ solution, isVisible, onReport }) => {
+const InlineSolution: React.FC<{ solution?: ContentBlock; hint?: ContentBlock; isVisible: boolean; onReport?: () => void }> = ({ solution, hint, isVisible, onReport }) => {
   if (!isVisible || !solution || !solution.html) return null;
 
   return (
     <div className="mt-2 pl-3 sm:pl-4 border-l-2 border-brand bg-brand-soft py-2 pr-2 sm:pr-3 rounded-r min-w-0">
+      {/* Rendu compact (listes, DS blanc) : un seul bouton, l'indication (la méthode) en tête de la solution. */}
+      {hint?.html && (
+        <div className="mb-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gold-strong mb-1">Indication</div>
+          <RenderContent content={hint} className="prose-sm" />
+        </div>
+      )}
       <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover mb-1">Solution</div>
       <RenderContent content={solution} className="prose-sm" />
       {/* Au toucher, le drapeau de la question est ici (il n'est plus à côté de l'énoncé). */}
@@ -443,6 +450,32 @@ const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }>
   </button>
 );
 
+/**
+ * « Indication » : la méthode de la solution, sans le raisonnement — un coup de pouce avant de regarder la
+ * solution. Bouton discret (contour, ampoule) placé AVANT « Voir la solution », qui reste le geste principal.
+ */
+const ReadingHintToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
+  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} data-tour="indication"
+    className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[13.5px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
+      isOpen ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-gold-line hover:text-gold-strong'}`}>
+    <Lightbulb className="h-4 w-4" aria-hidden />
+    Indication
+  </button>
+);
+
+/** Indication ouverte : encadré léger, filet doré (la solution, elle, a le filet vert). */
+const ReadingHint: React.FC<{ hint: ContentBlock }> = ({ hint }) => (
+  <div className="relative mt-3 overflow-hidden rounded-xl border border-gold-line bg-gold-soft/50">
+    <span className="absolute inset-y-0 left-0 w-[3px] bg-gold" aria-hidden />
+    <div className="fd-sol min-w-0 px-4 py-3 sm:px-5">
+      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
+        <Lightbulb className="h-3.5 w-3.5" aria-hidden /> Indication
+      </p>
+      <RenderContent content={hint} />
+    </div>
+  </div>
+);
+
 /** Solution ouverte : encadré papier, filet vert à gauche, pied (auto-évaluation, signaler au toucher). */
 const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactNode; onReport?: () => void }> = ({ solution, footer, onReport }) => {
   if (!solution?.html) return null;
@@ -474,26 +507,37 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
  * avec « Tu avais trouvé ? » à son pied. Sans solution, l'auto-évaluation reste sous la question.
  */
 const ReadingQuestionBody: React.FC<{
-  path: string; points?: number; solution?: ContentBlock; locked: boolean; globalShow: boolean;
+  path: string; points?: number; hint?: ContentBlock; solution?: ContentBlock; locked: boolean; globalShow: boolean;
   progress?: ProgressData; onAssess?: AssessHandler; canAssess: boolean; assessOptions?: AssessmentStatus[];
   onSolutionOpen?: (path: string) => void; onReport?: (path: string) => void;
-}> = ({ path, points, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onReport }) => {
+}> = ({ path, points, hint, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onReport }) => {
   const hasSolution = Boolean(solution?.html) && !locked;
   const { shown, toggle, openedHere } = useSolutionState(path, globalShow, locked, onSolutionOpen);
+  // Indication : cachée pendant l'épreuve comme la solution ; une solution ouverte la montre aussi (la
+  // correction garde sa méthode en tête), et le bouton « Indication » s'efface alors.
+  const hasHint = Boolean(hint?.html) && !locked;
+  const [hintOpen, setHintOpen] = useState(false);
+  const toggleHint = () => {
+    if (!hintOpen) trackAction('voir-indication');
+    setHintOpen(!hintOpen);
+  };
+  const hintShown = hasHint && (hintOpen || (hasSolution && shown));
   const current = progress?.[path]?.status;
   const assess = (s: AssessmentStatus, source: AssessSource) => onAssess?.(path, s, source);
   const report = onReport ? () => onReport(path) : undefined;
   const pts = points ? <span className="ml-auto pl-2 text-[12.5px] text-ink-faint fd-nums">{formatPoints(points)}</span> : null;
-  if (!hasSolution && !(canAssess && !locked) && !pts) return null;
+  if (!hasSolution && !hasHint && !(canAssess && !locked) && !pts) return null;
   return (
     <>
-      <div className={`${hasSolution || canAssess ? 'mt-2.5' : 'mt-1'} flex flex-wrap items-center gap-2`}>
+      <div className={`${hasSolution || hasHint || canAssess ? 'mt-2.5' : 'mt-1'} flex flex-wrap items-center gap-2`}>
+        {hasHint && !(hasSolution && shown) && <ReadingHintToggle isOpen={hintOpen} onToggle={toggleHint} />}
         {hasSolution && <ReadingSolutionToggle isOpen={shown} onToggle={toggle} />}
         {canAssess && !locked && (hasSolution
           ? (!shown && current ? <ReadingResult current={current} options={assessOptions} onOpen={toggle} /> : null)
           : <ReadingAssess current={current} options={assessOptions} onPick={(s) => assess(s, 'question')} />)}
         {pts}
       </div>
+      {hintShown && <ReadingHint hint={hint!} />}
       {hasSolution && shown && (
         <ReadingSolution solution={solution} onReport={report}
           footer={canAssess ? <ReadingFound current={current} options={assessOptions} openedHere={openedHere} onAssess={assess} /> : undefined} />
@@ -557,7 +601,7 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
           assess={interactive && onAssess && !locked
             ? { current: progress?.[path]?.status, onAssess: (s) => onAssess(path, s, 'question'), options: assessOptions } : undefined}
         />
-        <InlineSolution solution={subQuestion.solution} isVisible={showSolution} onReport={onReport ? () => onReport(path) : undefined} />
+        <InlineSolution solution={subQuestion.solution} hint={subQuestion.hint} isVisible={showSolution} onReport={onReport ? () => onReport(path) : undefined} />
         {showSolution && openedHere && hasSolution && interactive && onAssess && (
           <FoundPrompt assessed={!!progress?.[path]?.status} onAnswer={(s) => onAssess(path, s, 'apres_solution')} />
         )}
@@ -633,7 +677,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
       {/* Solution — only for questions without sub-questions */}
       {!hasSubQuestions && (
-        <InlineSolution solution={block.solution} isVisible={showSolution} onReport={onReport ? () => onReport(path) : undefined} />
+        <InlineSolution solution={block.solution} hint={block.hint} isVisible={showSolution} onReport={onReport ? () => onReport(path) : undefined} />
       )}
       {!hasSubQuestions && showSolution && openedHere && hasSolution && canAssess && (
         <FoundPrompt assessed={!!progress?.[path]?.status} onAnswer={(s) => onAssess!(path, s, 'apres_solution')} />
@@ -692,7 +736,7 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
             <div className="min-w-0 flex-1"><RenderContent content={block.content} /></div>
             {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
           </div>
-          {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} solution={block.solution} {...common} />}
+          {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} hint={block.hint} solution={block.solution} {...common} />}
           {/* « Tout réussi » d'une question n'est pas repris ici : « Où en es-tu ? » (haut de page, rappel en bas) le fait pour tout le contenu. */}
           {subs.length > 0 && (
             <>
@@ -706,7 +750,7 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
                         <div className="min-w-0 flex-1"><RenderContent content={sq.content} /></div>
                         {onReport && <ReportQuestionButton group="sq" onClick={() => onReport(sqPath)} />}
                       </div>
-                      <ReadingQuestionBody path={sqPath} points={sq.points} solution={sq.solution} {...common} />
+                      <ReadingQuestionBody path={sqPath} points={sq.points} hint={sq.hint} solution={sq.solution} {...common} />
                     </div>
                   </div>
                 );

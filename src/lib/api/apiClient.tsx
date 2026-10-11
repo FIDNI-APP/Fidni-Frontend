@@ -5,8 +5,10 @@ const ACCESS_KEY = 'token';
 const REFRESH_KEY = 'refresh_token';
 
 // Create the API instance without setting the Authorization header initially
+// VITE_API_URL (facultatif) : une API locale pour tester sans toucher la production
+// (ex. VITE_API_URL=http://localhost:8000/api npm run dev). Absente ou vide : l'API de fidni.fr.
 export const api = axios.create({
-  baseURL: 'https://api.fidni.fr/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.fidni.fr/api',
   headers: {
     'Content-Type': 'application/json',
   },

@@ -21,7 +21,7 @@ function checkHtml(html: string, where: string, out: MathProblem[]) {
 }
 
 type Part = { html?: string } | undefined;
-interface Node { id?: string; title?: string; type?: string; content?: Part; solution?: Part; subQuestions?: Node[]; subSections?: Node[] }
+interface Node { id?: string; title?: string; type?: string; content?: Part; hint?: Part; solution?: Part; subQuestions?: Node[]; subSections?: Node[] }
 
 /** Formules qui ne compilent pas, dans une structure stockée (blocks ou sections). */
 export function checkStructureMath(structure: unknown): MathProblem[] {
@@ -32,9 +32,11 @@ export function checkStructureMath(structure: unknown): MathProblem[] {
     if (b.type === 'question') q += 1;
     const label = b.type === 'question' ? `Question ${q}` : `Bloc ${i + 1}`;
     if (b.content?.html) checkHtml(b.content.html, label, out);
+    if (b.hint?.html) checkHtml(b.hint.html, `${label} (indication)`, out);
     if (b.solution?.html) checkHtml(b.solution.html, `${label} (solution)`, out);
     (b.subQuestions ?? []).forEach((sq, j) => {
       if (sq.content?.html) checkHtml(sq.content.html, `${label}.${j + 1}`, out);
+      if (sq.hint?.html) checkHtml(sq.hint.html, `${label}.${j + 1} (indication)`, out);
       if (sq.solution?.html) checkHtml(sq.solution.html, `${label}.${j + 1} (solution)`, out);
     });
   });

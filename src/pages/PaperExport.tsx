@@ -20,12 +20,13 @@ import { PAPER_GLYPHS_FACE, PAPER_SERIF, ROMAN } from '@/lib/paperFont';
 type SolutionsMode = 'none' | 'end' | 'inline';
 
 interface RichText { html?: string }
-interface SubQuestion { id: string; content?: RichText; points?: number; solution?: RichText }
+interface SubQuestion { id: string; content?: RichText; points?: number; hint?: RichText; solution?: RichText }
 interface Block {
   id: string;
   type: 'context' | 'question' | 'section' | string;
   content?: RichText;
   points?: number;
+  hint?: RichText;
   solution?: RichText;
   subQuestions?: SubQuestion[];
 }
@@ -104,6 +105,15 @@ const Rich: React.FC<{ content?: RichText; className?: string }> = ({ content, c
   return <div className={`fp-rich ${className || ''}`} dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
+/** Corrigé imprimé : l'indication (la méthode, bouton à part sur le site) reprend sa place en tête de la solution. */
+const withMethod = (q: { hint?: RichText; solution?: RichText }): RichText | undefined => {
+  if (!q.solution?.html || !q.hint?.html) return q.solution;
+  const raw = q.hint.html.trim().replace(/^<p>([\s\S]*)<\/p>$/, '$1');
+  // « On factorise… » reprend en minuscule après « Méthode : » (comme dans la rédaction d'origine).
+  const idea = /^[A-ZÀ-Ý][a-zà-ÿ]/.test(raw) ? raw[0].toLowerCase() + raw.slice(1) : raw;
+  return { html: `<p><strong>Méthode :</strong> ${idea}</p>${q.solution.html}` };
+};
+
 const Solution: React.FC<{ content?: RichText }> = ({ content }) =>
   content?.html ? (
     <div className="fp-sol">
@@ -138,7 +148,7 @@ const ExerciseBody: React.FC<{ item: PaperItem; inlineSolutions: boolean }> = ({
               <Rich content={b.content} />
               <span className="fp-pts">{!subs.length && Number(b.points) > 0 ? `(${formatPoints(Number(b.points))})` : ''}</span>
             </div>
-            {!subs.length && inlineSolutions && <Solution content={b.solution} />}
+            {!subs.length && inlineSolutions && <Solution content={withMethod(b)} />}
             {subs.map((sq, i) => (
               <React.Fragment key={sq.id}>
                 <div className="fp-q fp-sq">
@@ -146,7 +156,7 @@ const ExerciseBody: React.FC<{ item: PaperItem; inlineSolutions: boolean }> = ({
                   <Rich content={sq.content} />
                   <span className="fp-pts">{Number(sq.points) > 0 ? `(${formatPoints(Number(sq.points))})` : ''}</span>
                 </div>
-                {inlineSolutions && <div className="fp-sq-sol"><Solution content={sq.solution} /></div>}
+                {inlineSolutions && <div className="fp-sq-sol"><Solution content={withMethod(sq)} /></div>}
               </React.Fragment>
             ))}
           </div>
@@ -199,11 +209,11 @@ const AnswerKey: React.FC<{ items: PaperItem[] }> = ({ items }) => (
             const subs = b.subQuestions || [];
             if (!subs.length) {
               return b.solution?.html ? (
-                <div key={b.id} className="fp-q"><span className="fp-num">{n}.</span><Rich content={b.solution} /><span /></div>
+                <div key={b.id} className="fp-q"><span className="fp-num">{n}.</span><Rich content={withMethod(b)} /><span /></div>
               ) : null;
             }
             return subs.map((sq, i) => (sq.solution?.html ? (
-              <div key={sq.id} className="fp-q"><span className="fp-num">{n}.{letter(i)})</span><Rich content={sq.solution} /><span /></div>
+              <div key={sq.id} className="fp-q"><span className="fp-num">{n}.{letter(i)})</span><Rich content={withMethod(sq)} /><span /></div>
             ) : null));
           })}
         </div>
