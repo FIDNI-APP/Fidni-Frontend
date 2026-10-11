@@ -4,7 +4,7 @@ import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
-  X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown,
+  X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
@@ -15,7 +15,7 @@ import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
 import { canSeeParcours } from '@/lib/features';
 import type { User } from '@/types';
-import { sectionHome, studentLevelSlug, useHasClassroom } from './nav';
+import { sectionHome, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -277,12 +277,11 @@ const SidebarInner: React.FC<{
               const href = item.levels ? sectionHome(user, item.levels) : item.to;
               return (
                 <li key={item.to}>
-                  <NavRow item={item} href={href} active={active} collapsed={collapsed} drawer={drawer} onNavigate={onClose} />
-                  {item.levels && active && !collapsed && (
-                    <LevelLinks
-                      base={item.levels} levels={levels} user={user} openLevel={openLevel}
-                      drawer={drawer} onNavigate={onClose}
-                    />
+                  {item.levels && !collapsed ? (
+                    <LevelSection item={item} base={item.levels} href={href} active={active} drawer={drawer}
+                      levels={levels} openLevel={openLevel} onNavigate={onClose} />
+                  ) : (
+                    <NavRow item={item} href={href} active={active} collapsed={collapsed} drawer={drawer} onNavigate={onClose} />
                   )}
                 </li>
               );
@@ -325,8 +324,28 @@ const NavSection: React.FC<{
 
 const NavRow: React.FC<{
   item: NavItem; href: string; active: boolean; collapsed: boolean; drawer?: boolean; onNavigate?: () => void;
-}> = ({ item, href, active, collapsed, drawer, onNavigate }) => {
+  /** Rubrique à niveaux : chevron du menu déroulant, à droite du lien. */
+  toggle?: React.ReactNode;
+}> = ({ item, href, active, collapsed, drawer, onNavigate, toggle }) => {
   const Icon = item.icon;
+  if (toggle) {
+    return (
+      <div className={cx('group flex items-center rounded-xl transition-colors',
+        active ? 'bg-brand-soft' : 'hover:bg-[#f7f6f3]')}>
+        <Link
+          to={href}
+          onClick={onNavigate}
+          aria-current={active ? 'page' : undefined}
+          className={cx('flex min-w-0 flex-1 items-center gap-3 pl-3', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]',
+            active ? 'font-semibold text-ink' : 'font-medium text-ink-soft group-hover:text-ink')}
+        >
+          <Icon className={cx('h-[18px] w-[18px] flex-shrink-0 transition-colors', active ? 'text-brand-hover' : 'text-ink-faint group-hover:text-ink-soft')} />
+          <span className="truncate">{item.label}</span>
+        </Link>
+        {toggle}
+      </div>
+    );
+  }
   return (
     <Link
       to={href}
@@ -347,21 +366,49 @@ const NavRow: React.FC<{
 };
 
 /**
- * Niveaux de la rubrique ouverte. Un élève qui a indiqué sa classe ne voit que son niveau (et celui qu'il
- * consulte) ; les autres voient tous les niveaux. « Tous les niveaux » mène aux dossiers de niveaux
- * (sans ?niveau=tous, l'élève serait renvoyé dans son niveau : pages/content/ContentFolders).
+ * Rubrique à niveaux (Leçons, Exercices, Devoirs) : le lien, et à droite un chevron qui déplie la liste des
+ * niveaux. Ouverte d'office quand la rubrique est active ; le chevron plie ou déplie sans changer de page.
+ */
+const LevelSection: React.FC<{
+  item: NavItem; base: LevelBase; href: string; active: boolean; drawer?: boolean;
+  levels: Level[] | null; openLevel: string | null; onNavigate?: () => void;
+}> = ({ item, base, href, active, drawer, levels, openLevel, onNavigate }) => {
+  const [open, setOpen] = useState(active);
+  // Arrivée dans la rubrique (lien, retour…) : elle se déplie.
+  useEffect(() => { if (active) setOpen(true); }, [active]);
+  const toggle = (
+    <button
+      type="button"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
+      aria-expanded={open}
+      aria-label={open ? `Réduire ${item.label}` : `Déployer ${item.label}`}
+      className={cx('inline-flex flex-shrink-0 items-center justify-center rounded-xl transition-colors',
+        drawer ? 'h-11 w-11' : 'h-10 w-10', active ? 'text-brand-hover' : 'text-ink-faint hover:text-ink')}
+    >
+      <ChevronDown className="h-4 w-4 transition-transform duration-200" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
+    </button>
+  );
+  return (
+    <>
+      <NavRow item={item} href={href} active={active} collapsed={false} drawer={drawer} onNavigate={onNavigate} toggle={toggle} />
+      {open && <LevelLinks base={base} levels={levels} openLevel={openLevel} drawer={drawer} onNavigate={onNavigate} />}
+    </>
+  );
+};
+
+/**
+ * Niveaux d'une rubrique dépliée : tous les niveaux, puis « Tous les niveaux » (les dossiers de niveaux ;
+ * sans ?niveau=tous, un élève serait renvoyé dans son niveau : pages/content/ContentFolders).
  */
 const LevelLinks: React.FC<{
-  base: LevelBase; levels: Level[] | null; user: User | null | undefined; openLevel: string | null;
+  base: LevelBase; levels: Level[] | null; openLevel: string | null;
   drawer?: boolean; onNavigate?: () => void;
-}> = ({ base, levels, user, openLevel, drawer, onNavigate }) => {
+}> = ({ base, levels, openLevel, drawer, onNavigate }) => {
   const location = useLocation();
   if (!levels) return null;
-  const mine = studentLevelSlug(user);
   const onBase = location.pathname === base;
   const levelParam = new URLSearchParams(location.search).get('classLevels');
-  const filtered = mine ? levels.filter((l) => l.slug === mine || l.slug === openLevel) : levels;
-  const shown = filtered.length ? filtered : levels;
+  const shown = levels;
 
   return (
     <ul className="mb-2 ml-[21px] mt-1 flex flex-col gap-0.5 border-l border-line pl-2.5" aria-label="Niveaux">
@@ -371,8 +418,8 @@ const LevelLinks: React.FC<{
         const here = (!!l.slug && location.pathname.startsWith(`${base}/niveau/${l.slug}`)) || (onBase && levelParam === l.id);
         return (
           <SubLink key={l.id} to={to} onClick={onNavigate} drawer={drawer}
-            active={here || (!!l.slug && l.slug === openLevel)} current={here}
-            label={mine && l.slug === mine && shown.length > 1 ? `${l.name} · mon niveau` : l.name} />
+            active={here || (!!l.slug && l.slug === openLevel && location.pathname.startsWith(base))} current={here}
+            label={l.name} />
         );
       })}
       <SubLink to={`${base}?niveau=tous`} label="Tous les niveaux" onClick={onNavigate} drawer={drawer} muted

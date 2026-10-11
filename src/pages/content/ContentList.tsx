@@ -187,7 +187,7 @@ const withoutPath = (progress: Record<string, AssessmentStatus> | undefined, pat
 
 /** Cartes fantômes pendant le premier chargement (même forme que les cartes). */
 const SkeletonCards: React.FC = () => (
-  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" role="status" aria-label="Chargement de la liste">
+  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 min-[1700px]:grid-cols-3" role="status" aria-label="Chargement de la liste">
     {[0, 1, 2, 3].map((i) => (
       <div key={i} className="animate-pulse rounded-2xl border border-line bg-white">
         <div className="px-4 pb-4 pt-4 sm:px-5">
@@ -1112,7 +1112,7 @@ export const ContentList: React.FC<ContentListProps> = ({
 
   return (
     <div ref={rootRef}>
-    <Page width="wide">
+    <Page width="full">
       {/* Mêmes titres que les pages pré-remplies par le serveur (backend/src/config/seo.py). */}
       {hub ? (
         <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
@@ -1164,7 +1164,7 @@ export const ContentList: React.FC<ContentListProps> = ({
         ) : items.length > 0 ? (
           <div aria-busy={isLoading} className={`transition-opacity ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
             {viewMode === 'card' ? (
-              <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label={pageTitle}>
+              <ul className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2 min-[1700px]:grid-cols-3" aria-label={pageTitle}>
                 {items.map((item, i) => (
                   <React.Fragment key={item.id}>
                     <li className="min-w-0">

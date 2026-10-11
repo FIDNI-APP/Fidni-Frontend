@@ -363,9 +363,10 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       {contentType !== 'lesson' && (
         <FilterRow title="Difficulté">
           {([
-            { id: 'easy', name: 'Facile' },
-            { id: 'medium', name: 'Moyen' },
-            { id: 'hard', name: 'Difficile' },
+            // Couleurs de la difficulté (mêmes teintes que les cartes : listingUtils DIFFICULTY).
+            { id: 'easy', name: 'Facile', selected: 'border-[#2f8a57] bg-[#2f8a57] text-white', unselected: 'border-[#cfe5d7] bg-[#eaf3ed] text-[#15633c] hover:border-[#2f8a57]' },
+            { id: 'medium', name: 'Moyen', selected: 'border-[#c9962e] bg-[#c9962e] text-white', unselected: 'border-[#efdcae] bg-[#faf3e2] text-[#8a6318] hover:border-[#c9962e]' },
+            { id: 'hard', name: 'Difficile', selected: 'border-[#b4534b] bg-[#b4534b] text-white', unselected: 'border-[#f0d4cf] bg-[#fbecea] text-[#a23b34] hover:border-[#b4534b]' },
           ] as const).map((diff) => {
             const isSelected = filters.difficulties.includes(diff.id);
             const count = difficultyCounts ? (difficultyCounts[diff.id] ?? 0) : undefined;
@@ -377,7 +378,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 aria-pressed={isSelected}
                 disabled={off}
                 onClick={() => toggle('difficulties', diff.id)}
-                className={`${pill(isSelected)} disabled:cursor-not-allowed disabled:opacity-40`}
+                className={`min-h-10 sm:min-h-9 px-3.5 py-1.5 rounded-full border text-[13.5px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  isSelected ? diff.selected : diff.unselected}`}
               >
                 <span className="inline-flex items-center gap-1.5"><DifficultyBars difficulty={diff.id} />{diff.name}</span>
                 {count != null && <span className={`fd-nums ml-1.5 ${isSelected ? 'opacity-70' : 'text-ink-faint'}`}>{count}</span>}

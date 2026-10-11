@@ -5,7 +5,6 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Folder, FolderMinus, FolderOpen } from 'lucide-react';
 
 export interface FolderItem {
   key: string | number;
@@ -35,59 +34,67 @@ export interface FolderGroup {
   items: FolderItem[];
 }
 
+/**
+ * Un dossier « grand format », comme dans un explorateur de fichiers : onglet, feuilles qui dépassent, face
+ * avant où sont écrits le nom et le nombre de contenus. Au survol, la face s'entrouvre et les feuilles
+ * montent. Vide : silhouette grise, sans feuilles, pas un lien.
+ */
 const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
   const empty = item.count <= 0;
+  const p = item.progress;
+  const done = p ? Math.min(p.done, item.count) : 0;
+  const success = p ? Math.min(p.success, done) : 0;
+  const aussi = item.aussi?.length ? `Aussi : ${item.aussi.join(', ')}` : null;
+
   if (empty) {
     return (
       <div aria-disabled="true" title={`${item.name} : ${item.emptyLabel ?? 'vide pour l’instant'}`}
-        className="flex h-full cursor-default items-center gap-3 rounded-2xl border border-dashed border-line bg-paper px-3.5 py-2.5 sm:p-4">
-        {/* Téléphone : plus compact, les dossiers pleins restent faciles à repérer. */}
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-[#b3aea5] sm:h-11 sm:w-11" aria-hidden>
-          <FolderMinus className="h-[22px] w-[22px]" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-medium leading-snug text-ink-faint line-clamp-2">{item.name}</span>
-          <span className="mt-0.5 block text-[12px] text-[#a19c93]">{item.emptyLabel ?? 'Vide pour l’instant'}</span>
-          {item.aussi?.length ? <span className="mt-0.5 block text-[11.5px] text-[#a19c93]">Aussi : {item.aussi.join(', ')}</span> : null}
+        className="relative h-[150px] cursor-default select-none sm:h-[168px]">
+        <span aria-hidden className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] border border-b-0 border-dashed border-[#d9d4cb] bg-[#f4f2ee]" />
+        <span className="absolute inset-x-0 bottom-0 top-[18px] flex flex-col justify-end rounded-[14px] rounded-tl-none border border-dashed border-[#d9d4cb] bg-[#f7f6f3] p-3.5 sm:p-4">
+          <span className="text-[13.5px] font-semibold leading-snug text-ink-faint line-clamp-3 sm:text-[14.5px]">{item.name}</span>
+          <span className="mt-1 text-[12px] text-[#a19c93]">{item.emptyLabel ?? 'Vide pour l’instant'}</span>
+          {aussi && <span className="mt-0.5 truncate text-[11px] text-[#a19c93]">{aussi}</span>}
         </span>
       </div>
     );
   }
-  const p = item.progress;
-  const done = p ? Math.min(p.done, item.count) : 0;
-  const success = p ? Math.min(p.success, done) : 0;
+
   return (
     <Link to={item.to} onClick={item.onOpen}
-      className="group flex h-full items-center gap-3 rounded-2xl border border-line bg-white p-3.5 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:p-4">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-hover" aria-hidden>
-        <Folder className="h-[22px] w-[22px] group-hover:hidden" />
-        <FolderOpen className="hidden h-[22px] w-[22px] group-hover:block" />
+      aria-label={`${item.name} : ${item.countLabel}${p && done > 0 ? `, ${success} réussi${success > 1 ? 's' : ''}, ${done - success} à revoir` : ''}`}
+      className="group relative block h-[150px] rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper sm:h-[168px]">
+      {/* Dos du dossier et son onglet */}
+      <span aria-hidden className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#d9a94c]" />
+      <span aria-hidden className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-tl-none bg-[#d9a94c]" />
+      {/* Feuilles qui dépassent */}
+      <span aria-hidden className="absolute left-[9%] right-[12%] top-[26px] h-[58%] -rotate-[2.5deg] rounded-md bg-white shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform duration-300 ease-out group-hover:-translate-y-3 group-hover:-rotate-[4deg] motion-reduce:transform-none">
+        <span className="absolute left-3 right-6 top-3 h-[3px] rounded bg-[#ece7dd]" />
+        <span className="absolute left-3 right-10 top-[18px] h-[3px] rounded bg-[#ece7dd]" />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-start gap-2">
-          <span className="min-w-0 flex-1 text-[14.5px] font-semibold leading-snug text-ink line-clamp-2">{item.name}</span>
-          {item.badge && (
-            <span className="mt-px shrink-0 rounded-full bg-gold-soft px-2 py-0.5 text-[10.5px] font-semibold text-gold-strong">{item.badge}</span>
-          )}
-        </span>
-        <span className="fd-nums mt-0.5 block text-[12.5px] text-ink-faint">
+      <span aria-hidden className="absolute left-[14%] right-[7%] top-[22px] h-[58%] rotate-[1.5deg] rounded-md bg-[#fdfcfa] shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform delay-75 duration-300 ease-out group-hover:-translate-y-2 group-hover:rotate-[3deg] motion-reduce:transform-none" />
+      {/* Face avant : nom, nombre de contenus, avancement */}
+      <span className="absolute inset-x-0 bottom-0 top-[40%] flex origin-bottom flex-col justify-end rounded-[14px] p-3.5 shadow-[0_10px_22px_-12px_rgba(120,80,10,.55)] transition-transform duration-300 ease-out [transform:perspective(800px)_rotateX(0deg)] group-hover:[transform:perspective(800px)_rotateX(-16deg)] motion-reduce:transform-none sm:p-4"
+        style={{ background: 'linear-gradient(180deg, #f7dc9e 0%, #eec574 100%)' }}>
+        <span aria-hidden className="absolute inset-x-0 top-0 h-px rounded-t-[14px] bg-white/60" />
+        {item.badge && (
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-white/85 px-2 py-0.5 text-[10.5px] font-semibold text-[#7a5a14] shadow-sm">{item.badge}</span>
+        )}
+        <span className="text-[14px] font-semibold leading-snug text-[#3a2a07] line-clamp-2 sm:text-[15px]">{item.name}</span>
+        <span className="fd-nums mt-0.5 truncate text-[12px] text-[#6f5419]">
           {item.countLabel}
           {item.sub && <> · {item.sub}</>}
-          {p && done > 0 && <> · <span className="text-ink-soft">{done} {(item.doneWord ?? ['fait', 'faits'])[done > 1 ? 1 : 0]}</span></>}
+          {p && done > 0 && <> · {done} {(item.doneWord ?? ['fait', 'faits'])[done > 1 ? 1 : 0]}</>}
         </span>
-        {item.aussi?.length ? <span className="mt-0.5 block text-[11.5px] text-ink-faint">Aussi : {item.aussi.join(', ')}</span> : null}
-        {/* Barre : réussis (vert) et à revoir (or) ; la même chose en mots pour les lecteurs d'écran. */}
+        {aussi && <span className="truncate text-[11px] text-[#7a5f22]">{aussi}</span>}
+        {/* Avancement : réussis (vert) et à revoir (brun doré) */}
         {p && done > 0 && (
-          <span className="sr-only"> : {success} réussi{success > 1 ? 's' : ''}, {done - success} à revoir</span>
-        )}
-        {p && done > 0 && (
-          <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+          <span aria-hidden className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-white/55">
             <span className="h-full bg-brand" style={{ width: `${(success / item.count) * 100}%` }} />
-            <span className="h-full bg-gold" style={{ width: `${((done - success) / item.count) * 100}%` }} />
+            <span className="h-full bg-[#9a6e1c]" style={{ width: `${((done - success) / item.count) * 100}%` }} />
           </span>
         )}
       </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden />
     </Link>
   );
 };
@@ -108,7 +115,7 @@ export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string }> = ({
                 <span className="fd-nums font-medium normal-case tracking-normal">· {filled}/{g.items.length}</span>
               </h2>
             )}
-            <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4">
               {g.items.map((item) => <li key={item.key}><FolderCard item={item} /></li>)}
             </ul>
           </section>
@@ -119,15 +126,13 @@ export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string }> = ({
 };
 
 /** Dossiers fantômes pendant le chargement. */
-export const FolderSkeleton: React.FC<{ n?: number }> = ({ n = 6 }) => (
-  <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3" role="status" aria-label="Chargement des dossiers">
+export const FolderSkeleton: React.FC<{ n?: number }> = ({ n = 8 }) => (
+  <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4" role="status" aria-label="Chargement des dossiers">
     {Array.from({ length: n }, (_, i) => (
-      <li key={i} className="flex animate-pulse items-center gap-3 rounded-2xl border border-line bg-white p-3.5 sm:p-4">
-        <span className="h-11 w-11 shrink-0 rounded-xl bg-[#f2f1ee]" />
-        <span className="flex-1">
-          <span className="block h-4 w-3/4 rounded bg-[#efece6]" />
-          <span className="mt-2 block h-3 w-1/3 rounded bg-[#f2f1ee]" />
-        </span>
+      <li key={i} className="relative h-[150px] animate-pulse sm:h-[168px]">
+        <span className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#efece6]" />
+        <span className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-tl-none bg-[#efece6]" />
+        <span className="absolute inset-x-0 bottom-0 top-[40%] rounded-[14px] bg-[#f4f2ee]" />
       </li>
     ))}
   </ul>
