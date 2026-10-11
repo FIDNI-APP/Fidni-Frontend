@@ -2,7 +2,7 @@
 // Le niveau vient du profil ; sans niveau, l'élève le choisit d'abord.
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ArrowRight, Check, Loader2, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Loader2, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaxonomy } from '@/components/revision/RevisionLabelPicker';
 import { devoirsApi, KIND_LABEL, type TestKind, type UpcomingTest } from '@/lib/api/devoirsApi';
@@ -13,8 +13,9 @@ const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 const inDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDay(d); };
 const QUICK_DATES = [{ label: 'Demain', days: 1 }, { label: 'Dans 3 jours', days: 3 }, { label: 'Dans une semaine', days: 7 }];
 
+// Pastilles de choix : 40 px de haut au doigt, 36 px à la souris.
 const chip = (on: boolean) =>
-  `inline-flex max-w-full items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
+  `inline-flex min-h-10 max-w-full items-center gap-1 rounded-full border px-3.5 text-[13px] transition-colors sm:min-h-9 ${
     on ? 'border-brand bg-brand-soft font-semibold text-brand-hover' : 'border-line bg-white text-ink-soft hover:border-ink-faint hover:text-ink'}`;
 
 function profileLevelId(user: unknown): number | null {
@@ -112,7 +113,7 @@ export const TestFormModal: React.FC<{
     }
   };
 
-  const label = 'mb-2 block text-[12px] font-bold uppercase tracking-[.07em] text-ink-faint';
+  const label = 'mb-2 block text-sm font-medium text-ink-soft';
 
   return (
     <AnimatePresence>
@@ -124,24 +125,29 @@ export const TestFormModal: React.FC<{
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.16 }}
-            className="w-full max-w-xl rounded-2xl border border-line bg-white p-5 shadow-[0_20px_50px_rgba(20,18,16,.22)] sm:p-6"
+            className="relative w-full max-w-xl rounded-2xl border border-line bg-white p-5 shadow-[0_20px_50px_rgba(20,18,16,.22)] sm:p-6"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="test-form-title"
           >
-            <h2 id="test-form-title" className="fd-display text-[22px] text-ink">{editing ? 'Modifier mon DS' : 'Mon prochain DS'}</h2>
-            <p className="mt-1 text-[13.5px] text-ink-soft">
+            <button type="button" onClick={close} aria-label="Fermer"
+              className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+              <X className="h-5 w-5" />
+            </button>
+            <h2 id="test-form-title" className="fd-display pr-10 text-[22px] leading-tight text-ink">{editing ? 'Modifier mon DS' : 'Mon prochain DS'}</h2>
+            <p className="mt-1 pr-6 text-[13.5px] text-ink-soft">
               {editing ? 'La préparation se recalcule avec tes changements.' : 'Dis-nous la date et les chapitres : Fidni te prépare une révision ciblée.'}
             </p>
 
             <div className="mt-5 flex flex-col gap-5">
               <div>
                 <span className={label}>Type</span>
-                <div role="group" aria-label="Type de devoir" className="inline-flex rounded-xl bg-[#f2f1ee] p-1">
+                <div role="group" aria-label="Type de devoir" className="inline-flex max-w-full gap-1 rounded-2xl border border-line bg-white p-1">
                   {KINDS.map((k) => (
                     <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
-                      className={`rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${kind === k ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
+                      className={`inline-flex min-h-10 items-center rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors sm:min-h-9 ${
+                        kind === k ? 'bg-ink text-white' : 'text-ink-faint hover:bg-[#f7f6f3] hover:text-ink'}`}>
                       {KIND_LABEL[k]}
                     </button>
                   ))}
@@ -180,7 +186,7 @@ export const TestFormModal: React.FC<{
                 <label htmlFor="test-date" className={label}>Date</label>
                 <div className="flex flex-wrap items-center gap-2">
                   <input id="test-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required
-                    className="h-10 rounded-xl border border-line bg-white px-3 text-[14px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25" />
+                    className="h-11 rounded-xl border border-line bg-white px-3 text-[14px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 sm:h-10" />
                   {QUICK_DATES.map((q) => {
                     const value = inDays(q.days);
                     return (
@@ -199,9 +205,9 @@ export const TestFormModal: React.FC<{
                 <div>
                   <span className={label}>
                     Chapitres au programme
-                    {chapterIds.length > 0 && <span className="ml-1.5 normal-case tracking-normal text-brand-hover">· {chapterIds.length} choisi{chapterIds.length > 1 ? 's' : ''}</span>}
+                    {chapterIds.length > 0 && <span className="ml-1.5 font-semibold text-brand-hover">· {chapterIds.length} choisi{chapterIds.length > 1 ? 's' : ''}</span>}
                   </span>
-                  <div className="flex max-h-[220px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+                  <div className="-m-1 flex max-h-[232px] flex-wrap gap-1.5 overflow-y-auto p-1">
                     {chapters.map((c) => {
                       const on = chapterIds.includes(c.id);
                       return (
@@ -224,16 +230,16 @@ export const TestFormModal: React.FC<{
               </p>
             )}
 
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
+            <div className="mt-6 flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
               {editing && (
                 <button type="button" onClick={remove} disabled={saving}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold text-[#a23b34] hover:bg-[#fbecea]">
-                  <Trash2 className="h-4 w-4" /> Supprimer
+                  className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold text-[#a23b34] hover:bg-[#fbecea] disabled:opacity-50">
+                  <Trash2 className="h-4 w-4" /> Supprimer ce DS
                 </button>
               )}
-              <div className="ml-auto flex items-center gap-2.5">
-                <button type="button" className="fd-btn-ghost" onClick={close}>Annuler</button>
-                <button type="submit" className="fd-btn-primary disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || saving}>
+              <div className="grid grid-cols-[auto_1fr] gap-2.5 sm:ml-auto sm:flex sm:items-center">
+                <button type="button" className="fd-btn-ghost min-h-11 justify-center px-5 sm:min-h-10" onClick={close}>Annuler</button>
+                <button type="submit" className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10" disabled={!ready || saving}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                   {editing ? 'Enregistrer' : 'Préparer mon DS'}
                 </button>
