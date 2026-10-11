@@ -7,7 +7,7 @@
  * Les anciennes adresses (/revision-lists?onglet=ds|listes) y mènent (App.tsx, RevisionsRedirect).
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, CalendarCheck, CalendarPlus, Check, ChevronRight, ClipboardCheck, ListChecks, ListPlus, Loader2,
   Pencil, Plus, RotateCcw, Sparkles, Target, Timer, Trash2,
@@ -23,6 +23,12 @@ import {
   deleteRevisionList, getRevisionLists, getToRedo, quickAddManyToRevision, type RevisionList, type ToRedoItem,
 } from '@/lib/api/revisionListApi';
 
+type ReviserTab = 'ds' | 'a-refaire' | 'listes';
+const TABS: { key: ReviserTab; label: string }[] = [
+  { key: 'ds', label: 'Mes DS' }, { key: 'a-refaire', label: 'À refaire' }, { key: 'listes', label: 'Mes listes' },
+];
+/** Anciens liens à ancre (avant les onglets) → onglet. */
+const HASH_TAB: Record<string, ReviserTab> = { 'prochain-ds': 'ds', 'a-refaire': 'a-refaire', 'mes-listes': 'listes' };
 const REDO_SHOWN = 6;
 const PAST_SHOWN = 4;
 
@@ -253,11 +259,12 @@ export const Reviser: React.FC = () => {
     if (isAuthenticated) load();
   }, [authLoading, isAuthenticated, navigate, load]);
 
-  // Ancienne adresse ou lien « Mes listes » : on descend à la bonne section une fois chargée.
-  useEffect(() => {
-    if (!location.hash || !lists) return;
-    document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
-  }, [location.hash, lists]);
+  // Onglets (11/10/2026 : les trois sections empilées faisaient une longue page) : ?onglet=ds|a-refaire|listes.
+  // Les anciens liens (« /reviser#mes-listes ») ouvrent le bon onglet.
+  const [params, setParams] = useSearchParams();
+  const fromHash = HASH_TAB[location.hash.slice(1)];
+  const tab: ReviserTab = (TABS.some((x) => x.key === params.get('onglet')) ? params.get('onglet') : fromHash ?? 'ds') as ReviserTab;
+  const setTab = (k: ReviserTab) => { const p = new URLSearchParams(params); p.set('onglet', k); setParams(p, { replace: true }); };
 
   if (!isAuthenticated) return null;
 
@@ -328,7 +335,25 @@ export const Reviser: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-10">
+      {/* Onglets : une section à la fois, son nombre en badge. */}
+      <div role="tablist" aria-label="Réviser" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
+        {TABS.map((x) => {
+          const n = x.key === 'ds' ? upcoming.length : x.key === 'a-refaire' ? redo?.count : lists?.length;
+          const on = tab === x.key;
+          return (
+            <button key={x.key} type="button" role="tab" id={`onglet-${x.key}`} aria-selected={on} aria-controls={`panneau-${x.key}`}
+              onClick={() => setTab(x.key)}
+              className={`-mb-px inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-[14px] font-semibold transition-colors ${
+                on ? 'border-ink text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>
+              {x.label}
+              {!!n && <span className={`fd-nums rounded-full px-1.5 text-[11.5px] ${on ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-soft'}`}>{n}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div role="tabpanel" id={`panneau-${tab}`} aria-labelledby={`onglet-${tab}`} className="flex flex-col gap-10">
+        {tab === 'ds' && (
         <Section id="prochain-ds" title={upcoming.length > 1 ? 'Mes prochains DS' : 'Mon prochain DS'}>
           <div data-tour="revisions-ds">
             {tests === null ? <CardsSkeleton n={1} />
@@ -340,6 +365,9 @@ export const Reviser: React.FC = () => {
           </div>
         </Section>
 
+        )}
+
+        {tab === 'a-refaire' && (
         <Section id="a-refaire" title="À refaire" count={redo?.count}
           hint={redoItems.length ? 'Ce que tu as raté, le plus ancien d’abord : c’est le bon moment pour le refaire.' : undefined}
           action={notInList.length > 1 ? (
@@ -367,6 +395,9 @@ export const Reviser: React.FC = () => {
           </div>
         </Section>
 
+        )}
+
+        {tab === 'listes' && (
         <Section id="mes-listes" title="Mes listes" count={lists?.length}
           hint={lists?.length ? 'Ouvre une liste pour refaire ses exercices à la suite, ou imprime-la.' : undefined}>
           {lists === null ? <CardsSkeleton n={2} className="sm:grid-cols-2" />
@@ -386,6 +417,7 @@ export const Reviser: React.FC = () => {
               </ul>
             )}
         </Section>
+        )}
       </div>
 
       <TestFormModal open={!!testModal} test={testModal?.test} onClose={() => setTestModal(null)} onSaved={saved}

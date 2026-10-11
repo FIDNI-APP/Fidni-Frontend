@@ -77,7 +77,15 @@ export interface MockExam {
   started_at: string | null;
   done_at: string | null;
   seconds: number | null;
+  /** Réglages de l'élève : durée visée (minutes) et difficulté ('' = mélangée). */
+  settings?: { minutes: number; difficulty: MockDifficulty; choices: number[] };
+  /** Faux : pas assez d'exercices longs de la difficulté choisie, d'autres complètent le sujet. */
+  difficulty_respected?: boolean;
+  /** Questions au moins par exercice du DS blanc (3). */
+  min_questions?: number;
 }
+
+export type MockDifficulty = '' | 'easy' | 'medium' | 'hard';
 
 export interface TestPlan {
   test: UpcomingTest;
@@ -127,4 +135,7 @@ export const devoirsApi = {
   mock: async (id: number): Promise<MockExam & { test: UpcomingTest }> => (await api.get(`/devoirs/${id}/ds-blanc/`)).data,
   mockAction: async (id: number, action: 'start' | 'finish' | 'new', seconds?: number): Promise<MockExam & { test: UpcomingTest }> =>
     (await api.post(`/devoirs/${id}/ds-blanc/`, { action, seconds })).data,
+  /** Durée et difficulté du DS blanc : enregistrées, et un nouveau sujet est tiré. */
+  mockSettings: async (id: number, minutes: number, difficulty: MockDifficulty): Promise<MockExam & { test: UpcomingTest }> =>
+    (await api.post(`/devoirs/${id}/ds-blanc/`, { action: 'settings', minutes, difficulty })).data,
 };

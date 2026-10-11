@@ -22,7 +22,7 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, Section, EmptyState, CardsSkeleton } from '@/components/space/Page';
 import {
-  devoirsApi, longDate, plural, testTitle, type PlanChapter, type PlanExercise, type TestPlan, type UpcomingTest,
+  devoirsApi, longDate, plural, testTitle, type MockDifficulty, type PlanChapter, type PlanExercise, type TestPlan, type UpcomingTest,
 } from '@/lib/api/devoirsApi';
 import { STATUS } from '@/pages/progression/status';
 import { Meter } from '@/pages/progression/ui';
@@ -48,6 +48,53 @@ const firstOpen = (p: TestPlan) => {
 const minutesLabel = (s: number) => {
   const m = Math.max(1, Math.round(s / 60));
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
+};
+
+const durationChoice = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
+const MOCK_DIFFICULTIES: { key: MockDifficulty; label: string }[] = [
+  { key: '', label: 'Mélangée' }, { key: 'easy', label: 'Facile' }, { key: 'medium', label: 'Moyenne' }, { key: 'hard', label: 'Difficile' },
+];
+
+/** Réglages du DS blanc : durée visée et difficulté ; un changement tire un nouveau sujet. */
+const MockSettings: React.FC<{
+  settings: NonNullable<TestPlan['mock']>['settings'] & object; busy: boolean; respected: boolean; started: boolean;
+  onChange: (minutes: number, difficulty: MockDifficulty) => void;
+}> = ({ settings, busy, respected, started, onChange }) => {
+  const pick = (minutes: number, difficulty: MockDifficulty) => {
+    if (minutes === settings.minutes && difficulty === settings.difficulty) return;
+    if (started && !window.confirm('Ton DS blanc est commencé : le changer en tire un nouveau. Continuer ?')) return;
+    onChange(minutes, difficulty);
+  };
+  const seg = (on: boolean) => `min-h-9 rounded-lg px-3 text-[13px] font-medium transition-colors disabled:opacity-60 ${
+    on ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`;
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2.5 rounded-2xl border border-line bg-[#faf9f7] px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12.5px] font-semibold text-ink">Durée</span>
+        <div className="inline-flex flex-wrap rounded-xl bg-[#f2f1ee] p-1" role="group" aria-label="Durée du DS blanc">
+          {settings.choices.map((m) => (
+            <button key={m} type="button" aria-pressed={settings.minutes === m} disabled={busy} onClick={() => pick(m, settings.difficulty)}
+              className={seg(settings.minutes === m)}>{durationChoice(m)}</button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12.5px] font-semibold text-ink">Difficulté</span>
+        <div className="inline-flex flex-wrap rounded-xl bg-[#f2f1ee] p-1" role="group" aria-label="Difficulté du DS blanc">
+          {MOCK_DIFFICULTIES.map((d) => (
+            <button key={d.key || 'mix'} type="button" aria-pressed={settings.difficulty === d.key} disabled={busy}
+              onClick={() => pick(settings.minutes, d.key)} className={seg(settings.difficulty === d.key)}>{d.label}</button>
+          ))}
+        </div>
+      </div>
+      {busy && <Loader2 className="h-4 w-4 animate-spin text-ink-faint" aria-label="Nouveau sujet…" />}
+      {!respected && (
+        <p className="w-full text-[12.5px] text-gold-strong">
+          Pas assez d’exercices longs de cette difficulté dans ces chapitres : d’autres difficultés complètent le sujet.
+        </p>
+      )}
+    </div>
+  );
 };
 
 /** La prochaine étape, une seule : la plus utile maintenant. */
@@ -288,7 +335,15 @@ export default function TestPlanPage() {
         </Section>
 
         {/* DS blanc */}
-        <Section id="ds-blanc" title="DS blanc" hint={mock?.exercises.length ? 'Un sujet chronométré tiré des chapitres du DS, puis ta correction.' : undefined}>
+        <Section id="ds-blanc" title="DS blanc" hint="Un sujet chronométré tiré des chapitres du DS (exercices de 3 questions au moins), puis ta correction.">
+          {mock?.settings && !past && (
+            <MockSettings settings={mock.settings} busy={renewing} respected={mock.difficulty_respected !== false}
+              started={!!mock.started_at && !mock.done_at}
+              onChange={async (minutes, difficulty) => {
+                setRenewing(true);
+                try { await devoirsApi.mockSettings(t.id, minutes, difficulty); load(); } finally { setRenewing(false); }
+              }} />
+          )}
           {mock?.exercises.length ? (
             <div className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
               <div className="flex min-w-0 flex-1 items-start gap-4">
@@ -328,7 +383,9 @@ export default function TestPlanPage() {
             </div>
           ) : (
             <EmptyState compact icon={Timer} tone="ink" title="Pas encore de DS blanc"
-              text="Il n’y a pas encore assez d’exercices dans ces chapitres pour en composer un." />
+              text={mock?.settings?.difficulty
+                ? 'Pas d’exercice long (3 questions au moins) de cette difficulté dans ces chapitres : essaie « Mélangée ».'
+                : 'Il n’y a pas encore assez d’exercices longs (3 questions au moins) dans ces chapitres pour en composer un.'} />
           )}
         </Section>
       </div>
