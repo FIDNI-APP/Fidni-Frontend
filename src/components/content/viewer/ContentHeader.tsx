@@ -10,8 +10,8 @@
 import React, { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  BookMarked, Bookmark, CheckCircle2, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
-  RotateCcw, Share2, ShieldCheck, ShieldQuestion, Trash2,
+  BookMarked, Bookmark, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
+  Share2, ShieldCheck, ShieldQuestion, Trash2,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
@@ -45,9 +45,6 @@ interface ContentHeaderProps {
   basePath: string;
   /** Nombre de solutions proposées par les élèves (pastille de l'onglet). */
   solutionCount?: number;
-  /** Résultat de l'élève : pastille sous le titre ; un clic mène à « Tu as fini ? » en bas de page. */
-  completion?: 'success' | 'review' | null;
-  onShowCompletion?: () => void;
   /** Ranger le contenu : liste de révision (exercice, examen) ou cahier (leçon). */
   onCollect?: () => void;
   /** Temps (exercice) ou passages (examen) enregistrés. */
@@ -89,7 +86,7 @@ const MenuItem: React.FC<{ icon: React.ElementType; onClick: () => void; childre
 
 export const ContentHeader: React.FC<ContentHeaderProps> = ({
   content, contentType, isSaved, isSaving, onToggleSave, isAuthor, onDelete, onPrint, onReport, onSetVerified,
-  activeTab, onTabChange, basePath, solutionCount = 0, completion, onShowCompletion, onCollect, sessionCount = 0,
+  activeTab, onTabChange, basePath, solutionCount = 0, onCollect, sessionCount = 0,
   onOpenHistory, hideTabs = false,
 }) => {
   const navigate = useNavigate();
@@ -268,14 +265,6 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
             : content.author?.username && (
               <span className="hidden sm:inline">par <Link to={`/profile/${content.author.username}`} className="text-ink-soft hover:text-ink hover:underline">{content.author.username}</Link></span>
             )}
-        {completion && (
-          <button type="button" onClick={onShowCompletion} title="Voir où tu en es"
-            className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold ${
-              completion === 'success' ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-gold-strong'}`}>
-            {completion === 'success' ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> : <RotateCcw className="h-3.5 w-3.5" aria-hidden />}
-            {completion === 'success' ? (isLesson ? 'Lue' : 'Réussi') : 'À revoir'}
-          </button>
-        )}
       </div>
 
       {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}

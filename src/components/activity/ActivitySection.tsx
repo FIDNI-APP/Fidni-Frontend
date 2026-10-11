@@ -229,7 +229,7 @@ function Invitation({ nStudents, contentLabel, onGoToQuestions }: { nStudents: n
       <div className="flex-1 min-w-0">
         <h3 className="text-[15px] font-bold text-ink">Ton bilan personnel t’attend</h3>
         <p className="mt-1 text-[13.5px] text-ink-soft leading-relaxed">
-          Ouvre la solution de chaque question et dis si tu avais trouvé, ou indique « Tout réussi » en bas de {contentLabel}.
+          Ouvre la solution de chaque question et dis si tu avais trouvé, ou indique « Tout réussi » en haut de {contentLabel}.
           Tu verras alors ton résultat à côté de celui des autres{nStudents > 0 ? ` (${nStudents} ${plural(nStudents, 'élève')} l’${nStudents > 1 ? 'ont' : 'a'} déjà terminé)` : ''}.
         </p>
       </div>

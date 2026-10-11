@@ -505,7 +505,7 @@ export const ExamView: React.FC<Props> = ({
                 <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-4 pb-9 sm:px-8 sm:pb-10 ${heading ? 'pt-7 sm:pt-8' : 'pt-6 sm:pt-8'} ${i > 0 ? 'border-t border-line' : ''}`}>
                   {heading && (
                     <div className="mb-5 flex items-baseline justify-between gap-3">
-                      <h2 className="fd-display min-w-0 text-[21px] text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
+                      <h2 className="fd-paper min-w-0 text-[20px] font-bold leading-snug text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
                       <span className="flex shrink-0 items-center gap-1.5">
                         {sc.corrected > 0 && !locked && (
                           <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title="Tes points (auto-évaluation)">

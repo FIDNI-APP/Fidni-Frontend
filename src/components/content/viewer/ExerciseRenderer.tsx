@@ -686,21 +686,21 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
   return (
     <div id={subs.length ? undefined : questionAnchor(path)} className={`scroll-mt-24 ${isFirst ? '' : afterContext ? 'mt-6' : 'mt-8 sm:mt-10'}`}>
       <div className="group/q flex items-start gap-2.5 sm:gap-3">
-        <span className="mt-[2px] w-5 shrink-0 text-[15.5px] font-bold text-ink fd-nums sm:w-6">{questionIndex}.</span>
+        <span className="fd-qnum w-5 shrink-0 text-ink sm:w-6">{questionIndex}.</span>
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><RenderContent content={block.content} /></div>
             {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
           </div>
           {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} solution={block.solution} {...common} />}
-          {/* « Tout réussi » d'une question n'est pas repris ici : « Tu as fini ? » (bas de page) le fait pour tout le contenu. */}
+          {/* « Tout réussi » d'une question n'est pas repris ici : « Où en es-tu ? » (haut de page, rappel en bas) le fait pour tout le contenu. */}
           {subs.length > 0 && (
             <>
               {subs.map((sq, i) => {
                 const sqPath = `${path}.${sq.id}`;
                 return (
                   <div key={sq.id} id={questionAnchor(sqPath)} className="group/sq mt-5 flex items-start gap-2 scroll-mt-24 sm:gap-2.5">
-                    <span className="mt-[2px] w-7 shrink-0 text-[14.5px] font-semibold text-ink-faint fd-nums sm:w-8">{questionIndex}.{i + 1}</span>
+                    <span className="fd-qnum w-7 shrink-0 text-ink-faint sm:w-8">{questionIndex}.{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-1">
                         <div className="min-w-0 flex-1"><RenderContent content={sq.content} /></div>
@@ -719,10 +719,10 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
   );
 };
 
-/** Partie d'un contenu (rendu « lecture ») : titre serif, barème, un filet. */
+/** Partie d'un contenu (rendu « lecture ») : titre en gras (police de LaTeX), barème, un filet. */
 const ReadingSectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ block, first }) => (
   <div className={`mb-6 flex items-baseline justify-between gap-3 border-b border-line pb-2.5 ${first ? '' : 'mt-12'}`}>
-    <div className="fd-display min-w-0 text-[19px] text-ink [&_p]:m-0">
+    <div className="fd-paper min-w-0 font-bold text-ink [&_p]:m-0">
       <TipTapRenderer content={block.content?.html || ''} />
     </div>
     {Number(block.points) > 0 && (

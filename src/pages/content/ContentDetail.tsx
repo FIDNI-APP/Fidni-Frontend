@@ -273,6 +273,10 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Résultat donné pendant cette visite (pas celui chargé) : c'est là que le ressenti est demandé.
   const [statusChosen, setStatusChosen] = useState(false);
   useEffect(() => { setStatusChosen(false); }, [id]);
+  // « Où en es-tu ? » en haut, rappel « Tu as fini ? » en bas : les suites du résultat (ressenti, contenu
+  // suivant) vont dans le bloc où l'élève vient d'agir (en bas quand le résultat vient des questions).
+  const [finishFrom, setFinishFrom] = useState<'top' | 'bottom'>('top');
+  useEffect(() => { setFinishFrom('top'); }, [id]);
 
   // Statistics state
   const [statistics, setStatistics] = useState<ContentStatistics | null>(null);
@@ -502,6 +506,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       completionRef.current = target ?? null;
       setCompletionStatus(target ?? null);
       if (target) setStatusChosen(true);
+      if (completion === undefined) setFinishFrom('bottom');
     }
     if (Object.values(changes).some((s) => s && s !== 'success')) setRevisionNudge((n) => n + 1);
     try {
@@ -754,7 +759,18 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Questions évaluées : réussies, et à revoir (« En partie » et anciens « Échoué » compris).
   const successCount = leafPaths.filter((p) => questionProgress[p] === 'success').length;
   const assessedCount = leafPaths.filter((p) => questionProgress[p]).length;
-  const scrollToEnd = () => document.getElementById('fin')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const finishProps = (placement: 'top' | 'bottom') => ({
+    placement,
+    followUps: finishFrom === placement,
+    content,
+    contentType,
+    completionStatus,
+    onSetCompletion: (status: 'success' | 'review' | null) => { setFinishFrom(placement); handleSetCompletion(status); },
+    progress: { assessed: assessedCount, total: leafPaths.length, success: successCount, review: assessedCount - successCount },
+    statusChosen,
+    canAsk: !nudgeAsking,
+    onFelt: (felt: Felt | null) => setContent((prev) => (prev ? { ...prev, felt } as ContentItem : prev)),
+  });
 
   // Sous la feuille, dans l'ordre où l'élève en a besoin.
   const afterSheet = (
@@ -763,15 +779,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       {isAuthenticated && !isLesson && id && (
         <RevisionNudge contentId={id} trigger={revisionNudge} kind={contentType} onAskingChange={setNudgeAsking} />
       )}
-      {isAuthenticated && !examRunning && (
-        <FinishPanel key={content.id} content={content} contentType={contentType} completionStatus={completionStatus}
-          onSetCompletion={handleSetCompletion}
-          progress={{ assessed: assessedCount, total: leafPaths.length, success: successCount, review: assessedCount - successCount }}
-          statusChosen={statusChosen}
-          canAsk={!nudgeAsking}
-          onCollect={openCollect}
-          onFelt={(felt: Felt | null) => setContent((prev) => (prev ? { ...prev, felt } as ContentItem : prev))} />
-      )}
+      {/* Rappel en fin de feuille (le bandeau « Où en es-tu ? » est en haut). */}
+      {isAuthenticated && !examRunning && <FinishPanel key={`${content.id}-bas`} {...finishProps('bottom')} onCollect={openCollect} />}
       {/* Visiteur : ce qu'un compte apporterait, au moment où l'élève finit (l'examen le dit dans « Ta copie »). */}
       {!isAuthenticated && contentType !== 'exam' && (
         <SignupCard title={isLesson ? 'Garde tes leçons' : 'Suis ta progression'} tour="detail-inscription" benefits={false}
@@ -821,13 +830,16 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           }}
           basePath={config.basePath}
           solutionCount={proposedSolutions?.length ?? 0}
-          completion={isAuthenticated ? completionStatus : null}
-          onShowCompletion={scrollToEnd}
           onCollect={openCollect}
           sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
           onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
           hideTabs={examRunning}
         />
+
+        {/* « Où en es-tu ? » : en haut, au-dessus de la feuille (pas pendant l'épreuve). */}
+        {activeTab === 'exercise' && isAuthenticated && !examRunning && (
+          <div className="mb-5 sm:mb-6"><FinishPanel key={`${content.id}-haut`} {...finishProps('top')} /></div>
+        )}
 
         {activeTab === 'exercise' && (
           <ContentMainCard
