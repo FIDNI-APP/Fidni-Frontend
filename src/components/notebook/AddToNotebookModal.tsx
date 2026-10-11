@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, BookMarked, Check, Loader2, Plus, X } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { addLessonToNotebook, addChapterToNotebook } from '@/lib/api/notebookApi';
+import { apiError } from './notebookModel';
 import toast from 'react-hot-toast';
 
 interface Ref { id: string | number; name: string }
@@ -22,12 +23,14 @@ interface AddToNotebookModalProps {
   lessonChapters?: { id: string; name: string }[];
   lessonSubject?: { id: string | number; name: string } | null;
   lessonLevels?: { id: string | number; name: string }[];
+  /** Appelé après un ajout ou une création (ex. Mes enregistrements recharge ses cahiers). */
+  onChanged?: () => void;
 }
 
 const same = (a: unknown, b: unknown) => String(a) === String(b);
 
 export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
-  isOpen, onClose, lessonId, lessonTitle, lessonChapters = [], lessonSubject, lessonLevels = [],
+  isOpen, onClose, lessonId, lessonTitle, lessonChapters = [], lessonSubject, lessonLevels = [], onChanged,
 }) => {
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +84,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
       await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
       toast.success(`Leçon ajoutée à « ${chapter.name} »`);
       setDone({ notebookId: nb.id, chapter: chapter.name });
+      onChanged?.();
       await load();
     } catch {
       toast.error('La leçon n’a pas pu être ajoutée.');
@@ -105,9 +109,10 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
         setDone({ notebookId: nb.id, chapter: chapter.name });
       }
       toast.success('Cahier créé, leçon ajoutée');
+      onChanged?.();
       await load();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Le cahier n’a pas pu être créé.');
+    } catch (e) {
+      toast.error(apiError(e, 'Le cahier n’a pas pu être créé.'));
     } finally {
       setBusy(null);
     }
@@ -156,12 +161,13 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
           className="w-full max-w-md rounded-2xl border border-line bg-white shadow-[0_20px_50px_rgba(20,18,16,.25)]">
           <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
             <div className="min-w-0">
-              <h2 id="nb-modal-title" className="flex items-center gap-2 text-[17px] font-semibold text-ink">
-                <BookMarked className="w-5 h-5 text-brand" /> Ajouter à mon cahier
+              <h2 id="nb-modal-title" className="fd-display flex items-center gap-2 text-[21px] leading-tight text-ink">
+                <BookMarked className="w-5 h-5 shrink-0 text-brand" /> Ajouter à mon cahier
               </h2>
               {lessonTitle && <p className="mt-0.5 truncate text-[13px] text-ink-faint">{lessonTitle}</p>}
             </div>
-            <button onClick={onClose} aria-label="Fermer" className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={onClose} aria-label="Fermer"
+              className="-mr-2 -mt-1.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:text-ink hover:bg-[#f2f1ee]"><X className="w-5 h-5" /></button>
           </div>
 
           <div className="px-5 pb-5 flex flex-col gap-3">

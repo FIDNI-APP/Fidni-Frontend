@@ -1,493 +1,197 @@
-import React, { useState, useEffect, useRef } from 'react';
+// Un chapitre ouvert dans la liseuse du cahier : ses leçons en onglets, la leçon sur sa feuille, son sommaire,
+// « Leçon suivante » en bas. Menu « ⋯ » d'une leçon : ouvrir sa page, la retirer du cahier. « Annoter » n'est
+// proposé qu'avec une souris (les outils ne sont pas faits pour le doigt).
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { ArrowRight, ExternalLink, Loader2, MoreHorizontal, PenLine, Trash2 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import { Save, BookMarked, Trash, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
-import NotebookContent from './NotebookContent';
 import { useLessonOutline } from '@/components/lesson/useLessonOutline';
 import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/LessonOutline';
-import { Section } from '@/types';
-import { saveLessonAnnotations, getLessonAnnotations } from '@/lib/api/notebookApi';
-import toast from 'react-hot-toast';
+import { getLessonAnnotations, removeFromNotebook, saveLessonAnnotations } from '@/lib/api/notebookApi';
+import { usePhone } from '@/components/content/listing/listingUtils';
+import NotebookContent, { type Annotation } from './NotebookContent';
+import { NOTEBOOK_THEME } from './NotebookPaper';
+import type { Id, NbSection } from './notebookModel';
 
-
-interface ModularNote {
-  id: string;
-  content: string;
-  position: {
-    topPercent: number;
-    leftPercent: number;
-  };
-  color: string;
+/** Souris (survol + pointeur précis) : seul cas où l'on propose d'annoter. */
+function useFinePointer(): boolean {
+  const query = '(hover: hover) and (pointer: fine)';
+  const [fine, setFine] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const on = () => setFine(mq.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return fine;
 }
 
-interface SectionContentProps {
-  section: Section | null;
-  onStartEditNotes: (notes: string) => void;
-  onSaveNotes: () => void;
-  onCancelEditNotes: () => void;
-  editingNotes: boolean;
-  noteContent: string;
-  setNoteContent: (content: string) => void;
-  onSaveModularNotes?: (sectionId: string, notes: ModularNote[]) => Promise<void>;
-  notebookId?: string;
-}
+const PhoneTheme = { ...NOTEBOOK_THEME, marginLeft: 2 };
 
+const SectionContent: React.FC<{
+  notebookId: Id;
+  section: NbSection;
+  /** Après « Retirer du cahier » : le cahier est rechargé. */
+  onRemoved: () => void;
+}> = ({ notebookId, section, onRemoved }) => {
+  const entries = [...(section.lesson_entries ?? [])].sort((a, b) => (a.page_order ?? 0) - (b.page_order ?? 0));
+  const [index, setIndex] = useState(0);
+  const entry = entries[Math.min(index, entries.length - 1)];
+  const next = entries[Math.min(index, entries.length - 1) + 1];
 
+  const phone = usePhone();
+  const fine = useFinePointer();
+  const [annotating, setAnnotating] = useState(false);
+  const [annotations, setAnnotations] = useState<Annotation[] | undefined>(undefined);
+  const [ready, setReady] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const menuBtn = useRef<HTMLButtonElement>(null);
 
-const SectionContent: React.FC<SectionContentProps> = ({
-  section,
-  notebookId
-}) => {
-  // State to force re-rendering of TipTapRenderer
-  const [renderKey, setRenderKey] = useState<number>(0);
-  
-  // État pour gérer l'affichage fluide du contenu
-  const [contentLoading, setContentLoading] = useState<boolean>(true);
-  // État pour contrôler complètement la visibilité du contenu
-  const [showContent, setShowContent] = useState<boolean>(false);
-  
-  // State pour les notes modulaires
-  const [modularNotes, setModularNotes] = useState<ModularNote[]>([]);
-  
-  // State pour les annotations
-  const [annotations, setAnnotations] = useState<any[]>([]);
-  const [, setLoadingAnnotations] = useState(false);
-  const [addingNote, setAddingNote] = useState<boolean>(false);
-  
-  // États pour la navigation des pages
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const editingNoteAnchor = useRef<HTMLButtonElement | null>(null);
-  const [newNoteContent, setNewNoteContent] = useState<string>('');
-  const [newNoteColor, setNewNoteColor] = useState<string>('#E8C25A'); // Ambre par défaut
-  
-  // Référence pour le conteneur de contenu
-  const contentContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  // Cadre qui défile (feuille du cahier) : gardé aussi en état pour que le sommaire suive la lecture.
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
-  const setScrollRefs = (el: HTMLDivElement | null) => {
-    (contentContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-    setScrollEl(el);
-  };
   const outline = useLessonOutline({
-    containerRef: contentRef, scrollRoot: scrollEl, topOffset: 52, // barre d’annotation collante
-    deps: [currentPageIndex, renderKey, section?.id],
+    containerRef: contentRef, scrollRoot: scrollEl, topOffset: annotating ? 60 : 12,
+    deps: [entry?.id, ready],
   });
-  
-  // Couleurs disponibles pour les notes
-  const noteColors = [
-    '#E8C25A', // Ambre
-    '#6FA97F', // Vert sauge
-    '#6E9BD1', // Bleu doux
-    '#D98A8A', // Rouge poudré
-    '#A98BC4'  // Violet doux
-  ];
 
-  // Use section ID as dependency to update renderKey when section changes
+  // Nouvelle leçon : squelette, annotations rechargées, retour en haut de la feuille.
   useEffect(() => {
-    if (section?.id) {
-      // Reset states
-      setContentLoading(true);
-      setShowContent(false);
-      setCurrentPageIndex(0); // Reset to first page when section changes
-      
-      // Force TipTapRenderer to re-render with new content by changing its key
-      setRenderKey(prev => prev + 1);
-      
-      // Charger les notes modulaires pour cette section
-      loadModularNotes(section.id);
-      
-      // Charger les annotations
-      loadAnnotations();
-    }
-  }, [section?.id, notebookId]);
+    setReady(false);
+    setAnnotations(undefined);
+    scrollEl?.scrollTo({ top: 0 });
+    if (!entry) return;
+    let cancelled = false;
+    getLessonAnnotations(String(notebookId), String(section.id), String(entry.id))
+      .then((a) => { if (!cancelled) setAnnotations(a as Annotation[]); })
+      .catch(() => { if (!cancelled) setAnnotations([]); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry?.id, notebookId, section.id]);
 
-  // Reset content when page changes
-  useEffect(() => {
-    if (section?.lesson_entries && section.lesson_entries.length > 0) {
-      setContentLoading(true);
-      setShowContent(false);
-      setRenderKey(prev => prev + 1);
-      loadAnnotations();
-    }
-  }, [currentPageIndex]);
-
-  // Fonction pour charger les notes modulaires
-  const loadModularNotes = (sectionId: string) => {
-    // Cette fonction devrait normalement faire un appel API
-    // Pour l'instant, nous allons simuler avec des données en dur
-    
-    // Vérifier si nous avons des notes sauvegardées dans localStorage pour le développement
-    const savedNotes = localStorage.getItem(`modular_notes_${sectionId}`);
-    if (savedNotes) {
-      try {
-        setModularNotes(JSON.parse(savedNotes));
-        return;
-      } catch (e) {
-        console.error('Erreur lors du chargement des notes sauvegardées:', e);
-      }
-    }
-    
-    // Notes par défaut pour démonstration
-    const demoNotes: ModularNote[] = [];
-    setModularNotes(demoNotes);
-  };
-
-  
-
-  // Fonction pour ajouter une nouvelle note
-  const addModularNote = (e: React.MouseEvent) => {
-    if (!contentContainerRef.current || !addingNote || !section) return;
-    
-    // Obtenir la position du clic relative au conteneur
-    const containerRect = contentContainerRef.current.getBoundingClientRect();
-    const topPercent = ((e.clientY - containerRect.top) / containerRect.height) * 100;
-    const leftPercent = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-    
-    // Créer une nouvelle note
-    const newNote: ModularNote = {
-      id: `note_${Date.now()}`,
-      content: newNoteContent || 'Nouvelle note',
-      position: {
-        topPercent,
-        leftPercent
-      },
-      color: newNoteColor
-    };
-    
-    // Ajouter la note à la liste
-    setModularNotes(prev => [...prev, newNote]);
-    
-    // Réinitialiser l'état
-    setAddingNote(false);
-    setNewNoteContent('');
-  };
-
-  // Fonction pour éditer une note
-  const startEditingNote = (noteId: string) => {
-    setEditingNoteId(noteId);
-    const note = modularNotes.find(n => n.id === noteId);
-    if (note) {
-      setNewNoteContent(note.content);
-      setNewNoteColor(note.color);
-    }
-  };
-
-  // Fonction pour sauvegarder une note éditée
-  const saveEditedNote = () => {
-    if (!editingNoteId) return;
-    
-    setModularNotes(prev => prev.map(note => 
-      note.id === editingNoteId 
-        ? { ...note, content: newNoteContent, color: newNoteColor } 
-        : note
-    ));
-    
-    setEditingNoteId(null);
-    setNewNoteContent('');
-  };
-  
-  // Fonctions pour gérer les annotations
-  const handleSaveAnnotations = async (annotationsData: any[]) => {
-    const currentLessonEntry = section?.lesson_entries?.[currentPageIndex];
-    if (!notebookId || !section?.id || !currentLessonEntry?.id) {
-      console.warn('Missing notebook ID, chapter ID, or lesson entry ID for saving annotations');
-      return;
-    }
-
+  const save = useCallback(async (list: Annotation[]) => {
+    if (!entry) return;
     try {
-      await saveLessonAnnotations(notebookId, section.id, currentLessonEntry.id, annotationsData);
-      setAnnotations(annotationsData);
-    } catch (error) {
-      console.error('Failed to save annotations:', error);
-      toast.error('Erreur lors de la sauvegarde des annotations');
-      throw error;
+      await saveLessonAnnotations(String(notebookId), String(section.id), String(entry.id), list);
+    } catch (e) {
+      toast.error('Tes annotations n’ont pas pu être enregistrées.');
+      throw e;
     }
-  };
+  }, [notebookId, section.id, entry]);
 
-  const loadAnnotations = async () => {
-    const currentLessonEntry = section?.lesson_entries?.[currentPageIndex];
-    if (!notebookId || !section?.id || !currentLessonEntry?.id) return;
+  const onReady = useCallback(() => {
+    window.setTimeout(() => setReady(true), 60);
+  }, []);
 
+  const remove = async () => {
+    setMenu(false);
+    if (!entry || !window.confirm(`Retirer « ${entry.lesson.title} » de ton cahier ? La leçon reste sur Fidni.`)) return;
+    setRemoving(true);
     try {
-      setLoadingAnnotations(true);
-      const savedAnnotations = await getLessonAnnotations(notebookId, section.id, currentLessonEntry.id);
-      setAnnotations(savedAnnotations);
-    } catch (error) {
-      console.error('Failed to load annotations:', error);
+      await removeFromNotebook(String(notebookId), String(section.id), String(entry.id));
+      toast.success('Leçon retirée du cahier');
+      setIndex(0);
+      onRemoved();
+    } catch {
+      toast.error('La leçon n’a pas pu être retirée.');
     } finally {
-      setLoadingAnnotations(false);
+      setRemoving(false);
     }
   };
 
-  // Fonction pour supprimer une note
-  const deleteNote = (noteId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette note?')) {
-      setModularNotes(prev => prev.filter(note => note.id !== noteId));
-      if (editingNoteId === noteId) {
-        setEditingNoteId(null);
-        setNewNoteContent('');
-      }
-    }
-  };
-
-  // Fonction pour déplacer une note (glisser-déposer)
-  const moveNote = (noteId: string, newPosition: { topPercent: number, leftPercent: number }) => {
-    setModularNotes(prev => prev.map(note => 
-      note.id === noteId 
-        ? { ...note, position: newPosition } 
-        : note
-    ));
-  };
-  
-  // Fonction appelée quand TipTapRenderer a fini de charger
-  const handleContentReady = () => {
-    // Content is ready, stop showing the loading skeleton with a slight delay
-    setTimeout(() => {
-      setContentLoading(false);
-      // Afficher le contenu seulement après que le loading soit terminé
-      // pour éviter tout flash du contenu brut
-      setTimeout(() => {
-        setShowContent(true);
-      }, 50);
-    }, 100);
-  };
-
-  if (!section || !section.lesson_entries || section.lesson_entries.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8" style={{ background: '#faf9f7' }}>
-        <div className="text-center max-w-sm" style={{ background: '#fff', padding: 28, borderRadius: 16, border: '1px solid #e7e3dc' }}>
-          <div className="mx-auto mb-4 flex items-center justify-center" style={{ width: 56, height: 56, borderRadius: 16, background: '#f7f6f3' }}>
-            <BookMarked className="w-7 h-7" style={{ color: '#cfcdc8' }} />
-          </div>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>Aucun contenu de leçon</h3>
-          <p style={{ fontSize: 13.5, color: '#6b6862' }}>
-            Ce chapitre n'a pas encore de contenu de leçon.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Get current lesson entry
-  const currentLessonEntry = section.lesson_entries[currentPageIndex];
-  const totalPages = section.lesson_entries.length;
+  if (!entry) return null;
+  const item = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-[13.5px] font-medium transition-colors';
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Compact top bar */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 gap-4" style={{ background: '#fff', borderBottom: '1px solid #e7e3dc' }}>
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex-shrink-0" style={{ fontSize: 10.5, fontWeight: 700, color: '#9a958c', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-            {section.chapter.name}
-          </span>
-          <span className="flex-shrink-0" style={{ color: '#cfcdc8' }}>/</span>
-          <h2 className="truncate" style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>
-            {currentLessonEntry.lesson.title}
-          </h2>
-        </div>
-
-        {/* Page Navigation */}
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
-              disabled={currentPageIndex === 0}
-              className="flex items-center justify-center"
-              style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e7e3dc', background: '#fff', color: '#33302b', cursor: 'pointer', opacity: currentPageIndex === 0 ? 0.4 : 1 }}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#6b6862', fontVariantNumeric: 'tabular-nums', minWidth: 44, textAlign: 'center' }}>
-              {currentPageIndex + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPageIndex(Math.min(totalPages - 1, currentPageIndex + 1))}
-              disabled={currentPageIndex === totalPages - 1}
-              className="flex items-center justify-center"
-              style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e7e3dc', background: '#fff', color: '#33302b', cursor: 'pointer', opacity: currentPageIndex === totalPages - 1 ? 0.4 : 1 }}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Leçons du chapitre */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-white py-1.5 pl-3 pr-1.5 sm:pl-4">
+        {entries.length > 1 ? (
+          <div role="tablist" aria-label="Leçons du chapitre" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-0.5 scrollbar-hide">
+            {entries.map((e, i) => {
+              const on = e.id === entry.id;
+              return (
+                <button key={e.id} type="button" role="tab" aria-selected={on} onClick={() => setIndex(i)}
+                  className={`min-h-9 max-w-[240px] shrink-0 truncate rounded-full px-3 text-[12.5px] font-semibold transition-colors ${
+                    on ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-soft hover:text-ink'}`}>
+                  {e.lesson.title}
+                </button>
+              );
+            })}
           </div>
+        ) : (
+          <h2 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{entry.lesson.title}</h2>
         )}
+
+        {fine && (
+          <button type="button" onClick={() => setAnnotating((v) => !v)} aria-pressed={annotating} data-tour="cahier-annoter"
+            className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-semibold transition-colors ${
+              annotating ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:border-ink hover:text-ink'}`}>
+            <PenLine className="h-4 w-4" /> {annotating ? 'Terminer' : 'Annoter'}
+          </button>
+        )}
+        <button ref={menuBtn} type="button" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu}
+          aria-label="Actions de la leçon"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink">
+          {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
+        </button>
+        <FloatingPanel anchorRef={menuBtn} open={menu} onClose={() => setMenu(false)} placement="bottom-end" role="menu"
+          className="w-64 rounded-xl border border-line bg-white p-1.5 shadow-[0_12px_32px_rgba(20,18,16,.14)]">
+          <Link role="menuitem" to={`/lessons/${entry.lesson.id}`} onClick={() => setMenu(false)}
+            className={`${item} text-ink-soft hover:bg-[#f7f6f3] hover:text-ink`}>
+            <ExternalLink className="h-4 w-4 text-ink-faint" /> Ouvrir la page de la leçon
+          </Link>
+          <button type="button" role="menuitem" onClick={remove} className={`${item} text-[#a23b34] hover:bg-[#fbecea]`}>
+            <Trash2 className="h-4 w-4" /> Retirer du cahier
+          </button>
+        </FloatingPanel>
       </div>
 
       {/* Sommaire de la leçon : barre repliable sur écran moyen. */}
-      {currentLessonEntry && (
-        <LessonOutlineBar outline={outline} storageKey={`lecon-${currentLessonEntry.lesson.id}`} className="xl:hidden mx-3 mt-2 flex-shrink-0" />
-      )}
-      <div className="flex flex-1 min-h-0">
-      {/* Sommaire de la leçon : colonne à gauche de la feuille sur grand écran. */}
-      {outline.items.length >= 2 && currentLessonEntry && (
-        <aside className="hidden xl:block w-[230px] flex-shrink-0 overflow-y-auto border-r border-line bg-[#fcfbf9] px-4 py-5">
-          <LessonOutlinePanel outline={outline} storageKey={`lecon-${currentLessonEntry.lesson.id}`} title="Dans cette leçon" />
-        </aside>
-      )}
-      {/* Notebook paper — fills all remaining space */}
-      <div
-        ref={setScrollRefs}
-        className={`flex-1 overflow-auto relative ${addingNote ? 'cursor-crosshair ring-2 ring-[#1a7a4a]/40' : ''}`}
-        onClick={addingNote ? addModularNote : undefined}
-      >
-          {/* Loading state - skeleton loader - Toujours visible jusqu'à ce que le contenu soit prêt */}
-          {contentLoading && (
-            <div className="absolute inset-0 bg-white z-30 flex flex-col space-y-4 p-4">
-              <div className="h-6 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
-              <div className="h-20 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-              <div className="h-32 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
+      <LessonOutlineBar outline={outline} storageKey={`lecon-${entry.lesson.id}`} className="mx-3 mt-2 shrink-0 xl:hidden" />
+
+      <div className="flex min-h-0 flex-1">
+        {outline.items.length >= 2 && (
+          <aside className="hidden w-[230px] shrink-0 overflow-y-auto border-r border-line bg-[#fcfbf9] px-4 py-5 xl:block">
+            <LessonOutlinePanel outline={outline} storageKey={`lecon-${entry.lesson.id}`} title="Dans cette leçon" />
+          </aside>
+        )}
+
+        <div ref={setScrollEl} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {!ready && (
+            <div className="absolute inset-0 z-30 flex flex-col gap-3 bg-white p-6 pl-16" role="status" aria-label="Chargement de la leçon">
+              {['w-3/4 h-6', 'w-1/2', 'w-5/6', 'w-full h-20 mt-3', 'w-2/3', 'w-3/4', 'w-full h-28 mt-3'].map((c, i) => (
+                <div key={i} className={`h-4 animate-pulse rounded bg-[#efece6] ${c}`} />
+              ))}
             </div>
           )}
-
-          {/* Modular Notes */}
-          {modularNotes.map(note => (
-            <div
-              key={note.id}
-              className="absolute z-30"
-              style={{
-                top: `${note.position.topPercent}%`,
-                left: `${note.position.leftPercent}%`,
-              }}
-            >
-              <div 
-                className="flex flex-col items-start group transform transition-all duration-200 hover:scale-105"
-                draggable
-                onDragEnd={(e) => {
-                  if (!contentContainerRef.current) return;
-                  const containerRect = contentContainerRef.current.getBoundingClientRect();
-                  const topPercent = ((e.clientY - containerRect.top) / containerRect.height) * 100;
-                  const leftPercent = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-                  moveNote(note.id, { topPercent, leftPercent });
-                }}
-              >
-                {/* Note Icon */}
-                <button
-                  ref={editingNoteId === note.id ? editingNoteAnchor : undefined}
-                  className="w-10 h-10 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all duration-200 ring-2 ring-white hover:shadow-xl"
-                  style={{ backgroundColor: note.color }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (editingNoteId === note.id) {
-                      saveEditedNote();
-                    } else {
-                      startEditingNote(note.id);
-                    }
-                  }}
-                >
-                  <MessageSquare className="w-5 h-5 text-white" />
-                </button>
-                
-                {/* Expanded Note Content - only shown when editing */}
-                {editingNoteId === note.id && (
-                  <FloatingPanel anchorRef={editingNoteAnchor} open
-                    className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl p-4 border-l-4 min-w-72 border border-gray-200/50"
-                    style={{ borderLeftColor: note.color }}>
-                    <div className="flex justify-between mb-3">
-                        <div className="flex space-x-2">
-                          {noteColors.map(color => (
-                            <button
-                              key={color}
-                              className={`w-6 h-6 rounded-full transition-all duration-200 hover:scale-110 ${newNoteColor === color ? 'ring-2 ring-offset-2 ring-gray-400 shadow-md' : 'hover:shadow-md'}`}
-                              style={{ backgroundColor: color }}
-                              onClick={(e) => {
-                                e.stopPropagation(); 
-                                setNewNoteColor(color);
-                              }}
-                            />
-                          ))}
-                        </div>
-                      <button
-                        className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNote(note.id);
-                        }}
-                      >
-                        <Trash className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <textarea
-                      value={newNoteContent}
-                      onChange={(e) => setNewNoteContent(e.target.value)}
-                      className="w-full p-3 rounded-lg resize-none transition-all duration-200"
-                      style={{ border: '1px solid #e7e3dc', background: '#faf9f7', outline: 'none', fontSize: 13.5, fontFamily: 'inherit' }}
-                      rows={4}
-                      placeholder="Tapez votre note ici…"
-                      onClick={(e) => e.stopPropagation()}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = '#1a7a4a'; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = '#e7e3dc'; }}
-                    />
-                    <div className="flex justify-end mt-2">
-                      <button
-                        className="fd-btn-primary"
-                        style={{ padding: '7px 13px', fontSize: 12.5 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          saveEditedNote();
-                        }}
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        Enregistrer
-                      </button>
-                    </div>
-                  </FloatingPanel>
-                )}
-                
-                {/* Tooltip to show note content on hover */}
-                {editingNoteId !== note.id && (
-                  <div className="absolute top-10 left-0 hidden group-hover:block bg-white p-2 rounded shadow-md border-l-2 min-w-40 max-w-60 text-sm z-40" style={{ borderColor: note.color }}>
-                    {note.content}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          
-          {/* Content wrapper with hidden visibility until completely ready */}
-          <div 
-            ref={contentRef}
-            className={`w-full transition-opacity duration-300 ${showContent ? 'opacity-100 z-20' : 'opacity-0 z-10 invisible absolute'}`}
-          >
-            
-
+          <div ref={contentRef} className={ready ? '' : 'invisible'}>
             <NotebookContent
-              content={currentLessonEntry.lesson.content ?? ""}
-              structure={currentLessonEntry.lesson.structure}
-              lessonId={currentLessonEntry.lesson.id}
-              className="p-6 w-full"
-              notebookTheme={{
-                bgColor: '#ffffff',
-                lineColor: '#eceae5',
-                marginLineColor: '#e2c4c4',
-                isGrid: false,
-                lineSpacing: 1.5,
-                marginLeft: 3
-              }}
-              onReady={handleContentReady}
-              onSaveAnnotations={handleSaveAnnotations}
+              key={entry.id}
+              content={entry.lesson.content ?? ''}
+              structure={entry.lesson.structure}
+              className={phone ? 'py-1' : 'p-6'}
+              notebookTheme={phone ? PhoneTheme : NOTEBOOK_THEME}
+              onReady={onReady}
+              onSaveAnnotations={save}
               initialAnnotations={annotations}
-              key={`${renderKey}-${currentPageIndex}`}
+              annotating={annotating && fine}
             />
-           
           </div>
+          {ready && next && (
+            <div className="flex justify-end border-t border-line bg-[#fcfbf9] px-4 py-3">
+              <button type="button" onClick={() => setIndex(index + 1)}
+                className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-lg px-2 text-[13.5px] font-semibold text-brand-hover hover:underline">
+                <span className="shrink-0">Leçon suivante :</span>
+                <span className="truncate font-medium text-ink-soft">{next.lesson.title}</span>
+                <ArrowRight className="h-4 w-4 shrink-0" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Add a style tag for CSS animations */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-in-out;
-        }
-      `}</style>
     </div>
   );
 };
