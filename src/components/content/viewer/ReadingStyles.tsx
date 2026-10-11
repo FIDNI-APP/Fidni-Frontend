@@ -5,19 +5,26 @@
  * les cartes des listes et les aperçus gardent leur rendu.
  * Leçon (11/10/2026) : la mise en forme de la leçon imprimée (PaperExport) — police de LaTeX, titres I. / 1.
  * numérotés en vert, encadrés fins à filet coloré, mêmes couleurs par nature d'encadré.
+ * Exercices et devoirs : énoncés, solutions, numéros des questions et titres des parties dans la même police
+ * de LaTeX (`.fd-paper` pour les titres hors TipTap).
  */
 import React from 'react';
 import { PAPER_GLYPHS_FACE, PAPER_SERIF } from '@/lib/paperFont';
 
 const CSS = `
 ${PAPER_GLYPHS_FACE}
-.fd-read .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.72; color: #1a1a1a; }
-.fd-read .tiptap-full-renderer .ProseMirror p { margin-bottom: .55em; }
+.fd-paper { font-family: ${PAPER_SERIF}; }
+/* Énoncés et solutions (exercices, devoirs) : police de LaTeX, comme la feuille PDF ; les boutons restent en DM Sans. */
+.fd-read .tiptap-full-renderer .ProseMirror { font-family: ${PAPER_SERIF}; font-size: 17.5px; line-height: 1.62; color: #1a1a1a; }
+.fd-read .tiptap-full-renderer .ProseMirror p { margin-bottom: .5em; }
 .fd-read .tiptap-full-renderer .ProseMirror > div > :last-child { margin-bottom: 0; }
 .fd-read .tiptap-full-renderer .ProseMirror li { margin-bottom: .2em; }
-.fd-read .tiptap-full-renderer .katex { font-size: 1.1em; }
-.fd-read .tiptap-full-renderer .math-display { margin: .7em 0; }
-.fd-read .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 15.5px; line-height: 1.7; color: #33302b; }
+.fd-read .tiptap-full-renderer .katex { font-size: 1.08em; }
+.fd-read .tiptap-full-renderer .math-inline { display: inline; margin: 0; vertical-align: baseline; }
+.fd-read .tiptap-full-renderer .math-display { margin: .6em 0; }
+.fd-read .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.6; color: #33302b; }
+/* Numéros des questions : même police, même taille et même interligne que l'énoncé (lignes de base alignées). */
+.fd-read .fd-qnum { font-family: ${PAPER_SERIF}; font-size: 17.5px; line-height: 1.62; font-weight: 700; }
 .fd-read .fd-sol .tiptap-full-renderer .ProseMirror strong { color: #1a1a1a; }
 .fd-read .tiptap-full-renderer .ProseMirror [data-callout-type] > :last-child,
 .fd-lesson .tiptap-full-renderer .ProseMirror [data-callout-type] > :last-child,
@@ -65,9 +72,10 @@ ${PAPER_GLYPHS_FACE}
 .fd-lesson .tiptap-full-renderer [data-callout-type="warning"] .callout-kind { color: #a23b34; }
 
 @media (max-width: 640px) {
-  .fd-read .tiptap-full-renderer .ProseMirror { font-size: 16px; line-height: 1.68; }
-  .fd-read .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 15px; }
-  .fd-read .tiptap-full-renderer .katex { font-size: 1.06em; }
+  .fd-read .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.6; }
+  .fd-read .fd-qnum { font-size: 16.5px; line-height: 1.6; }
+  .fd-read .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 15.5px; }
+  .fd-read .tiptap-full-renderer .katex { font-size: 1.05em; }
   .fd-lesson .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.58; }
   .fd-lesson .tiptap-full-renderer .katex { font-size: 1.05em; }
   .fd-lesson-h2 { font-size: 20px; }
