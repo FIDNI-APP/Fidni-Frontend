@@ -150,7 +150,7 @@ function ExamsAdmin() {
               <button className="fd-btn-ghost" onClick={() => setEditingMeta(e)}>
                 <Edit className="w-3.5 h-3.5" /> Modifier
               </button>
-              <button className="fd-btn-ghost" style={{ color: '#b91c1c' }} onClick={() => onDelete(e)}>
+              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(e)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -213,7 +213,7 @@ function ExamMetaModal({ exam, onClose, onSaved }: {
       <Field label="Durée (minutes)">
         <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} style={inputStyle} />
       </Field>
-      {err && <p style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
+      {err && <p style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
       <div className="flex justify-end gap-2 mt-4">
         <button className="fd-btn-ghost" onClick={onClose}>Annuler</button>
         <button className="fd-btn-primary" onClick={save} disabled={busy}>
@@ -281,13 +281,13 @@ function TipsAdmin() {
                 <div className="flex items-center gap-2 flex-wrap mt-1">
                   {t.subject_name && <span style={{ fontSize: 10, color: '#000000', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subject_name}</span>}
                   {t.subfield_name && <span style={{ fontSize: 10, color: '#6b6862', background: '#f7f6f3', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subfield_name}</span>}
-                  {(t.video_url || t.video_file) && <span style={{ fontSize: 10, color: '#a16207', background: '#fef3c7', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>VIDÉO</span>}
+                  {(t.video_url || t.video_file) && <span style={{ fontSize: 10, color: '#9a6e1c', background: '#faf3e2', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>VIDÉO</span>}
                 </div>
               </div>
               <button className="fd-btn-ghost" onClick={() => setEditing(t)}>
                 <Edit className="w-3.5 h-3.5" />
               </button>
-              <button className="fd-btn-ghost" style={{ color: '#b91c1c' }} onClick={() => onDelete(t)}>
+              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(t)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -408,13 +408,13 @@ function TipModal({ tip, onClose, onSaved }: {
 
       <Field label="OU vidéo uploadée">
         {videoFileId ? (
-          <div className="flex items-center gap-2" style={{ background: '#f9f8ff', border: '1px solid #e7e3dc', padding: 10, borderRadius: 10 }}>
+          <div className="flex items-center gap-2" style={{ background: '#faf9f7', border: '1px solid #e7e3dc', padding: 10, borderRadius: 10 }}>
             <Upload className="w-4 h-4" style={{ color: '#000000' }} />
             <span style={{ fontSize: 13, color: '#1a1a1a', flex: 1 }}>{videoFileName || videoFileId}</span>
             <button
               onClick={() => { setVideoFileId(null); setVideoFileName(null); }}
               className="fd-btn-ghost"
-              style={{ padding: 4, color: '#b91c1c' }}
+              style={{ padding: 4, color: '#a23b34' }}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -432,7 +432,7 @@ function TipModal({ tip, onClose, onSaved }: {
         )}
       </Field>
 
-      {err && <p style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
+      {err && <p style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
 
       <div className="flex justify-end gap-2 mt-4">
         <button className="fd-btn-ghost" onClick={onClose}>Annuler</button>
@@ -455,7 +455,7 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   fontFamily: 'DM Sans',
   color: '#1a1a1a',
-  background: '#f9f8ff',
+  background: '#faf9f7',
   outline: 'none',
 };
 

@@ -4,13 +4,15 @@
 //   - exercice : le début de l'énoncé, rendu comme sur sa page (formules comprises) ;
 //   - examen   : la liste de ses exercices avec leur barème ;
 //   - leçon    : son sommaire.
-// Repères : chapitre (lien vers sa page), difficulté et ressenti des élèves, état de l'élève, questions
-// déjà évaluées (« 3/6 questions »), durée attendue (« ≈ 25 min »).
+// Repères : difficulté et ressenti des élèves, état de l'élève, questions déjà évaluées (« 3/6 questions »),
+// durée attendue (« ≈ 25 min »). On arrive dans une liste par Maths › niveau › chapitre (dossiers) : matière,
+// niveau et chapitre n'y sont plus répétés sur chaque carte ; le chapitre reste (lien) dans une liste qui en
+// mélange plusieurs (recherche, anciens liens filtrés).
 // En bas : votes, discussions, vues, et le bouton pour ouvrir. Toute la carte est un lien ; elle transmet
 // l'adresse de la liste (state.from) pour que le retour y ramène.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Eye, ListPlus, MessageSquare } from 'lucide-react';
+import { ArrowRight, Eye, ListPlus, MessageSquare, Sparkles } from 'lucide-react';
 import type { ExamListItem } from '@/types/content';
 import type { VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +39,12 @@ interface ContentListCardProps {
   first?: boolean;
   /** Niveau de la page affichée (page de niveau) : le lien du chapitre y reste. */
   levelSlug?: string | null;
+  /** Liste d'un seul niveau : le niveau n'est pas répété. */
+  hideLevel?: boolean;
+  /** Liste d'un seul chapitre (dossier) : l'étiquette du chapitre n'est pas répétée. */
+  hideChapter?: boolean;
+  /** Dossier d'une année du Bac national : l'étiquette « Bac national » n'est pas répétée. */
+  hideNational?: boolean;
 }
 
 const html = (h?: string) => ({ __html: renderContentHtml(h || '') });
@@ -116,7 +124,7 @@ const LessonPreview: React.FC<{ structure: PreviewStructure }> = ({ structure })
 };
 
 export const ContentListCard: React.FC<ContentListCardProps> = ({
-  content, contentType = 'exercise', onDelete, onEdit, showSubject, first, levelSlug,
+  content, contentType = 'exercise', onDelete, onEdit, showSubject, first, levelSlug, hideLevel, hideChapter, hideNational,
 }) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
@@ -135,12 +143,18 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const progress = progressOf(content);
   const started = contentType === 'lesson' ? null : questionProgress(content);
   const canManage = user?.id === content.author?.id || isModerator(user);
-  const chapter = chapterLabel(content);
+  const chapter = hideChapter ? null : chapterLabel(content, levelSlug);
   const chapterTo = chapterHref(content, contentType, levelSlug);
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
   const structure = structureOf(content);
   // Tri « Pour toi » : pourquoi ce contenu est proposé (« À retravailler », « Suite de ton travail · … »).
-  const reason = content.recommendation_reason;
+  // Dans le dossier d'un chapitre, « Suite de ton travail · Suites numériques » ne répète pas le chapitre.
+  const reason = useMemo(() => {
+    const r = content.recommendation_reason;
+    if (!r || !hideChapter) return r;
+    const names = new Set((content.chapters ?? []).map((c) => c.name));
+    return r.split(' · ').filter((part) => !names.has(part)).join(' · ') || null;
+  }, [content.recommendation_reason, content.chapters, hideChapter]);
   const felt = content.felt ?? null;
   const comments = content.comment_count ?? 0;
 
@@ -163,21 +177,21 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
 
   const infos = useMemo(() => [
     showSubject && content.subject?.name ? content.subject.name : null,
-    levelLabel(content),
+    hideLevel ? null : levelLabel(content),
     ...facts(content, contentType),
-  ].filter(Boolean) as string[], [content, contentType, showSubject]);
+  ].filter(Boolean) as string[], [content, contentType, showSubject, hideLevel]);
 
   // « Nouveau » : calculé une fois (lit le stockage du navigateur).
   const isNew = useMemo(() => isNewContent(content as { id: string | number; created_at?: string }), [content]);
 
   return (
-    <article className="group relative h-full flex flex-col rounded-2xl border border-line bg-white transition-[border-color,box-shadow] hover:border-[#d6d2ca] hover:shadow-[0_12px_32px_rgba(20,18,16,.07)]">
+    <article className="group relative h-full flex flex-col rounded-2xl border border-line bg-white transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[#d6d2ca] hover:shadow-[0_12px_32px_rgba(20,18,16,.07)] motion-reduce:hover:translate-y-0">
       {isNew && <NewBadge />}
       <div className="px-5 pt-4 flex-1 flex flex-col">
         {/* Repères : chapitre, difficulté, état de l'élève ; favori à droite. */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap min-w-0 pt-1">
-            {exam?.is_national_exam && <NationalTag year={exam.national_year} />}
+            {exam?.is_national_exam && !hideNational && <NationalTag year={exam.national_year} />}
             {structure?.a_verifier && (
               <span title="Correction rédigée récemment, en cours de relecture par l’auteur du document"
                 className="inline-flex items-center px-2 py-0.5 rounded-full bg-gold-soft text-[11.5px] font-semibold text-gold-strong">
@@ -194,8 +208,8 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
                 <span className="truncate">{chapter}</span>
               </span>
             ))}
-            {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
             <ProgressPill progress={progress} />
+            {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
           </div>
           <div className="relative z-10 flex items-center -mr-2 -mt-0.5 shrink-0">
             {canManage && (
@@ -216,12 +230,15 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
         </div>
 
         {reason && (
-          <p className="mt-2 text-[12px] font-semibold text-brand truncate">{reason}</p>
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-brand min-w-0">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="truncate">{reason}</span>
+          </p>
         )}
         <Link
           to={path}
           state={{ from }}
-          className="fd-display mt-2 text-[18.5px] leading-[1.25] font-semibold text-ink line-clamp-2 after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
+          className="fd-display mt-2 text-[18.5px] leading-[1.25] font-semibold text-ink line-clamp-2 transition-colors group-hover:text-brand-hover after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
         >
           {content.title}
         </Link>

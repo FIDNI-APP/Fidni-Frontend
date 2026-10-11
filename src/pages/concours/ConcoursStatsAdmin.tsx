@@ -170,7 +170,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
                   />
                 </div>
                 <button onClick={() => removeCard(i)}
-                        style={{ background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', alignSelf: 'flex-start' }}>
+                        style={{ background: 'none', border: 'none', color: '#a23b34', cursor: 'pointer', alignSelf: 'flex-start' }}>
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

@@ -1,7 +1,7 @@
 /**
  * Petits outils partagés par la navigation (barre latérale, barre du haut, barre d'onglets mobile).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { listClassrooms } from '@/lib/api/classroomApi';
@@ -30,6 +30,22 @@ export function useHideMobileTabBar(hidden: boolean) {
   }, [hidden]);
 }
 
+// Pages d'épreuve : la barre d'onglets n'y a pas sa place. L'onboarding garde aussi toute l'attention.
+// L'épreuve d'un examen (/exams/:id) la cache elle-même pendant le chrono (ExamView, useHideMobileTabBar).
+const TABBAR_HIDDEN_ROUTES = [
+  /^\/concours\/simulate\//, /^\/revisions\/ds\/[^/]+\/blanc\/?$/, /^\/complete-profile\/?$/,
+];
+
+/**
+ * La barre d'onglets du téléphone est-elle affichée sur cette page ? Quand elle ne l'est pas, la barre
+ * du haut remontre son bouton « Menu » (sinon le menu serait hors d'atteinte).
+ */
+export function useMobileTabBarVisible(): boolean {
+  const { pathname } = useLocation();
+  const forced = useSyncExternalStore(subscribeTabBar, tabBarForcedHidden);
+  return !forced && !TABBAR_HIDDEN_ROUTES.some((r) => r.test(pathname));
+}
+
 /** Slug du niveau de l'élève (« 2eme-bac-sm », même règle que Django : hubApi.slugify), ou null s'il ne l'a pas indiqué. */
 export function studentLevelSlug(user: User | null | undefined): string | null {
   const p = user?.profile;
@@ -39,11 +55,14 @@ export function studentLevelSlug(user: User | null | undefined): string | null {
   return name ? slugify(name) || null : null;
 }
 
-/** Page « Exercices » de l'élève : celle de son niveau quand on le connaît. */
-export const exercisesHome = (user: User | null | undefined) => {
+/** Page d'une rubrique (« /exercises », « /exams », « /lessons ») : celle du niveau de l'élève quand on le connaît. */
+export const sectionHome = (user: User | null | undefined, base: '/exercises' | '/exams' | '/lessons') => {
   const slug = studentLevelSlug(user);
-  return slug ? `/exercises/niveau/${slug}` : '/exercises';
+  return slug ? `${base}/niveau/${slug}` : base;
 };
+
+/** Page « Exercices » de l'élève : celle de son niveau quand on le connaît. */
+export const exercisesHome = (user: User | null | undefined) => sectionHome(user, '/exercises');
 
 /** Onglet affiché par /revision-lists : celui de l'adresse, sinon le dernier ouvert (pages/RevisionLists.tsx). */
 export function revisionTab(search: string): 'ds' | 'listes' {

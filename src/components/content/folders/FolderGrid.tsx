@@ -25,6 +25,8 @@ export interface FolderItem {
   badge?: string;
   /** Texte d'un dossier vide (défaut : « Vide pour l'instant »). */
   emptyLabel?: string;
+  /** Ancien dossier absorbé par celui-ci (« Aussi : dénombrement »). */
+  aussi?: string[];
   onOpen?: () => void;
 }
 
@@ -46,6 +48,7 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-medium leading-snug text-ink-faint line-clamp-2">{item.name}</span>
           <span className="mt-0.5 block text-[12px] text-[#a19c93]">{item.emptyLabel ?? 'Vide pour l’instant'}</span>
+          {item.aussi?.length ? <span className="mt-0.5 block text-[11.5px] text-[#a19c93]">Aussi : {item.aussi.join(', ')}</span> : null}
         </span>
       </div>
     );
@@ -72,6 +75,11 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
           {item.sub && <> · {item.sub}</>}
           {p && done > 0 && <> · <span className="text-ink-soft">{done} {(item.doneWord ?? ['fait', 'faits'])[done > 1 ? 1 : 0]}</span></>}
         </span>
+        {item.aussi?.length ? <span className="mt-0.5 block text-[11.5px] text-ink-faint">Aussi : {item.aussi.join(', ')}</span> : null}
+        {/* Barre : réussis (vert) et à revoir (or) ; la même chose en mots pour les lecteurs d'écran. */}
+        {p && done > 0 && (
+          <span className="sr-only"> : {success} réussi{success > 1 ? 's' : ''}, {done - success} à revoir</span>
+        )}
         {p && done > 0 && (
           <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
             <span className="h-full bg-brand" style={{ width: `${(success / item.count) * 100}%` }} />

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Users, Hash, Copy, Check, RefreshCw, BookOpen, Plus,
+  Users, Copy, Check, RefreshCw, BookOpen, Plus,
   Trash2, Loader2, X, ClipboardList, GraduationCap, Calendar,
-  ChevronRight, FileText, Flag, Sparkles,
+  ChevronRight, FileText, Flag, Sparkles, RotateCcw, SearchX, type LucideIcon,
 } from 'lucide-react';
 import { SEO } from '@/components/layout/SEO';
+import { Page, PageHeader, Section, EmptyState, Segmented, CardsSkeleton } from '@/components/space/Page';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getClassroom, regenerateJoinCode, getMembers, removeMember,
@@ -44,9 +45,17 @@ const finishedLabel = (finished: number, total: number) =>
 const difficultyFr = (d: string | null | undefined) =>
   (d === 'easy' || d === 'medium' || d === 'hard' ? getDifficultyLabel(d as Difficulty) : null);
 
+/** Pictogramme d'onglet affiché à partir de la largeur d'une tablette seulement. */
+const wideOnly = (I: LucideIcon) => {
+  const Wide = ({ className = '' }: { className?: string }) => <I className={`hidden sm:block ${className}`} aria-hidden />;
+  return Wide;
+};
+const TabIcons = {
+  students: wideOnly(Users), tdlists: wideOnly(ClipboardList), subjects: wideOnly(BookOpen), skills: wideOnly(Sparkles),
+};
+
 export default function ClassroomDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
@@ -110,23 +119,30 @@ export default function ClassroomDetailPage() {
     return () => { alive = false; };
   }, [id, loaded, tab, activeSubjectId]);
 
-  // Spinner plein écran au premier chargement seulement : un rafraîchissement (TD modifié…)
+  // Squelette au premier chargement seulement : un rafraîchissement (TD modifié…)
   // ne doit pas démonter la page ni fermer la fenêtre ouverte.
   if (loading && !classroom) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1a1a1a' }} />
-      </div>
+      <Page width="wide">
+        <div className="mb-8 animate-pulse" aria-hidden>
+          <div className="h-4 w-24 rounded bg-[#efece6]" />
+          <div className="mt-5 h-8 w-56 rounded bg-[#efece6]" />
+          <div className="mt-3 h-4 w-40 rounded bg-[#f2f1ee]" />
+        </div>
+        <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+      </Page>
     );
   }
   if (!classroom) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center px-4">
-        <div className="fd-card p-8 text-center">
-          <p style={{ color: '#6b6862', fontSize: 14 }}>{error || 'Classe introuvable.'}</p>
-          <Link to="/classrooms" className="fd-btn-primary mt-4 inline-flex"><ArrowLeft className="w-4 h-4" /> Retour</Link>
-        </div>
-      </div>
+      <Page width="wide">
+        <PageHeader back={{ to: '/classrooms', label: 'Mes classes' }} title={error ? 'Classe indisponible' : 'Classe introuvable'} />
+        {/* Classe supprimée, quittée, ou chargement raté (réseau) : on propose les deux issues. */}
+        <EmptyState icon={GraduationCap} tone="ink" title="Cette classe n’est pas accessible"
+          text="Elle a peut-être été supprimée, ou tu n’en fais plus partie. Si ta connexion a coupé, réessaie."
+          action={<Link to="/classrooms" className="fd-btn-primary min-h-10">Mes classes</Link>}
+          secondary={<button type="button" onClick={refresh} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>} />
+      </Page>
     );
   }
 
@@ -156,157 +172,122 @@ export default function ClassroomDetailPage() {
     } finally { setBusy(false); }
   };
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = isOwner
+  // Pictogrammes masqués sur téléphone (et pas de compteur côté élève) : les onglets tiennent sur l'écran.
+  const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = isOwner
     ? [
-      { key: 'students', label: 'Élèves', icon: <Users className="w-3.5 h-3.5" /> },
-      { key: 'tdlists', label: 'TD listes', icon: <ClipboardList className="w-3.5 h-3.5" /> },
-      { key: 'subjects', label: 'Matières', icon: <BookOpen className="w-3.5 h-3.5" /> },
+      { key: 'students', label: 'Élèves', icon: TabIcons.students, count: classroom.student_count },
+      { key: 'tdlists', label: 'TD listes', icon: TabIcons.tdlists, count: tdLists.length },
+      { key: 'subjects', label: 'Matières', icon: TabIcons.subjects },
     ]
     : [
-      { key: 'tdlists', label: 'TD listes', icon: <ClipboardList className="w-3.5 h-3.5" /> },
-      { key: 'students', label: 'Mes compétences', icon: <Sparkles className="w-3.5 h-3.5" /> },
-      { key: 'subjects', label: 'Matières', icon: <BookOpen className="w-3.5 h-3.5" /> },
+      { key: 'tdlists', label: 'TD listes', icon: TabIcons.tdlists },
+      { key: 'students', label: 'Mes compétences', icon: TabIcons.skills },
+      { key: 'subjects', label: 'Matières', icon: TabIcons.subjects },
     ];
 
+  const copyButton = (
+    <button type="button" onClick={copyCode} aria-label={copied ? 'Code copié' : 'Copier le code'}
+      className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+      <span aria-live="polite">{copied ? 'Copié' : 'Copier'}</span>
+    </button>
+  );
+
+  const chip = (active: boolean) => `inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+    active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`;
+
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
+    <Page width="wide">
       <SEO title={`${classroom.name} - Fidni`} description="Détails de la classe" />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-        {/* Header */}
-        <div className="mb-5">
-          <button onClick={() => navigate('/classrooms')} className="fd-btn-ghost mb-3"
-                  style={{ padding: '7px 12px', fontSize: 12 }}>
-            <ArrowLeft className="w-3 h-3" /> Mes classes
-          </button>
-
-          <div className="fd-card p-4 sm:p-5 flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <div
-                className="inline-flex items-center justify-center flex-shrink-0"
-                style={{
-                  width: 56, height: 56, borderRadius: 14,
-                  background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-                  boxShadow: '0 8px 24px rgba(20,18,16,.25)',
-                }}
-              >
-                <GraduationCap className="w-6 h-6" />
-              </div>
-              <div className="min-w-0">
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
-                  {classroom.name}
-                </h1>
-                {/* Le « · » accompagne l'élément qui le suit : il ne reste jamais seul en fin de ligne. */}
-                <div className="flex items-center gap-x-2 gap-y-0.5 mt-1 flex-wrap" style={{ fontSize: 12, color: '#6b6862' }}>
-                  {classroom.class_level_name && <span>{classroom.class_level_name}</span>}
-                  <span className="inline-flex items-center gap-1">
-                    {classroom.class_level_name && <span aria-hidden className="mr-1">·</span>}
-                    <Users className="w-3 h-3" /> {classroom.student_count} {plural(classroom.student_count, 'élève', 'élèves')}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span aria-hidden className="mr-1">·</span>
-                    <BookOpen className="w-3 h-3" /> {classroom.subjects.length} {plural(classroom.subjects.length, 'matière', 'matières')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              data-tour="classe-code"
-              className="flex items-center gap-3"
-              style={{
-                background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)',
-                border: '1px solid #e7e3dc', borderRadius: 12, padding: '8px 12px',
-              }}
-            >
-              <Hash className="w-4 h-4" style={{ color: '#000000' }} />
-              <span style={{ fontFamily: 'DM Mono', fontSize: 18, fontWeight: 800, color: '#000000', letterSpacing: '.12em' }}>
-                {code}
-              </span>
-              <button onClick={copyCode} className="fd-btn-ghost" style={{ padding: '8px 10px', fontSize: 11 }}
-                      aria-label="Copier le code" title="Copier le code">
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+      <PageHeader
+        back={{ to: '/classrooms', label: 'Mes classes' }}
+        eyebrow={classroom.class_level_name || 'Classe'}
+        title={classroom.name}
+        subtitle={(
+          <>
+            <span className="fd-nums">{classroom.student_count}</span> {plural(classroom.student_count, 'élève', 'élèves')}
+            {/* « 0 matière » ne dit rien : seulement s'il y en a. */}
+            {classroom.subjects.length > 0 && <>{' · '}<span className="fd-nums">{classroom.subjects.length}</span> {plural(classroom.subjects.length, 'matière', 'matières')}</>}
+            {!isOwner && <> · Prof : <b className="font-semibold text-ink-soft">{classroom.owner.username}</b></>}
+          </>
+        )}
+        actions={(
+          <div data-tour="classe-code" className="flex max-w-full items-center gap-1 rounded-2xl border border-line bg-white py-1 pl-4 pr-1">
+            <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">Code</span>
+            <span className="ml-1.5 truncate font-mono text-[18px] font-bold tracking-[.14em] text-ink">{code}</span>
+            {copyButton}
+            {isOwner && (
+              <button type="button" onClick={regenerate} disabled={busy} aria-label="Régénérer le code" title="Régénérer le code"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink disabled:opacity-50">
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
-              {isOwner && (
-                <button onClick={regenerate} className="fd-btn-ghost" style={{ padding: '8px 10px', fontSize: 11 }} disabled={busy}
-                        aria-label="Régénérer le code" title="Régénérer le code">
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            )}
           </div>
+        )}
+      >
+        <div className="mt-6" data-tour="classe-onglets">
+          <Segmented<Tab> label="Vues de la classe" value={tab} onChange={setTab} options={tabs} />
         </div>
+      </PageHeader>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 flex-wrap mb-5" data-tour="classe-onglets" role="tablist">
-          {tabs.map(t => (
-            <TabButton key={t.key} active={tab === t.key} onClick={() => setTab(t.key)} icon={t.icon}>
-              {t.label}
-            </TabButton>
+      {/* Matière (onglets Élèves et TD) */}
+      {tab !== 'subjects' && classroomSubjectOptions.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2" role="group" aria-label="Matière">
+          <span className="mr-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">Matière</span>
+          <button type="button" aria-pressed={activeSubjectId === null} className={chip(activeSubjectId === null)} onClick={() => setActiveSubjectId(null)}>
+            Toutes
+          </button>
+          {classroomSubjectOptions.map(s => (
+            <button key={s.id} type="button" aria-pressed={activeSubjectId === Number(s.id)} className={chip(activeSubjectId === Number(s.id))}
+              onClick={() => setActiveSubjectId(Number(s.id))}>
+              {s.name}
+            </button>
           ))}
         </div>
+      )}
 
-        {/* Subject filter (visible on Students + TDs tabs) */}
-        {tab !== 'subjects' && classroomSubjectOptions.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mb-4">
-            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
-              Matière :
-            </span>
-            <button
-              className={`fd-pill ${activeSubjectId === null ? 'is-active' : ''}`}
-              style={{ minHeight: 36 }}
-              onClick={() => setActiveSubjectId(null)}
-            >
-              Toutes
+      {/* Contenu de l'onglet */}
+      {tab === 'students' && (
+        <StudentsTab
+          roster={roster}
+          state={rosterState}
+          onOpen={(s) => setActiveStudent(s)}
+          isOwner={isOwner}
+          meId={user ? String(user.id) : null}
+          shareAction={(
+            <button type="button" onClick={copyCode} className="fd-btn-primary min-h-10">
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              <span aria-live="polite">{copied ? 'Code copié' : <>Copier le code <span className="font-mono tracking-[.08em]">{code}</span></>}</span>
             </button>
-            {classroomSubjectOptions.map(s => (
-              <button
-                key={s.id}
-                className={`fd-pill ${activeSubjectId === Number(s.id) ? 'is-active' : ''}`}
-                style={{ minHeight: 36 }}
-                onClick={() => setActiveSubjectId(Number(s.id))}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Tab content */}
-        {tab === 'students' && (
-          <StudentsTab
-            roster={roster}
-            state={rosterState}
-            onOpen={(s) => setActiveStudent(s)}
-            isOwner={isOwner}
-            meId={user ? String(user.id) : null}
-          />
-        )}
-        {tab === 'tdlists' && (
-          <TDListsTab
-            classroomId={classroom.id}
-            isOwner={isOwner}
-            tdLists={tdLists}
-            activeSubject={activeSubject ? { id: Number(activeSubject.id), name: activeSubject.name } : null}
-            onCreateClick={() => setShowCreateTD(true)}
-            onChanged={refresh}
-          />
-        )}
-        {tab === 'subjects' && (
-          <SubjectsTab
-            classroom={classroom}
-            allSubjects={allSubjects}
-            onChanged={refresh}
-            isOwner={isOwner}
-            members={members}
-            onRemoveMember={async (sid) => {
-              if (!window.confirm('Retirer cet élève de la classe ?')) return;
-              try { await removeMember(classroom.id, sid); await refresh(); }
-              catch (e) { alert(classroomError(e, "Impossible de retirer cet élève.")); }
-            }}
-          />
-        )}
-      </div>
+          )}
+        />
+      )}
+      {tab === 'tdlists' && (
+        <TDListsTab
+          classroomId={classroom.id}
+          isOwner={isOwner}
+          tdLists={tdLists}
+          activeSubject={activeSubject ? { id: Number(activeSubject.id), name: activeSubject.name } : null}
+          onClearSubject={() => setActiveSubjectId(null)}
+          onCreateClick={() => setShowCreateTD(true)}
+          onChanged={refresh}
+        />
+      )}
+      {tab === 'subjects' && (
+        <SubjectsTab
+          classroom={classroom}
+          allSubjects={allSubjects}
+          onChanged={refresh}
+          isOwner={isOwner}
+          members={members}
+          onRemoveMember={async (sid) => {
+            if (!window.confirm('Retirer cet élève de la classe ?')) return;
+            try { await removeMember(classroom.id, sid); await refresh(); }
+            catch (e) { alert(classroomError(e, "Impossible de retirer cet élève.")); }
+          }}
+        />
+      )}
 
       {/* Modals */}
       {showCreateTD && (
@@ -328,51 +309,22 @@ export default function ClassroomDetailPage() {
           onClose={() => setActiveStudent(null)}
         />
       )}
-    </div>
-  );
-}
-
-/* ─────────────────── Tabs ─────────────────── */
-function TabButton({ active, onClick, icon, children }: {
-  active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        minHeight: 38, padding: '8px 16px', borderRadius: 99, border: 'none',
-        background: active ? '#1a1a1a' : '#fff',
-        color: active ? '#fff' : '#6b6862',
-        fontSize: 13, fontWeight: active ? 700 : 500,
-        fontFamily: 'DM Sans', cursor: 'pointer',
-        boxShadow: active ? '0 6px 20px rgba(20,18,16,.25)' : '0 2px 6px rgba(20,18,16,.05)',
-        transition: 'all .18s',
-      }}
-    >
-      {icon} {children}
-    </button>
+    </Page>
   );
 }
 
 /* ─────────────────── shared bits ─────────────────── */
 function Avatar({ user, size }: { user: { username: string; avatar?: string | null }; size: number }) {
-  if (user.avatar) {
-    return <img src={user.avatar} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+  // Photo introuvable (lien mort, service d'avatars bloqué) : l'initiale, comme sans photo.
+  const [broken, setBroken] = useState(false);
+  if (user.avatar && !broken) {
+    return <img src={user.avatar} alt="" onError={() => setBroken(true)} className="shrink-0 rounded-full bg-[#f2f1ee] object-cover" style={{ width: size, height: size }} />;
   }
   return (
-    <div
-      className="inline-flex items-center justify-center flex-shrink-0"
-      style={{
-        width: size, height: size, borderRadius: '50%',
-        background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-        fontSize: Math.round(size * 0.38), fontWeight: 700,
-      }}
-    >
+    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full bg-ink font-bold text-white"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}>
       {user.username[0]?.toUpperCase()}
-    </div>
+    </span>
   );
 }
 
@@ -427,24 +379,22 @@ const sectionTitle: React.CSSProperties = {
 };
 
 /* ─────────────────── Students tab ─────────────────── */
-function StudentsTab({ roster, state, onOpen, isOwner, meId }: {
+function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
   roster: RosterStudentCard[];
   state: LoadState;
   onOpen: (s: RosterStudentCard) => void;
   isOwner: boolean;
   meId: string | null;
+  /** Bouton « Copier le code » de l'état vide du prof. */
+  shareAction?: React.ReactNode;
 }) {
   if (state === 'loading') {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
-      </div>
-    );
+    return <CardsSkeleton n={isOwner ? 4 : 1} className={isOwner ? 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'max-w-md'} />;
   }
   if (state === 'error') {
     return (
-      <div className="fd-card text-center" style={{ padding: 40 }}>
-        <p style={{ fontSize: 13, color: '#6b6862' }}>Impossible de charger les compétences pour le moment. Réessaie plus tard.</p>
+      <div role="alert" className="rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+        <p className="text-[13.5px] font-medium text-[#a23b34]">Les compétences n’ont pas pu se charger. Réessaie dans un moment.</p>
       </div>
     );
   }
@@ -453,36 +403,35 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId }: {
   if (!isOwner) {
     const mine = roster.find(c => String(c.student.id) === meId) || null;
     return (
-      <div style={{ maxWidth: 440 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>Mes compétences</h2>
-        <p style={{ fontSize: 12, color: '#6b6862', marginTop: 2, marginBottom: 12 }}>
-          Calculées à partir de ton travail sur Fidni. Tes camarades ne les voient pas. Touche ta carte pour le détail.
-        </p>
+      <Section id="mes-competences" title="Mes compétences" className="max-w-md"
+        hint="Calculées à partir de ton travail sur Fidni. Tes camarades ne les voient pas.">
         {mine ? (
           <SkillCard card={mine} onClick={() => onOpen(mine)} />
         ) : (
-          <div className="fd-card text-center" style={{ padding: 32 }}>
-            <p style={{ fontSize: 13, color: '#6b6862' }}>Fais quelques exercices pour voir apparaître tes compétences.</p>
-          </div>
+          <EmptyState compact icon={Sparkles} title="Ta carte apparaît après quelques exercices"
+            text="Précision, régularité, persévérance… elles se calculent à partir de ce que tu fais sur Fidni."
+            action={<Link to="/exercises" className="fd-btn-ghost min-h-10">Faire des exercices</Link>} />
         )}
-      </div>
+      </Section>
     );
   }
 
   if (roster.length === 0) {
     return (
-      <div className="fd-card text-center" style={{ padding: 48 }}>
-        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: '#6b6862' }} />
-        <p style={{ fontSize: 13, color: '#6b6862' }}>Partage le code de la classe pour que tes élèves la rejoignent.</p>
-      </div>
+      <EmptyState icon={Users} title="Aucun élève pour l’instant"
+        text="Envoie le code de la classe à tes élèves : ils l’entrent dans « Mes classes » pour la rejoindre."
+        action={shareAction} />
     );
   }
-  const toWatch = roster.filter(c => c.overall < WATCH_BELOW).length;
+  // Sans aucune activité, un élève n'est pas « à suivre » : il n'a simplement pas encore commencé.
+  const idle = roster.filter(isIdle).length;
+  const toWatch = roster.filter(c => !isIdle(c) && c.overall < WATCH_BELOW).length;
   return (
     <>
-      <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 12 }}>
-        {roster.length} {plural(roster.length, 'élève', 'élèves')}
-        {toWatch > 0 && <> · <strong style={{ color: '#92400e' }}>{toWatch} à suivre</strong> (score global sous {WATCH_BELOW})</>}
+      <p className="mb-3 text-[13px] leading-relaxed text-ink-faint">
+        <span className="fd-nums">{roster.length}</span> {plural(roster.length, 'élève', 'élèves')}
+        {toWatch > 0 && <> · <strong className="font-semibold text-gold-strong">{toWatch} à suivre</strong> (score global sous {WATCH_BELOW})</>}
+        {idle > 0 && <> · <span className="fd-nums">{idle}</span> sans activité pour l’instant</>}
         . Touche une carte pour le détail.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -495,52 +444,60 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId }: {
 }
 
 /* ─────────────────── Skill card (neutre : pas de palier) ─────────────────── */
+/** Aucune activité mesurée : score et six axes à zéro. */
+const isIdle = (c: RosterStudentCard) => c.overall === 0 && AXIS_LABELS.every(a => !c.axes[a.key]);
+
 function SkillCard({ card, onClick, watch = false }: {
   card: RosterStudentCard; onClick: () => void;
   /** Vue du prof : repère « À suivre » sous WATCH_BELOW. */
   watch?: boolean;
 }) {
-  const flagged = watch && card.overall < WATCH_BELOW;
+  const idle = isIdle(card);
+  const flagged = watch && !idle && card.overall < WATCH_BELOW;
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="fd-card text-left w-full"
-      style={{ cursor: 'pointer', padding: 0, overflow: 'hidden', background: '#fff' }}
+      className="group w-full overflow-hidden rounded-2xl border border-line bg-white text-left transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
-      <div className="flex items-center gap-3" style={{ padding: '14px 16px', borderBottom: '1px solid #efece6' }}>
-        <Avatar user={card.student} size={44} />
-        <div className="flex-1 min-w-0">
-          <div className="truncate" style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>
-            {card.student.username}
-          </div>
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <Avatar user={card.student} size={40} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14.5px] font-semibold text-ink group-hover:underline">{card.student.username}</div>
           {flagged ? (
-            <span
-              className="inline-flex items-center gap-1"
-              style={{
-                marginTop: 3, fontSize: 10, fontWeight: 700, color: '#92400e',
-                background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 99, padding: '1px 8px',
-              }}
-            >
-              <Flag className="w-3 h-3" /> À suivre
+            <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-semibold text-gold-strong">
+              <Flag className="h-3 w-3" aria-hidden /> À suivre
             </span>
           ) : (
-            <div style={{ fontSize: 11, color: '#6b6862', marginTop: 1 }}>Score global</div>
+            <div className="mt-0.5 text-[12px] text-ink-faint">{idle ? 'Pas encore d’activité' : 'Score global'}</div>
           )}
         </div>
-        <div style={{ fontSize: 30, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a', lineHeight: 1, letterSpacing: '-0.04em' }}>
-          {card.overall}
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-y-2 gap-x-3" style={{ padding: '12px 16px' }}>
-        {AXIS_LABELS.map(a => (
-          <div key={a.key} className="flex items-center gap-1.5" title={a.label}>
-            <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a', minWidth: 20 }}>
-              {card.axes[a.key]}
-            </span>
-            <span style={{ fontSize: 10, color: '#6b6862', fontWeight: 600, letterSpacing: '.04em' }}>{a.short}</span>
+        {!idle && (
+          <div className="shrink-0 text-right">
+            <span className="fd-nums text-[26px] font-bold leading-none text-ink">{card.overall}</span>
+            <span className="fd-nums ml-0.5 text-[11px] text-ink-faint">/100</span>
           </div>
-        ))}
+        )}
       </div>
+      {/* Les six axes en toutes lettres (avant : « PRÉ », « RÉG »… illisibles), chacun avec sa petite jauge. */}
+      {!idle && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#efece6] px-4 py-3">
+          {AXIS_LABELS.map(a => {
+            const v = Math.max(0, Math.min(100, card.axes[a.key] ?? 0));
+            return (
+              <div key={a.key} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-2 text-[11.5px]">
+                  <span className="truncate text-ink-faint">{a.label}</span>
+                  <span className="fd-nums font-semibold text-ink-soft">{card.axes[a.key]}</span>
+                </div>
+                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+                  <span className="block h-full rounded-full bg-ink-soft/70" style={{ width: `${v}%` }} />
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </button>
   );
 }
@@ -634,7 +591,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
             <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
               Score global {data.subject ? `· ${data.subject.name}` : ''}
             </div>
-            <div style={{ fontSize: 44, fontWeight: 900, fontFamily: 'DM Mono', color: '#000000', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
+            <div style={{ fontSize: 44, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
               {data.overall}
             </div>
           </div>
@@ -647,12 +604,12 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
                 key={a.key}
                 className="flex items-center justify-between"
                 style={{
-                  background: '#f9f8ff', border: '1px solid #e7e3dc',
+                  background: '#fcfbf9', border: '1px solid #e7e3dc',
                   borderRadius: 10, padding: '8px 12px',
                 }}
               >
                 <span style={{ fontSize: 12, color: '#33302b', fontWeight: 600 }}>{a.label}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'DM Mono', color: '#000000' }}>
+                <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a' }}>
                   {data.axes[a.key]}
                 </span>
               </div>
@@ -699,7 +656,7 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
         </radialGradient>
       </defs>
       {[0.25, 0.5, 0.75, 1].map((f, idx) => (
-        <path key={idx} d={ringPath(f)} fill="none" stroke="#e8e5f8" strokeWidth="1" strokeDasharray={idx === 3 ? undefined : '3,4'} />
+        <path key={idx} d={ringPath(f)} fill="none" stroke="#e7e3dc" strokeWidth="1" strokeDasharray={idx === 3 ? undefined : '3,4'} />
       ))}
       {AXIS_LABELS.map((_, i) => {
         const a = angleFor(i);
@@ -738,12 +695,13 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
 
 /* ─────────────────── TD lists tab ─────────────────── */
 function TDListsTab({
-  classroomId, isOwner, tdLists, activeSubject, onCreateClick, onChanged,
+  classroomId, isOwner, tdLists, activeSubject, onClearSubject, onCreateClick, onChanged,
 }: {
   classroomId: number; isOwner: boolean;
   tdLists: TDList[];
-  /** Matière choisie dans les pastilles « Matière : » (null = toutes). */
+  /** Matière choisie dans les pastilles « Matière » (null = toutes). */
   activeSubject: { id: number; name: string } | null;
+  onClearSubject: () => void;
   onCreateClick: () => void;
   onChanged: () => Promise<void> | void;
 }) {
@@ -757,40 +715,38 @@ function TDListsTab({
       || td.subject === activeSubject.id || td.subject_name === activeSubject.name)
     : tdLists;
 
+  const newTD = (
+    <button type="button" onClick={onCreateClick} className="fd-btn-primary min-h-10">
+      <Plus className="w-4 h-4" /> Nouveau TD
+    </button>
+  );
+
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>
-            TD listes <span style={{ color: '#6b6862', fontFamily: 'DM Mono', fontSize: 14, fontWeight: 500, marginLeft: 6 }}>· {shown.length}</span>
-          </h2>
-          <p style={{ fontSize: 12, color: '#6b6862' }}>
-            {isOwner ? 'Les exercices que tu donnes à ta classe' : 'Les exercices donnés par ton enseignant·e'}
-          </p>
-        </div>
-        {isOwner && (
-          <button onClick={onCreateClick} className="fd-btn-primary">
-            <Plus className="w-4 h-4" /> Nouveau TD
-          </button>
+      <Section id="td" title="TD listes" count={shown.length}
+        hint={tdLists.length ? (isOwner ? 'Les exercices que tu donnes à ta classe.' : 'Les exercices donnés par ton prof.') : undefined}
+        action={isOwner && tdLists.length > 0 ? newTD : undefined}>
+        {shown.length === 0 ? (
+          tdLists.length > 0 && activeSubject ? (
+            <EmptyState compact icon={SearchX} tone="ink" title={`Aucun TD en ${activeSubject.name}`}
+              action={<button type="button" onClick={onClearSubject} className="fd-btn-ghost min-h-10">Toutes les matières</button>} />
+          ) : isOwner ? (
+            <EmptyState icon={ClipboardList} title="Pas encore de TD"
+              text="Un TD, c’est une liste d’exercices de Fidni que tu donnes à ta classe, avec une date de rendu. Tu vois ensuite qui l’a fini."
+              action={newTD} />
+          ) : (
+            <EmptyState icon={ClipboardList} tone="ink" title="Pas encore de TD"
+              text="Quand ton prof donnera un TD à la classe, il apparaîtra ici avec ta progression."
+              action={<Link to="/reviser" className="fd-btn-ghost min-h-10">Réviser en attendant</Link>} />
+          )
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {shown.map(td => (
+              <TDListCard key={td.id} td={td} isOwner={isOwner} onOpen={() => setActiveId(td.id)} />
+            ))}
+          </div>
         )}
-      </div>
-
-      {shown.length === 0 ? (
-        <div className="fd-card text-center" style={{ padding: 48 }}>
-          <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: '#6b6862' }} />
-          <p style={{ fontSize: 13, color: '#6b6862' }}>
-            {tdLists.length > 0 && activeSubject
-              ? `Aucun TD en ${activeSubject.name}.`
-              : isOwner ? "Crée un TD pour assigner des exercices à tes élèves." : "Aucun TD pour le moment."}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {shown.map(td => (
-            <TDListCard key={td.id} td={td} isOwner={isOwner} onOpen={() => setActiveId(td.id)} />
-          ))}
-        </div>
-      )}
+      </Section>
 
       {active && (
         <TDListDetailModal
@@ -812,7 +768,7 @@ function ProgressBar({ pct }: { pct: number }) {
         style={{
           height: '100%',
           width: `${pct}%`,
-          background: pct === 100 ? 'linear-gradient(90deg,#16a34a,#34d399)' : 'linear-gradient(90deg,#1a1a1a,#9a958c)',
+          background: '#1a7a4a',
           transition: 'width .4s ease',
         }}
       />
@@ -830,54 +786,41 @@ function TDListCard({ td, isOwner, onOpen }: { td: TDList; isOwner: boolean; onO
     : mine && mine.total > 0 ? Math.round((mine.completed * 100) / mine.total) : 0;
   return (
     <button
+      type="button"
       onClick={onOpen}
-      className="fd-card text-left"
-      style={{ padding: 18, cursor: 'pointer', background: '#fff' }}
+      className="group w-full rounded-2xl border border-line bg-white p-4 text-left transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:p-5"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className="inline-flex items-center justify-center flex-shrink-0"
-            style={{
-              width: 32, height: 32, borderRadius: 9,
-              background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-            }}
-          >
-            <ClipboardList className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>{td.title}</div>
-            {td.subject_name && (
-              <div style={{ fontSize: 10, color: '#6b6862', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                {td.subject_name}
-              </div>
-            )}
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+          <ClipboardList className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold leading-snug text-ink group-hover:underline">{td.title}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-ink-faint">
+            {td.subject_name && <span>{td.subject_name}</span>}
+            <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" aria-hidden />{td.item_count} ex.</span>
+            {due && <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" aria-hidden />à rendre le {due.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>}
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#6b6862' }} />
-      </div>
-
-      <div className="flex items-center gap-3 mt-3" style={{ fontSize: 11, color: '#6b6862' }}>
-        <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />{td.item_count} ex.</span>
-        {due && <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />à rendre le {due.toLocaleDateString('fr-FR')}</span>}
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5" aria-hidden />
       </div>
 
       {cls && (
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-1" style={{ fontSize: 11, color: '#6b6862' }}>
+        <div className="mt-3.5">
+          <div className="mb-1.5 flex items-center justify-between text-[12px] text-ink-faint">
             <span>{cls.total === 0 ? 'Aucun élève dans la classe' : finishedLabel(cls.finished, cls.total)}</span>
             {cls.total > 0 && (
-              <span style={{ fontFamily: 'DM Mono', fontWeight: 700, color: pct === 100 ? '#15803d' : '#000000' }}>{pct} %</span>
+              <span className={`fd-nums font-semibold ${pct === 100 ? 'text-brand-hover' : 'text-ink-soft'}`}>{pct} %</span>
             )}
           </div>
           <ProgressBar pct={pct} />
         </div>
       )}
       {mine && (
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-1" style={{ fontSize: 11, color: '#6b6862' }}>
+        <div className="mt-3.5">
+          <div className="mb-1.5 flex items-center justify-between text-[12px] text-ink-faint">
             <span>Ma progression</span>
-            <span style={{ fontFamily: 'DM Mono', fontWeight: 700, color: pct === 100 ? '#15803d' : '#000000' }}>
+            <span className={`fd-nums font-semibold ${pct === 100 ? 'text-brand-hover' : 'text-ink-soft'}`}>
               {mine.completed}/{mine.total}
             </span>
           </div>
@@ -961,7 +904,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
               aria-label="Supprimer le TD"
               title="Supprimer le TD"
               className="inline-flex items-center justify-center"
-              style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}
+              style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -987,7 +930,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                   key={item.id}
                   className="flex items-center justify-between gap-2"
                   style={{
-                    background: '#f9f8ff', border: '1px solid #e7e3dc',
+                    background: '#fcfbf9', border: '1px solid #e7e3dc',
                     borderRadius: 10, padding: '10px 12px',
                   }}
                 >
@@ -995,7 +938,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     className="inline-flex items-center justify-center flex-shrink-0"
                     style={{
                       width: 24, height: 24, borderRadius: 7, background: '#fff', border: '1px solid #e7e3dc',
-                      fontSize: 11, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a',
+                      fontSize: 11, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a',
                     }}
                   >
                     {i + 1}
@@ -1019,7 +962,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                       aria-label="Retirer du TD"
                       title="Retirer du TD"
                       className="inline-flex items-center justify-center flex-shrink-0"
-                      style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}
+                      style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1058,8 +1001,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     onClick={() => !already && add(r.id)}
                     disabled={already || busy}
                     style={{
-                      background: already ? '#f0fdf4' : '#fff',
-                      border: '1px solid ' + (already ? '#bbf7d0' : '#e7e3dc'),
+                      background: already ? '#eaf3ed' : '#fff',
+                      border: '1px solid ' + (already ? '#cfe6d8' : '#e7e3dc'),
                       borderRadius: 10, padding: '8px 12px', cursor: already ? 'default' : 'pointer',
                       textAlign: 'left', minHeight: 40,
                       opacity: already ? .7 : 1,
@@ -1067,7 +1010,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                   >
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }} className="truncate">
                       {r.title}
-                      {already && <span style={{ marginLeft: 8, fontSize: 10, color: '#15803d' }}>· déjà ajouté</span>}
+                      {already && <span style={{ marginLeft: 8, fontSize: 10, color: '#15633c' }}>· déjà ajouté</span>}
                     </div>
                     {meta && <div style={{ fontSize: 10, color: '#6b6862', marginTop: 1 }} className="truncate">{meta}</div>}
                   </button>
@@ -1085,8 +1028,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
 type CellKind = 'success' | 'review' | 'started' | 'none';
 
 const CELL_STYLE: Record<CellKind, { label: string; bg: string; border: string; color: string; mark: string }> = {
-  success: { label: 'Réussi', bg: '#dcfce7', border: '#86efac', color: '#15803d', mark: '✓' },
-  review:  { label: 'À revoir', bg: '#fef3c7', border: '#fcd34d', color: '#b45309', mark: '!' },
+  success: { label: 'Réussi', bg: '#eaf3ed', border: '#8fc4a6', color: '#15633c', mark: '✓' },
+  review:  { label: 'À revoir', bg: '#faf3e2', border: '#e0c48a', color: '#9a6e1c', mark: '!' },
   started: { label: 'Commencé', bg: '#fff', border: '#a8a39a', color: '#6b6862', mark: '•' },
   none:    { label: 'Pas commencé', bg: 'transparent', border: '#cfcac2', color: '#c4c0b8', mark: '' },
 };
@@ -1178,7 +1121,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
         <h4 style={{ ...sectionTitle, marginBottom: 0 }}>Suivi de la classe</h4>
         {summary.total > 0 && nItems > 0 && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: summary.finished === summary.total ? '#15803d' : '#1a1a1a' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: summary.finished === summary.total ? '#15633c' : '#1a1a1a' }}>
             {finishedLabel(summary.finished, summary.total)}
           </span>
         )}
@@ -1209,7 +1152,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       key={it.object_id}
                       scope="col"
                       title={it.title}
-                      style={{ padding: '4px 0 6px', minWidth: 38, textAlign: 'center', fontFamily: 'DM Mono', fontWeight: 800, color: '#1a1a1a' }}
+                      style={{ padding: '4px 0 6px', minWidth: 38, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#1a1a1a' }}
                     >
                       {i + 1}
                     </th>
@@ -1259,8 +1202,8 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       })}
                       <td
                         style={{
-                          padding: '2px 6px 2px 10px', textAlign: 'center', fontFamily: 'DM Mono', fontWeight: 700,
-                          color: done === nItems ? '#15803d' : '#1a1a1a', borderTop: '1px solid #f2f1ee',
+                          padding: '2px 6px 2px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700,
+                          color: done === nItems ? '#15633c' : '#1a1a1a', borderTop: '1px solid #f2f1ee',
                         }}
                       >
                         {done}/{nItems}
@@ -1301,8 +1244,8 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                   <span
                     className="flex-shrink-0"
                     style={{
-                      fontFamily: 'DM Mono', fontSize: 11, fontWeight: 800, color: '#b45309',
-                      background: '#fef3c7', borderRadius: 6, padding: '2px 7px',
+                      fontVariantNumeric: 'tabular-nums', fontSize: 11, fontWeight: 800, color: '#9a6e1c',
+                      background: '#faf3e2', borderRadius: 6, padding: '2px 7px',
                     }}
                   >
                     {n > 0 ? `Ex. ${n} · ` : ''}{h.label}
@@ -1385,7 +1328,7 @@ function CreateTDModal({ classroomId, subjects, onClose, onCreated }: {
         <Field label="Échéance (facultatif)">
           <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputStyle} />
         </Field>
-        {err && <p style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
+        {err && <p style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
         <div className="flex justify-end gap-2 mt-2">
           <button type="button" className="fd-btn-ghost" onClick={onClose}>Annuler</button>
           <button type="submit" className="fd-btn-primary" disabled={busy}>
@@ -1428,15 +1371,17 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
       <div className="fd-card p-5">
         <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>Matières</h3>
         {classroom.subjects.length === 0 ? (
-          <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucune matière.</p>
+          <p className="text-[13px] text-ink-faint">
+            {isOwner ? 'Pas encore de matière : ajoute celles que tu enseignes à cette classe.' : 'Pas encore de matière dans cette classe.'}
+          </p>
         ) : (
           <div className="flex flex-col gap-2">
             {classroom.subjects.map(cs => (
               <div key={cs.id}
                    className="flex items-center justify-between"
-                   style={{ background: '#f9f8ff', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
+                   style={{ background: '#fcfbf9', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#000000' }} />
+                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#1a1a1a' }} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{cs.subject_name}</span>
                   <span className="truncate" style={{ fontSize: 11, color: '#6b6862' }}>· {cs.teacher_username}</span>
                 </div>
@@ -1444,7 +1389,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
                   <button onClick={() => removeS(cs.id, cs.subject_name)}
                           aria-label={`Retirer ${cs.subject_name}`}
                           className="inline-flex items-center justify-center flex-shrink-0"
-                          style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}>
+                          style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -1472,13 +1417,13 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
             Élèves ({members.length})
           </h3>
           {members.length === 0 ? (
-            <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun élève n'a rejoint.</p>
+            <p className="text-[13px] text-ink-faint">Aucun élève pour l’instant : envoie-leur le code de la classe.</p>
           ) : (
             <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
               {members.map(m => (
                 <div key={m.id}
                      className="flex items-center gap-3"
-                     style={{ background: '#f9f8ff', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
+                     style={{ background: '#fcfbf9', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
                   <Avatar user={m.student} size={28} />
                   <div className="flex-1 min-w-0">
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{m.student.username}</div>
@@ -1487,7 +1432,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
                   <button onClick={() => onRemoveMember(m.student.id)}
                           aria-label={`Retirer ${m.student.username}`}
                           className="inline-flex items-center justify-center flex-shrink-0"
-                          style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#b91c1c' }}>
+                          style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1509,7 +1454,7 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   fontFamily: 'DM Sans',
   color: '#1a1a1a',
-  background: '#f9f8ff',
+  background: '#fcfbf9',
   outline: 'none',
 };
 

@@ -1,211 +1,137 @@
-import { useEffect, useMemo, useState } from 'react';
+/**
+ * Concours › Mon historique (/concours/sessions), refonte du 11/10/2026 : mes simulations chronométrées,
+ * score en tête de ligne (vert réussi, or moyen, rouge sobre à retravailler), celles à reprendre en or.
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ConcoursHero } from './ConcoursHero';
-import {
-  Loader2, Trophy, Clock, ChevronRight, Calendar, Shuffle, ListChecks,
-  TrendingUp, Target, History as HistoryIcon,
-} from 'lucide-react';
+import { ChevronRight, Clock, History, RotateCcw } from 'lucide-react';
 import {
   listMySessions, CONCOURS_TYPES,
-  type SimulationSessionListItem, type ConcoursType, type SimulationMode,
+  type SimulationSessionListItem, type ConcoursType,
 } from '@/lib/api/concoursApi';
 import { SEO } from '@/components/layout/SEO';
+import { Page, Section, EmptyState, StatTile, CardsSkeleton } from '@/components/space/Page';
+import { ConcoursHeader } from './ConcoursHeader';
 
-const MODE_ICON: Record<SimulationMode, any> = {
-  exam: ListChecks, random_year: Calendar, random_mix: Shuffle,
+/** Couleur du score : vert ≥ 75 %, or ≥ 50 %, rouge sobre en dessous ; simulation non rendue : encre pâle. */
+const scoreTone = (pct: number, submitted: boolean) => {
+  if (!submitted) return 'bg-[#f7f6f3] text-ink-faint';
+  if (pct >= 75) return 'bg-brand-soft text-brand-hover';
+  if (pct >= 50) return 'bg-gold-soft text-gold-strong';
+  return 'bg-[#fbecea] text-[#a23b34]';
 };
 
-const SCORE_COLOR = (pct: number, submitted: boolean) => {
-  if (!submitted) return { color: '#6b6862', bg: '#f7f6f3' };
-  if (pct >= 75) return { color: '#16a34a', bg: '#f0fdf4' };
-  if (pct >= 50) return { color: '#d97706', bg: '#fffbeb' };
-  return { color: '#dc2626', bg: '#fef2f2' };
+const SessionRow: React.FC<{ s: SimulationSessionListItem }> = ({ s }) => {
+  const pct = Math.round(s.score_percentage);
+  const submitted = s.status === 'submitted';
+  return (
+    <li>
+      <Link to={submitted ? `/concours/sessions/${s.id}/recap` : `/concours/simulate/${s.id}`}
+        className="group flex items-stretch overflow-hidden rounded-2xl border border-line bg-white transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <span className={`flex w-[76px] shrink-0 flex-col items-center justify-center border-r border-line sm:w-[88px] ${scoreTone(pct, submitted)}`}>
+          <span className="fd-nums text-[20px] font-bold leading-none sm:text-[22px]">{submitted ? `${pct} %` : '—'}</span>
+          <span className="fd-nums mt-1 text-[11px] opacity-80">{s.correct_count}/{s.total_questions}</span>
+        </span>
+        <span className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5">
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[14.5px] font-semibold text-ink">{s.concours_type_display}</span>
+              <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-medium text-ink-soft">{s.mode_display}</span>
+              {!submitted && (
+                <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-gold-strong">À reprendre</span>
+              )}
+            </span>
+            {s.exam_title && <span className="mt-0.5 block truncate text-[12.5px] text-ink-soft">{s.exam_title}</span>}
+            <span className="mt-1 flex items-center gap-2 text-[12px] text-ink-faint">
+              <span>{new Date(s.started_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden /> {s.duration_minutes} min</span>
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      </Link>
+    </li>
+  );
 };
 
 export default function ConcoursHistoryPage() {
-  const [sessions, setSessions] = useState<SimulationSessionListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<SimulationSessionListItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [filterType, setFilterType] = useState<ConcoursType | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await listMySessions(filterType ? { concours_type: filterType } : {});
-        setSessions(data);
-      } finally { setLoading(false); }
-    })();
+  const load = useCallback(() => {
+    let alive = true;
+    setFailed(false);
+    setSessions(null);
+    listMySessions(filterType ? { concours_type: filterType } : {})
+      .then((data) => { if (alive) setSessions(data); })
+      .catch((e) => { console.error(e); if (alive) { setSessions([]); setFailed(true); } });
+    return () => { alive = false; };
   }, [filterType]);
+  useEffect(() => load(), [load]);
 
   const stats = useMemo(() => {
-    const done = sessions.filter(s => s.status === 'submitted');
+    const done = (sessions ?? []).filter((s) => s.status === 'submitted');
     const count = done.length;
     const avg = count ? Math.round(done.reduce((a, s) => a + s.score_percentage, 0) / count) : 0;
-    const best = count ? Math.round(Math.max(...done.map(s => s.score_percentage))) : 0;
-    return { total: sessions.length, count, avg, best };
+    const best = count ? Math.round(Math.max(...done.map((s) => s.score_percentage))) : 0;
+    return { count, avg, best };
   }, [sessions]);
 
+  const list = sessions ?? [];
+  const chip = (active: boolean) => `inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+    active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`;
+
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
-      <SEO title="Historique de simulations - Fidni" description="Historique des simulations" />
-      <style>{`
-        .session-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(20,18,16,.12) !important; }
-      `}</style>
+    <Page>
+      <SEO title="Historique de simulations - Fidni" description="Historique des simulations de concours" />
+      <ConcoursHeader />
 
-      <ConcoursHero
-        icon={HistoryIcon}
-        badge="HISTORIQUE"
-        title="Mon historique"
-        subtitle="Suis tes simulations et ta progression au fil du temps."
-      />
+      {failed && (
+        <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ton historique n’a pas pu se charger. Vérifie ta connexion.</p>
+          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+        </div>
+      )}
 
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+      <Section id="simulations" title="Mes simulations" count={list.length}
+        hint={list.length ? 'Ouvre une simulation pour revoir ta copie et la correction.' : undefined}>
+        {stats.count > 0 && (
+          <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
+            <StatTile label="Simulations" value={stats.count} />
+            <StatTile label="Moyenne" value={`${stats.avg} %`} />
+            <StatTile label="Meilleur" value={`${stats.best} %`} />
+          </div>
+        )}
 
-        {/* Stat cards */}
-        {!loading && stats.count > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-7 animate-fade-up">
-            {[
-              { icon: Trophy, label: 'Simulations', value: stats.count, color: '#1a1a1a', bg: '#f2f1ee' },
-              { icon: TrendingUp, label: 'Score moyen', value: `${stats.avg}%`, color: '#0e7490', bg: '#ecfeff' },
-              { icon: Target, label: 'Meilleur score', value: `${stats.best}%`, color: '#16a34a', bg: '#f0fdf4' },
-            ].map(({ icon: Icon, label, value, color, bg }) => (
-              <div key={label} style={{
-                background: '#fff', borderRadius: 16, border: '1px solid #e7e3dc',
-                padding: '18px 20px', boxShadow: '0 2px 10px rgba(20,18,16,.05)',
-              }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: 10, background: bg, color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-                }}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#1a1a1a', fontFamily: 'DM Mono', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                  {value}
-                </div>
-                <div style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>{label}</div>
-              </div>
+        {(list.length > 0 || filterType) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par concours">
+            <button type="button" aria-pressed={!filterType} className={chip(!filterType)} onClick={() => setFilterType(null)}>Tous</button>
+            {CONCOURS_TYPES.map((c) => (
+              <button key={c.id} type="button" aria-pressed={filterType === c.id} className={chip(filterType === c.id)} onClick={() => setFilterType(c.id)}>
+                {c.label}
+              </button>
             ))}
           </div>
         )}
 
-        {/* Filter pills */}
-        <div className="flex items-center gap-2 flex-wrap mb-5">
-          <button
-            className={`fd-pill ${!filterType ? 'is-active' : ''}`}
-            onClick={() => setFilterType(null)}
-          >
-            Tous
-          </button>
-          {CONCOURS_TYPES.map(c => (
-            <button
-              key={c.id}
-              className={`fd-pill ${filterType === c.id ? 'is-active' : ''}`}
-              onClick={() => setFilterType(c.id)}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center" style={{ padding: '80px 0' }}>
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="fd-card text-center" style={{ padding: 64 }}>
-            <Trophy className="w-10 h-10 mx-auto mb-4" style={{ color: '#c4c0e8' }} />
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>
-              Aucune simulation pour le moment
-            </p>
-            <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 20 }}>
-              Lance ta première simulation depuis la page des examens.
-            </p>
-            <Link to="/concours" className="fd-btn-primary inline-flex">
-              Parcourir les examens
-            </Link>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {sessions.map(s => {
-              const Icon = MODE_ICON[s.mode] || ListChecks;
-              const pct = Math.round(s.score_percentage);
-              const isSubmitted = s.status === 'submitted';
-              const sc = SCORE_COLOR(pct, isSubmitted);
-              return (
-                <Link
-                  key={s.id}
-                  to={isSubmitted ? `/concours/sessions/${s.id}/recap` : `/concours/simulate/${s.id}`}
-                  className="session-card animate-fade-up"
-                  style={{
-                    textDecoration: 'none', display: 'flex', alignItems: 'stretch',
-                    background: '#fff', borderRadius: 16, border: '1px solid #e7e3dc',
-                    boxShadow: '0 2px 10px rgba(20,18,16,.05)', overflow: 'hidden',
-                    transition: 'transform .2s, box-shadow .2s',
-                  }}
-                >
-                  {/* Left accent + score */}
-                  <div style={{
-                    flexShrink: 0, width: 92,
-                    background: sc.bg,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    borderRight: `1px solid ${sc.color}1a`,
-                  }}>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: sc.color, fontFamily: 'DM Mono', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                      {isSubmitted ? `${pct}%` : '—'}
-                    </div>
-                    <div style={{ fontSize: 10, color: sc.color, opacity: .75, marginTop: 3, fontFamily: 'DM Mono' }}>
-                      {s.correct_count}/{s.total_questions}
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0" style={{ padding: '14px 18px' }}>
-                    <div style={{
-                      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                      background: '#f4f2ff', color: '#000000',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Icon className="w-4.5 h-4.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>
-                          {s.concours_type_display}
-                        </span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, color: '#000000', background: '#f2f1ee',
-                          padding: '2px 8px', borderRadius: 99, letterSpacing: '.04em', textTransform: 'uppercase',
-                        }}>
-                          {s.mode_display}
-                        </span>
-                        {!isSubmitted && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, color: '#a16207', background: '#fef9c3',
-                            padding: '2px 8px', borderRadius: 99, textTransform: 'uppercase', letterSpacing: '.04em',
-                          }}>
-                            À reprendre
-                          </span>
-                        )}
-                      </div>
-                      {s.exam_title && (
-                        <div style={{ fontSize: 12, color: '#6b6862', marginTop: 3 }} className="truncate">{s.exam_title}</div>
-                      )}
-                      <div className="flex items-center gap-3 mt-1.5" style={{ fontSize: 11, color: '#6b6862' }}>
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {s.duration_minutes} min
-                        </span>
-                        <span>·</span>
-                        <span>{new Date(s.started_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#c4c0e8' }} />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+        {sessions === null ? <CardsSkeleton n={3} />
+          : list.length === 0 ? (
+            filterType ? (
+              <EmptyState compact icon={History} tone="ink" title="Aucune simulation pour ce concours"
+                action={<button type="button" className="fd-btn-ghost min-h-10" onClick={() => setFilterType(null)}>Tout afficher</button>} />
+            ) : !failed && (
+              <EmptyState icon={History} tone="ink" title="Pas encore de simulation"
+                text="Tes simulations chronométrées s’afficheront ici, avec ton score et la correction."
+                action={<Link to="/concours" className="fd-btn-ghost min-h-10">Voir les concours</Link>} />
+            )
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {list.map((s) => <SessionRow key={s.id} s={s} />)}
+            </ul>
+          )}
+      </Section>
+    </Page>
   );
 }

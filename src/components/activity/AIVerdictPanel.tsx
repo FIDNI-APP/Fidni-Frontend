@@ -34,8 +34,8 @@ export const AIVerdictPanel: React.FC<{ contentId: string }> = ({ contentId }) =
     setLoading(true);
     try {
       setResult(await aiCorrectionAPI.correct(contentId, file));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Échec de la correction IA.");
+    } catch (err) {
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Échec de la correction IA.");
     } finally {
       setLoading(false);
     }

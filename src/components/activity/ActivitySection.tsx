@@ -8,11 +8,13 @@
  *                             une colonne pour le détail et pour revenir à la question.
  *  3. Les autres élèves     — combien ont terminé, réussite, temps (répartition).
  *  (+ Tes notions, quand il y a des auto-évaluations.)
- * Que des chiffres enregistrés ; palette encre / vert / or, rouge doux réservé à « à revoir ».
+ * Que des chiffres enregistrés ; palette encre / vert / or.
+ * 11/10/2026 : titres serif, « à revoir » en or (le rouge reste aux erreurs), squelette au chargement.
  */
 
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRight, BadgeCheck, Check, Info, Loader2, RotateCcw, Sparkles, Target, Timer, Users } from 'lucide-react';
+import { AlertCircle, ArrowRight, BadgeCheck, Check, Info, RotateCcw, Sparkles, Target, Timer, Users } from 'lucide-react';
+import { CardsSkeleton } from '@/components/space/Page';
 import { type ContentStatistics } from '@/lib/api';
 import { type PerQuestionStat, type SkillMastery } from '@/lib/api/statisticsApi';
 import { type QuestionNumber } from '@/lib/reportTargets';
@@ -39,10 +41,11 @@ interface ActivitySectionProps {
 type Mine = 'success' | 'review';
 const mine = (s: PerQuestionStat['user_status']): Mine | null => (s === 'failed' || s === 'partial' ? 'review' : s);
 
-const C = { brand: '#1a7a4a', gold: '#c0892f', review: '#c9776e', empty: '#ece9e3' };
+// « À revoir » en or (repère « à retravailler », comme partout) ; les colonnes « difficiles » en or pâle.
+const C = { brand: '#1a7a4a', gold: '#d9b77a', review: '#c0892f', empty: '#ece9e3' };
 const MINE: Record<Mine, { label: string; color: string; chip: string; icon: React.ReactNode }> = {
   success: { label: 'Réussie', color: C.brand, chip: 'bg-brand-soft text-brand-hover border-brand-line', icon: <Check className="w-3 h-3" /> },
-  review: { label: 'À revoir', color: C.review, chip: 'bg-[#fbecea] text-[#a23b34] border-[#f1d3cf]', icon: <RotateCcw className="w-3 h-3" /> },
+  review: { label: 'À revoir', color: C.review, chip: 'bg-gold-soft text-gold-strong border-gold-line', icon: <RotateCcw className="w-3 h-3" /> },
 };
 
 const formatTime = (seconds: number | null | undefined) => {
@@ -72,14 +75,7 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({
   const contentLabel = contentType === 'exercise' ? 'cet exercice' : 'cet examen';
   const perQ = useMemo(() => statistics?.per_question ?? [], [statistics]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-7 h-7 animate-spin mb-3 text-ink-faint" />
-        <p className="text-sm text-ink-faint">Chargement…</p>
-      </div>
-    );
-  }
+  if (loading) return <CardsSkeleton n={3} />;
 
   if (!statistics) {
     return (
@@ -95,7 +91,7 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({
   const perSkill = (statistics.per_skill || []).slice().sort((a, b) => a.mastery_pct - b.mastery_pct);
 
   return (
-    <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-4">
       {assessed
         ? <MyResult statistics={statistics} perQ={perQ} totalQuestions={totalQuestions} contentLabel={contentLabel} />
         : <Invitation nStudents={nStudents} contentLabel={contentLabel} onGoToQuestions={onGoToQuestions} />}
@@ -126,13 +122,13 @@ function MyResult({ statistics, perQ, totalQuestions, contentLabel }: {
   const solvedAlone = statistics.user_completed === 'success' && !statistics.user_viewed_solution;
   const fasterThan = statistics.user_time_percentile;
   const verdict = statistics.user_completed === 'success' ? { t: 'Réussi', c: 'bg-brand text-white' }
-    : statistics.user_completed === 'review' ? { t: 'À revoir', c: 'bg-[#fbecea] text-[#a23b34]' }
+    : statistics.user_completed === 'review' ? { t: 'À revoir', c: 'bg-gold-soft text-gold-strong' }
       : { t: 'En cours', c: 'bg-[#f2f1ee] text-ink-soft' };
 
   return (
     <section data-tour="activite-bilan" className="bg-white border border-line rounded-2xl p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[15px] font-bold text-ink tracking-tight">Ton bilan</h3>
+        <h3 className="fd-display text-[18px] leading-tight text-ink">Ton bilan</h3>
         <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full ${verdict.c}`}>{verdict.t}</span>
       </div>
 
@@ -233,7 +229,7 @@ function Invitation({ nStudents, contentLabel, onGoToQuestions }: { nStudents: n
       <div className="flex-1 min-w-0">
         <h3 className="text-[15px] font-bold text-ink">Ton bilan personnel t’attend</h3>
         <p className="mt-1 text-[13.5px] text-ink-soft leading-relaxed">
-          Coche les questions que tu as réussies : un clic sous chaque question, ou « Tout réussi » en haut de {contentLabel}.
+          Ouvre la solution de chaque question et dis si tu avais trouvé, ou indique « Tout réussi » en bas de {contentLabel}.
           Tu verras alors ton résultat à côté de celui des autres{nStudents > 0 ? ` (${nStudents} ${plural(nStudents, 'élève')} l’${nStudents > 1 ? 'ont' : 'a'} déjà terminé)` : ''}.
         </p>
       </div>
@@ -289,7 +285,7 @@ function QuestionsChart({ perQ: stats, trap, showMine, totalQuestions, numbering
     <section data-tour="activite-questions" className="bg-white border border-line rounded-2xl p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-[15px] font-bold text-ink tracking-tight">Question par question</h3>
+          <h3 className="fd-display text-[18px] leading-tight text-ink">Question par question</h3>
           <p className="text-[12.5px] text-ink-faint mt-0.5">Part des élèves qui réussissent chaque question. Clique sur une colonne.</p>
         </div>
         <div className={`flex items-center gap-3 text-[11.5px] text-ink-faint ${perQ.length ? '' : 'hidden'}`}>
@@ -349,7 +345,7 @@ function QuestionsChart({ perQ: stats, trap, showMine, totalQuestions, numbering
                 {trap?.path === sel.path && <span className="text-gold-strong font-semibold"> C’est la question qui fait le plus échouer.</span>}
                 {showMine && (
                   <span className="block mt-0.5">
-                    Toi : {mine(sel.user_status) ? <b className={mine(sel.user_status) === 'success' ? 'text-brand-hover' : 'text-[#a23b34]'}>
+                    Toi : {mine(sel.user_status) ? <b className={mine(sel.user_status) === 'success' ? 'text-brand-hover' : 'text-gold-strong'}>
                       {MINE[mine(sel.user_status)!].label.toLowerCase()}</b> : <span className="text-ink-faint">pas encore évaluée</span>}.
                   </span>
                 )}
@@ -383,7 +379,7 @@ function Others({ statistics, contentLabel }: { statistics: ContentStatistics; c
 
   return (
     <section className="bg-white border border-line rounded-2xl p-5 sm:p-6">
-      <h3 className="text-[15px] font-bold text-ink tracking-tight">Les autres élèves</h3>
+      <h3 className="fd-display text-[18px] leading-tight text-ink">Les autres élèves</h3>
       <dl className="mt-4 grid grid-cols-3 gap-3">
         <Fact label={`${plural(n, 'Élève')} ${n > 1 ? 'ont' : 'a'} terminé`} value={String(n)} />
         <Fact label="Ont réussi" value={n ? `${statistics.success_percentage} %` : '—'} />
@@ -449,7 +445,7 @@ function Notions({ skills }: { skills: SkillMastery[] }) {
   const weak = skills.filter((s) => s.mastery_pct < 50);
   return (
     <section data-tour="activite-notions" className="bg-white border border-line rounded-2xl p-5 sm:p-6">
-      <h3 className="text-[15px] font-bold text-ink tracking-tight">Tes notions</h3>
+      <h3 className="fd-display text-[18px] leading-tight text-ink">Tes notions</h3>
       <p className="text-[12.5px] text-ink-faint mt-0.5">Ta maîtrise de chaque notion de {skills.length > 1 ? 'ces questions' : 'cette question'}, d’après tes auto-évaluations.</p>
       {weak.length > 0 && (
         <p className="mt-3 flex items-start gap-2 text-[13px] text-ink-soft">

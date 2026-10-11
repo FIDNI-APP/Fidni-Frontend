@@ -1,37 +1,14 @@
-// NotebookContent.tsx - Fixed spacing and better annotation toolbar
-import React, { useState, useRef, useEffect } from 'react';
-import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import { useNavigate } from 'react-router-dom';
+// Une leçon du cahier sur sa feuille, avec les annotations de l'élève (surlignages, traits, notes).
+// Les annotations existantes sont visibles (sauf `showAnnotations={false}` : téléphone) ; la barre d'outils
+// n'apparaît qu'en mode « Annoter » (bouton de SectionContent, proposé seulement avec une souris).
+// Enregistrement automatique, 1 s après un geste, et aussitôt si la leçon se ferme avant (autre leçon, autre page).
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Eraser, Highlighter, Loader2, Pen, Redo2, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
-import { NotebookPaper, paperTextStyle, type NotebookTheme } from './NotebookPaper';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
-import {
-  Highlighter,
-  Pen,
-  Type,
-  Eraser,
-  Trash2,
-  Palette,
-  MousePointer,
-  Undo2,
-  Redo2,
-  Save,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
+import { NotebookPaper, NOTEBOOK_THEME, paperTextStyle, type NotebookTheme } from './NotebookPaper';
 
-interface NotebookContentProps {
-  content: string;
-  structure?: any;
-  lessonId?: string;
-  className?: string;
-  notebookTheme?: NotebookTheme;
-  onReady?: () => void;
-  onSaveAnnotations?: (annotations: Annotation[]) => Promise<void>;
-  initialAnnotations?: Annotation[];
-}
-
-type Annotation = {
+export type Annotation = {
   id: string;
   type: 'highlight' | 'note' | 'pen';
   position: { x: number; y: number; width?: number; height?: number };
@@ -41,592 +18,328 @@ type Annotation = {
   strokeWidth?: number;
 };
 
-const notebookThemes = {
-  ruled: {
-    bgColor: '#fefefe',
-    lineColor: '#e8e9f3',
-    marginLineColor: '#fca5a5',
-    isGrid: false,
-    lineSpacing: 1.5,
-    marginLeft: 2.5
-  },
-  college: {
-    bgColor: '#fffef7',
-    lineColor: '#d8d4cc',
-    marginLineColor: '#fca5a5',
-    isGrid: false,
-    lineSpacing: 1.8,
-    marginLeft: 3
-  }
-};
+type Tool = 'highlight' | 'pen' | 'note' | 'eraser';
 
-// Shown when a lesson entry carries no body at all. Still reports ready, so
-// the caller's loading skeleton clears instead of hanging over an empty sheet.
+interface NotebookContentProps {
+  content: string;
+  structure?: unknown;
+  className?: string;
+  notebookTheme?: NotebookTheme;
+  onReady?: () => void;
+  onSaveAnnotations?: (annotations: Annotation[]) => Promise<void>;
+  initialAnnotations?: Annotation[];
+  /** Mode annotation : barre d'outils visible, la feuille répond aux gestes. */
+  annotating?: boolean;
+  /** Afficher les annotations (positions en px à la largeur où elles ont été faites). */
+  showAnnotations?: boolean;
+}
+
+// Quatre couleurs du site : or, vert, brique, encre.
+const COLORS = [
+  { name: 'or', value: '#e9c46a' },
+  { name: 'vert', value: '#7cc59a' },
+  { name: 'brique', value: '#e0928a' },
+  { name: 'encre', value: '#33302b' },
+];
+
+const TOOLS: { key: Tool; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'highlight', label: 'Surligner', icon: Highlighter },
+  { key: 'pen', label: 'Stylo', icon: Pen },
+  { key: 'note', label: 'Note', icon: StickyNote },
+  { key: 'eraser', label: 'Effacer', icon: Eraser },
+];
+
+// Leçon sans contenu : on le dit, et on signale quand même que la feuille est prête (le squelette s'efface).
 const EmptyLessonBody: React.FC<{ onReady?: () => void }> = ({ onReady }) => {
   useEffect(() => {
     const id = requestAnimationFrame(() => { onReady?.(); });
     return () => cancelAnimationFrame(id);
   }, [onReady]);
-
-  return (
-    <div className="text-center py-12" style={{ color: '#9a958c', fontSize: 13.5 }}>
-      <p>Cette leçon n'a pas encore de contenu à afficher.</p>
-    </div>
-  );
+  return <p className="py-12 text-center text-[13.5px] text-ink-faint">Cette leçon n’a pas encore de contenu à afficher.</p>;
 };
 
-// Wrapper that renders LessonRenderer and calls onReady after mount
-const StructuredLessonContent: React.FC<{ structure: any; onReady?: () => void }> = ({ structure, onReady }) => {
+// Leçon structurée (sections JSON) : prévient quand elle est affichée.
+const StructuredLessonContent: React.FC<{ structure: unknown; onReady?: () => void }> = ({ structure, onReady }) => {
   useEffect(() => {
     const id = requestAnimationFrame(() => { onReady?.(); });
     return () => cancelAnimationFrame(id);
   }, [structure, onReady]);
-
-  return <LessonRenderer structure={structure} />;
+  return <LessonRenderer structure={structure as React.ComponentProps<typeof LessonRenderer>['structure']} />;
 };
 
 const NotebookContent: React.FC<NotebookContentProps> = ({
   content,
   structure,
-  lessonId,
   className = '',
-  notebookTheme = notebookThemes.ruled,
+  notebookTheme = NOTEBOOK_THEME,
   onReady,
   onSaveAnnotations,
-  initialAnnotations = []
+  initialAnnotations,
+  annotating = false,
+  showAnnotations = true,
 }) => {
-  const hasStructure = structure && structure.sections && structure.sections.length > 0;
-  const navigate = useNavigate();
-  const [activeTool, setActiveTool] = useState<'select' | 'highlight' | 'note' | 'pen' | 'eraser' | null>('select');
-  const [activeColor, setActiveColor] = useState('#ffeb3b');
-  const [strokeWidth, setStrokeWidth] = useState(2);
-  const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPath, setCurrentPath] = useState('');
-  const [startPoint, setStartPoint] = useState<{x: number, y: number} | null>(null);
-  const [highlightSize, setHighlightSize] = useState<{width: number, height: number} | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [zoom, setZoom] = useState(0.9);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const colorBtnRef = useRef<HTMLDivElement>(null);
-  const [history, setHistory] = useState<Annotation[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const hasStructure = Boolean((structure as { sections?: unknown[] } | undefined)?.sections?.length);
+  const [tool, setTool] = useState<Tool | null>(null);
+  const [color, setColor] = useState(COLORS[0].value);
+  const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations ?? []);
+  const [history, setHistory] = useState<{ list: Annotation[][]; at: number }>({ list: [initialAnnotations ?? []], at: 0 });
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // Changements pas encore enregistrés ; `version` compte les gestes (un enregistrement fini ne « nettoie »
+  // que s'il n'y a rien eu depuis son départ).
+  const dirty = useRef(false);
+  const version = useRef(0);
+  const touch = () => { dirty.current = true; version.current += 1; };
+  // Note qu'on vient de poser : seule celle-ci prend le focus.
+  const [fresh, setFresh] = useState<string | null>(null);
 
-  // Update annotations when initialAnnotations prop changes
+  // Drawing in progress
+  const [drawing, setDrawing] = useState(false);
+  const [start, setStart] = useState<{ x: number; y: number } | null>(null);
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const [path, setPath] = useState('');
+  const layerRef = useRef<HTMLDivElement>(null);
+
+  // Annotations chargées après coup (ou leçon suivante) : on repart de celles-ci.
   useEffect(() => {
-    setAnnotations(initialAnnotations);
+    const init = initialAnnotations ?? [];
+    setAnnotations(init);
+    setHistory({ list: [init], at: 0 });
+    dirty.current = false;
   }, [initialAnnotations]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const annotationLayerRef = useRef<HTMLDivElement>(null);
-  
-  const colorPalette = [
-    { name: 'Yellow', value: '#ffeb3b' },
-    { name: 'Green', value: '#4caf50' },
-    { name: 'Blue', value: '#2196f3' },
-    { name: 'Red', value: '#f44336' },
-    { name: 'Purple', value: '#9c27b0' },
-    { name: 'Orange', value: '#ff9800' },
-    { name: 'Pink', value: '#e91e63' },
-    { name: 'Cyan', value: '#00bcd4' }
-  ];
+  // Fin du mode annotation : on repose l'outil.
+  useEffect(() => { if (!annotating) setTool(null); }, [annotating]);
 
-  const tools = [
-    { name: 'select', icon: MousePointer, label: 'Sélectionner' },
-    { name: 'highlight', icon: Highlighter, label: 'Surligner' },
-    { name: 'pen', icon: Pen, label: 'Dessiner' },
-    { name: 'note', icon: Type, label: 'Note' },
-    { name: 'eraser', icon: Eraser, label: 'Effacer' }
-  ];
-  
-  // Save to history when annotations change
-  useEffect(() => {
-    if (annotations.length > 0 || historyIndex >= 0) {
-      const newHistory = history.slice(0, historyIndex + 1);
-      newHistory.push([...annotations]);
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-    }
-  }, [annotations]);
-
-  // Save annotations whenever they change
-  useEffect(() => {
-    const save = async () => {
-      if (onSaveAnnotations && annotations !== initialAnnotations) {
-        setIsSaving(true);
-        try {
-          await onSaveAnnotations(annotations);
-        } catch (error) {
-          console.error('Failed to save annotations:', error);
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    };
-    
-    const timer = setTimeout(save, 1000);
-    return () => clearTimeout(timer);
-  }, [annotations, onSaveAnnotations, initialAnnotations]);
-
-  const handleContentReady = () => {
-    setupClickableHeadings();
-    if (onReady) onReady();
-  };
-  
-  const setupClickableHeadings = () => {
-    if (!contentRef.current || !lessonId) return;
-    
-    const headings = contentRef.current.querySelectorAll<HTMLElement>('h1, h2, h3');
-    
-    headings.forEach(heading => {
-      heading.style.cursor = 'pointer';
-      heading.classList.add('hover:text-indigo-600', 'transition-colors');
-      
-      heading.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        navigate(`/lessons/${lessonId}`);
-      });
+  const commit = useCallback((next: Annotation[]) => {
+    dirty.current = true;
+    version.current += 1;
+    setAnnotations(next);
+    setHistory((h) => {
+      const list = [...h.list.slice(0, h.at + 1), next];
+      return { list, at: list.length - 1 };
     });
-  };
-  
-  const selectTool = (tool: typeof activeTool) => {
-    setActiveTool(tool);
-    setShowColorPicker(false);
-  };
+  }, []);
 
   const undo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setAnnotations(history[historyIndex - 1] || []);
-    }
+    if (history.at <= 0) return;
+    touch();
+    setAnnotations(history.list[history.at - 1]);
+    setHistory((h) => ({ ...h, at: h.at - 1 }));
   };
-
   const redo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setAnnotations(history[historyIndex + 1]);
-    }
-  };
-  
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (activeTool === 'select' || !activeTool) return;
-    
-    const annotationLayer = annotationLayerRef.current;
-    if (!annotationLayer) return;
-    
-    setIsDrawing(true);
-    
-    const rect = annotationLayer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    setStartPoint({x, y});
-    
-    if (activeTool === 'pen') {
-      setCurrentPath(`M ${x} ${y}`);
-    } else if (activeTool === 'note') {
-      const newAnnotation: Annotation = {
-        id: `annotation-${Date.now()}`,
-        type: 'note',
-        color: activeColor,
-        position: { x, y, width: 200, height: 120 },
-        content: '',
-      };
-      setAnnotations(prev => [...prev, newAnnotation]);
-      // Automatically switch back to select tool after creating text annotation
-      setActiveTool('select');
-    }
+    if (history.at >= history.list.length - 1) return;
+    touch();
+    setAnnotations(history.list[history.at + 1]);
+    setHistory((h) => ({ ...h, at: h.at + 1 }));
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || activeTool === 'select' || !activeTool) return;
-    
-    const annotationLayer = annotationLayerRef.current;
-    if (!annotationLayer) return;
-    
-    const rect = annotationLayer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    if (activeTool === 'pen') {
-      setCurrentPath(prev => `${prev} L ${x} ${y}`);
-    } else if (activeTool === 'highlight' && startPoint) {
-      const width = Math.abs(x - startPoint.x);
-      const height = Math.abs(y - startPoint.y);
-      setHighlightSize({width, height});
-    }
+  // Enregistrement automatique, une seconde après le dernier geste.
+  useEffect(() => {
+    if (!dirty.current || !onSaveAnnotations) return;
+    const timer = window.setTimeout(async () => {
+      const v = version.current;
+      setSaveState('saving');
+      try {
+        await onSaveAnnotations(annotations);
+        if (version.current === v) dirty.current = false;
+        setSaveState('saved');
+      } catch {
+        setSaveState('error');
+      }
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [annotations, onSaveAnnotations]);
+
+  // Leçon fermée avant l'enregistrement (autre leçon, autre chapitre, autre page) : on enregistre tout de suite.
+  const latest = useRef({ annotations, onSaveAnnotations });
+  latest.current = { annotations, onSaveAnnotations };
+  useEffect(() => () => {
+    const { annotations: list, onSaveAnnotations: saveNow } = latest.current;
+    if (dirty.current && saveNow) saveNow(list).catch(() => {});
+  }, []);
+  // Onglet fermé ou rechargé avec un geste pas encore enregistré : le navigateur demande confirmation.
+  useEffect(() => {
+    const onLeave = (e: BeforeUnloadEvent) => {
+      if (!dirty.current || !latest.current.onSaveAnnotations) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onLeave);
+    return () => window.removeEventListener('beforeunload', onLeave);
+  }, []);
+
+  const point = (e: React.PointerEvent) => {
+    const rect = layerRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  const handleMouseUp = () => {
-    if (!isDrawing || activeTool === 'select') return;
-    
-    if (activeTool === 'pen' && currentPath) {
-      const newAnnotation: Annotation = {
-        id: `pen-${Date.now()}`,
-        type: 'pen',
-        color: activeColor,
-        position: { x: 0, y: 0 },
-        path: currentPath,
-        strokeWidth: strokeWidth,
-      };
-      setAnnotations(prev => [...prev, newAnnotation]);
-      setCurrentPath('');
-    } else if (activeTool === 'highlight' && startPoint && highlightSize) {
-      const newAnnotation: Annotation = {
-        id: `highlight-${Date.now()}`,
-        type: 'highlight',
-        color: activeColor,
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!annotating || !tool || tool === 'eraser' || !layerRef.current) return;
+    if (e.target !== layerRef.current && tool !== 'pen' && tool !== 'highlight') return;
+    // Pas de « mousedown » derrière : il retirerait le focus de la note qu'on vient de poser.
+    e.preventDefault();
+    const p = point(e);
+    if (tool === 'note') {
+      // La note reste dans la feuille (le calque coupe ce qui dépasse).
+      const x = Math.max(0, Math.min(p.x, layerRef.current.clientWidth - 260));
+      const id = `note-${Date.now()}`;
+      commit([...annotations, { id, type: 'note', color, position: { x, y: p.y, width: 200, height: 96 }, content: '' }]);
+      setFresh(id);
+      setTool(null);
+      return;
+    }
+    layerRef.current.setPointerCapture?.(e.pointerId);
+    setDrawing(true);
+    setStart(p);
+    if (tool === 'pen') setPath(`M ${p.x} ${p.y}`);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drawing || !start) return;
+    const p = point(e);
+    if (tool === 'pen') setPath((d) => `${d} L ${p.x} ${p.y}`);
+    else if (tool === 'highlight') setSize({ width: p.x - start.x, height: p.y - start.y });
+  };
+
+  const onPointerUp = () => {
+    if (!drawing) return;
+    if (tool === 'pen' && path.includes('L')) {
+      commit([...annotations, { id: `pen-${Date.now()}`, type: 'pen', color, position: { x: 0, y: 0 }, path, strokeWidth: 2 }]);
+    } else if (tool === 'highlight' && start && size && Math.abs(size.width) > 4 && Math.abs(size.height) > 4) {
+      commit([...annotations, {
+        id: `highlight-${Date.now()}`, type: 'highlight', color,
         position: {
-          x: startPoint.x,
-          y: startPoint.y,
-          width: highlightSize.width,
-          height: highlightSize.height,
+          x: Math.min(start.x, start.x + size.width), y: Math.min(start.y, start.y + size.height),
+          width: Math.abs(size.width), height: Math.abs(size.height),
         },
-      };
-      setAnnotations(prev => [...prev, newAnnotation]);
-      setHighlightSize(null);
+      }]);
     }
-    
-    setIsDrawing(false);
-    setStartPoint(null);
+    setDrawing(false);
+    setStart(null);
+    setSize(null);
+    setPath('');
   };
 
-  const handleDeleteAnnotation = (id: string) => {
-    setAnnotations(prev => prev.filter(ann => ann.id !== id));
+  const erase = (id: string) => { if (annotating && tool === 'eraser') commit(annotations.filter((a) => a.id !== id)); };
+  // Texte d'une note : remplace l'état courant de l'historique (pas une étape par lettre tapée).
+  const editNote = (id: string, text: string) => {
+    const next = annotations.map((a) => (a.id === id ? { ...a, content: text } : a));
+    touch();
+    setAnnotations(next);
+    setHistory((h) => ({ ...h, list: h.list.map((l, i) => (i === h.at ? next : l)) }));
+  };
+  const clearAll = () => {
+    if (annotations.length && window.confirm('Effacer toutes tes annotations de cette leçon ?')) commit([]);
   };
 
-  const handleTextAnnotationChange = (id: string, content: string) => {
-    setAnnotations(prev => 
-      prev.map(ann => 
-        ann.id === id ? { ...ann, content } : ann
-      )
-    );
-  };
-  
-  const getCursorClass = () => {
-    if (!activeTool || activeTool === 'select') return '';
-    
-    switch(activeTool) {
-      case 'highlight': return 'cursor-crosshair';
-      case 'pen': return 'cursor-crosshair';
-      case 'note': return 'cursor-text';
-      case 'eraser': return 'cursor-pointer';
-      default: return '';
-    }
-  };
+  const erasing = annotating && tool === 'eraser';
+  const shown = showAnnotations ? annotations : [];
+  const toolBtn = 'inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
 
   return (
-    <div className="notebook-content-wrapper flex flex-col bg-gray-50" ref={containerRef}>
-      {/* Professional Annotation Toolbar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-3 py-1">
-          {/* Left: Tools */}
-          <div className="flex items-center space-x-1">
-            {tools.map((tool) => {
-              const Icon = tool.icon;
-              const isActive = activeTool === tool.name;
-              return (
-                <button
-                  key={tool.name}
-                  onClick={() => selectTool(tool.name as typeof activeTool)}
-                  className={`
-                    relative p-1.5 rounded-md transition-all duration-200 group
-                    ${isActive 
-                      ? 'bg-blue-100 text-blue-700 shadow-sm' 
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }
-                  `}
-                  title={tool.label}
-                >
-                  <Icon className="w-4 h-4" />
-                  {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full" />
-                  )}
-                </button>
-              );
-            })}
-            
-            <div className="h-4 w-px bg-gray-300 mx-2" />
-            
-            {/* Color Picker */}
-            <div className="relative" ref={colorBtnRef}>
-              <button
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                title="Couleurs"
-              >
-                <div className="flex items-center space-x-1">
-                  <Palette className="w-4 h-4 text-gray-600" />
-                  <div 
-                    className="w-3 h-3 rounded-full border border-gray-300"
-                    style={{ backgroundColor: activeColor }}
-                  />
-                </div>
+    <div className="flex flex-col">
+      {annotating && (
+        <div role="toolbar" aria-label="Outils d’annotation"
+          className="sticky top-0 z-30 flex flex-wrap items-center gap-x-1 gap-y-1.5 border-b border-line bg-white/95 px-3 py-2 backdrop-blur">
+          {TOOLS.map(({ key, label, icon: Icon }) => {
+            const on = tool === key;
+            return (
+              <button key={key} type="button" aria-pressed={on} onClick={() => setTool(on ? null : key)} title={label}
+                className={`${toolBtn} ${on ? 'bg-ink text-white' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
+                <Icon className="h-4 w-4" /> <span className="hidden lg:inline">{label}</span>
               </button>
-              
-              <FloatingPanel anchorRef={colorBtnRef} open={showColorPicker} onClose={() => setShowColorPicker(false)}
-                className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
-                  <div className="grid grid-cols-4 gap-2">
-                    {colorPalette.map((color) => (
-                      <button
-                        key={color.value}
-                        onClick={() => {
-                          setActiveColor(color.value);
-                          setShowColorPicker(false);
-                        }}
-                        className={`
-                          w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110
-                          ${activeColor === color.value ? 'border-gray-400 ring-2 ring-gray-200' : 'border-gray-200'}
-                        `}
-                        style={{ backgroundColor: color.value }}
-                        title={color.name}
-                      />
-                    ))}
-                  </div>
-                  {activeTool === 'pen' && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <label className="block text-xs text-gray-600 mb-1">Épaisseur</label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="8"
-                        value={strokeWidth}
-                        onChange={(e) => setStrokeWidth(Number(e.target.value))}
-                        className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                      />
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>1</span>
-                        <span>8</span>
-                      </div>
-                    </div>
-                  )}
-              </FloatingPanel>
-            </div>
-          </div>
-          
-          {/* Center: Actions */}
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={undo}
-              disabled={historyIndex <= 0}
-              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Annuler"
-            >
-              <Undo2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={redo}
-              disabled={historyIndex >= history.length - 1}
-              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Refaire"
-            >
-              <Redo2 className="w-4 h-4" />
-            </button>
-            
-            {annotations.length > 0 && (
-              <>
-                <div className="h-4 w-px bg-gray-300 mx-2" />
-                <button
-                  onClick={() => setAnnotations([])}
-                  className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-                  title="Effacer tout"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </>
-            )}
-
-            {/* Zoom controls */}
-            <div className="h-4 w-px bg-gray-300 mx-2" />
-            <button
-              onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-              disabled={zoom <= 0.5}
-              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Dézoomer"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-medium text-gray-600 min-w-[3rem] text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
-              disabled={zoom >= 2.0}
-              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Zoomer"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-          
-          {/* Right: Status */}
-          <div className="flex items-center space-x-2">
-            {isSaving ? (
-              <div className="flex items-center space-x-2 text-sm text-blue-600">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                <span>Sauvegarde...</span>
-              </div>
-            ) : annotations.length > 0 ? (
-              <div className="flex items-center space-x-2 text-sm text-green-600">
-                <div className="w-2 h-2 bg-green-600 rounded-full" />
-                <span>Sauvegardé</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                <span>Aucune annotation</span>
-              </div>
-            )}
-            
-            <button
-              onClick={() => onSaveAnnotations?.(annotations)}
-              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-              title="Sauvegarder"
-            >
-              <Save className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Paper with enhanced notebook styling — fills remaining height */}
-      <NotebookPaper theme={notebookTheme}>
-        <div
-          className={`${className} relative z-10 transition-transform duration-200`}
-          ref={contentRef}
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left'
-          }}
-        >
-          {/* Content with proper margins - FIXED SPACING */}
-          <div 
-            className="py-8 pr-8"
-            style={paperTextStyle(notebookTheme)}
-          >
-            {hasStructure ? (
-              <StructuredLessonContent structure={structure} onReady={handleContentReady} />
-            ) : content ? (
-              <TipTapRenderer
-                content={content}
-                onReady={handleContentReady}
-              />
-            ) : (
-              // Neither form of body: say so, instead of leaving a blank sheet
-              // that reads as a broken page.
-              <EmptyLessonBody onReady={handleContentReady} />
-            )}
-          </div>
-        </div>
-        
-        {/* Annotation layer */}
-        <div 
-          ref={annotationLayerRef}
-          className={`absolute inset-0 z-20 pointer-events-none ${getCursorClass()}`}
-          style={{ pointerEvents: activeTool && activeTool !== 'select' ? 'auto' : 'none' }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          {annotations.map(annotation => {
-            if (annotation.type === 'highlight') {
-              return (
-                <div
-                  key={annotation.id}
-                  className="absolute opacity-60 hover:opacity-80 transition-opacity rounded-sm"
-                  style={{
-                    left: `${annotation.position.x}px`,
-                    top: `${annotation.position.y}px`,
-                    width: `${annotation.position.width}px`,
-                    height: `${annotation.position.height}px`,
-                    backgroundColor: annotation.color,
-                    pointerEvents: 'auto',
-                    cursor: activeTool === 'eraser' ? 'pointer' : 'move',
-                  }}
-                  onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
-                />
-              );
-            } else if (annotation.type === 'note') {
-              return (
-                <div
-                  key={annotation.id}
-                  className="absolute"
-                  style={{
-                    left: `${annotation.position.x}px`,
-                    top: `${annotation.position.y}px`,
-                    minWidth: `${annotation.position.width}px`,
-                    minHeight: `${annotation.position.height}px`,
-                    pointerEvents: 'auto',
-                  }}
-                  onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
-                >
-                  <div className="bg-yellow-50 border-l-4 border-yellow-400 shadow-lg rounded-r-md">
-                    <textarea
-                      value={annotation.content || ''}
-                      onChange={(e) => handleTextAnnotationChange(annotation.id, e.target.value)}
-                      className="w-full h-full p-3 bg-transparent resize-both border-none outline-none text-sm"
-                      style={{ 
-                        fontFamily: 'Inter, system-ui, sans-serif',
-                        lineHeight: '1.4',
-                      }}
-                      placeholder="Tapez votre note ici..."
-                    />
-                  </div>
-                </div>
-              );
-            } else if (annotation.type === 'pen') {
-              return (
-                <svg
-                  key={annotation.id}
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                  style={{ pointerEvents: activeTool === 'eraser' ? 'auto' : 'none' }}
-                >
-                  <path
-                    d={annotation.path || ''}
-                    stroke={annotation.color}
-                    strokeWidth={annotation.strokeWidth || 2}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    onClick={() => activeTool === 'eraser' && handleDeleteAnnotation(annotation.id)}
-                    style={{ cursor: activeTool === 'eraser' ? 'pointer' : 'default' }}
-                  />
-                </svg>
-              );
-            }
-            return null;
+            );
           })}
-          
-          {/* Live drawing preview */}
-          {isDrawing && currentPath && (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              <path
-                d={currentPath}
-                stroke={activeColor}
-                strokeWidth={strokeWidth}
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-          
-          {/* Live highlight preview */}
-          {isDrawing && activeTool === 'highlight' && startPoint && highlightSize && (
-            <div
-              className="absolute pointer-events-none opacity-50 rounded-sm"
+          <span className="mx-1.5 h-5 w-px bg-line" aria-hidden />
+          <span className="flex items-center gap-1" role="radiogroup" aria-label="Couleur">
+            {COLORS.map((c) => (
+              <button key={c.value} type="button" role="radio" aria-checked={color === c.value} aria-label={`Couleur ${c.name}`} title={c.name}
+                onClick={() => setColor(c.value)}
+                className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-105 ${color === c.value ? 'border-ink' : 'border-white ring-1 ring-line'}`}
+                style={{ backgroundColor: c.value }} />
+            ))}
+          </span>
+          <span className="mx-1.5 h-5 w-px bg-line" aria-hidden />
+          <button type="button" onClick={undo} disabled={history.at <= 0} title="Annuler" aria-label="Annuler"
+            className={`${toolBtn} text-ink-soft hover:bg-[#f2f1ee] disabled:opacity-40`}><Undo2 className="h-4 w-4" /></button>
+          <button type="button" onClick={redo} disabled={history.at >= history.list.length - 1} title="Refaire" aria-label="Refaire"
+            className={`${toolBtn} text-ink-soft hover:bg-[#f2f1ee] disabled:opacity-40`}><Redo2 className="h-4 w-4" /></button>
+          <button type="button" onClick={clearAll} disabled={!annotations.length} title="Tout effacer"
+            className={`${toolBtn} text-[#a23b34] hover:bg-[#fbecea] disabled:opacity-40`}><Trash2 className="h-4 w-4" /> <span className="hidden lg:inline">Tout effacer</span></button>
+          <span className="ml-auto inline-flex items-center gap-1 pl-2 text-[12px] text-ink-faint" aria-live="polite">
+            {saveState === 'saving' ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Enregistrement…</>
+              : saveState === 'saved' ? <><Check className="h-3.5 w-3.5 text-brand" /> Enregistré</>
+                : saveState === 'error' ? <span className="text-[#a23b34]">Pas enregistré</span> : null}
+          </span>
+        </div>
+      )}
+
+      <NotebookPaper theme={notebookTheme}>
+        <div className={`relative z-10 ${className}`}>
+          <div className="py-6 pr-4 sm:py-8 sm:pr-8" style={paperTextStyle(notebookTheme)}>
+            {hasStructure ? (
+              <StructuredLessonContent structure={structure} onReady={onReady} />
+            ) : content ? (
+              <TipTapRenderer content={content} onReady={onReady} />
+            ) : (
+              <EmptyLessonBody onReady={onReady} />
+            )}
+          </div>
+        </div>
+
+        {/* Calque des annotations : ne capte les gestes qu'en mode annotation avec un outil. */}
+        <div
+          ref={layerRef}
+          className={`absolute inset-0 z-20 overflow-hidden ${annotating && tool && tool !== 'eraser' ? (tool === 'note' ? 'cursor-text' : 'cursor-crosshair') : ''}`}
+          style={{ pointerEvents: annotating && tool ? 'auto' : 'none', touchAction: annotating && tool ? 'none' : undefined }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {shown.filter((a) => a.type === 'highlight').map((a) => (
+            <div key={a.id} onClick={() => erase(a.id)}
+              className={`absolute rounded-sm ${erasing ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#a23b34]' : ''}`}
               style={{
-                left: `${startPoint.x}px`,
-                top: `${startPoint.y}px`,
-                width: `${highlightSize.width}px`,
-                height: `${highlightSize.height}px`,
-                backgroundColor: activeColor,
-              }}
-            />
+                left: a.position.x, top: a.position.y, width: a.position.width, height: a.position.height,
+                backgroundColor: a.color, opacity: 0.4, mixBlendMode: 'multiply', pointerEvents: erasing ? 'auto' : 'none',
+              }} />
+          ))}
+
+          <svg className="absolute inset-0 h-full w-full" style={{ pointerEvents: 'none' }} aria-hidden>
+            {shown.filter((a) => a.type === 'pen').map((a) => (
+              <g key={a.id} onClick={() => erase(a.id)} style={{ cursor: erasing ? 'pointer' : 'default' }}>
+                <path d={a.path || ''} stroke={a.color} strokeWidth={a.strokeWidth || 2} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                {/* Zone de clic plus large que le trait, pour la gomme. */}
+                <path d={a.path || ''} stroke="transparent" strokeWidth={14} fill="none" style={{ pointerEvents: erasing ? 'stroke' : 'none' }} />
+              </g>
+            ))}
+            {drawing && path && <path d={path} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />}
+          </svg>
+
+          {drawing && tool === 'highlight' && start && size && (
+            <div className="pointer-events-none absolute rounded-sm"
+              style={{
+                left: Math.min(start.x, start.x + size.width), top: Math.min(start.y, start.y + size.height),
+                width: Math.abs(size.width), height: Math.abs(size.height), backgroundColor: color, opacity: 0.35,
+              }} />
           )}
+
+          {/* Note posée sur un écran plus large : ramenée dans la feuille plutôt que coupée. */}
+          {shown.filter((a) => a.type === 'note').map((a) => (
+            <div key={a.id} onClick={() => erase(a.id)}
+              className={`absolute max-w-[260px] rounded-r-lg border-l-4 bg-[#fffbea] shadow-[0_4px_14px_rgba(20,18,16,.10)] ${erasing ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#a23b34]' : ''}`}
+              style={{ left: `max(0px, min(${a.position.x}px, 100% - 200px))`, top: a.position.y, minWidth: 180, borderLeftColor: a.color, pointerEvents: annotating ? 'auto' : 'none' }}>
+              {annotating && !erasing ? (
+                <textarea value={a.content || ''} autoFocus={a.id === fresh} rows={3}
+                  onChange={(e) => editNote(a.id, e.target.value)}
+                  placeholder="Écris ta note…"
+                  className="block w-full resize-y border-none bg-transparent p-2.5 text-[13px] leading-snug text-ink outline-none placeholder:text-ink-faint" />
+              ) : (
+                <p className="whitespace-pre-wrap p-2.5 text-[13px] leading-snug text-ink">{a.content || <span className="text-ink-faint">Note vide</span>}</p>
+              )}
+            </div>
+          ))}
         </div>
       </NotebookPaper>
     </div>

@@ -1,76 +1,92 @@
-// Rappel de l'accueil (« Mon prochain DS », 08/10/2026) : « DS de mathématiques demain : Limites,
-// Dérivation », avec le bouton pour réviser. Seulement s'il y a un DS dans les deux semaines.
-// 10/10/2026 : sans DS annoncé, une carte discrète en donne l'idée (« Un contrôle bientôt ? ») et ouvre le
-// formulaire ; « Plus tard » la masque 14 jours. Un DS déjà annoncé plus loin que deux semaines : rien.
-import React, { useState } from 'react';
+// « Ton prochain DS » sur l'accueil (refonte du 11/10/2026) : une carte compacte (date, compte à rebours,
+// chapitres, préparation) qui ouvre le plan de révision (/revisions/ds/:id) ; seulement pour un DS dans les deux
+// semaines. Sans DS annoncé, une invitation discrète ouvre le formulaire ; « Plus tard » la masque 14 jours.
+// Un DS déjà annoncé plus loin que deux semaines : rien (Réviser le montre).
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarPlus, X } from 'lucide-react';
-import { testTitle, whenLabel } from '@/lib/api/devoirsApi';
-import { DateTile } from './ui';
-import type { NextTestState } from './useNextTest';
+import { testTitle } from '@/lib/api/devoirsApi';
+import { Section, SectionLink } from '@/components/space/Page';
+import { Countdown, DateTile, Readiness } from './ui';
+import { nextTestVisible, type NextTestState } from './useNextTest';
 
-const LATER_KEY = 'fidni:annoncer-ds:plus-tard';
-const LATER_DAYS = 14;
-
-const hiddenForNow = () => {
-  try { return Number(localStorage.getItem(LATER_KEY) || 0) > Date.now(); } catch { return false; }
-};
+/** « Dénombrement, Suites numériques » : les chapitres à renforcer en or (et dits aux lecteurs d'écran). */
+const ChapterLine: React.FC<{ names: string[]; weak: string[] }> = ({ names, weak }) => (
+  <p className="mt-1 truncate text-[13px] text-ink-faint">
+    {names.slice(0, 3).map((n, i) => (
+      <React.Fragment key={n}>
+        {i > 0 && ', '}
+        {weak.includes(n) ? <span className="text-gold-strong">{n}<span className="sr-only"> (à renforcer)</span></span> : n}
+      </React.Fragment>
+    ))}
+    {names.length > 3 && ` et ${names.length - 3} autre${names.length > 4 ? 's' : ''}`}
+  </p>
+);
 
 export const NextTestReminder: React.FC<{
   state: NextTestState;
-  /** Sans DS : montrer l'invitation (faux quand l'accueil propose déjà « Annonce ton prochain DS »). */
-  invite?: boolean;
   onAnnounce: () => void;
-}> = ({ state, invite = true, onAnnounce }) => {
-  const [later, setLater] = useState(hiddenForNow);
+  /** Invitation masquée (« Plus tard ») et le geste qui la masque : voir useAnnounceLater (useNextTest.ts). */
+  later: boolean;
+  onLater: () => void;
+  className?: string;
+}> = ({ state, onAnnounce, later, onLater, className = '' }) => {
+  if (!nextTestVisible(state, later)) return null;
   const test = state.test;
 
   if (!test) {
-    if (!invite || !state.loaded || state.upcoming || later) return null;
-    const dismiss = () => {
-      try { localStorage.setItem(LATER_KEY, String(Date.now() + LATER_DAYS * 86400000)); } catch { /* stockage indisponible */ }
-      setLater(true);
-    };
     return (
-      <section aria-label="Annoncer un DS" className="relative flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-line bg-white py-3.5 pl-4 pr-11 sm:pl-5">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
-          <CalendarPlus className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1 basis-[220px]">
-          <p className="text-[15px] font-semibold leading-snug text-ink">Un contrôle bientôt ?</p>
-          <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">
-            Dis-nous la date et les chapitres : on te prépare une révision ciblée et un DS blanc.
-          </p>
+      <Section id="prochain-ds" title="Ton prochain DS" className={className}
+        action={(
+          <button type="button" onClick={onLater} aria-label="Plus tard (masquer pendant 14 jours)" title="Masquer pendant 14 jours"
+            className="inline-flex min-h-10 items-center gap-1 font-medium text-ink-faint hover:text-ink">
+            <X className="h-3.5 w-3.5" aria-hidden /> Plus tard
+          </button>
+        )}>
+        <div className="flex items-start gap-3.5 rounded-2xl border border-dashed border-[#d8d4cc] bg-white p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+            <CalendarPlus className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px] font-semibold leading-snug text-ink">Un DS bientôt ?</p>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">
+              Indique sa date et ses chapitres : tu auras une révision ciblée et un DS blanc.
+            </p>
+            <button type="button" onClick={onAnnounce} className="fd-btn-ghost mt-3 min-h-10 text-[13px] font-semibold">
+              <CalendarPlus className="h-4 w-4" /> Annoncer mon DS
+            </button>
+          </div>
         </div>
-        <button type="button" onClick={onAnnounce} className="fd-btn-primary shrink-0" style={{ minHeight: 40 }}>
-          Annoncer mon DS <ArrowRight className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={dismiss} aria-label="Plus tard (masquer pendant 14 jours)" title="Plus tard"
-          className="absolute right-1.5 top-1.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-          <X className="h-4 w-4" />
-        </button>
-      </section>
+      </Section>
     );
   }
 
   const soon = test.days_left <= 1;
-  const names = test.chapters.map((c) => c.name);
   return (
-    <section aria-label="Prochain DS"
-      className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border px-4 py-3.5 sm:px-5 ${soon ? 'border-[#f0d4cf] bg-[#fdf6f4]' : 'border-line bg-white'}`}>
-      <DateTile date={test.date} size="sm" urgent={soon} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold leading-snug text-ink">
-          {testTitle(test)} <span className={soon ? 'text-[#a23b34]' : 'text-ink-soft'}>{whenLabel(test.days_left)}</span>
-        </p>
-        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-faint">
-          {names.slice(0, 3).join(', ')}{names.length > 3 ? ` et ${names.length - 3} autre${names.length > 4 ? 's' : ''}` : ''}
-        </p>
-      </div>
-      <Link to={`/revisions/ds/${test.id}`} className="fd-btn-primary shrink-0">
-        Réviser <ArrowRight className="h-4 w-4" />
+    <Section id="prochain-ds" title="Ton prochain DS" className={className}
+      action={<SectionLink to="/reviser#prochain-ds">Réviser</SectionLink>}>
+      <Link to={`/revisions/ds/${test.id}`}
+        className="group flex items-start gap-4 rounded-2xl border border-line bg-white p-4 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <DateTile date={test.date} size="sm" urgent={soon} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[15px] font-semibold leading-snug text-ink group-hover:underline">{testTitle(test)}</span>
+            <Countdown days={test.days_left} />
+          </div>
+          {test.chapters.length > 0 && <ChapterLine names={test.chapters.map((c) => c.name)} weak={test.weak_chapters ?? []} />}
+          <div className="mt-3 flex items-end gap-4">
+            <div className="min-w-0 max-w-[220px] flex-1">
+              {test.readiness == null
+                ? <p className="text-[12px] text-ink-faint">Pas encore de mesure : quelques exercices suffisent.</p>
+                : <Readiness value={test.readiness} compact />}
+            </div>
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-brand-hover">
+              Préparer <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </div>
       </Link>
-    </section>
+    </Section>
   );
 };
 

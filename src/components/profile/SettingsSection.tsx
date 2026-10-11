@@ -1,147 +1,124 @@
 // src/components/profile/SettingsSection.tsx
-import React, { useState, useRef, useEffect } from 'react';
-import { IdentityFields } from '@/components/profile/IdentityForm';
-import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
-import { deleteMyAccount, downloadMyData } from '@/lib/api/userApi';
-import { requestPasswordReset } from '@/lib/api/authApi';
-import { LEGAL } from '@/lib/legal';
+// Onglet « Paramètres » du profil (refonte du 11/10/2026) : une seule colonne, trois sections, et chaque
+// réglage s'enregistre lui-même (avant : cinq sous-onglets et un bouton « Enregistrer » global, facile à oublier
+// pour les notifications). Photo, présentation, identité, niveau et objectifs vivent sur « Modifier mon profil ».
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Check, ChevronRight, Download, Eye, EyeOff, KeyRound, Loader2, LogOut, MailCheck, Monitor, Moon, Sun, Trash2, UserPen, X,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import {
-  uploadAvatar,
-  removeAvatar,
-  updateUserInfo,
-  changePassword,
-  updateUserProfile
-} from '@/lib/api/userApi';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  User, Bell, Shield, Palette, LogOut,
-  Camera, Check, X, Loader2, Eye, EyeOff,
-  Mail, Trash2, Moon, Sun, Monitor,
-  Save, AlertTriangle, Database, KeyRound, MailCheck
-} from 'lucide-react';
+import { CardLink, Section } from '@/components/space/Page';
+import { requestPasswordReset } from '@/lib/api/authApi';
+import { changePassword, deleteMyAccount, downloadMyData, updateUserInfo, updateUserProfile } from '@/lib/api/userApi';
+import { LEGAL } from '@/lib/legal';
 
-type SettingsTab = 'profile' | 'account' | 'notifications' | 'appearance' | 'danger';
 /** Erreur axios telle que lue ici. */
 type ApiError = { response?: { status?: number; data?: { error?: string; code?: string } } };
 const apiData = (err: unknown) => (err as ApiError)?.response?.data;
 
-const SETTINGS_TABS = [
-  { id: 'profile', label: 'Profil', icon: User },
-  { id: 'account', label: 'Compte', icon: Shield },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'appearance', label: 'Apparence', icon: Palette },
-  { id: 'danger', label: 'Mes données', icon: Database },
-];
+/** Même règle que le serveur (apps/authentication/views.py, USERNAME_RE). */
+const USERNAME_RE = /^[A-Za-z0-9_.-]{3,30}$/;
 
-interface ToggleSwitchProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  disabled?: boolean;
-}
+const inputCls =
+  'h-11 w-full rounded-xl border border-line bg-white px-3.5 text-[14px] text-ink placeholder:text-ink-faint '
+  + 'focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:cursor-not-allowed disabled:bg-[#f7f6f3] disabled:text-ink-faint';
 
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, disabled }) => (
-  <button
-    type="button"
-    onClick={() => !disabled && onChange(!enabled)}
-    disabled={disabled}
-    className={`
-      relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200
-      ${enabled ? 'bg-brand' : 'bg-[#e7e3dc]'}
-      ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-    `}
-  >
-    <span
-      className={`
-        inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200
-        ${enabled ? 'translate-x-6' : 'translate-x-1'}
-      `}
-    />
-  </button>
-);
+type Msg = { kind: 'error' | 'ok' | 'info'; text: string } | null;
 
-interface SettingRowProps {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}
-
-const SettingRow: React.FC<SettingRowProps> = ({ icon: Icon, title, description, children }) => (
-  <div className="flex items-center justify-between py-4 border-b border-[#faf9f7] last:border-0">
-    <div className="flex items-start gap-3">
-      <div className="p-2 bg-[#f2f1ee] rounded-lg mt-0.5">
-        <Icon className="w-4 h-4 text-ink-soft" />
-      </div>
-      <div>
-        <h4 className="font-medium text-ink text-sm">{title}</h4>
-        <p className="text-xs text-ink-faint mt-0.5">{description}</p>
-      </div>
+/** Message sous un réglage : erreur (rouge sobre), réussite (vert), information (e-mail à confirmer). */
+const Note: React.FC<{ msg: Msg; onClose?: () => void }> = ({ msg, onClose }) => {
+  if (!msg) return null;
+  const cls = msg.kind === 'error' ? 'border-[#f0d5d1] bg-[#fbecea] text-[#a23b34]' : 'border-brand-line bg-brand-soft text-ink';
+  const Icon = msg.kind === 'info' ? MailCheck : msg.kind === 'ok' ? Check : null;
+  return (
+    <div role={msg.kind === 'error' ? 'alert' : 'status'} className={`mt-3 flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-[13px] leading-relaxed ${cls}`}>
+      {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-hover" aria-hidden />}
+      <p className="min-w-0 flex-1 break-words">{msg.text}</p>
+      {onClose && (
+        <button type="button" onClick={onClose} aria-label="Fermer le message" className="-m-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg opacity-70 hover:opacity-100">
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
-    <div className="flex-shrink-0 ml-4">
-      {children}
+  );
+};
+
+/** Une ligne de réglage : titre et explication, action à droite (dessous sur téléphone), puis le formulaire. */
+const Row: React.FC<{ title: string; hint?: React.ReactNode; aside?: React.ReactNode; children?: React.ReactNode }> = ({ title, hint, aside, children }) => (
+  <div className="px-4 py-4 sm:px-5">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="min-w-0">
+        <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
+        {hint && <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-faint">{hint}</p>}
+      </div>
+      {aside && <div className="flex shrink-0 flex-wrap gap-2">{aside}</div>}
     </div>
+    {children}
   </div>
 );
+
+const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">{children}</div>
+);
+
+/** Fenêtre de confirmation : fond sombre, Échap ou clic à côté pour fermer. */
+const Dialog: React.FC<{ id: string; title: string; onClose: () => void; children: React.ReactNode }> = ({ id, title, onClose, children }) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/40 p-4 [align-items:safe_center]" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby={id} onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-line bg-white p-5 shadow-xl sm:p-6">
+        <h2 id={id} className="fd-display text-[20px] leading-tight text-ink">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const PasswordInput: React.FC<{ id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string; autoFocus?: boolean }> = ({
+  id, label, value, onChange, autoComplete, autoFocus,
+}) => {
+  const [shown, setShown] = useState(false);
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-ink-soft">{label}</label>
+      <div className="relative">
+        <input id={id} type={shown ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete} autoFocus={autoFocus} className={`${inputCls} pr-12`} />
+        <button type="button" onClick={() => setShown((v) => !v)} aria-label={shown ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+          {shown ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const NOTIFS = [
+  { key: 'email_notifications', title: 'E-mails de Fidni', hint: 'Recevoir des notifications par e-mail.' },
+  { key: 'comment_notifications', title: 'Commentaires', hint: 'Quand quelqu’un commente ce que tu as publié.' },
+  { key: 'solution_notifications', title: 'Solutions', hint: 'Quand une nouvelle solution est proposée.' },
+] as const;
+type NotifKey = typeof NOTIFS[number]['key'];
+
+const THEMES = [
+  { id: 'light', label: 'Clair', icon: Sun },
+  { id: 'dark', label: 'Sombre', icon: Moon },
+  { id: 'system', label: 'Système', icon: Monitor },
+] as const;
 
 export const SettingsSection: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Bonne nouvelle à lire (nouvelle adresse à confirmer) : reste affichée jusqu'à fermeture.
-  const [notice, setNotice] = useState<string | null>(null);
-  // Changer d'adresse e-mail demande le mot de passe actuel (protection du compte).
-  const [emailPassword, setEmailPassword] = useState('');
-
-  // Profile state
-  const [profileData, setProfileData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    bio: user?.profile?.bio || '',
-    avatarPreview: user?.profile?.avatar || '',
-  });
-
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  // Identité (prénom, nom, civilité, date de naissance, établissement) : même composant qu'à l'inscription.
-  const [identity, setIdentity] = useState<IdentityValue>(() => identityFromUser(user));
-  const [exporting, setExporting] = useState(false);
-
-  // Password state
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
-  const [changingPassword, setChangingPassword] = useState(false);
-  // Compte sans mot de passe : lien « définir un mot de passe » envoyé par e-mail.
-  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent'>('idle');
-
-  // Notification settings
-  const [notifications, setNotifications] = useState({
-    emailNotifications: user?.profile?.email_notifications ?? true,
-    commentNotifications: user?.profile?.comment_notifications ?? true,
-    solutionNotifications: user?.profile?.solution_notifications ?? true,
-  });
-
-  // Modals
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const timer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   // Compte créé avec Google (10/10/2026) : peut n'avoir aucun mot de passe. Champ absent : comme avant.
   // Le premier mot de passe se définit par un lien reçu par e-mail (une session ouverte ne suffit pas).
@@ -151,155 +128,101 @@ export const SettingsSection: React.FC = () => {
     ? 'Pour changer d’adresse e-mail, définis d’abord un mot de passe : bouton « Définir un mot de passe » ci-dessous.'
     : `Ton compte n’a pas de mot de passe : pour changer d’adresse e-mail, écris à ${LEGAL.contactEmail}.`;
 
-  // Load user data on mount
-  useEffect(() => {
-    if (user) {
-      setProfileData({
-        username: user.username,
-        email: user.email,
-        bio: user.profile?.bio || '',
-        avatarPreview: user.profile?.avatar || '',
-      });
-      setIdentity(identityFromUser(user));
-      setNotifications({
-        emailNotifications: user.profile?.email_notifications ?? true,
-        commentNotifications: user.profile?.comment_notifications ?? true,
-        solutionNotifications: user.profile?.solution_notifications ?? true,
-      });
-    }
-  }, [user]);
+  /* ── Pseudo ── */
+  const [name, setName] = useState(user?.username ?? '');
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameMsg, setNameMsg] = useState<Msg>(null);
+  useEffect(() => { setName(user?.username ?? ''); }, [user?.username]);
+  const newName = name.trim();
+  const nameChanged = !!user && newName !== user.username;
+  const nameValid = USERNAME_RE.test(newName);
 
-  const handleSaveProfile = async () => {
-    if (!user?.username) {
-      setError('Utilisateur non authentifié');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    setNotice(null);
-
+  const saveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !nameChanged || !nameValid) return;
+    setNameBusy(true);
+    setNameMsg(null);
     try {
-      // Upload avatar if changed
-      if (avatarFile) {
-        await uploadAvatar(avatarFile);
-      }
+      await updateUserProfile(user.username, { username: newName });
+      await refreshUser();
+      setNameMsg({ kind: 'ok', text: `C’est fait : ton pseudo est maintenant « ${newName} ».` });
+      // L'adresse du profil suit le pseudo.
+      navigate(`/profile/${encodeURIComponent(newName)}?tab=settings`, { replace: true });
+    } catch (err) {
+      setNameMsg({ kind: 'error', text: apiData(err)?.error || 'Ton pseudo n’a pas pu être changé. Réessaie.' });
+    } finally {
+      setNameBusy(false);
+    }
+  };
 
-      // Update user info
-      const emailChanged = profileData.email.trim().toLowerCase() !== (user.email || '').toLowerCase();
-      if (emailChanged && !hasPassword) {
-        setActiveTab('account');
-        setError(SET_PASSWORD_FIRST);
-        return;
-      }
-      if (emailChanged && !emailPassword) {
-        setActiveTab('account');
-        setError('Indique ton mot de passe actuel pour changer d’adresse e-mail.');
-        return;
-      }
-      const problem = identityError(identity);
-      if (problem) {
-        setActiveTab('profile');
-        setError(problem);
-        return;
-      }
-      const newEmail = profileData.email.trim();
-      const info = await updateUserInfo({
-        ...identityPayload(identity),
-        ...(emailChanged ? { email: newEmail, current_password: emailPassword } : {}),
-      });
+  /* ── Adresse e-mail (mot de passe actuel exigé ; la nouvelle adresse est à confirmer) ── */
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState<Msg>(null);
+  useEffect(() => { setEmail(user?.email ?? ''); }, [user?.email]);
+  const newEmail = email.trim();
+  const emailChanged = newEmail.toLowerCase() !== (user?.email || '').toLowerCase();
+
+  const saveEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !emailChanged) return;
+    if (!hasPassword) { setEmailMsg({ kind: 'error', text: SET_PASSWORD_FIRST }); return; }
+    if (!emailPassword) { setEmailMsg({ kind: 'error', text: 'Indique ton mot de passe actuel pour changer d’adresse e-mail.' }); return; }
+    setEmailBusy(true);
+    setEmailMsg(null);
+    try {
+      const info = await updateUserInfo({ email: newEmail, current_password: emailPassword });
       setEmailPassword('');
       // La nouvelle adresse est enregistrée tout de suite, mais reste « à confirmer » jusqu'au clic sur le lien reçu.
-      if (emailChanged && info?.email_verification_sent) {
+      if (info?.email_verification_sent) {
         const to = typeof info.pending_email === 'string' && info.pending_email ? info.pending_email : newEmail;
-        setNotice(`Confirme ta nouvelle adresse : on t’a envoyé un lien à ${to}. Pense à vérifier tes courriers indésirables.`);
-      }
-
-      // Update profile (and optionally username)
-      await updateUserProfile(user.username, {
-        username: profileData.username,
-        profile: {
-          bio: profileData.bio,
-          email_notifications: notifications.emailNotifications,
-          comment_notifications: notifications.commentNotifications,
-          solution_notifications: notifications.solutionNotifications,
-        }
-      });
-
-      await refreshUser();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      if (apiData(err)?.code === 'set_password_first') {
-        setActiveTab('account');
-        setError(SET_PASSWORD_FIRST);
+        setEmailMsg({ kind: 'info', text: `Confirme ta nouvelle adresse : on t’a envoyé un lien à ${to}. Pense à vérifier tes courriers indésirables.` });
       } else {
-        setError(apiData(err)?.error || 'Erreur lors de la sauvegarde');
+        setEmailMsg({ kind: 'ok', text: 'Ton adresse e-mail est changée.' });
       }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileData(prev => ({ ...prev, avatarPreview: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
-    try {
-      await removeAvatar();
-      setProfileData(prev => ({ ...prev, avatarPreview: '' }));
-      setAvatarFile(null);
       await refreshUser();
-    } catch {
-      setError('Erreur lors de la suppression de l\'avatar');
+    } catch (err) {
+      setEmailMsg({
+        kind: 'error',
+        text: apiData(err)?.code === 'set_password_first' ? SET_PASSWORD_FIRST : apiData(err)?.error || 'Ton adresse n’a pas pu être changée. Réessaie.',
+      });
+    } finally {
+      setEmailBusy(false);
     }
   };
 
-  const handlePasswordChange = async () => {
-    setError(null);
-    if (!hasPassword) return;  // compte sans mot de passe : lien par e-mail (handleSetPasswordLink)
+  /* ── Mot de passe ── */
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState<Msg>(null);
+  // Compte sans mot de passe : lien « définir un mot de passe » envoyé par e-mail.
+  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent'>('idle');
 
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
-      return;
-    }
-
-    setChangingPassword(true);
-
+  const savePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hasPassword) return; // compte sans mot de passe : lien par e-mail (sendSetPasswordLink)
+    if (pw.next !== pw.confirm) { setPwMsg({ kind: 'error', text: 'Les deux nouveaux mots de passe ne sont pas identiques.' }); return; }
+    if (pw.next.length < 8) { setPwMsg({ kind: 'error', text: 'Le mot de passe doit contenir au moins 8 caractères.' }); return; }
+    setPwBusy(true);
+    setPwMsg(null);
     try {
-      await changePassword(passwordData.currentPassword, passwordData.newPassword);
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      await changePassword(pw.current, pw.next);
+      setPw({ current: '', next: '', confirm: '' });
+      setPwOpen(false);
+      setPwMsg({ kind: 'ok', text: 'Mot de passe changé. Tes autres appareils ont été déconnectés.' });
     } catch (err) {
-      setError(apiData(err)?.error || 'Erreur lors du changement de mot de passe');
+      setPwMsg({ kind: 'error', text: apiData(err)?.error || 'Le mot de passe n’a pas pu être changé. Réessaie.' });
     } finally {
-      setChangingPassword(false);
+      setPwBusy(false);
     }
   };
 
   /** Compte sans mot de passe (créé avec Google) : même lien que « Mot de passe oublié », envoyé à son adresse. */
-  const handleSetPasswordLink = async () => {
+  const sendSetPasswordLink = async () => {
     if (!user?.email) return;
-    setError(null);
+    setPwMsg(null);
     setLinkState('sending');
     try {
       await requestPasswordReset(user.email);
@@ -307,12 +230,69 @@ export const SettingsSection: React.FC = () => {
     } catch (err) {
       setLinkState('idle');
       const status = (err as ApiError)?.response?.status;
-      setError(status === 429 ? 'Trop de demandes. Patiente quelques minutes avant de réessayer.'
-        : apiData(err)?.error || 'Impossible d’envoyer le lien pour le moment. Réessaie dans un instant.');
+      setPwMsg({
+        kind: 'error',
+        text: status === 429 ? 'Trop de demandes. Patiente quelques minutes avant de réessayer.'
+          : apiData(err)?.error || 'Impossible d’envoyer le lien pour le moment. Réessaie dans un instant.',
+      });
     }
   };
 
-  const handleLogout = async () => {
+  /* ── Notifications : enregistrées dès le clic (mise à jour partielle du profil) ── */
+  const fromUser = (): Record<NotifKey, boolean> => ({
+    email_notifications: user?.profile?.email_notifications ?? true,
+    comment_notifications: user?.profile?.comment_notifications ?? true,
+    solution_notifications: user?.profile?.solution_notifications ?? true,
+  });
+  const [notifs, setNotifs] = useState(fromUser);
+  const [prefState, setPrefState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const p = user?.profile;
+  useEffect(() => {
+    setNotifs({
+      email_notifications: p?.email_notifications ?? true,
+      comment_notifications: p?.comment_notifications ?? true,
+      solution_notifications: p?.solution_notifications ?? true,
+    });
+  }, [p?.email_notifications, p?.comment_notifications, p?.solution_notifications]);
+
+  const toggleNotif = async (key: NotifKey) => {
+    if (!user) return;
+    const before = notifs;
+    const value = !before[key];
+    setNotifs({ ...before, [key]: value });
+    setPrefState('saving');
+    window.clearTimeout(timer.current);
+    try {
+      await updateUserProfile(user.username, { profile: { [key]: value } });
+      setPrefState('saved');
+      timer.current = window.setTimeout(() => setPrefState('idle'), 2500);
+      refreshUser().catch(() => undefined);
+    } catch {
+      setNotifs(before);
+      setPrefState('error');
+    }
+  };
+
+  /* ── Tes données ── */
+  const [exporting, setExporting] = useState(false);
+  const [dataMsg, setDataMsg] = useState<Msg>(null);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const exportData = async () => {
+    if (!user?.username) return;
+    setExporting(true);
+    setDataMsg(null);
+    try { await downloadMyData(user.username); }
+    catch { setDataMsg({ kind: 'error', text: 'Le téléchargement a échoué. Réessaie dans un instant.' }); }
+    finally { setExporting(false); }
+  };
+
+  const doLogout = async () => {
     try {
       await logout();
       navigate('/');
@@ -321,8 +301,12 @@ export const SettingsSection: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== user?.username || (hasPassword && !deletePassword)) return;
+  const closeDelete = () => { setDeleteOpen(false); setDeleteConfirm(''); setDeletePassword(''); setDeleteError(null); };
+  const canDelete = deleteConfirm === user?.username && (!hasPassword || !!deletePassword) && !deleting;
+
+  const deleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canDelete) return;
     setDeleting(true);
     setDeleteError(null);
     try {
@@ -337,690 +321,261 @@ export const SettingsSection: React.FC = () => {
     }
   };
 
+  if (!user) return null;
+
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Header with Save Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-ink-faint text-sm">
-            Gère ton compte et personnalise ton expérience
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <AnimatePresence>
-            {saved && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg"
-              >
-                <Check className="w-4 h-4" />
-                <span className="text-sm font-medium">Sauvegardé</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+    <div className="flex max-w-2xl flex-col gap-10">
+      <CardLink to={`/profile/${user.username}/edit`}>
+        <span className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+            <UserPen className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-ink group-hover:underline">Photo, présentation, identité, niveau et objectifs</span>
+            <span className="mt-0.5 block text-[12.5px] text-ink-faint">Tout ce qui te décrit se modifie sur « Modifier mon profil ».</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+        </span>
+      </CardLink>
 
-          <button
-            onClick={handleSaveProfile}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            <span className="text-sm font-medium">Enregistrer</span>
-          </button>
-        </div>
-      </div>
+      {/* ── Compte et sécurité ── */}
+      <Section id="compte" title="Compte et sécurité">
+        <Card>
+          <Row title="Pseudo" hint="Ton nom public sur Fidni : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).">
+            <form onSubmit={saveName} className="mt-3 flex flex-col gap-3">
+              <label htmlFor="settings-username" className="sr-only">Pseudo</label>
+              <input id="settings-username" value={name} autoComplete="username" maxLength={30}
+                onChange={(e) => { setName(e.target.value); setNameMsg(null); }}
+                aria-invalid={nameChanged && !nameValid} className={inputCls} />
+              {nameChanged && newName && !nameValid && (
+                <p className="text-[12.5px] text-[#a23b34]">Ce pseudo n’est pas valable : 3 à 30 caractères, sans espace ni accent.</p>
+              )}
+              {/* Les boutons n'apparaissent qu'une fois le pseudo modifié (comme pour l'e-mail). */}
+              {nameChanged && (
+                <div className="flex flex-wrap gap-2">
+                  <button type="submit" disabled={!nameValid || nameBusy} className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50">
+                    {nameBusy && <Loader2 className="h-4 w-4 animate-spin" />} Changer de pseudo
+                  </button>
+                  <button type="button" className="fd-btn-ghost min-h-11" onClick={() => { setName(user.username); setNameMsg(null); }}>
+                    Annuler
+                  </button>
+                </div>
+              )}
+            </form>
+            <Note msg={nameMsg} onClose={() => setNameMsg(null)} />
+          </Row>
 
-      {/* Error Message */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3"
-          >
-            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <p className="text-red-700 text-sm flex-1">{error}</p>
-            <button onClick={() => setError(null)} aria-label="Fermer le message">
-              <X className="w-4 h-4 text-red-400 hover:text-red-600" />
+          <Row title="Adresse e-mail"
+            hint={hasPassword ? 'Pour te connecter et recevoir tes notifications. Une nouvelle adresse est à confirmer par un lien.'
+              : 'Pour changer d’adresse, définis d’abord un mot de passe ci-dessous.'}>
+            <form onSubmit={saveEmail} className="mt-3 flex flex-col gap-3">
+              <label htmlFor="settings-email" className="sr-only">Adresse e-mail</label>
+              <input id="settings-email" type="email" value={email} autoComplete="email" disabled={!hasPassword}
+                onChange={(e) => { setEmail(e.target.value); setEmailMsg(null); }} placeholder="ton.email@exemple.com" className={inputCls} />
+              {hasPassword && emailChanged && (
+                <>
+                  <PasswordInput id="settings-email-password" label="Ton mot de passe actuel" value={emailPassword}
+                    onChange={setEmailPassword} autoComplete="current-password" />
+                  <div className="flex flex-wrap gap-2">
+                    <button type="submit" disabled={emailBusy || !newEmail} className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50">
+                      {emailBusy && <Loader2 className="h-4 w-4 animate-spin" />} Changer d’adresse
+                    </button>
+                    <button type="button" className="fd-btn-ghost min-h-11" onClick={() => { setEmail(user.email ?? ''); setEmailPassword(''); setEmailMsg(null); }}>
+                      Annuler
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
+            <Note msg={emailMsg} onClose={() => setEmailMsg(null)} />
+          </Row>
+
+          {googleLinked && (
+            <Row title="Connecté avec Google"
+              hint={hasPassword
+                ? 'Tu te connectes avec « Continuer avec Google ». Ton e-mail (ou ton pseudo) et ton mot de passe marchent aussi.'
+                : 'Tu te connectes avec « Continuer avec Google ». Ton compte n’a pas encore de mot de passe : tu peux en définir un ci-dessous.'}
+              aside={<span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-semibold text-brand-hover"><Check className="h-3.5 w-3.5" /> Relié</span>} />
+          )}
+
+          {/* Mot de passe. Compte sans mot de passe (créé avec Google) : le premier se définit par un lien
+              reçu par e-mail, comme « Mot de passe oublié » — une session restée ouverte ne suffit pas. */}
+          {hasPassword ? (
+            <Row title="Mot de passe" hint="Au moins 8 caractères. Tes autres appareils seront déconnectés."
+              aside={!pwOpen ? (
+                <button type="button" className="fd-btn-ghost min-h-10" onClick={() => { setPwOpen(true); setPwMsg(null); }}>
+                  <KeyRound className="h-4 w-4" /> Changer mon mot de passe
+                </button>
+              ) : undefined}>
+              {pwOpen && (
+                <form onSubmit={savePassword} className="mt-3 flex flex-col gap-3">
+                  <PasswordInput id="settings-current-password" label="Mot de passe actuel" value={pw.current} autoFocus
+                    onChange={(v) => setPw((s) => ({ ...s, current: v }))} autoComplete="current-password" />
+                  <PasswordInput id="settings-new-password" label="Nouveau mot de passe" value={pw.next}
+                    onChange={(v) => setPw((s) => ({ ...s, next: v }))} autoComplete="new-password" />
+                  <PasswordInput id="settings-confirm-password" label="Nouveau mot de passe, encore une fois" value={pw.confirm}
+                    onChange={(v) => setPw((s) => ({ ...s, confirm: v }))} autoComplete="new-password" />
+                  <div className="flex flex-wrap gap-2">
+                    <button type="submit" disabled={pwBusy || !pw.current || !pw.next} className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50">
+                      {pwBusy && <Loader2 className="h-4 w-4 animate-spin" />} Changer le mot de passe
+                    </button>
+                    <button type="button" className="fd-btn-ghost min-h-11" onClick={() => { setPwOpen(false); setPw({ current: '', next: '', confirm: '' }); setPwMsg(null); }}>
+                      Annuler
+                    </button>
+                  </div>
+                </form>
+              )}
+              <Note msg={pwMsg} onClose={() => setPwMsg(null)} />
+            </Row>
+          ) : (
+            <Row title="Définir un mot de passe"
+              hint={googleLinked ? (
+                <>Ton compte a été créé avec Google. Un mot de passe te permet aussi de te connecter avec ton e-mail (ou ton pseudo),
+                  et de changer d’adresse. Pour le choisir, on t’envoie un lien à <b className="break-words font-semibold text-ink-soft">{user.email}</b>.</>
+              ) : (
+                // Sans compte Google, le lien « Mot de passe oublié » n'est pas envoyé (rien ne prouve l'adresse).
+                <>Ton compte n’a pas de mot de passe. Pour en obtenir un, écris à{' '}
+                  <a href={`mailto:${LEGAL.contactEmail}`} className="font-semibold text-brand-hover underline">{LEGAL.contactEmail}</a>.</>
+              )}
+              aside={googleLinked && linkState !== 'sent' ? (
+                <button type="button" onClick={sendSetPasswordLink} disabled={linkState === 'sending' || !user.email}
+                  className="fd-btn-primary min-h-10 disabled:cursor-not-allowed disabled:opacity-50">
+                  {linkState === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                  {linkState === 'sending' ? 'Envoi…' : 'Définir un mot de passe'}
+                </button>
+              ) : undefined}>
+              {linkState === 'sent' && (
+                <Note msg={{ kind: 'info', text: 'On t’a envoyé un lien par e-mail pour définir ton mot de passe. Pense à regarder dans les spams. Une fois le mot de passe choisi, reconnecte-toi.' }} />
+              )}
+              <Note msg={pwMsg} onClose={() => setPwMsg(null)} />
+            </Row>
+          )}
+        </Card>
+      </Section>
+
+      {/* ── Préférences ── */}
+      <Section id="preferences" title="Préférences"
+        action={prefState === 'saved' ? <span role="status" className="inline-flex min-h-10 items-center gap-1 font-semibold text-brand-hover"><Check className="h-4 w-4" /> Enregistré</span>
+          : prefState === 'saving' ? <span className="inline-flex min-h-10 items-center gap-1.5 text-ink-faint"><Loader2 className="h-4 w-4 animate-spin" /> Enregistrement…</span>
+            : undefined}>
+        <Card>
+          {NOTIFS.map((n) => {
+            const on = notifs[n.key];
+            const disabled = n.key !== 'email_notifications' && !notifs.email_notifications;
+            return (
+              <button key={n.key} type="button" role="switch" aria-checked={on} disabled={disabled} onClick={() => toggleNotif(n.key)}
+                className="flex min-h-[60px] w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-[#fcfbf9] focus:outline-none focus-visible:bg-[#f7f6f3] disabled:cursor-not-allowed disabled:opacity-50 sm:px-5">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold text-ink">{n.title}</span>
+                  <span className="mt-0.5 block text-[12.5px] text-ink-faint">{n.hint}</span>
+                </span>
+                <span className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-brand' : 'bg-[#d8d4cc]'}`} aria-hidden>
+                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+                </span>
+              </button>
+            );
+          })}
+          {prefState === 'error' && (
+            <div className="px-4 pb-4 sm:px-5">
+              <Note msg={{ kind: 'error', text: 'Ce réglage n’a pas pu être enregistré. Réessaie.' }} onClose={() => setPrefState('idle')} />
+            </div>
+          )}
+          <Row title="Thème" hint="L’apparence de Fidni sur cet appareil.">
+            <div role="radiogroup" aria-label="Thème" className="mt-3 grid grid-cols-3 gap-2">
+              {THEMES.map((t) => {
+                const active = theme === t.id;
+                const Icon = t.icon;
+                return (
+                  <button key={t.id} type="button" role="radio" aria-checked={active} onClick={() => setTheme(t.id)}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border text-[13.5px] font-semibold transition-colors ${
+                      active ? 'border-brand bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+                    <Icon className="h-4 w-4" aria-hidden /> {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Row>
+        </Card>
+      </Section>
+
+      {/* ── Tes données ── */}
+      <Section id="donnees" title="Tes données">
+        <Card>
+          <Row title="Télécharger mes données"
+            hint="Un fichier avec tout ce que Fidni conserve sur ton compte : profil, progression, publications, favoris, historique…"
+            aside={(
+              <button type="button" onClick={exportData} disabled={exporting} className="fd-btn-ghost min-h-10 disabled:opacity-60">
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exporting ? 'Préparation…' : 'Télécharger (JSON)'}
+              </button>
+            )}>
+            <Note msg={dataMsg} onClose={() => setDataMsg(null)} />
+          </Row>
+          <Row title="Se déconnecter" hint="Sur cet appareil seulement."
+            aside={<button type="button" onClick={() => setLogoutOpen(true)} className="fd-btn-ghost min-h-10"><LogOut className="h-4 w-4" /> Se déconnecter</button>} />
+          <Row title="Supprimer mon compte"
+            hint="Irréversible : ton profil, ta progression et tes fichiers sont effacés. Tes publications restent visibles, sous le nom « Compte supprimé »."
+            aside={(
+              <button type="button" onClick={() => setDeleteOpen(true)}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-[10px] border border-[#f0d5d1] bg-[#fbecea] px-3.5 text-[13px] font-semibold text-[#a23b34] transition-colors hover:border-[#a23b34]">
+                <Trash2 className="h-4 w-4" /> Supprimer mon compte
+              </button>
+            )} />
+        </Card>
+      </Section>
+
+      {logoutOpen && (
+        <Dialog id="deconnexion-titre" title="Se déconnecter ?" onClose={() => setLogoutOpen(false)}>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-ink-faint">Tu devras te reconnecter pour retrouver ton compte sur cet appareil.</p>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
+            <button type="button" autoFocus onClick={() => setLogoutOpen(false)} className="fd-btn-ghost min-h-11 flex-1 justify-center">Annuler</button>
+            <button type="button" onClick={doLogout}
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-ink px-4 text-[13px] font-semibold text-white hover:bg-black">
+              <LogOut className="h-4 w-4" /> Se déconnecter
             </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Nouvelle adresse à confirmer */}
-      {notice && (
-        <div role="status" className="p-4 bg-brand-soft border border-brand-line rounded-xl flex items-start gap-3">
-          <MailCheck className="w-5 h-5 text-brand-hover flex-shrink-0 mt-0.5" />
-          <p className="text-ink text-sm flex-1 min-w-0 break-words">{notice}</p>
-          <button onClick={() => setNotice(null)} aria-label="Fermer le message">
-            <X className="w-4 h-4 text-ink-faint hover:text-ink" />
-          </button>
-        </div>
+          </div>
+        </Dialog>
       )}
 
-      {/* Segmented Tab Bar */}
-      <div className="flex bg-[#f2f1ee] rounded-xl p-1 overflow-x-auto scrollbar-hide w-fit">
-        {SETTINGS_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as SettingsTab)}
-              // Sur téléphone, seule l'icône est visible : le nom reste lisible par les lecteurs d'écran.
-              aria-label={tab.label}
-              aria-pressed={isActive}
-              title={tab.label}
-              className={`
-                flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all
-                ${isActive ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink-soft'}
-              `}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab Content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* Profile Tab */}
-          {activeTab === 'profile' && (
-            <div className="space-y-6">
-              {/* Avatar */}
-              <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-4">Photo de profil</h3>
-                <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <div className="w-20 h-20 rounded-2xl bg-[#e7e3dc] flex items-center justify-center text-ink-soft text-2xl font-bold overflow-hidden">
-                      {profileData.avatarPreview ? (
-                        <img src={profileData.avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        profileData.username.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute -bottom-2 -right-2 p-2 bg-white rounded-xl border border-[#e7e3dc] shadow-sm hover:bg-paper transition-colors"
-                    >
-                      <Camera className="w-4 h-4 text-ink-soft" />
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm text-ink-soft mb-3">
-                      JPG, PNG ou GIF. Max 5MB.
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-3 py-1.5 text-sm font-medium text-brand bg-brand-soft rounded-lg hover:bg-brand-soft transition-colors"
-                      >
-                        Changer
-                      </button>
-                      {profileData.avatarPreview && (
-                        <button
-                          onClick={handleRemoveAvatar}
-                          className="px-3 py-1.5 text-sm font-medium text-ink-soft bg-[#f2f1ee] rounded-lg hover:bg-[#e7e3dc] transition-colors"
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+      {deleteOpen && (
+        <Dialog id="suppression-titre" title="Supprimer ton compte ?" onClose={closeDelete}>
+          <form onSubmit={deleteAccount}>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-faint">
+              C’est irréversible. Ton profil, ta progression, tes favoris, tes cahiers, tes listes de révision et tes fichiers
+              seront définitivement effacés.
+            </p>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-faint">
+              Les exercices, commentaires et solutions que tu as publiés resteront en ligne pour les autres élèves, sous le nom
+              « Compte supprimé ».
+            </p>
+            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] p-3.5">
+              <div>
+                <label htmlFor="suppression-pseudo" className="mb-1.5 block text-[13px] text-[#a23b34]">
+                  Pour confirmer, recopie <b className="font-semibold">{user.username}</b> :
+                </label>
+                <input id="suppression-pseudo" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} autoFocus
+                  autoComplete="off" className={inputCls} />
               </div>
-
-              {/* Personal Info */}
-              <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-4">Informations personnelles</h3>
-                <div className="grid gap-4">
-                  <IdentityFields value={identity} onChange={(v) => { setIdentity(v); setError(null); }}
-                    isTeacher={user?.profile?.user_type === 'teacher'} />
-
-                  <div>
-                    <label className="block text-sm font-medium text-ink-soft mb-1.5">
-                      Nom d'utilisateur
-                    </label>
-                    <input
-                      type="text"
-                      value={profileData.username}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
-                      className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
-                      placeholder="Nom d'utilisateur"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-ink-soft mb-1.5">
-                      Bio
-                    </label>
-                    <textarea
-                      value={profileData.bio}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-                      rows={3}
-                      className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all resize-none"
-                      placeholder="Parle un peu de toi…"
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-ink-faint mt-1">{profileData.bio.length}/500 caractères</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Account Tab */}
-          {activeTab === 'account' && (
-            <div className="space-y-6">
-              {/* Connexion avec Google */}
-              {googleLinked && (
-                <div className="fd-card p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-brand-soft rounded-lg mt-0.5">
-                      <Check className="w-4 h-4 text-brand-hover" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-ink">Connecté avec Google</h3>
-                      <p className="text-sm text-ink-faint mt-1">
-                        Tu te connectes avec le bouton « Continuer avec Google ».{' '}
-                        {hasPassword
-                          ? 'Ton e-mail (ou ton pseudo) et ton mot de passe marchent aussi.'
-                          : 'Ton compte n’a pas encore de mot de passe : tu peux en définir un ci-dessous.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Email */}
-              <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-4">Adresse email</h3>
+              {/* Compte créé avec Google, sans mot de passe : le pseudo recopié suffit. */}
+              {hasPassword && (
                 <div>
-                  <label htmlFor="settings-email" className="block text-sm font-medium text-ink-soft mb-1.5">
-                    Email
-                  </label>
-                  <input
-                    id="settings-email"
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    disabled={!hasPassword}
-                    className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    placeholder="ton.email@exemple.com"
-                  />
-                  {!hasPassword && (
-                    <p className="text-xs text-ink-faint mt-1.5">Pour changer d’adresse, définis d’abord un mot de passe ci-dessous.</p>
-                  )}
+                  <label htmlFor="suppression-mdp" className="mb-1.5 block text-[13px] text-[#a23b34]">Ton mot de passe :</label>
+                  <input id="suppression-mdp" type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)}
+                    autoComplete="current-password" className={inputCls} />
                 </div>
-                {hasPassword && profileData.email.trim().toLowerCase() !== (user?.email || '').toLowerCase() && (
-                  <div className="mt-4">
-                    <label htmlFor="settings-email-password" className="block text-sm font-medium text-ink-soft mb-1.5">
-                      Mot de passe actuel
-                    </label>
-                    <input
-                      id="settings-email-password"
-                      type="password"
-                      value={emailPassword}
-                      onChange={(e) => setEmailPassword(e.target.value)}
-                      autoComplete="current-password"
-                      className="w-full px-4 py-2.5 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
-                      placeholder="••••••••"
-                    />
-                    <p className="text-xs text-ink-faint mt-1.5">
-                      Nécessaire pour changer l’adresse de ton compte. Puis « Enregistrer » : on enverra un lien de
-                      confirmation à la nouvelle adresse.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Mot de passe. Compte sans mot de passe (créé avec Google) : le premier se définit par un lien
-                  reçu par e-mail, comme « Mot de passe oublié » — une session restée ouverte ne suffit pas. */}
-              {!hasPassword ? (
-                <div className="fd-card p-6">
-                  <h3 className="font-semibold text-ink mb-2">Définir un mot de passe</h3>
-                  {googleLinked ? (
-                    <>
-                      <p className="text-sm text-ink-faint">
-                        Ton compte a été créé avec Google. Un mot de passe te permet aussi de te connecter avec ton
-                        e-mail (ou ton pseudo), et de changer d’adresse e-mail. Pour le choisir, on t’envoie un lien à{' '}
-                        <strong className="text-ink break-words">{user?.email}</strong>.
-                      </p>
-                      {linkState === 'sent' ? (
-                        <p role="status" className="mt-4 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-soft px-4 py-3 text-sm text-ink">
-                          <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-hover" />
-                          <span>
-                            On t’a envoyé un lien par e-mail pour définir ton mot de passe. Pense à regarder dans les
-                            spams. Une fois le mot de passe choisi, reconnecte-toi.
-                          </span>
-                        </p>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleSetPasswordLink}
-                          disabled={linkState === 'sending' || !user?.email}
-                          className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {linkState === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                          {linkState === 'sending' ? 'Envoi…' : 'Définir un mot de passe'}
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    // Sans compte Google, le lien « Mot de passe oublié » n'est pas envoyé (rien ne prouve l'adresse).
-                    <p className="text-sm text-ink-faint">
-                      Ton compte n’a pas de mot de passe. Pour en obtenir un, écris à{' '}
-                      <a href={`mailto:${LEGAL.contactEmail}`} className="text-brand-hover underline">{LEGAL.contactEmail}</a>.
-                    </p>
-                  )}
-                </div>
-              ) : (
-              <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-4">Mot de passe</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="settings-current-password" className="block text-sm font-medium text-ink-soft mb-1.5">
-                      Mot de passe actuel
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="settings-current-password"
-                        type={showPasswords.current ? 'text' : 'password'}
-                        value={passwordData.currentPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                        autoComplete="current-password"
-                        className="w-full px-4 py-2.5 pr-12 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                        aria-label={showPasswords.current ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-faint hover:text-ink-soft"
-                      >
-                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="settings-new-password" className="block text-sm font-medium text-ink-soft mb-1.5">
-                      Nouveau mot de passe
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="settings-new-password"
-                        type={showPasswords.new ? 'text' : 'password'}
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                        autoComplete="new-password"
-                        className="w-full px-4 py-2.5 pr-12 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                        aria-label={showPasswords.new ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-faint hover:text-ink-soft"
-                      >
-                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="settings-confirm-password" className="block text-sm font-medium text-ink-soft mb-1.5">
-                      Confirmer le mot de passe
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="settings-confirm-password"
-                        type={showPasswords.confirm ? 'text' : 'password'}
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                        autoComplete="new-password"
-                        className="w-full px-4 py-2.5 pr-12 bg-paper border border-[#e7e3dc] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                        aria-label={showPasswords.confirm ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-faint hover:text-ink-soft"
-                      >
-                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handlePasswordChange}
-                    disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword}
-                    className="px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {changingPassword ? 'Enregistrement…' : 'Changer le mot de passe'}
-                  </button>
-                </div>
-              </div>
               )}
+              {deleteError && <p role="alert" className="text-[13px] font-medium text-[#a23b34]">{deleteError}</p>}
             </div>
-          )}
-
-          {/* Notifications Tab */}
-          {activeTab === 'notifications' && (
-            <div className="space-y-6">
-              <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-2">Notifications par email</h3>
-                <p className="text-sm text-ink-faint mb-6">Choisis les notifications que tu veux recevoir</p>
-
-                <div className="space-y-1">
-                  <SettingRow
-                    icon={Mail}
-                    title="Notifications par email"
-                    description="Recevoir des notifications par email"
-                  >
-                    <ToggleSwitch
-                      enabled={notifications.emailNotifications}
-                      onChange={(v) => setNotifications(prev => ({ ...prev, emailNotifications: v }))}
-                    />
-                  </SettingRow>
-
-                  <SettingRow
-                    icon={Bell}
-                    title="Notifications de commentaires"
-                    description="Alertes quand quelqu'un commente ton contenu"
-                  >
-                    <ToggleSwitch
-                      enabled={notifications.commentNotifications}
-                      onChange={(v) => setNotifications(prev => ({ ...prev, commentNotifications: v }))}
-                      disabled={!notifications.emailNotifications}
-                    />
-                  </SettingRow>
-
-                  <SettingRow
-                    icon={Bell}
-                    title="Notifications de solutions"
-                    description="Alertes pour les nouvelles solutions"
-                  >
-                    <ToggleSwitch
-                      enabled={notifications.solutionNotifications}
-                      onChange={(v) => setNotifications(prev => ({ ...prev, solutionNotifications: v }))}
-                      disabled={!notifications.emailNotifications}
-                    />
-                  </SettingRow>
-                </div>
-              </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
+              <button type="button" onClick={closeDelete} className="fd-btn-ghost min-h-11 flex-1 justify-center">Annuler</button>
+              <button type="submit" disabled={!canDelete}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#a23b34] px-4 text-[13px] font-semibold text-white hover:bg-[#8a312b] disabled:cursor-not-allowed disabled:opacity-50">
+                {deleting && <Loader2 className="h-4 w-4 animate-spin" />} {deleting ? 'Suppression…' : 'Supprimer définitivement'}
+              </button>
             </div>
-          )}
-
-          {/* Appearance Tab */}
-          {activeTab === 'appearance' && (
-            <div className="space-y-6">
-              <div className="fd-card p-6">
-                <h3 className="font-semibold text-ink mb-2">Thème</h3>
-                <p className="text-sm text-ink-faint mb-6">Personnalise l'apparence de l'application</p>
-
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { id: 'light', label: 'Clair', icon: Sun },
-                    { id: 'dark', label: 'Sombre', icon: Moon },
-                    { id: 'system', label: 'Système', icon: Monitor },
-                  ].map((themeOption) => {
-                    const Icon = themeOption.icon;
-                    const isActive = theme === themeOption.id;
-
-                    return (
-                      <button
-                        key={themeOption.id}
-                        onClick={() => setTheme(themeOption.id as Parameters<typeof setTheme>[0])}
-                        className={`
-                          flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all
-                          ${isActive
-                            ? 'border-brand bg-brand-soft'
-                            : 'border-[#e7e3dc] hover:border-line bg-white'
-                          }
-                        `}
-                      >
-                        <div className={`p-3 rounded-xl ${isActive ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-soft'}`}>
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <span className={`text-sm font-medium ${isActive ? 'text-brand' : 'text-ink-soft'}`}>
-                          {themeOption.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Danger Zone Tab */}
-          {activeTab === 'danger' && (
-            <div className="space-y-6">
-              {/* RGPD : droit d'accès et de portabilité */}
-              <div className="fd-card p-6">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div>
-                    <h3 className="font-semibold text-ink">Télécharger mes données</h3>
-                    <p className="text-sm text-ink-faint mt-1 max-w-lg">
-                      Un fichier avec tout ce que Fidni conserve sur ton compte : profil, progression,
-                      publications, favoris, historique…
-                    </p>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      if (!user?.username) return;
-                      setExporting(true);
-                      try { await downloadMyData(user.username); }
-                      catch { setError('Le téléchargement a échoué. Réessaie dans un instant.'); }
-                      finally { setExporting(false); }
-                    }}
-                    disabled={exporting}
-                    className="fd-btn-ghost"
-                  >
-                    {exporting ? 'Préparation…' : 'Télécharger (JSON)'}
-                  </button>
-                </div>
-              </div>
-              {/* Logout */}
-              <div className="fd-card border-l-4 border-l-amber-500 p-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-amber-100 rounded-xl">
-                    <LogOut className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-ink">Se déconnecter</h3>
-                    <p className="text-sm text-ink-faint mt-1">
-                      Tu seras déconnecté de ton compte sur cet appareil.
-                    </p>
-                    <button
-                      onClick={() => setShowLogoutModal(true)}
-                      className="mt-4 px-4 py-2 text-sm font-medium text-amber-600 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
-                    >
-                      Se déconnecter
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Delete Account */}
-              <div className="bg-white rounded-2xl border border-red-200 border-l-4 border-l-red-500 p-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-red-100 rounded-xl">
-                    <Trash2 className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-900">Supprimer le compte</h3>
-                    <p className="text-sm text-red-600 mt-1">
-                      Irréversible : ton profil, ta progression et tes fichiers sont effacés. Tes publications
-                      restent visibles, sous le nom « Compte supprimé ».
-                    </p>
-                    <button
-                      onClick={() => setShowDeleteModal(true)}
-                      className="mt-4 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors"
-                    >
-                      Supprimer mon compte
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Logout Modal */}
-      <AnimatePresence>
-        {showLogoutModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-50 flex items-center justify-center p-4 bg-black/50"
-            onClick={() => setShowLogoutModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl"
-            >
-              <div className="text-center">
-                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <LogOut className="w-6 h-6 text-amber-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-ink mb-2">Se déconnecter ?</h3>
-                <p className="text-sm text-ink-faint mb-6">
-                  Tu devras te reconnecter pour accéder à ton compte.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowLogoutModal(false)}
-                    className="flex-1 px-4 py-2.5 text-sm font-medium text-ink-soft bg-[#f2f1ee] rounded-xl hover:bg-[#e7e3dc] transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-amber-600 rounded-xl hover:bg-amber-700 transition-colors"
-                  >
-                    Se déconnecter
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Account Modal */}
-      <AnimatePresence>
-        {showDeleteModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-50 flex items-center justify-center p-4 bg-black/50"
-            onClick={() => setShowDeleteModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
-            >
-              <div className="text-center">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="w-6 h-6 text-red-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-ink mb-2">Supprimer ton compte ?</h3>
-                <p className="text-sm text-ink-faint mb-3">
-                  Cette action est irréversible. Ton profil, ta progression, tes favoris, tes cahiers,
-                  tes listes de révision et tes fichiers seront définitivement effacés.
-                </p>
-                <p className="text-sm text-ink-faint mb-4">
-                  Les exercices, commentaires et solutions que tu as publiés resteront en ligne pour les
-                  autres élèves, sous le nom « Compte supprimé ».
-                </p>
-
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-left">
-                  <p className="text-sm text-red-700 mb-2">
-                    Pour confirmer, tape <strong>{user?.username}</strong> ci-dessous :
-                  </p>
-                  <input
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                    placeholder={user?.username}
-                  />
-                  {/* Compte créé avec Google, sans mot de passe : le pseudo recopié suffit. */}
-                  {hasPassword && (
-                    <>
-                      <p className="text-sm text-red-700 mt-3 mb-2">Ton mot de passe :</p>
-                      <input
-                        type="password"
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        autoComplete="current-password"
-                        className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                      />
-                    </>
-                  )}
-                  {deleteError && <p className="text-sm text-red-700 mt-2">{deleteError}</p>}
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowDeleteModal(false);
-                      setDeleteConfirmText('');
-                      setDeletePassword('');
-                      setDeleteError(null);
-                    }}
-                    className="flex-1 px-4 py-2.5 text-sm font-medium text-ink-soft bg-[#f2f1ee] rounded-xl hover:bg-[#e7e3dc] transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleDeleteAccount}
-                    disabled={deleteConfirmText !== user?.username || (hasPassword && !deletePassword) || deleting}
-                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {deleting ? 'Suppression…' : 'Supprimer définitivement'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </form>
+        </Dialog>
+      )}
     </div>
   );
 };

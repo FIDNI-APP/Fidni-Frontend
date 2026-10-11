@@ -1,16 +1,16 @@
 /**
- * Tips browser (list) and detail view with video player.
- * Routes:
- *   /concours/tips         → list with filters
- *   /concours/tips/:id     → detail
+ * Astuces des concours : liste (avec filtres) et page d'une astuce (vidéo, votes, commentaires).
+ * Routes :
+ *   /concours/tips         → liste
+ *   /concours/tips/:id     → détail
+ * Refonte du 11/10/2026 : en-tête commun des concours, cartes sobres (plus de bandeau ambre),
+ * filtres montrés seulement quand il y a des astuces, états vides utiles.
  */
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { useScrollToHash } from '@/hooks/useScrollToHash';
-import { ConcoursHero } from './ConcoursHero';
 import {
-  ArrowLeft, Lightbulb, Loader2, Search, Bookmark, ThumbsUp, ThumbsDown,
-  Eye, MessageSquare, Trash2, Play,
+  Bookmark, Eye, Landmark, Lightbulb, Loader2, MessageSquare, Play, Search, SearchX, ThumbsDown, ThumbsUp, Trash2,
 } from 'lucide-react';
 import {
   CONCOURS_TYPES, listConcoursTips, getConcoursTip, toggleSaveTip, voteTip,
@@ -21,198 +21,140 @@ import { getSubjects } from '@/lib/api/hierarchyApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { isModerator } from '@/lib/features';
 import { SEO } from '@/components/layout/SEO';
+import { Page, PageHeader, Section, EmptyState, CardLink, CardsSkeleton } from '@/components/space/Page';
 import type { SubjectModel } from '@/types';
+import { ConcoursHeader } from './ConcoursHeader';
 
-/* ───────────────── List page ───────────────── */
+/* ───────────────── Liste ───────────────── */
+
+const TipCard: React.FC<{ tip: ConcoursTip }> = ({ tip: t }) => (
+  <li>
+    <CardLink to={`/concours/tips/${t.id}`} className="h-full">
+      <span className="flex h-full flex-col">
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-soft text-gold-strong" aria-hidden>
+            <Lightbulb className="h-4 w-4" />
+          </span>
+          {(t.video_url || t.video_file) && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">
+              <Play className="h-3 w-3" aria-hidden /> Vidéo
+            </span>
+          )}
+        </span>
+        <span className="mt-3 block text-[14.5px] font-semibold leading-snug text-ink line-clamp-2">{t.title}</span>
+        {t.description && <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-faint line-clamp-2">{t.description}</span>}
+        <span className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-ink-faint">
+          {t.subject_name && <span className="truncate rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">{t.subject_name}</span>}
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1"><ThumbsUp className="h-3 w-3" aria-hidden /> {t.vote_count}<span className="sr-only"> votes</span></span>
+          <span className="inline-flex shrink-0 items-center gap-1"><Eye className="h-3 w-3" aria-hidden /> {t.view_count}<span className="sr-only"> vues</span></span>
+        </span>
+      </span>
+    </CardLink>
+  </li>
+);
 
 export function ConcoursTipsListPage() {
-  const [tips, setTips] = useState<ConcoursTip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tips, setTips] = useState<ConcoursTip[] | null>(null);
+  /** Nombre d'astuces sans filtre (premier chargement) : sans astuce, pas de filtres à montrer. */
+  const [total, setTotal] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [filterType, setFilterType] = useState<ConcoursType | null>(null);
   const [filterSubjectId, setFilterSubjectId] = useState<number | null>(null);
   const [subjects, setSubjects] = useState<SubjectModel[]>([]);
 
   useEffect(() => {
-    (async () => {
-      try { setSubjects(await getSubjects()); } catch (e) { console.error(e); }
-    })();
+    getSubjects().then(setSubjects).catch((e) => console.error(e));
   }, []);
 
+  // La recherche part quand on s'arrête de taper (plus une requête par lettre).
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const params: any = {};
-        if (filterType) params.concours_type = filterType;
-        if (filterSubjectId) params.subject = filterSubjectId;
-        if (search.trim()) params.search = search.trim();
-        const data = await listConcoursTips(params);
+    const t = window.setTimeout(() => setQuery(search.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    let alive = true;
+    setTips(null);
+    const params: { concours_type?: ConcoursType; subject?: number; search?: string } = {};
+    if (filterType) params.concours_type = filterType;
+    if (filterSubjectId) params.subject = filterSubjectId;
+    if (query) params.search = query;
+    listConcoursTips(params)
+      .then((data) => {
+        if (!alive) return;
         setTips(data);
-      } finally { setLoading(false); }
-    })();
-  }, [filterType, filterSubjectId, search]);
+        if (!filterType && !filterSubjectId && !query) setTotal(data.length);
+      })
+      .catch((e) => { console.error(e); if (alive) setTips([]); });
+    return () => { alive = false; };
+  }, [filterType, filterSubjectId, query]);
+
+  const filtered = !!(filterType || filterSubjectId || query);
+  const clear = () => { setSearch(''); setQuery(''); setFilterType(null); setFilterSubjectId(null); };
+  const chip = (active: boolean) => `inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+    active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
+    <Page>
       <SEO title="Astuces - Concours - Fidni" description="Astuces et techniques pour les concours" />
-      <style>{`
-        .tip-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(20,18,16,.14) !important; }
-      `}</style>
+      <ConcoursHeader />
 
-      <ConcoursHero
-        icon={Lightbulb}
-        badge="ASTUCES"
-        title="Astuces & techniques"
-        subtitle="Maîtrise les techniques clés pour répondre vite et juste le jour J."
-      />
-
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 flex-wrap mb-6">
-          {/* Search */}
-          <div className="flex items-center gap-2" style={{
-            background: '#fff', border: '1.5px solid #e7e3dc',
-            borderRadius: 10, padding: '7px 14px', minWidth: 200,
-          }}>
-            <Search className="w-3.5 h-3.5" style={{ color: '#6b6862', flexShrink: 0 }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher…"
-              style={{
-                flex: 1, border: 'none', outline: 'none',
-                background: 'transparent', fontSize: 13, color: '#1a1a1a',
-              }}
-            />
-          </div>
-          {/* Concours filter */}
-          <button className={`fd-pill ${!filterType ? 'is-active' : ''}`} onClick={() => setFilterType(null)}>
-            Tous
-          </button>
-          {CONCOURS_TYPES.map(c => (
-            <button
-              key={c.id}
-              className={`fd-pill ${filterType === c.id ? 'is-active' : ''}`}
-              onClick={() => setFilterType(c.id)}
-            >
-              {c.label}
-            </button>
-          ))}
-          {/* Subject select */}
-          <select
-            value={filterSubjectId ?? ''}
-            onChange={(e) => setFilterSubjectId(e.target.value ? Number(e.target.value) : null)}
-            style={{
-              padding: '7px 14px', borderRadius: 10,
-              border: '1.5px solid #e7e3dc', background: '#fff',
-              fontSize: 12, color: '#6b6862', outline: 'none',
-            }}
-          >
-            <option value="">Toutes matières</option>
-            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-
-        {/* Count */}
-        {!loading && tips.length > 0 && (
-          <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 16, fontFamily: 'DM Mono' }}>
-            {tips.length} astuce{tips.length !== 1 ? 's' : ''}
-          </p>
-        )}
-
-        {/* List */}
-        {loading ? (
-          <div className="flex justify-center" style={{ padding: '80px 0' }}>
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1a1a1a' }} />
-          </div>
-        ) : tips.length === 0 ? (
-          <div className="fd-card text-center" style={{ padding: 56 }}>
-            <Lightbulb className="w-9 h-9 mx-auto mb-3" style={{ color: '#c4c0e8' }} />
-            <p style={{ fontSize: 14, color: '#6b6862' }}>Aucune astuce trouvée.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tips.map(t => (
-              <Link
-                key={t.id}
-                to={`/concours/tips/${t.id}`}
-                className="tip-card animate-fade-up"
-                style={{
-                  overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column',
-                  background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc',
-                  boxShadow: '0 2px 10px rgba(20,18,16,.05)',
-                  transition: 'transform .2s, box-shadow .2s',
-                }}
-              >
-                {/* Amber banner */}
-                <div style={{
-                  position: 'relative', overflow: 'hidden', padding: '16px 18px',
-                  background: 'linear-gradient(120deg,#fbbf24,#f59e0b)',
-                }}>
-                  <div style={{
-                    position: 'absolute', right: -24, top: -24, width: 96, height: 96,
-                    borderRadius: '50%', background: 'rgba(255,255,255,.16)',
-                  }} />
-                  <div className="relative flex items-center justify-between">
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-                      background: 'rgba(255,255,255,.92)', color: '#d97706',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 2px 8px rgba(0,0,0,.1)',
-                    }}>
-                      <Lightbulb className="w-5 h-5" />
-                    </div>
-                    {(t.video_url || t.video_file) && (
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        background: 'rgba(20,18,16,.85)', color: '#fff',
-                        fontSize: 9, fontWeight: 700, padding: '4px 9px', borderRadius: 99,
-                        letterSpacing: '.06em', flexShrink: 0, backdropFilter: 'blur(4px)',
-                      }}>
-                        <Play className="w-2 h-2" /> VIDÉO
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4 flex flex-col gap-2 flex-1">
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
-                    {t.title}
-                  </h3>
-                  {t.description && (
-                    <p style={{ fontSize: 12, color: '#6b6862', lineHeight: 1.5 }} className="line-clamp-2">
-                      {t.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-2 flex-wrap mt-auto pt-3" style={{ borderTop: '1px solid #faf9f7' }}>
-                    {t.subject_name && (
-                      <span style={{ background: '#f2f1ee', color: '#000000', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>
-                        {t.subject_name}
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2 ml-auto" style={{ fontSize: 11, color: '#6b6862' }}>
-                      <span className="inline-flex items-center gap-1">
-                        <ThumbsUp className="w-3 h-3" /> {t.vote_count}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="w-3 h-3" /> {t.view_count}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+      <Section id="astuces" title="Astuces" count={tips?.length}
+        hint={total ? 'Les techniques pour répondre vite et juste le jour J.' : undefined}>
+        {(!!total || filtered) && (
+          <div className="mb-5 flex flex-col gap-3">
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3.5 focus-within:border-ink-faint sm:max-w-sm">
+              <Search className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+              <span className="sr-only">Rechercher une astuce</span>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher une astuce…"
+                className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint" />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par concours">
+                <button type="button" aria-pressed={!filterType} className={chip(!filterType)} onClick={() => setFilterType(null)}>Tous</button>
+                {CONCOURS_TYPES.map((c) => (
+                  <button key={c.id} type="button" aria-pressed={filterType === c.id} className={chip(filterType === c.id)} onClick={() => setFilterType(c.id)}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              <select value={filterSubjectId ?? ''} aria-label="Matière"
+                onChange={(e) => setFilterSubjectId(e.target.value ? Number(e.target.value) : null)}
+                className="min-h-10 rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft focus:border-ink-faint focus:outline-none">
+                <option value="">Toutes les matières</option>
+                {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
           </div>
         )}
-      </div>
-    </div>
+
+        {tips === null ? <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+          : tips.length === 0 ? (
+            filtered ? (
+              <EmptyState compact icon={SearchX} tone="ink" title="Aucune astuce ne correspond"
+                text="Essaie un autre mot ou retire un filtre."
+                action={<button type="button" className="fd-btn-ghost min-h-10" onClick={clear}>Effacer les filtres</button>} />
+            ) : (
+              <EmptyState icon={Lightbulb} tone="gold" title="Les astuces arrivent bientôt"
+                text="Des techniques courtes, souvent en vidéo, pour gagner du temps le jour du concours. En attendant, entraîne-toi sur le Bac national."
+                action={(
+                  <Link to="/exams/nationaux" className="fd-btn-primary min-h-11">
+                    <Landmark className="h-4 w-4" /> Réviser le Bac national
+                  </Link>
+                )} />
+            )
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {tips.map((t) => <TipCard key={t.id} tip={t} />)}
+            </ul>
+          )}
+      </Section>
+    </Page>
   );
 }
 
-/* ───────────────── Detail page ───────────────── */
+/* ───────────────── Détail ───────────────── */
 
 function getEmbedUrl(url: string): string | null {
   // YouTube
@@ -226,7 +168,6 @@ function getEmbedUrl(url: string): string | null {
 
 export function ConcoursTipDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [tip, setTip] = useState<ConcoursTip | null>(null);
@@ -235,28 +176,32 @@ export function ConcoursTipDetailPage() {
   const [busySave, setBusySave] = useState(false);
   const [busyVote, setBusyVote] = useState(false);
 
-  const refresh = async () => {
+  useEffect(() => {
     if (!id) return;
-    try { setLoading(true); setTip(await getConcoursTip(id)); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { refresh(); }, [id]);
+    let alive = true;
+    setLoading(true);
+    getConcoursTip(id)
+      .then((t) => { if (alive) setTip(t); })
+      .catch((e) => { console.error(e); if (alive) setTip(null); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [id]);
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
-      </div>
+      <Page width="narrow">
+        <CardsSkeleton n={2} />
+      </Page>
     );
   }
   if (!tip) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <div className="fd-card p-8 text-center">
-          <p style={{ color: '#6b6862' }}>Astuce introuvable.</p>
-          <Link to="/concours/tips" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
-        </div>
-      </div>
+      <Page width="narrow">
+        <PageHeader back={{ to: '/concours/tips', label: 'Astuces' }} title="Astuce introuvable" />
+        <EmptyState icon={SearchX} tone="ink" title="Cette astuce n’existe plus"
+          text="Elle a peut-être été retirée. Les autres t’attendent dans la liste."
+          action={<Link to="/concours/tips" className="fd-btn-primary min-h-10">Voir les astuces</Link>} />
+      </Page>
     );
   }
 
@@ -281,139 +226,79 @@ export function ConcoursTipDetailPage() {
   const directVideoSrc = tip.video_file?.url || (tip.video_url && !embedUrl ? tip.video_url : null);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
+    <Page width="narrow">
       <SEO title={`${tip.title} - Astuces - Fidni`} description={tip.description} />
+      <PageHeader back={{ to: '/concours/tips', label: 'Astuces' }} eyebrow="Astuce" icon={Lightbulb} title={tip.title} />
 
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
-        <button onClick={() => navigate('/concours/tips')} className="fd-btn-ghost mb-3"
-                style={{ padding: '5px 10px', fontSize: 12 }}>
-          <ArrowLeft className="w-3 h-3" /> Astuces
-        </button>
-
-        <div className="fd-card overflow-hidden mb-5 animate-fade-up">
-          {/* Video */}
+      <div className="flex flex-col gap-10">
+        <article className="overflow-hidden rounded-3xl border border-line bg-white">
           {embedUrl ? (
-            <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000' }}>
+            <div className="relative bg-black pb-[56.25%]">
               <iframe
                 src={embedUrl}
                 title={tip.title}
                 frameBorder={0}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+                className="absolute inset-0 h-full w-full border-0"
               />
             </div>
           ) : directVideoSrc ? (
-            <video
-              src={directVideoSrc}
-              controls
-              style={{ width: '100%', display: 'block', background: '#000', maxHeight: 480 }}
-            />
+            <video src={directVideoSrc} controls className="block max-h-[480px] w-full bg-black" />
           ) : (
-            <div
-              style={{
-                background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-                padding: 60, textAlign: 'center', color: '#fff',
-              }}
-            >
-              <Lightbulb className="w-12 h-12 mx-auto mb-2" />
-              <p style={{ fontSize: 13, opacity: .9 }}>Pas de vidéo disponible pour cette astuce.</p>
+            <div className="flex items-center gap-3 border-b border-line bg-gold-soft px-5 py-4 text-gold-strong">
+              <Lightbulb className="h-5 w-5 shrink-0" aria-hidden />
+              <p className="text-[13px] font-medium">Pas de vidéo pour cette astuce : tout est dans le texte.</p>
             </div>
           )}
 
-          {/* Body */}
-          <div className="p-6">
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
-              {tip.title}
-            </h1>
-            <div className="flex items-center gap-2 flex-wrap mt-3">
-              {tip.subject_name && (
-                <span style={{ background: '#f2f1ee', color: '#000000', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99 }}>
-                  {tip.subject_name}
-                </span>
-              )}
-              {tip.subfield_name && (
-                <span style={{ background: '#f7f6f3', color: '#6b6862', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99 }}>
-                  {tip.subfield_name}
-                </span>
-              )}
-              {tip.chapter_names?.map(n => (
-                <span key={n} style={{ background: '#fef3c7', color: '#a16207', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99 }}>
-                  {n}
-                </span>
-              ))}
-            </div>
+          <div className="p-5 sm:p-6">
+            {(tip.subject_name || tip.subfield_name || !!tip.chapter_names?.length) && (
+              <ul className="mb-4 flex flex-wrap gap-1.5" aria-label="Programme">
+                {tip.subject_name && <li className="rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12px] font-semibold text-ink-soft">{tip.subject_name}</li>}
+                {tip.subfield_name && <li className="rounded-full bg-[#f7f6f3] px-2.5 py-1 text-[12px] text-ink-faint">{tip.subfield_name}</li>}
+                {tip.chapter_names?.map((n) => (
+                  <li key={n} className="rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-medium text-gold-strong">{n}</li>
+                ))}
+              </ul>
+            )}
             {tip.description && (
-              <div
-                style={{ fontSize: 14, color: '#33302b', lineHeight: 1.7, marginTop: 14, whiteSpace: 'pre-wrap' }}
-              >
-                {tip.description}
-              </div>
+              <div className="whitespace-pre-wrap text-[14.5px] leading-relaxed text-ink-soft">{tip.description}</div>
             )}
 
-            {/* Action bar */}
-            <div className="flex items-center gap-2 mt-5 pt-4" style={{ borderTop: '1px solid #faf9f7' }}>
-              <div
-                className="inline-flex items-center"
-                style={{
-                  background: '#f7f6f3', border: '1px solid #e7e3dc',
-                  borderRadius: 99, padding: 2,
-                }}
-              >
-                <button
-                  onClick={() => onVote(1)}
-                  disabled={busyVote}
-                  style={{
-                    padding: '5px 9px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                    background: tip.user_vote === 1 ? '#1a1a1a' : 'transparent',
-                    color: tip.user_vote === 1 ? '#fff' : '#6b6862',
-                  }}
-                >
-                  <ThumbsUp className="w-3.5 h-3.5" />
+            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+              <div className="inline-flex items-center rounded-full border border-line bg-[#f7f6f3] p-0.5" role="group" aria-label="Voter">
+                <button type="button" onClick={() => onVote(1)} disabled={busyVote} aria-pressed={tip.user_vote === 1} aria-label="Utile"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${tip.user_vote === 1 ? 'bg-ink text-white' : 'text-ink-faint hover:text-ink'}`}>
+                  <ThumbsUp className="h-4 w-4" />
                 </button>
-                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'DM Mono', minWidth: 30, textAlign: 'center', color: '#1a1a1a' }}>
-                  {tip.vote_count}
-                </span>
-                <button
-                  onClick={() => onVote(-1)}
-                  disabled={busyVote}
-                  style={{
-                    padding: '5px 9px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                    background: tip.user_vote === -1 ? '#dc2626' : 'transparent',
-                    color: tip.user_vote === -1 ? '#fff' : '#6b6862',
-                  }}
-                >
-                  <ThumbsDown className="w-3.5 h-3.5" />
+                <span className="fd-nums min-w-[30px] text-center text-[13px] font-bold text-ink">{tip.vote_count}</span>
+                <button type="button" onClick={() => onVote(-1)} disabled={busyVote} aria-pressed={tip.user_vote === -1} aria-label="Pas utile"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${tip.user_vote === -1 ? 'bg-[#a23b34] text-white' : 'text-ink-faint hover:text-ink'}`}>
+                  <ThumbsDown className="h-4 w-4" />
                 </button>
               </div>
-              <button onClick={onSave} className="fd-btn-ghost"
-                      style={{
-                        background: tip.is_saved ? '#fef3c7' : '#fff',
-                        color: tip.is_saved ? '#a16207' : '#6b6862',
-                        borderColor: tip.is_saved ? '#fde68a' : '#e7e3dc',
-                      }}>
-                {busySave ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Bookmark className="w-3.5 h-3.5" fill={tip.is_saved ? 'currentColor' : 'none'} />}
-                {tip.is_saved ? 'Sauvegardée' : 'Sauvegarder'}
+              <button type="button" onClick={onSave} aria-pressed={tip.is_saved}
+                className={`fd-btn-ghost min-h-10 ${tip.is_saved ? '!border-gold-line !bg-gold-soft !text-gold-strong' : ''}`}>
+                {busySave ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Bookmark className="h-4 w-4" fill={tip.is_saved ? 'currentColor' : 'none'} />}
+                {tip.is_saved ? 'Enregistrée' : 'Enregistrer'}
               </button>
-              <span style={{ fontSize: 11, color: '#6b6862', marginLeft: 'auto' }}>
-                <Eye className="inline w-3 h-3 mr-1" />
-                {tip.view_count}
+              <span className="ml-auto inline-flex items-center gap-1 text-[12px] text-ink-faint">
+                <Eye className="h-3.5 w-3.5" aria-hidden /> {tip.view_count}<span className="sr-only"> vues</span>
               </span>
             </div>
           </div>
-        </div>
+        </article>
 
-        {/* Comments */}
-        <div id="commentaires" className="fd-card p-5 scroll-mt-20">
-          <div className="flex items-center gap-2 mb-3">
-            <MessageSquare className="w-4 h-4" style={{ color: '#000000' }} />
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>
-          </div>
+        <section id="commentaires" aria-labelledby="commentaires-titre" className="scroll-mt-20">
+          <h2 id="commentaires-titre" className="fd-display mb-3 flex items-center gap-2 text-[20px] leading-tight text-ink">
+            <MessageSquare className="h-4 w-4 text-ink-faint" aria-hidden /> Commentaires
+          </h2>
           <TipCommentsBlock tipId={tip.id} currentUserId={user?.id} canModerate={isModerator(user)} />
-        </div>
+        </section>
       </div>
-    </div>
+    </Page>
   );
 }
 
@@ -423,11 +308,12 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try { setLoading(true); setComments(await listTipComments(tipId)); }
+    catch (e) { console.error(e); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { refresh(); }, [tipId]);
+  }, [tipId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const post = async () => {
     if (!text.trim() || posting) return;
@@ -443,61 +329,48 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Ton commentaire…"
+          aria-label="Ton commentaire"
           rows={2}
-          style={{
-            flex: 1, padding: '10px 12px', borderRadius: 10,
-            border: '1.5px solid #e7e3dc', background: '#f9f8ff',
-            fontSize: 13, fontFamily: 'DM Sans', color: '#1a1a1a',
-            outline: 'none', resize: 'vertical', minHeight: 60,
-          }}
+          className="min-h-[60px] flex-1 resize-y rounded-xl border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none focus:border-ink-faint"
         />
-        <button onClick={post} disabled={!text.trim() || posting} className="fd-btn-primary"
-                style={{ alignSelf: 'flex-end' }}>
-          {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Publier'}
+        <button type="button" onClick={post} disabled={!text.trim() || posting} className="fd-btn-primary min-h-10 justify-center self-end disabled:opacity-60">
+          {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier'}
         </button>
       </div>
       {loading ? (
-        <div className="text-center" style={{ padding: 12 }}>
-          <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
-        </div>
+        <CardsSkeleton n={1} />
       ) : comments.length === 0 ? (
-        <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun commentaire.</p>
+        <p className="text-[13px] text-ink-faint">Pas encore de commentaire : pose ta question ou partage ton astuce.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {comments.map(c => (
-            <div key={c.id} className="flex gap-3" style={{
-              background: '#f9f8ff', border: '1px solid #e7e3dc',
-              borderRadius: 10, padding: 12,
-            }}>
+        <ul className="flex flex-col gap-2">
+          {comments.map((c) => (
+            <li key={c.id} className="flex gap-3 rounded-xl border border-line bg-[#fcfbf9] p-3">
               {c.author.avatar
-                ? <img src={c.author.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                : <div style={{
-                    width: 32, height: 32, borderRadius: '50%',
-                    background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700,
-                  }}>{c.author.username[0]?.toUpperCase()}</div>}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.author.username}</span>
-                  <span style={{ fontSize: 10, color: '#6b6862' }}>{new Date(c.created_at).toLocaleString('fr-FR')}</span>
+                ? <img src={c.author.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full" />
+                : <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-soft text-[12px] font-bold text-white" aria-hidden>
+                    {c.author.username[0]?.toUpperCase()}
+                  </span>}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[12.5px] font-semibold text-ink">{c.author.username}</span>
+                  <span className="text-[11px] text-ink-faint">{new Date(c.created_at).toLocaleString('fr-FR')}</span>
                 </div>
-                <p style={{ fontSize: 13, color: '#33302b', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.content}</p>
+                <p className="mt-1 whitespace-pre-wrap text-[13.5px] text-ink-soft">{c.content}</p>
               </div>
               {(canModerate || (currentUserId !== undefined && Number(currentUserId) === c.author.id)) && (
-                <button onClick={() => remove(c.id)}
-                        style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer' }}>
-                  <Trash2 className="w-4 h-4" />
+                <button type="button" onClick={() => remove(c.id)} aria-label="Supprimer ce commentaire"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-[#a23b34]">
+                  <Trash2 className="h-4 w-4" />
                 </button>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

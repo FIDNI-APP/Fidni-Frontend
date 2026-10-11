@@ -6,8 +6,9 @@ import { TourHelpButton } from '@/components/tour/TourProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { NotificationBell } from './NotificationBell';
-import { revisionTab } from './nav';
+import { useMobileTabBarVisible } from './nav';
 import { trackAction } from '@/lib/usage';
+import Logo3 from '@/assets/logo3.svg';
 
 interface TopBarProps {
   onOpenMobile: () => void;
@@ -24,10 +25,12 @@ const SECTION_LABELS: Record<string, string> = {
   classrooms: 'Classes',
   concours: 'Concours',
   profile: 'Profil',
-  saved: 'Favoris',
-  'revision-lists': 'Mes révisions',
-  revisions: 'Préparer un DS',
-  notebooks: 'Cahiers',
+  saved: 'Mes enregistrements',
+  enregistrements: 'Mes enregistrements',
+  reviser: 'Réviser',
+  'revision-lists': 'Réviser',
+  revisions: 'Réviser',
+  notebooks: 'Mes enregistrements',
   'skill-iq': 'Quiz par chapitre',
   settings: 'Paramètres',
   search: 'Recherche',
@@ -42,12 +45,17 @@ const SECTION_LABELS: Record<string, string> = {
   logs: 'Journaux',
 };
 
+/** Bouton rond de la barre (recherche, cloche, aide) : 40 px, sans cadre, même survol partout. */
+const BAR_ICON_BTN =
+  'inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-[#f2f1ee] hover:text-ink';
+
 export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { crumbs } = useBreadcrumb();
   const { isAuthenticated, isLoading } = useAuth();
   const openSignup = useOpenSignup('barre-haut');
+  const tabBarVisible = useMobileTabBarVisible();
   const [searchValue, setSearchValue] = useState('');
 
   const parts = location.pathname.split('/').filter(Boolean);
@@ -56,10 +64,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   const segment = parts[0] === 'exams' && parts[1] === 'nationaux' ? 'nationaux'
     : parts[0] === 'profile' && parts[1] === 'revision-lists' ? 'revision-lists'
       : (parts[0] ?? '');
-  // /revision-lists : deux onglets, deux entrées du menu (Préparer un DS / Mes révisions).
-  const sectionLabel = segment === 'revision-lists' && parts.length === 1 && revisionTab(location.search) === 'ds'
-    ? 'Préparer un DS'
-    : SECTION_LABELS[segment] ?? 'Fidni';
+  const sectionLabel = SECTION_LABELS[segment] ?? 'Fidni';
   const isHome = parts.length === 0;
   // A deeper segment (e.g. an id) means the section name should link back to
   // its listing; on the listing page itself it's the current crumb (plain).
@@ -67,8 +72,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   const hasDeeper = parts.length > (segment === 'nationaux' || parts[0] === 'profile' ? 2 : 1);
   const SECTION_PATHS: Record<string, string> = {
     nationaux: '/exams/nationaux',
-    revisions: '/revision-lists?onglet=ds',
-    'revision-lists': '/revision-lists?onglet=listes',
+    revisions: '/reviser',
+    'revision-lists': '/reviser#mes-listes',
+    notebooks: '/enregistrements?onglet=cahiers',
+    saved: '/enregistrements',
     profile: `/profile/${parts[1] ?? ''}`,
   };
   const sectionPath = SECTION_PATHS[segment] ?? `/${segment}`;
@@ -81,12 +88,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
       ? []
       : [{ label: sectionLabel, to: hasDeeper ? sectionPath : undefined }];
 
-  // Téléphone : un seul lien de retour « ‹ Limites » (le parent le plus proche) au lieu du fil complet.
-  // Si le dernier élément a une adresse, c'est un parent (la page elle-même n'est pas dans le fil).
+  // Téléphone : un bouton retour vers le parent le plus proche, puis le titre de la page (le parent en petit
+  // au-dessus). Si le dernier élément a une adresse, c'est un parent (la page elle-même n'est pas dans le fil).
   const last = trail[trail.length - 1];
   const current = last && !last.to ? last : null;
   const parents = current ? trail.slice(0, -1) : trail;
-  const back = [...parents].reverse().find((c) => c.to) ?? null;
+  const back = [...parents].reverse().find((c): c is Crumb & { to: string } => !!c.to) ?? null;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,139 +101,127 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
     if (q) { trackAction('recherche'); navigate(`/search?q=${encodeURIComponent(q)}`); }
   };
 
-  const crumbLink: React.CSSProperties = {
-    fontSize: 13, color: '#6b6862', fontWeight: 500, textDecoration: 'none',
-  };
-  const crumbCurrent: React.CSSProperties = {
-    fontSize: 15, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em',
-  };
-  const squareBtn: React.CSSProperties = {
-    alignItems: 'center', justifyContent: 'center',
-    width: 38, height: 38, borderRadius: 10, border: '1px solid #e7e3dc',
-    background: '#fff', color: '#1a1a1a', cursor: 'pointer', flexShrink: 0,
-  };
-
   return (
-    <header
-      className="sticky top-0 z-30"
-      style={{
-        height: 60,
-        background: 'rgba(255,255,255,.85)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #e7e3dc',
-      }}
-    >
-      <div className="h-full flex items-center gap-2 sm:gap-3 px-4 md:px-6">
-        {/* Mobile menu trigger */}
-        <button
-          className="md:hidden inline-flex"
-          onClick={onOpenMobile}
-          aria-label="Ouvrir le menu"
-          aria-haspopup="dialog"
-          data-tour="menu-mobile"
-          style={squareBtn}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <header className="sticky top-0 z-30 h-[60px] border-b border-line bg-white/90 backdrop-blur-lg print:hidden">
+      <div className="flex h-full items-center gap-1 pl-2 pr-2 sm:gap-2 sm:pl-4 sm:pr-3 md:px-6">
+        {/* Téléphone : le menu est dans la barre du bas ; ce bouton ne revient que si elle est cachée. */}
+        {!tabBarVisible && (
+          <button
+            type="button"
+            className={`md:hidden ${BAR_ICON_BTN}`}
+            onClick={onOpenMobile}
+            aria-label="Ouvrir le menu"
+            aria-haspopup="dialog"
+            data-tour="menu-mobile"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
 
-        {/* Breadcrumb / page title */}
-        <nav aria-label="Fil d'Ariane" className="flex items-center min-w-0" style={{ gap: 6 }}>
-          {isHome ? (
-            <span className="truncate" style={crumbCurrent}>Accueil</span>
-          ) : (
-            <>
-              {/* Téléphone : retour au parent le plus proche, la page en cours en dessous. */}
-              <span className="sm:hidden flex flex-col min-w-0" style={{ lineHeight: 1.2 }}>
-                {back && (
-                  <Link to={back.to!} className="inline-flex items-center min-w-0"
-                    style={current
-                      ? { fontSize: 12, color: '#6b6862', fontWeight: 500, textDecoration: 'none', minHeight: 20 }
-                      : { ...crumbCurrent, textDecoration: 'none', minHeight: 36 }}>
-                    <ChevronLeft className={current ? 'w-3.5 h-3.5 flex-shrink-0 -ml-1' : 'w-4 h-4 flex-shrink-0 -ml-1'} aria-hidden />
-                    <span className="truncate">{back.label}</span>
-                  </Link>
-                )}
-                {current && <span aria-current="page" className="truncate" style={back ? { ...crumbCurrent, fontSize: 14 } : crumbCurrent}>{current.label}</span>}
-              </span>
+        {/* Fil d'Ariane / titre de la page */}
+        <nav aria-label="Fil d'Ariane" className="flex min-w-0 flex-1 items-center">
+          {/* Téléphone */}
+          <div className="flex min-w-0 items-center md:hidden">
+            {isHome ? (
+              <Link to="/" aria-label="Fidni, accueil" className="flex items-center rounded-lg px-2">
+                <img src={Logo3} alt="Fidni" className="h-7 w-auto object-contain" />
+              </Link>
+            ) : current && back ? (
+              <>
+                <Link to={back.to} aria-label={`Retour : ${back.label}`} className={BAR_ICON_BTN}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Link>
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <Link to={back.to} tabIndex={-1} className="truncate text-[12px] font-medium text-ink-faint">{back.label}</Link>
+                  <span aria-current="page" className="truncate text-[15px] font-semibold text-ink">{current.label}</span>
+                </span>
+              </>
+            ) : back ? (
+              <Link to={back.to} className="flex h-10 min-w-0 items-center rounded-xl pr-2 text-ink transition-colors hover:bg-[#f2f1ee]">
+                <span className="inline-flex h-10 w-9 flex-shrink-0 items-center justify-center text-ink-soft"><ChevronLeft className="h-5 w-5" /></span>
+                <span className="truncate text-[15px] font-semibold">{back.label}</span>
+              </Link>
+            ) : current ? (
+              <span aria-current="page" className="truncate px-2 text-[16px] font-semibold text-ink">{current.label}</span>
+            ) : null}
+          </div>
 
-              {/* Plus large : le fil complet */}
-              <Link to="/" className="hidden sm:inline hover:underline" style={crumbLink}>Accueil</Link>
-              {trail.map((c, i) => {
-                const isLast = i === trail.length - 1;
-                return (
-                  <React.Fragment key={`${c.label}-${i}`}>
-                    <ChevronRight
-                      className="w-3.5 h-3.5 hidden sm:inline"
-                      style={{ color: '#c9c5bd', flexShrink: 0 }}
-                    />
-                    {isLast ? (
-                      <span aria-current="page" className="hidden sm:inline truncate" style={crumbCurrent}>{c.label}</span>
-                    ) : c.to ? (
-                      <Link to={c.to} className="hidden sm:inline hover:underline truncate" style={crumbLink}>{c.label}</Link>
-                    ) : (
-                      <span className="hidden sm:inline truncate" style={crumbLink}>{c.label}</span>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </>
-          )}
+          {/* Ordinateur : le fil complet */}
+          <ol className="hidden min-w-0 items-center gap-1.5 md:flex">
+            {isHome ? (
+              <li aria-current="page" className="truncate text-[15px] font-semibold text-ink">Accueil</li>
+            ) : (
+              <>
+                <li className="flex-shrink-0">
+                  <Link to="/" className="text-[13px] font-medium text-ink-faint hover:text-ink hover:underline">Accueil</Link>
+                </li>
+                {trail.map((c, i) => {
+                  const isLast = i === trail.length - 1;
+                  return (
+                    <li key={`${c.label}-${i}`} className={`flex min-w-0 items-center gap-1.5 ${isLast ? '' : 'flex-shrink'}`}>
+                      <ChevronRight aria-hidden className="h-3.5 w-3.5 flex-shrink-0 text-[#c9c5bd]" />
+                      {isLast && !c.to ? (
+                        <span aria-current="page" className="truncate text-[15px] font-semibold text-ink">{c.label}</span>
+                      ) : c.to ? (
+                        <Link to={c.to} className="truncate text-[13px] font-medium text-ink-faint hover:text-ink hover:underline">{c.label}</Link>
+                      ) : (
+                        <span className="truncate text-[13px] font-medium text-ink-faint">{c.label}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </>
+            )}
+          </ol>
         </nav>
-
-        <div className="flex-1" />
-
-        {/* Notifications (membres connectés) : à gauche de la recherche ; l'aide reste tout à droite. */}
-        <NotificationBell />
 
         {/* Visiteur : la connexion à portée de main (avant, elle n'était qu'au pied du menu). */}
         {!isAuthenticated && !isLoading && (
           <button
             type="button"
             onClick={() => openSignup('login')}
-            className="inline-flex items-center flex-shrink-0 rounded-[10px] border border-line bg-white px-3 text-[13px] font-semibold text-ink hover:border-ink transition-colors"
-            style={{ height: 38 }}
+            className="inline-flex h-10 flex-shrink-0 items-center rounded-xl border border-line bg-white px-3.5 text-[13.5px] font-semibold text-ink transition-colors hover:border-ink"
           >
             Connexion
           </button>
         )}
 
-        {/* Search — full field on larger screens */}
+        {/* Recherche — champ complet sur grand écran (sur tablette, il écrasait le fil d'Ariane) */}
         <form
           onSubmit={handleSearchSubmit}
           data-tour="recherche"
-          className="hidden sm:flex items-center w-full max-w-xs"
-          style={{
-            background: '#f7f6f3', border: '1.5px solid #e7e3dc',
-            borderRadius: 10, padding: '7px 12px', gap: 8,
-          }}
+          role="search"
+          className="hidden h-10 w-[280px] flex-shrink-0 items-center gap-2 rounded-xl border border-line bg-[#f7f6f3] px-3 transition-colors focus-within:border-[#cfc9bf] focus-within:bg-white lg:flex xl:w-[340px]"
         >
-          <SearchIcon className="w-4 h-4" style={{ color: '#6b6862' }} />
+          <SearchIcon aria-hidden className="h-4 w-4 flex-shrink-0 text-ink-faint" />
           <input
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Rechercher un exercice, une leçon…"
             aria-label="Rechercher"
-            style={{
-              flex: 1, border: 'none', outline: 'none', background: 'transparent',
-              fontSize: 13, fontFamily: 'DM Sans', color: '#1a1a1a', minWidth: 0,
-            }}
+            className="min-w-0 flex-1 border-none bg-transparent text-[13.5px] text-ink outline-none placeholder:text-ink-faint focus-visible:outline-none"
           />
         </form>
 
-        {/* Search — icon only on mobile */}
+        {/* Recherche — icône sur téléphone et tablette */}
         <button
-          className="sm:hidden inline-flex"
+          type="button"
+          className={`lg:hidden ${BAR_ICON_BTN}`}
           data-tour="recherche"
           onClick={() => navigate('/search')}
           aria-label="Rechercher"
-          style={squareBtn}
         >
-          <SearchIcon className="w-5 h-5" />
+          <SearchIcon className="h-5 w-5" />
         </button>
 
-        {/* Guide de la page (visite guidée), s'il y en a un */}
-        <TourHelpButton />
+        {/* Notifications (membres connectés) */}
+        <NotificationBell />
+
+        {/* Guide de la page (visite guidée), s'il y en a un : toujours tout à droite. */}
+        <TourHelpButton
+          className={BAR_ICON_BTN}
+          style={{ width: undefined, height: undefined, border: 'none', borderRadius: undefined, background: undefined, color: undefined }}
+        />
       </div>
     </header>
   );

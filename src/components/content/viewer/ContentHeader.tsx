@@ -1,20 +1,31 @@
-import React, { useState, useRef } from 'react';
-import { FloatingPanel } from '@/components/ui/FloatingPanel';
+/**
+ * En-tête de la page d'un contenu (refait le 11/10/2026, identité « encre et papier ») : sur le fond papier,
+ * comme les autres pages de l'espace élève.
+ *  - une ligne : retour nommé à gauche ; à droite trois boutons calmes (Enregistrer, PDF, ⋯) ;
+ *  - repère (or) : nature · chapitre · niveau, puis le titre serif et une ligne d'infos (difficulté, nombre
+ *    de questions et durée, auteur, ton résultat) ;
+ *  - onglets soulignés (Exercice · Solutions des élèves · Activité) au lieu de trois gros boutons.
+ * Le reste (partager, ranger dans une liste ou un cahier, mes temps, signaler, modération) est dans « ⋯ ».
+ */
+import React, { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Share2, Bookmark, MoreHorizontal, Printer, BookOpen, Lightbulb, BarChart3, ArrowLeft, Loader2,
-  Pencil, Trash2, User, Users, Calendar, Eye, GraduationCap, Flag, ShieldQuestion, ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  BookMarked, Bookmark, CheckCircle2, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
+  RotateCcw, Share2, ShieldCheck, ShieldQuestion, Trash2,
+} from 'lucide-react';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
-import { DifficultyBars } from '@/components/common/DifficultyBars';
 import { useAuth } from '@/contexts/AuthContext';
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
-import { feltTooltip } from '@/components/content/listing/listingUtils';
+import { DifficultyChip } from '@/components/content/listing/ListingParts';
 import { trackAction } from '@/lib/usage';
 import { contentHub } from './pageHelpers';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
+
+// La discussion est sous le contenu, dans l'onglet principal (plus d'onglet Discussions).
+export type ContentTab = 'exercise' | 'proposals' | 'activity';
 
 interface ContentHeaderProps {
   content: ContentItem;
@@ -34,59 +45,61 @@ interface ContentHeaderProps {
   basePath: string;
   /** Nombre de solutions proposées par les élèves (pastille de l'onglet). */
   solutionCount?: number;
+  /** Résultat de l'élève : pastille sous le titre ; un clic mène à « Tu as fini ? » en bas de page. */
+  completion?: 'success' | 'review' | null;
+  onShowCompletion?: () => void;
+  /** Ranger le contenu : liste de révision (exercice, examen) ou cahier (leçon). */
+  onCollect?: () => void;
+  /** Temps (exercice) ou passages (examen) enregistrés. */
+  sessionCount?: number;
+  onOpenHistory?: () => void;
+  /** Épreuve en cours : pas d'onglets (les solutions des élèves dévoileraient le corrigé). */
+  hideTabs?: boolean;
 }
-
-// La discussion est sous le contenu, dans l'onglet principal (plus d'onglet Discussions).
-export type ContentTab = 'exercise' | 'proposals' | 'activity';
-
-// Light, focus-first header chrome. Shared ghost-button styling (ink on white).
-const ghostBtn = 'rounded-xl gap-2 text-[#33302b] hover:bg-[#f7f6f3]';
-
-const DIFFICULTY: Record<string, { label: string; bg: string; text: string }> = {
-  easy:   { label: 'Facile',    bg: '#eaf3ed', text: '#15633c' },
-  medium: { label: 'Moyen',     bg: '#faf3e2', text: '#9a6e1c' },
-  hard:   { label: 'Difficile', bg: '#fbecea', text: '#a23b34' },
-};
-
-const chipStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
-  padding: '3px 10px', borderRadius: 99, whiteSpace: 'nowrap',
-};
 
 const timeAgo = (iso?: string) => {
   if (!iso) return '';
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (days <= 0) return "Aujourd'hui";
-  if (days === 1) return 'Hier';
-  if (days < 7) return `Il y a ${days} jours`;
-  if (days < 30) return `Il y a ${Math.floor(days / 7)} semaine${days >= 14 ? 's' : ''}`;
-  if (days < 365) return `Il y a ${Math.floor(days / 30)} mois`;
+  if (days <= 0) return "aujourd'hui";
+  if (days === 1) return 'hier';
+  if (days < 7) return `il y a ${days} jours`;
+  if (days < 30) return `il y a ${Math.floor(days / 7)} semaine${days >= 14 ? 's' : ''}`;
+  if (days < 365) return `il y a ${Math.floor(days / 30)} mois`;
   const years = Math.floor(days / 365);
-  return `Il y a ${years} an${years > 1 ? 's' : ''}`;
+  return `il y a ${years} an${years > 1 ? 's' : ''}`;
 };
 
+const durationLabel = (min: number) => {
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h} h${m ? ` ${String(m).padStart(2, '0')}` : ''}` : `${m} min`;
+};
+
+// Boutons de l'en-tête : calmes, 40 px de haut (cible confortable au pouce).
+const headBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-[13.5px] font-medium text-ink-soft transition-colors hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-60';
+
+const MenuItem: React.FC<{ icon: React.ElementType; onClick: () => void; children: React.ReactNode; tone?: 'danger' | 'brand' }> = ({
+  icon: Icon, onClick, children, tone,
+}) => (
+  <button type="button" role="menuitem" onClick={onClick}
+    className={`flex min-h-11 w-full items-center gap-3 px-4 text-left text-[14px] transition-colors ${
+      tone === 'danger' ? 'text-[#a23b34] hover:bg-[#fbecea]' : tone === 'brand' ? 'font-medium text-brand-hover hover:bg-brand-soft' : 'text-ink-soft hover:bg-[#f7f6f3] hover:text-ink'}`}>
+    <Icon className={`h-4 w-4 shrink-0 ${tone ? '' : 'text-ink-faint'}`} aria-hidden /> {children}
+  </button>
+);
+
 export const ContentHeader: React.FC<ContentHeaderProps> = ({
-  content,
-  contentType,
-  isSaved,
-  isSaving,
-  onToggleSave,
-  isAuthor,
-  onDelete,
-  onPrint,
-  onReport,
-  onSetVerified,
-  activeTab,
-  onTabChange,
-  basePath,
-  solutionCount = 0,
+  content, contentType, isSaved, isSaving, onToggleSave, isAuthor, onDelete, onPrint, onReport, onSetVerified,
+  activeTab, onTabChange, basePath, solutionCount = 0, completion, onShowCompletion, onCollect, sessionCount = 0,
+  onOpenHistory, hideTabs = false,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const isNational = contentType === 'exam' && !!(content as ContentExam).is_national_exam;
-  const [showDropdown, setShowDropdown] = useState(false);
+  const exam = contentType === 'exam' ? (content as ContentExam) : null;
+  const isNational = !!exam?.is_national_exam;
+  const [menuOpen, setMenuOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const isLesson = contentType === 'lesson';
 
   // Retour : arrivé depuis une liste (ou un autre contenu), on y revient tel quel (filtres, position) ;
   // sinon, page du chapitre au niveau de l'élève. Un examen national revient à sa section.
@@ -98,7 +111,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
     const section = basePath.replace(/^\//, '');
     if (level && chapter) return { to: hubPath(section, level.slug, chapter.slug), label: chapter.name };
     if (level) return { to: hubPath(section, level.slug), label: level.name };
-    return { to: basePath, label: contentType === 'lesson' ? 'Leçons' : contentType === 'exam' ? 'Devoirs (DS)' : 'Exercices' };
+    return { to: basePath, label: isLesson ? 'Leçons' : contentType === 'exam' ? 'Devoirs (DS)' : 'Exercices' };
   })();
   const goBack = () => {
     trackAction('retour-liste');
@@ -111,264 +124,190 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
       navigator.share({
         title: content?.title || 'Fidni',
         text: `${content?.title} – sur Fidni`,
-        url: window.location.href
+        url: window.location.href,
       }).catch(() => { /* partage annulé */ });
     } else {
       navigator.clipboard.writeText(window.location.href)
         .then(() => alert('Lien copié !'))
-        .catch(err => console.error('Error copying link:', err));
+        .catch((err) => console.error('Error copying link:', err));
     }
   };
+  const pick = (fn?: () => void) => () => { setMenuOpen(false); fn?.(); };
+
+  // ── Repère : nature · chapitre · niveau (liens vers la page du chapitre et du niveau, même rubrique).
+  const c = content as ContentItem & { structure?: { credit?: string; a_verifier?: boolean } };
+  const credit = c.structure?.credit;
+  const aVerifier = !!c.structure?.a_verifier && !isLesson;
+  const level = (hub.level ?? content.class_levels?.[0]) as { name: string; slug?: string } | undefined;
+  const levelSlug = level?.slug;
+  const levelUrl = levelSlug ? `${basePath}/niveau/${levelSlug}` : null;
+  const chapters = (content.chapters || []) as { id: number | string; name: string; slug?: string; class_levels?: { slug?: string }[] }[];
+  const chapterAtLevel = (ch: (typeof chapters)[number]) => !ch.class_levels?.length || ch.class_levels.some((l) => l.slug === levelSlug);
+  const kind = isLesson ? 'Leçon' : exam ? (isNational ? `Bac national${exam.national_year ? ` ${exam.national_year}` : ''}` : 'Devoir (DS)') : 'Exercice';
+  const eyebrowLink = 'underline-offset-4 transition-colors hover:text-gold hover:underline';
+
+  // ── Infos : questions et durée (estimée pour un exercice, celle du sujet pour un examen).
+  const items = Number(content.item_count) || 0;
+  const minutes = exam ? Number(exam.duration_minutes) || 0 : Number(content.expected_minutes) || 0;
+  const sectionCount = isLesson ? ((content.structure as { sections?: unknown[] } | undefined)?.sections?.length ?? 0) : 0;
+  const facts = [
+    !isLesson && items > 0 ? `${items} question${items > 1 ? 's' : ''}` : null,
+    sectionCount > 1 ? `${sectionCount} parties` : null,
+    minutes > 0 ? (exam ? durationLabel(minutes) : `≈ ${durationLabel(minutes)}`) : null,
+  ].filter(Boolean).join(' · ');
 
   // short : libellé sur téléphone, pour que les trois onglets tiennent sur une ligne.
-  const tabs: { id: ContentTab; label: string; short?: string; icon: React.ElementType; count?: number }[] = contentType === 'lesson'
-    ? [{ id: 'exercise', label: 'Leçon', icon: BookOpen }]
-    : [
-        { id: 'exercise', label: contentType === 'exam' ? 'Sujet' : 'Exercice', icon: BookOpen },
-        { id: 'proposals', label: 'Solutions des élèves', short: 'Solutions', icon: Lightbulb, count: solutionCount },
-        { id: 'activity', label: 'Activité', icon: BarChart3 },
-      ];
+  const tabs: { id: ContentTab; label: string; short?: string; count?: number }[] = isLesson ? [] : [
+    { id: 'exercise', label: exam ? 'Sujet' : 'Exercice' },
+    { id: 'proposals', label: 'Solutions des élèves', short: 'Solutions', count: solutionCount },
+    { id: 'activity', label: 'Activité' },
+  ];
 
   return (
-    <div style={{ background: '#fff', borderBottom: '1px solid #e7e3dc' }}>
-      {/* Même largeur que le contenu en dessous (l'en-tête était plus étroit, donc décalé). */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4">
-        {/* Retour nommé + actions */}
-        <div className="flex items-center justify-between gap-3 mb-2 sm:mb-4">
-          <div className="flex items-center min-w-0">
-            <button
-              type="button"
-              onClick={goBack}
-              title={from ? 'Revenir à la page précédente' : back.label}
-              className="inline-flex items-center gap-1.5 min-h-9 py-1.5 -ml-1 pr-2 rounded-lg text-sm text-[#6b6862] hover:text-[#1a1a1a] transition-colors min-w-0"
-            >
-              <ArrowLeft className="w-4 h-4 shrink-0" />
-              <span className="truncate max-w-[52vw] sm:max-w-xs">{from ? 'Retour' : back.label}</span>
+    <header className="mb-6 sm:mb-8">
+      {/* Retour nommé + actions */}
+      <div className="-mx-1 flex items-center justify-between gap-2 print:hidden">
+        <button type="button" onClick={goBack} title={from ? 'Revenir à la page précédente' : back.label}
+          className="inline-flex min-h-10 min-w-0 items-center gap-1 rounded-lg px-1 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink">
+          <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="max-w-[46vw] truncate sm:max-w-xs">{from ? 'Retour' : back.label}</span>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button type="button" onClick={onToggleSave} disabled={isSaving} data-tour="detail-enregistrer" aria-pressed={isSaved}
+            aria-label={isSaved ? 'Retirer de mes favoris' : 'Enregistrer dans mes favoris'}
+            className={`${headBtn} ${isSaved ? 'text-ink' : ''}`}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />}
+            <span className="hidden sm:inline">{isSaved ? 'Enregistré' : 'Enregistrer'}</span>
+          </button>
+          {onPrint && (
+            <button type="button" onClick={onPrint} data-tour={isLesson ? 'lecon-imprimer' : 'detail-imprimer'}
+              aria-label={isLesson ? 'Imprimer la leçon' : 'Imprimer ou télécharger en PDF'} className={headBtn}>
+              <Printer className="h-4 w-4" /> <span className="hidden sm:inline">{isLesson ? 'Imprimer' : 'PDF'}</span>
             </button>
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Save */}
-            <Button
-              onClick={onToggleSave}
-              data-tour="detail-enregistrer"
-              variant="ghost"
-              size="sm"
-              className={`rounded-xl gap-2 ${isSaved ? 'bg-[#f2f1ee] text-[#000000]' : ghostBtn}`}
-              disabled={isSaving}
-            >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />}
-              <span className="hidden sm:inline">{isSaved ? 'Enregistré' : 'Enregistrer'}</span>
-            </Button>
-
-            {/* Imprimer / PDF : visible directement (exercices, examens) ; la leçon a son bouton dans la carte. */}
-            {onPrint && contentType !== 'lesson' && (
-              <Button onClick={onPrint} data-tour="detail-imprimer" variant="ghost" size="sm" className={ghostBtn}
-                aria-label="Imprimer ou télécharger en PDF">
-                <Printer className="w-4 h-4" />
-                <span className="hidden sm:inline">PDF</span>
-              </Button>
-            )}
-
-            {/* More */}
-            <div className="relative" ref={moreRef}>
-              <Button onClick={() => setShowDropdown(!showDropdown)} variant="ghost" size="sm" className={`rounded-xl px-2 ${ghostBtn}`} data-tour="detail-plus" aria-label="Plus d'options">
-                <MoreHorizontal className="w-5 h-5" />
-              </Button>
-
-              <FloatingPanel anchorRef={moreRef} open={showDropdown} onClose={() => setShowDropdown(false)} placement="bottom-end"
-                className="min-w-48 w-max max-w-[300px] bg-white rounded-xl shadow-xl py-2 border border-[#e7e3dc] overflow-hidden">
-                    {/* Téléphone : date, vues et numéro sont ici plutôt que sous le titre (l'énoncé arrive plus haut). */}
-                    <p className="sm:hidden px-4 pt-1 pb-2.5 mb-1 border-b border-line text-[12.5px] text-ink-faint fd-nums">
-                      {[
-                        content.created_at ? `Publié ${timeAgo(content.created_at).toLowerCase()}` : null,
-                        typeof content.view_count === 'number' ? `${content.view_count} vue${content.view_count > 1 ? 's' : ''}` : null,
-                        `n° ${content.id}`,
-                      ].filter(Boolean).join(' · ')}
-                    </p>
-                    <button
-                      onClick={() => { handleShare(); setShowDropdown(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
-                    >
-                      <Share2 className="w-4 h-4 text-ink-faint" /> Partager
-                    </button>
-                    {onPrint && contentType === 'lesson' && (
-                      <button
-                        onClick={() => { onPrint(); setShowDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
-                      >
-                        <Printer className="w-4 h-4 text-ink-faint" /> Imprimer / PDF
-                      </button>
-                    )}
-                    {onReport && (
-                      <button
-                        onClick={() => { onReport(); setShowDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
-                      >
-                        <Flag className="w-4 h-4 text-ink-faint" /> Signaler une erreur
-                      </button>
-                    )}
-                    {onSetVerified && contentType !== 'lesson' && (
-                      <>
-                        <div className="border-t border-line my-1" />
-                        {(content as any).structure?.a_verifier ? (
-                          <button
-                            onClick={() => { setShowDropdown(false); onSetVerified(true); }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-brand-hover hover:bg-brand-soft transition-colors text-sm font-medium text-left"
-                          >
-                            <ShieldCheck className="w-4 h-4 shrink-0" /> Marquer la correction comme vérifiée
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => { setShowDropdown(false); onSetVerified(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm text-left"
-                          >
-                            <ShieldQuestion className="w-4 h-4 shrink-0 text-ink-faint" /> Remettre « à vérifier »
-                          </button>
-                        )}
-                      </>
-                    )}
-                    {isAuthor && (
-                      <>
-                        <div className="border-t border-line my-1" />
-                        <button
-                          onClick={() => { navigate(`${basePath}/${content.id}/edit`); setShowDropdown(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-ink-soft hover:bg-[#f7f6f3] transition-colors text-sm"
-                        >
-                          <Pencil className="w-4 h-4 text-ink-faint" /> Modifier
-                        </button>
-                        <button
-                          onClick={() => { setShowDropdown(false); onDelete?.(); }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors text-sm"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" /> Supprimer
-                        </button>
-                      </>
-                    )}
-              </FloatingPanel>
-            </div>
+          )}
+          <div ref={moreRef}>
+            <button type="button" onClick={() => setMenuOpen((o) => !o)} data-tour="detail-plus" aria-label="Plus d'options"
+              aria-haspopup="menu" aria-expanded={menuOpen} className={`${headBtn} w-10 px-0`}>
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            <FloatingPanel anchorRef={moreRef} open={menuOpen} onClose={() => setMenuOpen(false)} placement="bottom-end" role="menu"
+              className="w-max min-w-[240px] max-w-[300px] overflow-hidden rounded-2xl border border-line bg-white py-1.5 shadow-[0_16px_40px_rgba(20,18,16,.14)]">
+              <p className="mb-1 border-b border-line px-4 pb-2.5 pt-1.5 text-[12.5px] leading-relaxed text-ink-faint fd-nums">
+                {content.author?.username && !content.author.is_deleted ? (
+                  <>Par <Link to={`/profile/${content.author.username}`} onClick={() => setMenuOpen(false)} className="font-medium text-ink-soft hover:underline">{content.author.username}</Link> · </>
+                ) : null}
+                {[
+                  content.created_at ? `publié ${timeAgo(content.created_at)}` : null,
+                  typeof content.view_count === 'number' ? `${content.view_count} vue${content.view_count > 1 ? 's' : ''}` : null,
+                  `n° ${content.id}`,
+                ].filter(Boolean).join(' · ')}
+              </p>
+              <MenuItem icon={Share2} onClick={pick(handleShare)}>Partager</MenuItem>
+              {onCollect && (
+                <MenuItem icon={isLesson ? BookMarked : ListPlus} onClick={pick(onCollect)}>
+                  {isLesson ? 'Ajouter à mon cahier' : 'Ajouter à une liste de révision'}
+                </MenuItem>
+              )}
+              {onOpenHistory && sessionCount > 0 && (
+                <MenuItem icon={History} onClick={pick(onOpenHistory)}>
+                  {exam ? `Mes passages (${sessionCount})` : `Mes temps enregistrés (${sessionCount})`}
+                </MenuItem>
+              )}
+              {onReport && <MenuItem icon={Flag} onClick={pick(onReport)}>Signaler une erreur</MenuItem>}
+              {onSetVerified && !isLesson && (
+                <>
+                  <div className="my-1 border-t border-line" />
+                  {c.structure?.a_verifier
+                    ? <MenuItem icon={ShieldCheck} tone="brand" onClick={pick(() => onSetVerified(true))}>Marquer la correction comme vérifiée</MenuItem>
+                    : <MenuItem icon={ShieldQuestion} onClick={pick(() => onSetVerified(false))}>Remettre « à vérifier »</MenuItem>}
+                </>
+              )}
+              {isAuthor && (
+                <>
+                  <div className="my-1 border-t border-line" />
+                  <MenuItem icon={Pencil} onClick={pick(() => navigate(`${basePath}/${content.id}/edit`))}>Modifier</MenuItem>
+                  <MenuItem icon={Trash2} tone="danger" onClick={pick(() => { onDelete?.(); })}>Supprimer</MenuItem>
+                </>
+              )}
+            </FloatingPanel>
           </div>
         </div>
+      </div>
 
-        {/* Étiquettes, titre et infos : l'identité de la page, au-dessus des onglets. */}
-        {(() => {
-          const c = content as any;
-          const credit: string | undefined = c.structure?.credit;
-          const aVerifier: boolean = !!c.structure?.a_verifier;
-          const diff = c.difficulty ? DIFFICULTY[c.difficulty] : null;
-          const chapters: { id: string | number; name: string; slug?: string; class_levels?: { slug?: string }[] }[] = c.chapters || [];
-          // Niveau affiché : celui de l'élève quand le contenu en relève, sinon le premier.
-          const level = hub.level ?? c.class_levels?.[0];
-          const levelName = level ? (typeof level === 'string' ? level : level.name) : null;
-          // Étiquettes cliquables : page du niveau, page du chapitre (même rubrique), seulement si le
-          // chapitre existe à ce niveau (sinon la page serait vide).
-          const levelSlug: string | undefined = level && typeof level !== 'string' ? level.slug : undefined;
-          const levelUrl = levelSlug ? `${basePath}/niveau/${levelSlug}` : null;
-          const chapterAtLevel = (ch: (typeof chapters)[number]) =>
-            !ch.class_levels?.length || ch.class_levels.some((l) => l.slug === levelSlug);
-          // Ressenti des élèves (exercices ; l'examen l'affiche dans sa fiche) : dès qu'il y a assez de données.
-          const felt = contentType === 'exercise' ? content.felt : null;
-          const feltDiff = felt?.differs ? DIFFICULTY[felt.level] : null;
-          return (
-            <div className="mb-3 sm:mb-4">
-              <div className="flex flex-wrap items-center gap-1.5 mb-2 sm:mb-2.5">
-                {diff && (
-                  <span style={{ ...chipStyle, background: diff.bg, color: diff.text }}>
-                    <DifficultyBars difficulty={c.difficulty} />
-                    {diff.label}
-                  </span>
-                )}
-                {c.is_national_exam && (
-                  <span style={{ ...chipStyle, background: '#faf3e2', color: '#9a6e1c' }}>
-                    Examen national{c.national_year ? ` ${c.national_year}` : ''}
-                  </span>
-                )}
-                {chapters.slice(0, 2).map((ch) => (levelUrl && ch.slug && chapterAtLevel(ch) ? (
-                  <Link key={ch.id} to={`${levelUrl}/${ch.slug}`} title={`Tous les contenus : ${ch.name}`}
-                    className="hover:!bg-[#e7e3dc] transition-colors" style={{ ...chipStyle, background: '#f2f1ee', color: '#4b4843' }}>{ch.name}</Link>
-                ) : (
-                  <span key={ch.id} style={{ ...chipStyle, background: '#f2f1ee', color: '#4b4843' }}>{ch.name}</span>
-                )))}
-                {chapters.length > 2 && (
-                  <span style={{ ...chipStyle, background: '#f2f1ee', color: '#6b6862' }}>+{chapters.length - 2}</span>
-                )}
-                {levelName && (levelUrl
-                  ? <Link to={levelUrl} className="hover:!text-[#1a1a1a] transition-colors" style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</Link>
-                  : <span style={{ ...chipStyle, color: '#6b6862', paddingLeft: 4 }}>{levelName}</span>)}
-              </div>
-              <h1 className="fd-display" style={{ fontSize: 'clamp(22px, 3.6vw, 36px)', lineHeight: 1.15, color: '#1a1a1a' }}>
-                {content.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 sm:mt-2.5 text-sm" style={{ color: '#6b6862' }}>
-                {content.author?.username && (content.author.is_deleted ? (
-                  <span className="inline-flex items-center gap-1.5 italic">
-                    <User className="w-4 h-4" /> Compte supprimé
-                  </span>
-                ) : (
-                  <Link to={`/profile/${content.author.username}`} className="inline-flex items-center gap-1.5 hover:text-[#1a1a1a]">
-                    <User className="w-4 h-4" /> {content.author.username}
-                  </Link>
-                ))}
-                {credit && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4" /> Proposé par {credit}
-                  </span>
-                )}
-                {felt && (
-                  <span className="inline-flex items-center gap-1.5" title={feltTooltip(felt)}>
-                    <Users className="w-4 h-4" /> Ressenti des élèves :{' '}
-                    {feltDiff
-                      ? <b className="font-semibold" style={{ color: feltDiff.text }}>{feltDiff.label}</b>
-                      : <span>comme annoncé</span>}
-                  </span>
-                )}
-                {c.created_at && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {timeAgo(c.created_at)}</span>
-                )}
-                {typeof c.view_count === 'number' && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5">
-                    <Eye className="w-4 h-4" /> {c.view_count} vue{c.view_count > 1 ? 's' : ''}
-                  </span>
-                )}
-                <span className="hidden sm:inline fd-nums" style={{ color: '#9a958c' }}>#{content.id}</span>
-              </div>
-              {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}
-              {aVerifier && contentType !== 'lesson' && (
-                <p className="mt-2 sm:mt-3 inline-flex items-start gap-2 rounded-xl border border-[#ecdcb4] bg-gold-soft px-3 py-1.5 sm:py-2 text-[13px] text-gold-strong"
-                  title="L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la en bas de la page.">
-                  <ShieldQuestion className="w-4 h-4 mt-px shrink-0" aria-hidden />
-                  <span>
-                    <strong className="font-semibold">Correction en cours de vérification.</strong>{' '}
-                    <span className="hidden sm:inline">L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la en bas de la page.</span>
-                  </span>
-                </p>
-              )}
-            </div>
-          );
-        })()}
+      {/* Repère, titre, infos */}
+      <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong sm:mt-4">
+        <span>{kind}</span>
+        {chapters.slice(0, 2).map((ch) => (
+          <React.Fragment key={ch.id}>
+            <span aria-hidden className="text-gold-line">·</span>
+            {levelUrl && ch.slug && chapterAtLevel(ch)
+              ? <Link to={`${levelUrl}/${ch.slug}`} title={`Tous les contenus : ${ch.name}`} className={eyebrowLink}>{ch.name}</Link>
+              : <span>{ch.name}</span>}
+          </React.Fragment>
+        ))}
+        {chapters.length > 2 && <span className="text-gold-strong/70">+{chapters.length - 2}</span>}
+        {level && (
+          <>
+            <span aria-hidden className="text-gold-line">·</span>
+            {levelUrl ? <Link to={levelUrl} className={eyebrowLink}>{level.name}</Link> : <span>{level.name}</span>}
+          </>
+        )}
+      </p>
+      <h1 className="fd-display mt-2 text-ink" style={{ fontSize: 'clamp(26px, 3.4vw, 36px)', lineHeight: 1.12 }}>
+        {content.title}
+      </h1>
 
-        {/* Onglets : celui qui est ouvert est en vert plein, impossible à manquer. */}
-        {tabs.length > 1 && (
-          <div role="tablist" aria-label="Sections" data-tour="detail-onglets"
-            className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-3 sm:pb-4 scrollbar-hide sm:mx-0 sm:px-0">
-            {tabs.map(({ id, label, short, icon: Icon, count }) => {
-              const active = activeTab === id;
-              return (
-                <button key={id} type="button" role="tab" aria-selected={active} onClick={() => onTabChange(id)}
-                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-[14px] sm:px-4 font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                    active ? 'bg-brand text-white shadow-sm' : 'bg-[#f2f1ee] text-ink-soft hover:bg-[#e9e6e0] hover:text-ink'
-                  }`}>
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {short ? <><span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span></> : label}
-                  {count !== undefined && count > 0 && (
-                    <span className={`fd-nums rounded-full px-1.5 text-[12px] font-semibold ${active ? 'bg-white/20 text-white' : 'bg-white text-ink-soft'}`}>{count}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13.5px] text-ink-faint">
+        {/* Ressenti des élèves : dans la pastille de difficulté quand il diffère (l'examen le redit dans sa fiche). */}
+        {!isLesson && content.difficulty && <DifficultyChip difficulty={content.difficulty} felt={contentType === 'exercise' ? content.felt : null} />}
+        {facts && <span className="fd-nums">{facts}</span>}
+        {credit
+          ? <span>Proposé par {credit}</span>
+          : content.author?.is_deleted ? <span className="italic">Compte supprimé</span>
+            : content.author?.username && (
+              <span className="hidden sm:inline">par <Link to={`/profile/${content.author.username}`} className="text-ink-soft hover:text-ink hover:underline">{content.author.username}</Link></span>
+            )}
+        {completion && (
+          <button type="button" onClick={onShowCompletion} title="Voir où tu en es"
+            className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold ${
+              completion === 'success' ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-gold-strong'}`}>
+            {completion === 'success' ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> : <RotateCcw className="h-3.5 w-3.5" aria-hidden />}
+            {completion === 'success' ? (isLesson ? 'Lue' : 'Réussi') : 'À revoir'}
+          </button>
         )}
       </div>
-    </div>
+
+      {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}
+      {aVerifier && (
+        <p className="mt-4 flex max-w-2xl items-start gap-2 rounded-xl border border-gold-line bg-gold-soft px-3 py-2 text-[13px] leading-snug text-gold-strong">
+          <ShieldQuestion className="mt-px h-4 w-4 shrink-0" aria-hidden />
+          <span>
+            <strong className="font-semibold">Correction en cours de vérification.</strong>{' '}
+            L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la.
+          </span>
+        </p>
+      )}
+
+      {/* Onglets soulignés : l'énoncé d'abord, le reste à côté, sans voler la vedette. */}
+      {tabs.length > 0 && !hideTabs && (
+        <div role="tablist" aria-label="Sections" data-tour="detail-onglets"
+          className="mt-6 flex gap-6 overflow-x-auto border-b border-line scrollbar-hide sm:gap-8 print:hidden">
+          {tabs.map(({ id, label, short, count }) => {
+            const active = activeTab === id;
+            return (
+              <button key={id} type="button" role="tab" aria-selected={active} onClick={() => onTabChange(id)}
+                className={`-mb-px inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                  active ? 'border-ink text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>
+                {short ? <><span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span></> : label}
+                {count !== undefined && count > 0 && (
+                  <span className={`rounded-full px-1.5 text-[11.5px] fd-nums ${active ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-faint'}`}>{count}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </header>
   );
 };

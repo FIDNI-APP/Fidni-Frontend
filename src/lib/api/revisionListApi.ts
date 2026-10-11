@@ -113,7 +113,9 @@ export async function getRevisionList(id: number): Promise<RevisionList> {
     const response = await api.get(`/revision-lists/${id}/`);
     return withStructures(response.data);
   } catch (error) {
-    console.error('Failed to fetch revision list:', error);
+    // Liste supprimée ou d'un autre élève : la page affiche « Liste introuvable », rien à journaliser.
+    const status = (error as { response?: { status?: number } })?.response?.status;
+    if (status !== 404 && status !== 403) console.error('Failed to fetch revision list:', error);
     throw error;
   }
 }
@@ -222,5 +224,13 @@ export async function quickAddManyToRevision(objectIds: number[]): Promise<{ lis
 /** Exercices à retravailler, pas encore rangés dans une liste. */
 export async function getRevisionSuggestions(): Promise<{ count: number; results: RevisionSuggestion[] }> {
   const response = await api.get('/revision-lists/suggestions/');
+  return response.data;
+}
+
+/** « À refaire » (page Réviser, 11/10/2026) : tout ce qui est raté ou à reprendre, déjà rangé ou non,
+ *  le plus ancien d'abord (`days_ago`), 30 au plus. */
+export interface ToRedoItem extends RevisionSuggestion { in_list: boolean; days_ago: number | null }
+export async function getToRedo(): Promise<{ count: number; results: ToRedoItem[] }> {
+  const response = await api.get('/revision-lists/suggestions/', { params: { tout: 1 } });
   return response.data;
 }

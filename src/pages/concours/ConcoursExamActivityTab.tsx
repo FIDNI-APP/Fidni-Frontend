@@ -13,7 +13,7 @@ import { getExamActivity, type ExamActivity } from '@/lib/api/concoursApi';
 type Theme = { from: string; to: string; light: string; text: string };
 
 const scoreColor = (pct: number) =>
-  pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+  pct >= 75 ? '#1a7a4a' : pct >= 50 ? '#c0892f' : '#a23b34';
 
 const relDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -94,7 +94,7 @@ export function ConcoursExamActivityTab({
                       </span>
                       {!submitted && (
                         <span style={{
-                          fontSize: 10, fontWeight: 700, color: '#a16207', background: '#fef9c3',
+                          fontSize: 10, fontWeight: 700, color: '#9a6e1c', background: '#faf3e2',
                           padding: '2px 8px', borderRadius: 99, textTransform: 'uppercase',
                         }}>
                           Reprendre
@@ -120,7 +120,7 @@ export function ConcoursExamActivityTab({
                       {s.correct_count}/{s.total_questions}
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#c4c0e8' }} />
+                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#cfc9bf' }} />
                 </Link>
               );
             })}

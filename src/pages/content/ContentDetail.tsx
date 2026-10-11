@@ -5,6 +5,12 @@
  * 10/10/2026 : chargement après l'authentification, contenu et progression en parallèle, squelette au
  * lieu du spinner ; solution ouverte enregistrée (SolutionView, une fois par contenu) ; chaque
  * auto-évaluation dit d'où elle vient ; examen national rangé sous « Bac national », DS sous « Devoirs (DS) ».
+ *
+ * 11/10/2026 (refonte « encre et papier ») : une colonne de lecture sur le fond papier. En-tête calme (retour,
+ * Enregistrer, PDF, ⋯ ; onglets soulignés), la feuille, puis, dans l'ordre où l'élève en a besoin : « Tu as
+ * fini ? » (avant : en haut de page), pour continuer, la discussion. Plus de colonne de droite pour
+ * l'exercice (progression en bas, chrono dans la barre de la feuille). Ranger dans une liste / un cahier :
+ * depuis « Tu as fini ? » ou le menu ⋯ (fenêtres ici). Pendant une épreuve : ni onglets, ni suite, ni discussion.
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -43,7 +49,10 @@ import type { ContentTab } from '@/components/content/viewer/ContentHeader';
 import { listProposedSolutions, type ProposedSolution } from '@/lib/api/proposedSolutionsApi';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
 import { RevisionNudge } from '@/components/revision/RevisionNudge';
-import { SignupBanner } from '@/components/auth/SignupPrompt';
+import { SignupBanner, SignupCard } from '@/components/auth/SignupPrompt';
+import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
+import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
+import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import { questionAnchor, type AssessChanges } from '@/components/content/viewer/ExerciseRenderer';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
@@ -233,6 +242,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     setShowReport(true);
   };
 
+  // Ranger le contenu : liste de révision (exercice, examen) ou cahier (leçon), depuis « Tu as fini ? » ou « ⋯ ».
+  const [collectOpen, setCollectOpen] = useState(false);
+  const openCollect = () => {
+    if (!isAuthenticated) { openModal(contentType === 'lesson' ? 'cahier' : 'liste'); return; }
+    setCollectOpen(true);
+  };
+
   const [content, setContent] = useState<ContentItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<'notfound' | 'error' | null>(null);
@@ -383,9 +399,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       await api.post(`/contents/${content.id}/verification/`, { verifie });
       setContent((prev) => {
         if (!prev) return prev;
-        const structure = { ...((prev as any).structure || {}) };
+        const structure: Record<string, unknown> = { ...((prev as { structure?: Record<string, unknown> }).structure || {}) };
         if (verifie) delete structure.a_verifier; else structure.a_verifier = true;
-        return { ...prev, structure } as ContentItem;
+        return { ...prev, structure } as unknown as ContentItem;
       });
     } catch {
       alert('La mise à jour a échoué. Réessaie.');
@@ -554,6 +570,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     setSavingSession(true);
     try {
       await timerHook.saveSession();
+      // Temps enregistré : le chrono repart de zéro (plus de double enregistrement).
+      timerHook.resetTimer();
     } catch (err) {
       console.error('Failed to save session:', err);
     } finally {
@@ -707,22 +725,22 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   }, [content, contentType, config.basePath, setCrumbs, studentLevel]);
 
   if (isLoading || (authLoading && !content)) {
-    return <DetailSkeleton />;
+    return <DetailSkeleton narrow={contentType === 'exercise'} />;
   }
 
   if (error || !content) {
     return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-start justify-center px-4 pt-16">
-        <div className="fd-card p-8 text-center max-w-md" role="alert">
-          <p className="text-[15px] font-semibold text-ink">
+      <div className="min-h-screen bg-paper px-4 pt-12 sm:pt-16">
+        <div className="mx-auto max-w-md rounded-2xl border border-line bg-white p-8 text-center" role="alert">
+          <p className="fd-display text-[20px] text-ink">
             {error === 'error' ? 'Ce contenu n’a pas pu être chargé.' : 'Ce contenu n’existe pas ou a été retiré.'}
           </p>
-          {error === 'error' && <p className="mt-1 text-[13.5px] text-ink-faint">Vérifie ta connexion et réessaie.</p>}
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {error === 'error' && <p className="mt-1.5 text-[13.5px] text-ink-faint">Vérifie ta connexion et réessaie.</p>}
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
             {error === 'error' && (
-              <button type="button" className="fd-btn-primary inline-flex" onClick={() => setReloadKey((k) => k + 1)}>Réessayer</button>
+              <button type="button" className="fd-btn-primary inline-flex min-h-10" onClick={() => setReloadKey((k) => k + 1)}>Réessayer</button>
             )}
-            <Link to={config.basePath} className={error === 'error' ? 'fd-btn-ghost inline-flex' : 'fd-btn-primary inline-flex'}>
+            <Link to={config.basePath} className={`${error === 'error' ? 'fd-btn-ghost' : 'fd-btn-primary'} inline-flex min-h-10`}>
               {config.backLabel}
             </Link>
           </div>
@@ -732,109 +750,133 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   }
 
   const isAuthor = user && content.author?.id === user.id;
+  const isLesson = contentType === 'lesson';
+  // Questions évaluées : réussies, et à revoir (« En partie » et anciens « Échoué » compris).
+  const successCount = leafPaths.filter((p) => questionProgress[p] === 'success').length;
+  const assessedCount = leafPaths.filter((p) => questionProgress[p]).length;
+  const scrollToEnd = () => document.getElementById('fin')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Sous la feuille, dans l'ordre où l'élève en a besoin.
+  const afterSheet = (
+    <>
+      {/* « Ce sujet te résiste ? » : carte ici sur téléphone, en bas à droite sur ordinateur. */}
+      {isAuthenticated && !isLesson && id && (
+        <RevisionNudge contentId={id} trigger={revisionNudge} kind={contentType} onAskingChange={setNudgeAsking} />
+      )}
+      {isAuthenticated && !examRunning && (
+        <FinishPanel key={content.id} content={content} contentType={contentType} completionStatus={completionStatus}
+          onSetCompletion={handleSetCompletion}
+          progress={{ assessed: assessedCount, total: leafPaths.length, success: successCount, review: assessedCount - successCount }}
+          statusChosen={statusChosen}
+          canAsk={!nudgeAsking}
+          onCollect={openCollect}
+          onFelt={(felt: Felt | null) => setContent((prev) => (prev ? { ...prev, felt } as ContentItem : prev))} />
+      )}
+      {/* Visiteur : ce qu'un compte apporterait, au moment où l'élève finit (l'examen le dit dans « Ta copie »). */}
+      {!isAuthenticated && contentType !== 'exam' && (
+        <SignupCard title={isLesson ? 'Garde tes leçons' : 'Suis ta progression'} tour="detail-inscription" benefits={false}
+          text={isLesson
+            ? 'Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.'
+            : 'Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.'} />
+      )}
+      {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. */}
+      {!examRunning && id && <SimilarContents contentId={id} />}
+      {!examRunning && (
+        <section id="discussion" className="scroll-mt-20 rounded-2xl border border-line bg-white p-5 sm:p-6" data-tour="detail-discussion">
+          <CommentSection
+            comments={comments}
+            onAddComment={handleAddComment}
+            onVoteComment={handleVoteComment}
+            onEditComment={handleEditComment}
+            onDeleteComment={handleDeleteComment}
+            focusCommentId={focusCommentId}
+          />
+        </section>
+      )}
+    </>
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
+    <div className="min-h-screen bg-paper pb-24">
       {/* Titre de l'onglet (le serveur envoie déjà le même titre aux moteurs de recherche : config/seo.py). */}
       <Helmet><title>{`${content.title} – ${config.title} | Fidni`}</title></Helmet>
-      {/* Header */}
-      <ContentHeader
-        content={content}
-        contentType={contentType}
-        isSaved={isSaved}
-        isSaving={isSaving}
-        onToggleSave={handleSave}
-        isAuthor={!!isAuthor || isModerator(user)}
-        onDelete={handleDelete}
-        onPrint={() => navigate(`${config.basePath}/${content.id}/pdf`)}
-        onReport={openReport}
-        onSetVerified={isModerator(user) ? handleSetVerified : undefined}
-        activeTab={activeTab}
-        onTabChange={(t) => {
-          if (t === 'activity') trackAction('onglet-activite');
-          if (t === 'proposals') trackAction('onglet-solutions');
-          setActiveTab(t);
-        }}
-        basePath={config.basePath}
-        solutionCount={proposedSolutions?.length ?? 0}
-      />
+      {/* Exercice : une colonne de lecture ; examen et leçon : la feuille et sa colonne (copie, sommaire). */}
+      <div className={`mx-auto w-full px-4 pt-3 sm:pt-6 md:px-8 ${contentType === 'exercise' ? 'max-w-[768px]' : 'max-w-5xl'}`}>
+        <ContentHeader
+          content={content}
+          contentType={contentType}
+          isSaved={isSaved}
+          isSaving={isSaving}
+          onToggleSave={handleSave}
+          isAuthor={!!isAuthor || isModerator(user)}
+          onDelete={handleDelete}
+          onPrint={() => navigate(`${config.basePath}/${content.id}/pdf`)}
+          onReport={openReport}
+          onSetVerified={isModerator(user) ? handleSetVerified : undefined}
+          activeTab={activeTab}
+          onTabChange={(t) => {
+            if (t === 'activity') trackAction('onglet-activite');
+            if (t === 'proposals') trackAction('onglet-solutions');
+            setActiveTab(t);
+          }}
+          basePath={config.basePath}
+          solutionCount={proposedSolutions?.length ?? 0}
+          completion={isAuthenticated ? completionStatus : null}
+          onShowCompletion={scrollToEnd}
+          onCollect={openCollect}
+          sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
+          onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
+          hideTabs={examRunning}
+        />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-6 sm:py-6">
         {activeTab === 'exercise' && (
-          <div className="space-y-4 sm:space-y-6">
-            {/* « Où en es-tu ? » en haut de la page, visible dès l'arrivée (Natsu). */}
-            {isAuthenticated && !examRunning && (
-              <FinishPanel key={content.id} content={content} contentType={contentType} completionStatus={completionStatus}
-                onSetCompletion={handleSetCompletion}
-                progress={{ assessed: leafPaths.filter((p) => questionProgress[p]).length, total: leafPaths.length }}
-                statusChosen={statusChosen}
-                canAsk={!nudgeAsking}
-                onFelt={(felt: Felt | null) => setContent((prev) => (prev ? { ...prev, felt } as ContentItem : prev))} />
-            )}
-            {/* « Ce sujet te résiste ? » : carte sous « Où en es-tu ? » sur téléphone, en bas à droite sur ordinateur. */}
-            {isAuthenticated && contentType !== 'lesson' && id && (
-              <RevisionNudge contentId={id} trigger={revisionNudge} kind={contentType} onAskingChange={setNudgeAsking} />
-            )}
+          <ContentMainCard
+            content={content}
+            contentType={contentType}
+            voteCount={voteCount}
+            likeCount={likeCounts.likes}
+            dislikeCount={likeCounts.dislikes}
+            userVote={userVote}
+            onVote={handleVote}
+            isAuthenticated={isAuthenticated}
+            timer={timerHook.timer}
+            isTimerRunning={timerHook.isTimerRunning}
+            startTimer={timerHook.startTimer}
+            stopTimer={timerHook.stopTimer}
+            resetTimer={timerHook.resetTimer}
+            saveSession={handleSaveSession}
+            formatCurrentTime={timerHook.formatCurrentTime}
+            getSessionCount={timerHook.getSessionCount}
+            loadHistory={timerHook.loadHistory}
+            saving={savingSession}
+            questionProgress={questionProgress}
+            questionDates={questionDates}
+            onQuestionAssess={handleQuestionAssess}
+            onAssessMany={handleAssessMany}
+            onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
+            onSaveExamScore={isAuthenticated ? timerHook.saveExamScore : undefined}
+            onSolutionOpen={handleSolutionOpen}
+            onReport={openReport}
+            onExamAttemptChange={setExamRunning}
+          >
+            {afterSheet}
+          </ContentMainCard>
+        )}
 
-            <ContentMainCard
-              content={content}
-              contentType={contentType}
-              voteCount={voteCount}
-              likeCount={likeCounts.likes}
-              dislikeCount={likeCounts.dislikes}
-              userVote={userVote}
-              onVote={handleVote}
+        {activeTab === 'proposals' && !isLesson && id && (
+          <div className="max-w-3xl">
+            <ProposedSolutions
+              contentId={id}
+              solutions={proposedSolutions}
               isAuthenticated={isAuthenticated}
-              timer={timerHook.timer}
-              isTimerRunning={timerHook.isTimerRunning}
-              startTimer={timerHook.startTimer}
-              stopTimer={timerHook.stopTimer}
-              resetTimer={timerHook.resetTimer}
-              saveSession={handleSaveSession}
-              formatCurrentTime={timerHook.formatCurrentTime}
-              getSessionCount={timerHook.getSessionCount}
-              loadHistory={timerHook.loadHistory}
-              saving={savingSession}
-              questionProgress={questionProgress}
-              questionDates={questionDates}
-              onQuestionAssess={handleQuestionAssess}
-              onAssessMany={handleAssessMany}
-              onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
-              onSaveExamScore={isAuthenticated ? timerHook.saveExamScore : undefined}
-              onSolutionOpen={handleSolutionOpen}
-              onReport={openReport}
-              onExamAttemptChange={setExamRunning}
+              onRequireLogin={() => openModal('solution')}
+              onChanged={loadProposedSolutions}
             />
-
-            {/* Contenus semblables : ce qu'on peut faire ensuite (mêmes notions, même chapitre). */}
-            {id && <SimilarContents contentId={id} />}
-
-            {/* Discussion sous le contenu (plus d'onglet à part : personne ne l'ouvrait). */}
-            <section id="discussion" className="fd-card scroll-mt-20" style={{ padding: 22 }} data-tour="detail-discussion">
-              <CommentSection
-                comments={comments}
-                onAddComment={handleAddComment}
-                onVoteComment={handleVoteComment}
-                onEditComment={handleEditComment}
-                onDeleteComment={handleDeleteComment}
-                focusCommentId={focusCommentId}
-              />
-            </section>
           </div>
         )}
 
-        {activeTab === 'proposals' && contentType !== 'lesson' && id && (
-          <ProposedSolutions
-            contentId={id}
-            solutions={proposedSolutions}
-            isAuthenticated={isAuthenticated}
-            onRequireLogin={() => openModal('solution')}
-            onChanged={loadProposedSolutions}
-          />
-        )}
-
-        {activeTab === 'activity' && contentType !== 'lesson' && (
-          <>
+        {activeTab === 'activity' && !isLesson && (
+          <div className="flex max-w-3xl flex-col gap-4">
             <ActivitySection
               statistics={statistics}
               loading={loadingStatistics}
@@ -850,7 +892,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               }}
             />
             {user?.is_superuser && id && <AIVerdictPanel contentId={id} />}
-          </>
+          </div>
         )}
       </div>
 
@@ -866,7 +908,30 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         initialPath={reportPath}
       />
 
-      {/* Session History Modal */}
+      {/* Ranger : liste de révision ou cahier de cours. */}
+      {!isLesson && (
+        <AddToRevisionListModal
+          isOpen={collectOpen}
+          onClose={() => setCollectOpen(false)}
+          contentType={contentType}
+          contentId={Number(content.id)}
+          contentTitle={content.title}
+          contentLabels={labelsFromContent(content)}
+        />
+      )}
+      {isLesson && (
+        <AddToNotebookModal
+          isOpen={collectOpen}
+          onClose={() => setCollectOpen(false)}
+          lessonId={String(content.id)}
+          lessonTitle={content.title}
+          lessonChapters={content.chapters?.map((ch) => ({ id: String(ch.id), name: ch.name })) ?? []}
+          lessonSubject={content.subject ? { id: content.subject.id, name: content.subject.name } : null}
+          lessonLevels={(content.class_levels || []).map((l) => ({ id: l.id, name: l.name }))}
+        />
+      )}
+
+      {/* Temps et passages enregistrés */}
       <SessionHistoryModal
         isOpen={timerHook.showHistoryModal}
         onClose={() => timerHook.setShowHistoryModal(false)}
@@ -878,37 +943,30 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   );
 };
 
-/** Forme de la page pendant le chargement (en-tête, « Où en es-tu ? », trois questions). */
-const DetailSkeleton: React.FC = () => (
-  <div style={{ minHeight: '100vh', background: '#faf9f7' }} aria-busy="true" aria-label="Chargement">
-    <div className="bg-white border-b border-line">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 animate-pulse">
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-28 rounded bg-[#efece6]" />
-          <div className="flex gap-2"><div className="h-8 w-8 rounded-xl bg-[#f2f1ee]" /><div className="h-8 w-8 rounded-xl bg-[#f2f1ee]" /></div>
-        </div>
-        <div className="mt-4 flex gap-1.5"><div className="h-5 w-16 rounded-full bg-[#f2f1ee]" /><div className="h-5 w-28 rounded-full bg-[#f2f1ee]" /></div>
-        <div className="mt-3 h-7 w-4/5 max-w-xl rounded bg-[#efece6]" />
-        <div className="mt-2.5 h-4 w-40 rounded bg-[#f2f1ee]" />
-        <div className="mt-5 flex gap-1.5"><div className="h-10 w-28 rounded-xl bg-[#f2f1ee]" /><div className="h-10 w-28 rounded-xl bg-[#f2f1ee]" /></div>
+/** Forme de la page pendant le chargement (en-tête, feuille, trois questions). */
+const DetailSkeleton: React.FC<{ narrow?: boolean }> = ({ narrow }) => (
+  <div className="min-h-screen bg-paper" aria-busy="true" aria-label="Chargement">
+    <div className={`mx-auto w-full animate-pulse px-4 pt-3 sm:pt-6 md:px-8 ${narrow ? 'max-w-[768px]' : 'max-w-5xl'}`}>
+      <div className="flex items-center justify-between">
+        <div className="h-4 w-28 rounded bg-[#efece6]" />
+        <div className="flex gap-2"><div className="h-9 w-9 rounded-xl bg-[#f2f1ee]" /><div className="h-9 w-9 rounded-xl bg-[#f2f1ee]" /></div>
       </div>
-    </div>
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 animate-pulse">
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
-        <div className="space-y-4">
-          <div className="h-14 rounded-2xl border border-line bg-white" />
-          <div className="rounded-2xl border border-line bg-white p-5 sm:p-7 space-y-6">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-4 w-full rounded bg-[#f2f1ee]" />
-                <div className="h-4 w-11/12 rounded bg-[#f2f1ee]" />
-                <div className="h-4 w-2/3 rounded bg-[#f2f1ee]" />
-                <div className="h-6 w-40 rounded-full bg-[#f5f4f1]" />
-              </div>
-            ))}
-          </div>
+      <div className="mt-5 h-3 w-40 rounded bg-[#efe6d2]" />
+      <div className="mt-3 h-8 w-4/5 max-w-xl rounded bg-[#efece6]" />
+      <div className="mt-3 h-4 w-48 rounded bg-[#f2f1ee]" />
+      <div className="mt-7 h-px w-full bg-line" />
+      <div className="mt-6 rounded-3xl border border-line bg-white">
+        <div className="h-[52px] border-b border-line bg-[#fcfbf9]" />
+        <div className="space-y-8 px-4 py-7 sm:px-10 sm:py-9">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2.5">
+              <div className="h-4 w-full rounded bg-[#f2f1ee]" />
+              <div className="h-4 w-11/12 rounded bg-[#f2f1ee]" />
+              <div className="h-4 w-2/3 rounded bg-[#f2f1ee]" />
+              <div className="h-9 w-40 rounded-full bg-[#f5f4f1]" />
+            </div>
+          ))}
         </div>
-        <div className="hidden lg:block h-48 rounded-2xl border border-line bg-white" />
       </div>
     </div>
   </div>

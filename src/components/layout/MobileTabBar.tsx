@@ -6,32 +6,28 @@
  * Sa hauteur est publiée dans la variable CSS --fd-tabbar-h (0 sur ordinateur ou quand elle est
  * cachée) : les éléments fixés en bas de l'écran s'en servent pour ne pas passer dessous
  * (`bottom: TABBAR_OFFSET`, components/layout/nav.ts). Une page peut la cacher avec useHideMobileTabBar.
+ *
+ * 11/10/2026 : l'élève a « Devoirs » à la place de « Progression » (les DS corrigés sont ce qu'il lit
+ * le plus ; Ma progression reste dans le menu, sous « Mon suivi »). Onglet actif : pastille verte.
  */
-import React, { useEffect, useSyncExternalStore } from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, GraduationCap, Home, ListChecks, Menu, TrendingUp } from 'lucide-react';
+import { BookOpen, GraduationCap, Home, ListChecks, Menu } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { trackAction } from '@/lib/usage';
-import { TABBAR_VAR, exercisesHome, subscribeTabBar, tabBarForcedHidden } from './nav';
+import { TABBAR_VAR, sectionHome, useMobileTabBarVisible } from './nav';
 
 // 56 px d'onglets + 1 px de bordure, plus la zone du geste d'accueil (iPhone).
 const TABBAR_HEIGHT = 'calc(57px + env(safe-area-inset-bottom, 0px))';
-
-// Pages d'épreuve : la barre n'y a pas sa place. L'onboarding garde aussi toute l'attention.
-// L'épreuve d'un examen (/exams/:id) la cache elle-même pendant le chrono (ExamView, useHideMobileTabBar).
-// Les pages qui ont leur propre barre collée en bas (enregistrer le profil, révéler les corrigés d'une
-// annale de concours) se placent au-dessus d'elle avec TABBAR_OFFSET.
-const HIDDEN_ROUTES = [
-  /^\/concours\/simulate\//, /^\/revisions\/ds\/[^/]+\/blanc\/?$/, /^\/complete-profile\/?$/,
-];
 
 interface Tab {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  active: (pathname: string) => boolean;
+  active: boolean;
 }
 
 const startsWith = (p: string, base: string) => p === base || p.startsWith(`${base}/`);
@@ -39,8 +35,8 @@ const startsWith = (p: string, base: string) => p === base || p.startsWith(`${ba
 export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void }> = ({ menuOpen, onOpenMenu }) => {
   const { pathname } = useLocation();
   const { isAuthenticated, user } = useAuth();
-  const forced = useSyncExternalStore(subscribeTabBar, tabBarForcedHidden);
-  const visible = !forced && !HIDDEN_ROUTES.some((r) => r.test(pathname));
+  const { crumbs, section } = useBreadcrumb();
+  const visible = useMobileTabBarVisible();
 
   // Hauteur publiée pour les éléments fixés en bas (0 sur ordinateur : la barre y est masquée).
   useEffect(() => {
@@ -54,34 +50,41 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
 
   if (!visible) return null;
 
-  const home: Tab = { to: '/', label: 'Accueil', icon: Home, active: (p) => p === '/' };
+  // Un sujet du Bac national vit sous /exams/123 comme un DS : la page le signale (BreadcrumbContext).
+  const pageSection = section ?? crumbs?.[0]?.to ?? null;
+  const onNational = startsWith(pathname, '/exams/nationaux') || pageSection === '/exams/nationaux';
+  const onExams = startsWith(pathname, '/exams') && !onNational;
+  const onExercises = startsWith(pathname, '/exercises');
+
+  const home: Tab = { to: '/', label: 'Accueil', icon: Home, active: pathname === '/' };
   const isTeacher = user?.profile?.user_type === 'teacher';
   const tabs: Tab[] = !isAuthenticated
     ? [
       home,
-      { to: '/exercises', label: 'Exercices', icon: BookOpen, active: (p) => startsWith(p, '/exercises') },
-      { to: '/lessons', label: 'Leçons', icon: LessonIcon, active: (p) => startsWith(p, '/lessons') },
-      { to: '/exams', label: 'Examens', icon: APlusIcon, active: (p) => startsWith(p, '/exams') },
+      { to: '/exercises', label: 'Exercices', icon: BookOpen, active: onExercises },
+      { to: '/lessons', label: 'Leçons', icon: LessonIcon, active: startsWith(pathname, '/lessons') },
+      { to: '/exams', label: 'Devoirs', icon: APlusIcon, active: onExams },
     ]
     : isTeacher
       ? [
         home,
-        { to: '/exercises', label: 'Exercices', icon: BookOpen, active: (p) => startsWith(p, '/exercises') },
-        { to: '/exams', label: 'Devoirs', icon: APlusIcon, active: (p) => startsWith(p, '/exams') },
-        { to: '/classrooms', label: 'Classes', icon: GraduationCap, active: (p) => startsWith(p, '/classrooms') },
+        { to: '/exercises', label: 'Exercices', icon: BookOpen, active: onExercises },
+        { to: '/exams', label: 'Devoirs', icon: APlusIcon, active: onExams },
+        { to: '/classrooms', label: 'Classes', icon: GraduationCap, active: startsWith(pathname, '/classrooms') },
       ]
       : [
         home,
-        // Sa page de niveau : ses chapitres, sans repasser par les filtres.
-        { to: exercisesHome(user), label: 'Exercices', icon: BookOpen, active: (p) => startsWith(p, '/exercises') },
+        // Sa page de niveau : ses chapitres, sans repasser par les dossiers de niveaux.
+        { to: sectionHome(user, '/exercises'), label: 'Exercices', icon: BookOpen, active: onExercises },
+        { to: sectionHome(user, '/exams'), label: 'Devoirs', icon: APlusIcon, active: onExams },
         {
-          to: '/revision-lists', label: 'Réviser', icon: ListChecks,
-          active: (p) => startsWith(p, '/revision-lists') || startsWith(p, '/revisions') || startsWith(p, '/profile/revision-lists'),
+          to: '/reviser', label: 'Réviser', icon: ListChecks,
+          active: ['/reviser', '/revision-lists', '/revisions', '/profile/revision-lists'].some((b) => startsWith(pathname, b)),
         },
-        { to: '/progression', label: 'Progression', icon: TrendingUp, active: (p) => startsWith(p, '/progression') },
       ];
 
-  const cell = 'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 h-14 text-[11px] leading-none transition-colors';
+  const cell = 'flex h-14 flex-1 min-w-0 flex-col items-center justify-center gap-1 text-[11px] leading-none transition-colors';
+  const pill = (on: boolean) => `inline-flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? 'bg-brand-soft text-brand-hover' : ''}`;
   return (
     <nav
       aria-label="Navigation principale"
@@ -89,24 +92,20 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
       className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur print:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <ul className="flex items-stretch">
-        {tabs.map(({ to, label, icon: Icon, active }) => {
-          const on = active(pathname);
-          return (
-            <li key={label} className="flex flex-1 min-w-0">
-              <Link
-                to={to}
-                onClick={() => trackAction('barre-mobile')}
-                aria-current={on ? 'page' : undefined}
-                className={`${cell} relative ${on ? 'text-brand-hover font-semibold' : 'text-ink-faint font-medium'}`}
-              >
-                {on && <span aria-hidden className="absolute top-0 h-[3px] w-8 rounded-b-full bg-brand" />}
-                <Icon className="h-5 w-5" />
-                <span className="max-w-full truncate px-0.5">{label}</span>
-              </Link>
-            </li>
-          );
-        })}
+      <ul className="mx-auto flex max-w-lg items-stretch px-1">
+        {tabs.map(({ to, label, icon: Icon, active }) => (
+          <li key={label} className="flex flex-1 min-w-0">
+            <Link
+              to={to}
+              onClick={() => trackAction('barre-mobile')}
+              aria-current={active ? 'page' : undefined}
+              className={`${cell} ${active ? 'font-semibold text-ink' : 'font-medium text-ink-faint hover:text-ink-soft'}`}
+            >
+              <span aria-hidden className={pill(active)}><Icon className="h-5 w-5" /></span>
+              <span className="max-w-full truncate px-0.5">{label}</span>
+            </Link>
+          </li>
+        ))}
         <li className="flex flex-1 min-w-0">
           <button
             type="button"
@@ -114,9 +113,10 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
             aria-label="Ouvrir le menu"
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
-            className={`${cell} font-medium ${menuOpen ? 'text-ink' : 'text-ink-faint'}`}
+            data-tour="menu-mobile"
+            className={`${cell} ${menuOpen ? 'font-semibold text-ink' : 'font-medium text-ink-faint hover:text-ink-soft'}`}
           >
-            <Menu className="h-5 w-5" />
+            <span aria-hidden className={pill(menuOpen)}><Menu className="h-5 w-5" /></span>
             <span>Menu</span>
           </button>
         </li>

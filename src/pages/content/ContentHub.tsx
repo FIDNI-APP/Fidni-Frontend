@@ -7,45 +7,81 @@
 // Titres et textes des pages de niveau et de chapitre : backend (apps/caracteristics/hubs.py), identiques à la
 // page pré-remplie que lisent les moteurs de recherche (config/seo.py).
 import React, { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ContentList } from './ContentList';
 import { ContentFolders } from './ContentFolders';
 import { NotFound } from '@/pages/NotFound';
+import { Page, CardsSkeleton } from '@/components/space/Page';
+import { FolderSkeleton } from '@/components/content/folders/FolderGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHub, type HubInfo } from '@/lib/api/hubApi';
 import { SECTION_OF, hasListParams, type ContentKind } from './sections';
 
-const Loading: React.FC = () => (
-  <div className="flex items-center justify-center py-24" role="status" aria-label="Chargement de la page">
-    <div className="h-6 w-6 rounded-full border-2 border-line border-t-brand animate-spin" />
-  </div>
+// Pages déjà chargées dans l'onglet : un retour (« Précédent ») réaffiche les dossiers tout de suite, à la même
+// hauteur, au lieu d'un chargement qui ramenait en haut de la page.
+const hubCache = new Map<string, HubInfo>();
+const HUB_CACHE_MAX = 20;
+
+/** Pendant le chargement : la forme de la page (en-tête, dossiers ou cartes), pas une roue au milieu du vide. */
+const Loading: React.FC<{ folders: boolean }> = ({ folders }) => (
+  <Page width="wide">
+    <div className="mb-5 animate-pulse sm:mb-7" role="status" aria-label="Chargement de la page">
+      <div className="h-4 w-40 rounded bg-[#efece6]" />
+      <div className="mt-4 h-9 w-2/3 max-w-md rounded-lg bg-[#efece6]" />
+      <div className="mt-3 h-3.5 w-48 rounded bg-[#f2f1ee]" />
+    </div>
+    {folders ? <FolderSkeleton n={6} /> : <CardsSkeleton n={4} className="lg:grid-cols-2" />}
+  </Page>
 );
 
 export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType }) => {
   const { level = '', chapter } = useParams<{ level: string; chapter?: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [hub, setHub] = useState<HubInfo | null>(null);
-  const [missing, setMissing] = useState(false);
+  const section = SECTION_OF[contentType];
   // Page d'un niveau sans paramètre de liste : ses chapitres en dossiers.
   const folders = !chapter && !hasListParams(location.search);
-  // Dossiers : rechargés à la connexion (ce que l'élève a terminé dans chaque chapitre).
+  // Dossiers : rechargés à la connexion et après une évaluation (ce que l'élève a terminé dans chaque chapitre).
   const viewer = folders ? user?.id ?? null : null;
+  const cacheKey = `${section}|${level}|${chapter ?? ''}|${viewer ?? ''}`;
+  const [hub, setHub] = useState<HubInfo | null>(() => hubCache.get(cacheKey) ?? null);
+  const [missing, setMissing] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setMissing(false);
-    getHub(SECTION_OF[contentType], level, chapter)
-      .then((data) => { if (!cancelled) setHub(data); })
+    const cached = hubCache.get(cacheKey);
+    if (cached) setHub(cached);
+    getHub(section, level, chapter)
+      .then((data) => {
+        if (cancelled) return;
+        // Chapitre renommé ou absorbé (programme officiel) : on remplace l'adresse, filtres compris.
+        if (data.redirect) {
+          navigate(data.redirect + location.search + location.hash, { replace: true });
+          return;
+        }
+        hubCache.delete(cacheKey);
+        hubCache.set(cacheKey, data);
+        if (hubCache.size > HUB_CACHE_MAX) hubCache.delete(hubCache.keys().next().value as string);
+        setHub(data);
+      })
       .catch(() => { if (!cancelled) setMissing(true); });
     return () => { cancelled = true; };
-  }, [contentType, level, chapter, viewer]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section, level, chapter, cacheKey, reload]);
 
   if (missing) return <NotFound />;
-  // Autre niveau ou chapitre : rien de l'ancien pendant le chargement.
-  const current = hub && hub.level.slug === level && (hub.chapter?.slug ?? undefined) === (chapter || undefined) ? hub : null;
-  if (!current) return <Loading />;
-  if (folders) return <ContentFolders key={current.url} view="chapters" contentType={contentType} hub={current} />;
+  // Autre rubrique, niveau ou chapitre : rien de l'ancien pendant le chargement (la même instance sert aux
+  // trois rubriques : /exercises/niveau/… → /lessons/niveau/… garderait sinon la page des exercices).
+  const current = hub && hub.section === section && hub.level.slug === level
+    && (hub.chapter?.slug ?? undefined) === (chapter || undefined) ? hub : null;
+  if (!current) return <Loading folders={folders} />;
+  if (folders) {
+    return <ContentFolders key={current.url} view="chapters" contentType={contentType} hub={current}
+      onProgress={() => setReload((n) => n + 1)} />;
+  }
   // key : un autre niveau ou chapitre repart d'une liste neuve (filtres de la nouvelle page).
   return <ContentList key={current.url} contentType={contentType} hub={current} />;
 };

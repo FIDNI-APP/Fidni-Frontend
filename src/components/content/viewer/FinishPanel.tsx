@@ -9,14 +9,15 @@
  * 10/10/2026 : sur téléphone, une seule ligne (l'énoncé arrive plus haut). Une fois le résultat donné :
  * « C'était : Plus facile · Comme annoncé · Plus dur » (ressenti des élèves, une seule demande à la fois
  * sur la page) et la suite adaptée au résultat (« Exercice suivant », le cours après un échec).
+ * 11/10/2026 : en bas de la feuille, là où l'élève finit (plus en haut de page) ; titre serif, barre des
+ * questions réussies / à revoir, « Ranger dans une liste » (ou le cahier) en lien discret. Les fenêtres de
+ * rangement sont dans la page (aussi ouvertes depuis le menu « ⋯ »).
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, BookMarked, BookOpen, Check, CheckCheck, CheckCircle2, ListPlus, RotateCcw } from 'lucide-react';
 import type { ContentExercise, ContentExam, ContentLesson, Felt } from '@/types/content';
-import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
-import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
-import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
+import { SplitBar } from '@/components/space/Page';
 import { getRecommendations, sendRessenti, type FeltVote, type RecommendedItem } from '@/lib/api/contentItemApi';
 import { useFoundPromptOpen } from './pageHelpers';
 import { trackAction } from '@/lib/usage';
@@ -29,14 +30,16 @@ interface FinishPanelProps {
   contentType: 'exercise' | 'exam' | 'lesson';
   completionStatus?: Status;
   onSetCompletion: (status: Status) => void;
-  /** Questions évaluées / à évaluer (exercice, examen). */
-  progress?: { assessed: number; total: number };
+  /** Questions évaluées / à évaluer (exercice, examen), dont réussies et à revoir. */
+  progress?: { assessed: number; total: number; success?: number; review?: number };
   /** Résultat choisi pendant cette visite (pas celui chargé avec la page) : le ressenti n'est demandé qu'alors. */
   statusChosen?: boolean;
   /** Faux quand une autre demande est déjà affichée (proposition « À revoir »…) : le ressenti attend. */
   canAsk?: boolean;
   /** Ressenti des élèves recalculé après l'avis de l'élève. */
   onFelt?: (felt: Felt | null) => void;
+  /** Ranger : liste de révision (exercice, examen) ou cahier (leçon) ; les fenêtres sont dans la page. */
+  onCollect?: () => void;
 }
 
 const QUESTION: Record<FinishPanelProps['contentType'], string> = {
@@ -64,27 +67,26 @@ const rememberGiven = (id: number | string, v: FeltVote) => {
 };
 
 export const FinishPanel: React.FC<FinishPanelProps> = ({
-  content, contentType, completionStatus = null, onSetCompletion, progress, statusChosen, canAsk = true, onFelt,
+  content, contentType, completionStatus = null, onSetCompletion, progress, statusChosen, canAsk = true, onFelt, onCollect,
 }) => {
-  const [listOpen, setListOpen] = useState(false);
-  const [notebookOpen, setNotebookOpen] = useState(false);
   const isLesson = contentType === 'lesson';
   const toggle = (s: Exclude<Status, null>) => onSetCompletion(completionStatus === s ? null : s);
   const location = useLocation();
 
-  const btn = 'inline-flex items-center justify-center gap-1.5 rounded-xl border px-2 sm:px-3.5 py-2 text-[13px] sm:text-[13.5px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
+  const btn = 'inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
   const success = completionStatus === 'success';
   const review = completionStatus === 'review';
 
-  const status = success
-    ? (isLesson ? 'Leçon marquée comme lue.' : 'Réussi : c’est noté dans ta progression.')
-    : review ? 'À revoir : à refaire dans 2-3 jours, on te le rappellera sur l’accueil.' : null;
   const total = progress?.total ?? 0;
   const assessed = progress?.assessed ?? 0;
-  const hint = isLesson || total < 2 ? null
-    : assessed === 0 ? 'Indique sous chaque question si tu l’as réussie, ou tout d’un coup ici.'
-      : assessed < total ? `${assessed} question${assessed > 1 ? 's' : ''} évaluée${assessed > 1 ? 's' : ''} sur ${total}.`
-        : null;
+  const title = success ? (isLesson ? 'Leçon lue' : 'Réussi, c’est noté')
+    : review ? 'À revoir dans 2-3 jours' : QUESTION[contentType];
+  const sub = success ? (isLesson ? 'Elle compte dans ta progression.' : 'Il compte dans ta progression.')
+    : review ? 'On te le rappellera sur l’accueil, avec les autres contenus à reprendre.'
+      : isLesson ? 'Marque-la comme lue : elle compte dans ta progression.'
+        : total >= 2 && assessed > 0 && assessed < total ? 'Continue question par question, ou indique ton résultat d’un coup ici.'
+          : total >= 2 ? 'Ouvre la solution de chaque question et dis si tu avais trouvé, ou indique ton résultat d’un coup ici.'
+            : 'Indique ton résultat : il compte dans ta progression.';
 
   // ── Ressenti : quand l'élève vient de donner son résultat (pas à chaque visite d'un contenu déjà fait),
   // si aucune autre question ne l'attend.
@@ -133,116 +135,95 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
     return () => { alive = false; };
   }, [content.id, contentType, completionStatus, isLesson]);
 
-  const feltChip = 'inline-flex items-center h-8 [@media(pointer:coarse)]:h-9 px-3 rounded-full border border-line bg-white text-[13px] font-medium text-ink-soft hover:border-ink hover:text-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
+  const feltChip = 'inline-flex min-h-10 items-center rounded-full border border-line bg-white px-3.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40';
+  const successCount = progress?.success ?? 0;
+  const reviewCount = progress?.review ?? 0;
 
   return (
-    <>
-      <section className="fd-card px-3 py-2.5 sm:px-5 sm:py-3.5" data-tour="detail-terminer">
-        <div className="flex items-center gap-2.5 sm:gap-3 sm:justify-between">
-          <div className="min-w-0 hidden sm:block">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">Où en es-tu ?</p>
-            <p className={`mt-0.5 text-[14.5px] font-semibold ${success ? 'text-brand-hover' : review ? 'text-gold-strong' : 'text-ink'}`}>
-              {status ?? QUESTION[contentType]}
-            </p>
-            {hint && <p className="mt-0.5 text-[12.5px] text-ink-faint fd-nums">{hint}</p>}
-          </div>
-          {/* Téléphone : une seule ligne (questions évaluées, puis les boutons). */}
-          {!isLesson && total >= 2 && (
-            <p className="sm:hidden max-[379px]:hidden shrink-0 leading-tight text-center" title="Questions évaluées">
-              <span className="block fd-nums text-[13px] font-semibold text-ink-soft">{assessed}/{total}</span>
-              <span className="block text-[10.5px] text-ink-faint">évaluées</span>
-            </p>
-          )}
-          <div className={`grid flex-1 gap-2 sm:flex sm:flex-none sm:shrink-0 ${isLesson ? 'grid-cols-[1fr_auto]' : 'grid-cols-[1fr_1fr_auto]'}`}>
-            <button type="button" onClick={() => toggle('success')} aria-pressed={success}
-              title={success ? 'Cliquer pour annuler' : undefined}
-              className={`${btn} ${success ? 'border-brand bg-brand text-white hover:bg-brand-hover' : 'border-brand-line bg-white text-brand-hover hover:bg-brand-soft'}`}>
-              {success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <CheckCheck className="h-4 w-4 shrink-0" />}
-              {isLesson ? (success ? 'Lue' : 'Marquer comme lue') : 'Tout réussi'}
-            </button>
-            {!isLesson && (
-              <button type="button" onClick={() => toggle('review')} aria-pressed={review}
-                title={review ? 'Cliquer pour annuler' : undefined}
-                className={`${btn} ${review ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-[#d6d2ca] hover:text-ink'}`}>
-                <RotateCcw className="h-4 w-4 shrink-0" /> À revoir
-              </button>
-            )}
-            {isLesson ? (
-              <button type="button" onClick={() => setNotebookOpen(true)} data-tour="detail-cahier" aria-label="Ajouter à mon cahier"
-                className={`${btn} border-line bg-white text-ink-soft hover:border-ink hover:text-ink`}>
-                <BookMarked className="h-4 w-4" /> <span className="sm:hidden">Cahier</span><span className="hidden sm:inline">Ajouter à mon cahier</span>
-              </button>
-            ) : (
-              <button type="button" onClick={() => setListOpen(true)} data-tour="detail-liste" aria-label="Ajouter à une liste de révision"
-                title="Ajouter à une liste de révision"
-                className={`${btn} min-w-10 border-line bg-white text-ink-soft hover:border-ink hover:text-ink`}>
-                <ListPlus className="h-4 w-4" /> <span className="hidden sm:inline">Ajouter à une liste de révision</span>
-              </button>
-            )}
-          </div>
+    <section id="fin" className="scroll-mt-24 rounded-2xl border border-line bg-white p-5 sm:p-6" data-tour="detail-terminer" aria-labelledby="fin-titre">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="min-w-0">
+          <h2 id="fin-titre" className={`fd-display flex items-center gap-2 text-[19px] leading-tight ${success ? 'text-brand-hover' : review ? 'text-gold-strong' : 'text-ink'}`}>
+            {success && <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />}
+            {review && <RotateCcw className="h-[18px] w-[18px] shrink-0" aria-hidden />}
+            {title}
+          </h2>
+          <p className="mt-1 max-w-md text-[13.5px] leading-relaxed text-ink-faint">{sub}</p>
         </div>
+        <div className={`grid shrink-0 gap-2 sm:flex ${isLesson ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          <button type="button" onClick={() => toggle('success')} aria-pressed={success}
+            title={success ? 'Clique pour annuler' : undefined}
+            className={`${btn} ${success ? 'border-brand bg-brand text-white hover:bg-brand-hover' : 'border-brand-line bg-white text-brand-hover hover:bg-brand-soft'}`}>
+            {success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <CheckCheck className="h-4 w-4 shrink-0" />}
+            {isLesson ? (success ? 'Lue' : 'Marquer comme lue') : 'Tout réussi'}
+          </button>
+          {!isLesson && (
+            <button type="button" onClick={() => toggle('review')} aria-pressed={review}
+              title={review ? 'Clique pour annuler' : undefined}
+              className={`${btn} ${review ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+              <RotateCcw className="h-4 w-4 shrink-0" /> À revoir
+            </button>
+          )}
+        </div>
+      </div>
 
-        {status && (
-          <p className={`sm:hidden mt-2 text-[13px] font-medium leading-snug ${success ? 'text-brand-hover' : 'text-gold-strong'}`}>{status}</p>
-        )}
-
-        {/* Ressenti : un geste, puis un merci qui s'efface. */}
-        {askFelt && (
-          <div role="group" aria-label="La difficulté annoncée était-elle juste ?" className="mt-2.5 pt-2.5 border-t border-line flex flex-wrap items-center gap-1.5">
-            <span className="mr-0.5 text-[13px] font-medium text-ink-soft">C’était :</span>
-            <button type="button" className={feltChip} onClick={() => giveFelt('easier')}>Plus facile</button>
-            <button type="button" className={feltChip} onClick={() => giveFelt('as_said')}>Comme annoncé ({declared})</button>
-            <button type="button" className={feltChip} onClick={() => giveFelt('harder')}>Plus dur</button>
-          </div>
-        )}
-        {thanks && given && (
-          <p role="status" className="mt-2.5 pt-2.5 border-t border-line flex items-center gap-1.5 text-[13px] font-medium text-brand-hover">
-            <Check className="h-3.5 w-3.5" /> Merci, ton avis aide à mieux annoncer la difficulté.
+      {/* Questions évaluées : réussies (vert), à revoir (or), le reste. */}
+      {!isLesson && total >= 2 && (
+        <div className="mt-4" data-tour="detail-progression">
+          <SplitBar success={successCount} review={reviewCount} total={total} />
+          <p className="mt-1.5 text-[12.5px] text-ink-faint fd-nums">
+            {assessed === 0 ? `${total} questions à évaluer`
+              : `${assessed} / ${total} question${total > 1 ? 's' : ''} évaluée${assessed > 1 ? 's' : ''}`}
+            {successCount > 0 && <> · <span className="text-brand-hover">{successCount} réussie{successCount > 1 ? 's' : ''}</span></>}
+            {reviewCount > 0 && <> · <span className="text-gold-strong">{reviewCount} à revoir</span></>}
           </p>
-        )}
-
-        {next.length > 0 && (
-          <div className="mt-2.5 pt-2 border-t border-line flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-5">
-            {next.map((item) => {
-              const label = item.type === 'lesson' ? 'Revoir le cours' : item.type === 'exam' ? 'Sujet suivant' : 'Exercice suivant';
-              return (
-                <Link key={item.id} to={`${PATH[item.type] ?? '/exercises'}/${item.id}`}
-                  state={{ from: location.pathname + location.search }}
-                  onClick={() => trackAction('suivant-apres-resultat')}
-                  className="group inline-flex min-h-9 min-w-0 items-center gap-1.5 text-[13.5px] font-semibold text-brand-hover hover:text-brand">
-                  {item.type === 'lesson' ? <BookOpen className="h-4 w-4 shrink-0" /> : null}
-                  <span className="shrink-0">{label} :</span>
-                  <span className="min-w-0 truncate font-medium text-ink-soft group-hover:text-ink">{item.title}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {contentType !== 'lesson' && (
-        <AddToRevisionListModal
-          isOpen={listOpen}
-          onClose={() => setListOpen(false)}
-          contentType={contentType}
-          contentId={Number(content.id)}
-          contentTitle={content.title}
-          contentLabels={labelsFromContent(content)}
-        />
+        </div>
       )}
-      {isLesson && (
-        <AddToNotebookModal
-          isOpen={notebookOpen}
-          onClose={() => setNotebookOpen(false)}
-          lessonId={String(content.id)}
-          lessonTitle={content.title}
-          lessonChapters={content.chapters?.map((ch) => ({ id: String(ch.id), name: ch.name })) ?? []}
-          lessonSubject={content.subject ? { id: content.subject.id, name: content.subject.name } : null}
-          lessonLevels={(content.class_levels || []).map((l) => ({ id: l.id, name: l.name }))}
-        />
+
+      {/* Ressenti : un geste, puis un merci qui s'efface. */}
+      {askFelt && (
+        <div role="group" aria-label="La difficulté annoncée était-elle juste ?" className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line pt-4">
+          <span className="mr-1 text-[13.5px] font-medium text-ink-soft">C’était :</span>
+          <button type="button" className={feltChip} onClick={() => giveFelt('easier')}>Plus facile</button>
+          <button type="button" className={feltChip} onClick={() => giveFelt('as_said')}>Comme annoncé ({declared})</button>
+          <button type="button" className={feltChip} onClick={() => giveFelt('harder')}>Plus dur</button>
+        </div>
       )}
-    </>
+      {thanks && given && (
+        <p role="status" className="mt-4 flex items-center gap-1.5 border-t border-line pt-4 text-[13px] font-medium text-brand-hover">
+          <Check className="h-3.5 w-3.5" /> Merci, ton avis aide à mieux annoncer la difficulté.
+        </p>
+      )}
+
+      {next.length > 0 && (
+        <div className="mt-4 flex flex-col gap-0.5 border-t border-line pt-3">
+          {next.map((item) => {
+            const label = item.type === 'lesson' ? 'Revoir le cours' : item.type === 'exam' ? 'Sujet suivant' : 'Exercice suivant';
+            return (
+              <Link key={item.id} to={`${PATH[item.type] ?? '/exercises'}/${item.id}`}
+                state={{ from: location.pathname + location.search }}
+                onClick={() => trackAction('suivant-apres-resultat')}
+                className="group inline-flex min-h-10 min-w-0 items-center gap-1.5 text-[14px] font-semibold text-brand-hover hover:text-brand">
+                {item.type === 'lesson' ? <BookOpen className="h-4 w-4 shrink-0" /> : null}
+                <span className="shrink-0">{label} :</span>
+                <span className="min-w-0 truncate font-medium text-ink-soft group-hover:text-ink">{item.title}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {onCollect && (
+        <div className="mt-4 border-t border-line pt-2">
+          <button type="button" onClick={onCollect} data-tour={isLesson ? 'detail-cahier' : 'detail-liste'}
+            className="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink">
+            {isLesson ? <BookMarked className="h-4 w-4 text-ink-faint" aria-hidden /> : <ListPlus className="h-4 w-4 text-ink-faint" aria-hidden />}
+            {isLesson ? 'Ajouter à mon cahier de cours' : 'Ranger dans une liste de révision'}
+          </button>
+        </div>
+      )}
+    </section>
   );
 };
 

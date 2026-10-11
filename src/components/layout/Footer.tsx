@@ -1,17 +1,18 @@
-// src/components/Footer.tsx
+// src/components/layout/Footer.tsx
+// Pied de page (11/10/2026) : clair et compact, il suit chaque page. Rubriques, niveaux (adresses
+// indexées) et informations légales ; sur téléphone, deux colonnes courtes puis une ligne de liens légaux.
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Shield, BookOpen, BookMarked, Mail, Trophy, ArrowRight, Scale, Cookie, Landmark, GraduationCap } from 'lucide-react';
 import { LEGAL } from '@/lib/legal';
 import { ADS_ENABLED, openConsentBanner } from '@/lib/ads';
-import { LessonIcon } from '@/components/icons/LessonIcon';
 
-// Calm, flat dark-ink footer — one solid colour (no gradient), warm light
-// text, green reserved for the single action. Links hover to white.
-const linkClass = 'group flex items-center gap-2 text-sm text-[#b8b4ac] hover:text-white transition-colors';
-const iconClass = 'w-4 h-4 text-[#8a857d] group-hover:text-[#b8b4ac] transition-colors';
-const headingClass = 'text-[#8a857d] uppercase tracking-widest mb-5 text-xs font-semibold';
-const MONO = { fontFamily: "'DM Mono', ui-monospace, monospace" };
+const SECTIONS = [
+  { to: '/exercises', label: 'Exercices' },
+  { to: '/lessons', label: 'Leçons' },
+  { to: '/exams', label: 'Devoirs (DS)' },
+  { to: '/exams/nationaux', label: 'Bac national corrigé' },
+  { to: '/concours', label: 'Concours' },
+];
 
 // Pages de niveau (adresses stables, indexées : apps/caracteristics/hubs.py) — orientation et référencement.
 const LEVELS = [
@@ -21,126 +22,58 @@ const LEVELS = [
   { slug: '2eme-bac-pc', name: '2ème Bac PC' },
 ];
 
-export const Footer: React.FC = () => {
-  return (
-    <footer className="bg-ink text-white py-14 border-t border-[#33302b]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {/* Wordmark + description */}
-          <div className="space-y-4">
-            <h2 className="fd-display text-2xl" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>Fidni</h2>
-            <p className="text-[#9a958c] text-sm leading-relaxed max-w-xs">
-              La plateforme de maths des lycéens : exercices, leçons et examens corrigés, du Tronc commun au Bac, programme marocain.
-            </p>
-            <div className="pt-1">
-              {/* « En savoir plus », « À propos », « Accessibilité » menaient vers /about, qui
-                  n'existe pas, et les réseaux sociaux vers « # » : retirés en attendant les vraies pages. */}
-              <Link
-                to="/exercises"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors"
-              >
-                Commencer à s’entraîner
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+const colLink = 'inline-flex min-h-9 items-center text-[13.5px] text-ink-soft transition-colors hover:text-brand-hover md:min-h-7';
+const legalLink = 'inline-flex min-h-9 items-center text-[12.5px] text-ink-faint transition-colors hover:text-ink md:min-h-0';
 
-          {/* Liens utiles */}
-          <div>
-            <h3 className={headingClass} style={MONO}>
-              Liens utiles
-            </h3>
-            <ul className="space-y-3.5">
-              <li>
-                <Link to="/exercises" className={linkClass}>
-                  <BookOpen className={iconClass} /> Exercices
-                </Link>
-              </li>
-              <li>
-                <Link to="/lessons" className={linkClass}>
-                  <LessonIcon className={iconClass} /> Leçons
-                </Link>
-              </li>
-              <li>
-                <Link to="/exams" className={linkClass}>
-                  <BookMarked className={iconClass} /> Devoirs (DS)
-                </Link>
-              </li>
-              <li>
-                <Link to="/exams/nationaux" className={linkClass}>
-                  <Landmark className={iconClass} /> Bac national corrigé
-                </Link>
-              </li>
-              <li>
-                <Link to="/concours" className={linkClass}>
-                  <Trophy className={iconClass} /> Concours
-                </Link>
-              </li>
-            </ul>
-          </div>
+const Column: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <div className="min-w-0">
+    <h2 className="mb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">{title}</h2>
+    <ul className="flex flex-col">{children}</ul>
+  </div>
+);
 
-          {/* Exercices par niveau */}
-          <div>
-            <h3 className={headingClass} style={MONO}>
-              Exercices par niveau
-            </h3>
-            <ul className="space-y-3.5">
-              {LEVELS.map((l) => (
-                <li key={l.slug}>
-                  <Link to={`/exercises/niveau/${l.slug}`} className={linkClass}>
-                    <GraduationCap className={iconClass} /> {l.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Informations légales */}
-          <div>
-            <h3 className={headingClass} style={MONO}>
-              Informations légales
-            </h3>
-            <ul className="space-y-3.5">
-              <li>
-                <Link to="/mentions-legales" className={linkClass}>
-                  <Scale className={iconClass} /> Mentions légales
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms-of-service" className={linkClass}>
-                  <FileText className={iconClass} /> Conditions d'utilisation
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy-policy" className={linkClass}>
-                  <Shield className={iconClass} /> Politique de confidentialité
-                </Link>
-              </li>
-              {ADS_ENABLED && (
-                <li>
-                  <button type="button" onClick={openConsentBanner} className={linkClass}>
-                    <Cookie className={iconClass} /> Gérer les cookies
-                  </button>
-                </li>
-              )}
-              <li>
-                <a href={`mailto:${LEGAL.contactEmail}`} className={linkClass}>
-                  <Mail className={iconClass} /> Contact
-                </a>
-              </li>
-            </ul>
-
-          </div>
-        </div>
-
-        <div className="mt-12 border-t border-[#33302b] pt-6 text-center">
-          <p className="text-sm text-[#8a857d]">
-            &copy; {new Date().getFullYear()} Fidni
+export const Footer: React.FC = () => (
+  <footer className="border-t border-line bg-white print:hidden">
+    <div className="mx-auto max-w-6xl px-4 pb-6 pt-8 sm:px-6 md:pb-7 md:pt-10 lg:px-8">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-[1.3fr_1fr_1fr] md:gap-x-10">
+        {/* Nom + une phrase */}
+        <div className="col-span-2 md:col-span-1">
+          <Link to="/" className="fd-display text-[22px] leading-none text-ink">Fidni</Link>
+          <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-ink-faint">
+            Exercices, leçons et devoirs de maths corrigés pas à pas, du Tronc commun au Bac. Programme marocain.
           </p>
         </div>
+
+        <Column title="Travailler">
+          {SECTIONS.map((s) => (
+            <li key={s.to}><Link to={s.to} className={colLink}>{s.label}</Link></li>
+          ))}
+        </Column>
+
+        <Column title="Exercices par niveau">
+          {LEVELS.map((l) => (
+            <li key={l.slug}><Link to={`/exercises/niveau/${l.slug}`} className={colLink}>{l.name}</Link></li>
+          ))}
+        </Column>
       </div>
-    </footer>
-  );
-};
+
+      {/* Informations légales + copyright, sur une ligne (qui passe à la ligne sur téléphone) */}
+      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-0 border-t border-[#f2f1ee] pt-4 md:mt-8">
+        <nav aria-label="Informations légales" className="contents">
+          <Link to="/mentions-legales" className={legalLink}>Mentions légales</Link>
+          <Link to="/terms-of-service" className={legalLink}>Conditions d’utilisation</Link>
+          <Link to="/privacy-policy" className={legalLink}>Confidentialité</Link>
+          {ADS_ENABLED && (
+            <button type="button" onClick={openConsentBanner} className={legalLink}>Gérer les cookies</button>
+          )}
+          <a href={`mailto:${LEGAL.contactEmail}`} className={legalLink}>Contact</a>
+        </nav>
+        <p className="fd-nums inline-flex min-h-9 items-center text-[12.5px] text-ink-faint md:ml-auto md:min-h-0">
+          &copy; {new Date().getFullYear()} Fidni
+        </p>
+      </div>
+    </div>
+  </footer>
+);
 
 export default Footer;

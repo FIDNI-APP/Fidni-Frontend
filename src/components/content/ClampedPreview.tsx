@@ -38,7 +38,7 @@ export const ClampedPreview: React.FC<{ maxHeight?: number; children: React.Reac
             setOpen((o) => !o);
             if (open) ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           }}
-          className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-brand-hover hover:underline"
+          className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-xl px-1 text-[13.5px] font-semibold text-brand-hover hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           aria-expanded={open}
         >
           {open ? 'Réduire' : 'Lire la suite'}

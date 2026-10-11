@@ -16,10 +16,15 @@
  * drapeau quitte l'énoncé pour le pied de la solution ouverte. Une solution se referme même quand « Voir les
  * solutions » est actif. L'examen ajoute « En partie » (prop assessOptions). Chaque évaluation dit d'où elle
  * vient (source : question, tout, apres_solution).
+ *
+ * 11/10/2026 : variante « lecture » (variant="reading", page d'un contenu) : plus d'air entre les questions,
+ * « Voir la solution » en toutes lettres, solution dans un encadré calme, et l'auto-évaluation au pied de la
+ * solution ouverte (« Tu avais trouvé ? »), là où l'élève sait s'il avait trouvé ; une question déjà évaluée
+ * garde son résultat à côté du bouton. Les autres pages (listes, révisions, DS blanc) gardent le rendu compact.
  */
 
 import React, { useEffect, useState } from 'react';
-import { Check, RotateCcw, Eye, EyeOff, Flag, CheckCheck, Contrast } from 'lucide-react';
+import { Check, RotateCcw, Eye, EyeOff, Flag, CheckCheck, Contrast, ChevronDown } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { ContentBlock, AssessmentStatus } from '@/types/content';
 import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
@@ -69,6 +74,8 @@ interface ExerciseRendererProps {
   locked?: boolean;
   /** Signaler une erreur sur une question (chemin « q2 », « q2.sq1 ») ; absent = pas de bouton. */
   onReport?: (path: string) => void;
+  /** « reading » : rendu de la page d'un contenu (voir l'en-tête du fichier). Défaut : rendu compact des listes. */
+  variant?: 'default' | 'reading';
 }
 
 /** Ancre d'une question (onglet Activité → « Revoir la question »). */
@@ -153,8 +160,9 @@ const SectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ bl
 
 const QUICK_OPTION: Partial<Record<AssessmentStatus, { label: string; hint?: string; icon: React.ReactNode; on: string }>> = {
   success: { label: 'Réussi', icon: <Check className="w-3.5 h-3.5" />, on: 'bg-white text-brand-hover shadow-sm' },
-  partial: { label: 'En partie', hint: 'la moitié des points', icon: <Contrast className="w-3.5 h-3.5" />, on: 'bg-white text-gold-strong shadow-sm' },
-  review: { label: 'À revoir', icon: <RotateCcw className="w-3.5 h-3.5" />, on: 'bg-white text-[#a23b34] shadow-sm' },
+  // « À revoir » en or comme partout (repère « à retravailler ») ; « En partie » à l'encre ; le rouge reste aux erreurs.
+  partial: { label: 'En partie', hint: 'la moitié des points', icon: <Contrast className="w-3.5 h-3.5" />, on: 'bg-white text-ink shadow-sm' },
+  review: { label: 'À revoir', icon: <RotateCcw className="w-3.5 h-3.5" />, on: 'bg-white text-gold-strong shadow-sm' },
 };
 const DEFAULT_OPTIONS: AssessmentStatus[] = ['success', 'review'];
 
@@ -250,7 +258,7 @@ const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentSt
       <button type="button" onClick={answer('success')} className={`${btn} bg-brand-soft text-brand-hover hover:bg-brand hover:text-white`}>
         <Check className="w-3.5 h-3.5" /> Oui
       </button>
-      <button type="button" onClick={answer('review')} className={`${btn} bg-[#fbecea] text-[#a23b34] hover:bg-[#a23b34] hover:text-white`}>
+      <button type="button" onClick={answer('review')} className={`${btn} bg-gold-soft text-gold-strong hover:bg-gold hover:text-white`}>
         <RotateCcw className="w-3.5 h-3.5" /> Non, à revoir
       </button>
     </div>
@@ -348,6 +356,153 @@ const QuestionActions: React.FC<{
 );
 
 // =====================
+// VARIANTE « LECTURE » (page d'un contenu)
+// =====================
+
+// « À revoir » en or (repère « à retravailler »), « En partie » à l'encre : le rouge reste aux erreurs.
+const READ_OPTION: Partial<Record<AssessmentStatus, { label: string; icon: React.ElementType; on: string }>> = {
+  success: { label: 'Réussi', icon: Check, on: 'bg-brand-soft text-brand-hover border-brand-line' },
+  partial: { label: 'En partie', icon: Contrast, on: 'bg-[#f2f1ee] text-ink border-[#d8d4cc]' },
+  review: { label: 'À revoir', icon: RotateCcw, on: 'bg-gold-soft text-gold-strong border-gold-line' },
+};
+const shownStatus = (current: AssessmentStatus | undefined, options: AssessmentStatus[]) =>
+  (current && !options.includes(current) && (current === 'failed' || current === 'partial') ? 'review' : current);
+
+/** Choix d'auto-évaluation en pastilles (au pied d'une solution, ou d'une question sans solution). */
+const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: AssessmentStatus[]; onPick: (s: AssessmentStatus) => void; fill?: boolean }> = ({
+  current, options = DEFAULT_OPTIONS, onPick, fill = false,
+}) => {
+  const shown = shownStatus(current, options);
+  return (
+    <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval"
+      className={fill ? 'flex w-full gap-1.5 sm:inline-flex sm:w-auto' : 'inline-flex flex-wrap items-center gap-1.5'}>
+      {options.map((value) => {
+        const o = READ_OPTION[value];
+        if (!o) return null;
+        const active = shown === value;
+        const Icon = o.icon;
+        return (
+          <button key={value} type="button" aria-pressed={active}
+            title={active ? `${o.label} : clique pour effacer` : o.label}
+            onClick={(e) => { e.stopPropagation(); onPick(active && current ? current : value); }}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-full border text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-8 sm:px-3 [@media(pointer:coarse)]:h-10 ${
+              fill ? 'min-w-0 flex-1 justify-center px-1.5 sm:flex-none' : 'px-3.5 [@media(pointer:coarse)]:px-3.5'} ${
+              active ? o.on : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`}>
+            <Icon className={`h-3.5 w-3.5 shrink-0 ${fill && options.length > 2 ? 'hidden sm:block' : ''}`} aria-hidden />
+            <span className="whitespace-nowrap">{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+/** Résultat déjà donné, solution fermée : une pastille calme ; un clic rouvre la solution pour le changer. */
+const ReadingResult: React.FC<{ current: AssessmentStatus; options: AssessmentStatus[]; onOpen: () => void }> = ({ current, options, onOpen }) => {
+  const o = READ_OPTION[shownStatus(current, options) as AssessmentStatus];
+  if (!o) return null;
+  const Icon = o.icon;
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} data-tour="auto-eval"
+      title={`Ton résultat : ${o.label}. Ouvre la solution pour le changer.`}
+      className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold sm:h-8 sm:px-2.5 [@media(pointer:coarse)]:h-10 ${o.on}`}>
+      <Icon className="h-3.5 w-3.5" aria-hidden /> {o.label}
+    </button>
+  );
+};
+
+/** Pied de la solution ouverte : « Tu avais trouvé ? » (une demande à l'élève, tant qu'il n'a pas répondu). */
+const ReadingFound: React.FC<{
+  current?: AssessmentStatus; options?: AssessmentStatus[]; openedHere: boolean; onAssess: (s: AssessmentStatus, source: AssessSource) => void;
+}> = ({ current, options = DEFAULT_OPTIONS, openedHere, onAssess }) => {
+  useRegisterPrompt(!current);
+  return (
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2" data-tour={current ? undefined : 'trouve'}>
+      <span className="text-[13px] font-medium text-ink-soft">Tu avais trouvé ?</span>
+      <ReadingAssess current={current} options={options} fill onPick={(s) => {
+        // Première réponse après avoir ouvert la solution soi-même : c'est « Tu avais trouvé ? ».
+        if (openedHere && !current) {
+          trackAction('trouve-apres-solution');
+          onAssess(s, 'apres_solution');
+        } else onAssess(s, 'question');
+      }} />
+    </div>
+  );
+};
+
+/** Bouton « Voir la solution » en toutes lettres (le seul geste principal d'une question). */
+const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
+  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} data-tour="solution"
+    className={`inline-flex h-10 items-center gap-1.5 rounded-full pl-3 pr-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
+      isOpen ? 'bg-[#f2f1ee] text-ink-soft hover:bg-line' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
+    {isOpen ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+    {isOpen
+      ? <><span className="sm:hidden">Masquer</span><span className="hidden sm:inline">Masquer la solution</span></>
+      : <><span className="sm:hidden">Solution</span><span className="hidden sm:inline">Voir la solution</span></>}
+    <ChevronDown className={`h-3.5 w-3.5 opacity-70 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
+  </button>
+);
+
+/** Solution ouverte : encadré papier, filet vert à gauche, pied (auto-évaluation, signaler au toucher). */
+const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactNode; onReport?: () => void }> = ({ solution, footer, onReport }) => {
+  if (!solution?.html) return null;
+  return (
+    <div className="relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
+      <span className="absolute inset-y-0 left-0 w-[3px] bg-brand" aria-hidden />
+      <div className="fd-sol min-w-0 px-4 pb-3.5 pt-3 sm:px-5 sm:pb-4">
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-[.1em] text-brand-hover">Solution</p>
+        <RenderContent content={solution} />
+      </div>
+      {(footer || onReport) && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-line px-4 py-2.5 sm:px-5">
+          {footer}
+          {/* Au toucher, le drapeau de la question est ici (pas à côté de l'énoncé). */}
+          {onReport && (
+            <button type="button" onClick={(e) => { e.stopPropagation(); onReport(); }}
+              className="ml-auto hidden h-10 items-center gap-1.5 rounded-lg px-1 text-[12.5px] font-medium text-ink-faint hover:text-[#a23b34] [@media(pointer:coarse)]:inline-flex">
+              <Flag className="h-3.5 w-3.5" aria-hidden /> Une erreur ?
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Une question (ou sous-question) en lecture : la barre (solution, résultat, barème), puis la solution ouverte
+ * avec « Tu avais trouvé ? » à son pied. Sans solution, l'auto-évaluation reste sous la question.
+ */
+const ReadingQuestionBody: React.FC<{
+  path: string; points?: number; solution?: ContentBlock; locked: boolean; globalShow: boolean;
+  progress?: ProgressData; onAssess?: AssessHandler; canAssess: boolean; assessOptions?: AssessmentStatus[];
+  onSolutionOpen?: (path: string) => void; onReport?: (path: string) => void;
+}> = ({ path, points, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onReport }) => {
+  const hasSolution = Boolean(solution?.html) && !locked;
+  const { shown, toggle, openedHere } = useSolutionState(path, globalShow, locked, onSolutionOpen);
+  const current = progress?.[path]?.status;
+  const assess = (s: AssessmentStatus, source: AssessSource) => onAssess?.(path, s, source);
+  const report = onReport ? () => onReport(path) : undefined;
+  const pts = points ? <span className="ml-auto pl-2 text-[12.5px] text-ink-faint fd-nums">{formatPoints(points)}</span> : null;
+  if (!hasSolution && !(canAssess && !locked) && !pts) return null;
+  return (
+    <>
+      <div className={`${hasSolution || canAssess ? 'mt-2.5' : 'mt-1'} flex flex-wrap items-center gap-2`}>
+        {hasSolution && <ReadingSolutionToggle isOpen={shown} onToggle={toggle} />}
+        {canAssess && !locked && (hasSolution
+          ? (!shown && current ? <ReadingResult current={current} options={assessOptions} onOpen={toggle} /> : null)
+          : <ReadingAssess current={current} options={assessOptions} onPick={(s) => assess(s, 'question')} />)}
+        {pts}
+      </div>
+      {hasSolution && shown && (
+        <ReadingSolution solution={solution} onReport={report}
+          footer={canAssess ? <ReadingFound current={current} options={assessOptions} openedHere={openedHere} onAssess={assess} /> : undefined} />
+      )}
+    </>
+  );
+};
+
+// =====================
 // SUB-QUESTION RENDERER
 // =====================
 
@@ -426,6 +581,8 @@ interface QuestionRendererProps {
   onSolutionOpen?: (path: string) => void;
   interactive: boolean;
   isFirst?: boolean;
+  /** Juste après un texte d'introduction (variante « lecture » : un peu moins d'espace). */
+  afterContext?: boolean;
   locked?: boolean;
   onReport?: (path: string) => void;
 }
@@ -514,6 +671,69 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 };
 
 // =====================
+// QUESTION EN LECTURE
+// =====================
+
+/** Question en variante « lecture » : numéro en marge, énoncé, puis sa barre et ses sous-questions. */
+const ReadingQuestion: React.FC<QuestionRendererProps> = ({
+  block, questionIndex, globalShowSolutions, progress, onAssess, assessOptions, onSolutionOpen,
+  interactive, isFirst = false, afterContext = false, locked = false, onReport,
+}) => {
+  const path = block.id;
+  const subs = block.subQuestions ?? [];
+  const canAssess = interactive && !!onAssess && !locked;
+  const common = { locked, globalShow: globalShowSolutions, progress, onAssess, canAssess, assessOptions, onSolutionOpen, onReport };
+  return (
+    <div id={subs.length ? undefined : questionAnchor(path)} className={`scroll-mt-24 ${isFirst ? '' : afterContext ? 'mt-6' : 'mt-8 sm:mt-10'}`}>
+      <div className="group/q flex items-start gap-2.5 sm:gap-3">
+        <span className="mt-[2px] w-5 shrink-0 text-[15.5px] font-bold text-ink fd-nums sm:w-6">{questionIndex}.</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><RenderContent content={block.content} /></div>
+            {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
+          </div>
+          {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} solution={block.solution} {...common} />}
+          {/* « Tout réussi » d'une question n'est pas repris ici : « Tu as fini ? » (bas de page) le fait pour tout le contenu. */}
+          {subs.length > 0 && (
+            <>
+              {subs.map((sq, i) => {
+                const sqPath = `${path}.${sq.id}`;
+                return (
+                  <div key={sq.id} id={questionAnchor(sqPath)} className="group/sq mt-5 flex items-start gap-2 scroll-mt-24 sm:gap-2.5">
+                    <span className="mt-[2px] w-7 shrink-0 text-[14.5px] font-semibold text-ink-faint fd-nums sm:w-8">{questionIndex}.{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start gap-1">
+                        <div className="min-w-0 flex-1"><RenderContent content={sq.content} /></div>
+                        {onReport && <ReportQuestionButton group="sq" onClick={() => onReport(sqPath)} />}
+                      </div>
+                      <ReadingQuestionBody path={sqPath} points={sq.points} solution={sq.solution} {...common} />
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** Partie d'un contenu (rendu « lecture ») : titre serif, barème, un filet. */
+const ReadingSectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ block, first }) => (
+  <div className={`mb-6 flex items-baseline justify-between gap-3 border-b border-line pb-2.5 ${first ? '' : 'mt-12'}`}>
+    <div className="fd-display min-w-0 text-[19px] text-ink [&_p]:m-0">
+      <TipTapRenderer content={block.content?.html || ''} />
+    </div>
+    {Number(block.points) > 0 && (
+      <span className="shrink-0 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-gold-strong fd-nums">
+        {formatPoints(Number(block.points))}
+      </span>
+    )}
+  </div>
+);
+
+// =====================
 // MAIN RENDERER
 // =====================
 
@@ -529,6 +749,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   compact = true,
   locked = false,
   onReport,
+  variant = 'default',
 }) => {
   if (!structure || !structure.blocks || structure.blocks.length === 0) {
     return (
@@ -538,27 +759,33 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
     );
   }
 
+  const reading = variant === 'reading';
+  const isCompact = compact && !reading;
+  const Question = reading ? ReadingQuestion : QuestionRenderer;
+  const Heading = reading ? ReadingSectionHeading : SectionHeading;
+
   return (
-    <div className={compact ? 'content-compact-view bg-white rounded-xl border border-line' : ''}>
-      {compact && <CompactStyles />}
-      <div className={compact ? 'p-4' : ''}>
+    <div className={isCompact ? 'content-compact-view bg-white rounded-xl border border-line' : reading ? 'fd-read' : ''}>
+      {isCompact && <CompactStyles />}
+      <div className={isCompact ? 'p-4' : ''}>
         {(() => {
           let qCount = 0;
           return structure.blocks.map((block, index) => {
             if (block.type === 'section') {
               qCount = 0;
-              return <SectionHeading key={block.id} block={block} first={index === 0} />;
+              return <Heading key={block.id} block={block} first={index === 0} />;
             }
             if (block.type === 'context') {
+              const prev = structure.blocks[index - 1];
               return (
-                <div key={block.id} className={index > 0 ? 'mt-2' : ''}>
+                <div key={block.id} className={index === 0 ? '' : reading ? (prev?.type === 'section' ? '' : 'mt-8 sm:mt-10') : 'mt-2'}>
                   <RenderContent content={block.content} />
                 </div>
               );
             }
             qCount++;
             return (
-              <QuestionRenderer
+              <Question
                 key={block.id}
                 block={block}
                 questionIndex={qCount}
@@ -569,7 +796,8 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                 assessOptions={assessOptions}
                 onSolutionOpen={onSolutionOpen}
                 interactive={interactive}
-                isFirst={index === 0}
+                isFirst={index === 0 || (reading && structure.blocks[index - 1]?.type === 'section')}
+                afterContext={structure.blocks[index - 1]?.type === 'context'}
                 locked={locked}
                 onReport={onReport}
               />

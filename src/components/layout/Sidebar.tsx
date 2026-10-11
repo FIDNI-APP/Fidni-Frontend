@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
   Home, BookOpen, Route, GraduationCap, Trophy,
-  User, Bookmark as BookmarkIcon, Settings, LogOut,
-  X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
+  User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
+  X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown,
+  Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
@@ -14,20 +14,22 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
 import { canSeeParcours } from '@/lib/features';
-import { revisionTab, useHasClassroom } from './nav';
+import type { User } from '@/types';
+import { sectionHome, studentLevelSlug, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
+
+type IconType = React.ComponentType<{ className?: string }>;
+type LevelBase = '/exercises' | '/lessons' | '/exams';
 
 interface NavItem {
   to: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: IconType;
   match?: string[];
   /** Chemins qui ne l'activent pas malgré `match` (sous-section qui a sa propre entrée). */
   exclude?: string[];
-  /** Règle sur mesure quand l'adresse seule ne suffit pas (deux onglets d'une même page). */
-  isActive?: (pathname: string, search: string) => boolean;
-  /** Content type for the class-level quick-link dropdown (singular API form). */
-  dropdown?: 'exercise' | 'lesson' | 'exam';
+  /** Rubrique rangée par niveaux : ses niveaux s'affichent dessous quand on y est (et seulement alors). */
+  levels?: LevelBase;
 }
 
 interface NavGroup {
@@ -38,6 +40,7 @@ interface NavGroup {
 }
 
 const under = (p: string, base: string) => p === base || p.startsWith(`${base}/`);
+const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
 // Menu du 10/10/2026 : ce qu'on fait (Travailler), puis où on en est (Mon suivi). Les libellés disent
 // ce que contient la page : « Examens » ne contenait que des DS, « Révisions » cachait la préparation d'un DS.
@@ -47,33 +50,25 @@ const WORK_GROUP: NavGroup = {
   title: 'Travailler',
   tour: 'nav-travailler',
   items: [
-    { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], dropdown: 'lesson' },
+    { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], levels: '/lessons' },
     { to: '/learning-path', label: 'Parcours', icon: Route, match: ['/learning-path'] },
-    { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], dropdown: 'exercise' },
-    { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux'], dropdown: 'exam' },
+    { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], levels: '/exercises' },
+    { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux'], levels: '/exams' },
     { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
     { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
   ],
 };
 
-// Suivi personnel : seulement pour un membre connecté.
+// Suivi personnel : seulement pour un membre connecté. Refonte du 11/10/2026 : quatre entrées au lieu de six,
+// regroupées par intention (Réviser = prochain DS + à refaire + listes ; Mes enregistrements = favoris + cahiers).
 const FOLLOW_GROUP: NavGroup = {
   title: 'Mon suivi',
   tour: 'nav-suivi',
   items: [
     { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
-    {
-      to: '/revision-lists?onglet=ds', label: 'Préparer un DS', icon: CalendarCheck,
-      isActive: (p, s) => under(p, '/revisions/ds') || (p === '/revision-lists' && revisionTab(s) === 'ds'),
-    },
-    {
-      to: '/revision-lists?onglet=listes', label: 'Mes révisions', icon: ListChecks,
-      isActive: (p, s) => (p === '/revision-lists' ? revisionTab(s) === 'listes'
-        : under(p, '/revision-lists') || under(p, '/profile/revision-lists')),
-    },
+    { to: '/reviser', label: 'Réviser', icon: CalendarCheck, match: ['/reviser', '/revisions', '/revision-lists', '/profile/revision-lists'] },
     { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'] },
-    { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
-    { to: '/saved', label: 'Favoris', icon: BookmarkIcon, match: ['/saved'] },
+    { to: '/enregistrements', label: 'Mes enregistrements', icon: BookmarkIcon, match: ['/enregistrements', '/saved', '/notebooks'] },
   ],
 };
 
@@ -82,6 +77,36 @@ const CLASS_GROUP: NavGroup = {
   tour: 'nav-classe',
   items: [{ to: '/classrooms', label: 'Classes', icon: GraduationCap, match: ['/classrooms'] }],
 };
+
+/* ────── Niveaux (sous-liens des rubriques Leçons / Exercices / Devoirs) ────── */
+
+interface Level { id: string; name: string; slug?: string }
+
+// Une seule requête par session : la liste des niveaux ne change pas d'une page à l'autre.
+let levelsRequest: Promise<Level[]> | null = null;
+const loadLevels = () => {
+  levelsRequest ??= getClassLevels()
+    .then((data) => data.map((l) => ({ id: String(l.id), name: l.name, slug: (l as { slug?: string }).slug })))
+    .catch((e) => { levelsRequest = null; throw e; });
+  return levelsRequest;
+};
+
+function useLevels(): Level[] | null {
+  const [levels, setLevels] = useState<Level[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadLevels()
+      .then((l) => { if (!cancelled) setLevels(l); })
+      .catch((e) => console.error('Sidebar: niveaux indisponibles', e));
+    return () => { cancelled = true; };
+  }, []);
+  return levels;
+}
+
+/** Adresse d'une page de niveau (/exercises/niveau/2eme-bac-sm[/chapitre]) : le slug du niveau. */
+const NIVEAU_RE = /^\/(?:exercises|lessons|exams)\/niveau\/([^/?#]+)/;
+
+/* ────── Barre latérale (ordinateur) + tiroir (téléphone) ────── */
 
 interface SidebarProps {
   collapsed: boolean;
@@ -92,30 +117,22 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({
   collapsed, onToggleCollapsed, mobileOpen, onCloseMobile,
-}) => {
-  return (
-    <>
-      {/* Desktop rail */}
-      <aside
-        className="hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0"
-        style={{
-          width: collapsed ? 72 : 240,
-          background: '#fff',
-          borderRight: '1px solid #e7e3dc',
-          transition: 'width .2s cubic-bezier(.25,.46,.45,.94)',
-        }}
-      >
-        <SidebarInner collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
-      </aside>
+}) => (
+  <>
+    <aside
+      className="hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0 border-r border-line bg-white print:hidden"
+      style={{ width: collapsed ? 72 : 240, transition: 'width .2s cubic-bezier(.25,.46,.45,.94)' }}
+    >
+      <SidebarInner collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
+    </aside>
 
-      {mobileOpen && <MobileDrawer onClose={onCloseMobile} />}
-    </>
-  );
-};
+    {mobileOpen && <MobileDrawer onClose={onCloseMobile} />}
+  </>
+);
 
 /**
  * Tiroir du téléphone : une vraie fenêtre (annoncée comme telle, Échap pour fermer, focus dedans
- * puis rendu au bouton qui l'a ouverte).
+ * puis rendu au bouton qui l'a ouverte). Il liste tout : rubriques, suivi, classe et compte.
  */
 const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const panelRef = useRef<HTMLElement>(null);
@@ -146,11 +163,15 @@ const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="md:hidden fixed inset-0 z-[60]">
+    <div className="md:hidden fixed inset-0 z-[60] print:hidden">
+      <style>{`
+        @keyframes fd-drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+        @keyframes fd-veil-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
       <div
         aria-hidden
-        className="absolute inset-0"
-        style={{ background: 'rgba(20,18,16,.4)', backdropFilter: 'blur(2px)' }}
+        className="absolute inset-0 bg-[rgba(20,18,16,.38)]"
+        style={{ animation: 'fd-veil-in .2s ease both' }}
         onClick={onClose}
       />
       <aside
@@ -158,31 +179,35 @@ const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-label="Menu"
-        className="absolute left-0 top-0 h-full flex flex-col"
+        className="absolute left-0 top-0 flex h-full flex-col bg-white shadow-[8px_0_32px_rgba(20,18,16,.12)]"
         style={{
-          width: 'min(288px, 86vw)', background: '#fff', borderRight: '1px solid #e7e3dc',
-          animation: 'slideIn .25s ease both',
+          width: 'min(320px, 86vw)',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          animation: 'fd-drawer-in .24s cubic-bezier(.25,.46,.45,.94) both',
         }}
       >
-        <SidebarInner collapsed={false} onCloseMobile={onClose} showClose />
+        <SidebarInner collapsed={false} onClose={onClose} drawer />
       </aside>
     </div>
   );
 };
 
-/* ────── Shared inner content (rail + drawer) ────── */
+/* ────── Contenu commun (barre latérale et tiroir) ────── */
 
 const SidebarInner: React.FC<{
   collapsed: boolean;
   onToggleCollapsed?: () => void;
-  onCloseMobile?: () => void;
-  showClose?: boolean;
-}> = ({ collapsed, onToggleCollapsed, onCloseMobile, showClose }) => {
+  onClose?: () => void;
+  /** Tiroir du téléphone : cibles plus grandes, compte déplié. */
+  drawer?: boolean;
+}> = ({ collapsed, onToggleCollapsed, onClose, drawer }) => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const { crumbs, section: forcedSection } = useBreadcrumb();
   const showParcours = canSeeParcours(user);
   const hasClassroom = useHasClassroom();
+  const levels = useLevels();
 
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
@@ -201,386 +226,364 @@ const SidebarInner: React.FC<{
   const isActive = (item: NavItem) => {
     if (section) return item.to === section;
     const p = location.pathname;
-    if (item.isActive) return item.isActive(p, location.search);
     if (item.to === '/') return p === '/';
     if (item.exclude?.some(x => under(p, x))) return false;
     return item.match?.some(x => under(p, x)) ?? false;
   };
 
+  // Niveau ouvert (adresse, sinon fil d'Ariane d'un contenu : Exercices › 2ème Bac SM › Limites).
+  const openLevel = useMemo(() => {
+    const fromPath = location.pathname.match(NIVEAU_RE)?.[1];
+    if (fromPath) return fromPath;
+    for (const c of crumbs ?? []) {
+      const m = c.to?.match(NIVEAU_RE);
+      if (m) return m[1];
+    }
+    return null;
+  }, [location.pathname, crumbs]);
+
   return (
     <>
-      {/* Header: logo + collapse / close control */}
-      <div
-        className="flex items-center"
-        style={{
-          height: 60, padding: collapsed ? '0' : '0 16px',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          borderBottom: '1px solid #faf9f7', flexShrink: 0,
-        }}
-      >
+      {/* En-tête : logo + réduire / fermer */}
+      <div className={cx('flex h-[60px] flex-shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between pl-5 pr-3')}>
         {!collapsed && (
-          <Link to="/" onClick={onCloseMobile} className="flex items-center">
-            <img src={Logo3} alt="Fidni" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
+          <Link to="/" onClick={onClose} className="flex items-center rounded-lg" aria-label="Fidni, accueil">
+            <img src={Logo3} alt="Fidni" className="h-8 w-auto object-contain" />
           </Link>
         )}
-        {showClose ? (
-          <button onClick={onCloseMobile} aria-label="Fermer le menu" data-drawer-close style={{ ...iconBtnStyle, width: 40, height: 40 }}>
-            <X className="w-5 h-5" />
+        {drawer ? (
+          <button type="button" onClick={onClose} aria-label="Fermer le menu" data-drawer-close className={iconBtn}>
+            <X className="h-5 w-5" />
           </button>
         ) : (
           <button
+            type="button"
             onClick={onToggleCollapsed}
             aria-label={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
-            title={collapsed ? 'Déployer' : 'Réduire'}
-            style={iconBtnStyle}
+            title={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
+            className={iconBtn}
           >
-            {collapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+            {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
           </button>
         )}
       </div>
 
-      {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3" style={{ padding: collapsed ? '12px 10px' : '12px' }}>
+      {/* Rubriques */}
+      <nav aria-label="Menu principal" className={cx('flex-1 overflow-y-auto overflow-x-hidden', collapsed ? 'px-3 py-3' : 'px-3 py-4')}>
         {groups.map((group, gi) => (
-          <div key={gi} className={gi > 0 ? 'mt-4' : ''} data-tour={group.tour}>
-            {group.title && !collapsed && (
-              <div
-                style={{
-                  fontSize: 10, fontWeight: 700, color: '#6b6862',
-                  letterSpacing: '.08em', textTransform: 'uppercase',
-                  padding: '0 10px 6px',
-                }}
-              >
-                {group.title}
-              </div>
-            )}
-            {group.title && collapsed && gi > 0 && (
-              <div style={{ height: 1, background: '#faf9f7', margin: '0 8px 8px' }} />
-            )}
-            <div className="flex flex-col gap-0.5">
-              {group.items.map(item => (
-                <NavItemRow key={item.to} item={item} active={isActive(item)} collapsed={collapsed} onClick={onCloseMobile} />
-              ))}
-            </div>
-          </div>
+          <NavSection key={gi} group={group} first={gi === 0} collapsed={collapsed} drawer={drawer}>
+            {group.items.map((item) => {
+              const active = isActive(item);
+              const href = item.levels ? sectionHome(user, item.levels) : item.to;
+              return (
+                <li key={item.to}>
+                  <NavRow item={item} href={href} active={active} collapsed={collapsed} drawer={drawer} onNavigate={onClose} />
+                  {item.levels && active && !collapsed && (
+                    <LevelLinks
+                      base={item.levels} levels={levels} user={user} openLevel={openLevel}
+                      drawer={drawer} onNavigate={onClose}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </NavSection>
         ))}
+
+        {/* Tiroir : le compte déplié dans la liste (rien de caché derrière un bouton). */}
+        {drawer && <DrawerAccount onNavigate={onClose} canJoinClass={isAuthenticated && !hasClassroom} />}
       </nav>
 
-      {/* User / auth footer */}
-      <div data-tour="nav-compte" style={{ borderTop: '1px solid #faf9f7', padding: collapsed ? '10px' : '12px', flexShrink: 0 }}>
-        <SidebarUser collapsed={collapsed} onNavigate={onCloseMobile} canJoinClass={isAuthenticated && !hasClassroom} inline={showClose} />
-      </div>
+      {/* Compte (ordinateur) */}
+      {!drawer && (
+        <div data-tour="nav-compte" className="flex-shrink-0 border-t border-line p-3">
+          <RailAccount collapsed={collapsed} canJoinClass={isAuthenticated && !hasClassroom} />
+        </div>
+      )}
     </>
   );
 };
 
-const INK = '#1a1a1a';
-// Entrée active : fond encre, tuile d'icône dorée.
-const rowLinkStyle = (active: boolean, collapsed: boolean): React.CSSProperties => ({
-  display: 'flex', alignItems: 'center', gap: 10,
-  padding: collapsed ? '5px' : '5px 8px 5px 5px',
-  justifyContent: collapsed ? 'center' : 'flex-start',
-  borderRadius: 11,
-  background: active ? INK : 'transparent',
-  color: active ? '#fff' : '#33302b',
-  fontSize: 13.5, fontWeight: active ? 600 : 500,
-  textDecoration: 'none', transition: 'background .14s, color .14s',
-});
+const iconBtn = 'inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink';
 
-/** L'icône posée dans une petite tuile ; dorée quand l'entrée est active. */
-const IconTile: React.FC<{ icon: React.ComponentType<{ className?: string }>; active: boolean }> = ({ icon: Icon, active }) => (
-  <span
-    style={{
-      width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: active ? '#c0892f' : '#faf9f7',
-      border: `1px solid ${active ? '#c0892f' : '#e7e3dc'}`,
-      color: active ? INK : '#33302b',
-      transition: 'background .14s, border-color .14s',
-    }}
-  >
-    <Icon className="w-4 h-4" />
-  </span>
-);
-
-const RowLabel: React.FC<{ label: string }> = ({ label }) => (
-  <span className="min-w-0 flex flex-col" style={{ lineHeight: 1.2 }}>
-    <span className="truncate">{label}</span>
-  </span>
-);
-
-const NavItemRow: React.FC<{ item: NavItem; active: boolean; collapsed: boolean; onClick?: () => void }> = ({
-  item, active, collapsed, onClick,
-}) => {
-  const hasDropdown = !!item.dropdown && !collapsed;
-  const hoverIn = (el: HTMLElement) => { if (!active) el.style.background = '#f7f6f3'; };
-  const hoverOut = (el: HTMLElement) => { if (!active) el.style.background = 'transparent'; };
-  const [open, setOpen] = useState<boolean>(active && hasDropdown);
-  const [levels, setLevels] = useState<{ id: string; name: string; slug?: string }[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  // Sous-lien actif : même page ET même niveau dans l'URL (« Tout voir » = page sans niveau).
-  const location = useLocation();
-  const onBase = location.pathname === item.to;
-  const currentLevel = new URLSearchParams(location.search).get('classLevels');
-
-  useEffect(() => {
-    if (!open || levels || !item.dropdown) return;
-    let cancelled = false;
-    setLoading(true);
-    getClassLevels(item.dropdown)
-      .then(data => { if (!cancelled) setLevels(data.map((l) => ({ id: String(l.id), name: l.name, slug: (l as { slug?: string }).slug }))); })
-      .catch(e => console.error('Sidebar: failed to load class levels', e))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [open, item.dropdown]);
-
-  // Plain item (no dropdown, or collapsed rail) — a simple link.
-  if (!hasDropdown) {
-    return (
-      <Link
-        to={item.to} onClick={onClick} title={collapsed ? item.label : undefined}
-        aria-label={collapsed ? item.label : undefined}
-        aria-current={active ? 'page' : undefined}
-        style={rowLinkStyle(active, collapsed)}
-        onMouseEnter={(e) => hoverIn(e.currentTarget)}
-        onMouseLeave={(e) => hoverOut(e.currentTarget)}
-      >
-        <IconTile icon={item.icon} active={active} />
-        {!collapsed && <RowLabel label={item.label} />}
-      </Link>
-    );
-  }
-
+/** Un groupe du menu : titre discret (ou simple filet quand la barre est réduite). */
+const NavSection: React.FC<{
+  group: NavGroup; first: boolean; collapsed: boolean; drawer?: boolean; children: React.ReactNode;
+}> = ({ group, first, collapsed, drawer, children }) => {
+  const id = useId();
   return (
-    <div>
-      <div
-        className="flex items-center"
-        style={{ borderRadius: 11, background: active ? INK : 'transparent', transition: 'background .14s' }}
-        onMouseEnter={(e) => hoverIn(e.currentTarget)}
-        onMouseLeave={(e) => hoverOut(e.currentTarget)}
-      >
-        <Link
-          to={item.to} onClick={onClick}
-          aria-current={active ? 'page' : undefined}
-          style={{
-            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
-            padding: '5px 4px 5px 5px',
-            color: active ? '#fff' : '#33302b',
-            fontSize: 13.5, fontWeight: active ? 600 : 500, textDecoration: 'none',
-          }}
-        >
-          <IconTile icon={item.icon} active={active} />
-          <RowLabel label={item.label} />
-        </Link>
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
-          aria-label={open ? `Réduire ${item.label}` : `Déployer ${item.label}`}
-          aria-expanded={open}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 40, height: 40, border: 'none', background: 'transparent',
-            color: active ? 'rgba(255,255,255,.7)' : '#6b6862', cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          <ChevronDown className="w-4 h-4" style={{ transition: 'transform .18s', transform: open ? 'rotate(180deg)' : 'none' }} />
-        </button>
-      </div>
-
-      {open && (
-        <div
-          style={{
-            marginTop: 2, marginLeft: 16, paddingLeft: 11,
-            borderLeft: '1px solid #e7e3dc',
-            display: 'flex', flexDirection: 'column', gap: 1,
-          }}
-        >
-          {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', color: '#6b6862', fontSize: 12.5 }}>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Chargement…
-            </div>
-          )}
-          {!loading && levels?.map(l => (
-            // Page du niveau (/exercises/niveau/2eme-bac-sm) : une vraie adresse, que Google indexe.
-            <SubLink key={l.id} to={l.slug ? `${item.to}/niveau/${l.slug}` : `${item.to}?classLevels=${l.id}`} label={l.name} onClick={onClick}
-              active={(onBase && currentLevel === l.id) || (!!l.slug && location.pathname.startsWith(`${item.to}/niveau/${l.slug}`))} />
-          ))}
-          {!loading && levels && levels.length === 0 && (
-            <div style={{ padding: '7px 10px', color: '#6b6862', fontSize: 12 }}>Aucun niveau</div>
-          )}
-          {/* « Tous les niveaux » : les dossiers de niveaux (sans ?niveau=tous, un élève qui a indiqué sa classe
-              serait renvoyé dans le dossier de son niveau, voir pages/content/ContentFolders). */}
-          {!loading && <SubLink to={`${item.to}?niveau=tous`} label="Tous les niveaux" onClick={onClick} muted active={onBase && !currentLevel} />}
-        </div>
+    <div data-tour={group.tour} className={cx(!first && (collapsed ? 'mt-3 border-t border-[#f2f1ee] pt-3' : drawer ? 'mt-6' : 'mt-5'))}>
+      {group.title && !collapsed && (
+        <p id={id} className="px-3 pb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">{group.title}</p>
       )}
+      <ul className="flex flex-col gap-0.5" aria-labelledby={group.title && !collapsed ? id : undefined}>
+        {children}
+      </ul>
     </div>
   );
 };
 
-// Sous-lien (niveaux sous Exercices / Examens / Leçons). Actif : fond or pâle et trait or sur la
-// ligne de l'arborescence, en écho à la tuile dorée de la section active.
-const SubLink: React.FC<{ to: string; label: string; onClick?: () => void; muted?: boolean; active?: boolean }> = ({
-  to, label, onClick, muted, active,
-}) => {
-  const rest = { background: active ? '#faf3e2' : 'transparent', color: active ? INK : muted ? '#6b6862' : '#33302b' };
+const NavRow: React.FC<{
+  item: NavItem; href: string; active: boolean; collapsed: boolean; drawer?: boolean; onNavigate?: () => void;
+}> = ({ item, href, active, collapsed, drawer, onNavigate }) => {
+  const Icon = item.icon;
   return (
     <Link
-      to={to} onClick={onClick} className="truncate"
+      to={href}
+      onClick={onNavigate}
+      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
       aria-current={active ? 'page' : undefined}
-      style={{
-        padding: '9px 10px', borderRadius: 8, fontSize: 12.5, ...rest,
-        boxShadow: active ? 'inset 3px 0 0 #c0892f' : 'none',
-        fontWeight: active ? 700 : muted ? 600 : 500,
-        textDecoration: 'none', transition: 'background .12s, color .12s',
-      }}
-      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = '#f7f6f3'; e.currentTarget.style.color = '#15633c'; } }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = rest.background; e.currentTarget.style.color = rest.color; }}
+      className={cx(
+        'group flex items-center rounded-xl transition-colors',
+        collapsed ? 'mx-auto h-11 w-11 justify-center' : cx('gap-3 px-3', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]'),
+        active ? 'bg-brand-soft font-semibold text-ink' : 'font-medium text-ink-soft hover:bg-[#f7f6f3] hover:text-ink',
+      )}
     >
-      {label}
+      <Icon className={cx('h-[18px] w-[18px] flex-shrink-0 transition-colors', active ? 'text-brand-hover' : 'text-ink-faint group-hover:text-ink-soft')} />
+      {!collapsed && <span className="truncate">{item.label}</span>}
     </Link>
   );
 };
 
-/* ────── User footer ────── */
-
-const SidebarUser: React.FC<{ collapsed: boolean; onNavigate?: () => void; canJoinClass?: boolean; inline?: boolean }> = ({
-  collapsed, onNavigate, canJoinClass, inline,
-}) => {
-  const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
-  const openSignup = useOpenSignup('sidebar');
-  const [menuOpen, setMenuOpen] = React.useState(false);
-  const accountRef = React.useRef<HTMLDivElement>(null);
-
-  const go = (to: string) => { navigate(to); onNavigate?.(); setMenuOpen(false); };
-  const handleLogout = async () => {
-    try { await logout(); go('/'); } catch (err) { console.error('Logout failed:', err); }
-  };
-
-  if (!isAuthenticated || !user) {
-    if (collapsed) {
-      return (
-        <button
-          onClick={() => openSignup('login')}
-          aria-label="Connexion" title="Connexion"
-          style={{ ...iconBtnStyle, width: '100%', height: 38 }}
-        >
-          <User className="w-4 h-4" />
-        </button>
-      );
-    }
-    return (
-      <div className="flex flex-col gap-2">
-        <button className="fd-btn-ghost" style={{ justifyContent: 'center', minHeight: 40 }} onClick={() => openSignup('login')}>
-          Connexion
-        </button>
-        <button className="fd-btn-primary" style={{ justifyContent: 'center', minHeight: 40 }} onClick={() => openSignup('signup')}>
-          S'inscrire
-        </button>
-      </div>
-    );
-  }
-
-  const avatar = (
-    <img
-      src={user.profile?.avatar || '/avatar-placeholder.jpg'}
-      alt=""
-      style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-    />
-  );
-
-  if (collapsed) {
-    return (
-      <button
-        onClick={() => go(`/profile/${user.username}`)}
-        aria-label="Mon profil" title={user.username}
-        style={{ ...iconBtnStyle, width: '100%', height: 40, padding: 0 }}
-      >
-        {avatar}
-      </button>
-    );
-  }
-
-  // Compte : profil et réglages seulement (la progression et les révisions sont dans « Mon suivi »).
-  const items = (
-    <>
-      <MenuItem icon={<User className="w-4 h-4" />} label="Mon profil" onClick={() => go(`/profile/${user.username}`)} />
-      <MenuItem icon={<Settings className="w-4 h-4" />} label="Paramètres" onClick={() => go(`/profile/${user.username}?tab=settings`)} />
-      {canJoinClass && (
-        <MenuItem icon={<UserPlus className="w-4 h-4" />} label="Rejoindre une classe" onClick={() => go('/classrooms')} />
-      )}
-      {user.is_superuser && (
-        <MenuItem icon={<Gauge className="w-4 h-4" />} label="Pilotage" onClick={() => go('/pilotage')} />
-      )}
-      {user.is_superuser && (
-        <MenuItem icon={<Trophy className="w-4 h-4" />} label="Admin concours" onClick={() => go('/concours/admin')} />
-      )}
-      <div style={{ height: 1, background: '#faf9f7', margin: '4px 0' }} />
-      <MenuItem icon={<LogOut className="w-4 h-4" />} label="Se déconnecter" onClick={handleLogout} danger />
-    </>
-  );
+/**
+ * Niveaux de la rubrique ouverte. Un élève qui a indiqué sa classe ne voit que son niveau (et celui qu'il
+ * consulte) ; les autres voient tous les niveaux. « Tous les niveaux » mène aux dossiers de niveaux
+ * (sans ?niveau=tous, l'élève serait renvoyé dans son niveau : pages/content/ContentFolders).
+ */
+const LevelLinks: React.FC<{
+  base: LevelBase; levels: Level[] | null; user: User | null | undefined; openLevel: string | null;
+  drawer?: boolean; onNavigate?: () => void;
+}> = ({ base, levels, user, openLevel, drawer, onNavigate }) => {
+  const location = useLocation();
+  if (!levels) return null;
+  const mine = studentLevelSlug(user);
+  const onBase = location.pathname === base;
+  const levelParam = new URLSearchParams(location.search).get('classLevels');
+  const filtered = mine ? levels.filter((l) => l.slug === mine || l.slug === openLevel) : levels;
+  const shown = filtered.length ? filtered : levels;
 
   return (
-    <div className="relative" ref={accountRef}>
-      {/* Dans le tiroir du téléphone, le menu s'ouvre sur place (il reste dans la fenêtre du tiroir). */}
-      {inline && menuOpen && (
-        <div style={{ marginBottom: 8, padding: 6, borderRadius: 12, border: '1px solid #e7e3dc', background: '#fff' }}>
-          {items}
-        </div>
-      )}
-      <button
-        onClick={() => setMenuOpen(v => !v)}
-        aria-expanded={menuOpen}
-        aria-label={`Compte de ${user.username}`}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-          padding: 8, borderRadius: 12, border: '1px solid #e7e3dc',
-          background: menuOpen ? '#faf9f7' : '#fff', cursor: 'pointer',
-          transition: 'background .15s',
-        }}
-      >
-        {avatar}
-        <div className="flex-1 min-w-0 text-left">
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: '#1a1a1a' }} className="truncate">{user.username}</div>
-          <div style={{ fontSize: 10.5, color: '#6b6862' }} className="truncate">{user.email}</div>
-        </div>
-      </button>
+    <ul className="mb-2 ml-[21px] mt-1 flex flex-col gap-0.5 border-l border-line pl-2.5" aria-label="Niveaux">
+      {shown.map((l) => {
+        // Page du niveau (/exercises/niveau/2eme-bac-sm) : une vraie adresse, que Google indexe.
+        const to = l.slug ? `${base}/niveau/${l.slug}` : `${base}?classLevels=${l.id}`;
+        const here = (!!l.slug && location.pathname.startsWith(`${base}/niveau/${l.slug}`)) || (onBase && levelParam === l.id);
+        return (
+          <SubLink key={l.id} to={to} onClick={onNavigate} drawer={drawer}
+            active={here || (!!l.slug && l.slug === openLevel)} current={here}
+            label={mine && l.slug === mine && shown.length > 1 ? `${l.name} · mon niveau` : l.name} />
+        );
+      })}
+      <SubLink to={`${base}?niveau=tous`} label="Tous les niveaux" onClick={onNavigate} drawer={drawer} muted
+        active={onBase && !levelParam} current={onBase && !levelParam} />
+    </ul>
+  );
+};
 
-      {!inline && (
-        <FloatingPanel anchorRef={accountRef} open={menuOpen} onClose={() => setMenuOpen(false)} placement="top-start"
-          offset={8} matchWidth
-          style={{
-            background: '#fff', borderRadius: 12, border: '1px solid #e7e3dc',
-            boxShadow: '0 14px 40px rgba(20,18,16,.18)', padding: 6,
-            animation: 'fadeUp .18s ease',
-          }}
-        >
-          {items}
-        </FloatingPanel>
+const SubLink: React.FC<{
+  to: string; label: string; onClick?: () => void; muted?: boolean; active?: boolean; current?: boolean; drawer?: boolean;
+}> = ({ to, label, onClick, muted, active, current, drawer }) => (
+  <li className="relative">
+    {active && <span aria-hidden className="absolute -left-[11.5px] top-2 bottom-2 w-[2px] rounded-full bg-brand" />}
+    <Link
+      to={to}
+      onClick={onClick}
+      aria-current={current ? 'page' : undefined}
+      className={cx(
+        'flex items-center rounded-lg px-2.5 transition-colors',
+        drawer ? 'min-h-10 text-[14px]' : 'min-h-9 text-[13px]',
+        active ? 'font-semibold text-brand-hover' : cx(muted ? 'text-ink-faint' : 'text-ink-soft', 'hover:bg-[#f7f6f3] hover:text-ink'),
       )}
+    >
+      <span className="truncate">{label}</span>
+    </Link>
+  </li>
+);
+
+/* ────── Compte ────── */
+
+/** Photo du membre, ou son initiale (l'image par défaut n'existe pas). */
+const Avatar: React.FC<{ user: User; size?: number }> = ({ user, size = 32 }) => {
+  const [broken, setBroken] = useState(false);
+  const src = user.profile?.avatar;
+  return src && !broken ? (
+    <img src={src} alt="" onError={() => setBroken(true)} className="flex-shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+  ) : (
+    <span
+      aria-hidden
+      className="inline-flex flex-shrink-0 items-center justify-center rounded-full bg-gold-soft font-semibold uppercase text-gold-strong ring-1 ring-gold-line"
+      style={{ width: size, height: size, fontSize: size * 0.42 }}
+    >
+      {user.username?.[0] ?? '?'}
+    </span>
+  );
+};
+
+/** Sous le pseudo : le niveau de l'élève, ou le rôle. */
+const accountHint = (user: User) => {
+  if (user.is_superuser) return 'Administrateur';
+  if (user.profile?.user_type === 'teacher') return 'Professeur';
+  const p = user.profile;
+  const level = p?.class_level_name || (p?.class_level && typeof p.class_level === 'object' ? p.class_level.name : null);
+  return level || 'Mon compte';
+};
+
+interface AccountEntry { key: string; icon: IconType; label: string; to?: string; onClick?: () => void; danger?: boolean }
+
+/** Entrées du compte : profil et réglages (la progression et les révisions sont dans « Mon suivi »). */
+function useAccountEntries(canJoinClass: boolean | undefined, onDone?: () => void): AccountEntry[] {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  if (!user) return [];
+  const handleLogout = async () => {
+    try { await logout(); onDone?.(); navigate('/'); } catch (err) { console.error('Logout failed:', err); }
+  };
+  return [
+    { key: 'profil', icon: UserIcon, label: 'Mon profil', to: `/profile/${user.username}` },
+    { key: 'reglages', icon: Settings, label: 'Paramètres', to: `/profile/${user.username}?tab=settings` },
+    ...(canJoinClass ? [{ key: 'classe', icon: UserPlus, label: 'Rejoindre une classe', to: '/classrooms' }] : []),
+    ...(user.is_superuser ? [
+      { key: 'pilotage', icon: Gauge, label: 'Pilotage', to: '/pilotage' },
+      { key: 'concours', icon: Trophy, label: 'Admin concours', to: '/concours/admin' },
+    ] : []),
+    { key: 'sortie', icon: LogOut, label: 'Se déconnecter', onClick: handleLogout, danger: true },
+  ];
+}
+
+const entryClass = (danger?: boolean, big?: boolean) => cx(
+  'flex w-full items-center gap-3 rounded-xl px-3 text-left font-medium transition-colors',
+  big ? 'min-h-11 text-[15px]' : 'min-h-10 text-[13.5px]',
+  danger ? 'text-[#a23b34] hover:bg-[#fbecea]' : 'text-ink-soft hover:bg-[#f7f6f3] hover:text-ink',
+);
+
+const EntryRow: React.FC<{ entry: AccountEntry; big?: boolean; onNavigate?: () => void; role?: string }> = ({ entry, big, onNavigate, role }) => {
+  const Icon = entry.icon;
+  const icon = <Icon className={cx('h-[18px] w-[18px] flex-shrink-0', entry.danger ? '' : 'text-ink-faint')} />;
+  return entry.to ? (
+    <Link to={entry.to} onClick={onNavigate} role={role} className={entryClass(entry.danger, big)}>{icon}{entry.label}</Link>
+  ) : (
+    <button type="button" onClick={entry.onClick} role={role} className={entryClass(entry.danger, big)}>{icon}{entry.label}</button>
+  );
+};
+
+/** Visiteur : se connecter / s'inscrire. */
+const GuestButtons: React.FC<{ collapsed?: boolean; big?: boolean }> = ({ collapsed, big }) => {
+  const openSignup = useOpenSignup('sidebar');
+  if (collapsed) {
+    return (
+      <button type="button" onClick={() => openSignup('login')} aria-label="Connexion" title="Connexion" className={cx(iconBtn, 'mx-auto flex h-11 w-11')}>
+        <LogIn className="h-[18px] w-[18px]" />
+      </button>
+    );
+  }
+  const h = big ? 'min-h-11 text-[14px]' : 'min-h-10';
+  return (
+    <div className="flex flex-col gap-2">
+      <button type="button" className={cx('fd-btn-primary justify-center', h)} onClick={() => openSignup('signup')}>
+        S’inscrire
+      </button>
+      <button type="button" className={cx('fd-btn-ghost justify-center', h)} onClick={() => openSignup('login')}>
+        Connexion
+      </button>
     </div>
   );
 };
 
-const MenuItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }> = ({
-  icon, label, onClick, danger,
-}) => (
-  <button
-    onClick={onClick}
-    style={{
-      display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 38,
-      padding: '8px 10px', borderRadius: 9, border: 'none',
-      background: 'transparent', color: danger ? '#b91c1c' : '#33302b',
-      fontSize: 12.5, fontWeight: 500, fontFamily: 'DM Sans', cursor: 'pointer', textAlign: 'left',
-    }}
-    onMouseEnter={(e) => (e.currentTarget.style.background = danger ? '#fef2f2' : '#f7f6f3')}
-    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-  >
-    {icon}{label}
-  </button>
-);
+/** Bas de la barre latérale : le membre (photo, pseudo, niveau) ; un clic ouvre son menu au-dessus. */
+const RailAccount: React.FC<{ collapsed: boolean; canJoinClass?: boolean }> = ({ collapsed, canJoinClass }) => {
+  const { isAuthenticated, user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const entries = useAccountEntries(canJoinClass, () => setOpen(false));
 
-const iconBtnStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: 34, height: 34, borderRadius: 9, border: '1px solid #e7e3dc',
-  background: '#fff', color: '#33302b', cursor: 'pointer',
+  useEffect(() => { setOpen(false); }, [location.pathname, location.search]);
+
+  if (!isAuthenticated || !user) return <GuestButtons collapsed={collapsed} />;
+
+  return (
+    <div ref={anchorRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Compte de ${user.username}`}
+        title={collapsed ? user.username : undefined}
+        className={cx(
+          'flex items-center rounded-xl transition-colors hover:bg-[#f7f6f3]',
+          open && 'bg-[#f7f6f3]',
+          collapsed ? 'mx-auto h-11 w-11 justify-center' : 'w-full gap-3 px-2 py-2 text-left',
+        )}
+      >
+        <Avatar user={user} size={collapsed ? 30 : 34} />
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13.5px] font-semibold text-ink">{user.username}</span>
+              <span className="mt-0.5 block truncate text-[12px] text-ink-faint">{accountHint(user)}</span>
+            </span>
+            <ChevronsUpDown className="h-4 w-4 flex-shrink-0 text-ink-faint" />
+          </>
+        )}
+      </button>
+
+      <FloatingPanel
+        anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} placement="top-start" offset={8}
+        role="menu"
+        className="w-[232px] rounded-2xl border border-line bg-white p-1.5 shadow-[0_14px_40px_rgba(20,18,16,.16)]"
+      >
+        <div className="px-3 pb-2 pt-1.5">
+          <p className="truncate text-[13px] font-semibold text-ink">{user.username}</p>
+          {user.email && <p className="truncate text-[12px] text-ink-faint">{user.email}</p>}
+        </div>
+        <div className="flex flex-col gap-0.5 border-t border-[#f2f1ee] pt-1.5">
+          {entries.map((e) => (
+            <React.Fragment key={e.key}>
+              {e.danger && <div className="my-1 h-px bg-[#f2f1ee]" />}
+              <EntryRow entry={e} role="menuitem" onNavigate={() => setOpen(false)} />
+            </React.Fragment>
+          ))}
+        </div>
+      </FloatingPanel>
+    </div>
+  );
+};
+
+/** Tiroir du téléphone : le compte en clair, en fin de liste. */
+const DrawerAccount: React.FC<{ onNavigate?: () => void; canJoinClass?: boolean }> = ({ onNavigate, canJoinClass }) => {
+  const { isAuthenticated, user } = useAuth();
+  const entries = useAccountEntries(canJoinClass, onNavigate);
+  const id = useId();
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div data-tour="nav-compte" className="mt-6 border-t border-line px-1 pt-5">
+        <p className="mb-3 px-2 text-[13px] leading-snug text-ink-faint">Crée ton compte pour garder ta progression et tes révisions.</p>
+        <GuestButtons big />
+      </div>
+    );
+  }
+
+  const rest = entries.filter((e) => e.key !== 'profil');
+  return (
+    <div data-tour="nav-compte" className="mt-6 border-t border-line pt-4">
+      <p id={id} className="px-3 pb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">Mon compte</p>
+      <ul className="flex flex-col gap-0.5" aria-labelledby={id}>
+        <li>
+          <Link to={`/profile/${user.username}`} onClick={onNavigate} className="flex min-h-12 items-center gap-3 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-[#f7f6f3]">
+            <Avatar user={user} size={30} />
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[15px] font-medium text-ink">Mon profil</span>
+              <span className="block truncate text-[12px] text-ink-faint">{user.username} · {accountHint(user)}</span>
+            </span>
+          </Link>
+        </li>
+        {rest.map((e) => (
+          <li key={e.key}><EntryRow entry={e} big onNavigate={onNavigate} /></li>
+        ))}
+      </ul>
+    </div>
+  );
 };

@@ -146,7 +146,8 @@ function decorateCallouts(html: string): string {
       if (m) {
         const rest = title.slice(m[0].length).trim();
         if (!rest || /^[\dIVX]+[.)]?$/.test(rest)) kind = title;
-        else { kind = title.slice(0, m[0].length); name = rest; }
+        // « Méthode : étudier… » → étiquette « Méthode », nom « étudier… » (sans le deux-points de tête).
+        else { kind = title.slice(0, m[0].length); name = rest.replace(/^[\s:–—-]+/, ''); }
       } else {
         name = title;
       }

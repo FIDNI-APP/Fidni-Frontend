@@ -49,5 +49,12 @@ export const SECTION_TEXT: Record<ContentKind, {
 
 export const plural = (n: number, [one, many]: [string, string]) => `${n.toLocaleString('fr-FR')} ${n > 1 ? many : one}`;
 
-/** Paramètres d'adresse qui demandent la liste filtrée (anciens liens, recherche) plutôt que les dossiers. */
-export const hasListParams = (search: string) => [...new URLSearchParams(search).keys()].some((k) => k !== 'niveau');
+/** Paramètres que la liste lit (ContentList : getInitialFilters, tri, dossier « Sans chapitre »). Les autres
+ *  (fbclid, utm_*, gclid… ajoutés par les réseaux sociaux et la publicité) n'empêchent pas les dossiers. */
+export const LIST_KEYS = new Set([
+  'classLevels', 'subjects', 'subfields', 'chapters', 'theorems', 'difficulties', 'showViewed', 'hideViewed',
+  'showCompleted', 'showFailed', 'todo', 'isNationalExam', 'dateStart', 'dateEnd', 'sort', 'sansChapitre',
+]);
+
+/** L'adresse demande-t-elle la liste filtrée (anciens liens, « S'entraîner », recherche) plutôt que les dossiers ? */
+export const hasListParams = (search: string) => [...new URLSearchParams(search).keys()].some((k) => LIST_KEYS.has(k));

@@ -42,7 +42,7 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   fontFamily: 'DM Sans',
   color: '#1a1a1a',
-  background: '#f9f8ff',
+  background: '#faf9f7',
   outline: 'none',
 };
 
@@ -257,7 +257,7 @@ export function MultiChapterPicker({
     <div
       className="flex flex-wrap gap-1.5"
       style={{
-        background: '#f9f8ff', border: '1.5px solid #e7e3dc',
+        background: '#faf9f7', border: '1.5px solid #e7e3dc',
         borderRadius: 10, padding: 10, maxHeight: 200, overflowY: 'auto',
       }}
     >
