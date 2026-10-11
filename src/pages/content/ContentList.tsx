@@ -221,7 +221,11 @@ export const ContentList: React.FC<ContentListProps> = ({
   // Dossier d'une année du Bac national : la liste de l'année (le filtre « Année du Bac » disparaît).
   const yearFolder = isNationalSection && nationalYear ? nationalYear : null;
   const yearLabel = yearFolder === 'aucune' ? 'Année non précisée' : `Bac ${yearFolder}`;
-  const config = CONTENT_TYPE_CONFIG[contentType];
+  const baseConfig = CONTENT_TYPE_CONFIG[contentType];
+  // Examens : « devoirs » dans la rubrique Devoirs (DS), « sujets » au Bac national (mêmes mots que les dossiers).
+  const config = contentType !== 'exam' ? baseConfig : isNationalSection
+    ? { ...baseConfig, emptyMessage: 'Aucun sujet trouvé', noun: ['sujet', 'sujets', 'de sujet'] as [string, string, string] }
+    : { ...baseConfig, emptyMessage: 'Aucun devoir trouvé', noun: ['devoir', 'devoirs', 'de devoir'] as [string, string, string] };
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
@@ -553,7 +557,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   const scrollToList = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
-    // Sous la barre du haut (60 px) et la barre de filtres collante du téléphone.
+    // Sous la barre du haut (60 px) ; téléphone : on laisse voir le bas de la barre de filtres (onglets du statut).
     const top = el.getBoundingClientRect().top + window.scrollY - (phone ? 150 : 80);
     if (window.scrollY > top) window.scrollTo({ top: Math.max(0, top) });
   }, [phone]);
@@ -942,7 +946,8 @@ export const ContentList: React.FC<ContentListProps> = ({
     // en arrivant par « S'entraîner », ni de « Retirer … »).
     const nothingHere = !!hub && hub.count === 0;
     const filterChips = nothingHere ? [] : chips;
-    const onlyTodo = filterChips.length === 1 && filterChips[0].key === 'todo';
+    const only = filterChips.length === 1 ? filterChips[0].key : null;
+    const onlyTodo = only === 'todo';
     let title: string;
     let text: string;
     let icon: React.ComponentType<{ className?: string }> = config.icon;
@@ -953,13 +958,25 @@ export const ContentList: React.FC<ContentListProps> = ({
       text = `Tu as réussi tous les ${many} de cette liste. Choisis « Tout » pour les revoir.`;
       icon = Check;
       tone = 'brand';
+    } else if (only === 'showFailed') {
+      title = 'Rien à revoir ici';
+      text = `Aucun ${one} marqué « À revoir » dans cette liste. Continue comme ça !`;
+      icon = Check;
+      tone = 'brand';
+    } else if (only === 'showCompleted') {
+      title = 'Rien de réussi ici pour l’instant';
+      text = `Quand tu marques un ${one} « Réussi », il apparaît ici.`;
+      icon = Check;
     } else if (filterChips.length > 0) {
       title = config.emptyMessage;
       text = 'Aucun résultat avec ces filtres : retire-en un.';
       icon = SearchX;
     } else if (hub?.chapter) {
       title = `Pas encore ${ofNoun} sur ce chapitre`;
-      text = 'Ça arrive bientôt. En attendant, regarde le cours ou les chapitres voisins.';
+      const hasNeighbours = hub.chapters.some((c) => c.id !== hub.chapter!.id && c.count > 0);
+      text = hub.related.length > 0
+        ? `Ça arrive bientôt. En attendant, ${hub.related.some((r) => r.section === 'lessons') ? 'lis le cours' : 'regarde les autres rubriques'}${hasNeighbours ? ' ou un chapitre voisin' : ''}.`
+        : hasNeighbours ? 'Ça arrive bientôt. En attendant, essaie un chapitre voisin.' : 'Ça arrive bientôt.';
       icon = FolderOpen;
     } else if (hub) {
       title = `Pas encore ${ofNoun} pour ce niveau`;
@@ -978,9 +995,9 @@ export const ContentList: React.FC<ContentListProps> = ({
       text = 'Les premiers contenus arrivent bientôt.';
     }
 
-    if (onlyTodo) {
+    if (only === 'todo' || only === 'showFailed' || only === 'showCompleted') {
       actions = (
-        <button type="button" onClick={() => handleFilterChange(withoutChip(filters, 'todo'))} className="fd-btn-primary min-h-10">
+        <button type="button" onClick={() => handleFilterChange(withoutChip(filters, only))} className="fd-btn-primary min-h-10">
           Tout afficher
         </button>
       );
@@ -1077,7 +1094,6 @@ export const ContentList: React.FC<ContentListProps> = ({
         <> · <b className="font-semibold text-brand-hover">{mine.success}</b> {contentType === 'lesson' ? (mine.success > 1 ? 'lues' : 'lue') : (mine.success > 1 ? 'réussis' : 'réussi')}</>
       )}
       {mine && mine.review > 0 && <> · <b className="font-semibold text-gold-strong">{mine.review}</b> à revoir</>}
-      {mine && mine.success + mine.review === 0 && contentType !== 'lesson' && <> · rien de fait pour l’instant</>}
     </p>
   ) : null;
 
@@ -1088,7 +1104,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       {canPublish && (
         <button onClick={handleNewContentClick} data-tour="liste-creer" className="fd-btn-ghost min-h-10" aria-label={config.createLabel}>
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">{config.createLabel}</span>
+          <span>{config.createLabel}</span>
         </button>
       )}
     </>
@@ -1118,7 +1134,8 @@ export const ContentList: React.FC<ContentListProps> = ({
         actions={headerActions}
       />
 
-      <HorizontalFilterBar
+      {/* Dossier vide : rien à filtrer ni à trier. */}
+      {!(hub && hub.count === 0) && <HorizontalFilterBar
         contentType={contentType}
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -1132,7 +1149,7 @@ export const ContentList: React.FC<ContentListProps> = ({
         resultLoading={isLoading}
         onChipsChange={setChips}
         trailing={<div className="hidden sm:block">{viewToggle}</div>}
-      />
+      />}
 
       <div ref={listRef}>
         {/* « Pour toi » : rattraper d'un clic ce qu'il a ouvert sans dire s'il l'a réussi (sur la page d'un
@@ -1157,6 +1174,8 @@ export const ContentList: React.FC<ContentListProps> = ({
                         first={i === 0}
                         showSubject={showSubject}
                         levelSlug={hub?.level.slug}
+                        hideLevel={filters.classLevels.length === 1}
+                        hideNational={!!yearFolder}
                         onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
                         onDelete={handleDeleteItem}
                       />

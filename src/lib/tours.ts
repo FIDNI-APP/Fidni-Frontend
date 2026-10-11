@@ -114,10 +114,11 @@ export const TOURS: Tour[] = [
     id: 'liste',
     match: /^\/(exercises|exams|lessons)(\/nationaux(\/[^/]+)?|\/niveau\/[^/]+(\/[^/]+)?)?\/?$/,
     requires: 'liste-filtres',
-    version: 2, // « Publier » réservé aux profs, nouveaux mots du statut et du menu
+    version: 3, // cartes et barre de filtres allégées (11/10/2026) : statut en onglets visibles
     autoSteps: ['liste-filtres', 'liste-tri', 'liste-ouvrir'],
     steps: [
-      { target: 'liste-filtres', title: 'Filtrer', body: 'Difficulté, statut (à faire, à revoir, réussis), théorème : ne garde que ce qui t’intéresse dans ce dossier.' },
+      { target: 'liste-statut', title: 'Où tu en es', body: 'Tout, à faire, à revoir ou réussis : un toucher et la liste ne garde que ceux-là.' },
+      { target: 'liste-filtres', title: 'Filtrer', body: 'Difficulté, théorème (et niveau ou chapitre hors d’un dossier) : ne garde que ce qui t’intéresse.' },
       { target: 'liste-tri', title: 'Trier', body: '« Pour toi » met en tête ce qui te fera progresser. Tu peux aussi trier du plus facile au plus difficile, ou par nouveauté.' },
       { target: 'liste-vue', title: 'Deux affichages', body: 'Cartes : un aperçu de chaque contenu (le début de l’énoncé, les exercices d’un sujet, le sommaire d’une leçon). Énoncés : le texte complet, avec chrono et auto-évaluation.' },
       { target: 'liste-chrono', title: 'Chronomètre', body: 'Lance-le avant de commencer, puis enregistre ton temps pour suivre tes progrès.' },

@@ -434,6 +434,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   const quickStatus = isAuthenticated && contentType !== 'lesson';
   // Étiquettes sous la barre : pas celles du statut quand les onglets le montrent déjà.
   const shownChips = quickStatus ? chips.filter((c) => !(STATUS_KEYS as readonly string[]).includes(c.key)) : chips;
+  // Pastille de « Filtres » : ce qui se choisit dans le panneau (le statut a ses onglets).
+  const panelCount = shownChips.length;
 
   const [the, many] = NOUN[contentType];
   const seeLabel = resultLoading || resultCount == null ? 'Voir les résultats'
@@ -445,7 +447,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         {/* Le statut de l'élève, en onglets (choix unique). */}
         {quickStatus && (
-          <div role="radiogroup" aria-label="Statut"
+          <div role="radiogroup" aria-label="Statut" data-tour="liste-statut"
             className="grid grid-cols-4 gap-1 rounded-2xl border border-line bg-white p-1 sm:inline-flex sm:grid-cols-none">
             {STATUS_OPTIONS.map((o) => {
               const on = status === o.id;
@@ -480,9 +482,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
             >
               <SlidersHorizontal className="h-4 w-4" />
               <span>Filtres</span>
-              {activeFilterCount > 0 && (
+              {panelCount > 0 && (
                 <span className="fd-nums inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] font-bold text-white">
-                  {activeFilterCount}
+                  {panelCount}
                 </span>
               )}
               <ChevronDown className={`hidden h-4 w-4 transition-transform duration-200 sm:block ${isPanelOpen ? 'rotate-180' : ''}`} />
@@ -559,7 +561,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 <span className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[#e7e3dc]" aria-hidden />
                 <div className="flex items-center justify-between h-12 pl-4 pr-2 border-b border-[#f0ede8]">
                   <h2 id="filtres-titre" className="text-[16px] font-semibold text-ink">
-                    Filtres{activeFilterCount > 0 ? <span className="ml-1.5 text-ink-faint font-medium">({activeFilterCount})</span> : null}
+                    Filtres{panelCount > 0 ? <span className="ml-1.5 text-ink-faint font-medium">({panelCount})</span> : null}
                   </h2>
                   <button type="button" onClick={() => setIsPanelOpen(false)} aria-label="Fermer"
                     className="inline-flex w-10 h-10 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">

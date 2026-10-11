@@ -11,6 +11,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ContentList } from './ContentList';
 import { ContentFolders } from './ContentFolders';
 import { NotFound } from '@/pages/NotFound';
+import { Page, CardsSkeleton } from '@/components/space/Page';
+import { FolderSkeleton } from '@/components/content/folders/FolderGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHub, type HubInfo } from '@/lib/api/hubApi';
 import { SECTION_OF, hasListParams, type ContentKind } from './sections';
@@ -20,10 +22,16 @@ import { SECTION_OF, hasListParams, type ContentKind } from './sections';
 const hubCache = new Map<string, HubInfo>();
 const HUB_CACHE_MAX = 20;
 
-const Loading: React.FC = () => (
-  <div className="flex items-center justify-center py-24" role="status" aria-label="Chargement de la page">
-    <div className="h-6 w-6 rounded-full border-2 border-line border-t-brand animate-spin" />
-  </div>
+/** Pendant le chargement : la forme de la page (en-tête, dossiers ou cartes), pas une roue au milieu du vide. */
+const Loading: React.FC<{ folders: boolean }> = ({ folders }) => (
+  <Page width="wide">
+    <div className="mb-5 animate-pulse sm:mb-7" role="status" aria-label="Chargement de la page">
+      <div className="h-4 w-40 rounded bg-[#efece6]" />
+      <div className="mt-4 h-9 w-2/3 max-w-md rounded-lg bg-[#efece6]" />
+      <div className="mt-3 h-3.5 w-48 rounded bg-[#f2f1ee]" />
+    </div>
+    {folders ? <FolderSkeleton n={6} /> : <CardsSkeleton n={4} className="lg:grid-cols-2" />}
+  </Page>
 );
 
 export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType }) => {
@@ -69,7 +77,7 @@ export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType
   // trois rubriques : /exercises/niveau/… → /lessons/niveau/… garderait sinon la page des exercices).
   const current = hub && hub.section === section && hub.level.slug === level
     && (hub.chapter?.slug ?? undefined) === (chapter || undefined) ? hub : null;
-  if (!current) return <Loading />;
+  if (!current) return <Loading folders={folders} />;
   if (folders) {
     return <ContentFolders key={current.url} view="chapters" contentType={contentType} hub={current}
       onProgress={() => setReload((n) => n + 1)} />;

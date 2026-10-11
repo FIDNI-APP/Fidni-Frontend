@@ -28,8 +28,6 @@ import { isModerator } from '@/lib/features';
 import { trackAction, trackHubChoice } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, SECTION_OF, SECTION_TEXT, plural, type ContentKind } from './sections';
 
-const SUBJECT = 'Mathématiques';
-
 /** Retour (« Précédent ») sur une page de dossiers : la même hauteur qu'au départ (comme ContentList). */
 function useScrollMemory(ready: boolean) {
   const { pathname, search } = useLocation();
@@ -63,7 +61,7 @@ const CreateButton: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   const t = SECTION_TEXT[kind];
   return (
     <Link to={`${t.basePath}/new`} className="fd-btn-ghost min-h-10 flex-shrink-0" aria-label={t.createLabel}>
-      <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t.createLabel}</span>
+      <Plus className="h-4 w-4" /> <span>{t.createLabel}</span>
     </Link>
   );
 };
@@ -96,7 +94,6 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   // Élève qui a indiqué sa classe : directement les chapitres de son niveau (il remonte d'un cran pour les autres).
   if (redirect) return <Navigate to={redirect} replace state={{ auto: true }} />;
 
-  const subject = data?.subject || SUBJECT;
   const groups: FolderGroup[] = data ? [{
     title: null,
     items: data.levels.map((lv) => ({
@@ -115,8 +112,8 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   return (
     <Page width="wide">
       <SEO title={LIST_SEO[kind].title} description={LIST_SEO[kind].description} canonicalUrl={t.basePath} />
-      <FolderHeader title={t.title}
-        summary={<p>{t.intro}{data ? <span className="fd-nums"> {subject} : {plural(total, t.noun)} dans {plural(data.levels.length, ['niveau', 'niveaux'])}.</span> : null}</p>}
+      <FolderHeader title={t.title} count={data ? total : null}
+        summary={<p>{t.intro}</p>}
         actions={<CreateButton kind={kind} />} />
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data || (authLoading && !allLevels) ? <FolderSkeleton n={4} />
@@ -164,10 +161,10 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
   const section = SECTION_OF[kind];
   const location = useLocation();
   const navigationType = useNavigationType();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const canCreate = isModerator(user) || user?.profile?.user_type === 'teacher';
   const { setCrumbs } = useBreadcrumb();
   const levelsPath = `${t.basePath}?niveau=tous`;
-  const subject = hub.subject || SUBJECT;
 
   // Barre du haut (téléphone : « ‹ Exercices » remonte aux niveaux) et entrée du menu.
   useEffect(() => {
@@ -217,13 +214,15 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
             <span className="font-medium text-ink-soft">{plural(hub.count, t.noun)}</span>
             {' '}dans {filled} chapitre{filled > 1 ? 's' : ''} sur {folders.length}
             {isAuthenticated && done > 0 && (
-              <> · <b className="font-semibold text-brand-hover">{success}</b> {success > 1 ? t.doneWord[1] : t.doneWord[0]}{kind !== 'lesson' && success !== done ? '' : ''}
-                {kind !== 'lesson' && done - success > 0 && <> dont <b className="font-semibold text-gold-strong">{done - success}</b> à revoir</>}
+              <>
+                {' · '}<b className="font-semibold text-ink-soft">{done}</b> {done > 1 ? t.doneWord[1] : t.doneWord[0]}
+                {kind !== 'lesson' && success > 0 && <> · <b className="font-semibold text-brand-hover">{success}</b> réussi{success > 1 ? 's' : ''}</>}
+                {kind !== 'lesson' && done - success > 0 && <> · <b className="font-semibold text-gold-strong">{done - success}</b> à revoir</>}
               </>
             )}
           </p>
         )}
-        actions={(hub.related.length > 0 || null) && <><RelatedLinks related={hub.related} /><CreateButton kind={kind} /></>}
+        actions={hub.related.length > 0 || canCreate ? <><RelatedLinks related={hub.related} /><CreateButton kind={kind} /></> : undefined}
       />
       {/* À évaluer : seulement ce niveau ; une évaluation met à jour les dossiers (« 3 faits »). */}
       {isAuthenticated && kind !== 'lesson' && (
@@ -280,8 +279,8 @@ const YearsView: React.FC = () => {
   return (
     <Page width="wide">
       <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux" />
-      <FolderHeader title={NATIONAL.title}
-        summary={<p>{NATIONAL.subtitle} Un dossier par année{data && data.years.length ? <span className="fd-nums"> : {plural(total, ['sujet', 'sujets'])} en tout</span> : null}.</p>}
+      <FolderHeader title={NATIONAL.title} count={data ? total : null}
+        summary={<p>{NATIONAL.subtitle} Un dossier par année.</p>}
         actions={<CreateButton kind="exam" />} />
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data ? <FolderSkeleton n={6} />

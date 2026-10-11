@@ -1,6 +1,7 @@
 // Étiquette « Nouveau » des cartes de contenu (demande de Natsu, 05/10/2026) : posée à cheval sur le bord
-// haut de la carte (NewBadge) ; dans les cartes de liste refaites le 11/10/2026, un point d'or et un mot (NewTag). « Nouveau pour toi » : contenu ajouté depuis moins de NEW_DAYS jours ET pas encore
-// ouvert dans ce navigateur (clé `fidni:vue:<id>` posée par la page du contenu).
+// haut de la carte (NewBadge) ; dans les cartes refaites le 11/10/2026, un point d'or et un mot (NewTag).
+// « Nouveau pour toi » : contenu ajouté depuis moins de NEW_DAYS jours ET pas encore ouvert dans ce navigateur
+// (clé `fidni:vue:<id>` posée par la page du contenu).
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 
