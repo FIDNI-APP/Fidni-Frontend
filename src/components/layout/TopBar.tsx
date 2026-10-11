@@ -6,7 +6,6 @@ import { TourHelpButton } from '@/components/tour/TourProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { NotificationBell } from './NotificationBell';
-import { revisionTab } from './nav';
 import { trackAction } from '@/lib/usage';
 
 interface TopBarProps {
@@ -24,10 +23,12 @@ const SECTION_LABELS: Record<string, string> = {
   classrooms: 'Classes',
   concours: 'Concours',
   profile: 'Profil',
-  saved: 'Favoris',
-  'revision-lists': 'Mes révisions',
-  revisions: 'Préparer un DS',
-  notebooks: 'Cahiers',
+  saved: 'Mes enregistrements',
+  enregistrements: 'Mes enregistrements',
+  reviser: 'Réviser',
+  'revision-lists': 'Réviser',
+  revisions: 'Réviser',
+  notebooks: 'Mes enregistrements',
   'skill-iq': 'Quiz par chapitre',
   settings: 'Paramètres',
   search: 'Recherche',
@@ -56,10 +57,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   const segment = parts[0] === 'exams' && parts[1] === 'nationaux' ? 'nationaux'
     : parts[0] === 'profile' && parts[1] === 'revision-lists' ? 'revision-lists'
       : (parts[0] ?? '');
-  // /revision-lists : deux onglets, deux entrées du menu (Préparer un DS / Mes révisions).
-  const sectionLabel = segment === 'revision-lists' && parts.length === 1 && revisionTab(location.search) === 'ds'
-    ? 'Préparer un DS'
-    : SECTION_LABELS[segment] ?? 'Fidni';
+  const sectionLabel = SECTION_LABELS[segment] ?? 'Fidni';
   const isHome = parts.length === 0;
   // A deeper segment (e.g. an id) means the section name should link back to
   // its listing; on the listing page itself it's the current crumb (plain).
@@ -67,8 +65,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   const hasDeeper = parts.length > (segment === 'nationaux' || parts[0] === 'profile' ? 2 : 1);
   const SECTION_PATHS: Record<string, string> = {
     nationaux: '/exams/nationaux',
-    revisions: '/revision-lists?onglet=ds',
-    'revision-lists': '/revision-lists?onglet=listes',
+    revisions: '/reviser',
+    'revision-lists': '/reviser#mes-listes',
+    notebooks: '/enregistrements?onglet=cahiers',
+    saved: '/enregistrements',
     profile: `/profile/${parts[1] ?? ''}`,
   };
   const sectionPath = SECTION_PATHS[segment] ?? `/${segment}`;
@@ -108,7 +108,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
 
   return (
     <header
-      className="sticky top-0 z-30"
+      className="sticky top-0 z-30 print:hidden"
       style={{
         height: 60,
         background: 'rgba(255,255,255,.85)',

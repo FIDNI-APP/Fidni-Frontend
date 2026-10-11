@@ -75,8 +75,8 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
         // Sa page de niveau : ses chapitres, sans repasser par les filtres.
         { to: exercisesHome(user), label: 'Exercices', icon: BookOpen, active: (p) => startsWith(p, '/exercises') },
         {
-          to: '/revision-lists', label: 'Réviser', icon: ListChecks,
-          active: (p) => startsWith(p, '/revision-lists') || startsWith(p, '/revisions') || startsWith(p, '/profile/revision-lists'),
+          to: '/reviser', label: 'Réviser', icon: ListChecks,
+          active: (p) => startsWith(p, '/reviser') || startsWith(p, '/revision-lists') || startsWith(p, '/revisions') || startsWith(p, '/profile/revision-lists'),
         },
         { to: '/progression', label: 'Progression', icon: TrendingUp, active: (p) => startsWith(p, '/progression') },
       ];

@@ -23,7 +23,7 @@ const LEVELS = [
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-ink text-white py-14 border-t border-[#33302b]">
+    <footer className="bg-ink text-white py-14 border-t border-[#33302b] print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Wordmark + description */}

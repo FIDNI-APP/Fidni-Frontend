@@ -5,7 +5,7 @@ import {
   Home, BookOpen, Route, GraduationCap, Trophy,
   User, Bookmark as BookmarkIcon, Settings, LogOut,
   X, ChevronsLeft, ChevronsRight, ChevronDown, Loader2,
-  NotebookPen, Brain, ListChecks, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
+  Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
@@ -14,7 +14,7 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
 import { canSeeParcours } from '@/lib/features';
-import { revisionTab, useHasClassroom } from './nav';
+import { useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
 
 interface NavItem {
@@ -56,24 +56,16 @@ const WORK_GROUP: NavGroup = {
   ],
 };
 
-// Suivi personnel : seulement pour un membre connecté.
+// Suivi personnel : seulement pour un membre connecté. Refonte du 11/10/2026 : quatre entrées au lieu de six,
+// regroupées par intention (Réviser = prochain DS + à refaire + listes ; Mes enregistrements = favoris + cahiers).
 const FOLLOW_GROUP: NavGroup = {
   title: 'Mon suivi',
   tour: 'nav-suivi',
   items: [
     { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
-    {
-      to: '/revision-lists?onglet=ds', label: 'Préparer un DS', icon: CalendarCheck,
-      isActive: (p, s) => under(p, '/revisions/ds') || (p === '/revision-lists' && revisionTab(s) === 'ds'),
-    },
-    {
-      to: '/revision-lists?onglet=listes', label: 'Mes révisions', icon: ListChecks,
-      isActive: (p, s) => (p === '/revision-lists' ? revisionTab(s) === 'listes'
-        : under(p, '/revision-lists') || under(p, '/profile/revision-lists')),
-    },
+    { to: '/reviser', label: 'Réviser', icon: CalendarCheck, match: ['/reviser', '/revisions', '/revision-lists', '/profile/revision-lists'] },
     { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'] },
-    { to: '/notebooks', label: 'Cahiers', icon: NotebookPen, match: ['/notebooks'] },
-    { to: '/saved', label: 'Favoris', icon: BookmarkIcon, match: ['/saved'] },
+    { to: '/enregistrements', label: 'Mes enregistrements', icon: BookmarkIcon, match: ['/enregistrements', '/saved', '/notebooks'] },
   ],
 };
 
@@ -97,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Desktop rail */}
       <aside
-        className="hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0"
+        className="hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0 print:hidden"
         style={{
           width: collapsed ? 72 : 240,
           background: '#fff',

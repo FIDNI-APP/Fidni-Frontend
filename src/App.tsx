@@ -17,6 +17,7 @@ import ConsentBanner from './components/ads/ConsentBanner';
 import { TourProvider } from '@/components/tour/TourProvider';
 import Footer from './components/layout/Footer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { Toaster } from 'react-hot-toast';
 
 // Learning paths
 
@@ -89,8 +90,10 @@ const CreatePathChapter = page(() => import('./pages/learningpaths/CreatePathCha
 const CreateLearningPath = page(() => import('./pages/learningpaths/CreateLearningPath'), 'CreateLearningPath');
 const RevisionListDetail = page(() => import('./pages/RevisionListDetail'), 'RevisionListDetail');
 const PaperExport = page(() => import('./pages/PaperExport'), 'PaperExport');
-const SavedItems = page(() => import('./pages/SavedItems'), 'SavedItems');
-const RevisionLists = page(() => import('./pages/RevisionLists'), 'RevisionLists');
+// Mes enregistrements (11/10/2026) : favoris et cahiers de cours réunis (remplace /saved et la liste de /notebooks).
+const MesEnregistrements = page(() => import('./pages/enregistrements/MesEnregistrements'), 'MesEnregistrements');
+// Réviser (11/10/2026) : prochain DS, à refaire et listes sur une seule page (remplace /revision-lists).
+const Reviser = page(() => import('./pages/reviser/Reviser'), 'Reviser');
 const TestPlanPage = page(() => import('./pages/devoirs/TestPlanPage'), 'default');
 const MockExamPage = page(() => import('./pages/devoirs/MockExamPage'), 'default');
 const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'), 'default');
@@ -153,6 +156,20 @@ const NavbarWrapper = ({ children, showNavbar = true, showFooter = true }: { chi
     );
   }
   return <AppShell showFooter={showFooter}><PageBoundary><Suspense fallback={<PageLoader />}>{children}</Suspense></PageBoundary></AppShell>;
+};
+
+// /notebooks?nb=<id> : la liseuse d'un cahier ; /notebooks seul : l'onglet Cahiers de Mes enregistrements.
+const NotebooksRoute = () => {
+  const { search } = useLocation();
+  if (!new URLSearchParams(search).get('nb')) return <Navigate to="/enregistrements?onglet=cahiers" replace />;
+  return <NavbarWrapper showFooter={false}><StudentNotebook /></NavbarWrapper>;
+};
+
+// /revision-lists?onglet=ds|listes (ancienne page Révisions) → la section correspondante de /reviser.
+const RevisionsRedirect = () => {
+  const { search } = useLocation();
+  const tab = new URLSearchParams(search).get('onglet');
+  return <Navigate to={`/reviser${tab === 'listes' ? '#mes-listes' : tab === 'ds' ? '#prochain-ds' : ''}`} replace />;
 };
 
 // Redirect helpers for legacy /structured/* routes
@@ -229,6 +246,11 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <ScrollToTopOnNavigate />
+        {/* Messages brefs (« Cahier créé », « Leçon ajoutée »…) : aucun conteneur n'était monté, ils restaient muets. */}
+        <Toaster position="bottom-center" toastOptions={{
+          duration: 3000,
+          style: { background: '#1a1a1a', color: '#fff', fontSize: '13.5px', borderRadius: '12px', padding: '10px 14px' },
+        }} containerStyle={{ bottom: 'calc(16px + var(--fd-tabbar-h, 0px))' }} />
         <LegalRedirector />
         <ConsentBanner />
         <ThemeProvider>
@@ -322,11 +344,12 @@ function App() {
                         <RevisionListDetail />
                       </NavbarWrapper>
                     } />
-                    <Route path="/saved" element={
+                    <Route path="/enregistrements" element={
                       <NavbarWrapper>
-                        <SavedItems />
+                        <MesEnregistrements />
                       </NavbarWrapper>
                     } />
+                    <Route path="/saved" element={<Navigate to="/enregistrements?onglet=favoris" replace />} />
                     <Route path="/classrooms" element={
                       <NavbarWrapper>
                         <ClassroomsPage />
@@ -371,13 +394,15 @@ function App() {
                     <Route path="/concours/editor-test" element={
                       <NavbarWrapper><EditorTestPage /></NavbarWrapper>
                     } />
-                    <Route path="/revision-lists" element={
+                    <Route path="/reviser" element={
                       <NavbarWrapper>
-                        <RevisionLists />
+                        <Reviser />
                       </NavbarWrapper>
                     } />
+                    {/* Anciennes adresses : « Préparer un DS » et « Mes révisions » sont des sections de Réviser. */}
+                    <Route path="/revision-lists" element={<RevisionsRedirect />} />
+                    <Route path="/revisions" element={<Navigate to="/reviser" replace />} />
                     {/* « Mon prochain DS » : plan de révision et DS blanc */}
-                    <Route path="/revisions" element={<Navigate to="/revision-lists" replace />} />
                     <Route path="/revisions/ds/:id" element={
                       <NavbarWrapper>
                         <TestPlanPage />
@@ -389,11 +414,8 @@ function App() {
                       </NavbarWrapper>
                     } />
                     {/* Mon espace — features moved out of the profile page */}
-                    <Route path="/notebooks" element={
-                      <NavbarWrapper showFooter={false}>
-                        <StudentNotebook />
-                      </NavbarWrapper>
-                    } />
+                    {/* Un cahier ouvert (?nb=<id>) : la liseuse ; sans cahier, la liste vit dans Mes enregistrements. */}
+                    <Route path="/notebooks" element={<NotebooksRoute />} />
                     <Route path="/progression" element={
                       <NavbarWrapper>
                         <ProgressionPage />
@@ -403,9 +425,7 @@ function App() {
                     <Route path="/statistiques" element={<Navigate to="/progression" replace />} />
                     <Route path="/skill-iq" element={
                       <NavbarWrapper>
-                        <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
-                          <SkillIQSection />
-                        </div>
+                        <SkillIQSection />
                       </NavbarWrapper>
                     } />
 
