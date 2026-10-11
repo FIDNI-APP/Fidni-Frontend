@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { IATab } from '@/components/pilotage/IATab';
+import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
 import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
 import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
 import { FunnelCard, type Funnel } from '@/components/pilotage/FunnelCard';
@@ -65,7 +66,7 @@ interface UsersPage { count: number; pages: number; results: UserRow[]; counts: 
 interface ActivityEvent { at: string; kind: string; username: string | null; label: string; content?: ContentRef }
 
 const PERIODS = [7, 30, 90];
-type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'visiteurs' | 'ia';
+type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'visiteurs' | 'quiz' | 'ia';
 
 /* Réponse de /api/pilotage/ remise en forme une seule fois (10/10/2026) : un champ absent, nul ou d'un autre
  * type (serveur plus ancien ou plus récent que la page) devient une valeur vide au lieu de faire planter
@@ -884,7 +885,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
 export default function Pilotage() {
   const { user, isLoading } = useAuth();
   const [params, setParams] = useSearchParams();
-  const tab = (['apercu', 'a-traiter', 'membres', 'usage', 'visiteurs', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
+  const tab = (['apercu', 'a-traiter', 'membres', 'usage', 'visiteurs', 'quiz', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
   const days = PERIODS.includes(Number(params.get('periode'))) ? Number(params.get('periode')) : 30;
   const setParam = (key: string, value: string) => setParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n; }, { replace: true });
 
@@ -929,6 +930,7 @@ export default function Pilotage() {
     { key: 'membres', label: 'Membres', badge: undefined },
     { key: 'usage', label: 'Usage' },
     { key: 'visiteurs', label: 'Visiteurs' },
+    { key: 'quiz', label: 'Quiz' },
     { key: 'ia', label: 'IA' },
   ];
 
@@ -975,6 +977,8 @@ export default function Pilotage() {
           <ErrorBoundary variant="block" label="Un membre n’arrive pas à se connecter ?" resetKey={days}><LoginDiagnostic /></ErrorBoundary>
           <ErrorBoundary variant="block" label="Membres" resetKey={days}><MembersTab days={days} /></ErrorBoundary>
         </>
+      ) : tab === 'quiz' ? (
+        <QuizAdminTab />
       ) : tab === 'ia' ? (
         <IATab />
       ) : !data ? (

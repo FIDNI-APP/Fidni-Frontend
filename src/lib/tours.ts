@@ -136,6 +136,7 @@ export const TOURS: Tour[] = [
       { target: 'liste-ouvrir', title: 'Page complète', body: (c) => c.kind === 'lesson'
         ? 'Ouvre la leçon pour la lire en entier et poser tes questions.'
         : 'Ouvre-le pour travailler : solutions question par question, chrono, discussion et statistiques.' },
+      { target: 'liste-fiche', title: 'Fiche TD', body: 'Regroupe les exercices de ton choix (glisse-les, ou « + Fiche » sur une carte) en une fiche à imprimer ; elle est rangée dans Réviser.' },
       { target: 'liste-creer', title: 'Publier', body: (c) => `Tu peux aussi partager ${un(c)} que tu as rédigé.`, when: (c) => c.isTeacher },
     ],
   },

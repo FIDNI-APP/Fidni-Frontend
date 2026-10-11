@@ -31,6 +31,7 @@ import { LessonReader } from '@/components/content/viewer/LessonReader';
 import { ReadingStyles } from '@/components/content/viewer/ReadingStyles';
 import { SchoolPicker, type SchoolValue } from '@/components/common/SchoolPicker';
 import { JsonImportModal } from '@/components/common/JsonImportModal';
+import { SharedToolbarProvider, SharedToolbarSlot } from '@/components/editor/SharedToolbar';
 import { checkStructureMath } from '@/lib/mathCheck';
 import type { ClassLevelModel, SubjectModel } from '@/types';
 
@@ -510,14 +511,17 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
         {/* ─────────────── Étape 2 : écrire */}
         {step === 1 && (
           <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <SharedToolbarProvider>
             <div className="min-w-0" data-tour="creer-blocs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[13px] text-ink-faint">Les formules s’écrivent entre <code className="rounded bg-[#f2f1ee] px-1">$…$</code> ; la barre « Encarts » ajoute définitions et théorèmes.</p>
+                <p className="text-[13px] text-ink-faint">Les formules s’écrivent entre <code className="rounded bg-[#f2f1ee] px-1">$…$</code>.</p>
                 <button type="button" onClick={() => setShowJson(true)} data-tour="creer-importer"
                   className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
                   <FileJson className="h-3.5 w-3.5" /> Importer un fichier
                 </button>
               </div>
+              {/* Une seule barre d'outils, celle du champ où est le curseur, collée en haut pendant le défilement. */}
+              <SharedToolbarSlot className="mb-3" />
               {d.type === 'lesson'
                 ? <LessonSectionsEditor sections={d.sections} onChange={(sections) => patch({ sections })} />
                 : <QuestionsEditor blocks={d.blocks} onChange={(blocks) => patch({ blocks })} isExam={d.type === 'exam'} />}
@@ -528,6 +532,7 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
               </button>
               {showPreview && <div className="mt-3 lg:hidden">{preview}</div>}
             </div>
+            </SharedToolbarProvider>
             <div className="sticky top-20 hidden max-h-[calc(100vh-7rem)] overflow-y-auto lg:block">{preview}</div>
           </div>
         )}

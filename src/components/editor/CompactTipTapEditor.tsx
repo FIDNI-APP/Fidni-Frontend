@@ -12,7 +12,8 @@
  * - Images (variant "full") : bouton, glisser-déposer ou coller ; elles partent sur S3 et le HTML
  *   garde l'URL stable (jamais de base64).
  */
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extensions';
@@ -32,6 +33,7 @@ import { MathNode, latexError, mathifyHtml, renderKatex, storedHtml, type MathAt
 import { colorOptions, mathFormulaCategories, mathSymbolGroups } from './editorConfig';
 import { CalloutExtension } from './extensions/CalloutExtension';
 import { CALLOUT_CONFIGS, CalloutType } from '@/types/callout';
+import { useSharedToolbar } from './SharedToolbar';
 
 export interface CompactTipTapEditorProps {
   content?: string;
@@ -367,6 +369,11 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   // Dernier HTML émis (ou reçu) : distinguer l'écho de notre propre saisie d'un vrai changement venu du parent.
   const lastHtml = useRef(content);
   const touched = useRef(false);
+  // Barre partagée (SharedToolbar) : ce champ y prend la place quand il reçoit le curseur.
+  const shared = useSharedToolbar();
+  const myId = useId();
+  const sharedRef = useRef(shared);
+  sharedRef.current = shared;
 
   const extensions = useMemo(() => {
     const base = [
@@ -422,7 +429,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
     content: initialContent,
     autofocus: autoFocus ? 'end' : false,
     editorProps,
-    onFocus: () => { touched.current = true; },
+    onFocus: () => { touched.current = true; sharedRef.current?.setActive(myId); },
     onUpdate: ({ editor: ed }) => {
       const html = storedHtml(ed.getHTML());
       lastHtml.current = html;
@@ -506,6 +513,9 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
     setEditing(null);
     setComposer({ latex: picked.replace(/\$/g, '').trim(), display: false });
   }, [editor]);
+
+  // Champ retiré de la page (question supprimée) : la barre partagée se vide.
+  useEffect(() => () => { if (sharedRef.current?.active === myId) sharedRef.current.setActive(null); }, [myId]);
 
   if (!editor) return null;
 
@@ -629,10 +639,15 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
     </div>
   );
 
+  const sharedMode = !!shared && !comment;
   return (
-    <div className={`fd-editor rounded-xl border border-line bg-white transition-shadow focus-within:border-[#b9d9c6] focus-within:ring-2 focus-within:ring-brand/10 ${className}`}>
-      {!comment && toolbar}
-      {!comment && composerPanel}
+    <div className={`fd-editor rounded-xl border border-line bg-white transition-shadow focus-within:border-[#b9d9c6] focus-within:ring-2 focus-within:ring-brand/10 ${className}`}
+      // Barre partagée : ce champ devient le champ actif dès qu'on y clique ou qu'on y entre au clavier.
+      onFocusCapture={sharedMode ? () => shared.setActive(myId) : undefined}
+      onPointerDownCapture={sharedMode ? () => shared.setActive(myId) : undefined}>
+      {!comment && !sharedMode && toolbar}
+      {!comment && !sharedMode && composerPanel}
+      {sharedMode && shared.active === myId && shared.slot && createPortal(<>{toolbar}{composerPanel}</>, shared.slot)}
       <EditorContent editor={editor} />
       {imageNote && (
         <p role="status" className={`flex items-center gap-1.5 border-t border-line px-3.5 py-2 text-[12.5px] ${imageNote.busy ? 'text-ink-faint' : 'text-[#a23b34]'}`}>

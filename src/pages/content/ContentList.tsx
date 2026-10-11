@@ -58,6 +58,7 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
 import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, hasListParams, plural } from './sections';
+import { FicheButton, FichePanel, FicheSlot, useFicheTD, type FicheContext } from '@/components/revision/FicheTD';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -233,6 +234,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   // Dossier « Sans chapitre » d'un niveau (contenus rangés dans aucun de ses chapitres, hubs.py `unfiled`).
   const unfiledOnly = searchParams.get('sansChapitre') === 'true';
   const { isAuthenticated, user } = useAuth();
+  const fiche = useFicheTD(user?.id); // Fiche TD en cours (voir plus bas)
   const { openModal } = useAuthModal();
   const phone = usePhone();
   // Publier : auteurs (profs) et modérateurs ; pour un élève, le bouton ne servait à rien.
@@ -1097,6 +1099,17 @@ export const ContentList: React.FC<ContentListProps> = ({
     </p>
   ) : null;
 
+  // Fiche TD : regrouper des exercices de la liste en une fiche imprimable (membres, exercices et examens).
+  const showFiche = isAuthenticated && contentType !== 'lesson';
+  const ficheContext: FicheContext = {
+    levelIds: hub ? [hub.level.id] : filters.classLevels.map(Number),
+    chapterIds: hub?.chapter ? [hub.chapter.id] : filters.chapters.map(Number),
+    subjectIds: filters.subjects.map(Number),
+    label: hub?.chapter?.name ?? null,
+  };
+  const ficheItem = (item: { id: number | string; title: string }) =>
+    ({ id: Number(item.id), title: item.title, type: contentType === 'exam' ? 'exam' as const : 'exercise' as const });
+
   const headerActions = (hub?.related.length || canPublish) ? (
     <>
       {hub && <RelatedLinks related={hub.related} />}
@@ -1168,6 +1181,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                 {items.map((item, i) => (
                   <React.Fragment key={item.id}>
                     <li className="min-w-0">
+                      <FicheSlot fiche={fiche} item={ficheItem(item)}>
                       <ContentListCard
                         content={item}
                         contentType={contentType}
@@ -1180,6 +1194,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                         onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
                         onDelete={handleDeleteItem}
                       />
+                      </FicheSlot>
                     </li>
                     {/* Visiteur : une invitation après les premières cartes, pas plus. */}
                     {!isAuthenticated && i === Math.min(3, items.length - 1) && (
@@ -1204,8 +1219,8 @@ export const ContentList: React.FC<ContentListProps> = ({
                     }]))
                     : undefined;
                   return (
+                    <FicheSlot key={item.id} fiche={fiche} item={ficheItem(item)}>
                     <StatementCard
-                      key={item.id}
                       item={item}
                       kind={contentType}
                       path={`${config.basePath}/${item.id}`}
@@ -1233,6 +1248,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                       onSolutionOpen={() => handleSolutionOpen(id)}
                       showAllSolutions={showAllSolutions}
                     />
+                    </FicheSlot>
                   );
                 })}
               </div>
@@ -1276,6 +1292,9 @@ export const ContentList: React.FC<ContentListProps> = ({
           contentLabels={labelsFromContent(items.find((it) => String(it.id) === revisionListModal.itemId))}
         />
       )}
+      {/* Fiche TD : bouton flottant à lui seul (bas droite), remplacé par le panneau quand il s'ouvre. */}
+      {showFiche && <FicheButton fiche={fiche} />}
+      {showFiche && <FichePanel fiche={fiche} context={ficheContext} />}
     </Page>
     </div>
   );
