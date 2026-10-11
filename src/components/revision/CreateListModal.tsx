@@ -94,7 +94,7 @@ export const CreateListModal: React.FC<{ open: boolean; onClose: () => void; onC
             <div className="mt-4"><RevisionLabelPicker value={labels} onChange={setLabels} /></div>
 
             {error && (
-              <p role="alert" className="mt-3 flex items-center gap-2 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-3 py-2.5 text-[13px] text-[#9c3b2e]">
+              <p role="alert" className="mt-3 flex items-center gap-2 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-3 py-2.5 text-[13px] text-[#a23b34]">
                 <AlertCircle className="h-4 w-4 shrink-0" /> {error}
               </p>
             )}

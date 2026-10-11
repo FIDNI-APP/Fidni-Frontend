@@ -227,7 +227,12 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
           <QuizList data={data} onStart={startChapter}>{data.elsewhere > 0 && other}</QuizList>
         ) : browse ? (
           <Section id="tous-les-quiz" title="Choisis un niveau"
-            hint={variant === 'no-level' ? 'Indique ton niveau dans tes réglages pour voir directement tes quiz.' : 'Les quiz prêts, niveau par niveau.'}>
+            hint={variant === 'no-level' ? (
+              <>
+                <Link to={`/profile/${encodeURIComponent(user.username)}/edit#scolarite`} className="font-semibold text-brand-hover hover:underline">Indique ton niveau</Link>
+                {' '}pour voir directement tes quiz.
+              </>
+            ) : 'Les quiz prêts, niveau par niveau.'}>
             <div data-tour="skilliq-niveaux">{other}</div>
           </Section>
         ) : (

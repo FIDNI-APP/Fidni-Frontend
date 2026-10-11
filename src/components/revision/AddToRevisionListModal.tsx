@@ -258,7 +258,7 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                       </label>
                       <div className="mt-3"><RevisionLabelPicker value={newLabels} onChange={setNewLabels} /></div>
                       {createError && (
-                        <p role="alert" className="mt-3 flex items-center gap-2 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-3 py-2.5 text-[13px] text-[#9c3b2e]">
+                        <p role="alert" className="mt-3 flex items-center gap-2 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-3 py-2.5 text-[13px] text-[#a23b34]">
                           <AlertCircle className="h-4 w-4 shrink-0" /> {createError}
                         </p>
                       )}

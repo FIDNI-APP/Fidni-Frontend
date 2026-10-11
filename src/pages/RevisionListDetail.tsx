@@ -47,7 +47,7 @@ const BACK = { to: '/reviser#mes-listes', label: 'Réviser' };
 
 const STATUS_UI: Record<'success' | 'review' | 'todo', { label: string; pill: string; dot: string }> = {
   success: { label: 'Réussi', pill: 'bg-brand-soft text-brand-hover', dot: 'border-brand bg-brand text-white' },
-  review: { label: 'À revoir', pill: 'bg-gold-soft text-[#8a6318]', dot: 'border-gold bg-gold-soft text-[#8a6318]' },
+  review: { label: 'À revoir', pill: 'bg-gold-soft text-gold-strong', dot: 'border-gold bg-gold-soft text-gold-strong' },
   todo: { label: 'Pas encore fait', pill: 'bg-[#f2f1ee] text-ink-faint', dot: 'border-line bg-white text-ink-soft hover:border-ink-faint' },
 };
 const statusKey = (s: ItemStatus | undefined) => (s === 'success' || s === 'review' ? s : 'todo');
@@ -501,7 +501,7 @@ export const RevisionListDetail: React.FC = () => {
                       return (
                         <button key={v} type="button" disabled={busy} aria-pressed={on} onClick={() => setVerdict(item.content_object, v)}
                           className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
-                            on ? (v === 'success' ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gold bg-gold-soft text-[#8a6318]')
+                            on ? (v === 'success' ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gold bg-gold-soft text-gold-strong')
                               : 'border-line bg-white text-ink-soft hover:border-ink-faint hover:text-ink'}`}>
                           <Icon className="h-4 w-4" /> {label}
                         </button>

@@ -5,15 +5,15 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, RotateCcw } from 'lucide-react';
 import type { ToRedoItem } from '@/lib/api/revisionListApi';
 import { Section, SectionLink } from '@/components/space/Page';
+import { REDO_SHOWN } from './home';
 
-const SHOWN = 3;
 const ago = (days: number | null) => (days === null ? '' : days <= 0 ? 'aujourd’hui' : days === 1 ? 'hier' : `il y a ${days} j`);
 
 export const RedoBlock: React.FC<{ items: ToRedoItem[]; count: number; className?: string }> = ({ items, count, className = '' }) => (
   <Section id="a-refaire" title="À refaire" count={count} className={className}
     action={<SectionLink to="/reviser#a-refaire">Tout voir</SectionLink>}>
     <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
-      {items.slice(0, SHOWN).map((x) => {
+      {items.slice(0, REDO_SHOWN).map((x) => {
         const why = x.failed ? 'Marqué à revoir' : `${x.weak_questions} question${x.weak_questions > 1 ? 's' : ''} à reprendre`;
         return (
           <li key={`${x.type}-${x.id}`}>

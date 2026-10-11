@@ -35,11 +35,13 @@ export const IdentityFields: React.FC<{
     <div className="flex flex-wrap items-start gap-4">
     <div>
       <span className="block text-sm font-medium text-ink-soft mb-1.5">Civilité</span>
-      <div className="inline-flex flex-wrap p-1 rounded-xl bg-[#f2f1ee]" role="radiogroup" aria-label="Civilité">
-        {([['M', 'Monsieur'], ['F', 'Madame'], ['N', 'Je préfère ne pas le dire']] as const).map(([g, label]) => (
+      {/* Trois segments égaux sur une ligne (avant : « Je préfère ne pas le dire » passait seul à la ligne au téléphone). */}
+      <div className="grid w-full max-w-md grid-cols-3 gap-1 p-1 rounded-xl bg-[#f2f1ee]" role="radiogroup" aria-label="Civilité">
+        {([['M', 'Monsieur'], ['F', 'Madame'], ['N', 'Ne pas préciser']] as const).map(([g, label]) => (
           <button key={g} type="button" role="radio" aria-checked={value.gender === g}
             onClick={() => onChange({ ...value, gender: g })}
-            className={`min-h-10 px-4 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+            title={g === 'N' ? 'Je préfère ne pas le dire' : undefined}
+            className={`min-h-10 px-2 rounded-lg text-[13px] font-medium leading-tight transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
               value.gender === g ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
             {label}
           </button>

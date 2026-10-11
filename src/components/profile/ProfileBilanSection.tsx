@@ -29,6 +29,29 @@ export interface Goal {
 
 const SHOWN = 5;
 
+/**
+ * État vide discret du profil (pas une grande illustration par section : le profil en a deux) : une carte en
+ * pointillés, une icône, une phrase et un bouton — comme « Un DS bientôt ? » sur l'accueil.
+ */
+const QuietEmpty: React.FC<{
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  text: string;
+  action: React.ReactNode;
+  tone?: 'gold' | 'ink';
+}> = ({ icon: Icon, title, text, action, tone = 'ink' }) => (
+  <div className="flex items-start gap-3.5 rounded-2xl border border-dashed border-[#d8d4cc] bg-white p-4">
+    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone === 'gold' ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`} aria-hidden>
+      <Icon className="h-5 w-5" />
+    </span>
+    <div className="min-w-0 flex-1">
+      <p className="text-[14.5px] font-semibold leading-snug text-ink">{title}</p>
+      <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">{text}</p>
+      <div className="mt-3">{action}</div>
+    </div>
+  </div>
+);
+
 const contentPath = (item: PublishedItem) =>
   `/${item.type === 'lesson' ? 'lessons' : item.type === 'exam' ? 'exams' : 'exercises'}/${item.id}`;
 
@@ -37,9 +60,9 @@ export const PublicationsList: React.FC<{ items: PublishedItem[]; isOwner: boole
   const [all, setAll] = useState(false);
   if (items.length === 0) {
     return isOwner ? (
-      <EmptyState compact icon={PenLine} tone="ink" title="Tu n’as rien publié pour l’instant"
+      <QuietEmpty icon={PenLine} title="Tu n’as rien publié pour l’instant"
         text="Proposer un exercice est un bon moyen de vérifier que tu maîtrises un chapitre."
-        action={<Link to="/exercises/new" className="fd-btn-ghost min-h-10"><Plus className="h-4 w-4" /> Proposer un exercice</Link>} />
+        action={<Link to="/exercises/new" className="fd-btn-ghost min-h-10 text-[13px]"><Plus className="h-4 w-4" /> Proposer un exercice</Link>} />
     ) : (
       <EmptyState compact icon={PenLine} tone="ink" title="Rien de publié pour l’instant"
         text="Ses exercices, leçons et examens apparaîtront ici." />
@@ -88,9 +111,9 @@ export const PublicationsList: React.FC<{ items: PublishedItem[]; isOwner: boole
 export const GoalsList: React.FC<{ goals: Goal[]; editUrl: string }> = ({ goals, editUrl }) => {
   if (goals.length === 0) {
     return (
-      <EmptyState compact icon={Target} tone="gold" title="Fixe-toi un objectif"
+      <QuietEmpty icon={Target} tone="gold" title="Fixe-toi un objectif"
         text="Note ta moyenne actuelle et celle que tu vises : tu verras le chemin qui reste."
-        action={<Link to={`${editUrl}#objectifs`} className="fd-btn-ghost min-h-10"><Plus className="h-4 w-4" /> Fixer un objectif</Link>} />
+        action={<Link to={`${editUrl}#objectifs`} className="fd-btn-ghost min-h-10 text-[13px]"><Plus className="h-4 w-4" /> Fixer un objectif</Link>} />
     );
   }
   return (

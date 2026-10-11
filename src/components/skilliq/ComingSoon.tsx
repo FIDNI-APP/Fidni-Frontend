@@ -3,7 +3,7 @@
 // le plus fragile (d'après Ma progression), et sa progression. Pas de tuiles à zéro ni de cartes « en préparation ».
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CircleDashed, Dumbbell, Hourglass, LineChart, Settings, Target } from 'lucide-react';
+import { ArrowRight, CircleDashed, Dumbbell, GraduationCap, Hourglass, LineChart, Target } from 'lucide-react';
 import { EmptyState } from '@/components/space/Page';
 import { practiceUrl } from '@/pages/progression/links';
 import { ChapterPlan } from './ChapterPlan';
@@ -46,7 +46,7 @@ export const ComingSoon: React.FC<{
             {variant === 'student' && fragile && (
               <span className="mt-4 flex justify-center">
                 <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] ring-1 ${
-                  weak ? 'bg-gold-soft text-[#8a6318] ring-gold-line' : 'bg-[#f7f6f3] text-ink-soft ring-line'}`}>
+                  weak ? 'bg-gold-soft text-gold-strong ring-gold-line' : 'bg-[#f7f6f3] text-ink-soft ring-line'}`}>
                   {weak ? <Target className="h-3.5 w-3.5 shrink-0" aria-hidden /> : <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden />}
                   <span className="truncate">{weak ? 'À renforcer' : 'Commencé'} : <b className="font-semibold">{fragile.name}</b></span>
                 </span>
@@ -64,8 +64,9 @@ export const ComingSoon: React.FC<{
             <LineChart className="h-4 w-4" aria-hidden /> Voir ma progression
           </Link>
         ) : variant === 'no-level' && username ? (
-          <Link to={`/profile/${username}?tab=settings`} className="fd-btn-ghost min-h-11 w-full justify-center text-[13px] sm:w-auto">
-            <Settings className="h-4 w-4" aria-hidden /> Indiquer mon niveau
+          // Le niveau se règle dans « Modifier mon profil », section Scolarité (pas dans les Paramètres).
+          <Link to={`/profile/${encodeURIComponent(username)}/edit#scolarite`} className="fd-btn-ghost min-h-11 w-full justify-center text-[13px] sm:w-auto">
+            <GraduationCap className="h-4 w-4" aria-hidden /> Indiquer mon niveau
           </Link>
         ) : undefined}
       />

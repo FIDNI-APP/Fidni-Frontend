@@ -50,7 +50,7 @@ function renderLatex(latex: string, displayMode: boolean): string {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    return `<code style="color:#dc2626;background:#fef2f2;padding:2px 4px;border-radius:4px;font-size:.9em;">${displayMode ? '$$' : '$'}${escaped}${displayMode ? '$$' : '$'}</code>`;
+    return `<code style="color:#a23b34;background:#fbecea;padding:2px 4px;border-radius:4px;font-size:.9em;">${displayMode ? '$$' : '$'}${escaped}${displayMode ? '$$' : '$'}</code>`;
   }
 }
 

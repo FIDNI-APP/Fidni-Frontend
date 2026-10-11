@@ -2,7 +2,8 @@
 // la liste de ses élèves, les invitations en attente et l'historique. Tutoiement, couleurs de la palette,
 // bouton « Retirer » toujours visible (avant : seulement au survol, inaccessible au doigt).
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2, RotateCcw, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Check, Loader2, RotateCcw, School, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { CardsSkeleton, EmptyState, Section } from '@/components/space/Page';
 import { deleteTeacherInvitation, getTeacherStudents, sendTeacherInvitation } from '@/lib/api';
 
@@ -161,7 +162,8 @@ const TeacherStudentsPanel: React.FC = () => {
       <Section id="eleves" title="Mes élèves" count={students?.length}>
         {students === null ? <CardsSkeleton n={2} /> : students.length === 0 ? (
           <EmptyState compact icon={Users} tone="ink" title="Pas encore d’élève"
-            text="Invite un élève avec son pseudo : dès qu’il accepte, il apparaît ici." />
+            text="Invite un élève avec son pseudo : dès qu’il accepte, il apparaît ici. Les élèves qui ont rejoint tes classes avec leur code sont dans « Mes classes »."
+            action={<Link to="/classrooms" className="fd-btn-ghost min-h-10 text-[13px]"><School className="h-4 w-4" /> Voir mes classes</Link>} />
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {students.map((s) => {

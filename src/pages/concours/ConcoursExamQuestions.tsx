@@ -28,7 +28,7 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   fontFamily: 'DM Sans',
   color: '#1a1a1a',
-  background: '#f9f8ff',
+  background: '#faf9f7',
   outline: 'none',
 };
 
@@ -137,7 +137,7 @@ const OptionsEditor = memo(function OptionsEditor({
               updateQuestion(activeIdx, { options: newOpts });
             }}
             className="fd-btn-ghost"
-            style={{ padding: 6, color: '#b91c1c', marginTop: 4 }}
+            style={{ padding: 6, color: '#a23b34', marginTop: 4 }}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -344,7 +344,7 @@ export default function ConcoursExamQuestionsPage() {
           </div>
           <div className="flex items-center gap-2">
             {savedFlash && (
-              <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✓ Enregistré</span>
+              <span style={{ fontSize: 12, color: '#1a7a4a', fontWeight: 600 }}>✓ Enregistré</span>
             )}
             <button className="fd-btn-ghost" onClick={() => setShowImport(true)}>
               <Upload className="w-4 h-4" /> Importer JSON
@@ -382,7 +382,7 @@ export default function ConcoursExamQuestionsPage() {
                 onClick={() => setActiveIdx(i)}
                 style={{
                   padding: '8px 12px', borderRadius: 8,
-                  background: i === activeIdx ? '#f2f1ee' : '#f9f8ff',
+                  background: i === activeIdx ? '#f2f1ee' : '#faf9f7',
                   border: `1px solid ${i === activeIdx ? '#b8b4ac' : '#e7e3dc'}`,
                   color: i === activeIdx ? '#000000' : '#33302b',
                   fontSize: 13, fontWeight: i === activeIdx ? 700 : 500,
@@ -416,7 +416,7 @@ export default function ConcoursExamQuestionsPage() {
                     <button onClick={() => moveQuestion(activeIdx, 1)} className="fd-btn-ghost" style={{ padding: 5 }} disabled={activeIdx === structure.questions.length - 1}>
                       <ChevronDown className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => removeQuestion(activeIdx)} className="fd-btn-ghost" style={{ padding: 5, color: '#b91c1c' }}>
+                    <button onClick={() => removeQuestion(activeIdx)} className="fd-btn-ghost" style={{ padding: 5, color: '#a23b34' }}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -493,7 +493,7 @@ export default function ConcoursExamQuestionsPage() {
                   concoursType={exam.concours_type}
                 />
 
-                {err && <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 8 }}>{err}</p>}
+                {err && <p style={{ fontSize: 12, color: '#a23b34', marginTop: 8 }}>{err}</p>}
               </div>
             )}
           </div>
@@ -788,7 +788,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
         {showPrompt && (
           <div
             style={{
-              background: '#f9f8ff', border: '1.5px solid #e7e3dc',
+              background: '#faf9f7', border: '1.5px solid #e7e3dc',
               borderRadius: 10, padding: 12, marginBottom: 12,
             }}
           >
@@ -827,7 +827,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
           style={{
             width: '100%', minHeight: 240,
             padding: '12px 14px', borderRadius: 10,
-            border: '1.5px solid #e7e3dc', background: '#f9f8ff',
+            border: '1.5px solid #e7e3dc', background: '#faf9f7',
             fontFamily: 'DM Mono', fontSize: 12, color: '#1a1a1a',
             outline: 'none', resize: 'vertical',
           }}
@@ -835,8 +835,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
 
         {err && (
           <div style={{
-            background: '#fef2f2', border: '1px solid #fecaca',
-            color: '#b91c1c', padding: '10px 12px', borderRadius: 10,
+            background: '#fbecea', border: '1px solid #f0d5d1',
+            color: '#a23b34', padding: '10px 12px', borderRadius: 10,
             fontSize: 12, marginTop: 10,
           }}>
             ✗ {err}
@@ -845,8 +845,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
 
         {warnings.length > 0 && (
           <div style={{
-            background: '#fffbeb', border: '1px solid #fde68a',
-            color: '#a16207', padding: '10px 12px', borderRadius: 10,
+            background: '#faf3e2', border: '1px solid #ecdcb4',
+            color: '#9a6e1c', padding: '10px 12px', borderRadius: 10,
             fontSize: 12, marginTop: 10,
           }}>
             <div style={{ fontWeight: 700, marginBottom: 4 }}>Avertissements :</div>
@@ -858,8 +858,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
 
         {parsed && !err && (
           <div style={{
-            background: '#ecfdf5', border: '1px solid #bbf7d0',
-            color: '#15803d', padding: '10px 12px', borderRadius: 10,
+            background: '#eaf3ed', border: '1px solid #cfe6d8',
+            color: '#15633c', padding: '10px 12px', borderRadius: 10,
             fontSize: 12, marginTop: 10,
           }}>
             ✓ JSON valide — <strong>{parsed.questions.length}</strong> question{parsed.questions.length > 1 ? 's' : ''} prête{parsed.questions.length > 1 ? 's' : ''} à importer.
@@ -892,7 +892,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                 onClick={() => setMode('replace')}
                 style={{
                   padding: '5px 12px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                  background: mode === 'replace' ? '#dc2626' : 'transparent',
+                  background: mode === 'replace' ? '#a23b34' : 'transparent',
                   color: mode === 'replace' ? '#fff' : '#6b6862',
                   fontSize: 11, fontWeight: 600,
                 }}

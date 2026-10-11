@@ -62,7 +62,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
 
         {/* Level sub-tabs */}
         <div className="flex gap-1 mb-5" style={{
-          background: '#f4f2ff', borderRadius: 11, padding: 4, width: 'fit-content',
+          background: '#f2f1ee', borderRadius: 11, padding: 4, width: 'fit-content',
         }}>
           {(['subject', 'subfield', 'chapter'] as Level[]).map(l => {
             const active = level === l;
@@ -107,11 +107,11 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                       {r.count} Q · {r.pct}%
                     </span>
                   </div>
-                  <div style={{ height: 9, borderRadius: 99, background: '#f0eefb', overflow: 'hidden' }}>
+                  <div style={{ height: 9, borderRadius: 99, background: '#f2f1ee', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', width: `${(r.pct / maxPct) * 100}%`, borderRadius: 99,
                       background: untagged
-                        ? '#c4c0e8'
+                        ? '#cfc9bf'
                         : `linear-gradient(90deg,${theme.from},${theme.to})`,
                       transition: 'width .4s ease',
                     }} />
@@ -157,17 +157,17 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
           {/* Rich text comparison */}
           {stats.comparison_html?.trim() && (
             <div className="concours-comparison-text"
-                 style={{ fontSize: 15, color: '#3f3d63', lineHeight: 1.75 }}>
+                 style={{ fontSize: 15, color: '#33302b', lineHeight: 1.75 }}>
               <ConcoursContentRenderer html={stats.comparison_html} />
             </div>
           )}
         </section>
       ) : (
         <section style={{
-          background: '#faf9f7', borderRadius: 18, border: '1px dashed #d9d4f5',
+          background: '#faf9f7', borderRadius: 18, border: '1px dashed #e7e3dc',
           padding: '32px 28px', textAlign: 'center',
         }}>
-          <Layers className="w-8 h-8 mx-auto mb-3" style={{ color: '#c4c0e8' }} />
+          <Layers className="w-8 h-8 mx-auto mb-3" style={{ color: '#cfc9bf' }} />
           <p style={{ fontSize: 14, color: '#6b6862' }}>
             L'analyse comparative de cet examen sera bientôt disponible.
           </p>

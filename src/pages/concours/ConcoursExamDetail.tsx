@@ -128,9 +128,7 @@ export default function ConcoursExamDetailPage() {
         .concours-explanation-text .katex-display { font-size: 1.06em; }
         .concours-question-card .katex-display { margin: .5em 0; }
         .opt-row { transition: background .12s, border-color .12s; }
-        .opt-row:hover { background: #f7f6f3 !important; }
-        .reveal-btn { transition: all .15s; }
-        .reveal-btn:hover { filter: brightness(.97); }
+        .opt-row:not(.is-correct):hover { background: #f7f6f3; }
       `}</style>
 
       {/* ═══════════ En-tête (refonte du 11/10/2026) : sur le papier, comme le reste de l'espace élève ═══════════ */}
@@ -206,14 +204,14 @@ export default function ConcoursExamDetailPage() {
         {/* ═════ TAB: Navigation (révision) ═════ */}
         {activeTab === 'navigation' && (
         <div className="max-w-3xl mx-auto">
-        <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 20, lineHeight: 1.5 }}>
-          📖 Mode révision — les réponses sont masquées. Réfléchis à chaque question, puis révèle le corrigé.
+        <p className="mb-5 text-[13px] leading-relaxed text-ink-faint">
+          Mode révision : les réponses sont masquées. Réfléchis à chaque question, puis révèle le corrigé.
         </p>
 
-        {/* Questions */}
+        {/* Questions (identité « encre et papier » : vert = bonne réponse, or = explication) */}
         {questions.length === 0 ? (
-          <div className="fd-card text-center" style={{ padding: 56 }}>
-            <p style={{ color: '#6b6862', fontSize: 14 }}>Aucune question disponible pour cet examen.</p>
+          <div className="fd-card px-6 py-14 text-center">
+            <p className="text-[14px] text-ink-faint">Aucune question disponible pour cet examen.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
@@ -221,47 +219,35 @@ export default function ConcoursExamDetailPage() {
               const open = !!revealed[idx];
               const correctOpt = q.options.find(o => o.key === q.correct_key);
               return (
-                <div
+                <section
                   key={q.id || idx}
-                  className="concours-question-card animate-fade-up px-4 py-5 sm:px-7 sm:py-[26px]"
-                  style={{
-                    background: '#fff', borderRadius: 18,
-                    border: '1px solid #e7e3dc',
-                    boxShadow: '0 1px 3px rgba(20,18,16,.05)',
-                  }}
+                  aria-label={`Question ${idx + 1}`}
+                  className="concours-question-card animate-fade-up rounded-2xl border border-line bg-white px-4 py-5 sm:px-7 sm:py-6"
                 >
-                  {/* Question header line */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <span style={{
-                      fontSize: 12, fontWeight: 800, fontFamily: 'DM Mono',
-                      color: theme.from, letterSpacing: '.02em',
-                    }}>
-                      QUESTION {idx + 1}
+                  {/* En-tête : numéro, points, « Révélée » */}
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="fd-nums text-[11.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
+                      Question {idx + 1}
                     </span>
-                    <span style={{ flex: 1, height: 1, background: '#f0eefb' }} />
+                    <span className="h-px flex-1 bg-[#efece6]" aria-hidden />
                     {q.points && (
-                      <span style={{ fontSize: 11, color: '#6b6862', fontFamily: 'DM Mono', fontWeight: 600 }}>
+                      <span className="fd-nums text-[11.5px] font-semibold text-ink-faint">
                         {q.points} pt{q.points > 1 ? 's' : ''}
                       </span>
                     )}
                     {open && (
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        fontSize: 11, fontWeight: 700, color: '#16a34a',
-                        background: '#ecfdf5', padding: '2px 9px', borderRadius: 99,
-                      }}>
-                        <Check className="w-3 h-3" /> Révélée
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-hover">
+                        <Check className="h-3 w-3" aria-hidden /> Révélée
                       </span>
                     )}
                   </div>
 
-                  {/* Statement */}
-                  <div className="concours-question-text"
-                       style={{ fontSize: 17, color: '#1a1a1a', lineHeight: 1.8, marginBottom: 22 }}>
+                  {/* Énoncé */}
+                  <div className="concours-question-text mb-5 text-[16px] leading-[1.75] text-ink sm:text-[17px]">
                     <ConcoursContentRenderer html={q.statement} />
                   </div>
 
-                  {/* Options */}
+                  {/* Propositions */}
                   <div className="flex flex-col gap-2.5">
                     {q.options.map(opt => {
                       const isCorrect = opt.key === q.correct_key;
@@ -269,92 +255,70 @@ export default function ConcoursExamDetailPage() {
                       return (
                         <div
                           key={opt.key}
-                          className="opt-row flex items-start gap-3"
-                          style={{
-                            padding: '13px 16px', borderRadius: 12,
-                            background: showCorrect ? '#f0fdf4' : '#faf9f7',
-                            border: `1.5px solid ${showCorrect ? '#86efac' : '#efece6'}`,
-                          }}
+                          className={`opt-row flex items-start gap-3 rounded-xl border-[1.5px] px-4 py-3 transition-colors ${
+                            showCorrect ? 'is-correct border-brand-line bg-brand-soft' : 'border-[#efece6] bg-paper'}`}
                         >
-                          <span style={{
-                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: showCorrect ? '#16a34a' : '#fff',
-                            color: showCorrect ? '#fff' : '#6b6862',
-                            fontSize: 13, fontWeight: 800, fontFamily: 'DM Mono',
-                            border: `1.5px solid ${showCorrect ? '#16a34a' : '#e7e3dc'}`,
-                          }}>
+                          <span className={`fd-nums flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-[1.5px] text-[13px] font-bold ${
+                            showCorrect ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink-faint'}`}>
                             {opt.key}
                           </span>
-                          <div className="flex-1 concours-option-text"
-                               style={{ fontSize: 15, color: showCorrect ? '#166534' : '#1a1a1a', lineHeight: 1.6, paddingTop: 3, fontWeight: showCorrect ? 600 : 400 }}>
+                          <div className={`concours-option-text flex-1 pt-[3px] text-[15px] leading-relaxed ${
+                            showCorrect ? 'font-semibold text-brand-hover' : 'text-ink'}`}>
                             <ConcoursContentRenderer html={opt.text} />
                           </div>
                           {showCorrect && (
-                            <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#16a34a' }} />
+                            <>
+                              <Check className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
+                              <span className="sr-only">Bonne réponse</span>
+                            </>
                           )}
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Reveal button */}
+                  {/* Voir / masquer le corrigé : un bouton discret (pas un bouton plein par question) */}
                   <button
+                    type="button"
                     data-tour="concours-reponse"
-                    className="reveal-btn"
+                    className={`reveal-btn mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                      open ? 'text-ink-faint hover:bg-[#f7f6f3] hover:text-ink' : 'border-[1.5px] border-line bg-white text-ink hover:border-[#cfc9bf]'}`}
+                    aria-expanded={open}
                     onClick={() => setRevealed(prev => ({ ...prev, [idx]: !prev[idx] }))}
-                    style={{
-                      marginTop: 18, width: '100%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      padding: '12px 18px', borderRadius: 11, cursor: 'pointer',
-                      background: open ? '#fff' : theme.from,
-                      color: open ? '#6b6862' : '#fff',
-                      border: open ? '1.5px solid #e7e3dc' : 'none',
-                      fontSize: 14, fontWeight: 700,
-                    }}
                   >
                     {open
-                      ? <><ChevronUp className="w-4 h-4" /> Masquer le corrigé</>
-                      : <><ChevronDown className="w-4 h-4" /> Voir le corrigé</>}
+                      ? <><ChevronUp className="h-4 w-4" /> Masquer le corrigé</>
+                      : <><ChevronDown className="h-4 w-4" /> Voir le corrigé</>}
                   </button>
 
-                  {/* Explanation */}
+                  {/* Explication */}
                   {open && q.explanation && (
-                    <div className="mt-4 animate-fade-up" style={{
-                      background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14, padding: '18px 22px',
-                    }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Lightbulb className="w-4 h-4" style={{ color: '#a16207' }} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#a16207' }}>Explication</span>
+                    <div className="mt-4 animate-fade-up rounded-xl bg-gold-soft p-4 ring-1 ring-gold-line sm:px-5">
+                      <div className="mb-2.5 flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-gold-strong" aria-hidden />
+                        <span className="text-[13px] font-bold text-gold-strong">Explication</span>
                         {correctOpt && (
-                          <span style={{
-                            marginLeft: 'auto', fontSize: 11, fontWeight: 700,
-                            color: '#15803d', background: '#dcfce7', padding: '3px 10px', borderRadius: 99,
-                          }}>
+                          <span className="ml-auto rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-hover ring-1 ring-brand-line">
                             Réponse : {q.correct_key}
                           </span>
                         )}
                       </div>
-                      <div className="concours-explanation-text"
-                           style={{ fontSize: 15, color: '#3f3d63', lineHeight: 1.75 }}>
+                      <div className="concours-explanation-text text-[15px] leading-[1.75] text-ink-soft">
                         <ConcoursContentRenderer html={q.explanation} />
                       </div>
                     </div>
                   )}
                   {open && !q.explanation && (
-                    <div className="mt-4" style={{
-                      background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 11,
-                      padding: '12px 18px', fontSize: 14, color: '#15803d', fontWeight: 600,
-                    }}>
+                    <div className="mt-4 rounded-xl border border-brand-line bg-brand-soft px-4 py-3 text-[14px] font-semibold text-brand-hover">
                       Bonne réponse : <strong>{q.correct_key}</strong>
                       {correctOpt && (
-                        <span style={{ fontWeight: 400, color: '#166534', marginLeft: 8 }}>
+                        <span className="ml-2 font-normal text-ink-soft">
                           — <ConcoursContentRenderer html={correctOpt.text} />
                         </span>
                       )}
                     </div>
                   )}
-                </div>
+                </section>
               );
             })}
           </div>
@@ -365,7 +329,7 @@ export default function ConcoursExamDetailPage() {
           background: '#fff', borderRadius: 18, border: '1px solid #e7e3dc',
         }}>
           <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="w-4 h-4" style={{ color: '#000000' }} />
+            <MessageSquare className="w-4 h-4 text-ink-faint" aria-hidden />
             <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>
           </div>
           <CommentsBlock examId={exam.id} currentUserId={user?.id} canModerate={isModerator(user)}
@@ -493,7 +457,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
           rows={2}
           style={{
             flex: 1, padding: '10px 14px', borderRadius: 10,
-            border: '1.5px solid #e7e3dc', background: '#f9f8ff',
+            border: '1.5px solid #e7e3dc', background: '#faf9f7',
             fontSize: 13, color: '#1a1a1a',
             outline: 'none', resize: 'vertical', minHeight: 64,
           }}
@@ -508,7 +472,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
         </button>
       </div>
       )}
-      {err && <p role="alert" style={{ fontSize: 12, color: '#b91c1c' }}>{err}</p>}
+      {err && <p role="alert" style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
 
       {loading ? (
         <div className="text-center" style={{ padding: 16 }}>
@@ -520,7 +484,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
         <div className="flex flex-col gap-2">
           {comments.map(c => (
             <div key={c.id} className="flex gap-3" style={{
-              background: '#f9f8ff', border: '1px solid #e7e3dc', borderRadius: 10, padding: '12px 14px',
+              background: '#faf9f7', border: '1px solid #e7e3dc', borderRadius: 10, padding: '12px 14px',
             }}>
               {c.author.avatar
                 ? <img src={c.author.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />
@@ -545,7 +509,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
                 <button onClick={() => remove(c.id)}
                         aria-label="Supprimer le commentaire" title="Supprimer le commentaire"
                         className="inline-flex items-center justify-center"
-                        style={{ width: 32, height: 32, margin: '-6px -6px 0 0', background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer', flexShrink: 0 }}>
+                        style={{ width: 32, height: 32, margin: '-6px -6px 0 0', background: 'transparent', border: 'none', color: '#a23b34', cursor: 'pointer', flexShrink: 0 }}>
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}

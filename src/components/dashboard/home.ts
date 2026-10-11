@@ -69,6 +69,9 @@ export const easiest = (items: RecommendedItem[]) => items.find((x) => x.difficu
 
 /* ───────────────────────── Blocs facultatifs ───────────────────────── */
 
+/** Contenus montrés dans « À refaire » (les autres sont sur Réviser). */
+export const REDO_SHOWN = 3;
+
 /** Une activité à montrer ? (sinon la ligne de la semaine n'apparaît pas : pas de bande de zéros) */
 export const hasWeekData = (data: Overview) =>
   data.totals.questions > 0 || data.streak.current > 0 || data.week.questions > 0;

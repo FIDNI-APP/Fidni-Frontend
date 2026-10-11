@@ -119,7 +119,7 @@ export const ProfileOverview: React.FC<Props> = ({ username, profile, userType, 
 
   if (isTeacher) {
     return (
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
         {publications}
         <Section id="enseigner" title="Enseigner">
           <div className="grid gap-3">
@@ -152,7 +152,7 @@ export const ProfileOverview: React.FC<Props> = ({ username, profile, userType, 
 
   // Téléphone : progression, objectifs, publications ; ordinateur : objectifs dans la colonne de droite.
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
       <Section id="ma-progression" title="Ma progression" className="lg:col-start-1 lg:row-start-1"
         action={<SectionLink to="/progression">Tout voir ›</SectionLink>}>
         <div data-tour="profil-resume">

@@ -204,7 +204,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           <Link to="/reviser#a-refaire"
             className="flex min-h-11 items-center gap-2 border-t border-line bg-gold-soft/60 px-4 text-[13px] font-semibold text-gold-strong hover:underline sm:px-5">
             <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="min-w-0 flex-1">{review.length} à revoir : les refaire dans Réviser</span>
+            <span className="min-w-0 flex-1">{review.length} à revoir : {review.length > 1 ? 'les' : 'le'} refaire dans Réviser</span>
             <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
         )}

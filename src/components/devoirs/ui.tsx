@@ -24,14 +24,15 @@ export function DateTile({ date, size = 'md', urgent = false }: { date: string; 
   );
 }
 
-/** « Aujourd’hui », « Demain », « Dans 3 jours » : de plus en plus visible à l'approche. */
+/** « Aujourd’hui », « Demain », « Dans 3 jours », « Il y a 5 jours » : de plus en plus visible à l'approche. */
 export function Countdown({ days, className = '' }: { days: number; className?: string }) {
   const tone = days < 0
     ? 'bg-[#f2f1ee] text-ink-faint'
     : days <= 1 ? 'bg-[#fbecea] text-[#a23b34]'
-      : days <= 6 ? 'bg-gold-soft text-[#8a6318]'
+      : days <= 6 ? 'bg-gold-soft text-gold-strong'
         : 'bg-[#f2f1ee] text-ink-soft';
-  const label = days < 0 ? 'Passé' : whenLabel(days);
+  // Un DS passé : « Hier », « Il y a 5 jours » (plus parlant que « Passé »).
+  const label = whenLabel(days);
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${tone} ${className}`}>
       {label.charAt(0).toUpperCase() + label.slice(1)}
@@ -46,7 +47,7 @@ export function Readiness({ value, compact = false }: { value: number | null | u
   if (value === null || value === undefined) {
     return (
       <p className={`${compact ? 'text-[12px]' : 'text-[13px]'} text-ink-faint`}>
-        Pas encore de mesure : un quiz ou quelques exercices suffisent.
+        Pas encore de mesure : quelques exercices suffisent.
       </p>
     );
   }
@@ -87,7 +88,7 @@ export function ReadinessRing({ value, size = 92 }: { value: number | null; size
 export function GradeBadge({ grade }: { grade: number }) {
   const ok = grade >= 10;
   return (
-    <span className={`fd-nums inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-bold ${ok ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-[#8a6318]'}`}>
+    <span className={`fd-nums inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-bold ${ok ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-gold-strong'}`}>
       {String(grade).replace('.', ',')} / 20
     </span>
   );

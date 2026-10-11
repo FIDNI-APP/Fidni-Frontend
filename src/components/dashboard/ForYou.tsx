@@ -69,10 +69,14 @@ export const ForYou: React.FC<{
   exercisesHub: string;
   /** Un prof : pas de « ce que tu as travaillé ». */
   teacher?: boolean;
-}> = ({ recs, failed, onRetry, exercisesHub, teacher = false }) => {
+  /** Déjà montrés juste au-dessus (« À refaire ») : « exercise-12 », « exam-3 » — pas deux fois la même carte. */
+  shownAbove?: Set<string>;
+}> = ({ recs, failed, onRetry, exercisesHub, teacher = false, shownAbove }) => {
   const [tab, setTab] = useState<ListKind>('exercise');
+  const fresh = (kind: ListKind, list: RecommendedItem[] | undefined) =>
+    (list ?? []).filter((x) => !shownAbove?.has(`${kind}-${x.id}`));
   const byKind: Record<ListKind, RecommendedItem[]> = {
-    exercise: recs?.exercises ?? [], lesson: recs?.lessons ?? [], exam: recs?.exams ?? [],
+    exercise: fresh('exercise', recs?.exercises), lesson: recs?.lessons ?? [], exam: fresh('exam', recs?.exams),
   };
   const tabs = TABS.filter((t) => t.key === 'exercise' || byKind[t.key].length > 0);
   const items = byKind[tab].slice(0, SHOWN);

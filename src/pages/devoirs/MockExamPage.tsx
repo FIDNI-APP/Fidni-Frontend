@@ -189,7 +189,7 @@ export default function MockExamPage() {
   const succeeded = data.exercises.reduce((n, e) => n + assessablePaths(e.structure).filter((p) => progress[e.id]?.[p]?.status === 'success').length, 0);
   const toCorrect = data.exercises.reduce((n, e) => n + assessablePaths(e.structure).length, 0);
   const over = remaining < 0;
-  const timerTone = over ? 'bg-[#fbecea] text-[#a23b34]' : remaining < 600 ? 'bg-gold-soft text-[#8a6318]' : 'bg-[#f2f1ee] text-ink';
+  const timerTone = over ? 'bg-[#fbecea] text-[#a23b34]' : remaining < 600 ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink';
   const barTone = over ? 'bg-[#a23b34]' : remaining < 600 ? 'bg-gold' : 'bg-brand';
 
   const actAlert = actError && (

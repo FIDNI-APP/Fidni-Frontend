@@ -199,21 +199,10 @@ export default function TestPlanPage() {
                   {past ? 'Après le DS' : 'Prochaine étape'}
                 </h2>
                 <p className="mt-1.5 text-[16.5px] font-semibold leading-snug text-ink sm:text-[17px]">
-                  {past ? 'Comment s’est passé ton DS ?' : a.text}
+                  {past ? 'Comment s’est passé ton DS\u00a0?' : a.text}
                 </p>
                 {past && <p className="mt-1 text-[13px] leading-relaxed text-ink-faint">Note ta note pour suivre tes résultats au fil de l’année.</p>}
-                {t.chapters.length > 0 && (
-                  <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Chapitres du DS">
-                    {t.chapters.map((c) => {
-                      const isWeak = plan.chapters.some((x) => x.id === c.id && x.status === 'weak');
-                      return (
-                        <li key={c.id} className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${isWeak ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`}>
-                          {c.name}{isWeak && <span className="sr-only"> (à renforcer)</span>}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                {/* Les chapitres et leur état sont juste dessous (« Tes chapitres ») : pas de pastilles en double ici. */}
               </div>
             </div>
             <div className="flex flex-col gap-3 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">

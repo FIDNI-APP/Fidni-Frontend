@@ -9,7 +9,7 @@
  * Données : /api/dashboard/overview/ (que des chiffres enregistrés), /api/devoirs/, /api/revision-lists/suggestions/,
  * /api/dashboard/recommended/, /api/classrooms/progress/weekly/.
  */
-import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RotateCcw } from 'lucide-react';
 import { getDashboardOverview, getRecommendedContent, getWeeklyProgress, type DashboardOverview as Overview, type WeeklyProgress } from '@/lib/api';
@@ -26,7 +26,7 @@ import { WeekLine } from './WeekLine';
 import { RedoBlock } from './RedoBlock';
 import { ForYou } from './ForYou';
 import { ClassChart } from './ClassChart';
-import { chooseNext, easiest, firstSteps, hasClassChart, hasWeekData } from './home';
+import { REDO_SHOWN, chooseNext, easiest, firstSteps, hasClassChart, hasWeekData } from './home';
 
 // Le formulaire « Annoncer un DS » n'est chargé qu'à l'ouverture (taxonomie, animations).
 const TestFormModal = lazy(() => import('@/components/devoirs/TestFormModal').then((m) => ({ default: m.TestFormModal })));
@@ -103,8 +103,10 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   const dsInHero = !newcomer && choice?.kind === 'ds';
   const showDs = heroReady && !isTeacher && !dsInHero && (newcomer ? !!ds.test : nextTestVisible(ds, later));
   const showRedo = !!redo && redo.results.length > 0;
+  // Les contenus d'« À refaire » (les trois montrés) ne se répètent pas dans « Pour toi ».
+  const redoShown = useMemo(() => new Set((showRedo ? redo!.results.slice(0, REDO_SHOWN) : []).map((x) => `${x.type}-${x.id}`)), [showRedo, redo]);
   const levelLink = user?.profile && !user.profile.onboarding_completed
-    ? '/complete-profile' : `/profile/${encodeURIComponent(username ?? '')}/edit`;
+    ? '/complete-profile' : `/profile/${encodeURIComponent(username ?? '')}/edit#scolarite`;
   const exercisesHub = data?.level_hub_url ?? '/exercises';
 
   const subtitle = !data ? undefined
@@ -144,7 +146,7 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
           </div>
         )}
 
-        <ForYou recs={recs} failed={recsFailed} onRetry={loadRecs} exercisesHub={exercisesHub} teacher={isTeacher} />
+        <ForYou recs={recs} failed={recsFailed} onRetry={loadRecs} exercisesHub={exercisesHub} teacher={isTeacher} shownAbove={redoShown} />
 
         {hasClassChart(weekly) && <ClassChart progress={weekly} />}
       </div>

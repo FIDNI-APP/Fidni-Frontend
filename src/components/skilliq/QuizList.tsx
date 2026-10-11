@@ -10,7 +10,7 @@ import { bySubfield, estMinutes, pct, quizSize, type QuizChapter } from './types
 import type { QuizChapters } from './useQuizChapters';
 
 const REASON: Record<ChapterStatus, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
-  weak: { label: 'À renforcer d’après tes exercices', icon: Target, cls: 'bg-gold-soft text-[#8a6318]' },
+  weak: { label: 'À renforcer d’après tes exercices', icon: Target, cls: 'bg-gold-soft text-gold-strong' },
   started: { label: 'Chapitre commencé', icon: CircleDashed, cls: 'bg-[#f2f1ee] text-ink-soft' },
   todo: { label: 'Pas encore travaillé', icon: Circle, cls: 'bg-[#f2f1ee] text-ink-soft' },
   good: { label: 'En bonne voie : vérifie-le', icon: TrendingUp, cls: 'bg-brand-soft text-brand-hover' },
@@ -36,7 +36,7 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({
           </span>
           <div className="min-w-0">
             {taken ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-[#8a6318]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Ton score le plus bas : <span className="fd-nums">{pct(taken)} %</span>
               </span>
             ) : (

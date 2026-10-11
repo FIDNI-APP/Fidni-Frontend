@@ -292,7 +292,7 @@ export default function ConcoursSimulatePage() {
               data-tour="simulation-soumettre"
               disabled={submitting}
               className="fd-btn-primary"
-              style={{ background: '#16a34a', padding: '9px 14px' }}
+              style={{ background: '#1a7a4a', padding: '9px 14px' }}
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Soumettre
@@ -328,7 +328,7 @@ export default function ConcoursSimulatePage() {
               onClick={() => handleSubmit(true)}
               disabled={submitting}
               className="fd-btn-primary"
-              style={{ background: '#16a34a', padding: '7px 12px', fontSize: 12 }}
+              style={{ background: '#1a7a4a', padding: '7px 12px', fontSize: 12 }}
             >
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               Réessayer
@@ -505,7 +505,7 @@ export default function ConcoursSimulatePage() {
             onClick={() => setShowConfirm(true)}
             disabled={submitting}
             className="fd-btn-primary flex-1 justify-center"
-            style={{ minHeight: 44, background: '#16a34a' }}
+            style={{ minHeight: 44, background: '#1a7a4a' }}
           >
             <Send className="w-4 h-4" /> Terminer
           </button>
@@ -539,7 +539,7 @@ export default function ConcoursSimulatePage() {
               Les questions non répondues compteront comme fausses.
             </p>
             {unsaved.size > 0 && (
-              <p style={{ fontSize: 13, color: '#b45309', marginTop: 6 }}>
+              <p style={{ fontSize: 13, color: '#9a6e1c', marginTop: 6 }}>
                 {unsaved.size > 1
                   ? `${unsaved.size} réponses ne sont pas encore enregistrées : elles seront renvoyées avec ta copie.`
                   : "1 réponse n'est pas encore enregistrée : elle sera renvoyée avec ta copie."}
@@ -551,7 +551,7 @@ export default function ConcoursSimulatePage() {
                 className="fd-btn-primary"
                 onClick={() => { setShowConfirm(false); handleSubmit(true); }}
                 disabled={submitting}
-                style={{ background: '#16a34a' }}
+                style={{ background: '#1a7a4a' }}
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Soumettre

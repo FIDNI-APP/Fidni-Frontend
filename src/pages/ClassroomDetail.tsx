@@ -207,7 +207,8 @@ export default function ClassroomDetailPage() {
         subtitle={(
           <>
             <span className="fd-nums">{classroom.student_count}</span> {plural(classroom.student_count, 'élève', 'élèves')}
-            {' · '}<span className="fd-nums">{classroom.subjects.length}</span> {plural(classroom.subjects.length, 'matière', 'matières')}
+            {/* « 0 matière » ne dit rien : seulement s'il y en a. */}
+            {classroom.subjects.length > 0 && <>{' · '}<span className="fd-nums">{classroom.subjects.length}</span> {plural(classroom.subjects.length, 'matière', 'matières')}</>}
             {!isOwner && <> · Prof : <b className="font-semibold text-ink-soft">{classroom.owner.username}</b></>}
           </>
         )}
@@ -314,20 +315,16 @@ export default function ClassroomDetailPage() {
 
 /* ─────────────────── shared bits ─────────────────── */
 function Avatar({ user, size }: { user: { username: string; avatar?: string | null }; size: number }) {
-  if (user.avatar) {
-    return <img src={user.avatar} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+  // Photo introuvable (lien mort, service d'avatars bloqué) : l'initiale, comme sans photo.
+  const [broken, setBroken] = useState(false);
+  if (user.avatar && !broken) {
+    return <img src={user.avatar} alt="" onError={() => setBroken(true)} className="shrink-0 rounded-full bg-[#f2f1ee] object-cover" style={{ width: size, height: size }} />;
   }
   return (
-    <div
-      className="inline-flex items-center justify-center flex-shrink-0"
-      style={{
-        width: size, height: size, borderRadius: '50%',
-        background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-        fontSize: Math.round(size * 0.38), fontWeight: 700,
-      }}
-    >
+    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full bg-ink font-bold text-white"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}>
       {user.username[0]?.toUpperCase()}
-    </div>
+    </span>
   );
 }
 
@@ -426,12 +423,15 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
         action={shareAction} />
     );
   }
-  const toWatch = roster.filter(c => c.overall < WATCH_BELOW).length;
+  // Sans aucune activité, un élève n'est pas « à suivre » : il n'a simplement pas encore commencé.
+  const idle = roster.filter(isIdle).length;
+  const toWatch = roster.filter(c => !isIdle(c) && c.overall < WATCH_BELOW).length;
   return (
     <>
-      <p className="mb-3 text-[13px] text-ink-faint">
+      <p className="mb-3 text-[13px] leading-relaxed text-ink-faint">
         <span className="fd-nums">{roster.length}</span> {plural(roster.length, 'élève', 'élèves')}
         {toWatch > 0 && <> · <strong className="font-semibold text-gold-strong">{toWatch} à suivre</strong> (score global sous {WATCH_BELOW})</>}
+        {idle > 0 && <> · <span className="fd-nums">{idle}</span> sans activité pour l’instant</>}
         . Touche une carte pour le détail.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -444,52 +444,60 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
 }
 
 /* ─────────────────── Skill card (neutre : pas de palier) ─────────────────── */
+/** Aucune activité mesurée : score et six axes à zéro. */
+const isIdle = (c: RosterStudentCard) => c.overall === 0 && AXIS_LABELS.every(a => !c.axes[a.key]);
+
 function SkillCard({ card, onClick, watch = false }: {
   card: RosterStudentCard; onClick: () => void;
   /** Vue du prof : repère « À suivre » sous WATCH_BELOW. */
   watch?: boolean;
 }) {
-  const flagged = watch && card.overall < WATCH_BELOW;
+  const idle = isIdle(card);
+  const flagged = watch && !idle && card.overall < WATCH_BELOW;
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="fd-card text-left w-full"
-      style={{ cursor: 'pointer', padding: 0, overflow: 'hidden', background: '#fff' }}
+      className="group w-full overflow-hidden rounded-2xl border border-line bg-white text-left transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
-      <div className="flex items-center gap-3" style={{ padding: '14px 16px', borderBottom: '1px solid #efece6' }}>
-        <Avatar user={card.student} size={44} />
-        <div className="flex-1 min-w-0">
-          <div className="truncate" style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>
-            {card.student.username}
-          </div>
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <Avatar user={card.student} size={40} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14.5px] font-semibold text-ink group-hover:underline">{card.student.username}</div>
           {flagged ? (
-            <span
-              className="inline-flex items-center gap-1"
-              style={{
-                marginTop: 3, fontSize: 10, fontWeight: 700, color: '#9a6e1c',
-                background: '#faf3e2', border: '1px solid #ecdcb4', borderRadius: 99, padding: '1px 8px',
-              }}
-            >
-              <Flag className="w-3 h-3" /> À suivre
+            <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-semibold text-gold-strong">
+              <Flag className="h-3 w-3" aria-hidden /> À suivre
             </span>
           ) : (
-            <div style={{ fontSize: 11, color: '#6b6862', marginTop: 1 }}>Score global</div>
+            <div className="mt-0.5 text-[12px] text-ink-faint">{idle ? 'Pas encore d’activité' : 'Score global'}</div>
           )}
         </div>
-        <div style={{ fontSize: 30, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a', lineHeight: 1, letterSpacing: '-0.04em' }}>
-          {card.overall}
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-y-2 gap-x-3" style={{ padding: '12px 16px' }}>
-        {AXIS_LABELS.map(a => (
-          <div key={a.key} className="flex items-center gap-1.5" title={a.label}>
-            <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a', minWidth: 20 }}>
-              {card.axes[a.key]}
-            </span>
-            <span style={{ fontSize: 10, color: '#6b6862', fontWeight: 600, letterSpacing: '.04em' }}>{a.short}</span>
+        {!idle && (
+          <div className="shrink-0 text-right">
+            <span className="fd-nums text-[26px] font-bold leading-none text-ink">{card.overall}</span>
+            <span className="fd-nums ml-0.5 text-[11px] text-ink-faint">/100</span>
           </div>
-        ))}
+        )}
       </div>
+      {/* Les six axes en toutes lettres (avant : « PRÉ », « RÉG »… illisibles), chacun avec sa petite jauge. */}
+      {!idle && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#efece6] px-4 py-3">
+          {AXIS_LABELS.map(a => {
+            const v = Math.max(0, Math.min(100, card.axes[a.key] ?? 0));
+            return (
+              <div key={a.key} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-2 text-[11.5px]">
+                  <span className="truncate text-ink-faint">{a.label}</span>
+                  <span className="fd-nums font-semibold text-ink-soft">{card.axes[a.key]}</span>
+                </div>
+                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+                  <span className="block h-full rounded-full bg-ink-soft/70" style={{ width: `${v}%` }} />
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </button>
   );
 }
@@ -583,7 +591,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
             <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
               Score global {data.subject ? `· ${data.subject.name}` : ''}
             </div>
-            <div style={{ fontSize: 44, fontWeight: 900, fontFamily: 'DM Mono', color: '#000000', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
+            <div style={{ fontSize: 44, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
               {data.overall}
             </div>
           </div>
@@ -601,7 +609,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
                 }}
               >
                 <span style={{ fontSize: 12, color: '#33302b', fontWeight: 600 }}>{a.label}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'DM Mono', color: '#000000' }}>
+                <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a' }}>
                   {data.axes[a.key]}
                 </span>
               </div>
@@ -760,7 +768,7 @@ function ProgressBar({ pct }: { pct: number }) {
         style={{
           height: '100%',
           width: `${pct}%`,
-          background: pct === 100 ? '#1a7a4a' : 'linear-gradient(90deg,#1a1a1a,#9a958c)',
+          background: '#1a7a4a',
           transition: 'width .4s ease',
         }}
       />
@@ -778,54 +786,41 @@ function TDListCard({ td, isOwner, onOpen }: { td: TDList; isOwner: boolean; onO
     : mine && mine.total > 0 ? Math.round((mine.completed * 100) / mine.total) : 0;
   return (
     <button
+      type="button"
       onClick={onOpen}
-      className="fd-card text-left"
-      style={{ padding: 18, cursor: 'pointer', background: '#fff' }}
+      className="group w-full rounded-2xl border border-line bg-white p-4 text-left transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:p-5"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className="inline-flex items-center justify-center flex-shrink-0"
-            style={{
-              width: 32, height: 32, borderRadius: 9,
-              background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-            }}
-          >
-            <ClipboardList className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.01em' }}>{td.title}</div>
-            {td.subject_name && (
-              <div style={{ fontSize: 10, color: '#6b6862', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                {td.subject_name}
-              </div>
-            )}
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+          <ClipboardList className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold leading-snug text-ink group-hover:underline">{td.title}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-ink-faint">
+            {td.subject_name && <span>{td.subject_name}</span>}
+            <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" aria-hidden />{td.item_count} ex.</span>
+            {due && <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" aria-hidden />à rendre le {due.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>}
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#6b6862' }} />
-      </div>
-
-      <div className="flex items-center gap-3 mt-3" style={{ fontSize: 11, color: '#6b6862' }}>
-        <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />{td.item_count} ex.</span>
-        {due && <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />à rendre le {due.toLocaleDateString('fr-FR')}</span>}
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5" aria-hidden />
       </div>
 
       {cls && (
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-1" style={{ fontSize: 11, color: '#6b6862' }}>
+        <div className="mt-3.5">
+          <div className="mb-1.5 flex items-center justify-between text-[12px] text-ink-faint">
             <span>{cls.total === 0 ? 'Aucun élève dans la classe' : finishedLabel(cls.finished, cls.total)}</span>
             {cls.total > 0 && (
-              <span style={{ fontFamily: 'DM Mono', fontWeight: 700, color: pct === 100 ? '#15633c' : '#000000' }}>{pct} %</span>
+              <span className={`fd-nums font-semibold ${pct === 100 ? 'text-brand-hover' : 'text-ink-soft'}`}>{pct} %</span>
             )}
           </div>
           <ProgressBar pct={pct} />
         </div>
       )}
       {mine && (
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-1" style={{ fontSize: 11, color: '#6b6862' }}>
+        <div className="mt-3.5">
+          <div className="mb-1.5 flex items-center justify-between text-[12px] text-ink-faint">
             <span>Ma progression</span>
-            <span style={{ fontFamily: 'DM Mono', fontWeight: 700, color: pct === 100 ? '#15633c' : '#000000' }}>
+            <span className={`fd-nums font-semibold ${pct === 100 ? 'text-brand-hover' : 'text-ink-soft'}`}>
               {mine.completed}/{mine.total}
             </span>
           </div>
@@ -943,7 +938,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     className="inline-flex items-center justify-center flex-shrink-0"
                     style={{
                       width: 24, height: 24, borderRadius: 7, background: '#fff', border: '1px solid #e7e3dc',
-                      fontSize: 11, fontWeight: 800, fontFamily: 'DM Mono', color: '#1a1a1a',
+                      fontSize: 11, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a',
                     }}
                   >
                     {i + 1}
@@ -1006,8 +1001,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     onClick={() => !already && add(r.id)}
                     disabled={already || busy}
                     style={{
-                      background: already ? '#f0fdf4' : '#fff',
-                      border: '1px solid ' + (already ? '#bbf7d0' : '#e7e3dc'),
+                      background: already ? '#eaf3ed' : '#fff',
+                      border: '1px solid ' + (already ? '#cfe6d8' : '#e7e3dc'),
                       borderRadius: 10, padding: '8px 12px', cursor: already ? 'default' : 'pointer',
                       textAlign: 'left', minHeight: 40,
                       opacity: already ? .7 : 1,
@@ -1157,7 +1152,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       key={it.object_id}
                       scope="col"
                       title={it.title}
-                      style={{ padding: '4px 0 6px', minWidth: 38, textAlign: 'center', fontFamily: 'DM Mono', fontWeight: 800, color: '#1a1a1a' }}
+                      style={{ padding: '4px 0 6px', minWidth: 38, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#1a1a1a' }}
                     >
                       {i + 1}
                     </th>
@@ -1207,7 +1202,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       })}
                       <td
                         style={{
-                          padding: '2px 6px 2px 10px', textAlign: 'center', fontFamily: 'DM Mono', fontWeight: 700,
+                          padding: '2px 6px 2px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700,
                           color: done === nItems ? '#15633c' : '#1a1a1a', borderTop: '1px solid #f2f1ee',
                         }}
                       >
@@ -1249,7 +1244,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                   <span
                     className="flex-shrink-0"
                     style={{
-                      fontFamily: 'DM Mono', fontSize: 11, fontWeight: 800, color: '#9a6e1c',
+                      fontVariantNumeric: 'tabular-nums', fontSize: 11, fontWeight: 800, color: '#9a6e1c',
                       background: '#faf3e2', borderRadius: 6, padding: '2px 7px',
                     }}
                   >
@@ -1386,7 +1381,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
                    className="flex items-center justify-between"
                    style={{ background: '#fcfbf9', border: '1px solid #e7e3dc', borderRadius: 10, padding: '8px 12px' }}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#000000' }} />
+                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#1a1a1a' }} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{cs.subject_name}</span>
                   <span className="truncate" style={{ fontSize: 11, color: '#6b6862' }}>· {cs.teacher_username}</span>
                 </div>
