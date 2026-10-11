@@ -42,3 +42,6 @@ export const STATUS: Record<ChapterStatus, {
 };
 
 export const STATUS_ORDER: ChapterStatus[] = ['mastered', 'good', 'weak', 'started', 'todo'];
+
+/** Couleur des cercles de maîtrise (hors `.fd-card`, qui forcerait le vert sur les cercles). */
+export const RING: Record<ChapterStatus, string> = { mastered: '#1a7a4a', good: '#5fa47f', weak: '#c0892f', started: '#9a958c', todo: '#cfcdc8' };

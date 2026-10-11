@@ -1,6 +1,7 @@
 // Données de « Ma progression » (GET /api/stats/progression/), affichées tout de suite au retour sur la
 // page : la dernière réponse est gardée (mémoire + onglet), puis rafraîchie en arrière-plan.
-import { useEffect, useState } from 'react';
+// `reload()` : nouvel essai après un échec (bouton « Réessayer »).
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api/apiClient';
 import type { ProgressionData } from './types';
 
@@ -26,6 +27,7 @@ function write(user: string, data: ProgressionData) {
 export function useProgression(user: string | null) {
   const [data, setData] = useState<ProgressionData | null>(() => (user ? read(user) : null));
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -35,6 +37,7 @@ export function useProgression(user: string | null) {
       .then((r) => { if (!alive) return; write(user, r.data); setData(r.data); setFailed(false); })
       .catch(() => { if (alive && !cached) setFailed(true); });
     return () => { alive = false; };
-  }, [user]);
-  return { data, failed, setData };
+  }, [user, attempt]);
+  const reload = useCallback(() => { setFailed(false); setAttempt((n) => n + 1); }, []);
+  return { data, failed, setData, reload };
 }
