@@ -62,8 +62,8 @@ const SOLUTION: TourStep = {
 };
 const AUTO_EVAL: TourStep = {
   target: 'auto-eval',
-  title: 'Auto-évaluation',
-  body: "Un clic sous chaque question : Réussi ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
+  title: 'Tu avais trouvé ?',
+  body: "Sous chaque solution ouverte : Réussi ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
 };
 const VOTE: TourStep = {
   target: 'vote',
@@ -140,7 +140,8 @@ export const TOURS: Tour[] = [
     id: 'exercice',
     match: /^\/exercises\/\d+\/?$/,
     requires: 'detail-onglets',
-    autoSteps: ['solution', 'auto-eval', 'detail-terminer'],
+    version: 2, // page de lecture du 11/10/2026 : auto-évaluation sous la solution, « Tu as fini ? » en bas
+    autoSteps: ['solution', 'auto-eval', 'detail-solutions', 'detail-terminer'],
     steps: [
       {
         target: 'detail-onglets',
@@ -150,13 +151,13 @@ export const TOURS: Tour[] = [
       { target: 'detail-solutions', title: 'Toutes les solutions', body: 'Affiche ou masque d’un coup la solution de chaque question.' },
       SOLUTION,
       AUTO_EVAL,
-      { target: 'detail-progression', title: 'Ta progression', body: 'Elle se remplit à mesure que tu t’auto-évalues.' },
-      { target: 'detail-chrono', title: 'Chronomètre', body: 'Démarre, fais une pause, puis enregistre : tu retrouves tous tes temps juste en dessous.' },
-      { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => `Tout bon ? « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque ${le(c)} « À revoir ».` },
+      { target: 'detail-progression', title: 'Ta progression', body: 'En bas de l’exercice : elle se remplit à mesure que tu dis si tu avais trouvé.' },
+      { target: 'detail-chrono', title: 'Chronomètre', body: 'Lance le chrono quand tu commences ; en pause, ✓ enregistre ton temps. Tes temps sont dans le menu ⋯.' },
+      { target: 'detail-terminer', title: 'Tu as fini ?', body: (c) => `En bas de la page : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque ${le(c)} « À revoir ».` },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-le à tes favoris.' },
       { target: 'detail-liste', title: 'Liste de révision', body: 'Range-le dans une liste pour le réviser plus tard ou l’imprimer.' },
       { target: 'detail-imprimer', title: 'Imprimer / PDF', body: 'Télécharge-le en PDF façon sujet d’examen, avec ou sans corrigé.' },
-      { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ou signaler une erreur.' },
+      { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ranger dans une liste de révision, revoir tes temps, ou signaler une erreur.' },
       VOTE,
       SIGNALER,
     ],
@@ -166,6 +167,7 @@ export const TOURS: Tour[] = [
     id: 'examen',
     match: /^\/exams\/\d+\/?$/,
     requires: 'examen-fiche',
+    version: 2, // page de lecture du 11/10/2026
     autoSteps: ['examen-epreuve', 'solution', 'examen-copie'],
     steps: [
       { target: 'examen-fiche', title: 'Le sujet', body: 'Durée, barème, nombre d’exercices : comme la copie distribuée en classe.' },
@@ -174,9 +176,9 @@ export const TOURS: Tour[] = [
       AUTO_EVAL,
       { target: 'examen-copie', title: 'Ta copie', body: 'Évalue chaque question après l’épreuve : ta note estimée se calcule avec le barème, exercice par exercice.' },
       { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche, Activité pour te situer. Les questions et la discussion sont en bas du sujet.' },
-      { target: 'detail-terminer', title: 'Où en es-tu ?', body: 'Après l’épreuve : « Tout réussi » coche toutes les questions, puis décoche celles que tu as ratées. Ta note se calcule avec le barème.' },
+      { target: 'detail-terminer', title: 'Tu as fini ?', body: 'Après l’épreuve, en bas du sujet : « Tout réussi » coche toutes les questions, puis décoche celles que tu as ratées. Ta note se calcule avec le barème.' },
       { target: 'detail-imprimer', title: 'Imprimer / PDF', body: 'Télécharge le sujet en PDF pour le faire sur papier.' },
-      { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ou signaler une erreur.' },
+      { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ranger dans une liste de révision, revoir tes passages, ou signaler une erreur.' },
       VOTE,
       SIGNALER,
     ],
@@ -197,13 +199,14 @@ export const TOURS: Tour[] = [
     id: 'lecon',
     match: /^\/lessons\/\d+\/?$/,
     requires: 'lecon-contenu',
+    version: 2, // feuille de cours du 11/10/2026
     autoSteps: ['lecon-sommaire', 'detail-cahier', 'detail-discussion'],
     steps: [
       { target: ['lecon-sommaire', 'lecon-sommaire-barre'], title: 'Le sommaire', body: 'Toutes les parties de la leçon : clique pour y aller. La partie en cours est surlignée et Fidni retient où tu t’es arrêté.' },
       { target: 'lecon-contenu', title: 'La leçon', body: 'Définitions, théorèmes, propriétés : chaque encadré annonce sa nature en en-tête.' },
       { target: 'detail-discussion', title: 'Une question ?', body: 'Pose tes questions sur la leçon ici, en bas de la page.' },
       { target: 'lecon-imprimer', title: 'Imprimer', body: 'Télécharge la leçon en PDF, mise en page comme un polycopié, pour la lire ou l’annoter sur papier.' },
-      { target: 'detail-cahier', title: 'Cahier', body: 'Ajoute la leçon à ton cahier de cours : elle va directement dans son chapitre.' },
+      { target: 'detail-cahier', title: 'Cahier', body: 'En bas de la leçon (ou dans le menu ⋯) : ajoute-la à ton cahier de cours, directement dans son chapitre.' },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-la à tes favoris.' },
       VOTE,
       SIGNALER,
