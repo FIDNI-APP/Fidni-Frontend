@@ -118,11 +118,11 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
       <span className="hidden text-[13px] text-ink-faint sm:inline">
         {isLesson ? 'Cette leçon t’a aidé ?' : contentType === 'exam' ? 'Ce sujet t’a aidé ?' : 'Cet exercice t’a aidé ?'}
       </span>
-      <VoteButtons likes={likeCount} dislikes={dislikeCount} initialVotes={voteCount} onVote={onVote} userVote={userVote} size="sm" />
+      <VoteButtons likes={likeCount} dislikes={dislikeCount} initialVotes={voteCount} onVote={onVote} userVote={userVote} size="md" />
     </div>
   );
   const sheetFooter = (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-[#fcfbf9] px-4 py-2 sm:px-8">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-[#fcfbf9] px-4 py-2 sm:px-8 print:hidden">
       {votes}
       {onReport && (
         <button type="button" onClick={() => onReport()} data-tour="signaler"
@@ -166,7 +166,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
         <ReadingStyles />
         {/* Ordinateur : sommaire collant à gauche. */}
         {withOutline && (
-          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] overflow-y-auto pb-4 pr-1 lg:block" data-tour="lecon-sommaire"
+          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] overflow-y-auto pb-4 pr-1 lg:block print:!hidden" data-tour="lecon-sommaire"
             onClickCapture={trackOutline}>
             <LessonOutlinePanel outline={outline} storageKey={`lecon-${content.id}`} syncHash />
           </aside>
@@ -175,11 +175,11 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
           <div>
             {/* Téléphone / tablette : sommaire repliable, collé sous la barre du site. */}
             {withOutline && (
-              <div className="sticky top-[68px] z-20 mb-3 lg:hidden" onClickCapture={trackOutline}>
+              <div className="sticky top-[68px] z-20 mb-3 lg:hidden print:hidden" onClickCapture={trackOutline}>
                 <LessonOutlineBar outline={outline} storageKey={`lecon-${content.id}`} tourId="lecon-sommaire-barre" />
               </div>
             )}
-            <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
+            <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl print:rounded-none print:border-0">
               <div ref={lessonRef} data-tour="lecon-contenu" className="px-5 pb-10 pt-8 sm:px-12 sm:pb-14 sm:pt-12">
                 <LessonReader structure={content.structure as FlexibleLessonStructure} />
               </div>
@@ -187,7 +187,8 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
             </article>
           </div>
           <AdSlot />
-          {children}
+          {/* Impression (Ctrl + P) : la leçon seule. */}
+          <div className="flex flex-col gap-8 sm:gap-10 print:hidden">{children}</div>
         </div>
       </div>
     );
@@ -199,15 +200,18 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
       <ReadingStyles />
       <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
         {/* Barre de la feuille : toutes les solutions à gauche, chrono à droite. */}
-        <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line bg-[#fcfbf9] px-2.5 py-1.5 sm:px-6">
+        <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line bg-[#fcfbf9] px-2.5 py-1.5 sm:px-6 print:hidden">
           {canToggle ? (
             <button type="button" onClick={toggleAllSolutions} data-tour="detail-solutions" aria-pressed={showAllSolutions}
-              className={`inline-flex h-10 items-center gap-2 rounded-full px-3 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              className={`inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                 showAllSolutions ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
               {showAllSolutions ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+              {/* Téléphone : libellé court, pour laisser la place au chrono. */}
               {showAllSolutions
-                ? (questionsWithSolutions > 1 ? 'Masquer les solutions' : 'Masquer la solution')
-                : questionsWithSolutions > 1 ? 'Toutes les solutions' : 'Voir la solution'}
+                ? <><span className="sm:hidden">Masquer</span><span className="hidden sm:inline">{questionsWithSolutions > 1 ? 'Masquer les solutions' : 'Masquer la solution'}</span></>
+                : questionsWithSolutions > 1
+                  ? <><span className="sm:hidden">Solutions</span><span className="hidden sm:inline">Toutes les solutions</span></>
+                  : 'Voir la solution'}
               {!showAllSolutions && questionsWithSolutions > 1 && (
                 <span className="rounded-full bg-[#f2f1ee] px-1.5 text-[11.5px] text-ink-faint fd-nums">{questionsWithSolutions}</span>
               )}
@@ -260,7 +264,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
         {sheetFooter}
       </article>
       <AdSlot />
-      {children}
+      <div className="flex flex-col gap-8 sm:gap-10 print:hidden">{children}</div>
     </div>
   );
 };

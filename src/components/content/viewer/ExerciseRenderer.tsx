@@ -368,12 +368,13 @@ const shownStatus = (current: AssessmentStatus | undefined, options: AssessmentS
   (current && !options.includes(current) && (current === 'failed' || current === 'partial') ? 'review' : current);
 
 /** Choix d'auto-évaluation en pastilles (au pied d'une solution, ou d'une question sans solution). */
-const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: AssessmentStatus[]; onPick: (s: AssessmentStatus) => void }> = ({
-  current, options = DEFAULT_OPTIONS, onPick,
+const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: AssessmentStatus[]; onPick: (s: AssessmentStatus) => void; fill?: boolean }> = ({
+  current, options = DEFAULT_OPTIONS, onPick, fill = false,
 }) => {
   const shown = shownStatus(current, options);
   return (
-    <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval" className="inline-flex flex-wrap items-center gap-1.5">
+    <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval"
+      className={fill ? 'flex w-full gap-1.5 sm:inline-flex sm:w-auto' : 'inline-flex flex-wrap items-center gap-1.5'}>
       {options.map((value) => {
         const o = READ_OPTION[value];
         if (!o) return null;
@@ -383,9 +384,11 @@ const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: Assessment
           <button key={value} type="button" aria-pressed={active}
             title={active ? `${o.label} : clique pour effacer` : o.label}
             onClick={(e) => { e.stopPropagation(); onPick(active && current ? current : value); }}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:px-3.5 ${
+            className={`inline-flex h-10 items-center gap-1.5 rounded-full border text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-8 sm:px-3 [@media(pointer:coarse)]:h-10 ${
+              fill ? 'min-w-0 flex-1 justify-center px-1.5 sm:flex-none' : 'px-3.5 [@media(pointer:coarse)]:px-3.5'} ${
               active ? o.on : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`}>
-            <Icon className="h-3.5 w-3.5" aria-hidden /> {o.label}
+            <Icon className={`h-3.5 w-3.5 shrink-0 ${fill && options.length > 2 ? 'hidden sm:block' : ''}`} aria-hidden />
+            <span className="whitespace-nowrap">{o.label}</span>
           </button>
         );
       })}
@@ -401,7 +404,7 @@ const ReadingResult: React.FC<{ current: AssessmentStatus; options: AssessmentSt
   return (
     <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} data-tour="auto-eval"
       title={`Ton résultat : ${o.label}. Ouvre la solution pour le changer.`}
-      className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-semibold [@media(pointer:coarse)]:h-10 ${o.on}`}>
+      className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold sm:h-8 sm:px-2.5 [@media(pointer:coarse)]:h-10 ${o.on}`}>
       <Icon className="h-3.5 w-3.5" aria-hidden /> {o.label}
     </button>
   );
@@ -415,7 +418,7 @@ const ReadingFound: React.FC<{
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2" data-tour={current ? undefined : 'trouve'}>
       <span className="text-[13px] font-medium text-ink-soft">Tu avais trouvé ?</span>
-      <ReadingAssess current={current} options={options} onPick={(s) => {
+      <ReadingAssess current={current} options={options} fill onPick={(s) => {
         // Première réponse après avoir ouvert la solution soi-même : c'est « Tu avais trouvé ? ».
         if (openedHere && !current) {
           trackAction('trouve-apres-solution');
@@ -429,7 +432,7 @@ const ReadingFound: React.FC<{
 /** Bouton « Voir la solution » en toutes lettres (le seul geste principal d'une question). */
 const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
   <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} data-tour="solution"
-    className={`inline-flex h-9 items-center gap-1.5 rounded-full pl-3 pr-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-10 ${
+    className={`inline-flex h-10 items-center gap-1.5 rounded-full pl-3 pr-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
       isOpen ? 'bg-[#f2f1ee] text-ink-soft hover:bg-line' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
     {isOpen ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
     {isOpen
@@ -483,7 +486,7 @@ const ReadingQuestionBody: React.FC<{
   if (!hasSolution && !(canAssess && !locked) && !pts) return null;
   return (
     <>
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+      <div className={`${hasSolution || canAssess ? 'mt-2.5' : 'mt-1'} flex flex-wrap items-center gap-2`}>
         {hasSolution && <ReadingSolutionToggle isOpen={shown} onToggle={toggle} />}
         {canAssess && !locked && (hasSolution
           ? (!shown && current ? <ReadingResult current={current} options={assessOptions} onOpen={toggle} /> : null)
@@ -672,13 +675,12 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
 /** Question en variante « lecture » : numéro en marge, énoncé, puis sa barre et ses sous-questions. */
 const ReadingQuestion: React.FC<QuestionRendererProps> = ({
-  block, questionIndex, globalShowSolutions, progress, onAssess, onAssessMany, assessOptions, onSolutionOpen,
+  block, questionIndex, globalShowSolutions, progress, onAssess, assessOptions, onSolutionOpen,
   interactive, isFirst = false, afterContext = false, locked = false, onReport,
 }) => {
   const path = block.id;
   const subs = block.subQuestions ?? [];
   const canAssess = interactive && !!onAssess && !locked;
-  const subPaths = subs.map((sq) => `${path}.${sq.id}`);
   const common = { locked, globalShow: globalShowSolutions, progress, onAssess, canAssess, assessOptions, onSolutionOpen, onReport };
   return (
     <div id={subs.length ? undefined : questionAnchor(path)} className={`scroll-mt-24 ${isFirst ? '' : afterContext ? 'mt-6' : 'mt-8 sm:mt-10'}`}>
@@ -690,11 +692,9 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
             {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
           </div>
           {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} solution={block.solution} {...common} />}
+          {/* « Tout réussi » d'une question n'est pas repris ici : « Tu as fini ? » (bas de page) le fait pour tout le contenu. */}
           {subs.length > 0 && (
             <>
-              {canAssess && onAssessMany && subPaths.length > 1 && (
-                <div className="mt-2"><AllSuccessChip paths={subPaths} progress={progress} onAssessMany={onAssessMany} /></div>
-              )}
               {subs.map((sq, i) => {
                 const sqPath = `${path}.${sq.id}`;
                 return (

@@ -344,23 +344,24 @@ export const ExamView: React.FC<Props> = ({
       className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
         showAll ? 'bg-brand-soft text-brand-hover' : 'border border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
       {showAll ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-      {showAll ? 'Masquer les solutions' : 'Toutes les solutions'}
+      {showAll ? 'Masquer le corrigé' : 'Tout le corrigé'}
     </button>
   ) : null;
 
   // Fiche, partie « épreuve » : une seule action principale à chaque moment.
+  // Deux façons de travailler un sujet : en conditions (l'action principale) ou en lisant le corrigé.
   const epreuveBlock = epreuve.status === 'idle' ? (
-    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tour="examen-epreuve">
+    <div className="mt-5 border-t border-line pt-5" data-tour="examen-epreuve">
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={epreuve.start} className="fd-btn-primary min-h-11 justify-center px-5 text-[14px]">
           <Play className="h-4 w-4" /> Lancer l’épreuve
         </button>
         {toggleAll}
       </div>
-      <p className="text-[13px] leading-snug text-ink-faint sm:max-w-[250px] sm:text-right">
+      <p className="mt-2.5 text-[13px] leading-snug text-ink-faint">
         {durationMin
-          ? <>Compte à rebours de {durationLabel(durationMin)}, solutions cachées jusqu’à la fin.</>
-          : <>Chronomètre-toi, solutions cachées jusqu’à la fin.</>}
+          ? <>L’épreuve lance un compte à rebours de {durationLabel(durationMin)} ; les solutions restent cachées jusqu’à la fin.</>
+          : <>L’épreuve lance un chronomètre ; les solutions restent cachées jusqu’à la fin.</>}
       </p>
     </div>
   ) : locked ? (
@@ -399,7 +400,7 @@ export const ExamView: React.FC<Props> = ({
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Ta copie</span>
         {sessionCount > 0 && (
-          <button type="button" onClick={onOpenHistory} className="min-h-8 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
+          <button type="button" onClick={onOpenHistory} className="-my-2 min-h-10 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
             {sessionCount} passage{sessionCount > 1 ? 's' : ''}
           </button>
         )}
@@ -540,8 +541,8 @@ export const ExamView: React.FC<Props> = ({
           </section>
         </div>
 
-        {/* Téléphone : la copie (note, barème par exercice) après le sujet, pas pendant l'épreuve. */}
-        {!locked && <div id="ta-copie" className="scroll-mt-24 lg:hidden">{copiePanel}</div>}
+        {/* Téléphone : la copie (note, barème par exercice) après le sujet, dès qu'il y a une note (pas pendant l'épreuve). */}
+        {!locked && (corrected > 0 || !isAuthenticated) && <div id="ta-copie" className="scroll-mt-24 lg:hidden">{copiePanel}</div>}
         <AdSlot />
         {children}
       </div>

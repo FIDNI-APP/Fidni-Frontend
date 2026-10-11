@@ -85,8 +85,8 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
         description: description.trim() || undefined,
       });
       setSent(true);
-    } catch (err: any) {
-      const status = err?.response?.status;
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
       setError(status === 429
         ? 'Tu as envoyé beaucoup de signalements d’un coup. Réessaie un peu plus tard.'
         : 'Le signalement n’a pas pu être envoyé. Vérifie ta connexion et réessaie.');

@@ -21,14 +21,14 @@ interface ChronoProps {
   onOpenHistory: () => void;
 }
 
-const iconBtn = 'inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-40 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10';
+const iconBtn = 'inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-40 sm:h-9 sm:w-9 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10';
 
 export const Chrono: React.FC<ChronoProps> = ({
   timer, isRunning, start, stop, reset, save, saving, format, sessionCount, onOpenHistory,
 }) => {
   const history = sessionCount > 0 && (
     <button type="button" onClick={onOpenHistory}
-      className="inline-flex min-h-9 items-center px-1.5 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums [@media(pointer:coarse)]:min-h-10">
+      className="inline-flex min-h-10 items-center px-1.5 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums sm:min-h-9 [@media(pointer:coarse)]:min-h-10">
       {sessionCount} temps
     </button>
   );
@@ -38,7 +38,7 @@ export const Chrono: React.FC<ChronoProps> = ({
       <span className="inline-flex items-center gap-0.5" data-tour="detail-chrono">
         {history}
         <button type="button" onClick={start} title="Me chronométrer" aria-label="Lancer le chronomètre"
-          className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-10">
+          className="inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10">
           <Timer className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Chrono</span>
         </button>
       </span>

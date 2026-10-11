@@ -53,9 +53,11 @@ export const SimilarContents: React.FC<{ contentId: string }> = ({ contentId }) 
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 text-[14.5px] font-semibold leading-snug text-ink group-hover:text-brand-hover">{item.title}</span>
-                  <span className="mt-0.5 block truncate text-[12.5px] text-ink-faint">{sub}</span>
+                  <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                    <span className="shrink-0 whitespace-nowrap empty:hidden"><ProgressPill progress={progressOf(item)} /></span>
+                    <span className="truncate text-[12.5px] text-ink-faint">{sub}</span>
+                  </span>
                 </span>
-                <ProgressPill progress={progressOf(item)} />
                 <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden />
               </Link>
             </li>

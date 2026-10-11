@@ -2,6 +2,7 @@
 // (maths en $…$) et/ou en photos de leur copie. Les autres votent ; l'auteur peut modifier
 // ou supprimer la sienne. La correction officielle reste dans l'onglet « Exercice ».
 // L'éditeur (lourd) n'est téléchargé qu'à l'ouverture de « Proposer ma solution ».
+// 11/10/2026 : titre de section serif, état vide commun (EmptyState) qui porte seul les actions, squelette.
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +11,7 @@ import { Camera, Edit3, ImagePlus, Loader2, PenLine, Trash2, X, Lightbulb } from
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { fileAPI } from '@/lib/api/contentItemApi';
+import { CardsSkeleton, EmptyState } from '@/components/space/Page';
 import {
   compressImage, createProposedSolution, deleteProposedSolution, updateProposedSolution, voteProposedSolution,
   type ProposedSolution, type SolutionAttachment,
@@ -89,7 +91,8 @@ const Composer: React.FC<{
         await createProposedSolution({ content: contentId, body: isBlank(body) ? '' : body, file_ids: fileIds });
       }
       onDone();
-    } catch (err: any) {
+    } catch (caught) {
+      const err = caught as { response?: { status?: number; data?: Record<string, unknown> & { detail?: string; non_field_errors?: string[]; body?: string[]; file?: string[] } } };
       const data = err?.response?.data;
       const message = data && typeof data === 'object'
         ? (data.detail || data.non_field_errors?.[0] || data.body?.[0] || data.file?.[0] || Object.values(data)[0])
@@ -311,17 +314,19 @@ export const ProposedSolutions: React.FC<{
     setComposing(true);
   };
 
+  const empty = solutions !== null && solutions.length === 0;
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="fd-display text-ink" style={{ fontSize: 22 }}>Solutions des élèves</h2>
-          <p className="text-sm text-ink-faint mt-1 max-w-xl">
-            Compare ta démarche avec celle des autres. La correction officielle reste dans l'onglet « Exercice ».
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h2 className="fd-display text-[20px] leading-tight text-ink">Solutions des élèves</h2>
+          <p className="mt-1 max-w-xl text-[13px] text-ink-faint">
+            Compare ta démarche avec celle des autres. Le corrigé officiel reste avec l’énoncé.
           </p>
         </div>
-        {!composing && !editing && (
-          <button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary">
+        {/* Liste vide : les actions sont dans l'état vide (pas deux fois le même bouton). */}
+        {!composing && !editing && !empty && (
+          <button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary min-h-10">
             <PenLine className="w-4 h-4" /> {mine ? 'Proposer une autre solution' : 'Proposer ma solution'}
           </button>
         )}
@@ -338,22 +343,14 @@ export const ProposedSolutions: React.FC<{
       )}
 
       {solutions === null ? (
-        <div className="fd-card p-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-ink-faint" /></div>
+        <CardsSkeleton n={2} />
       ) : solutions.length === 0 ? (
         !composing && (
-          <div className="fd-card p-8 sm:p-10 text-center">
-            <div className="w-12 h-12 rounded-xl bg-[#f2f1ee] text-ink-faint flex items-center justify-center mx-auto mb-3">
-              <Lightbulb className="w-6 h-6" />
-            </div>
-            <h3 className="font-semibold text-ink">Aucune solution proposée pour l'instant</h3>
-            <p className="text-sm text-ink-faint mt-1.5 max-w-md mx-auto">
-              Sois le premier à partager ta méthode : rédige-la avec l'éditeur, ou prends simplement ta copie en photo.
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-5 flex-wrap">
-              <button onClick={start} className="fd-btn-primary"><PenLine className="w-4 h-4" /> Rédiger ma solution</button>
-              <button onClick={start} className="fd-btn-ghost"><Camera className="w-4 h-4" /> Envoyer une photo</button>
-            </div>
-          </div>
+          <EmptyState icon={Lightbulb} tone="ink" compact
+            title="Aucune solution proposée pour l’instant"
+            text="Sois le premier à partager ta méthode : rédige-la avec l’éditeur, ou prends simplement ta copie en photo."
+            action={<button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary min-h-10"><PenLine className="w-4 h-4" /> Rédiger ma solution</button>}
+            secondary={<button onClick={start} className="fd-btn-ghost min-h-10"><Camera className="w-4 h-4" /> Envoyer une photo</button>} />
         )
       ) : (
         solutions.map((s) => (

@@ -67,7 +67,7 @@ const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 const commentHtml = (text: string) => (/<(p|ul|ol|br|strong|em|a|span|div)[\s>/]/i.test(text)
   ? text
   : text.split(/\n{2,}/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join(''));
-const isBlank = (html: string) => !html.replace(/<[^>]*>/g, '').replace(/&nbsp;| /g, ' ').trim();
+const isBlank = (html: string) => !html.replace(/<[^>]*>/g, '').replace(/&nbsp;|\u00a0/g, ' ').trim();
 
 const timeAgo = (iso: string) => {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);

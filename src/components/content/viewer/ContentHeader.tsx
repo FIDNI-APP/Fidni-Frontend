@@ -149,8 +149,10 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   // ── Infos : questions et durée (estimée pour un exercice, celle du sujet pour un examen).
   const items = Number(content.item_count) || 0;
   const minutes = exam ? Number(exam.duration_minutes) || 0 : Number(content.expected_minutes) || 0;
+  const sectionCount = isLesson ? ((content.structure as { sections?: unknown[] } | undefined)?.sections?.length ?? 0) : 0;
   const facts = [
     !isLesson && items > 0 ? `${items} question${items > 1 ? 's' : ''}` : null,
+    sectionCount > 1 ? `${sectionCount} parties` : null,
     minutes > 0 ? (exam ? durationLabel(minutes) : `≈ ${durationLabel(minutes)}`) : null,
   ].filter(Boolean).join(' · ');
 
@@ -164,7 +166,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   return (
     <header className="mb-6 sm:mb-8">
       {/* Retour nommé + actions */}
-      <div className="-mx-1 flex items-center justify-between gap-2">
+      <div className="-mx-1 flex items-center justify-between gap-2 print:hidden">
         <button type="button" onClick={goBack} title={from ? 'Revenir à la page précédente' : back.label}
           className="inline-flex min-h-10 min-w-0 items-center gap-1 rounded-lg px-1 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink">
           <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
@@ -290,7 +292,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
       {/* Onglets soulignés : l'énoncé d'abord, le reste à côté, sans voler la vedette. */}
       {tabs.length > 0 && !hideTabs && (
         <div role="tablist" aria-label="Sections" data-tour="detail-onglets"
-          className="mt-6 flex gap-6 overflow-x-auto border-b border-line scrollbar-hide sm:gap-8">
+          className="mt-6 flex gap-6 overflow-x-auto border-b border-line scrollbar-hide sm:gap-8 print:hidden">
           {tabs.map(({ id, label, short, count }) => {
             const active = activeTab === id;
             return (

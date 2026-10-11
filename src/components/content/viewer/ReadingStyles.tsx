@@ -15,6 +15,9 @@ const CSS = `
 .fd-read .tiptap-full-renderer .math-display { margin: .7em 0; }
 .fd-read .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 15.5px; line-height: 1.7; color: #33302b; }
 .fd-read .fd-sol .tiptap-full-renderer .ProseMirror strong { color: #1a1a1a; }
+.fd-read .tiptap-full-renderer .ProseMirror [data-callout-type] > :last-child,
+.fd-lesson .tiptap-full-renderer .ProseMirror [data-callout-type] > :last-child,
+.fd-lesson .tiptap-full-renderer .ProseMirror li > p { margin-bottom: 0; }
 
 .fd-lesson .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.75; color: #1a1a1a; }
 .fd-lesson .tiptap-full-renderer .ProseMirror p { margin-bottom: .7em; }
