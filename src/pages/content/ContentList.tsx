@@ -1175,6 +1175,7 @@ export const ContentList: React.FC<ContentListProps> = ({
                         showSubject={showSubject}
                         levelSlug={hub?.level.slug}
                         hideLevel={filters.classLevels.length === 1}
+                        hideChapter={!!hub?.chapter || filters.chapters.length === 1}
                         hideNational={!!yearFolder}
                         onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
                         onDelete={handleDeleteItem}

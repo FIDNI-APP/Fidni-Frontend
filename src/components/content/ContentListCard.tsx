@@ -1,33 +1,34 @@
 // src/components/content/ContentListCard.tsx
-// Carte d'un exercice, d'un examen ou d'une leçon dans les listes (refaite le 11/10/2026 pour alléger :
-// moins d'étiquettes, de couleurs et de boutons). L'élève y lit, de haut en bas :
-//   1. où il en est (✓ Réussi, ↻ À revoir, « 1/3 questions », ◌ À faire) et « • Nouveau » ; à droite, « Liste »
-//      et favori ;
-//   2. le titre ;
-//   3. le chapitre (lien, sauf dans son propre dossier), la difficulté (et le ressenti des élèves s'il diffère),
-//      le nombre de questions, la durée ; le niveau seulement s'il ne va pas de soi ; puis, avec le tri « Pour
-//      toi », pourquoi on le lui propose (« Suite de ton travail ») ;
-//   4. un aperçu discret : début de l'énoncé, exercices d'un sujet (barème), sommaire d'une leçon ;
-//   5. en pied : j'aime / je n'aime pas (discrets) et UNE façon d'ouvrir (« Commencer », « Reprendre »…).
-// Toute la carte est un lien ; elle transmet l'adresse de la liste (state.from) pour que le retour y ramène.
+// Carte d'un exercice, d'un examen ou d'une leçon dans les listes. Pensée pour qu'un élève sache
+// en un coup d'œil de quoi il s'agit :
+//   - exercice : le début de l'énoncé, rendu comme sur sa page (formules comprises) ;
+//   - examen   : la liste de ses exercices avec leur barème ;
+//   - leçon    : son sommaire.
+// Repères : difficulté et ressenti des élèves, état de l'élève, questions déjà évaluées (« 3/6 questions »),
+// durée attendue (« ≈ 25 min »). On arrive dans une liste par Maths › niveau › chapitre (dossiers) : matière,
+// niveau et chapitre n'y sont plus répétés sur chaque carte ; le chapitre reste (lien) dans une liste qui en
+// mélange plusieurs (recherche, anciens liens filtrés).
+// En bas : votes, discussions, vues, et le bouton pour ouvrir. Toute la carte est un lien ; elle transmet
+// l'adresse de la liste (state.from) pour que le retour y ramène.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, ListPlus, MessageSquare, Sparkles } from 'lucide-react';
+import { ArrowRight, Eye, ListPlus, MessageSquare, Sparkles } from 'lucide-react';
 import type { ExamListItem } from '@/types/content';
 import type { VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { isModerator } from '@/lib/features';
+import { VoteButtons } from '@/components/interactions/VoteButtons';
+import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import {
   BASE_PATH, chapterHref, chapterLabel, facts, levelLabel, progressOf, questionProgress, structureOf, useBookmark,
-  type ListItem, type ListKind,
+  type ListItem, type ListKind, type PreviewStructure,
 } from './listing/listingUtils';
-import { CardPreview } from './listing/CardPreview';
-import { BookmarkButton, CardStatus, DifficultyChip, OwnerButtons, QuietVotes, cardIconBtn } from './listing/ListingParts';
-import { NewTag, isNewContent } from './NewBadge';
+import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, ProgressPill, QuestionProgressBar } from './listing/ListingParts';
+import { NewBadge, isNewContent } from './NewBadge';
 
 interface ContentListCardProps {
   content: ListItem;
@@ -36,25 +37,94 @@ interface ContentListCardProps {
   onEdit?: (id: string) => void;
   showSubject?: boolean;
   first?: boolean;
-  /** Niveau de la page affichée (page de niveau) : le lien du chapitre y reste, le niveau ne se répète pas. */
+  /** Niveau de la page affichée (page de niveau) : le lien du chapitre y reste. */
   levelSlug?: string | null;
-  /** Le niveau va de soi (un seul niveau filtré) : on ne le répète pas sur chaque carte. */
+  /** Liste d'un seul niveau : le niveau n'est pas répété. */
   hideLevel?: boolean;
-  /** Dossier d'une année du Bac : « Bac national 2024 » va de soi. */
+  /** Liste d'un seul chapitre (dossier) : l'étiquette du chapitre n'est pas répétée. */
+  hideChapter?: boolean;
+  /** Dossier d'une année du Bac national : l'étiquette « Bac national » n'est pas répétée. */
   hideNational?: boolean;
 }
 
-const kindWordOf = (kind: ListKind) => (kind === 'lesson' ? 'cours' : kind === 'exam' ? 'devoirs' : 'exercices');
+const html = (h?: string) => ({ __html: renderContentHtml(h || '') });
+const stripTags = (h?: string) => (h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-function reasonText(reason: string | null | undefined, chapter: string | null, review: boolean): string | null {
-  if (!reason) return null;
-  if (review && /retravailler/i.test(reason)) return null;
-  const short = chapter ? reason.replace(` · ${chapter}`, '') : reason;
-  return short.trim() || null;
-}
+/** Début de l'énoncé : contexte et premières questions, numérotées comme sur la page. */
+const ExercisePreview: React.FC<{ structure: PreviewStructure }> = ({ structure }) => {
+  const rows: React.ReactNode[] = [];
+  let q = 0;
+  for (const b of structure?.blocks ?? []) {
+    if (rows.length >= 4) break;
+    if (b?.type === 'section') continue;
+    if (b?.type === 'context') {
+      if (b.content?.html) rows.push(<div key={b.id} dangerouslySetInnerHTML={html(b.content.html)} />);
+      continue;
+    }
+    q++;
+    rows.push(
+      <div key={b.id} className="flex gap-1.5">
+        <span className="fd-nums font-semibold text-ink shrink-0">{q}.</span>
+        <div className="min-w-0 flex-1">
+          <div dangerouslySetInnerHTML={html(b.content?.html)} />
+          {(b.subQuestions ?? []).slice(0, 2).map((sq, i) => (
+            <div key={sq.id} className="flex gap-1.5">
+              <span className="fd-nums text-ink-faint shrink-0">{q}.{i + 1}.</span>
+              <div className="min-w-0 flex-1" dangerouslySetInnerHTML={html(sq.content?.html)} />
+            </div>
+          ))}
+        </div>
+      </div>,
+    );
+  }
+  return <>{rows}</>;
+};
+
+/** Sujet d'examen : un exercice par ligne, avec son barème et sa première phrase. `total` : nombre de
+ *  parties donné par le serveur (en mode Cartes, la structure n'en contient que le début). */
+const ExamPreview: React.FC<{ structure: PreviewStructure; total?: number }> = ({ structure, total }) => {
+  const parts: { id: string; title: string; points?: number; first: string }[] = [];
+  for (const b of structure?.blocks ?? []) {
+    if (b?.type === 'section') parts.push({ id: b.id ?? String(parts.length), title: stripTags(b.content?.html) || `Partie ${parts.length + 1}`, points: b.points, first: '' });
+    else if (parts.length && !parts[parts.length - 1].first && b?.content?.html) parts[parts.length - 1].first = b.content.html;
+  }
+  if (!parts.length) return <ExercisePreview structure={structure} />;
+  const more = Math.max(parts.length, total ?? 0) - Math.min(parts.length, 4);
+  return (
+    <ol className="flex flex-col gap-1.5">
+      {parts.slice(0, 4).map((p) => (
+        <li key={p.id} className="min-w-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="font-semibold text-ink truncate">{p.title}</span>
+            {Number(p.points) > 0 && <span className="fd-nums text-[12px] text-ink-faint shrink-0">{String(p.points).replace('.', ',')} pts</span>}
+          </div>
+          {p.first && <div className="fd-preview-line text-ink-faint" dangerouslySetInnerHTML={html(p.first)} />}
+        </li>
+      ))}
+      {more > 0 && <li className="text-[12px] text-ink-faint">+ {more} autre{more > 1 ? 's' : ''}</li>}
+    </ol>
+  );
+};
+
+/** Leçon : son sommaire. */
+const LessonPreview: React.FC<{ structure: PreviewStructure }> = ({ structure }) => {
+  const sections = (structure?.sections ?? []).filter((s) => s?.title);
+  if (!sections.length) return <div dangerouslySetInnerHTML={html(structure?.sections?.[0]?.content?.html)} />;
+  return (
+    <ol className="flex flex-col gap-1">
+      {sections.slice(0, 5).map((s, i) => (
+        <li key={s.id} className="flex gap-2 min-w-0">
+          <span className="fd-nums text-ink-faint shrink-0 w-4 text-right">{i + 1}</span>
+          <span className="truncate text-ink-soft">{stripTags(s.title)}</span>
+        </li>
+      ))}
+      {sections.length > 5 && <li className="pl-6 text-[12px] text-ink-faint">+ {sections.length - 5} autre{sections.length - 5 > 1 ? 's' : ''} partie{sections.length - 5 > 1 ? 's' : ''}</li>}
+    </ol>
+  );
+};
 
 export const ContentListCard: React.FC<ContentListCardProps> = ({
-  content, contentType = 'exercise', onDelete, onEdit, showSubject, first, levelSlug, hideLevel, hideNational,
+  content, contentType = 'exercise', onDelete, onEdit, showSubject, first, levelSlug, hideLevel, hideChapter, hideNational,
 }) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
@@ -71,16 +141,20 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const bookmark = useBookmark(content, contentType);
   const path = `${BASE_PATH[contentType]}/${content.id}`;
   const progress = progressOf(content);
-  const lesson = contentType === 'lesson';
-  const started = lesson ? null : questionProgress(content);
+  const started = contentType === 'lesson' ? null : questionProgress(content);
   const canManage = user?.id === content.author?.id || isModerator(user);
-  const chapter = chapterLabel(content, levelSlug);
+  const chapter = hideChapter ? null : chapterLabel(content, levelSlug);
   const chapterTo = chapterHref(content, contentType, levelSlug);
-  // Dans le dossier de son chapitre, le chapitre va de soi.
-  const inOwnFolder = !!chapterTo && chapterTo === location.pathname;
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
   const structure = structureOf(content);
-  const reason = reasonText(content.recommendation_reason, chapter, progress === 'review');
+  // Tri « Pour toi » : pourquoi ce contenu est proposé (« À retravailler », « Suite de ton travail · … »).
+  // Dans le dossier d'un chapitre, « Suite de ton travail · Suites numériques » ne répète pas le chapitre.
+  const reason = useMemo(() => {
+    const r = content.recommendation_reason;
+    if (!r || !hideChapter) return r;
+    const names = new Set((content.chapters ?? []).map((c) => c.name));
+    return r.split(' · ').filter((part) => !names.has(part)).join(' · ') || null;
+  }, [content.recommendation_reason, content.chapters, hideChapter]);
   const felt = content.felt ?? null;
   const comments = content.comment_count ?? 0;
 
@@ -93,135 +167,127 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
 
   const vote = async (value: VoteValue) => {
     if (!isAuthenticated) { openModal('vote'); return; }
-    const before = { counts, myVote };
-    // Affichage immédiat (re-toucher retire le vote), corrigé ensuite par la réponse du serveur.
-    const next = { ...counts };
-    if (myVote === 1) next.likes -= 1;
-    if (myVote === -1) next.dislikes -= 1;
-    if (myVote !== value) { if (value === 1) next.likes += 1; else next.dislikes += 1; }
-    setCounts({ likes: Math.max(0, next.likes), dislikes: Math.max(0, next.dislikes) });
-    setMyVote(myVote === value ? 0 : value);
     const api = contentType === 'exam' ? examContentAPI : contentType === 'lesson' ? lessonContentAPI : exerciseContentAPI;
     try {
       const r = await api.vote(String(content.id), value);
       if (typeof r.like_count === 'number') setCounts({ likes: r.like_count, dislikes: r.dislike_count ?? 0 });
       setMyVote(r.user_vote as 1 | -1 | 0);
-    } catch (e) {
-      console.error('Vote', e);
-      setCounts(before.counts);
-      setMyVote(before.myVote);
-    }
+    } catch (e) { console.error('Vote', e); }
   };
 
-  // Repères en une ligne : nombre de questions, durée ; niveau et matière seulement s'ils ne vont pas de soi.
   const infos = useMemo(() => [
     showSubject && content.subject?.name ? content.subject.name : null,
+    hideLevel ? null : levelLabel(content),
     ...facts(content, contentType),
-    levelSlug || hideLevel ? null : levelLabel(content),
-  ].filter(Boolean) as string[], [content, contentType, showSubject, levelSlug, hideLevel]);
+  ].filter(Boolean) as string[], [content, contentType, showSubject, hideLevel]);
 
   // « Nouveau » : calculé une fois (lit le stockage du navigateur).
   const isNew = useMemo(() => isNewContent(content as { id: string | number; created_at?: string }), [content]);
-  const meta: React.ReactNode[] = [
-    chapter && !inOwnFolder ? (chapterTo ? (
-      <Link to={chapterTo} title={`Tous les ${kindWordOf(contentType)} de ce chapitre`}
-        className="relative z-10 max-w-full truncate font-semibold text-ink-soft underline decoration-line underline-offset-[3px] transition-colors before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] hover:text-ink hover:decoration-ink-faint">
-        {chapter}
-      </Link>
-    ) : <span className="max-w-full truncate font-semibold text-ink-soft">{chapter}</span>) : null,
-    exam?.is_national_exam && !hideNational ? <span className="font-semibold text-gold-strong">Bac national{exam.national_year ? ` ${exam.national_year}` : ''}</span> : null,
-    'difficulty' in content && content.difficulty ? <DifficultyChip difficulty={content.difficulty} felt={felt} interactive plain /> : null,
-    infos.length ? <span className="fd-nums">{infos.join(' · ')}</span> : null,
-    structure?.a_verifier ? (
-      <span title="Correction rédigée récemment, en cours de relecture par l’auteur du document" className="font-medium text-gold-strong">
-        Correction en vérification
-      </span>
-    ) : null,
-  ].filter(Boolean);
-  const cta = lesson ? 'Lire' : progress === 'success' ? 'Revoir' : progress === 'review' || started ? 'Reprendre' : 'Commencer';
 
   return (
-    <article className="group relative flex h-full flex-col rounded-2xl border border-line bg-white transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus-within:border-[#cfc9bf]">
-      <div className="flex flex-1 flex-col px-4 pt-3 sm:px-5 sm:pt-3.5">
-        {/* 1. Où il en est, pourquoi on le lui propose ; « Liste » et favori à droite. */}
-        <div className="flex min-h-10 items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-x-2.5 gap-y-1 overflow-hidden">
-            <CardStatus progress={progress} started={started} lesson={lesson} signedIn={isAuthenticated} />
-            {isNew && <NewTag />}
+    <article className="group relative h-full flex flex-col rounded-2xl border border-line bg-white transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[#d6d2ca] hover:shadow-[0_12px_32px_rgba(20,18,16,.07)] motion-reduce:hover:translate-y-0">
+      {isNew && <NewBadge />}
+      <div className="px-5 pt-4 flex-1 flex flex-col">
+        {/* Repères : chapitre, difficulté, état de l'élève ; favori à droite. */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0 pt-1">
+            {exam?.is_national_exam && !hideNational && <NationalTag year={exam.national_year} />}
+            {structure?.a_verifier && (
+              <span title="Correction rédigée récemment, en cours de relecture par l’auteur du document"
+                className="inline-flex items-center px-2 py-0.5 rounded-full bg-gold-soft text-[11.5px] font-semibold text-gold-strong">
+                Correction en vérification
+              </span>
+            )}
+            {chapter && (chapterTo && chapterTo !== location.pathname ? (
+              <Link to={chapterTo} title={`Tous les ${contentType === 'lesson' ? 'cours' : contentType === 'exam' ? 'devoirs' : 'exercices'} de ce chapitre`}
+                className="relative z-10 inline-flex max-w-full items-center px-2 py-0.5 rounded-full bg-[#f2f1ee] text-[11.5px] font-semibold text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']">
+                <span className="truncate">{chapter}</span>
+              </Link>
+            ) : (
+              <span className="inline-flex max-w-full items-center px-2 py-0.5 rounded-full bg-[#f2f1ee] text-[11.5px] font-semibold text-ink-muted">
+                <span className="truncate">{chapter}</span>
+              </span>
+            ))}
+            <ProgressPill progress={progress} />
+            {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
           </div>
-          <div className="relative z-10 -mr-2 flex shrink-0 items-center">
+          <div className="relative z-10 flex items-center -mr-2 -mt-0.5 shrink-0">
             {canManage && (
               <OwnerButtons
                 onEdit={onEdit ? () => onEdit(String(content.id)) : undefined}
                 onDelete={onDelete ? () => onDelete(String(content.id)) : undefined}
               />
             )}
-            {!lesson && (
+            {contentType !== 'lesson' && (
               <button type="button" onClick={openRevision} data-tour={first ? 'liste-revision' : undefined}
-                className={`${cardIconBtn} text-ink-faint hover:bg-[#f2f1ee] hover:text-ink`}
+                className="relative z-10 w-9 h-9 rounded-lg inline-flex items-center justify-center text-ink-faint hover:text-ink hover:bg-[#f2f1ee] transition-colors"
                 aria-label="Ajouter à une liste de révision" title="Ajouter à une liste de révision">
-                <ListPlus className="h-[18px] w-[18px]" />
+                <ListPlus className="w-4 h-4" />
               </button>
             )}
-            <BookmarkButton saved={bookmark.saved} busy={bookmark.busy} onClick={bookmark.toggle} className="!h-10 !w-10 !rounded-xl sm:!h-9 sm:!w-9" />
+            <BookmarkButton saved={bookmark.saved} busy={bookmark.busy} onClick={bookmark.toggle} />
           </div>
         </div>
 
-        {/* 2. Titre : le lien de toute la carte. */}
-        <Link
-          to={path}
-          state={{ from }}
-          className="fd-display mt-0.5 text-[18px] font-semibold leading-[1.28] text-ink line-clamp-2 after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand/50"
-        >
-          {content.title}
-        </Link>
-
-        {/* 3. Chapitre, difficulté, repères : des groupes espacés (pas de point qui pend en fin de ligne). */}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-ink-faint">
-          {meta.map((node, i) => <React.Fragment key={i}>{node}</React.Fragment>)}
-        </div>
-        {/* « Pour toi » : pourquoi on le lui propose. */}
         {reason && (
-          <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-brand-hover" title={content.recommendation_reason ?? undefined}>
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-brand min-w-0">
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
             <span className="truncate">{reason}</span>
           </p>
         )}
+        <Link
+          to={path}
+          state={{ from }}
+          className="fd-display mt-2 text-[18.5px] leading-[1.25] font-semibold text-ink line-clamp-2 transition-colors group-hover:text-brand-hover after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
+        >
+          {content.title}
+        </Link>
+        {infos.length > 0 && (
+          <p className="mt-1 text-[12.5px] text-ink-faint fd-nums">{infos.join(' · ')}</p>
+        )}
+        {/* Travail commencé : où il en est. */}
+        {started && progress !== 'success' && (
+          <div className="mt-2"><QuestionProgressBar progress={started} /></div>
+        )}
 
-        {/* 4. Aperçu : ce qu'il y a dedans, en retrait, coupé en fondu. */}
+        {/* Aperçu : ce qu'il y a dedans, lisible, coupé en fondu. */}
         {structure && (
-          <div className="fd-card-preview mt-3 border-l-2 border-[#efece6] pl-3 text-[13px] leading-[1.55] text-ink-faint">
-            <div className="max-h-[66px] overflow-hidden sm:max-h-[86px]"
-              style={{ WebkitMaskImage: 'linear-gradient(to bottom, #000 55%, transparent)', maskImage: 'linear-gradient(to bottom, #000 55%, transparent)' }}>
-              <CardPreview structure={structure} kind={contentType} total={exam?.section_count} />
+          <div className="fd-card-preview mt-3 mb-4 rounded-xl border border-[#efece6] bg-[#fcfbf9] px-4 py-3 text-[13.5px] leading-[1.55] text-ink-soft">
+            <div className="fd-card-preview-clip">
+              {contentType === 'exam' ? <ExamPreview structure={structure} total={exam?.section_count} />
+                : contentType === 'lesson' ? <LessonPreview structure={structure} />
+                : <ExercisePreview structure={structure} />}
             </div>
           </div>
         )}
-        <div className="min-h-3 flex-1" />
       </div>
 
-      {/* 5. Pied : avis discrets, une seule façon d'ouvrir. */}
-      <div className="flex items-center gap-1 border-t border-[#f0ede8] px-2.5 py-1.5 sm:px-3">
-        <div data-tour={first ? 'vote' : undefined} className="flex items-center">
-          <QuietVotes likes={counts.likes} dislikes={counts.dislikes} userVote={myVote} onVote={vote} />
+      {/* Pied : votes, discussions, vues ; bouton d'ouverture. */}
+      <div className="relative z-10 flex items-center gap-3 px-4 py-3 border-t border-[#f0ede8]">
+        <div data-tour={first ? 'vote' : undefined}>
+          <VoteButtons likes={counts.likes} dislikes={counts.dislikes} onVote={vote} userVote={myVote} size="sm" />
         </div>
         {comments > 0 && (
-          <span className="ml-1 inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title={`${comments} message${comments > 1 ? 's' : ''}`}>
-            <MessageSquare className="h-3.5 w-3.5" aria-hidden /> {comments}
-            <span className="sr-only">message{comments > 1 ? 's' : ''}</span>
+          <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title={`${comments} message${comments > 1 ? 's' : ''}`}>
+            <MessageSquare className="w-3.5 h-3.5" /> {comments}
           </span>
         )}
-        {/* Pas un second lien : le titre couvre toute la carte (un seul arrêt au clavier). */}
-        <span
+        {(content.view_count ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title="Vues">
+            <Eye className="w-3.5 h-3.5" /> {content.view_count}
+          </span>
+        )}
+        <Link
+          to={path}
+          state={{ from }}
           data-tour={first ? 'liste-ouvrir' : undefined}
-          aria-hidden
-          className="ml-auto inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-soft px-3.5 text-[13px] font-semibold text-brand-hover transition-colors group-hover:bg-brand group-hover:text-white sm:h-9"
+          className="ml-auto inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[10px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover transition-colors"
         >
-          {cta}
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </span>
+          {contentType === 'lesson' ? 'Lire' : progress === 'success' ? 'Revoir' : progress === 'review' || started ? 'Reprendre' : 'Commencer'}
+          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </div>
-      {revisionOpen && !lesson && (
+      {revisionOpen && contentType !== 'lesson' && (
         <AddToRevisionListModal
           isOpen={revisionOpen}
           onClose={() => setRevisionOpen(false)}

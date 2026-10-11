@@ -160,8 +160,9 @@ const SectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ bl
 
 const QUICK_OPTION: Partial<Record<AssessmentStatus, { label: string; hint?: string; icon: React.ReactNode; on: string }>> = {
   success: { label: 'Réussi', icon: <Check className="w-3.5 h-3.5" />, on: 'bg-white text-brand-hover shadow-sm' },
-  partial: { label: 'En partie', hint: 'la moitié des points', icon: <Contrast className="w-3.5 h-3.5" />, on: 'bg-white text-gold-strong shadow-sm' },
-  review: { label: 'À revoir', icon: <RotateCcw className="w-3.5 h-3.5" />, on: 'bg-white text-[#a23b34] shadow-sm' },
+  // « À revoir » en or comme partout (repère « à retravailler ») ; « En partie » à l'encre ; le rouge reste aux erreurs.
+  partial: { label: 'En partie', hint: 'la moitié des points', icon: <Contrast className="w-3.5 h-3.5" />, on: 'bg-white text-ink shadow-sm' },
+  review: { label: 'À revoir', icon: <RotateCcw className="w-3.5 h-3.5" />, on: 'bg-white text-gold-strong shadow-sm' },
 };
 const DEFAULT_OPTIONS: AssessmentStatus[] = ['success', 'review'];
 
@@ -257,7 +258,7 @@ const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentSt
       <button type="button" onClick={answer('success')} className={`${btn} bg-brand-soft text-brand-hover hover:bg-brand hover:text-white`}>
         <Check className="w-3.5 h-3.5" /> Oui
       </button>
-      <button type="button" onClick={answer('review')} className={`${btn} bg-[#fbecea] text-[#a23b34] hover:bg-[#a23b34] hover:text-white`}>
+      <button type="button" onClick={answer('review')} className={`${btn} bg-gold-soft text-gold-strong hover:bg-gold hover:text-white`}>
         <RotateCcw className="w-3.5 h-3.5" /> Non, à revoir
       </button>
     </div>
