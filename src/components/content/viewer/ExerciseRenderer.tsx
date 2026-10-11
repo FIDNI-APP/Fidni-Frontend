@@ -31,6 +31,7 @@ import type { ExerciseBlock, SubQuestionBlock, FlexibleExerciseStructure } from 
 import { trackAction } from '@/lib/usage';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import { useRegisterPrompt } from './pageHelpers';
+import { FoldedSolution } from './FoldedSolution';
 
 // =====================
 // TYPES
@@ -542,6 +543,9 @@ const ReadingQuestionBody: React.FC<{
         <ReadingSolution solution={solution} onReport={report}
           footer={canAssess ? <ReadingFound current={current} options={assessOptions} openedHere={openedHere} onAssess={assess} /> : undefined} />
       )}
+      {/* Fermées : dans la page sans être affichées (moteurs de recherche). */}
+      {hasHint && !hintShown && <FoldedSolution html={hint?.html} />}
+      {hasSolution && !shown && <FoldedSolution html={solution?.html} />}
     </>
   );
 };

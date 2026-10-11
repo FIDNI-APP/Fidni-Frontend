@@ -192,6 +192,7 @@ export function Search() {
       <SEO
         title={submitted ? `Recherche : ${submitted} - Fidni` : 'Recherche - Fidni'}
         description={submitted ? `Résultats de recherche pour « ${submitted} »` : 'Trouve un exercice, une leçon ou un examen.'}
+        noindex
       />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">

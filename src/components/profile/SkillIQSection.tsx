@@ -19,6 +19,7 @@ import { practiceUrl } from '@/pages/progression/links';
 import type { User } from '@/types';
 import { findChapter, getQuiz } from '@/components/skilliq/api';
 import { ComingSoon } from '@/components/skilliq/ComingSoon';
+import { SEO } from '@/components/layout/SEO';
 import { OtherLevel } from '@/components/skilliq/OtherLevel';
 import { QuizList } from '@/components/skilliq/QuizList';
 import { QuizResult } from '@/components/skilliq/QuizResult';
@@ -259,6 +260,8 @@ export const SkillIQSection: React.FC = () => {
   if (!isAuthenticated || !user) {
     return (
       <Shell>
+        {/* Invitation à s'inscrire, rien à indexer. */}
+        <SEO title="Quiz par chapitre – Fidni" description="Des quiz de 10 questions corrigées par chapitre, avec un compte gratuit." noindex />
         <Header />
         <EmptyState tone="brand" icon={Brain} title="Les quiz par chapitre, avec ton compte"
           text="10 questions corrigées sur un chapitre, pour mesurer ta maîtrise. Avec un compte gratuit, ton score est gardé dans ta progression."

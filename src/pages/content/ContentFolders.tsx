@@ -79,6 +79,8 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   const [data, setData] = useState<LevelFolders | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Visiteur (et robot de Google) : seulement les niveaux qui ont du contenu, sans « 3 chapitres sur 12 ».
+  const member = useMemberView();
 
   useEffect(() => {
     if (redirect) return;
@@ -96,13 +98,15 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
 
   const groups: FolderGroup[] = data ? [{
     title: null,
-    items: data.levels.map((lv) => ({
+    items: data.levels.filter((lv) => member || lv.count > 0).map((lv) => ({
       key: lv.id,
       name: lv.name,
       to: lv.url,
       count: lv.count,
       countLabel: plural(lv.count, t.noun),
-      sub: lv.chapters_total ? `${lv.chapters_filled} chapitre${lv.chapters_filled > 1 ? 's' : ''} sur ${lv.chapters_total}` : undefined,
+      sub: !lv.chapters_total ? undefined
+        : member ? `${lv.chapters_filled} chapitre${lv.chapters_filled > 1 ? 's' : ''} sur ${lv.chapters_total}`
+          : `${lv.chapters_filled} chapitre${lv.chapters_filled > 1 ? 's' : ''}`,
       badge: myLevel && String(lv.id) === myLevel.id ? 'Ton niveau' : undefined,
       onOpen: () => trackAction('dossier-niveau'),
     })),
@@ -129,6 +133,14 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
     </Page>
   );
 };
+
+/** Vue « membre » (carte complète du programme, dossiers vides compris) : connecté, ou session en cours de
+ *  chargement (pas de dossiers qui disparaissent puis reviennent au démarrage). */
+function useMemberView() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const hadSession = useMemo(() => { try { return !!localStorage.getItem('token'); } catch { return false; } }, []);
+  return isAuthenticated || (isLoading && hadSession);
+}
 
 /* ───────────────────────── Chapitres d'un niveau ───────────────────────── */
 
@@ -181,10 +193,12 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
   }, [hub.level.id, kind]);
   useScrollMemory(true);
 
-  // Serveur plus ancien (sans `folders`) : les chapitres qui ont du contenu.
+  // Serveur plus ancien (sans `folders`) : les chapitres qui ont du contenu. Visiteur (et robot de Google) :
+  // pas de dossiers vides (« Vide pour l'instant » faisait site en construction) ; un membre voit tout le programme.
+  const member = useMemberView();
   const folders: HubFolder[] = useMemo(
-    () => hub.folders ?? hub.chapters.map((c) => ({ ...c, subfield: null })),
-    [hub.folders, hub.chapters],
+    () => (hub.folders ?? hub.chapters.map((c) => ({ ...c, subfield: null }))).filter((f) => member || f.count > 0),
+    [hub.folders, hub.chapters, member],
   );
   const groups = useMemo(() => {
     const g = groupFolders(folders, kind);
@@ -212,7 +226,7 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
         summary={(
           <p className="fd-nums">
             <span className="font-medium text-ink-soft">{plural(hub.count, t.noun)}</span>
-            {' '}dans {filled} chapitre{filled > 1 ? 's' : ''} sur {folders.length}
+            {' '}dans {filled} chapitre{filled > 1 ? 's' : ''}{member && <> sur {folders.length}</>}
             {isAuthenticated && done > 0 && (
               <>
                 {' · '}<b className="font-semibold text-ink-soft">{done}</b> {done > 1 ? t.doneWord[1] : t.doneWord[0]}
@@ -278,7 +292,8 @@ const YearsView: React.FC = () => {
 
   return (
     <Page width="wide">
-      <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux" />
+      <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux"
+        noindex={!!data && data.years.length === 0} />
       <FolderHeader title={NATIONAL.title} count={data ? total : null}
         summary={<p>{NATIONAL.subtitle} Un dossier par année.</p>}
         actions={<CreateButton kind="exam" />} />

@@ -97,7 +97,7 @@ export function ConcoursTipsListPage() {
 
   return (
     <Page>
-      <SEO title="Astuces - Concours - Fidni" description="Astuces et techniques pour les concours" />
+      <SEO title="Astuces - Concours - Fidni" description="Astuces et techniques pour les concours" noindex={tips !== null && !total && !filtered} />
       <ConcoursHeader />
 
       <Section id="astuces" title="Astuces" count={tips?.length}

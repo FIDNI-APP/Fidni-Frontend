@@ -808,7 +808,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   return (
     <div className="min-h-screen bg-paper pb-24">
       {/* Titre de l'onglet (le serveur envoie déjà le même titre aux moteurs de recherche : config/seo.py). */}
-      <Helmet><title>{`${content.title} – ${config.title} | Fidni`}</title></Helmet>
+      <Helmet>
+        <title>{`${content.title} – ${config.title} | Fidni`}</title>
+        <meta name="description" content={isLesson
+          ? `Leçon de maths : ${content.title}. Définitions, théorèmes, méthodes et exemples, programme marocain, sur Fidni.`
+          : `${config.title} de maths : ${content.title}. Énoncé et solution détaillée étape par étape, programme marocain, sur Fidni.`} />
+        <link rel="canonical" href={`https://fidni.fr${config.basePath}/${content.id}`} />
+      </Helmet>
       {/* Exercice : une colonne de lecture ; examen et leçon : la feuille et sa colonne (copie, sommaire).
           Largeur calculée pour que la feuille ait les proportions de la feuille A4 imprimée (pageHelpers). */}
       <div className="mx-auto w-full px-4 pt-3 sm:pt-6 md:px-8" style={{ maxWidth: DETAIL_MAX_WIDTH[contentType] }}>

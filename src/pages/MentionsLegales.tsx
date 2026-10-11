@@ -94,6 +94,7 @@ const sections: LegalSection[] = [
 export const MentionsLegales: React.FC = () => (
   <LegalLayout
     title="Mentions légales"
+    description="Mentions légales de Fidni : éditeur du site, hébergement (OVH), signalement d’un contenu et contact."
     intro={<p>Qui édite Fidni, qui l’héberge, et comment nous joindre.</p>}
     sections={sections}
   />

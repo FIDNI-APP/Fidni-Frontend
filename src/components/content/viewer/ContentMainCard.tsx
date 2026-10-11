@@ -25,6 +25,7 @@ import { LessonReader } from './LessonReader';
 import { ReadingStyles } from './ReadingStyles';
 import { SHEET_TEXT_PX } from './pageHelpers';
 import { Chrono } from './Chrono';
+import { FoldedSolution } from './FoldedSolution';
 import { trackAction } from '@/lib/usage';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
@@ -255,6 +256,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
               {wholeSolutionShown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
               {wholeSolutionShown ? 'Masquer la solution' : 'Voir la solution'}
             </button>
+            {!wholeSolutionShown && <FoldedSolution html={wholeSolution?.html} />}
             {wholeSolutionShown && wholeSolution?.html && (
               <div className="fd-read relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
                 <span className="absolute inset-y-0 left-0 w-[3px] bg-brand" aria-hidden />

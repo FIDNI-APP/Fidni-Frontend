@@ -35,6 +35,19 @@ export interface HubInfo {
   unfiled?: number;
   subject?: string | null;
   related: { section: string; label: string; count: number; url: string }[];
+  /** Page d'un chapitre : ce que dit le programme officiel (hubs.programme_public) ; null sinon. */
+  programme?: HubProgramme | null;
+}
+
+/** Programme d'un chapitre ; `reperes` (1ère Bac SM) : repères indicatifs, le document officiel ne donnant que les titres. */
+export interface HubProgramme {
+  periode: string | null;
+  heures: number | null;
+  contenus: string[];
+  capacites: string[];
+  reperes: string[];
+  theoremes: string[];
+  hors_programme: string[];
 }
 
 export type HubSection = 'exercises' | 'lessons' | 'exams';

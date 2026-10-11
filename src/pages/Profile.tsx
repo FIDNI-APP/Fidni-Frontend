@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CalendarDays, GraduationCap, Lock, MapPin, Pencil, Plus, RotateCcw, UserX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { SEO } from '@/components/layout/SEO';
 import { api } from '@/lib/api/apiClient';
 import { identityFromUser } from '@/lib/identity';
 import type { Content } from '@/types';
@@ -199,9 +200,13 @@ export const ProfilePage: React.FC = () => {
     return [name && `${civ}${name}`, id.school.name].filter(Boolean).join(' · ');
   }, [isOwner, currentUser]);
 
+  // Profils de membres : pas à indexer (pages de personnes, peu de contenu propre).
+  const seo = <SEO title={`${username || 'Profil'} – Fidni`} description="Profil d’un membre de Fidni." noindex />;
+
   if (state === 'notfound') {
     return (
       <Page width="narrow">
+        {seo}
         <EmptyState icon={UserX} tone="ink" title="Ce profil n’existe pas (ou plus)"
           text="Le pseudo a peut-être changé, ou le compte a été supprimé."
           action={<Link to="/" className="fd-btn-primary min-h-10">Retour à l’accueil</Link>} />
@@ -253,6 +258,7 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <Page>
+      {seo}
       {/* ── En-tête : qui est cette personne ── */}
       <header className="overflow-hidden rounded-3xl border border-line bg-white">
         {/* Bandeau papier quadrillé, même motif que les cahiers. */}

@@ -85,7 +85,7 @@ export function ClassroomsPage() {
   if (!user) {
     return (
       <Page>
-        <SEO title="Mes classes - Fidni" description="Rejoindre la classe de son prof avec un code." />
+        <SEO title="Mes classes - Fidni" description="Rejoindre la classe de son prof avec un code." noindex />
         {authLoading ? <CardsSkeleton n={2} /> : (
           <>
             {header()}

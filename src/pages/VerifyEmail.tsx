@@ -4,6 +4,7 @@ import { Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { verifyEmail } from '@/lib/api/authApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
+import { SEO } from '@/components/layout/SEO';
 
 type State = 'verifying' | 'success' | 'already' | 'expired' | 'invalid' | 'new-email';
 
@@ -50,6 +51,7 @@ export const VerifyEmail: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto px-4 py-16 sm:py-24 text-center">
+      <SEO title="Confirmer mon adresse – Fidni" description="Confirmation de l’adresse e-mail d’un compte Fidni." noindex />
       <div className="fd-card p-8">
         {state === 'verifying' && (
           <>

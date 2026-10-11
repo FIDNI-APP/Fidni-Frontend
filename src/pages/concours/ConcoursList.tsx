@@ -196,7 +196,8 @@ export default function ConcoursListPage() {
 
   return (
     <Page>
-      <SEO title="Concours - Fidni" description="Préparation aux concours d'entrée de l'ENSA, de l'ENSAM et de médecine." />
+      {/* Rien en ligne : page « arrivent bientôt », pas à indexer. */}
+      <SEO title="Concours - Fidni" description="Préparation aux concours d'entrée de l'ENSA, de l'ENSAM et de médecine." noindex={empty} />
       <ConcoursHeader />
 
       {failed && (

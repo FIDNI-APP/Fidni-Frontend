@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { LEGAL } from '@/lib/legal';
+import { SEO } from '@/components/layout/SEO';
 
 export interface LegalSection {
   id: string;
@@ -16,8 +17,8 @@ const PAGES = [
   { to: '/privacy-policy', label: 'Confidentialité' },
 ];
 
-export const LegalLayout: React.FC<{ title: string; intro: React.ReactNode; sections: LegalSection[] }> = ({
-  title, intro, sections,
+export const LegalLayout: React.FC<{ title: string; description: string; intro: React.ReactNode; sections: LegalSection[] }> = ({
+  title, description, intro, sections,
 }) => {
   const { pathname, hash } = useLocation();
   useEffect(() => {
@@ -27,6 +28,8 @@ export const LegalLayout: React.FC<{ title: string; intro: React.ReactNode; sect
 
   return (
     <div className="bg-[#faf9f7] min-h-screen pb-16 text-[#1a1a1a]">
+      {/* Titre et description propres (avant : ceux de l'accueil). */}
+      <SEO title={`${title} – Fidni`} description={description} canonicalUrl={pathname} />
       <header className="border-b border-[#e7e3dc] pt-8 pb-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <Link to="/" className="inline-flex items-center text-[#6b6862] hover:text-[#1a1a1a] mb-6 text-sm transition-colors">

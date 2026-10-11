@@ -38,6 +38,7 @@ import { CatchUpBanner } from '@/components/content/listing/CatchUpBanner';
 import { StatementCard } from '@/components/content/listing/StatementCard';
 import { usePhone } from '@/components/content/listing/listingUtils';
 import { FolderAbout, FolderHeader, RelatedLinks, type Crumb } from '@/components/content/folders/FolderHeader';
+import { ChapterProgramme } from '@/components/content/folders/ChapterProgramme';
 import { HorizontalFilterBar } from '@/components/search/HorizontalFilterBar';
 import {
   clearedFilters, withoutChip, type ActiveChip, type FilterSlugs, type ListFilters,
@@ -1276,6 +1277,11 @@ export const ContentList: React.FC<ContentListProps> = ({
         )}
 
         {items.length > 0 && <AdSlot className="mt-10" />}
+
+        {/* Page d'un chapitre : ce que dit le programme officiel. */}
+        {hub?.chapter && hub.programme && (
+          <ChapterProgramme programme={hub.programme} chapter={hub.chapter.name} level={hub.level.name} />
+        )}
 
         {/* Présentation pour les moteurs de recherche (même texte que la page pré-remplie), en bas de page. */}
         {hub?.intro && <FolderAbout>{hub.intro}</FolderAbout>}

@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Compass } from 'lucide-react';
+import { SEO } from '@/components/layout/SEO';
 
 /** Adresse inconnue : avant, l'élève tombait sur une page blanche sans issue. */
 export const NotFound: React.FC = () => (
   <div className="max-w-md mx-auto px-4 py-16 sm:py-24 text-center">
+    {/* Le serveur répond 200 (application) : noindex pour ne pas indexer d'adresses inconnues. */}
+    <SEO title="Page introuvable – Fidni" description="Cette page n’existe pas ou a été déplacée." noindex />
     <div className="fd-card p-8">
       <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#f2f1ee] flex items-center justify-center">
         <Compass className="w-6 h-6 text-ink-soft" />

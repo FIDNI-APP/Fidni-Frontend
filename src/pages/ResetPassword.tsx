@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, CheckCircle2, XCircle, ArrowRight, Lock, KeyRound } from 'lucide-react';
 import { confirmPasswordReset } from '@/lib/api/authApi';
+import { SEO } from '@/components/layout/SEO';
 
 type State = 'form' | 'success' | 'invalid';
 
@@ -46,6 +47,7 @@ export const ResetPassword: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto px-4 py-16 sm:py-24">
+      <SEO title="Nouveau mot de passe – Fidni" description="Choisir un nouveau mot de passe pour un compte Fidni." noindex />
       <div className="fd-card p-8">
         {state === 'form' && (
           <>

@@ -166,6 +166,7 @@ const sections: LegalSection[] = [
 export const TermsOfService: React.FC = () => (
   <LegalLayout
     title="Conditions d’utilisation"
+    description="Conditions d’utilisation de Fidni : ce que le site propose, les règles de publication et de modération, et tes engagements."
     intro={<p>Les règles du jeu sur Fidni : ce que vous pouvez attendre du site, et ce que le site attend de vous.</p>}
     sections={sections}
   />

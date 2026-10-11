@@ -15,6 +15,7 @@ import type { Difficulty } from '@/types';
 import { TourHelpButton } from '@/components/tour/TourProvider';
 import { SignupCard, useOpenSignup } from '@/components/auth/SignupPrompt';
 import { trackAction } from '@/lib/usage';
+import { SEO } from '@/components/layout/SEO';
 import { PAPER_GLYPHS_FACE, PAPER_SERIF, ROMAN } from '@/lib/paperFont';
 
 type SolutionsMode = 'none' | 'end' | 'inline';
@@ -428,6 +429,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   if (guest && source !== 'content') {
     return (
       <div className="fp-desk fp-center">
+        <SEO title="Aperçu du PDF – Fidni" noindex />
         <div style={{ maxWidth: 420, width: '100%' }}>
           <SignupCard title="Imprimer avec un compte"
             text="Le téléchargement en PDF (exercices, sujets, leçons, cahiers) est réservé aux membres. L’inscription est gratuite et prend une minute." />
@@ -443,6 +445,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   if (error) {
     return (
       <div className="fp-desk fp-center">
+        <SEO title="Aperçu du PDF – Fidni" noindex />
         <p style={{ color: '#6b6862', marginBottom: 16 }}>{error}</p>
         <button className="fd-btn-primary" onClick={goBack}>Retour</button>
         <style>{styles('')}</style>
@@ -452,6 +455,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   if (!data || !custom) {
     return (
       <div className="fp-desk fp-center">
+        <SEO title="Aperçu du PDF – Fidni" noindex />
         <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#6b6862' }} />
         <style>{styles('')}</style>
       </div>
@@ -481,6 +485,8 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
 
   return (
     <div className="fp-desk">
+      {/* Aperçu à imprimer : doublon de la page du contenu, pas à indexer. */}
+      <SEO title={`${paperTitle} – PDF | Fidni`} noindex />
       {/* Barre d'outils (écran seulement) */}
       <div className="fp-toolbar">
         <div className="fp-toolbar-inner">

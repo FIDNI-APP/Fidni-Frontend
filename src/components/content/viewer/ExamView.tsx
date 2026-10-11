@@ -545,7 +545,8 @@ export const ExamView: React.FC<Props> = ({
 
         {/* Téléphone : la copie (note, barème par exercice) après le sujet, dès qu'il y a une note (pas pendant l'épreuve). */}
         {!locked && (corrected > 0 || !isAuthenticated) && <div id="ta-copie" className="scroll-mt-24 fd-exam-narrow">{copiePanel}</div>}
-        <AdSlot />
+        {/* Pas d’annonce pendant une épreuve chronométrée. */}
+        {!locked && <AdSlot />}
         {children}
       </div>
 

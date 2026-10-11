@@ -67,6 +67,7 @@ const OnboardingProfile = page(() => import('@/pages/OnboardingProfile'), 'defau
 const TermsOfService = page(() => import('./pages/TermsOfService'), 'default');
 const PrivacyPolicy = page(() => import('./pages/PrivacyPolicy'), 'default');
 const MentionsLegales = page(() => import('./pages/MentionsLegales'), 'default');
+const InfoPage = page(() => import('./pages/InfoPage'), 'default');
 const ImportPreview = page(() => import('./pages/ImportPreview'), 'default');
 const Search = page(() => import('./pages/Search'), 'Search');
 const ClassroomsPage = page(() => import('./pages/Classrooms'), 'ClassroomsPage');
@@ -283,6 +284,17 @@ function App() {
                     <Route path="/mentions-legales" element={
                       <NavbarWrapper showNavbar={false}>
                         <MentionsLegales />
+                      </NavbarWrapper>
+                    } />
+                    {/* Qui fait Fidni, comment nous joindre (texte : backend config/pages.py). */}
+                    <Route path="/a-propos" element={
+                      <NavbarWrapper>
+                        <InfoPage slug="a-propos" />
+                      </NavbarWrapper>
+                    } />
+                    <Route path="/contact" element={
+                      <NavbarWrapper>
+                        <InfoPage slug="contact" />
                       </NavbarWrapper>
                     } />
 

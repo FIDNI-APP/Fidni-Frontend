@@ -41,7 +41,10 @@ export function Landing() {
     getClassLevels('exercise')
       .then((data) => {
         if (cancelled) return;
-        setLevels(data.map((l) => ({ id: String(l.id), name: l.name, slug: (l as { slug?: string }).slug ?? '' })).filter((l) => l.slug));
+        // Seulement les niveaux qui ont des exercices (content_count) : jamais de sommaire vide « arrive bientôt ».
+        setLevels(data
+          .filter((l) => (l as { content_count?: number | null }).content_count !== 0)
+          .map((l) => ({ id: String(l.id), name: l.name, slug: (l as { slug?: string }).slug ?? '' })).filter((l) => l.slug));
       })
       .catch(() => { if (!cancelled) setLevels([]); });
     return () => { cancelled = true; };
@@ -438,7 +441,7 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
             </div>
           ) : chapters.length === 0 ? (
             <p style={{ fontSize: 14, color: FAINT, padding: '14px' }}>
-              {unavailable ? 'Le sommaire n’a pas pu s’afficher.' : 'Les exercices de ce niveau arrivent bientôt.'}{' '}
+              {unavailable ? 'Le sommaire n’a pas pu s’afficher.' : 'Choisis un niveau pour voir ses chapitres.'}{' '}
               <Link to="/exercises" style={{ color: ACCENT, fontWeight: 600 }}>Voir tous les exercices</Link>
             </p>
           ) : (

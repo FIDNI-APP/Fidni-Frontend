@@ -3,7 +3,6 @@
 // indexées) et informations légales ; sur téléphone, deux colonnes courtes puis une ligne de liens légaux.
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LEGAL } from '@/lib/legal';
 import { ADS_ENABLED, openConsentBanner } from '@/lib/ads';
 
 const SECTIONS = [
@@ -60,13 +59,14 @@ export const Footer: React.FC = () => (
       {/* Informations légales + copyright, sur une ligne (qui passe à la ligne sur téléphone) */}
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-0 border-t border-[#f2f1ee] pt-4 md:mt-8">
         <nav aria-label="Informations légales" className="contents">
+          <Link to="/a-propos" className={legalLink}>À propos</Link>
+          <Link to="/contact" className={legalLink}>Contact</Link>
           <Link to="/mentions-legales" className={legalLink}>Mentions légales</Link>
           <Link to="/terms-of-service" className={legalLink}>Conditions d’utilisation</Link>
           <Link to="/privacy-policy" className={legalLink}>Confidentialité</Link>
           {ADS_ENABLED && (
             <button type="button" onClick={openConsentBanner} className={legalLink}>Gérer les cookies</button>
           )}
-          <a href={`mailto:${LEGAL.contactEmail}`} className={legalLink}>Contact</a>
         </nav>
         <p className="fd-nums inline-flex min-h-9 items-center text-[12.5px] text-ink-faint md:ml-auto md:min-h-0">
           &copy; {new Date().getFullYear()} Fidni

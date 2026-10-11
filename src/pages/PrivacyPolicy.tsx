@@ -260,6 +260,7 @@ const sections: LegalSection[] = [
 export const PrivacyPolicy: React.FC = () => (
   <LegalLayout
     title="Politique de confidentialité"
+    description="Politique de confidentialité de Fidni : données conservées, finalités, durées, cookies et publicité, et tes droits sur tes données."
     intro={<p>Quelles données Fidni conserve, pourquoi, combien de temps, et comment garder la main dessus.</p>}
     sections={sections}
   />
