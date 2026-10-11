@@ -6,7 +6,8 @@
  *  - Usage (06/10/2026) : membres qui se servent de chaque fonctionnalité, pages les plus visitées, filtres et
  *    leurs valeurs les plus choisies (difficulté, chapitre, tri…, 09/10/2026) ;
  *  - Visiteurs (09/10/2026) : les visiteurs non connectés, à part (components/pilotage/VisitorsTab) ;
- *  - Membres : aussi « Un membre n'arrive pas à se connecter ? » (components/pilotage/LoginDiagnostic) ;
+ *  - Membres : aussi « Un membre n'arrive pas à se connecter ? » (components/pilotage/LoginDiagnostic) et
+ *    « Comptes bannis » (components/pilotage/BansCard, 11/10/2026) ;
  *  - IA : un document (PDF, Word, photos) → fiches préparées par l'IA, relues puis publiées (components/pilotage/IATab).
  * Audit du 10/10/2026 : « Entonnoir » dans l'Aperçu (components/pilotage/FunnelCard), « Écarts de difficulté » dans
  * À traiter (DifficultyGapsPanel), « Portes d'inscription » dans Usage (AuthDoorsCard).
@@ -27,6 +28,7 @@ import { IATab } from '@/components/pilotage/IATab';
 import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
 import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
 import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
+import { BansCard } from '@/components/pilotage/BansCard';
 import { FunnelCard, type Funnel } from '@/components/pilotage/FunnelCard';
 import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
 import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
@@ -975,6 +977,7 @@ export default function Pilotage() {
       {tab === 'membres' ? (
         <>
           <ErrorBoundary variant="block" label="Un membre n’arrive pas à se connecter ?" resetKey={days}><LoginDiagnostic /></ErrorBoundary>
+          <ErrorBoundary variant="block" label="Comptes bannis" resetKey={days}><BansCard /></ErrorBoundary>
           <ErrorBoundary variant="block" label="Membres" resetKey={days}><MembersTab days={days} /></ErrorBoundary>
         </>
       ) : tab === 'quiz' ? (

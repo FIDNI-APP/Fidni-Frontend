@@ -255,8 +255,10 @@ export const deleteMyAccount = async (password?: string) => {
 };
 
 /** Modération (admin) : supprime un compte ET son contenu. `confirm` = nom du compte recopié. */
-export const moderationDeleteAccount = async (username: string, confirm: string) => {
-  const response = await api.post(`/moderation/users/${encodeURIComponent(username)}/delete/`, { confirm });
+/** Modération : supprime le compte et son contenu ; `bannir` = la même personne ne recrée pas de compte
+ *  (adresse e-mail, compte Google, adresses IP pendant 30 jours ; backend users/bans.py). */
+export const moderationDeleteAccount = async (username: string, confirm: string, bannir = true) => {
+  const response = await api.post(`/moderation/users/${encodeURIComponent(username)}/delete/`, { confirm, bannir });
   return response.data;
 };
 

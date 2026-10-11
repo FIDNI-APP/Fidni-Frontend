@@ -22,7 +22,8 @@ export interface GoogleLoginResult {
  * Connexion (ou inscription) avec le jeton d'identité Google. Sans compte existant, ou pour un compte jamais
  * confirmé à cette adresse, le serveur répond 400 {code:'consent_required', email, name} : renvoyer le même
  * jeton avec les deux cases cochées.
- * Autres refus : 400 {code:'invalid_token'}, 403 {code:'account_disabled'}, 503 {code:'google_unavailable'}.
+ * Autres refus : 400 {code:'invalid_token'}, 403 {code:'account_disabled'}, 403 {code:'banned'} (personne bannie par
+ * la modération, message dans `error`), 503 {code:'google_unavailable'}.
  */
 export const loginWithGoogle = async (credential: string, consents?: SignupConsents): Promise<GoogleLoginResult> => {
   const response = await api.post('/auth/google/', { credential, ...(consents ?? {}) });

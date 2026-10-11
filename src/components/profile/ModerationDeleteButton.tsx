@@ -1,5 +1,6 @@
 // Modération (admins) : supprime un compte ET tout son contenu, pour un contenu inapproprié.
 // Une suppression demandée par l'utilisateur, elle, garde ses contributions sous « Compte supprimé ».
+// 11/10/2026 : « Bannir aussi » (coché par défaut), voir Pilotage › Membres › Comptes bannis.
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ShieldAlert } from 'lucide-react';
@@ -9,10 +10,12 @@ export const ModerationDeleteButton: React.FC<{ username: string }> = ({ usernam
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState('');
+  // Bannir aussi (coché par défaut) : sinon la même personne recrée un compte avec la même adresse.
+  const [ban, setBan] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const close = () => { setOpen(false); setConfirm(''); setError(null); };
+  const close = () => { setOpen(false); setConfirm(''); setError(null); setBan(true); };
 
   useEffect(() => {
     if (!open) return;
@@ -27,7 +30,7 @@ export const ModerationDeleteButton: React.FC<{ username: string }> = ({ usernam
     setBusy(true);
     setError(null);
     try {
-      await moderationDeleteAccount(username, confirm);
+      await moderationDeleteAccount(username, confirm, ban);
       close();
       navigate('/');
     } catch (err) {
@@ -61,11 +64,18 @@ export const ModerationDeleteButton: React.FC<{ username: string }> = ({ usernam
                 className="h-11 w-full rounded-xl border border-line bg-white px-3.5 text-[14px] text-ink focus:border-[#a23b34] focus:outline-none focus:ring-2 focus:ring-[#a23b34]/25" />
               {error && <p role="alert" className="mt-2 text-[13px] font-medium text-[#a23b34]">{error}</p>}
             </div>
+            <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-[#faf9f7] p-3 text-[13px] leading-snug text-ink-soft">
+              <input type="checkbox" checked={ban} onChange={(e) => setBan(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#a23b34]" />
+              <span>
+                <b className="font-semibold text-ink">Bannir aussi</b> : son adresse e-mail et son compte Google ne pourront plus créer
+                de compte, ni ses adresses IP pendant 30 jours. Les membres qui partagent ces IP ne sont pas gênés.
+              </span>
+            </label>
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
               <button type="button" onClick={close} className="fd-btn-ghost min-h-11 flex-1 justify-center" disabled={busy}>Annuler</button>
               <button type="submit" disabled={confirm !== username || busy}
                 className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#a23b34] px-4 text-[13px] font-semibold text-white hover:bg-[#8a312b] disabled:cursor-not-allowed disabled:opacity-50">
-                {busy && <Loader2 className="h-4 w-4 animate-spin" />} Supprimer définitivement
+                {busy && <Loader2 className="h-4 w-4 animate-spin" />} {ban ? 'Supprimer et bannir' : 'Supprimer définitivement'}
               </button>
             </div>
           </form>
