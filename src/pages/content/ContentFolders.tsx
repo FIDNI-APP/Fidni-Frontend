@@ -7,10 +7,14 @@
  *  - `years`    : /exams/nationaux — un dossier par année du Bac national.
  * Dans un dossier de chapitre ou d'année, les « fichiers » sont les cartes habituelles (ContentList).
  * Données : GET /api/hubs/niveaux/, /api/hubs/ (folders), /api/hubs/nationaux/ (backend caracteristics/hubs.py).
+ * 11/10/2026 : même en-tête que la liste (FolderHeader : chemin, titre, une ligne, liens), la présentation pour
+ * les moteurs de recherche en bas de page.
  */
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { ArrowRight, Landmark, Plus, RotateCcw } from 'lucide-react';
+import { Page, EmptyState } from '@/components/space/Page';
+import { FolderAbout, FolderHeader, RelatedLinks } from '@/components/content/folders/FolderHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { SEO } from '@/components/layout/SEO';
@@ -25,8 +29,6 @@ import { trackAction, trackHubChoice } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, SECTION_OF, SECTION_TEXT, plural, type ContentKind } from './sections';
 
 const SUBJECT = 'Mathématiques';
-// Lien « remonter d'un cran » : une vraie cible au doigt (40 px de haut).
-const UP_LINK = 'inline-flex min-h-10 items-center text-[13px] font-medium text-brand-hover hover:underline';
 
 /** Retour (« Précédent ») sur une page de dossiers : la même hauteur qu'au départ (comme ContentList). */
 function useScrollMemory(ready: boolean) {
@@ -45,53 +47,12 @@ function useScrollMemory(ready: boolean) {
   }, [key]);
 }
 
-/** En-tête commun : fil d'Ariane (chaque cran remonte d'un dossier), titre, phrase, résumé. */
-const Header: React.FC<{
-  trail: { label: string; to?: string }[];
-  title: string;
-  intro: string;
-  summary?: string;
-  action?: React.ReactNode;
-}> = ({ trail, title, intro, summary, action }) => (
-  <div className="pb-4 pt-5 sm:pt-6">
-    {trail.length > 0 && (
-      // Téléphone : la barre du haut porte déjà le retour (« ‹ Exercices »).
-      <nav aria-label="Fil d’Ariane" className="mb-1.5 hidden flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint sm:flex">
-        {trail.map((c, i) => (
-          <React.Fragment key={`${c.label}-${i}`}>
-            {i > 0 && <span aria-hidden>›</span>}
-            {c.to ? <Link to={c.to} className="hover:text-ink hover:underline">{c.label}</Link>
-              : <span className="text-ink-soft" aria-current="page">{c.label}</span>}
-          </React.Fragment>
-        ))}
-      </nav>
-    )}
-    <div className="flex items-end justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="fd-display text-ink" style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-          {title}
-        </h1>
-        <p className="mt-1.5 max-w-3xl text-[13.5px] text-ink-faint line-clamp-2 sm:line-clamp-none">{intro}</p>
-        {summary && <p className="fd-nums mt-1 text-[12.5px] font-medium text-ink-soft">{summary}</p>}
-      </div>
-      {action}
-    </div>
-  </div>
-);
-
 const ErrorBox: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
-  <div role="alert" className="flex flex-col gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] p-4 sm:flex-row sm:items-center">
-    <p className="flex-1 text-[14px] font-medium text-[#a23b34]">Les dossiers n’ont pas pu se charger. Vérifie ta connexion.</p>
-    <button type="button" onClick={onRetry}
-      className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#e8c4bf] bg-white px-4 text-[13.5px] font-semibold text-ink hover:bg-[#fdf6f5]">
+  <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+    <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Les dossiers n’ont pas pu se charger. Vérifie ta connexion.</p>
+    <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10">
       <RotateCcw className="h-4 w-4" /> Réessayer
     </button>
-  </div>
-);
-
-const Page: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ minHeight: '100vh', background: '#faf9f7', paddingBottom: 64 }}>
-    <div className="mx-auto max-w-7xl px-4 md:px-6">{children}</div>
   </div>
 );
 
@@ -101,7 +62,7 @@ const CreateButton: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   if (!(isModerator(user) || user?.profile?.user_type === 'teacher')) return null;
   const t = SECTION_TEXT[kind];
   return (
-    <Link to={`${t.basePath}/new`} className="fd-btn-ghost flex-shrink-0" style={{ padding: '9px 14px' }} aria-label={t.createLabel}>
+    <Link to={`${t.basePath}/new`} className="fd-btn-ghost min-h-10 flex-shrink-0" aria-label={t.createLabel}>
       <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t.createLabel}</span>
     </Link>
   );
@@ -152,17 +113,17 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   const total = data ? data.levels.reduce((n, lv) => n + lv.count, 0) : 0;
 
   return (
-    <Page>
+    <Page width="wide">
       <SEO title={LIST_SEO[kind].title} description={LIST_SEO[kind].description} canonicalUrl={t.basePath} />
-      <Header trail={[{ label: subject }]} title={t.title} intro={t.intro}
-        summary={data ? `${plural(total, t.noun)} · ${plural(data.levels.length, ['niveau', 'niveaux'])}` : undefined}
-        action={<CreateButton kind={kind} />} />
+      <FolderHeader title={t.title}
+        summary={<p>{t.intro}{data ? <span className="fd-nums"> {subject} : {plural(total, t.noun)} dans {plural(data.levels.length, ['niveau', 'niveaux'])}.</span> : null}</p>}
+        actions={<CreateButton kind={kind} />} />
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data || (authLoading && !allLevels) ? <FolderSkeleton n={4} />
           : <FolderGrid groups={groups} label={`Niveaux – ${t.title}`} />}
       {kind === 'exam' && (
         <Link to="/exams/nationaux"
-          className="mt-5 inline-flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-3 text-[13.5px] text-ink-soft hover:border-ink">
+          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line bg-white px-4 py-3 text-[13.5px] text-ink-soft transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)]">
           <Landmark className="h-4 w-4 text-ink-faint" />
           Les sujets du Bac national ont leur rubrique : <b className="font-semibold text-ink">Bac national</b>
           <ArrowRight className="h-4 w-4" />
@@ -240,44 +201,47 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
     return g;
   }, [folders, kind, hub.unfiled, hub.level.id, t.noun, t.basePath]);
   const filled = folders.filter((f) => f.count > 0).length;
+  // Où en est l'élève dans ce niveau (contenus terminés, tous chapitres confondus).
+  const done = folders.reduce((n, f) => n + (f.mine?.done ?? 0), 0);
+  const success = folders.reduce((n, f) => n + (f.mine?.success ?? 0), 0);
 
   return (
-    <Page>
+    <Page width="wide">
       <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
-      <Header
-        trail={[{ label: subject, to: levelsPath }, { label: hub.level.name }]}
+      <FolderHeader
+        crumbs={[{ label: t.title, to: levelsPath }]}
         title={hub.h1}
-        intro={hub.intro}
-        summary={`${plural(folders.length, ['chapitre', 'chapitres'])} · ${filled} avec des ${t.noun[1]} · ${plural(hub.count, t.noun)}`}
-        action={<CreateButton kind={kind} />}
+        emphasis={hub.level.name}
+        summary={(
+          <p className="fd-nums">
+            <span className="font-medium text-ink-soft">{plural(hub.count, t.noun)}</span>
+            {' '}dans {filled} chapitre{filled > 1 ? 's' : ''} sur {folders.length}
+            {isAuthenticated && done > 0 && (
+              <> · <b className="font-semibold text-brand-hover">{success}</b> {success > 1 ? t.doneWord[1] : t.doneWord[0]}{kind !== 'lesson' && success !== done ? '' : ''}
+                {kind !== 'lesson' && done - success > 0 && <> dont <b className="font-semibold text-gold-strong">{done - success}</b> à revoir</>}
+              </>
+            )}
+          </p>
+        )}
+        actions={(hub.related.length > 0 || null) && <><RelatedLinks related={hub.related} /><CreateButton kind={kind} /></>}
       />
-      <Link to={levelsPath} className={`mb-2 ${UP_LINK}`}>‹ Tous les niveaux</Link>
       {/* À évaluer : seulement ce niveau ; une évaluation met à jour les dossiers (« 3 faits »). */}
       {isAuthenticated && kind !== 'lesson' && (
-        <div className="mb-4"><CatchUpBanner kind={kind} level={hub.level.id} onEvaluated={onProgress} /></div>
+        <CatchUpBanner kind={kind} level={hub.level.id} onEvaluated={onProgress} />
       )}
       {folders.length === 0 ? (
-        <p className="fd-card p-6 text-center text-[13.5px] text-ink-faint">Aucun chapitre n’est encore rattaché à ce niveau.</p>
+        <EmptyState icon={Landmark} tone="ink" compact title="Aucun chapitre pour l’instant"
+          text="Aucun chapitre n’est encore rattaché à ce niveau." />
       ) : (
         <FolderGrid groups={groups} label={`Chapitres – ${hub.level.name}`} />
       )}
-      {hub.related.length > 0 && (
-        <p className="mt-6 text-[12.5px] text-ink-faint">
-          Aussi pour le {hub.level.name} :{' '}
-          {hub.related.map((r, i) => (
-            <React.Fragment key={r.url}>
-              {i > 0 && ' · '}
-              <Link to={r.url} className="font-medium text-brand-hover hover:underline">{r.label}</Link>{' '}
-              <span className="fd-nums">({r.count})</span>
-            </React.Fragment>
-          ))}
-        </p>
-      )}
       {section === 'exams' && (
-        <p className="mt-2 text-[12.5px] text-ink-faint">
-          Les sujets du Bac national sont dans <Link to="/exams/nationaux" className="font-medium text-brand-hover hover:underline">Bac national</Link>.
+        <p className="mt-6 text-[13px] text-ink-faint">
+          Les sujets du Bac national sont dans <Link to="/exams/nationaux" className="font-semibold text-brand-hover hover:underline">Bac national</Link>.
         </p>
       )}
+      {/* Présentation pour les moteurs de recherche (même texte que la page pré-remplie), en bas de page. */}
+      {hub.intro && <FolderAbout>{hub.intro}</FolderAbout>}
     </Page>
   );
 };
@@ -314,22 +278,17 @@ const YearsView: React.FC = () => {
   const total = data ? data.years.reduce((n, y) => n + y.count, 0) : 0;
 
   return (
-    <Page>
+    <Page width="wide">
       <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux" />
-      <Header trail={[{ label: data?.subject || SUBJECT }]} title={NATIONAL.title}
-        intro={`${NATIONAL.subtitle} Un dossier par année.`}
-        summary={data && data.years.length ? `${plural(total, ['sujet', 'sujets'])} · ${plural(data.years.length, ['année', 'années'])}` : undefined}
-        action={<CreateButton kind="exam" />} />
+      <FolderHeader title={NATIONAL.title}
+        summary={<p>{NATIONAL.subtitle} Un dossier par année{data && data.years.length ? <span className="fd-nums"> : {plural(total, ['sujet', 'sujets'])} en tout</span> : null}.</p>}
+        actions={<CreateButton kind="exam" />} />
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data ? <FolderSkeleton n={6} />
           : data.years.length === 0 ? (
-            <div className="fd-card text-center" style={{ padding: '40px 20px' }}>
-              <h2 className="text-[16px] font-bold text-ink">Les sujets nationaux arrivent bientôt</h2>
-              <p className="mx-auto mt-1.5 max-w-md text-[13px] text-ink-faint">
-                Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.
-              </p>
-              <Link to="/exams" className="fd-btn-primary mt-4 inline-flex">Voir les devoirs surveillés</Link>
-            </div>
+            <EmptyState icon={Landmark} tone="gold" title="Les sujets nationaux arrivent bientôt"
+              text="Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés."
+              action={<Link to="/exams" className="fd-btn-primary min-h-10">Voir les devoirs surveillés</Link>} />
           ) : <FolderGrid groups={groups} label="Années du Bac national" />}
     </Page>
   );

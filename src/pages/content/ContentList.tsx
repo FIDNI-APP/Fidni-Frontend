@@ -9,29 +9,24 @@
  *   (user_progress) ; le mode Énoncés (ordinateur seulement) charge le détail de chaque contenu.
  * - Liens « S'entraîner » (Ma progression, plan de DS, quiz) : ?sort=easiest&todo=true, lus dans l'adresse
  *   comme les autres filtres (pages de niveau et de chapitre comprises).
+ * - 11/10/2026 (alléger) : en-tête des dossiers (chemin, titre, une ligne : combien, réussis, à revoir), barre
+ *   de filtres plus légère (statut en onglets, le reste dans « Filtres »), cartes calmes, états vides utiles ;
+ *   la présentation pour les moteurs de recherche passe en bas de page.
  */
 
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { hubPath, type HubInfo } from '@/lib/api/hubApi';
-import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import {
   Plus,
   BookOpen,
-  ChevronRight,
+  Check,
+  FolderOpen,
   Loader2,
   LayoutGrid,
   FileText,
-  Clock,
-  Play,
-  Pause,
   RotateCcw,
-  ListPlus,
-  Save,
-  Eye,
-  MessageSquare,
-  CheckCircle2,
-  Circle,
+  SearchX,
   X,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
@@ -39,19 +34,14 @@ import { LessonIcon } from '@/components/icons/LessonIcon';
 import { exerciseContentAPI, examContentAPI, lessonContentAPI, markSolutionViewed } from '@/lib/api';
 import type { AssessSource, PaginatedResponse } from '@/lib/api/contentItemApi';
 import { ContentListCard } from '@/components/content/ContentListCard';
-import {
-  ContentCardBanner, getSubjectTheme, DIFFICULTY_CFG,
-} from '@/components/content/ContentCardBanner';
 import { CatchUpBanner } from '@/components/content/listing/CatchUpBanner';
+import { StatementCard } from '@/components/content/listing/StatementCard';
 import { usePhone } from '@/components/content/listing/listingUtils';
+import { FolderAbout, FolderHeader, RelatedLinks, type Crumb } from '@/components/content/folders/FolderHeader';
 import { HorizontalFilterBar } from '@/components/search/HorizontalFilterBar';
 import {
   clearedFilters, withoutChip, type ActiveChip, type FilterSlugs, type ListFilters,
 } from '@/components/search/filterState';
-import { ExerciseRenderer } from '@/components/content/viewer/ExerciseRenderer';
-import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
-import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
-import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import { SignupStrip } from '@/components/auth/SignupPrompt';
@@ -59,16 +49,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { isModerator } from '@/lib/features';
+import { Page, EmptyState } from '@/components/space/Page';
 import type { Difficulty } from '@/types';
 import type {
   ExerciseListItem, ExamListItem, LessonListItem, ContentFilters, AssessmentStatus, ListSort,
 } from '@/types/content';
-import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
-import { ClampedPreview } from '@/components/content/ClampedPreview';
 import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
-import { LIST_SEO, NATIONAL, hasListParams } from './sections';
+import { LIST_SEO, NATIONAL, hasListParams, plural } from './sections';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -91,8 +80,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
   emptyMessage: string;
   /** « exercice », « exercices » ; « d’exercice » (pas encore d'…). */
   noun: [string, string, string];
-  icon: React.ReactNode;
-  accentColor: string;
+  icon: React.ComponentType<{ className?: string }>;
   basePath: string;
   api: ListPageAPI;
 }> = {
@@ -102,8 +90,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     createLabel: 'Ajouter un exercice',
     emptyMessage: 'Aucun exercice trouvé',
     noun: ['exercice', 'exercices', 'd’exercice'],
-    icon: <BookOpen className="w-5 h-5" />,
-    accentColor: 'blue',
+    icon: BookOpen,
     basePath: '/exercises',
     api: exerciseContentAPI,
   },
@@ -114,8 +101,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     createLabel: 'Ajouter un examen',
     emptyMessage: 'Aucun examen trouvé',
     noun: ['examen', 'examens', 'd’examen'],
-    icon: <APlusIcon className="w-5 h-5" />,
-    accentColor: 'purple',
+    icon: APlusIcon,
     basePath: '/exams',
     api: examContentAPI,
   },
@@ -125,8 +111,7 @@ const CONTENT_TYPE_CONFIG: Record<ContentType, {
     createLabel: 'Ajouter une leçon',
     emptyMessage: 'Aucune leçon trouvée',
     noun: ['leçon', 'leçons', 'de leçon'],
-    icon: <LessonIcon className="w-5 h-5" />,
-    accentColor: 'emerald',
+    icon: LessonIcon,
     basePath: '/lessons',
     api: lessonContentAPI,
   },
@@ -200,21 +185,26 @@ function writeSnapshot(url: string, snap: ListSnapshot) {
 const withoutPath = (progress: Record<string, AssessmentStatus> | undefined, path: string) =>
   Object.fromEntries(Object.entries(progress || {}).filter(([p]) => p !== path)) as Record<string, AssessmentStatus>;
 
-/** Cartes fantômes pendant le premier chargement. */
+/** Cartes fantômes pendant le premier chargement (même forme que les cartes). */
 const SkeletonCards: React.FC = () => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 min-[1700px]:grid-cols-3 gap-5" role="status" aria-label="Chargement de la liste">
+  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" role="status" aria-label="Chargement de la liste">
     {[0, 1, 2, 3].map((i) => (
-      <div key={i} className="rounded-2xl border border-line bg-white px-5 pt-4 pb-3 animate-pulse">
-        <div className="flex gap-1.5">
-          <div className="h-5 w-28 rounded-full bg-[#f2f1ee]" />
-          <div className="h-5 w-16 rounded-full bg-[#f2f1ee]" />
+      <div key={i} className="animate-pulse rounded-2xl border border-line bg-white">
+        <div className="px-4 pb-4 pt-4 sm:px-5">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-24 rounded-full bg-[#f2f1ee]" />
+            <div className="h-6 w-14 rounded-lg bg-[#f2f1ee]" />
+          </div>
+          <div className="mt-3 h-5 w-3/4 rounded bg-[#efece6]" />
+          <div className="mt-2.5 h-3.5 w-1/2 rounded bg-[#f2f1ee]" />
+          <div className="mt-4 space-y-2 border-l-2 border-[#efece6] pl-3">
+            <div className="h-3 w-5/6 rounded bg-[#f4f2ee]" />
+            <div className="h-3 w-2/3 rounded bg-[#f4f2ee]" />
+          </div>
         </div>
-        <div className="mt-3 h-5 w-3/4 rounded bg-[#efece6]" />
-        <div className="mt-2 h-3.5 w-1/3 rounded bg-[#f2f1ee]" />
-        <div className="mt-3 h-24 rounded-xl border border-[#efece6] bg-[#fcfbf9]" />
-        <div className="mt-3 flex items-center justify-between">
-          <div className="h-7 w-24 rounded bg-[#f2f1ee]" />
-          <div className="h-9 w-28 rounded-[10px] bg-[#efece6]" />
+        <div className="flex items-center justify-between border-t border-[#f0ede8] px-4 py-2.5">
+          <div className="h-8 w-20 rounded-full bg-[#f2f1ee]" />
+          <div className="h-9 w-28 rounded-xl bg-brand-soft" />
         </div>
       </div>
     ))}
@@ -437,9 +427,6 @@ export const ContentList: React.FC<ContentListProps> = ({
     setItems((prev) => prev.map((it) => (String(it.id) === String(id) ? { ...it, user_complete: result } : it)));
     setItemCompletions((p) => ({ ...p, [String(id)]: result }));
   }, []);
-  const [completionDropdown, setCompletionDropdown] = useState<{ itemId: string | number | null; pos: { top: number; left: number } }>({ itemId: null, pos: { top: 0, left: 0 } });
-  // Bouton du menu ouvert : le menu s'y accroche (et suit la page quand elle défile).
-  const completionAnchor = useRef<HTMLElement | null>(null);
   const [revisionListModal, setRevisionListModal] = useState<{ isOpen: boolean; itemId: string | null; itemTitle: string | null }>({
     isOpen: false,
     itemId: null,
@@ -807,12 +794,6 @@ export const ContentList: React.FC<ContentListProps> = ({
     }));
   }, []);
 
-  const formatTime = useCallback((seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }, []);
-
   const loadSessionCount = useCallback(async (itemId: string) => {
     if (!isAuthenticated || contentType === 'lesson') return;
 
@@ -904,27 +885,29 @@ export const ContentList: React.FC<ContentListProps> = ({
     [items],
   );
 
+  // Cartes / Énoncés (ordinateur seulement).
   const viewToggle = (
-            <div data-tour="liste-vue" role="radiogroup" aria-label="Affichage" className="inline-flex p-[3px] rounded-[10px] bg-[#f2f1ee]">
-              {([
-                ['card', 'Cartes', LayoutGrid],
-                ['full', 'Énoncés', FileText],
-              ] as const).map(([mode, label, Icon]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  role="radio"
-                  aria-checked={viewMode === mode}
-                  onClick={() => setViewMode(mode)}
-                  title={label}
-                  className={`inline-flex items-center gap-1.5 h-9 px-2.5 lg:px-3 rounded-lg text-[12.5px] transition-colors ${
-                    viewMode === mode ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink-faint font-medium hover:text-ink'}`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="sm:hidden lg:inline">{label}</span>
-                </button>
-              ))}
-            </div>
+    <div data-tour="liste-vue" role="radiogroup" aria-label="Affichage" className="inline-flex rounded-xl border border-line bg-white p-0.5">
+      {([
+        ['card', 'Cartes', LayoutGrid],
+        ['full', 'Énoncés', FileText],
+      ] as const).map(([mode, label, Icon]) => (
+        <button
+          key={mode}
+          type="button"
+          role="radio"
+          aria-checked={viewMode === mode}
+          aria-label={label}
+          onClick={() => setViewMode(mode)}
+          title={label}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-[10px] px-2.5 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+            viewMode === mode ? 'bg-[#f2f1ee] text-ink' : 'text-ink-faint hover:text-ink'}`}
+        >
+          <Icon className="h-4 w-4" />
+          <span className="hidden xl:inline">{label}</span>
+        </button>
+      ))}
+    </div>
   );
 
   const handleDeleteItem = async (id: string) => {
@@ -941,16 +924,17 @@ export const ContentList: React.FC<ContentListProps> = ({
   const listFrom = location.pathname + location.search;
 
   const errorBox = (more: boolean) => (
-    <div role="alert" className="mb-6 flex flex-col gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] p-4 sm:flex-row sm:items-center">
-      <p className="flex-1 text-[14px] font-medium text-[#a23b34]">
+    <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+      <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">
         {more ? 'La suite de la liste n’a pas pu se charger.' : 'La liste n’a pas pu se charger.'} Vérifie ta connexion.
       </p>
-      <button type="button" onClick={() => load(more ? page + 1 : 1)}
-        className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#e8c4bf] bg-white px-4 text-[13.5px] font-semibold text-ink hover:bg-[#fdf6f5]">
+      <button type="button" onClick={() => load(more ? page + 1 : 1)} className="fd-btn-ghost min-h-10">
         <RotateCcw className="h-4 w-4" /> Réessayer
       </button>
     </div>
   );
+
+  const chipBtn = 'inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#efece6] pl-3.5 pr-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-[#e7e3dc] hover:text-ink';
 
   // Liste vide : pourquoi, et quoi faire ensuite.
   const emptyState = () => {
@@ -961,44 +945,56 @@ export const ContentList: React.FC<ContentListProps> = ({
     const onlyTodo = filterChips.length === 1 && filterChips[0].key === 'todo';
     let title: string;
     let text: string;
+    let icon: React.ComponentType<{ className?: string }> = config.icon;
+    let tone: 'brand' | 'gold' | 'ink' = 'ink';
     let actions: React.ReactNode = null;
     if (onlyTodo) {
       title = 'Tout est réussi ici, bravo !';
-      text = `Tu as réussi tous les ${many} de cette liste. Retire « À faire » pour les revoir.`;
+      text = `Tu as réussi tous les ${many} de cette liste. Choisis « Tout » pour les revoir.`;
+      icon = Check;
+      tone = 'brand';
     } else if (filterChips.length > 0) {
       title = config.emptyMessage;
-      text = 'Aucun résultat avec ces filtres.';
+      text = 'Aucun résultat avec ces filtres : retire-en un.';
+      icon = SearchX;
     } else if (hub?.chapter) {
       title = `Pas encore ${ofNoun} sur ce chapitre`;
-      text = 'Ça arrive bientôt.';
+      text = 'Ça arrive bientôt. En attendant, regarde le cours ou les chapitres voisins.';
+      icon = FolderOpen;
     } else if (hub) {
       title = `Pas encore ${ofNoun} pour ce niveau`;
       text = 'Ça arrive bientôt.';
+      icon = FolderOpen;
     } else if (yearFolder) {
       title = 'Aucun sujet pour cette année';
       text = 'Les autres années du Bac national sont dans leurs dossiers.';
-      actions = <Link to="/exams/nationaux" className="fd-btn-primary inline-flex">Toutes les années</Link>;
+      actions = <Link to="/exams/nationaux" className="fd-btn-primary min-h-10">Toutes les années</Link>;
     } else if (isNationalSection) {
       title = 'Les sujets nationaux arrivent bientôt';
       text = 'Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.';
-      actions = <Link to="/exams" className="fd-btn-primary inline-flex">Voir les devoirs surveillés</Link>;
+      actions = <Link to="/exams" className="fd-btn-primary min-h-10">Voir les devoirs surveillés</Link>;
     } else {
       title = 'Rien de publié ici pour le moment';
       text = 'Les premiers contenus arrivent bientôt.';
     }
 
-    if (filterChips.length > 0) {
+    if (onlyTodo) {
+      actions = (
+        <button type="button" onClick={() => handleFilterChange(withoutChip(filters, 'todo'))} className="fd-btn-primary min-h-10">
+          Tout afficher
+        </button>
+      );
+    } else if (filterChips.length > 0) {
       actions = (
         <div className="flex flex-wrap items-center justify-center gap-2">
           {filterChips.map((chip) => (
-            <button key={chip.key} type="button" onClick={() => handleFilterChange(withoutChip(filters, chip.key))}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-indigo-100 pl-3 pr-2 text-sm font-medium text-indigo-700 hover:bg-indigo-200">
+            <button key={chip.key} type="button" onClick={() => handleFilterChange(withoutChip(filters, chip.key))} className={chipBtn}>
               Retirer {chip.label} <X className="h-3.5 w-3.5" />
             </button>
           ))}
           {filterChips.length > 1 && (
             <button type="button" onClick={() => handleFilterChange(clearedFilters(fixed))}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
               <RotateCcw className="h-3.5 w-3.5" /> Tout effacer
             </button>
           )}
@@ -1020,7 +1016,7 @@ export const ContentList: React.FC<ContentListProps> = ({
           {hub.related.length > 0 && (
             <div className="flex flex-wrap justify-center gap-2">
               {hub.related.map((r) => (
-                <Link key={r.url} to={r.url} className="fd-btn-primary inline-flex" style={{ padding: '9px 14px' }}>
+                <Link key={r.url} to={r.url} className="fd-btn-primary min-h-10">
                   {r.label} <span className="fd-nums opacity-80">({r.count})</span>
                 </Link>
               ))}
@@ -1030,8 +1026,8 @@ export const ContentList: React.FC<ContentListProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="text-[12.5px] text-ink-faint">Chapitres voisins :</span>
               {neighbours.map((c) => (
-                <Link key={c.id} to={c.url} className="inline-flex h-9 items-center rounded-full border border-line bg-white px-3 text-[13px] text-ink-soft hover:border-ink">
-                  {c.name} <span className="fd-nums ml-1 text-ink-faint">{c.count}</span>
+                <Link key={c.id} to={c.url} className="inline-flex min-h-10 items-center rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft hover:border-[#cfc9bf] hover:text-ink">
+                  {c.name} <span className="fd-nums ml-1.5 text-ink-faint">{c.count}</span>
                 </Link>
               ))}
             </div>
@@ -1040,34 +1036,67 @@ export const ContentList: React.FC<ContentListProps> = ({
       ) : null;
     } else if (!isNationalSection && canPublish) {
       actions = (
-        <button type="button" onClick={handleNewContentClick} className="fd-btn-ghost inline-flex" style={{ padding: '9px 14px' }}>
-          <Plus className="w-4 h-4" /> {config.createLabel}
+        <button type="button" onClick={handleNewContentClick} className="fd-btn-ghost min-h-10">
+          <Plus className="h-4 w-4" /> {config.createLabel}
         </button>
       );
     }
 
-    return (
-      <div className="fd-card text-center" style={{ padding: '40px 20px' }}>
-        <div
-          className="inline-flex items-center justify-center mx-auto mb-4"
-          style={{
-            width: 64, height: 64, borderRadius: 16,
-            background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)',
-            color: '#6b6862',
-          }}
-        >
-          {React.cloneElement(config.icon as React.ReactElement, { className: 'w-7 h-7' })}
-        </div>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>{title}</h3>
-        <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>{text}</p>
-        {actions && <div style={{ marginTop: 18 }}>{actions}</div>}
-      </div>
-    );
+    return <EmptyState icon={icon} tone={tone} title={title} text={text} action={actions} />;
   };
 
-  // Dynamic colors based on content type
+  // En-tête : les dossiers parents (chaque cran remonte d'un dossier), le titre, une ligne.
+  const crumbs: Crumb[] = hub
+    ? [{ label: config.title, to: allLevelsPath }, ...(hub.chapter ? [{ label: hub.level.name, to: hub.level.url }] : [])]
+    : isNationalSection
+      ? (yearFolder ? [{ label: NATIONAL.title, to: '/exams/nationaux' }] : [{ label: 'Toutes les années', to: '/exams/nationaux' }])
+      : [{ label: 'Tous les niveaux', to: allLevelsPath }];
+  const pageTitle = hub ? hub.h1
+    : yearFolder ? (yearFolder === 'aucune' ? 'Bac national : année non précisée' : `Bac national ${yearFolder}`)
+      : isNationalSection ? NATIONAL.title : unfiledOnly ? `${config.title} sans chapitre` : config.title;
+
+  // Où en est l'élève dans ce dossier : seulement quand toute la liste est là (sinon les nombres mentiraient).
+  const mine = useMemo(() => {
+    if (!isAuthenticated || hasMore || !items.length) return null;
+    let success = 0;
+    let review = 0;
+    items.forEach((it) => {
+      const c = itemCompletions[String(it.id)] ?? it.user_complete ?? null;
+      if (c === 'success') success++;
+      else if (c === 'review') review++;
+    });
+    return { success, review };
+  }, [isAuthenticated, hasMore, items, itemCompletions]);
+
+  const summary = isLoading && !items.length ? (
+    <span className="inline-block h-4 w-44 animate-pulse rounded bg-[#efece6]" aria-hidden />
+  ) : totalCount > 0 ? (
+    <p className="fd-nums">
+      <span className="font-medium text-ink-soft">{plural(totalCount, [one, many])}</span>
+      {mine && mine.success > 0 && (
+        <> · <b className="font-semibold text-brand-hover">{mine.success}</b> {contentType === 'lesson' ? (mine.success > 1 ? 'lues' : 'lue') : (mine.success > 1 ? 'réussis' : 'réussi')}</>
+      )}
+      {mine && mine.review > 0 && <> · <b className="font-semibold text-gold-strong">{mine.review}</b> à revoir</>}
+      {mine && mine.success + mine.review === 0 && contentType !== 'lesson' && <> · rien de fait pour l’instant</>}
+    </p>
+  ) : null;
+
+  const headerActions = (hub?.related.length || canPublish) ? (
+    <>
+      {hub && <RelatedLinks related={hub.related} />}
+      {/* Publier : réservé aux auteurs et aux modérateurs. */}
+      {canPublish && (
+        <button onClick={handleNewContentClick} data-tour="liste-creer" className="fd-btn-ghost min-h-10" aria-label={config.createLabel}>
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">{config.createLabel}</span>
+        </button>
+      )}
+    </>
+  ) : undefined;
+
   return (
-    <div ref={rootRef} style={{ minHeight: '100vh', background: '#faf9f7', paddingBottom: 64 }}>
+    <div ref={rootRef}>
+    <Page width="wide">
       {/* Mêmes titres que les pages pré-remplies par le serveur (backend/src/config/seo.py). */}
       {hub ? (
         <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
@@ -1080,522 +1109,143 @@ export const ContentList: React.FC<ContentListProps> = ({
       ) : (
         <SEO title={LIST_SEO[contentType].title} description={LIST_SEO[contentType].description} canonicalUrl={config.basePath} />
       )}
-      {/* En-tête compact : titre, nombre, une phrase ; le contenu commence tout de suite après. */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4">
-        <div className="flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            {/* Dossiers : Maths › niveau › chapitre, chaque cran remonte d'un dossier. Téléphone : la barre du haut
-                porte déjà le retour (« ‹ 2ème Bac SM ») ; la liste commence plus haut. */}
-            {hub && (
-              <nav aria-label="Fil d’Ariane" className="mb-1.5 hidden sm:flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
-                <Link to={allLevelsPath} className="hover:text-ink">{hub.subject || 'Mathématiques'}</Link>
-                <span aria-hidden>›</span>
-                {hub.chapter ? <Link to={hub.level.url} className="hover:text-ink">{hub.level.name}</Link> : <span className="text-ink-soft">{hub.level.name}</span>}
-                {hub.chapter && <><span aria-hidden>›</span><span className="text-ink-soft" aria-current="page">{hub.chapter.name}</span></>}
-                {!hub.chapter && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <Link to={allLevelsPath} className="font-medium text-brand-hover hover:underline">Tous les niveaux</Link>
-                  </>
-                )}
-              </nav>
-            )}
-            {yearFolder && (
-              <nav aria-label="Fil d’Ariane" className="mb-1.5 hidden sm:flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-faint">
-                <Link to="/exams/nationaux" className="hover:text-ink">{NATIONAL.title}</Link>
-                <span aria-hidden>›</span>
-                <span className="text-ink-soft" aria-current="page">{yearFolder === 'aucune' ? 'Année non précisée' : yearFolder}</span>
-              </nav>
-            )}
-            <h1 className="fd-display text-ink flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-              {hub ? hub.h1 : yearFolder ? (yearFolder === 'aucune' ? 'Bac national : année non précisée' : `Bac national ${yearFolder}`)
-                : isNationalSection ? NATIONAL.title : unfiledOnly ? `${config.title} sans chapitre` : config.title}
-              <span className="fd-nums text-[15px] font-medium text-ink-faint" style={{ letterSpacing: 0 }}>
-                {totalCount > 0 ? totalCount : ''}
-              </span>
-            </h1>
-            <p className="text-[13.5px] text-ink-faint mt-1.5 max-w-3xl line-clamp-2 sm:line-clamp-none">{hub ? hub.intro : isNationalSection ? NATIONAL.subtitle
-              : unfiledOnly ? 'Ces contenus ne sont encore rangés dans aucun chapitre de ce niveau.' : config.subtitle}</p>
-          </div>
 
-          {/* Publier : réservé aux auteurs et aux modérateurs. */}
-          {canPublish && (
-            <button
-              onClick={handleNewContentClick}
-              data-tour="liste-creer"
-              className="fd-btn-ghost flex-shrink-0"
-              style={{ padding: '9px 14px' }}
-              aria-label={config.createLabel}
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">{config.createLabel}</span>
-            </button>
-          )}
-        </div>
-      </div>
+      <FolderHeader
+        crumbs={crumbs}
+        title={pageTitle}
+        emphasis={hub ? (hub.chapter?.name ?? hub.level.name) : null}
+        summary={summary}
+        actions={headerActions}
+      />
 
-      {/* Dossier d'un chapitre (ou d'une année du Bac) : remonter d'un cran ; les autres rubriques du niveau. */}
-      {(hub || yearFolder) && (
-        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3 sm:pb-4 flex flex-col gap-1.5">
-          {hub?.chapter && (
-            <Link to={hub.level.url} className="self-start text-[13px] font-medium text-brand-hover hover:underline">
-              ‹ Tous les chapitres du {hub.level.name}
-            </Link>
-          )}
-          {yearFolder && (
-            <Link to="/exams/nationaux" className="self-start text-[13px] font-medium text-brand-hover hover:underline">
-              ‹ Toutes les années du Bac
-            </Link>
-          )}
-          {hub && hub.related.length > 0 && (
-            <p className="text-[12.5px] text-ink-faint">
-              Aussi pour {hub.chapter ? `« ${hub.chapter.name} »` : `le ${hub.level.name}`} :{' '}
-              {hub.related.map((r, i) => (
-                <React.Fragment key={r.url}>
-                  {i > 0 && ' · '}
-                  <Link to={r.url} className="font-medium text-brand-hover hover:underline">{r.label}</Link>{' '}
-                  <span className="fd-nums">({r.count})</span>
-                </React.Fragment>
-              ))}
-            </p>
-          )}
-        </div>
-      )}
+      <HorizontalFilterBar
+        contentType={contentType}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        sortBy={sortBy}
+        onSortChange={handleSortChange}
+        nationalSection={isNationalSection}
+        inFolder={hub?.chapter ? 'chapter' : yearFolder ? 'year' : undefined}
+        nationalYear={yearFolder ?? undefined}
+        fixed={fixed}
+        resultCount={totalCount}
+        resultLoading={isLoading}
+        onChipsChange={setChips}
+        trailing={<div className="hidden sm:block">{viewToggle}</div>}
+      />
 
-      {/* Main layout */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
-        {/* Horizontal Filter Bar */}
-        <HorizontalFilterBar
-          contentType={contentType}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          sortBy={sortBy}
-          onSortChange={handleSortChange}
-          accentColor={contentType === 'exam' ? 'violet' : contentType === 'lesson' ? 'emerald' : 'blue'}
-          nationalSection={isNationalSection}
-          inFolder={hub?.chapter ? 'chapter' : yearFolder ? 'year' : undefined}
-          nationalYear={yearFolder ?? undefined}
-          fixed={fixed}
-          resultCount={totalCount}
-          resultLoading={isLoading}
-          onChipsChange={setChips}
-          trailing={<div className="hidden sm:block">{viewToggle}</div>}
-        />
+      <div ref={listRef}>
+        {/* « Pour toi » : rattraper d'un clic ce qu'il a ouvert sans dire s'il l'a réussi (sur la page d'un
+            chapitre, seulement ce chapitre). Pas sur une liste restaurée au retour : il décalerait la position. */}
+        {isAuthenticated && sortBy === 'recommended' && contentType !== 'lesson' && skipKey.current !== listKey && (
+          <CatchUpBanner kind={contentType} chapter={hub?.chapter?.id} onEvaluated={handleCatchUp} />
+        )}
+        {error && !error.more && errorBox(false)}
 
-        {/* Content Area */}
-        <div ref={listRef}>
-          {/* « Pour toi » : rattraper d'un clic ce qu'il a ouvert sans dire s'il l'a réussi (sur la page d'un
-              chapitre, seulement ce chapitre). Pas sur une liste restaurée au retour : il décalerait la position. */}
-          {isAuthenticated && sortBy === 'recommended' && contentType !== 'lesson' && skipKey.current !== listKey && (
-            <CatchUpBanner kind={contentType} chapter={hub?.chapter?.id} onEvaluated={handleCatchUp} />
-          )}
-          {error && !error.more && errorBox(false)}
-
-          {/* Content Grid/List */}
-          {isLoading && items.length === 0 ? (
-            <SkeletonCards />
-          ) : items.length > 0 ? (
-            <div aria-busy={isLoading} className={`transition-opacity ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+        {isLoading && items.length === 0 ? (
+          <SkeletonCards />
+        ) : items.length > 0 ? (
+          <div aria-busy={isLoading} className={`transition-opacity ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
             {viewMode === 'card' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 min-[1700px]:grid-cols-3 gap-4 sm:gap-5">
+              <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label={pageTitle}>
                 {items.map((item, i) => (
                   <React.Fragment key={item.id}>
-                    <ContentListCard
-                      content={item}
-                      contentType={contentType}
-                      first={i === 0}
-                      showSubject={showSubject}
-                      levelSlug={hub?.level.slug}
-                      onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
-                      onDelete={handleDeleteItem}
-                    />
+                    <li className="min-w-0">
+                      <ContentListCard
+                        content={item}
+                        contentType={contentType}
+                        first={i === 0}
+                        showSubject={showSubject}
+                        levelSlug={hub?.level.slug}
+                        onEdit={(id) => navigate(`${config.basePath}/${id}/edit`)}
+                        onDelete={handleDeleteItem}
+                      />
+                    </li>
                     {/* Visiteur : une invitation après les premières cartes, pas plus. */}
                     {!isAuthenticated && i === Math.min(3, items.length - 1) && (
-                      <SignupStrip className="lg:col-span-2 min-[1700px]:col-span-3" />
+                      <li className="lg:col-span-2"><SignupStrip /></li>
                     )}
                   </React.Fragment>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <div className="flex flex-col gap-8 max-w-4xl mx-auto">
+              <div className="mx-auto flex max-w-4xl flex-col gap-6">
                 {items.map((item) => {
-                  const hasStructure = item.structure && typeof item.structure === 'object' && ('blocks' in item.structure || 'sections' in item.structure);
-
-                  // Subject theme + difficulty config for the banner
-                  const subjectName = item.subject
-                    ? (typeof item.subject === 'string' ? item.subject : item.subject.name)
-                    : '';
-                  const itemTheme = getSubjectTheme(subjectName);
-                  const itemTypeLabel = contentType === 'exam' ? 'Examen' : contentType === 'lesson' ? 'Leçon' : 'Exercice';
-                  const itemDifficulty = ('difficulty' in item && item.difficulty
-                    && item.difficulty in DIFFICULTY_CFG)
-                    ? DIFFICULTY_CFG[item.difficulty as 'easy' | 'medium' | 'hard']
-                    : null;
-                  const itemIsNational = 'is_national_exam' in item && item.is_national_exam;
-                  const itemNationalYear = 'national_year' in item ? item.national_year ?? undefined : undefined;
-                  const itemIsSolved = itemCompletions[item.id] === 'success';
-
-                  // Convert progress for ExerciseRenderer — merge assessments + validations
-                  const progressEntries = itemProgress[item.id] || {};
-                  const validationEntries = itemValidations[item.id] || {};
+                  const id = String(item.id);
+                  // Questions évaluées et validations de solution, réunies pour le rendu de l'énoncé.
+                  const progressEntries = itemProgress[id] || {};
+                  const validationEntries = itemValidations[id] || {};
                   const allPaths = new Set([...Object.keys(progressEntries), ...Object.keys(validationEntries)]);
                   const progressData = allPaths.size > 0
-                    ? Object.fromEntries(
-                        [...allPaths].map(path => [
-                          path,
-                          {
-                            status: progressEntries[path] || null,
-                            solution_validation: validationEntries[path] || null,
-                            assessed_at: new Date().toISOString()
-                          }
-                        ])
-                      )
+                    ? Object.fromEntries([...allPaths].map((path) => [path, {
+                      status: progressEntries[path] || null,
+                      solution_validation: validationEntries[path] || null,
+                      assessed_at: new Date().toISOString(),
+                    }]))
                     : undefined;
-
                   return (
-                    <div
+                    <StatementCard
                       key={item.id}
-                      className="fd-card"
-                      style={{ overflow: 'hidden' }}
-                    >
-                      {/* Gradient banner — same as card view, taller for full layout */}
-                      <ContentCardBanner
-                        title={item.title}
-                        subjectName={subjectName}
-                        typeLabel={itemTypeLabel}
-                        theme={itemTheme}
-                        difficulty={itemDifficulty}
-                        isSolved={itemIsSolved}
-                        isNationalExam={!!itemIsNational}
-                        nationalYear={itemNationalYear}
-                        isSaved={!!itemBookmarks[item.id]}
-                        onSave={(e) => { e.stopPropagation(); handleBookmark(String(item.id)); }}
-                        height={120}
-                      />
-
-                      {/* Controls strip below banner: type label + tags on left,
-                          interactive widgets (timer, completion, revision) on right */}
-                      <div className="px-6 pt-4 pb-3 flex flex-wrap items-center gap-3 justify-between">
-                        <div className="flex items-center gap-2 flex-wrap min-w-0">
-                          <span style={{
-                            fontSize: 10, fontWeight: 700,
-                            color: '#6b6862', letterSpacing: '.08em', textTransform: 'uppercase',
-                            fontFamily: 'DM Mono',
-                          }}>
-                            {itemTypeLabel} #{item.id}
-                          </span>
-                          {item.chapters && item.chapters.length > 0 && (
-                            <span style={{
-                              background: '#f7f6f3', color: '#6b6862',
-                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                            }}>
-                              <BookOpen className="w-3 h-3" />
-                              {typeof item.chapters[0] === 'string' ? item.chapters[0] : item.chapters[0].name}
-                            </span>
-                          )}
-                          {item.theorems && item.theorems.length > 0 && (
-                            <span style={{
-                              background: '#f7f6f3', color: '#1a1a1a',
-                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
-                            }}>
-                              {typeof item.theorems[0] === 'string' ? item.theorems[0] : item.theorems[0].name}
-                            </span>
-                          )}
-                          {item.class_levels && item.class_levels.length > 0 && (
-                            <span style={{ fontSize: 11, color: '#6b6862' }}>
-                              {typeof item.class_levels[0] === 'string' ? item.class_levels[0] : item.class_levels[0].name}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Interactive widgets */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            {/* Timer Widget - only for exercises/exams */}
-                            {contentType !== 'lesson' && (
-                              <div data-tour="liste-chrono" className={`
-                                flex items-center gap-1.5 px-2 py-1.5 rounded-lg border transition-all
-                                ${itemTimers[item.id]?.isRunning
-                                  ? 'bg-emerald-50 border-emerald-200'
-                                  : itemTimers[item.id]?.elapsed > 0
-                                    ? 'bg-amber-50 border-amber-200'
-                                    : 'bg-slate-50 border-slate-200'
-                                }
-                              `}>
-                                <Clock className={`w-3.5 h-3.5 ${
-                                  itemTimers[item.id]?.isRunning ? 'text-emerald-600' :
-                                  itemTimers[item.id]?.elapsed > 0 ? 'text-amber-600' : 'text-slate-400'
-                                }`} />
-                                <span className={`font-mono text-xs font-semibold min-w-[2.5rem] ${
-                                  itemTimers[item.id]?.isRunning ? 'text-emerald-700' :
-                                  itemTimers[item.id]?.elapsed > 0 ? 'text-amber-700' : 'text-slate-500'
-                                }`}>
-                                  {formatTime(itemTimers[item.id]?.elapsed || 0)}
-                                </span>
-
-                                <button
-                                  onClick={() => handleToggleTimer(String(item.id))}
-                                  className={`p-1 rounded transition-colors ${
-                                    itemTimers[item.id]?.isRunning
-                                      ? 'bg-emerald-200 text-emerald-700 hover:bg-emerald-300'
-                                      : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                                  }`}
-                                  title={itemTimers[item.id]?.isRunning ? 'Pause' : 'Démarrer'}
-                                >
-                                  {itemTimers[item.id]?.isRunning ? (
-                                    <Pause className="w-3 h-3" />
-                                  ) : (
-                                    <Play className="w-3 h-3" />
-                                  )}
-                                </button>
-
-                                <button
-                                  onClick={() => handleResetTimer(String(item.id))}
-                                  disabled={(itemTimers[item.id]?.elapsed || 0) === 0 || itemTimers[item.id]?.isRunning}
-                                  className="p-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                  title="Réinitialiser"
-                                >
-                                  <RotateCcw className="w-3 h-3" />
-                                </button>
-
-                                {/* Save button - appears when timer > 0 */}
-                                {(itemTimers[item.id]?.elapsed || 0) > 0 && (
-                                  <button
-                                    onClick={() => handleSaveTimerSession(String(item.id))}
-                                    disabled={savingTimer[item.id] || itemTimers[item.id]?.isRunning}
-                                    className="p-1 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors disabled:opacity-40"
-                                    title="Enregistrer le temps"
-                                  >
-                                    {savingTimer[item.id] ? (
-                                      <div className="w-3 h-3 border border-blue-300 border-t-blue-600 rounded-full animate-spin" />
-                                    ) : (
-                                      <Save className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                )}
-
-                                {/* Session count badge */}
-                                {sessionCounts[item.id] > 0 && (
-                                  <Link
-                                    to={`${config.basePath}/${item.id}`}
-                                    state={{ from: listFrom }}
-                                    className="px-2 py-0.5 text-xs font-medium bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors"
-                                    title={`${sessionCounts[item.id]} session${sessionCounts[item.id] > 1 ? 's' : ''} enregistrée${sessionCounts[item.id] > 1 ? 's' : ''}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {sessionCounts[item.id]}
-                                  </Link>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Completion dropdown */}
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  completionAnchor.current = e.currentTarget;
-                                  setCompletionDropdown(prev =>
-                                    prev.itemId === item.id
-                                      ? { itemId: null, pos: { top: 0, left: 0 } }
-                                      : { itemId: item.id, pos: { top: rect.bottom + 4, left: rect.left } }
-                                  );
-                                }}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  itemCompletions[item.id] === 'success'
-                                    ? 'bg-emerald-100 text-emerald-600'
-                                    : itemCompletions[item.id] === 'review'
-                                      ? 'bg-red-100 text-red-600'
-                                      : 'bg-slate-50 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
-                                title={itemCompletions[item.id] === 'success' ? 'Réussi' : itemCompletions[item.id] === 'review' ? 'À revoir' : 'Pas encore fait : dis si tu l’as réussi'}
-                                data-tour="liste-terminer"
-                              >
-                                {itemCompletions[item.id] === 'success' ? (
-                                  <CheckCircle2 className="w-4 h-4" />
-                                ) : itemCompletions[item.id] === 'review' ? (
-                                  <X className="w-4 h-4" />
-                                ) : (
-                                  <Circle className="w-4 h-4" />
-                                )}
-                              </button>
-
-                              {completionDropdown.itemId === item.id && (
-                                <FloatingPanel anchorRef={completionAnchor} open
-                                  onClose={() => setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } })}
-                                  className="bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[130px]">
-                                    <button
-                                      onClick={() => {
-                                        handleSetCompletion(String(item.id), itemCompletions[item.id] === 'success' ? null : 'success');
-                                        setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } });
-                                      }}
-                                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                                        itemCompletions[item.id] === 'success'
-                                          ? 'bg-emerald-100 text-emerald-700'
-                                          : 'text-emerald-600 hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      <CheckCircle2 className="w-3.5 h-3.5" />
-                                      <span>Réussi</span>
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        handleSetCompletion(String(item.id), itemCompletions[item.id] === 'review' ? null : 'review');
-                                        setCompletionDropdown({ itemId: null, pos: { top: 0, left: 0 } });
-                                      }}
-                                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                                        itemCompletions[item.id] === 'review'
-                                          ? 'bg-red-100 text-red-700'
-                                          : 'text-red-600 hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                      <span>À revoir</span>
-                                    </button>
-                                </FloatingPanel>
-                              )}
-                            </div>
-
-                            {/* Add to revision list - only for exercises/exams */}
-                            {contentType !== 'lesson' && (
-                              <button
-                                onClick={() => {
-                                  if (!isAuthenticated) {
-                                    openModal('liste-revision');
-                                    return;
-                                  }
-                                  setRevisionListModal({
-                                    isOpen: true,
-                                    itemId: String(item.id),
-                                    itemTitle: item.title
-                                  });
-                                }}
-                                className="p-1.5 rounded-lg transition-colors"
-                                style={{
-                                  background: '#f7f6f3', color: '#6b6862', border: '1px solid #e7e3dc',
-                                }}
-                                title="Ajouter à une liste de révision"
-                                data-tour="liste-revision"
-                              >
-                                <ListPlus className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="mx-6" style={{ borderTop: '1px solid #faf9f7' }} />
-
-                      {/* Content */}
-                      <div className="px-6 py-4">
-                        <ClampedPreview>
-                        {hasStructure ? (
-                          contentType === 'lesson' ? (
-                            <LessonRenderer
-                              structure={item.structure as FlexibleLessonStructure}
-                            />
-                          ) : (
-                            <ExerciseRenderer
-                              structure={item.structure as unknown as FlexibleExerciseStructure}
-                              progress={progressData}
-                              onAssess={(path, status, source) => handleAssess(String(item.id), path, status, source)}
-                              onSolutionOpen={() => handleSolutionOpen(String(item.id))}
-                              interactive={isAuthenticated}
-                              showAllSolutions={showAllSolutions}
-                              compact={false}
-                            />
-                          )
-                        ) : (
-                          <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>Ancien format — clique pour voir le détail.</p>
-                        )}
-                        </ClampedPreview>
-                      </div>
-
-                      {/* Footer */}
-                      <div
-                        className="px-6 py-3"
-                        style={{ borderTop: '1px solid #faf9f7', background: '#faf9ff' }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div data-tour="vote">
-                            <VoteButtons
-                              likes={itemVotes[item.id]?.likes ?? 0}
-                              dislikes={itemVotes[item.id]?.dislikes ?? 0}
-                              onVote={(value) => handleVote(String(item.id), value)}
-                              vertical={false}
-                              userVote={(itemVotes[item.id]?.vote || 0) as 1 | -1 | 0}
-                              size="sm"
-                            />
-                            </div>
-                            <div className="flex items-center gap-1.5" style={{ color: '#6b6862' }}>
-                              <Eye className="w-4 h-4" />
-                              <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono' }}>{item.view_count}</span>
-                            </div>
-                            {(item.comment_count ?? 0) > 0 && (
-                              <div className="flex items-center gap-1.5" style={{ color: '#6b6862' }}>
-                                <MessageSquare className="w-4 h-4" />
-                                <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono' }}>{item.comment_count}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <Link
-                            to={`${config.basePath}/${item.id}`}
-                            state={{ from: listFrom }}
-                            data-tour="liste-ouvrir"
-                            className="fd-btn-primary"
-                            style={{ padding: '6px 14px', fontSize: 12, borderRadius: 9, textDecoration: 'none' }}
-                          >
-                            {contentType === 'lesson' ? 'Lire' : 'Commencer'} →
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
+                      item={item}
+                      kind={contentType}
+                      path={`${config.basePath}/${item.id}`}
+                      from={listFrom}
+                      isAuthenticated={isAuthenticated}
+                      hideLevel={!!hub}
+                      saved={!!itemBookmarks[id]}
+                      onToggleSave={() => handleBookmark(id)}
+                      completion={itemCompletions[id] ?? null}
+                      onSetCompletion={(st) => handleSetCompletion(id, st)}
+                      vote={itemVotes[id] ?? { vote: 0, likes: 0, dislikes: 0 }}
+                      onVote={(v) => handleVote(id, v)}
+                      timer={itemTimers[id] ?? { isRunning: false, elapsed: 0 }}
+                      savingTimer={!!savingTimer[id]}
+                      sessionCount={sessionCounts[id] ?? 0}
+                      onToggleTimer={() => handleToggleTimer(id)}
+                      onResetTimer={() => handleResetTimer(id)}
+                      onSaveTimer={() => handleSaveTimerSession(id)}
+                      onAddToList={() => {
+                        if (!isAuthenticated) { openModal('liste-revision'); return; }
+                        setRevisionListModal({ isOpen: true, itemId: id, itemTitle: item.title });
+                      }}
+                      progressData={progressData}
+                      onAssess={(path, status, source) => handleAssess(id, path, status, source)}
+                      onSolutionOpen={() => handleSolutionOpen(id)}
+                      showAllSolutions={showAllSolutions}
+                    />
                   );
                 })}
               </div>
             )}
-            </div>
-          ) : !error ? (
-            emptyState()
-          ) : null}
+          </div>
+        ) : !error ? (
+          emptyState()
+        ) : null}
 
-          {error?.more && <div className="mt-6">{errorBox(true)}</div>}
+        {error?.more && <div className="mt-6">{errorBox(true)}</div>}
 
-          {/* Load More Button */}
-          {hasMore && !isLoading && items.length > 0 && !error?.more && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="fd-btn-ghost"
-                style={{ padding: '10px 22px', fontSize: 13, minHeight: 44 }}
-              >
-                {loadingMore ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Chargement…</>
-                ) : (
-                  <>Charger plus <ChevronRight className="w-3 h-3" /></>
-                )}
-              </button>
-              <p className="mt-2 text-[12px] text-ink-faint fd-nums">{items.length} sur {totalCount} {totalCount > 1 ? many : one}</p>
-            </div>
-          )}
+        {/* La suite de la liste. */}
+        {hasMore && !isLoading && items.length > 0 && !error?.more && (
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <button type="button" onClick={handleLoadMore} disabled={loadingMore} className="fd-btn-ghost min-h-11 px-5 text-[13.5px]">
+              {loadingMore ? <><Loader2 className="h-4 w-4 animate-spin" /> Chargement…</> : <>Voir la suite</>}
+            </button>
+            <p className="fd-nums text-[12px] text-ink-faint">{items.length} sur {totalCount} {totalCount > 1 ? many : one}</p>
+          </div>
+        )}
 
-          {items.length > 0 && <AdSlot className="mt-10" />}
+        {/* Toute la liste est là. */}
+        {totalPages > 1 && !hasMore && (
+          <p className="fd-nums mt-8 text-center text-[12px] text-ink-faint">{items.length} sur {totalCount} {totalCount > 1 ? many : one}</p>
+        )}
 
-          {/* Pagination info */}
-          {totalPages > 1 && !hasMore && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <span style={{ fontSize: 12, color: '#6b6862', fontFamily: 'DM Mono' }}>
-                {items.length} / {totalCount} résultats
-              </span>
-            </div>
-          )}
-        </div>
+        {items.length > 0 && <AdSlot className="mt-10" />}
+
+        {/* Présentation pour les moteurs de recherche (même texte que la page pré-remplie), en bas de page. */}
+        {hub?.intro && <FolderAbout>{hub.intro}</FolderAbout>}
       </div>
 
-      {/* Revision List Modal */}
+      {/* Liste de révision (affichage Énoncés). */}
       {contentType !== 'lesson' && revisionListModal.isOpen && revisionListModal.itemId && (
         <AddToRevisionListModal
           isOpen={revisionListModal.isOpen}
@@ -1606,6 +1256,7 @@ export const ContentList: React.FC<ContentListProps> = ({
           contentLabels={labelsFromContent(items.find((it) => String(it.id) === revisionListModal.itemId))}
         />
       )}
+    </Page>
     </div>
   );
 };

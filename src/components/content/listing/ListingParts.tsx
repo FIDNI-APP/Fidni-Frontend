@@ -1,7 +1,8 @@
 // Petits éléments des cartes de liste (exercices, examens, leçons).
-// Mêmes mots partout pour l'état de l'élève : « Réussi », « À revoir », « Pas encore fait ».
+// Mêmes mots partout pour l'état de l'élève : « Réussi », « À revoir », « Pas encore fait » (« À faire » dans
+// les cartes de liste, comme le filtre).
 import React, { useState } from 'react';
-import { Bookmark, Check, Loader2, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Bookmark, Check, Loader2, Pencil, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import type { Felt, UserProgress } from '@/types/content';
 import { DIFFICULTY, feltTooltip, type Progress } from './listingUtils';
 import { DifficultyBars } from '@/components/common/DifficultyBars';
@@ -23,29 +24,45 @@ export const ProgressPill: React.FC<{ progress: Progress }> = ({ progress }) =>
  * `interactive` (cartes de liste, hors de tout lien) : un toucher ouvre l'explication, sinon invisible sur
  * téléphone (pas de survol) et cachée sous le lien de la carte sur ordinateur.
  */
-export const DifficultyChip: React.FC<{ difficulty?: string | null; felt?: Felt | null; interactive?: boolean }> = ({
-  difficulty, felt, interactive = false,
+export const DifficultyChip: React.FC<{
+  difficulty?: string | null;
+  felt?: Felt | null;
+  interactive?: boolean;
+  /** Cartes de liste (11/10/2026) : sans pastille de couleur, encre et barres seulement ; le ressenti en or. */
+  plain?: boolean;
+}> = ({
+  difficulty, felt, interactive = false, plain = false,
 }) => {
   const [open, setOpen] = useState(false);
   const d = difficulty ? DIFFICULTY[difficulty] : null;
   if (!d) return null;
   const f = felt?.differs ? DIFFICULTY[felt.level] : null;
   const tip = f && felt ? `Ressenti des élèves : ${f.label}. ${feltTooltip(felt)}` : undefined;
-  const chip = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px] font-semibold';
+  const chip = plain
+    ? 'inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-soft'
+    : 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px] font-semibold';
+  const tone = plain ? undefined : { background: d.bg, color: d.text };
   const inner = (
     <>
       <DifficultyBars difficulty={difficulty} />
       {d.label}
-      {f && (
+      {f && (plain ? (
+        <>
+          <span aria-hidden className="text-ink-faint">·</span>
+          <span className="font-medium text-gold-strong underline decoration-gold-line decoration-dotted underline-offset-[3px]">
+            ressenti {f.label.toLowerCase()}
+          </span>
+        </>
+      ) : (
         <span className="font-medium" style={{ color: f.text }}>
           <span aria-hidden>· </span>ressenti {f.label}
         </span>
-      )}
+      ))}
     </>
   );
   if (!f || !interactive) {
     return (
-      <span className={chip} style={{ background: d.bg, color: d.text }} title={tip}>
+      <span className={chip} style={tone} title={tip}>
         {inner}
         {tip && <span className="sr-only"> ({tip})</span>}
       </span>
@@ -57,8 +74,8 @@ export const DifficultyChip: React.FC<{ difficulty?: string | null; felt?: Felt 
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
         onBlur={() => setOpen(false)}
         onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
-        className={`${chip} relative cursor-help before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand`}
-        style={{ background: d.bg, color: d.text }}>
+        className={`${chip} relative cursor-help before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand`}
+        style={tone}>
         {inner}
         <span className="sr-only"> ({tip})</span>
       </button>
@@ -95,9 +112,11 @@ export const NationalTag: React.FC<{ year?: number | null }> = ({ year }) => (
 
 const iconBtn = 'relative z-10 w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand';
 
-export const BookmarkButton: React.FC<{ saved: boolean; busy: boolean; onClick: (e: React.MouseEvent) => void }> = ({ saved, busy, onClick }) => (
+export const BookmarkButton: React.FC<{ saved: boolean; busy: boolean; onClick: (e: React.MouseEvent) => void; className?: string }> = ({
+  saved, busy, onClick, className = '',
+}) => (
   <button type="button" onClick={onClick} data-tour="favori"
-    className={`${iconBtn} ${saved ? 'text-brand hover:bg-brand-soft' : 'text-ink-faint hover:text-ink hover:bg-[#f2f1ee]'}`}
+    className={`${iconBtn} ${saved ? 'text-brand hover:bg-brand-soft' : 'text-ink-faint hover:text-ink hover:bg-[#f2f1ee]'} ${className}`}
     aria-label={saved ? 'Retirer des favoris' : 'Ajouter aux favoris'} aria-pressed={saved}
     title={saved ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className="w-4 h-4" fill={saved ? 'currentColor' : 'none'} />}
@@ -120,3 +139,90 @@ export const OwnerButtons: React.FC<{ onEdit?: () => void; onDelete?: () => void
     )}
   </>
 );
+
+/* ───────────── Cartes de liste (refonte du 11/10/2026) ───────────── */
+
+/** Bouton icône des cartes : 40 px au doigt, 36 px à la souris. */
+export const cardIconBtn = 'relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:h-9 sm:w-9';
+
+/**
+ * État de l'élève en un mot, en haut à gauche des cartes : ✓ Réussi (vert), ↻ À revoir (or), « 1/3 » (commencé),
+ * ◌ À faire (discret). Leçon : « Lue ». Visiteur : rien (rien n'est suivi).
+ */
+export const CardStatus: React.FC<{
+  progress: Progress;
+  started?: UserProgress | null;
+  lesson?: boolean;
+  signedIn: boolean;
+}> = ({ progress, started, lesson = false, signedIn }) => {
+  const base = 'inline-flex shrink-0 items-center gap-1.5 text-[12.5px]';
+  if (progress === 'success') {
+    return (
+      <span className={`${base} font-semibold text-brand-hover`}>
+        <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-brand text-white" aria-hidden>
+          <Check className="h-3 w-3" strokeWidth={3} />
+        </span>
+        {lesson ? 'Lue' : 'Réussi'}
+      </span>
+    );
+  }
+  if (progress === 'review') {
+    return (
+      <span className={`${base} font-semibold text-gold-strong`}>
+        <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-gold-soft ring-1 ring-gold-line" aria-hidden>
+          <RotateCcw className="h-2.5 w-2.5" strokeWidth={3} />
+        </span>
+        À revoir
+      </span>
+    );
+  }
+  if (!signedIn) return null;
+  if (started && !lesson) {
+    const pct = Math.min(100, Math.round((started.assessed / started.total) * 100));
+    return (
+      <span className={`${base} font-medium text-ink-soft`}
+        title={`${started.assessed} question${started.assessed > 1 ? 's' : ''} évaluée${started.assessed > 1 ? 's' : ''} sur ${started.total}, dont ${started.success} réussie${started.success > 1 ? 's' : ''}`}>
+        <span className="h-1.5 w-8 overflow-hidden rounded-full bg-[#efece6]" aria-hidden>
+          <span className="block h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+        </span>
+        <span className="fd-nums">{started.assessed}/{started.total} question{started.total > 1 ? 's' : ''}</span>
+      </span>
+    );
+  }
+  return (
+    <span className={`${base} text-ink-faint`}>
+      <span className="h-[18px] w-[18px] rounded-full border-[1.5px] border-dashed border-[#cfc9bf]" aria-hidden />
+      {lesson ? 'Pas encore lue' : 'À faire'}
+    </span>
+  );
+};
+
+/**
+ * J'aime / je n'aime pas, en discret (pied des cartes) : des icônes, le nombre seulement s'il y en a.
+ * Le nombre change tout de suite ; `onVote` appelle le serveur.
+ */
+export const QuietVotes: React.FC<{
+  likes: number;
+  dislikes: number;
+  userVote: 1 | -1 | 0;
+  onVote: (value: 1 | -1) => void;
+}> = ({ likes, dislikes, userVote, onVote }) => {
+  const btn = 'relative z-10 inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold fd-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:h-9 sm:min-w-9';
+  const stop = (e: React.MouseEvent, v: 1 | -1) => { e.preventDefault(); e.stopPropagation(); onVote(v); };
+  return (
+    <span className="inline-flex items-center">
+      <button type="button" onClick={(e) => stop(e, 1)} aria-pressed={userVote === 1} aria-label={`J’aime (${likes})`}
+        title={userVote === 1 ? 'Tu aimes ce contenu · touche pour retirer' : 'J’aime : ce contenu m’a aidé'}
+        className={`${btn} ${userVote === 1 ? 'bg-brand-soft text-brand-hover' : 'text-ink-faint hover:bg-[#f2f1ee] hover:text-ink'}`}>
+        <ThumbsUp className="h-4 w-4" fill={userVote === 1 ? 'currentColor' : 'none'} fillOpacity={userVote === 1 ? 0.25 : 0} aria-hidden />
+        {likes > 0 && <span>{likes}</span>}
+      </button>
+      <button type="button" onClick={(e) => stop(e, -1)} aria-pressed={userVote === -1} aria-label={`Je n’aime pas (${dislikes})`}
+        title={userVote === -1 ? 'Tu n’aimes pas ce contenu · touche pour retirer' : 'Je n’aime pas'}
+        className={`${btn} ${userVote === -1 ? 'bg-[#efede9] text-ink' : 'text-ink-faint hover:bg-[#f2f1ee] hover:text-ink'}`}>
+        <ThumbsDown className="h-4 w-4" fill={userVote === -1 ? 'currentColor' : 'none'} fillOpacity={userVote === -1 ? 0.25 : 0} aria-hidden />
+        {dislikes > 0 && <span>{dislikes}</span>}
+      </button>
+    </span>
+  );
+};

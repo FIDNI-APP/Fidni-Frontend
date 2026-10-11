@@ -7,6 +7,9 @@
 //   - Ta copie : note estimée d'après l'auto-évaluation (Réussi = tous les points, En partie = la
 //     moitié, À revoir = 0), exercice par exercice. Aucun chiffre inventé : tout vient du barème et de
 //     l'élève. Une épreuve refaite ne compte que les évaluations faites depuis son départ (comme le DS blanc).
+// 11/10/2026 : la fiche porte l'action principale (« Lancer l'épreuve », puis « Terminée : à toi de
+//   corriger ») ; la colonne de droite ne montre que le compte à rebours pendant l'épreuve, sinon ta copie
+//   (qui sert aussi de sommaire). Sur téléphone, la copie passe après le sujet. Logique de l'épreuve inchangée.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, EyeOff, Flag, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import type { AssessmentStatus, ContentExam } from '@/types/content';
@@ -39,14 +42,14 @@ interface Props {
   onSolutionOpen?: (path: string) => void;
   sessionCount: number;
   onOpenHistory: () => void;
-  /** Votes, affichés en haut à droite de la fiche du sujet. */
-  votes?: React.ReactNode;
-  /** Bas de la fiche (signaler une erreur). */
+  /** Pied de la feuille (j'aime, signaler une erreur). */
   footer?: React.ReactNode;
   /** Signaler une erreur sur une question précise. */
   onReport?: (path: string) => void;
   /** Épreuve en cours (vrai) ou non : la page cache ce qui détournerait de la copie (« Où en es-tu ? »). */
   onAttemptChange?: (running: boolean) => void;
+  /** Sous la feuille, dans la colonne du sujet (« Tu as fini ? », pour continuer, discussion). */
+  children?: React.ReactNode;
 }
 
 // ───────────────────────────── Découpage du sujet
@@ -189,7 +192,7 @@ function useEpreuve(examId: number | string, durationMin: number, onDone: (secon
 
 export const ExamView: React.FC<Props> = ({
   content, isAuthenticated, questionProgress, questionDates, onQuestionAssess, onAssessMany,
-  onSaveSession, onSaveScore, onSolutionOpen, sessionCount, onOpenHistory, votes, footer, onReport, onAttemptChange,
+  onSaveSession, onSaveScore, onSolutionOpen, sessionCount, onOpenHistory, footer, onReport, onAttemptChange, children,
 }) => {
   const structure = content.structure as unknown as FlexibleExerciseStructure | undefined;
   const { intro, parts } = useMemo(() => splitExam(structure), [structure]);
@@ -305,69 +308,86 @@ export const ExamView: React.FC<Props> = ({
   const goTo = (id: string) => document.getElementById(`exam-part-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const levelName = content.class_levels?.[0]?.name;
 
-  // ── Panneaux du rail (ordinateur : colonne de droite ; téléphone : au-dessus du sujet)
-  const epreuvePanel = (
+  // ── Épreuve : lancement dans la fiche du sujet ; pendant l'épreuve, le compte à rebours (colonne de droite
+  //    sur ordinateur, bandeau collé en haut sur téléphone).
+  const clockLabel = clock(epreuve.remaining ?? epreuve.elapsed);
+  const timerPanel = (
     <div className="rounded-2xl border border-line bg-white p-5" data-tour="examen-epreuve">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-faint">Épreuve</span>
-        {sessionCount > 0 && (
-          <button type="button" onClick={onOpenHistory} className="text-[12px] font-medium text-ink-faint hover:text-ink fd-nums">
-            {sessionCount} passage{sessionCount > 1 ? 's' : ''}
-          </button>
-        )}
+        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Épreuve en cours</span>
+        {epreuve.status === 'paused' && <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-faint">en pause</span>}
       </div>
-
-      {epreuve.status === 'idle' && (
-        <>
-          <p className="mt-2 text-[13.5px] text-ink-soft leading-relaxed">
-            {durationMin
-              ? <>Mets-toi en conditions : <b className="text-ink">{durationLabel(durationMin)}</b>, solutions masquées jusqu’à la fin.</>
-              : <>Chronomètre-toi, solutions masquées jusqu’à la fin.</>}
-          </p>
-          <button type="button" onClick={epreuve.start} className="fd-btn-primary w-full justify-center mt-3.5" style={{ minHeight: 42 }}>
-            <Play className="w-4 h-4" /> Commencer l’épreuve
-          </button>
-        </>
+      <div className="mt-2 flex items-baseline justify-between">
+        <span role="timer" className={`fd-nums text-[32px] font-semibold leading-none ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>{clockLabel}</span>
+        <span className="text-[12px] text-ink-faint">{epreuve.remaining !== null ? 'restant' : 'écoulé'}</span>
+      </div>
+      {epreuve.remaining !== null && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]">
+          <div className={`h-full rounded-full ${epreuve.remaining < 600 ? 'bg-gold' : 'bg-brand'}`}
+            style={{ width: `${Math.min(100, (epreuve.elapsed / (durationMin * 60)) * 100)}%` }} />
+        </div>
       )}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {epreuve.status === 'running'
+          ? <button type="button" onClick={epreuve.pause} className="fd-btn-ghost min-h-10 justify-center"><Pause className="h-4 w-4" /> Pause</button>
+          : <button type="button" onClick={epreuve.resume} className="fd-btn-ghost min-h-10 justify-center"><Play className="h-4 w-4" /> Reprendre</button>}
+        <button type="button" onClick={confirmFinish} className="fd-btn-primary min-h-10 justify-center"><Flag className="h-4 w-4" /> Terminer</button>
+      </div>
+    </div>
+  );
 
-      {locked && (
-        <>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className={`fd-nums font-semibold leading-none text-[30px] ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>
-              {clock(epreuve.remaining ?? epreuve.elapsed)}
-            </span>
-            <span className="text-[12px] text-ink-faint">{epreuve.remaining !== null ? 'restant' : 'écoulé'}{epreuve.status === 'paused' ? ' · en pause' : ''}</span>
-          </div>
-          {epreuve.remaining !== null && (
-            <div className="mt-3 h-1.5 rounded-full bg-[#f2f1ee] overflow-hidden">
-              <div className={`h-full rounded-full ${epreuve.remaining < 600 ? 'bg-gold' : 'bg-brand'}`}
-                style={{ width: `${Math.min(100, (epreuve.elapsed / (durationMin * 60)) * 100)}%` }} />
-            </div>
-          )}
-          <div className="mt-3.5 grid grid-cols-2 gap-2">
-            {epreuve.status === 'running'
-              ? <button type="button" onClick={epreuve.pause} className="fd-btn-ghost justify-center"><Pause className="w-4 h-4" /> Pause</button>
-              : <button type="button" onClick={epreuve.resume} className="fd-btn-ghost justify-center"><Play className="w-4 h-4" /> Reprendre</button>}
-            <button type="button" onClick={confirmFinish}
-              className="fd-btn-primary justify-center"><Flag className="w-4 h-4" /> Terminer</button>
-          </div>
-        </>
-      )}
+  const toggleAll = solutionCount > 0 && !locked ? (
+    <button type="button" onClick={() => {
+      if (!showAll) { trackAction('toutes-solutions'); onSolutionOpen?.('*'); }
+      setShowAll((v) => !v);
+    }} data-tour="detail-solutions" aria-pressed={showAll}
+      className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+        showAll ? 'bg-brand-soft text-brand-hover' : 'border border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+      {showAll ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      {showAll ? 'Masquer les solutions' : 'Toutes les solutions'}
+    </button>
+  ) : null;
 
-      {epreuve.status === 'done' && (
-        <>
-          <p className="mt-2 flex items-center gap-2 text-[14px] font-semibold text-ink">
-            <CheckCircle2 className="w-4 h-4 text-brand" />
-            {epreuve.timeUp ? 'Temps écoulé' : `Terminée en ${clock(epreuve.elapsed)}`}
-          </p>
-          <p className="mt-1 text-[13px] text-ink-faint leading-relaxed">
-            À toi de corriger : ouvre la solution de chaque question et indique Réussi, En partie ou À revoir.
-          </p>
-          <button type="button" onClick={epreuve.reset} className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint hover:text-ink">
-            <RotateCcw className="w-3.5 h-3.5" /> Refaire l’épreuve
-          </button>
-        </>
-      )}
+  // Fiche, partie « épreuve » : une seule action principale à chaque moment.
+  const epreuveBlock = epreuve.status === 'idle' ? (
+    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tour="examen-epreuve">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={epreuve.start} className="fd-btn-primary min-h-11 justify-center px-5 text-[14px]">
+          <Play className="h-4 w-4" /> Lancer l’épreuve
+        </button>
+        {toggleAll}
+      </div>
+      <p className="text-[13px] leading-snug text-ink-faint sm:max-w-[250px] sm:text-right">
+        {durationMin
+          ? <>Compte à rebours de {durationLabel(durationMin)}, solutions cachées jusqu’à la fin.</>
+          : <>Chronomètre-toi, solutions cachées jusqu’à la fin.</>}
+      </p>
+    </div>
+  ) : locked ? (
+    <p className="mt-5 flex items-start gap-2.5 rounded-xl border border-gold-line bg-gold-soft px-3.5 py-2.5 text-[13.5px] leading-snug text-gold-strong">
+      <Timer className="mt-px h-4 w-4 shrink-0" aria-hidden />
+      <span><b className="font-semibold">Épreuve en cours.</b> Compose sur une feuille : les solutions s’afficheront à la fin.</span>
+    </p>
+  ) : (
+    <div className="mt-5 rounded-xl border border-brand-line bg-brand-soft/60 px-4 py-3">
+      <p className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-hidden />
+        {epreuve.timeUp ? 'Temps écoulé' : `Épreuve terminée en ${clock(epreuve.elapsed)}`}
+        {corrected > 0 && (
+          <a href="#ta-copie" className="ml-auto shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums lg:hidden">
+            {fmtPts(got)} / {fmtPts(total)}
+          </a>
+        )}
+      </p>
+      <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+        À toi de corriger : ouvre la solution de chaque question et indique Réussi, En partie ou À revoir.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {toggleAll}
+        <button type="button" onClick={epreuve.reset} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[13px] font-medium text-ink-faint hover:text-ink">
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Refaire l’épreuve
+        </button>
+      </div>
     </div>
   );
 
@@ -376,7 +396,14 @@ export const ExamView: React.FC<Props> = ({
       text="Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice." />
   ) : (
     <div className="rounded-2xl border border-line bg-white p-5" data-tour="examen-copie">
-      <span className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-faint">Ta copie</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Ta copie</span>
+        {sessionCount > 0 && (
+          <button type="button" onClick={onOpenHistory} className="min-h-8 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
+            {sessionCount} passage{sessionCount > 1 ? 's' : ''}
+          </button>
+        )}
+      </div>
       {corrected > 0 ? (
         <>
           <div className="mt-2 flex items-baseline gap-1.5">
@@ -384,34 +411,34 @@ export const ExamView: React.FC<Props> = ({
             <span className="text-[16px] text-ink-faint fd-nums">/ {fmtPts(total)}</span>
             {total > 0 && total !== 20 && <span className="ml-auto text-[12px] text-ink-faint fd-nums">soit {fmtPts(Math.round((got / total) * 200) / 10)} / 20</span>}
           </div>
-          <p className="mt-1.5 text-[12px] text-ink-faint leading-snug">
+          <p className="mt-1.5 text-[12px] leading-snug text-ink-faint">
             Note estimée d’après ton auto-évaluation{attemptStart ? ' de ce passage' : ''}{corrected < total ? `, sur ${fmtPts(corrected)} points corrigés` : ''}.
           </p>
         </>
       ) : (
-        <p className="mt-2 text-[13px] text-ink-faint leading-relaxed">
+        <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">
           {attemptStart
-            ? 'Corrige ce passage question par question (Réussi, En partie, À revoir) : ta note s’affiche ici.'
-            : 'Après l’épreuve, évalue chaque question (Réussi, En partie, À revoir) : ta note estimée s’affiche ici.'}
+            ? 'Corrige ce passage question par question : ta note s’affiche ici.'
+            : 'Après l’épreuve, ouvre chaque solution et dis si tu avais trouvé : ta note estimée s’affiche ici.'}
         </p>
       )}
 
       {parts.length > 1 && (
-        <ol className="mt-4 flex flex-col gap-1">
+        <ol className="mt-4 flex flex-col gap-0.5 border-t border-line pt-3">
           {parts.map((p, i) => {
-            const s = scores[i];
+            const sc = scores[i];
             return (
               <li key={p.id}>
                 <button type="button" onClick={() => goTo(p.id)}
-                  className="w-full text-left rounded-lg px-2 py-1.5 -mx-2 hover:bg-[#f7f6f3] transition-colors">
+                  className="-mx-2 w-[calc(100%+1rem)] rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[#f7f6f3]">
                   <span className="flex items-baseline justify-between gap-2 text-[13px]">
-                    <span className="font-medium text-ink truncate">{plainTitle(p.titleHtml)}</span>
-                    <span className="fd-nums text-ink-faint shrink-0">
-                      {s.corrected > 0 ? <><b className="text-ink">{fmtPts(s.got)}</b> / {fmtPts(s.max)}</> : `${fmtPts(s.max)} pts`}
+                    <span className="truncate font-medium text-ink">{plainTitle(p.titleHtml)}</span>
+                    <span className="shrink-0 text-ink-faint fd-nums">
+                      {sc.corrected > 0 ? <><b className="text-ink">{fmtPts(sc.got)}</b> / {fmtPts(sc.max)}</> : `${fmtPts(sc.max)} pts`}
                     </span>
                   </span>
-                  <span className="mt-1 block h-1 rounded-full bg-[#f2f1ee] overflow-hidden">
-                    <span className="block h-full rounded-full bg-brand" style={{ width: `${s.count ? (s.assessed / s.count) * 100 : 0}%` }} />
+                  <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f2f1ee]">
+                    <span className="block h-full rounded-full bg-brand" style={{ width: `${sc.count ? (sc.assessed / sc.count) * 100 : 0}%` }} />
                   </span>
                 </button>
               </li>
@@ -425,115 +452,102 @@ export const ExamView: React.FC<Props> = ({
     </div>
   );
 
+  const noParts = parts.length === 1 && parts[0].id === 'sujet';
   return (
-    <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
-      <div className="min-w-0 flex flex-col gap-5">
-        {/* Téléphone : épreuve et copie avant le sujet ; compte à rebours collé en haut pendant l'épreuve. */}
-        <div className="lg:hidden flex flex-col gap-4">
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_272px]">
+      <div className="flex min-w-0 flex-col gap-8 sm:gap-10">
+        <div>
+          {/* Téléphone : compte à rebours collé en haut pendant l'épreuve. */}
           {locked && (
-            <div className="sticky top-[68px] z-20 -mx-1 pl-4 pr-1.5 py-1.5 rounded-xl border border-line bg-white/95 backdrop-blur flex items-center justify-between gap-2 shadow-sm">
-              <span className="fd-nums font-semibold text-ink">{clock(epreuve.remaining ?? epreuve.elapsed)}</span>
+            <div className="sticky top-[68px] z-20 mb-3 flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/95 py-1 pl-4 pr-1 shadow-[0_2px_10px_rgba(20,18,16,.06)] backdrop-blur lg:hidden">
+              <span className="flex items-baseline gap-1.5">
+                <span role="timer" className={`text-[17px] font-semibold fd-nums ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>{clockLabel}</span>
+                <span className="text-[12px] text-ink-faint">{epreuve.status === 'paused' ? 'en pause' : epreuve.remaining !== null ? 'restant' : ''}</span>
+              </span>
               <span className="flex items-center gap-1">
                 <button type="button" onClick={epreuve.status === 'running' ? epreuve.pause : epreuve.resume}
-                  className="h-9 px-3 rounded-lg text-[13px] font-medium text-ink-faint hover:bg-[#f2f1ee]">
+                  className="h-10 rounded-xl px-3 text-[13px] font-medium text-ink-soft hover:bg-[#f2f1ee]">
                   {epreuve.status === 'running' ? 'Pause' : 'Reprendre'}
                 </button>
-                <button type="button" onClick={confirmFinish}
-                  className="h-9 px-3 rounded-lg text-[13px] font-semibold text-brand-hover hover:bg-brand-soft">
+                <button type="button" onClick={confirmFinish} className="h-10 rounded-xl bg-brand px-3.5 text-[13px] font-semibold text-white hover:bg-brand-hover">
                   Terminer
                 </button>
               </span>
             </div>
           )}
-          {epreuvePanel}
-          {/* La copie (note, points) n'apparaît pas pendant l'épreuve. */}
-          {!locked && (corrected > 0 || !isAuthenticated) && copiePanel}
+
+          {/* Le sujet : une seule feuille, la fiche en tête (comme la copie distribuée en classe), puis les exercices. */}
+          <section className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
+            <div className="border-b border-line bg-[#fcfbf9] px-4 py-5 sm:px-8 sm:py-6" data-tour="examen-fiche">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-10">
+                {durationMin > 0 && <Fact label="Durée" value={durationLabel(durationMin)} />}
+                {total > 0 && <Fact label="Barème" value={`${fmtPts(total)} points`} />}
+                {!noParts && parts.length > 0 && <Fact label="Exercices" value={String(parts.length)} />}
+                {levelName && <Fact label="Niveau" value={levelName} />}
+                {content.is_national_exam && <Fact label="Session" value={`Bac ${content.national_year ?? 'national'}`} />}
+                {felt && feltLabel && <Fact label="Ressenti des élèves" value={feltLabel} title={feltTooltip(felt)} />}
+              </dl>
+              {epreuveBlock}
+            </div>
+            {intro.length > 0 && (
+              <div className="border-b border-line px-4 py-5 text-[14.5px] sm:px-8">
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Consignes</p>
+                <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} variant="reading" />
+              </div>
+            )}
+
+            {/* Exercices : un intertitre (titre, barème, tes points) et un trait entre deux exercices. */}
+            {parts.map((p, i) => {
+              const sc = scores[i];
+              const heading = !(noParts && !sc.max);
+              return (
+                <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-4 pb-9 sm:px-8 sm:pb-10 ${heading ? 'pt-7 sm:pt-8' : 'pt-6 sm:pt-8'} ${i > 0 ? 'border-t border-line' : ''}`}>
+                  {heading && (
+                    <div className="mb-5 flex items-baseline justify-between gap-3">
+                      <h2 className="fd-display min-w-0 text-[21px] text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {sc.corrected > 0 && !locked && (
+                          <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title="Tes points (auto-évaluation)">
+                            {fmtPts(sc.got)} / {fmtPts(sc.max)}
+                          </span>
+                        )}
+                        {sc.max > 0 && (
+                          <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-gold-strong fd-nums">
+                            {fmtPts(sc.max)} pt{sc.max > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  <ExerciseRenderer
+                    structure={{ version: structure?.version || '2.1', blocks: p.blocks }}
+                    progress={progressData}
+                    onAssess={assessOne}
+                    onAssessMany={assessMany}
+                    assessOptions={EXAM_OPTIONS}
+                    onSolutionOpen={onSolutionOpen}
+                    interactive={isAuthenticated}
+                    showAllSolutions={showAll}
+                    compact={false}
+                    variant="reading"
+                    locked={locked}
+                    onReport={onReport}
+                  />
+                </div>
+              );
+            })}
+            {footer}
+          </section>
         </div>
 
-        {/* Le sujet : une seule feuille, la fiche en tête puis les exercices. */}
-        <section className="rounded-2xl border border-line bg-white overflow-hidden">
-          <div className="px-6 py-5 bg-[#fcfbf9] border-b border-line flex flex-wrap items-start justify-between gap-4" data-tour="examen-fiche">
-            <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3">
-              {durationMin > 0 && <Fact label="Durée" value={durationLabel(durationMin)} />}
-              {total > 0 && <Fact label="Barème" value={`${fmtPts(total)} points`} />}
-              {parts.length > 0 && parts[0].id !== 'sujet' && <Fact label="Exercices" value={String(parts.length)} />}
-              {levelName && <Fact label="Niveau" value={levelName} />}
-              {content.is_national_exam && <Fact label="Session" value={`Bac national${content.national_year ? ` ${content.national_year}` : ''}`} />}
-              {felt && feltLabel && <Fact label="Ressenti des élèves" value={feltLabel} title={feltTooltip(felt)} />}
-            </dl>
-            <div className="flex flex-col items-end gap-2.5 ml-auto">
-            {votes}
-            {solutionCount > 0 && (
-              <button type="button" disabled={locked} onClick={() => {
-                if (!showAll) { trackAction('toutes-solutions'); onSolutionOpen?.('*'); }
-                setShowAll((v) => !v);
-              }} data-tour="detail-solutions"
-                title={locked ? 'Disponible à la fin de l’épreuve' : undefined}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
-                  showAll && !locked ? 'bg-brand-soft text-brand-hover border-brand-line' : 'bg-white text-ink-soft border-line hover:border-ink'}`}>
-                {showAll && !locked ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showAll && !locked ? 'Masquer les solutions' : 'Toutes les solutions'}
-              </button>
-            )}
-            </div>
-          </div>
-          {intro.length > 0 && (
-            <div className="px-4 sm:px-7 py-5 border-b border-line">
-              <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} />
-            </div>
-          )}
-          {locked && (
-            <p className="px-6 py-3 border-b border-line text-[13px] text-ink-soft bg-gold-soft/60 flex items-center gap-2">
-              <Timer className="w-4 h-4 text-gold-strong shrink-0" />
-              Épreuve en cours : compose sur une feuille. Les solutions s’afficheront à la fin.
-            </p>
-          )}
-
-          {/* Exercices : un intertitre (titre, barème, tes points) et un trait entre deux exercices. */}
-          {parts.map((p, i) => {
-            const s = scores[i];
-            return (
-              <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-4 sm:px-7 pt-6 pb-7 ${i > 0 ? 'border-t border-line' : ''}`}>
-                <div className="flex items-baseline justify-between gap-3 mb-4">
-                  <h2 className="fd-display text-[19px] text-ink min-w-0 [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
-                  <span className="flex items-center gap-2 shrink-0">
-                    {s.corrected > 0 && !locked && (
-                      <span className="fd-nums text-[12.5px] font-semibold px-2.5 py-1 rounded-full bg-brand-soft text-brand-hover" title="Tes points (auto-évaluation)">
-                        {fmtPts(s.got)} / {fmtPts(s.max)}
-                      </span>
-                    )}
-                    {s.max > 0 && (
-                      <span className="fd-nums text-[12.5px] font-semibold px-2.5 py-1 rounded-full bg-gold-soft text-gold-strong">
-                        {fmtPts(s.max)} point{s.max > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <ExerciseRenderer
-                  structure={{ version: structure?.version || '2.1', blocks: p.blocks }}
-                  progress={progressData}
-                  onAssess={assessOne}
-                  onAssessMany={assessMany}
-                  assessOptions={EXAM_OPTIONS}
-                  onSolutionOpen={onSolutionOpen}
-                  interactive={isAuthenticated}
-                  showAllSolutions={showAll}
-                  compact={false}
-                  locked={locked}
-                  onReport={onReport}
-                />
-              </div>
-            );
-          })}
-          {footer}
-        </section>
-
-        <AdSlot className="mt-1" />
+        {/* Téléphone : la copie (note, barème par exercice) après le sujet, pas pendant l'épreuve. */}
+        {!locked && <div id="ta-copie" className="scroll-mt-24 lg:hidden">{copiePanel}</div>}
+        <AdSlot />
+        {children}
       </div>
 
-      <aside className="hidden lg:flex flex-col gap-4 sticky top-20">
-        {epreuvePanel}
-        {!locked && copiePanel}
+      <aside className="sticky top-20 hidden flex-col gap-4 lg:flex">
+        {locked ? timerPanel : copiePanel}
       </aside>
     </div>
   );
@@ -541,9 +555,9 @@ export const ExamView: React.FC<Props> = ({
 
 function Fact({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
-    <div title={title}>
-      <dt className="text-[11px] font-semibold uppercase tracking-[.1em] text-ink-faint">{label}</dt>
-      <dd className="mt-0.5 text-[15px] font-semibold text-ink fd-nums">{value}</dd>
+    <div title={title} className="min-w-0">
+      <dt className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{label}</dt>
+      <dd className="mt-1 text-[16px] font-semibold text-ink fd-nums">{value}</dd>
       {/* Au toucher, pas d'infobulle : le détail est écrit dessous. */}
       {title && <dd className="mt-0.5 max-w-[220px] text-[11.5px] leading-snug text-ink-faint [@media(hover:hover)]:hidden">{title}</dd>}
     </div>

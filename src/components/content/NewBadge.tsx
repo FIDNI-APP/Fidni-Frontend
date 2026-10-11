@@ -1,5 +1,5 @@
 // Étiquette « Nouveau » des cartes de contenu (demande de Natsu, 05/10/2026) : posée à cheval sur le bord
-// haut de la carte. « Nouveau pour toi » : contenu ajouté depuis moins de NEW_DAYS jours ET pas encore
+// haut de la carte (NewBadge) ; dans les cartes de liste refaites le 11/10/2026, un point d'or et un mot (NewTag). « Nouveau pour toi » : contenu ajouté depuis moins de NEW_DAYS jours ET pas encore
 // ouvert dans ce navigateur (clé `fidni:vue:<id>` posée par la page du contenu).
 import React from 'react';
 import { Sparkles } from 'lucide-react';
@@ -24,6 +24,15 @@ export const NewBadge: React.FC<{ className?: string }> = ({ className = '' }) =
     title={`Ajouté il y a moins de ${NEW_DAYS} jours`}
   >
     <Sparkles className="h-3 w-3" aria-hidden />
+    Nouveau
+  </span>
+);
+
+/** « • Nouveau » dans une ligne de la carte : plus calme que l'étiquette à cheval sur le bord. */
+export const NewTag: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <span className={`inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-gold-strong ${className}`}
+    title={`Ajouté il y a moins de ${NEW_DAYS} jours`}>
+    <span className="h-1.5 w-1.5 rounded-full bg-gold" aria-hidden />
     Nouveau
   </span>
 );

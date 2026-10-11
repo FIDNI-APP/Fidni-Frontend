@@ -11,10 +11,12 @@
  *   champ de réponse est ouvert juste dessous.
  * - L'éditeur (lourd : ~140 Ko) n'est téléchargé que quand on veut écrire (10/10/2026) : à sa place, un
  *   faux champ « Écris un message… » ; la plupart des élèves lisent sans écrire.
+ * - 11/10/2026 : titre serif et une phrase d'aide sous le titre ; plus de grand encart vide quand personne
+ *   n'a encore écrit (la phrase suffit).
  */
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, CornerDownRight, FileIcon, Image as ImageIcon, Loader2, MessageSquare, Paperclip, Pencil, Send, Trash2, X } from 'lucide-react';
+import { ChevronDown, CornerDownRight, FileIcon, Image as ImageIcon, Loader2, Paperclip, Pencil, Send, Trash2, X } from 'lucide-react';
 import type { Comment, VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
@@ -440,18 +442,19 @@ export function CommentSection({
 
   return (
     <div className="relative">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="fd-display flex items-center text-ink" style={{ fontSize: 22 }}>
-          Questions et discussion
-          {total > 0 && (
-            <span className="fd-nums ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-sm font-semibold text-brand-hover">{total}</span>
-          )}
-        </h2>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
+          <h2 className="fd-display flex items-baseline gap-2 text-[20px] leading-tight text-ink">
+            Questions et discussion
+            {total > 0 && <span className="font-sans text-[13px] font-semibold text-ink-faint fd-nums">{total}</span>}
+          </h2>
+          <p className="mt-1 text-[13px] text-ink-faint">Bloqué ? Demande ici : un camarade ou un prof te répondra.</p>
+        </div>
         {comments.length > 1 && (
           <label className="relative flex items-center gap-2 text-[13px] text-ink-faint">
             Trier :
             <select value={sort} onChange={(e) => changeSort(e.target.value as Sort)}
-              className="appearance-none rounded-lg border border-line bg-white py-1.5 pl-3 pr-8 text-[13px] font-medium text-ink hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20">
+              className="min-h-10 appearance-none rounded-lg border border-line bg-white py-1.5 pl-3 pr-8 text-[13px] font-medium text-ink hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20">
               {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 h-4 w-4 text-ink-faint" />
@@ -460,7 +463,7 @@ export function CommentSection({
       </div>
 
       {isAuthenticated ? (
-        <div className="mb-6">
+        <div className={roots.length > 0 ? 'mb-6' : ''}>
           <Composer
             deferred
             placeholder="Pose une question ou partage une astuce…"
@@ -471,24 +474,16 @@ export function CommentSection({
           />
         </div>
       ) : (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3.5">
+        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3 ${roots.length > 0 ? 'mb-6' : ''}`}>
           <p className="text-[13.5px] text-ink-soft">Connecte-toi pour poser une question ou répondre à un camarade.</p>
           <button type="button" onClick={() => openModal('commentaire')}
-            className="rounded-lg bg-brand px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-brand-hover">
+            className="inline-flex min-h-10 items-center rounded-xl bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover">
             Se connecter
           </button>
         </div>
       )}
 
-      {roots.length > 0 ? (
-        <ul className="divide-y divide-line">{roots.map(thread)}</ul>
-      ) : (
-        <div className="rounded-xl border border-dashed border-line bg-[#faf9f7] px-5 py-8 text-center">
-          <MessageSquare className="mx-auto mb-3 h-8 w-8 text-[#cfcdc8]" />
-          <p className="text-[15px] font-semibold text-ink">Pas encore de question</p>
-          <p className="mt-1 text-[13.5px] text-ink-faint">Bloqué sur une question ? Demande ici : un camarade ou un prof te répondra.</p>
-        </div>
-      )}
+      {roots.length > 0 && <ul className="divide-y divide-line">{roots.map(thread)}</ul>}
     </div>
   );
 }

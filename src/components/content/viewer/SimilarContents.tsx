@@ -1,16 +1,20 @@
 // « Pour continuer » : sous un exercice, un examen ou une leçon, les contenus les plus semblables
 // (mêmes notions, même chapitre, même niveau — backend apps/things/similar.py), chacun avec sa raison.
+// 11/10/2026 : une liste calme dans une seule carte (avant : une grille de cartes, longue sur téléphone).
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BookOpen, FileText, PenLine } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { trackAction } from '@/lib/usage';
-import { DifficultyChip, ProgressPill } from '@/components/content/listing/ListingParts';
+import { ProgressPill } from '@/components/content/listing/ListingParts';
 import {
-  BASE_PATH, TYPE_LABEL, chapterLabel, progressOf, type ListItem, type ListKind,
+  BASE_PATH, DIFFICULTY, TYPE_LABEL, chapterLabel, progressOf, type ListItem, type ListKind,
 } from '@/components/content/listing/listingUtils';
 
 type Item = ListItem & { reason?: string };
+
+const ICON: Record<ListKind, React.ElementType> = { exercise: PenLine, exam: FileText, lesson: BookOpen };
+const SHOWN = 4;
 
 export const SimilarContents: React.FC<{ contentId: string }> = ({ contentId }) => {
   const [items, setItems] = useState<Item[] | null>(null);
@@ -30,33 +34,29 @@ export const SimilarContents: React.FC<{ contentId: string }> = ({ contentId }) 
 
   return (
     <section aria-labelledby="pour-continuer" data-tour="detail-similaires">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <div>
-          <h2 id="pour-continuer" className="fd-display text-[18px] text-ink">Pour continuer</h2>
-          <p className="mt-0.5 text-[12.5px] text-ink-faint">Des contenus qui travaillent la même chose, à ton niveau.</p>
-        </div>
-      </div>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => {
+      <h2 id="pour-continuer" className="fd-display text-[20px] leading-tight text-ink">Pour continuer</h2>
+      <p className="mt-1 text-[13px] text-ink-faint">Des contenus qui travaillent la même chose, à ton niveau.</p>
+      <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+        {items.slice(0, SHOWN).map((item) => {
           const kind = item.type as ListKind;
-          const chapter = chapterLabel(item);
+          const Icon = ICON[kind] ?? PenLine;
+          const diff = 'difficulty' in item && item.difficulty ? DIFFICULTY[item.difficulty]?.label : null;
+          const sub = [TYPE_LABEL[kind] ?? 'Contenu', diff, item.reason || chapterLabel(item)].filter(Boolean).join(' · ');
           return (
             <li key={item.id}>
               <Link to={`${BASE_PATH[kind] ?? '/exercises'}/${item.id}`}
                 state={{ from: location.pathname + location.search }}
                 onClick={() => trackAction('similaire')}
-                className="group flex h-full flex-col rounded-2xl border border-line bg-white p-4 transition-colors hover:border-ink/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">{TYPE_LABEL[kind] ?? 'Contenu'}</span>
-                  {'difficulty' in item && <DifficultyChip difficulty={item.difficulty} felt={item.felt} />}
-                  <ProgressPill progress={progressOf(item)} />
+                className="group flex min-h-[64px] items-center gap-3 px-4 py-3 transition-colors hover:bg-[#fcfbf9] focus:outline-none focus-visible:bg-[#fcfbf9] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40 sm:px-5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
+                  <Icon className="h-4 w-4" />
                 </span>
-                <span className="mt-2.5 line-clamp-2 text-[14.5px] font-semibold leading-snug text-ink group-hover:text-brand">{item.title}</span>
-                {chapter && <span className="mt-1 truncate text-[12px] text-ink-faint">{chapter}</span>}
-                <span className="mt-auto flex items-center gap-1.5 pt-3 text-[12px] text-ink-soft">
-                  <span className="min-w-0 flex-1 truncate">{item.reason}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-2 text-[14.5px] font-semibold leading-snug text-ink group-hover:text-brand-hover">{item.title}</span>
+                  <span className="mt-0.5 block truncate text-[12.5px] text-ink-faint">{sub}</span>
                 </span>
+                <ProgressPill progress={progressOf(item)} />
+                <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden />
               </Link>
             </li>
           );
