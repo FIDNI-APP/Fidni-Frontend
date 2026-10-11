@@ -31,7 +31,11 @@ const markSeen = (tour: Tour) => {
     localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
   } catch { /* stockage indisponible : la visite pourra réapparaître, sans gravité */ }
 };
-const isSeen = (tour: Tour) => (readSeen()[tour.id] ?? 0) >= (tour.version ?? 1);
+// Lancement automatique : UNE fois par visite, la toute première (11/10/2026 : relancée à chaque nouvelle
+// version, elle revenait à chaque mise à jour du site). Une visite enrichie depuis la dernière vue est
+// seulement signalée par un point sur le bouton « ? ».
+const everSeen = (tour: Tour) => readSeen()[tour.id] !== undefined;
+const hasNews = (tour: Tour) => everSeen(tour) && (readSeen()[tour.id] ?? 0) < (tour.version ?? 1);
 
 /** Premier élément `data-tour="name"` réellement visible (ni masqué, ni hors du rendu). */
 export function findTarget(names: string | string[] | undefined): HTMLElement | null {
@@ -73,9 +77,11 @@ function prepare(tour: Tour, context: TourContext, auto: boolean): ActiveTour {
 interface TourApi {
   /** Une visite existe pour la page affichée (le bouton « ? » ne s'affiche que dans ce cas). */
   hasTour: boolean;
+  /** La visite de la page a été enrichie depuis la dernière fois qu'il l'a vue : un point sur « ? ». */
+  news: boolean;
   start: () => void;
 }
-const TourCtx = createContext<TourApi>({ hasTour: false, start: () => undefined });
+const TourCtx = createContext<TourApi>({ hasTour: false, news: false, start: () => undefined });
 export const useTour = () => useContext(TourCtx);
 
 export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -118,7 +124,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Lancement automatique : membres connectés seulement.
       if (active || !canAutoRef.current || document.visibilityState !== 'visible' || somethingOpen()) return;
-      const next = candidates.find((t) => t.auto !== false && !isSeen(t) && now - stableSince.current[t.id] >= 1200);
+      const next = candidates.find((t) => t.auto !== false && !everSeen(t) && now - stableSince.current[t.id] >= 1200);
       const prepared = next && prepare(next, contextRef.current, true);
       // Rien d'affichable pour l'instant (cibles pas encore là) : on réessaie au prochain passage.
       if (prepared && prepared.steps.some((s) => !s.target || findTarget(s.target))) {
@@ -146,7 +152,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <TourCtx.Provider value={{ hasTour: !!available, start }}>
+    <TourCtx.Provider value={{ hasTour: !!available, news: !!available && !active && hasNews(available), start }}>
       {children}
       {active && !authOpen && createPortal(
         <TourOverlay key={`${active.tour.id}-${active.short ? 'courte' : 'complete'}`} active={active} context={context} onClose={finish} />,
@@ -159,23 +165,24 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
 /* ───────────────────────────── Bouton « ? » ───────────────────────────── */
 
 export const TourHelpButton: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => {
-  const { hasTour, start } = useTour();
+  const { hasTour, news, start } = useTour();
   if (!hasTour) return null;
   return (
     <button
       type="button"
       onClick={start}
       data-tour="aide"
-      aria-label="Guide de cette page"
-      title="Guide de cette page"
+      aria-label={news ? 'Guide de cette page (nouveautés)' : 'Guide de cette page'}
+      title={news ? 'Nouveautés sur cette page : voir le guide' : 'Guide de cette page'}
       className={className}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 38, height: 38, borderRadius: 10, border: '1px solid #e7e3dc',
-        background: '#fff', color: '#33302b', cursor: 'pointer', flexShrink: 0, ...style,
+        background: '#fff', color: '#33302b', cursor: 'pointer', flexShrink: 0, position: 'relative', ...style,
       }}
     >
       <HelpCircle className="w-[18px] h-[18px]" />
+      {news && <span aria-hidden className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-gold ring-2 ring-white" />}
     </button>
   );
 };

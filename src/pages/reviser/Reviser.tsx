@@ -7,14 +7,14 @@
  * Les anciennes adresses (/revision-lists?onglet=ds|listes) y mènent (App.tsx, RevisionsRedirect).
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, CalendarCheck, CalendarPlus, Check, ChevronRight, ClipboardCheck, ListChecks, ListPlus, Loader2,
   Pencil, Plus, RotateCcw, Sparkles, Target, Timer, Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Page, PageHeader, Section, EmptyState, SplitBar, CardsSkeleton } from '@/components/space/Page';
-import { Countdown, DateTile, GradeBadge, ReadinessRing } from '@/components/devoirs/ui';
+import { Countdown, DateTile, GradeBadge } from '@/components/devoirs/ui';
 import { GradeForm } from '@/components/devoirs/GradeForm';
 import { TestFormModal } from '@/components/devoirs/TestFormModal';
 import { CreateListModal } from '@/components/revision/CreateListModal';
@@ -23,6 +23,12 @@ import {
   deleteRevisionList, getRevisionLists, getToRedo, quickAddManyToRevision, type RevisionList, type ToRedoItem,
 } from '@/lib/api/revisionListApi';
 
+type ReviserTab = 'ds' | 'a-refaire' | 'listes';
+const TABS: { key: ReviserTab; label: string }[] = [
+  { key: 'ds', label: 'Mes DS' }, { key: 'a-refaire', label: 'À refaire' }, { key: 'listes', label: 'Mes listes' },
+];
+/** Anciens liens à ancre (avant les onglets) → onglet. */
+const HASH_TAB: Record<string, ReviserTab> = { 'prochain-ds': 'ds', 'a-refaire': 'a-refaire', 'mes-listes': 'listes' };
 const REDO_SHOWN = 6;
 const PAST_SHOWN = 4;
 
@@ -60,24 +66,17 @@ const NextTestHero: React.FC<{ test: UpcomingTest; others: UpcomingTest[]; onEdi
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-3 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-        <div className="flex items-center gap-3">
-          <ReadinessRing value={test.readiness ?? null} size={64} />
-          <p className="text-[13px] leading-snug text-ink-soft">
-            {test.readiness == null ? <>Pas encore de mesure : quelques exercices suffisent.</>
-              : test.weak_chapters?.length ? <>À renforcer : <b className="font-semibold text-ink">{test.weak_chapters[0]}</b></>
-                : <>Tu es sur la bonne voie.</>}
-          </p>
-        </div>
-        <Link to={`/revisions/ds/${test.id}`} className="fd-btn-primary min-h-11 w-full justify-center" data-tour="reviser-preparer">
-          Continuer ma préparation <ArrowRight className="h-4 w-4" />
+      {/* 11/10/2026 : le DS blanc est l'action principale (avant : « Continuer ma préparation », DS blanc en petit). */}
+      <div className="flex flex-col gap-2 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+        <Link to={`/revisions/ds/${test.id}/blanc`} className="fd-btn-primary min-h-12 w-full justify-center text-[15px]" data-tour="reviser-preparer">
+          <Timer className="h-4 w-4" /> {test.mock_done_at ? 'Un autre DS blanc' : 'Lancer le DS blanc'}
+        </Link>
+        <Link to={`/revisions/ds/${test.id}`} className="inline-flex min-h-10 items-center justify-center gap-1 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
+          Réviser chapitre par chapitre <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     </div>
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] sm:px-6">
-      <Link to={`/revisions/ds/${test.id}/blanc`} className="inline-flex min-h-9 items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
-        <Timer className="h-4 w-4" /> DS blanc chronométré
-      </Link>
       <button type="button" onClick={() => onEdit(test)} className="inline-flex min-h-9 items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
         <Pencil className="h-3.5 w-3.5" /> Modifier
       </button>
@@ -253,11 +252,12 @@ export const Reviser: React.FC = () => {
     if (isAuthenticated) load();
   }, [authLoading, isAuthenticated, navigate, load]);
 
-  // Ancienne adresse ou lien « Mes listes » : on descend à la bonne section une fois chargée.
-  useEffect(() => {
-    if (!location.hash || !lists) return;
-    document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
-  }, [location.hash, lists]);
+  // Onglets (11/10/2026 : les trois sections empilées faisaient une longue page) : ?onglet=ds|a-refaire|listes.
+  // Les anciens liens (« /reviser#mes-listes ») ouvrent le bon onglet.
+  const [params, setParams] = useSearchParams();
+  const fromHash = HASH_TAB[location.hash.slice(1)];
+  const tab: ReviserTab = (TABS.some((x) => x.key === params.get('onglet')) ? params.get('onglet') : fromHash ?? 'ds') as ReviserTab;
+  const setTab = (k: ReviserTab) => { const p = new URLSearchParams(params); p.set('onglet', k); setParams(p, { replace: true }); };
 
   if (!isAuthenticated) return null;
 
@@ -328,7 +328,25 @@ export const Reviser: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-10">
+      {/* Onglets : une section à la fois, son nombre en badge. */}
+      <div role="tablist" aria-label="Réviser" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
+        {TABS.map((x) => {
+          const n = x.key === 'ds' ? upcoming.length : x.key === 'a-refaire' ? redo?.count : lists?.length;
+          const on = tab === x.key;
+          return (
+            <button key={x.key} type="button" role="tab" id={`onglet-${x.key}`} aria-selected={on} aria-controls={`panneau-${x.key}`}
+              onClick={() => setTab(x.key)}
+              className={`-mb-px inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-[14px] font-semibold transition-colors ${
+                on ? 'border-ink text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>
+              {x.label}
+              {!!n && <span className={`fd-nums rounded-full px-1.5 text-[11.5px] ${on ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-soft'}`}>{n}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div role="tabpanel" id={`panneau-${tab}`} aria-labelledby={`onglet-${tab}`} className="flex flex-col gap-10">
+        {tab === 'ds' && (
         <Section id="prochain-ds" title={upcoming.length > 1 ? 'Mes prochains DS' : 'Mon prochain DS'}>
           <div data-tour="revisions-ds">
             {tests === null ? <CardsSkeleton n={1} />
@@ -340,6 +358,9 @@ export const Reviser: React.FC = () => {
           </div>
         </Section>
 
+        )}
+
+        {tab === 'a-refaire' && (
         <Section id="a-refaire" title="À refaire" count={redo?.count}
           hint={redoItems.length ? 'Ce que tu as raté, le plus ancien d’abord : c’est le bon moment pour le refaire.' : undefined}
           action={notInList.length > 1 ? (
@@ -367,6 +388,9 @@ export const Reviser: React.FC = () => {
           </div>
         </Section>
 
+        )}
+
+        {tab === 'listes' && (
         <Section id="mes-listes" title="Mes listes" count={lists?.length}
           hint={lists?.length ? 'Ouvre une liste pour refaire ses exercices à la suite, ou imprime-la.' : undefined}>
           {lists === null ? <CardsSkeleton n={2} className="sm:grid-cols-2" />
@@ -386,6 +410,7 @@ export const Reviser: React.FC = () => {
               </ul>
             )}
         </Section>
+        )}
       </div>
 
       <TestFormModal open={!!testModal} test={testModal?.test} onClose={() => setTestModal(null)} onSaved={saved}
