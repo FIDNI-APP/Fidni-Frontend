@@ -12,8 +12,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 
-type Width = 'narrow' | 'default' | 'wide';
-const WIDTH: Record<Width, string> = { narrow: 'max-w-3xl', default: 'max-w-5xl', wide: 'max-w-6xl' };
+type Width = 'narrow' | 'default' | 'wide' | 'full';
+// full : listes de cartes (3 colonnes sur grand écran).
+const WIDTH: Record<Width, string> = { narrow: 'max-w-3xl', default: 'max-w-5xl', wide: 'max-w-6xl', full: 'max-w-7xl' };
 
 /** Fond papier, colonne centrée, marges régulières (téléphone : 16 px). */
 export const Page: React.FC<{ width?: Width; children: React.ReactNode; className?: string }> = ({
