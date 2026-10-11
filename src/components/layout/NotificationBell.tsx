@@ -4,20 +4,23 @@
  * (backend apps/notifications). Le nombre de non lues est relu toutes les minutes, au retour sur
  * l'onglet et à chaque changement de page ; la liste est chargée à l'ouverture.
  * Un clic ouvre le commentaire, champ de réponse prêt : c'est ce qui incite à répondre.
+ * « report » (11/10/2026) : son signalement d'erreur a été traité, avec la réponse de l'équipe en entier.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, CornerDownRight, Loader2, MessageCircle } from 'lucide-react';
+import { Bell, CornerDownRight, Flag, Loader2, MessageCircle } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAction } from '@/lib/usage';
 
 interface Notif {
   id: number;
-  kind: 'comment' | 'reply';
+  kind: 'comment' | 'reply' | 'report';
   title: string;
   url: string;
   excerpt: string;
+  /** Réponse complète de l'équipe à un signalement. */
+  message?: string;
   count: number;
   actor: { username: string; avatar: string | null } | null;
   updated_at: string;
@@ -49,6 +52,9 @@ const Avatar: React.FC<{ actor: Notif['actor'] }> = ({ actor }) => {
 };
 
 function Message({ n }: { n: Notif }) {
+  if (n.kind === 'report') {
+    return <><b className="font-semibold text-ink">L’équipe Fidni</b> a traité ton signalement sur <span className="font-semibold text-ink">« {n.title} »</span></>;
+  }
   const who = <b className="font-semibold text-ink">{n.actor?.username ?? 'Quelqu’un'}</b>;
   const what = <span className="font-semibold text-ink">« {n.title} »</span>;
   if (n.kind === 'reply') {
@@ -159,7 +165,7 @@ export const NotificationBell: React.FC = () => {
               <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-ink-faint" /></div>
             ) : !items?.length ? (
               <p className="px-5 py-8 text-center text-[13px] leading-relaxed text-ink-faint">
-                Rien de neuf pour l’instant. Quand quelqu’un commente un contenu sur lequel tu as travaillé, ou te répond, tu le verras ici.
+                Rien de neuf pour l’instant. Quand quelqu’un commente un contenu sur lequel tu as travaillé, te répond, ou quand l’équipe traite un de tes signalements, tu le verras ici.
               </p>
             ) : (
               <ul className="divide-y divide-line">
@@ -167,17 +173,25 @@ export const NotificationBell: React.FC = () => {
                   <li key={n.id}>
                     <button type="button" onClick={() => go(n)}
                       className={`flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-[#faf9f7] ${n.read ? '' : 'bg-brand-soft/40'}`}>
-                      <Avatar actor={n.actor} />
+                      {n.kind === 'report' ? (
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-soft text-gold-strong"><Flag className="h-4 w-4" /></span>
+                      ) : <Avatar actor={n.actor} />}
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] leading-snug text-ink-soft"><Message n={n} /></span>
-                        {n.excerpt && (
+                        {n.kind === 'report' ? (
+                          <span className="mt-1.5 block whitespace-pre-line rounded-xl border-l-2 border-brand bg-[#f7f6f3] px-3 py-2 text-[12.5px] leading-relaxed text-ink">{n.message || n.excerpt}</span>
+                        ) : n.excerpt && (
                           <span className="mt-1 block truncate text-[12.5px] italic text-ink-faint">“{n.excerpt}”</span>
                         )}
                         <span className="mt-1.5 flex items-center gap-2 text-[12px]">
                           <span className="text-ink-faint">{timeAgo(n.updated_at)}</span>
-                          <span className="inline-flex items-center gap-0.5 font-semibold text-brand-hover">
-                            <CornerDownRight className="h-3.5 w-3.5" /> Répondre
-                          </span>
+                          {n.kind === 'report' ? (
+                            <span className="font-semibold text-brand-hover">Voir le contenu ›</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 font-semibold text-brand-hover">
+                              <CornerDownRight className="h-3.5 w-3.5" /> Répondre
+                            </span>
+                          )}
                         </span>
                       </span>
                       {!n.read && <span aria-label="Non lue" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" />}

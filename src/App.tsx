@@ -250,7 +250,9 @@ function App() {
         <Toaster position="bottom-center" toastOptions={{
           duration: 3000,
           style: { background: '#1a1a1a', color: '#fff', fontSize: '13.5px', borderRadius: '12px', padding: '10px 14px' },
-        }} containerStyle={{ bottom: 'calc(16px + var(--fd-tabbar-h, 0px))' }} />
+        }} containerStyle={{ bottom: 'calc(16px + var(--fd-tabbar-h, 0px))' }}
+          // Calque fixe sur toute la page : jamais imprimé (il recouvrait les feuilles PDF, 11/10/2026).
+          containerClassName="print:hidden" />
         <LegalRedirector />
         <ConsentBanner />
         <ThemeProvider>

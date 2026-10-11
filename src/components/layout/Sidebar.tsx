@@ -322,6 +322,14 @@ const NavSection: React.FC<{
   );
 };
 
+/** Icône dans une tuile de 30 px : dorée sur la ligne noire de l'entrée active (couleurs d'origine). */
+const NavIcon: React.FC<{ icon: NavItem['icon']; active: boolean }> = ({ icon: Icon, active }) => (
+  <span className={cx('inline-flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-lg transition-colors',
+    active ? 'bg-[#c0892f] text-ink' : 'text-ink-faint group-hover:text-ink-soft')}>
+    <Icon className="h-[18px] w-[18px]" />
+  </span>
+);
+
 const NavRow: React.FC<{
   item: NavItem; href: string; active: boolean; collapsed: boolean; drawer?: boolean; onNavigate?: () => void;
   /** Rubrique à niveaux : chevron du menu déroulant, à droite du lien. */
@@ -331,15 +339,15 @@ const NavRow: React.FC<{
   if (toggle) {
     return (
       <div className={cx('group flex items-center rounded-xl transition-colors',
-        active ? 'bg-brand-soft' : 'hover:bg-[#f7f6f3]')}>
+        active ? 'bg-ink' : 'hover:bg-[#f7f6f3]')}>
         <Link
           to={href}
           onClick={onNavigate}
           aria-current={active ? 'page' : undefined}
-          className={cx('flex min-w-0 flex-1 items-center gap-3 pl-3', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]',
-            active ? 'font-semibold text-ink' : 'font-medium text-ink-soft group-hover:text-ink')}
+          className={cx('flex min-w-0 flex-1 items-center gap-2.5 pl-1.5', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]',
+            active ? 'font-semibold text-white' : 'font-medium text-ink-soft group-hover:text-ink')}
         >
-          <Icon className={cx('h-[18px] w-[18px] flex-shrink-0 transition-colors', active ? 'text-brand-hover' : 'text-ink-faint group-hover:text-ink-soft')} />
+          <NavIcon icon={Icon} active={active} />
           <span className="truncate">{item.label}</span>
         </Link>
         {toggle}
@@ -355,11 +363,11 @@ const NavRow: React.FC<{
       aria-current={active ? 'page' : undefined}
       className={cx(
         'group flex items-center rounded-xl transition-colors',
-        collapsed ? 'mx-auto h-11 w-11 justify-center' : cx('gap-3 px-3', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]'),
-        active ? 'bg-brand-soft font-semibold text-ink' : 'font-medium text-ink-soft hover:bg-[#f7f6f3] hover:text-ink',
+        collapsed ? 'mx-auto h-11 w-11 justify-center' : cx('gap-2.5 px-1.5', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]'),
+        active ? 'bg-ink font-semibold text-white' : 'font-medium text-ink-soft hover:bg-[#f7f6f3] hover:text-ink',
       )}
     >
-      <Icon className={cx('h-[18px] w-[18px] flex-shrink-0 transition-colors', active ? 'text-brand-hover' : 'text-ink-faint group-hover:text-ink-soft')} />
+      <NavIcon icon={Icon} active={active} />
       {!collapsed && <span className="truncate">{item.label}</span>}
     </Link>
   );
@@ -383,7 +391,7 @@ const LevelSection: React.FC<{
       aria-expanded={open}
       aria-label={open ? `Réduire ${item.label}` : `Déployer ${item.label}`}
       className={cx('inline-flex flex-shrink-0 items-center justify-center rounded-xl transition-colors',
-        drawer ? 'h-11 w-11' : 'h-10 w-10', active ? 'text-brand-hover' : 'text-ink-faint hover:text-ink')}
+        drawer ? 'h-11 w-11' : 'h-10 w-10', active ? 'text-white/70 hover:text-white' : 'text-ink-faint hover:text-ink')}
     >
       <ChevronDown className="h-4 w-4 transition-transform duration-200" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
     </button>
@@ -432,7 +440,6 @@ const SubLink: React.FC<{
   to: string; label: string; onClick?: () => void; muted?: boolean; active?: boolean; current?: boolean; drawer?: boolean;
 }> = ({ to, label, onClick, muted, active, current, drawer }) => (
   <li className="relative">
-    {active && <span aria-hidden className="absolute -left-[11.5px] top-2 bottom-2 w-[2px] rounded-full bg-brand" />}
     <Link
       to={to}
       onClick={onClick}
@@ -440,7 +447,8 @@ const SubLink: React.FC<{
       className={cx(
         'flex items-center rounded-lg px-2.5 transition-colors',
         drawer ? 'min-h-10 text-[14px]' : 'min-h-9 text-[13px]',
-        active ? 'font-semibold text-brand-hover' : cx(muted ? 'text-ink-faint' : 'text-ink-soft', 'hover:bg-[#f7f6f3] hover:text-ink'),
+        active ? 'bg-[#faf3e2] font-bold text-ink shadow-[inset_3px_0_0_#c0892f]'
+          : cx(muted ? 'text-ink-faint' : 'text-ink-soft', 'hover:bg-[#f7f6f3] hover:text-[#15633c]'),
       )}
     >
       <span className="truncate">{label}</span>
