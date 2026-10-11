@@ -5,17 +5,33 @@
 // 11/10/2026 (refonte) : groupes en titres simples, lignes plus aérées avec une jauge, « Pas encore commencés »
 // replié seulement s'il y a d'autres groupes ; rien de travaillé : le programme rangé par domaine. Le chapitre
 // choisi d'office est celui du « prochain pas » ; `focus` (bouton « Voir le détail », notions, temps) le change.
+// Niveau sans chapitre en ligne : un état vide qui mène aux exercices.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, Brain, ChevronDown, ChevronRight, Clock, RotateCcw } from 'lucide-react';
-import { Section } from '@/components/space/Page';
+import { EmptyState, Section } from '@/components/space/Page';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { trackAction } from '@/lib/usage';
 import type { ChapterProgress, ChapterStatus } from './types';
 import { RING, STATUS } from './status';
 import { Meter } from './ui';
 import { daysAgo, duration, plural } from './format';
-import { lessonsUrl, practiceUrl, quizUrl } from './links';
+import { courseFirst as needsCourseFirst, lessonsUrl, practiceUrl, quizUrl } from './links';
+
+/** Ordinateur (lg) : le détail est dans la colonne de droite, pas en accordéon sous la ligne. */
+function useDesktop(): boolean {
+  const query = '(min-width: 1024px)';
+  const [desk, setDesk] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const on = () => setDesk(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return desk;
+}
 
 // Ordre de travail : ce qui est à renforcer d'abord, puis ce qui est en cours, puis ce qui est acquis.
 const GROUPS: { key: string; label: string; statuses: ChapterStatus[] }[] = [
@@ -30,7 +46,7 @@ const byPriority = (a: ChapterProgress, b: ChapterProgress) =>
 
 export interface Focus { id: number; at: number }
 
-export function Programme({ chapters, levelName, preferred, focus, levelLink }: {
+export function Programme({ chapters, levelName, preferred, focus, levelLink, exercisesTo }: {
   chapters: ChapterProgress[];
   levelName: string | null;
   /** Chapitre montré d'office (celui du prochain pas). */
@@ -38,7 +54,10 @@ export function Programme({ chapters, levelName, preferred, focus, levelLink }: 
   /** Chapitre demandé (« ?chapitre= », « Voir le détail ») : choisi, ouvert et amené à l'écran. */
   focus: Focus | null;
   levelLink: string;
+  /** Programme pas encore en ligne : où s'entraîner en attendant (rien si la page le propose déjà au-dessus). */
+  exercisesTo?: string;
 }) {
+  const desk = useDesktop();
   const fresh = chapters.every((c) => c.status === 'todo');
   const groups = useMemo(() => {
     if (fresh) {
@@ -54,7 +73,11 @@ export function Programme({ chapters, levelName, preferred, focus, levelLink }: 
   // Téléphone : le détail s'ouvre sous la ligne touchée (aucun ouvert d'office).
   const [expanded, setExpanded] = useState<number | null>(focus?.id ?? null);
   const foldable = !fresh && groups.length > 1;
-  const [showTodo, setShowTodo] = useState(() => !!focus && chapters.find((c) => c.id === focus.id)?.status === 'todo');
+  // « Pas encore commencés » déplié d'office si le chapitre montré (demandé ou prochain pas) y est.
+  const [showTodo, setShowTodo] = useState(() => {
+    const id = focus?.id ?? preferred;
+    return id != null && chapters.find((c) => c.id === id)?.status === 'todo';
+  });
   const current = chapters.find((c) => c.id === selected) ?? ordered[0];
   const rowRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
@@ -64,7 +87,11 @@ export function Programme({ chapters, levelName, preferred, focus, levelLink }: 
     setSelected(focus.id);
     setExpanded(focus.id);
     if (chapters.find((c) => c.id === focus.id)?.status === 'todo') setShowTodo(true);
-    const t = window.setTimeout(() => rowRefs.current[focus.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    // Ordinateur : le haut du programme, pour voir le détail (et ses boutons) en entier ; téléphone : la ligne ouverte.
+    const t = window.setTimeout(() => {
+      const wide = window.matchMedia?.('(min-width: 1024px)').matches;
+      (wide ? document.getElementById('programme') : rowRefs.current[focus.id])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus]);
@@ -73,6 +100,18 @@ export function Programme({ chapters, levelName, preferred, focus, levelLink }: 
     setSelected(id);
     setExpanded((cur) => (cur === id ? null : id));
   };
+
+  if (!chapters.length) {
+    return (
+      <div data-tour="prog-carte">
+        <Section id="programme" title="Mon programme">
+          <EmptyState compact tone="ink" icon={BookOpen} title="Ton programme arrive bientôt"
+            text={`Les chapitres de ${levelName ?? 'ta classe'} ne sont pas encore en ligne. En attendant, entraîne-toi sur les exercices de ton niveau.`}
+            action={exercisesTo ? <Link to={exercisesTo} className="fd-btn-primary min-h-10">Voir les exercices</Link> : undefined} />
+        </Section>
+      </div>
+    );
+  }
 
   const hint = !levelName
     ? <>Les chapitres que tu as travaillés. <Link to={levelLink} className="font-semibold text-brand-hover hover:underline">Indique ta classe</Link> pour voir tout ton programme.</>
@@ -107,7 +146,7 @@ export function Programme({ chapters, levelName, preferred, focus, levelLink }: 
                     <ul>
                       {g.items.map((c) => (
                         <li key={c.id} ref={(el) => { rowRefs.current[c.id] = el; }} className="scroll-mt-24">
-                          <Row chapter={c} plain={fresh} active={current?.id === c.id} open={expanded === c.id} onClick={() => choose(c.id)} />
+                          <Row chapter={c} plain={fresh} active={current?.id === c.id} open={expanded === c.id} desk={desk} onClick={() => choose(c.id)} />
                           {expanded === c.id && (
                             <div className="mx-1 mb-2 mt-1 rounded-xl border border-line bg-[#fcfbf9] p-4 lg:hidden">
                               <ChapterDetail chapter={c} compact />
@@ -122,7 +161,7 @@ export function Programme({ chapters, levelName, preferred, focus, levelLink }: 
             })}
           </div>
           {current && (
-            <aside aria-label={`Détail : ${current.name}`} className="sticky top-[76px] hidden rounded-2xl border border-line bg-white p-5 lg:block xl:p-6">
+            <aside id="programme-detail" aria-label={`Détail : ${current.name}`} className="sticky top-[76px] hidden rounded-2xl border border-line bg-white p-5 lg:block xl:p-6">
               <ChapterDetail chapter={current} />
             </aside>
           )}
@@ -136,14 +175,16 @@ const Count = ({ n }: { n: number }) => (
   <span className="fd-nums rounded-full bg-[#f2f1ee] px-1.5 text-[11.5px] font-semibold text-ink-faint">{n}</span>
 );
 
-function Row({ chapter: c, plain, active, open, onClick }: {
-  chapter: ChapterProgress; plain: boolean; active: boolean; open: boolean; onClick: () => void;
+function Row({ chapter: c, plain, active, open, desk, onClick }: {
+  chapter: ChapterProgress; plain: boolean; active: boolean; open: boolean; desk: boolean; onClick: () => void;
 }) {
   const st = STATUS[c.status];
   const Icon = st.icon;
   const sub = plain ? (c.contents ? plural(c.contents, 'exercice', 'exercices') : 'Pas encore d’exercice') : c.subfield;
   return (
-    <button type="button" onClick={onClick} aria-expanded={open} aria-current={active || undefined}
+    // Ordinateur : la ligne commande le détail à droite (pas d'accordéon) ; téléphone : elle ouvre son détail dessous.
+    <button type="button" onClick={onClick} aria-current={active || undefined}
+      aria-expanded={desk ? undefined : open} aria-controls={desk ? 'programme-detail' : undefined}
       className={`group flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-[#f7f6f3] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
         active ? 'lg:bg-[#f2f1ee] lg:hover:bg-[#f2f1ee]' : ''}`}>
       <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${st.track}`} aria-hidden>
@@ -176,7 +217,21 @@ export function ChapterDetail({ chapter: c, compact = false }: { chapter: Chapte
       : c.skilliq ? 'D’après ton quiz du chapitre. Évalue aussi tes réponses aux exercices pour l’affiner.'
         : c.questions ? `${evaluated} : encore un peu et tu auras ton pourcentage.`
           : c.status === 'started' ? 'Dis pour chaque question si tu l’as réussie : tu verras où tu en es.'
-            : 'Commence par les exercices les plus faciles, ou par le cours.';
+            : c.contents ? 'Commence par les exercices les plus faciles, ou par le cours.'
+              : 'Pas encore d’exercice sur ce chapitre : commence par le cours.';
+  const courseFirst = needsCourseFirst(c);
+  const practice = (
+    <Link key="entrainer" to={practiceUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-entrainer')}
+      className={`${courseFirst ? 'fd-btn-ghost' : 'fd-btn-primary'} min-h-10`}>
+      S’entraîner <ArrowRight className="h-4 w-4" />
+    </Link>
+  );
+  const course = (
+    <Link key="cours" to={lessonsUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-cours')}
+      className={`${courseFirst ? 'fd-btn-primary' : 'fd-btn-ghost'} min-h-10`}>
+      <BookOpen className="h-4 w-4" /> Le cours
+    </Link>
+  );
   const facts = [
     c.contents ? `${c.done} / ${plural(c.contents, 'exercice réussi', 'exercices réussis')}` : null,
     c.seconds ? `${duration(c.seconds)} de travail` : null,
@@ -243,12 +298,8 @@ export function ChapterDetail({ chapter: c, compact = false }: { chapter: Chapte
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link to={practiceUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-entrainer')} className="fd-btn-primary min-h-10">
-          S’entraîner <ArrowRight className="h-4 w-4" />
-        </Link>
-        <Link to={lessonsUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-cours')} className="fd-btn-ghost min-h-10">
-          <BookOpen className="h-4 w-4" /> Le cours
-        </Link>
+        {/* Même règle que le prochain pas : sans exercice, le cours d'abord. */}
+        {(courseFirst ? [course, practice] : [practice, course])}
         {c.quiz_ready && (
           <Link to={quizUrl(c.id)} onClick={() => trackAction('prog-quiz')} className="fd-btn-ghost min-h-10">
             <Brain className="h-4 w-4" /> {c.skilliq ? 'Refaire le quiz' : 'Passer le quiz'}

@@ -3,7 +3,8 @@
 //   1. le chapitre « à renforcer » le plus faible ;
 //   2. sinon le chapitre commencé le plus récemment (pas encore de pourcentage) ;
 //   3. sinon le chapitre « en bonne voie » le plus bas (viser 80 %) ;
-//   4. sinon un chapitre pas encore commencé (même domaine que le dernier travaillé, le plus fourni d'abord) ;
+//   4. sinon un chapitre pas encore commencé : un qui a des exercices d'abord, puis le même domaine que le dernier
+//      travaillé, puis le plus fourni (un chapitre sans exercice n'est proposé que s'il n'y a rien d'autre) ;
 //   5. tout est maîtrisé : entretenir le moins haut.
 import type { ChapterProgress, ChapterStatus, NotionStat, ProgressionData } from './types';
 import { daysAgo, duration, plural } from './format';
@@ -40,7 +41,9 @@ function measured(c: ChapterProgress) {
 export function workOrder(chapters: ChapterProgress[]): ChapterProgress[] {
   const last = [...chapters].filter((c) => c.last_at).sort(recent)[0];
   const todo = of(chapters, 'todo').sort((a, b) =>
-    Number(b.subfield === last?.subfield) - Number(a.subfield === last?.subfield) || b.contents - a.contents || a.name.localeCompare(b.name, 'fr'));
+    Number(b.contents > 0) - Number(a.contents > 0)
+    || Number(b.subfield === last?.subfield) - Number(a.subfield === last?.subfield)
+    || b.contents - a.contents || a.name.localeCompare(b.name, 'fr'));
   return [
     ...of(chapters, 'weak').sort(lowest),
     ...of(chapters, 'started').sort(recent),
@@ -54,7 +57,8 @@ export function pickNextStep(data: ProgressionData): NextStep | null {
   const order = workOrder(data.chapters);
   const c = order[0];
   if (!c) return null;
-  const then = order.slice(1).filter((x) => x.status !== 'mastered').slice(0, 2);
+  // « Ensuite » : jamais un chapitre maîtrisé, ni un chapitre à découvrir qui n'a pas encore d'exercice.
+  const then = order.slice(1).filter((x) => x.status !== 'mastered' && (x.status !== 'todo' || x.contents > 0)).slice(0, 2);
   const focus = c.notions.worst[0] ?? null;
   switch (c.status) {
     case 'weak':
@@ -89,7 +93,13 @@ export function highlights(data: ProgressionData): Highlight[] {
   const t = data.time;
   const out: Highlight[] = [];
   const worked = ch.total - ch.todo;
-  if (worked > 0) {
+  if (worked > 0 && ch.mastered === worked) {
+    // Tout ce qui est commencé est maîtrisé : on le dit tel quel (pas « 3 commencés, dont 3 maîtrisés »).
+    out.push({
+      key: 'chapitres', label: worked > 1 ? 'Chapitres maîtrisés' : 'Chapitre maîtrisé', value: String(worked),
+      hint: ch.total > worked ? `sur ${ch.total} au programme` : 'tout ton programme',
+    });
+  } else if (worked > 0) {
     out.push({
       key: 'chapitres', label: worked > 1 ? 'Chapitres commencés' : 'Chapitre commencé', value: String(worked),
       hint: ch.mastered ? `dont ${ch.mastered} maîtrisé${ch.mastered > 1 ? 's' : ''}` : ch.total > worked ? `sur ${ch.total} au programme` : undefined,

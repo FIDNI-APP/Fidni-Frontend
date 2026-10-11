@@ -20,3 +20,6 @@ export const lessonsUrl = (hubUrl: string | null | undefined, chapterId: number 
 /** Quiz du chapitre ; `retour` : la page où revenir après le résultat (plan de DS). */
 export const quizUrl = (chapterId: number | string, retour?: string) =>
   `/skill-iq?chapitre=${chapterId}${retour ? `&retour=${encodeURIComponent(retour)}` : ''}`;
+
+/** Chapitre sans exercice encore : « Le cours » passe devant « S'entraîner » (qui mènerait à une liste vide). */
+export const courseFirst = (c: { contents: number }) => !c.contents;

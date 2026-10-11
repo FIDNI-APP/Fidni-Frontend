@@ -9,18 +9,21 @@ import { trackAction } from '@/lib/usage';
 import type { ProgressionData } from './types';
 import { RING, STATUS } from './status';
 import { highlights, pickNextStep, type Highlight, type NextStep } from './nextStep';
-import { lessonsUrl, practiceUrl, quizUrl } from './links';
+import { courseFirst as needsCourseFirst, lessonsUrl, practiceUrl, quizUrl } from './links';
 
+// « À renforcer » : le texte or foncé de status.ts (4,9:1 sur le fond doré clair ; gold-strong n'y fait que 4,1:1).
 const CHIP = {
-  mastered: 'bg-brand-soft text-brand-hover', good: 'bg-brand-soft text-brand-hover', weak: 'bg-gold-soft text-gold-strong',
+  mastered: 'bg-brand-soft text-brand-hover', good: 'bg-brand-soft text-brand-hover', weak: `bg-gold-soft ${STATUS.weak.text}`,
   started: 'bg-[#f2f1ee] text-ink-soft', todo: 'bg-[#f2f1ee] text-ink-soft',
 } as const;
 
 export function Overview({ data, onShow }: { data: ProgressionData; onShow: (chapterId: number) => void }) {
   const step = pickNextStep(data);
   const facts = highlights(data);
+  // Pas de chapitre à proposer (programme pas encore en ligne) : seulement le bilan, s'il y a de quoi.
+  if (!step && !facts.length) return null;
   return (
-    <Section id="prochain-pas" title="Ton prochain pas">
+    <Section id="prochain-pas" title={step ? 'Ton prochain pas' : 'Ton bilan'}>
       <div data-tour="prog-resume">
         {step && <NextStepHero step={step} onShow={onShow} />}
         <Highlights items={facts} />
@@ -32,10 +35,13 @@ export function Overview({ data, onShow }: { data: ProgressionData; onShow: (cha
 function NextStepHero({ step, onShow }: { step: NextStep; onShow: (chapterId: number) => void }) {
   const c = step.chapter;
   const st = STATUS[c.status];
-  const Icon = st.icon;
+  // Chapitre à découvrir : « À découvrir » (pas « Pas commencé » juste au-dessus de « Commence … »).
+  const discover = step.kind === 'decouvrir';
+  const Icon = discover ? Compass : st.icon;
+  const label = discover ? 'À découvrir' : st.label;
   const review = c.review[0];
   // Chapitre sans exercice encore : le cours d'abord (« S'entraîner » mènerait à une liste vide).
-  const courseFirst = c.status === 'todo' && !c.contents;
+  const courseFirst = needsCourseFirst(c);
   const practice = (
     <Link key="entrainer" to={practiceUrl(c.hub_url, c.id)} onClick={() => trackAction('prog-entrainer')}
       className={`${courseFirst ? 'fd-btn-ghost min-h-10' : 'fd-btn-primary min-h-11'} w-full justify-center`}>
@@ -63,7 +69,7 @@ function NextStepHero({ step, onShow }: { step: NextStep; onShow: (chapterId: nu
           )}
           <div className="min-w-0">
             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${CHIP[c.status]}`}>
-              <Icon className="h-3.5 w-3.5" /> {st.label}
+              <Icon className="h-3.5 w-3.5" /> {label}
             </span>
             <h3 className="fd-display mt-2 text-[24px] leading-tight text-ink">
               <span className="text-ink-faint">{step.verb}</span> {c.name}
@@ -90,23 +96,27 @@ function NextStepHero({ step, onShow }: { step: NextStep; onShow: (chapterId: nu
           )}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-[#fcfbf9] px-5 py-2 text-[12.5px] sm:px-6">
+      {/* Bas de carte : ce qui reste à revoir, le détail (téléphone : l'ordinateur l'a déjà à côté du programme), la suite. */}
+      <div className={`flex flex-wrap items-center gap-x-4 border-t border-line bg-[#fcfbf9] px-5 py-1 text-[12.5px] sm:px-6 ${
+        review || step.then.length ? '' : 'lg:hidden'}`}>
         {review && (
-          <Link to={review.url} className="inline-flex min-h-9 min-w-0 max-w-full items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
+          <Link to={review.url} className="inline-flex min-h-10 min-w-0 max-w-full grow items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
             <RotateCcw className="h-3.5 w-3.5 shrink-0 text-gold-strong" />
             <span className="truncate">À revoir : {review.title}</span>
           </Link>
         )}
-        <button type="button" onClick={() => onShow(c.id)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-ink-soft hover:text-ink">
+        <button type="button" onClick={() => onShow(c.id)} className="inline-flex min-h-10 items-center gap-1 font-semibold text-ink-soft hover:text-ink lg:hidden">
           Voir le détail du chapitre <ChevronRight className="h-3.5 w-3.5" />
         </button>
         {step.then.length > 0 && (
-          <span className="text-ink-faint sm:ml-auto">
-            Ensuite :{' '}
+          <span className="flex min-w-0 basis-full flex-wrap items-center gap-x-1 text-ink-faint sm:ml-auto sm:basis-auto">
+            <span>Ensuite :</span>
             {step.then.map((t, i) => (
-              <span key={t.id}>
-                {i > 0 && ' · '}
-                <button type="button" onClick={() => onShow(t.id)} className="min-h-9 text-ink-soft underline decoration-line underline-offset-2 hover:text-ink">
+              // Le séparateur reste avec le nom qui le suit ; un nom ne se coupe pas.
+              <span key={t.id} className="inline-flex min-w-0 max-w-full items-center whitespace-nowrap">
+                {i > 0 && <span className="pr-1" aria-hidden>·</span>}
+                <button type="button" onClick={() => onShow(t.id)}
+                  className="min-h-10 min-w-0 truncate text-ink-soft underline decoration-line underline-offset-2 hover:text-ink">
                   {t.name}
                 </button>
               </span>

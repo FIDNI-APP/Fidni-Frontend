@@ -1,6 +1,7 @@
 // Données de « Ma progression » (GET /api/stats/progression/), affichées tout de suite au retour sur la
 // page : la dernière réponse est gardée (mémoire + onglet), puis rafraîchie en arrière-plan.
-// `reload()` : nouvel essai après un échec (bouton « Réessayer »).
+// `reload()` : nouvel essai après un échec (bouton « Réessayer ») ; `update(fn)` : changement fait sur la page
+// (objectif quotidien), gardé aussi dans le cache pour ne pas réapparaître à l'ancienne valeur au retour.
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api/apiClient';
 import type { ProgressionData } from './types';
@@ -39,5 +40,13 @@ export function useProgression(user: string | null) {
     return () => { alive = false; };
   }, [user, attempt]);
   const reload = useCallback(() => { setFailed(false); setAttempt((n) => n + 1); }, []);
-  return { data, failed, setData, reload };
+  const update = useCallback((fn: (d: ProgressionData) => ProgressionData) => {
+    setData((d) => {
+      if (!d) return d;
+      const next = fn(d);
+      if (user) write(user, next);
+      return next;
+    });
+  }, [user]);
+  return { data, failed, setData, reload, update };
 }

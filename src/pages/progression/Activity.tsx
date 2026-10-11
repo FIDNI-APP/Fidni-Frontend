@@ -3,7 +3,10 @@
 // les chapitres où passe le temps.
 // 11/10/2026 : onglets communs (components/space), objectif en pastille qui ouvre ses choix (plus de petit
 // menu déroulant au milieu d'une phrase), « Où passe ton temps » (time.by_chapter, déjà envoyé par le serveur).
-import { useEffect, useMemo, useRef, useState } from 'react';
+// L'objectif vit dans Activity (pas dans l'onglet « Cette semaine », démonté au changement d'onglet) et se règle
+// même avant la première minute mesurée.
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import toast from 'react-hot-toast';
 import { Check, Clock, Pencil, TrendingUp } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { Section, Segmented } from '@/components/space/Page';
@@ -15,16 +18,38 @@ type View = 'week' | 'all';
 const GOALS = [10, 15, 20, 30, 45, 60, 90, 120];
 const TOP_CHAPTERS = 5;
 
-export function Activity({ data, onShow }: { data: ProgressionData; onShow: (chapterId: number) => void }) {
+export function Activity({ data, onShow, onGoalSaved }: {
+  data: ProgressionData;
+  onShow: (chapterId: number) => void;
+  /** Objectif enregistré : la page le garde dans ses données (et son cache). */
+  onGoalSaved?: (minutes: number) => void;
+}) {
   // Pas encore de temps mesuré : la courbe de ce qui est réussi d'abord (la semaine serait vide).
   const [view, setView] = useState<View>(() => (data.time.total_seconds > 0 || !data.evolution.points.length ? 'week' : 'all'));
+  const [goal, setGoal] = useState(data.time.goal_minutes);
+  const [saving, setSaving] = useState(false);
+  // Données rafraîchies (cache puis serveur) : l'objectif suit.
+  const serverGoal = data.time.goal_minutes;
+  useEffect(() => { setGoal(serverGoal); }, [serverGoal]);
+
+  const changeGoal = (minutes: number) => {
+    if (minutes === goal) return;
+    const before = goal;
+    setGoal(minutes);
+    setSaving(true);
+    api.patch('/settings/', { daily_goal_minutes: minutes })
+      .then(() => onGoalSaved?.(minutes))
+      .catch(() => { setGoal(before); toast.error('Ton objectif n’a pas pu être enregistré.'); })
+      .finally(() => setSaving(false));
+  };
+
   return (
     <div data-tour="prog-activite">
       <Section id="activite" title="Mon activité">
         <div className="rounded-2xl border border-line bg-white p-4 sm:p-6">
           <Segmented label="Période" value={view} onChange={setView}
             options={[{ key: 'week', label: 'Cette semaine' }, { key: 'all', label: 'Depuis le début' }]} />
-          {view === 'week' ? <Week data={data} /> : <AllTime data={data} onShow={onShow} />}
+          {view === 'week' ? <Week data={data} goal={goal} saving={saving} onGoal={changeGoal} /> : <AllTime data={data} onShow={onShow} />}
         </div>
       </Section>
     </div>
@@ -32,7 +57,7 @@ export function Activity({ data, onShow }: { data: ProgressionData; onShow: (cha
 }
 
 /** Petit état vide dans la carte (même dessin que EmptyState, sans seconde bordure). */
-function Blank({ title, text }: { title: string; text: string }) {
+function Blank({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
   return (
     <div className="mt-5 flex flex-col items-center rounded-xl bg-[#faf9f7] px-4 py-7 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f2f1ee] text-ink-soft ring-1 ring-line" aria-hidden>
@@ -40,30 +65,58 @@ function Blank({ title, text }: { title: string; text: string }) {
       </span>
       <p className="mt-3 text-[14.5px] font-semibold text-ink">{title}</p>
       <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-ink-faint">{text}</p>
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
 
-function Week({ data }: { data: ProgressionData }) {
+/** Pastille « Objectif : 30 min / jour » : ouvre ou ferme les choix. */
+function GoalPill({ goal, saving, open, onToggle }: { goal: number; saving: boolean; open: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" onClick={onToggle} aria-expanded={open} disabled={saving}
+      className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft transition-colors hover:border-[#cfc9bf] hover:text-ink disabled:opacity-60">
+      Objectif : <b className="fd-nums font-semibold text-ink">{goal} min</b> / jour <Pencil className="h-3.5 w-3.5 text-ink-faint" />
+    </button>
+  );
+}
+
+/** Les durées proposées pour l'objectif quotidien. */
+function GoalChoices({ goal, onPick }: { goal: number; onPick: (minutes: number) => void }) {
+  return (
+    <div className="mt-3 rounded-xl border border-line bg-[#fcfbf9] p-3">
+      <p className="text-[12.5px] text-ink-faint">Combien de minutes par jour ?</p>
+      <div role="radiogroup" aria-label="Objectif quotidien" className="mt-2 flex flex-wrap gap-2">
+        {[...new Set([...GOALS, goal])].sort((a, b) => a - b).map((m) => (
+          <button key={m} type="button" role="radio" aria-checked={m === goal} onClick={() => onPick(m)}
+            className={`fd-nums min-h-10 min-w-[64px] rounded-full px-3.5 text-[13px] font-semibold transition-colors ${
+              m === goal ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+            {m} min
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Week({ data, goal, saving, onGoal }: { data: ProgressionData; goal: number; saving: boolean; onGoal: (minutes: number) => void }) {
   const t = data.time;
-  const [goal, setGoal] = useState(t.goal_minutes);
   const [picking, setPicking] = useState(false);
-  const [saving, setSaving] = useState(false);
   const days = t.days.slice(-7);
   const reached = days.filter((d) => d.seconds >= goal * 60).length;
   const diff = Math.round((t.week - t.previous_week) / 60);
 
-  const changeGoal = (minutes: number) => {
-    setPicking(false);
-    if (minutes === goal) return;
-    const before = goal;
-    setGoal(minutes);
-    setSaving(true);
-    api.patch('/settings/', { daily_goal_minutes: minutes }).catch(() => setGoal(before)).finally(() => setSaving(false));
-  };
+  const pill = <GoalPill goal={goal} saving={saving} open={picking} onToggle={() => setPicking((v) => !v)} />;
+  const choices = picking && <GoalChoices goal={goal} onPick={(m) => { setPicking(false); onGoal(m); }} />;
 
+  // Pas encore de temps mesuré : l'objectif se règle déjà.
   if (t.total_seconds === 0) {
-    return <Blank title="Ton temps se compte tout seul" text="Il s’ajoute dès que tu ouvres un exercice, une leçon ou un examen. Ta semaine s’affichera ici." />;
+    return (
+      <>
+        <Blank title="Ton temps se compte tout seul" action={pill}
+          text="Il s’ajoute dès que tu ouvres un exercice, une leçon ou un examen. Ta semaine s’affichera ici." />
+        {choices}
+      </>
+    );
   }
 
   return (
@@ -86,29 +139,13 @@ function Week({ data }: { data: ProgressionData }) {
           )}
         </div>
         <div className="sm:text-right">
-          <button type="button" onClick={() => setPicking((v) => !v)} aria-expanded={picking} disabled={saving}
-            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft transition-colors hover:border-[#cfc9bf] hover:text-ink disabled:opacity-60">
-            Objectif : <b className="fd-nums font-semibold text-ink">{goal} min</b> / jour <Pencil className="h-3.5 w-3.5 text-ink-faint" />
-          </button>
+          {pill}
           <p className="mt-1 text-[12.5px] text-ink-faint sm:pr-1">
             atteint <b className="font-semibold text-ink-soft">{plural(reached, 'jour', 'jours')}</b> sur 7
           </p>
         </div>
       </div>
-      {picking && (
-        <div className="mt-3 rounded-xl border border-line bg-[#fcfbf9] p-3">
-          <p className="text-[12.5px] text-ink-faint">Combien de minutes par jour ?</p>
-          <div role="radiogroup" aria-label="Objectif quotidien" className="mt-2 flex flex-wrap gap-2">
-            {[...new Set([...GOALS, goal])].sort((a, b) => a - b).map((m) => (
-              <button key={m} type="button" role="radio" aria-checked={m === goal} onClick={() => changeGoal(m)}
-                className={`fd-nums min-h-10 min-w-[64px] rounded-full px-3.5 text-[13px] font-semibold transition-colors ${
-                  m === goal ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
-                {m} min
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {choices}
       <Bars goalMinutes={goal} items={days.map((d) => ({
         key: d.date, label: `${weekday(d.date)} ${parseDay(d.date).getDate()}`, title: longDate(d.date), seconds: d.seconds,
       }))} />

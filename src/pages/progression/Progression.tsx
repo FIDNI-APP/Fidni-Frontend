@@ -25,13 +25,16 @@ import { lessonsHub } from './links';
 
 export function ProgressionPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const { data, failed, reload } = useProgression(isAuthenticated && user ? String(user.id) : null);
+  const { data, failed, reload, update } = useProgression(isAuthenticated && user ? String(user.id) : null);
   // « ?chapitre=12 » (quiz, accueil, profil…) : ce chapitre est choisi d'office et amené à l'écran.
   const [params] = useSearchParams();
   const initial = Number(params.get('chapitre')) || null;
   const [focus, setFocus] = useState<Focus | null>(null);
   useEffect(() => { if (initial) setFocus({ id: initial, at: Date.now() }); }, [initial]);
   const show = useCallback((id: number) => setFocus({ id, at: Date.now() }), []);
+  const goalSaved = useCallback((minutes: number) => {
+    update((d) => ({ ...d, time: { ...d.time, goal_minutes: minutes } }));
+  }, [update]);
 
   if (!authLoading && !isAuthenticated) return <Navigate to="/" replace />;
 
@@ -54,7 +57,7 @@ export function ProgressionPage() {
       {failed && !data && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
           <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ta progression n’a pas pu se charger. Vérifie ta connexion.</p>
-          <button type="button" onClick={reload} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          <button type="button" onClick={reload} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
         </div>
       )}
       {!data && !failed && <Skeleton />}
@@ -86,9 +89,10 @@ export function ProgressionPage() {
               <Notions strengths={data.strengths} weaknesses={data.weaknesses} onShow={show} />
             </>
           )}
+          {/* Chapitre montré d'office : celui du prochain pas (première visite : le plus fourni en exercices). */}
           <Programme chapters={data.chapters} levelName={data.level?.name ?? null} levelLink={levelLink}
-            preferred={nothingYet ? null : pickNextStep(data)?.chapter.id ?? null} focus={focus} />
-          {!nothingYet && <Activity data={data} onShow={show} />}
+            preferred={pickNextStep(data)?.chapter.id ?? null} focus={focus} exercisesTo={nothingYet ? undefined : home} />
+          {!nothingYet && <Activity data={data} onShow={show} onGoalSaved={goalSaved} />}
         </div>
       ))}
     </Page>
