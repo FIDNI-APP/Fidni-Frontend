@@ -6,7 +6,7 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText,
+  FileText, FilePlus2,
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
-import { canSeeParcours } from '@/lib/features';
+import { canSeeParcours, isModerator } from '@/lib/features';
 import type { User } from '@/types';
 import { sectionHome, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
@@ -47,14 +47,17 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 // ce que contient la page : « Examens » ne contenait que des DS, « Révisions » cachait la préparation d'un DS.
 const HOME_GROUP: NavGroup = { items: [{ to: '/', label: 'Accueil', icon: Home, match: ['/'] }] };
 
+// Pages « Ajouter un contenu » : c'est l'entrée Outils prof qui s'allume, pas la rubrique.
+const NEW_CONTENT = ['/exercises/new', '/exams/new', '/lessons/new'];
+
 const WORK_GROUP: NavGroup = {
   title: 'Travailler',
   tour: 'nav-travailler',
   items: [
-    { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], levels: '/lessons' },
+    { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], exclude: NEW_CONTENT, levels: '/lessons' },
     { to: '/learning-path', label: 'Parcours', icon: Route, match: ['/learning-path'] },
-    { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], levels: '/exercises' },
-    { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux'], levels: '/exams' },
+    { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], exclude: NEW_CONTENT, levels: '/exercises' },
+    { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux', ...NEW_CONTENT], levels: '/exams' },
     { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
     { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
   ],
@@ -70,8 +73,20 @@ const FOLLOW_GROUP: NavGroup = {
     { to: '/reviser', label: 'Réviser', icon: CalendarCheck, match: ['/reviser', '/revisions', '/revision-lists', '/profile/revision-lists'] },
     { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'] },
     { to: '/enregistrements', label: 'Mes enregistrements', icon: BookmarkIcon, match: ['/enregistrements', '/saved', '/notebooks'] },
-    // Éditeur de documents avec équations (12/10/2026).
+    // Éditeur de documents avec équations (12/10/2026) ; chez un prof, il est dans « Outils prof ».
     { to: '/documents', label: 'Mes documents', icon: FileText, match: ['/documents'] },
+  ],
+};
+
+// Outils prof (12/10/2026) : profs et modération. Créer un contenu, rédiger dans l'éditeur « façon Word »
+// (équations), suivre ses classes ; ces entrées quittent alors « Mon suivi ».
+const TEACHER_GROUP: NavGroup = {
+  title: 'Outils prof',
+  tour: 'nav-outils-prof',
+  items: [
+    { to: '/exercises/new', label: 'Ajouter un contenu', icon: FilePlus2, match: NEW_CONTENT },
+    { to: '/documents', label: 'Mes documents', icon: FileText, match: ['/documents'] },
+    { to: '/classrooms', label: 'Classes', icon: GraduationCap, match: ['/classrooms'] },
   ],
 };
 
@@ -211,13 +226,18 @@ const SidebarInner: React.FC<{
   const showParcours = canSeeParcours(user);
   const hasClassroom = useHasClassroom();
   const levels = useLevels();
+  const teacherTools = user?.profile?.user_type === 'teacher' || isModerator(user);
 
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
     const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/learning-path') };
     if (!isAuthenticated) return [HOME_GROUP, work];
+    if (teacherTools) {
+      const follow = { ...FOLLOW_GROUP, items: FOLLOW_GROUP.items.filter((it) => it.to !== '/documents') };
+      return [HOME_GROUP, work, TEACHER_GROUP, follow];
+    }
     return hasClassroom ? [HOME_GROUP, work, FOLLOW_GROUP, CLASS_GROUP] : [HOME_GROUP, work, FOLLOW_GROUP];
-  }, [isAuthenticated, showParcours, hasClassroom]);
+  }, [isAuthenticated, showParcours, hasClassroom, teacherTools]);
 
   // Section imposée par la page (ex. un sujet du Bac national, sous /exams/123 comme un DS) :
   // explicite (BreadcrumbContext.section), sinon l'adresse du premier élément du fil d'Ariane.

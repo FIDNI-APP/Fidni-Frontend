@@ -191,3 +191,13 @@
   .wd-print-root p.is-editor-empty:first-child::before { content: none; }
   .wd-print-root [data-callout-type], .wd-print-root th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Onglet Équation dans la barre de l'éditeur compact (création de contenus) */
+.wd-ribbon-inline { border-bottom: 1px solid #e7e3dc; background: #fbfaf8; }
+.wd-ribbon-inline .wd-panel { min-height: 0; border-top: 0; padding-top: .35rem; flex-wrap: wrap; row-gap: .35rem; overflow-x: visible; }
+.wd-ribbon-inline .wd-group { border-right: 0; border-left: 1px solid #e7e3dc; }
+.wd-ribbon-inline .wd-group:first-child { border-left: 0; }
+.wd-ribbon-inline .wd-structures { flex: 1 1 100%; min-width: 0; border-left: 0; }
+.wd-ribbon-inline .wd-structures .wd-group-body { flex-wrap: wrap; row-gap: .2rem; }
+.fd-editor .math-node.is-editing { cursor: text; background: #f3f8f5; box-shadow: 0 0 0 1px #9cc9ad; overflow: visible; }
+.fd-editor .math-node-inline.is-editing { vertical-align: middle; }

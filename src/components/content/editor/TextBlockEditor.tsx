@@ -3,6 +3,8 @@
  *
  * Uses the compact editor that grows with content (not A4 format)
  * for editing individual content blocks within the structured content system.
+ * Équations « façon Word » (12/10/2026) : Alt+= ou « Équation » ouvre un champ visuel dans la ligne,
+ * l'onglet Équation s'affiche dans la barre, « Plein écran » ouvre le champ dans l'éditeur de documents.
  */
 
 import React from 'react';
@@ -39,6 +41,8 @@ export const TextBlockEditor: React.FC<TextBlockEditorProps> = ({
         onChange={handleChange}
         placeholder={placeholder}
         minHeight={minHeight}
+        wordMath
+        fullscreenTitle={placeholder}
       />
     </div>
   );

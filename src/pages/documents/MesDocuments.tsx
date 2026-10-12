@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { useAuth } from '@/contexts/AuthContext';
+import { isModerator } from '@/lib/features';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { CardsSkeleton, EmptyState, Page, PageHeader } from '@/components/space/Page';
 import { documentsAPI, type DocumentSummary } from '@/lib/api/documentsApi';
@@ -43,7 +44,8 @@ const Excerpt: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const MesDocuments: React.FC = () => {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const teacherTools = user?.profile?.user_type === 'teacher' || isModerator(user);
   const openSignup = useOpenSignup('documents');
   const navigate = useNavigate();
   const [docs, setDocs] = useState<DocumentSummary[] | null>(null);
@@ -90,7 +92,7 @@ export const MesDocuments: React.FC = () => {
   };
 
   const header = (
-    <PageHeader eyebrow="Mon suivi" title="Mes documents"
+    <PageHeader eyebrow={teacherTools ? 'Outils prof' : 'Mon suivi'} title="Mes documents"
       subtitle="Rédige tes fiches, tes devoirs et tes exercices comme dans Word, avec des équations faciles à écrire : Alt+= puis tape ta formule."
       actions={isAuthenticated ? (
         <button type="button" onClick={create} disabled={creating} className="fd-btn-primary min-h-10">

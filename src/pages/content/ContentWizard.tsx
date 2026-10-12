@@ -514,7 +514,7 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
             <SharedToolbarProvider>
             <div className="min-w-0" data-tour="creer-blocs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[13px] text-ink-faint">Les formules s’écrivent entre <code className="rounded bg-[#f2f1ee] px-1">$…$</code>.</p>
+                <p className="text-[13px] text-ink-faint">Équation : <kbd className="rounded bg-[#f2f1ee] px-1 font-sans">Alt</kbd>+<kbd className="rounded bg-[#f2f1ee] px-1 font-sans">=</kbd> (ou <code className="rounded bg-[#f2f1ee] px-1">$…$</code>), puis tape ta formule.</p>
                 <button type="button" onClick={() => setShowJson(true)} data-tour="creer-importer"
                   className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
                   <FileJson className="h-3.5 w-3.5" /> Importer un fichier

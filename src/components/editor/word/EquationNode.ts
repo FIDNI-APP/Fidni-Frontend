@@ -17,6 +17,7 @@ import type { MathfieldElement } from 'mathlive';
 import { MathNode, renderKatex, type MathAttrs } from '../MathNode';
 import { forEditing } from './mathGallery';
 import { loadMathLive, toStoredLatex } from './mathlive';
+import './word.css';
 
 /** Ce que le ruban sait faire de l'équation ouverte. */
 export interface ActiveEquation {
