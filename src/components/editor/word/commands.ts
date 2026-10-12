@@ -31,9 +31,15 @@ export interface EditorUi {
   /** En-tête FIDNI de la première page (documents). */
   entete?: { actif: boolean; toggle: () => void; edit: () => void };
   /** Fichier : actions fournies par la page (nouveau, dupliquer…), absentes dans un éditeur intégré. */
-  file?: { newDocument?: () => void; duplicate?: () => void; rename?: () => void; list?: () => void };
-  /** LaTeX : exporter le document en .tex, importer un fichier .tex (au curseur). */
-  latex?: { exportTex: () => void; importTex: () => void };
+  file?: {
+    newDocument?: () => void; duplicate?: () => void; rename?: () => void; list?: () => void;
+    /** Word : importer un .docx (nouveau document), exporter le document en .docx. */
+    importDocx?: () => void; exportDocx?: () => void;
+    /** Publier le document sur FIDNI (exercice, devoir ou leçon). */
+    publish?: () => void;
+  };
+  /** LaTeX : exporter le document en .tex. */
+  latex?: { exportTex: () => void };
   /** Renuméroter les équations (1), (2)… dans l'ordre du document. */
   renumberEquations?: () => void;
 }
@@ -72,7 +78,9 @@ const COMMANDS: CommandSpec[] = [
   { id: 'file.rename', label: 'Renommer', location: 'Fichier', run: (c) => c.ui.file?.rename?.(), enabled: (c) => !!c.ui.file?.rename },
   { id: 'file.list', label: 'Mes documents', location: 'Fichier', run: (c) => c.ui.file?.list?.(), enabled: (c) => !!c.ui.file?.list },
   { id: 'file.exportTex', label: 'Exporter en LaTeX (.tex)', location: 'Fichier', run: (c) => c.ui.latex?.exportTex(), enabled: (c) => !!c.ui.latex },
-  { id: 'file.importTex', label: 'Importer un fichier LaTeX (.tex)', location: 'Fichier', run: (c) => c.ui.latex?.importTex(), enabled: (c) => !!c.ui.latex && !c.eq },
+  { id: 'file.importDocx', label: 'Importer un document Word (.docx)', location: 'Fichier', run: (c) => c.ui.file?.importDocx?.(), enabled: (c) => !!c.ui.file?.importDocx },
+  { id: 'file.exportDocx', label: 'Exporter en Word (.docx)', location: 'Fichier', run: (c) => c.ui.file?.exportDocx?.(), enabled: (c) => !!c.ui.file?.exportDocx },
+  { id: 'file.publish', label: 'Publier sur FIDNI', location: 'Fichier', run: (c) => c.ui.file?.publish?.(), enabled: (c) => !!c.ui.file?.publish },
   { id: 'file.print', label: 'Imprimer / PDF', location: 'Fichier', keys: 'Ctrl+P', run: (c) => c.ui.print() },
 
   // ── Accueil › Presse-papiers et modification

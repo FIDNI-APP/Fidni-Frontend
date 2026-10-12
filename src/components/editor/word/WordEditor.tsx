@@ -21,7 +21,7 @@ import { Tex } from './RibbonParts';
 import { runCommand, searchableCommands, type Ctx, type EditorUi, type Marges, type Orientation, type Params } from './commands';
 import { searchableEquations } from './mathGallery';
 import { VariationTableDialog, tvFromLatex, type TVSpec } from './VariationTable';
-import { htmlToLatex, latexToHtml } from './latex';
+import { htmlToLatex } from './latex';
 import { useLivePagination } from '@/components/paper/livePagination';
 import { DENSITIES, SHEET_CONTENT_CSS, densityVars } from '@/components/paper/sheetStyles';
 import { sheetHeaderBlocks } from '@/components/paper/paperBlocks';
@@ -310,7 +310,6 @@ export const WordEditor: React.FC<WordEditorProps> = ({
   const zoomRef = useRef(100);
   const pendingAlign = useMemo<(() => void)[]>(() => [], []);
   const fileRef = useRef<HTMLInputElement>(null);
-  const texRef = useRef<HTMLInputElement>(null);
   const flowRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const tabBeforeEq = useRef<TabId>('accueil');
@@ -513,7 +512,6 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         a.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       },
-      importTex: () => texRef.current?.click(),
     },
     // (1), (2)… dans l'ordre du document, après un ajout ou une suppression.
     renumberEquations: () => {
@@ -688,17 +686,6 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         const files = Array.from(e.target.files ?? []).filter((f) => IMAGE_TYPES.includes(f.type));
         e.target.value = '';
         if (files.length) uploadRef.current(editor, files);
-      }} />
-      <input ref={texRef} type="file" accept=".tex,text/x-tex,application/x-tex,text/plain" className="hidden" onChange={async (e) => {
-        const f = e.target.files?.[0];
-        e.target.value = '';
-        if (!f || f.size > 2_000_000) return;
-        const { html } = latexToHtml(await f.text());
-        if (!html) return;
-        // Document vide : le fichier le remplace ; sinon il s'insère au curseur.
-        if (editor.isEmpty) editor.commands.setContent(mathifyHtml(html));
-        else editor.chain().focus().insertContent(mathifyHtml(html)).run();
-        onChangeRef.current(toStoredHtml(editor.getHTML()));
       }} />
       {palette && <CommandSearch run={run} onClose={() => { setPalette(false); }} />}
       {tv && (

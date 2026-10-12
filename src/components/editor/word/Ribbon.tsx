@@ -10,7 +10,7 @@ import {
   FolderOpen, Highlighter, ImageIcon, IndentDecrease, IndentIncrease, Italic, Link as LinkIcon, List, ListOrdered,
   Merge, Minus, PenLine, Printer, Redo2, RemoveFormatting, Replace, Rows3, Scissors, Search, SeparatorHorizontal,
   Split, Strikethrough, Subscript as SubIcon, Superscript as SupIcon, Table as TableIcon, Trash2, Underline, Undo2,
-  ZoomIn, ZoomOut, MessageSquare, RectangleHorizontal, RectangleVertical, PanelTop,
+  ZoomIn, ZoomOut, MessageSquare, RectangleHorizontal, RectangleVertical, PanelTop, FileCode2, Send,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { CALLOUT_CONFIGS, type CalloutType } from '@/types/callout';
@@ -317,7 +317,7 @@ const FileMenu: React.FC<{ ctx: Ctx; run: Run }> = ({ ctx, run }) => (
   <MenuButton label="Fichier" showLabel icon={null} panelClassName="w-60 p-1">
     {(close) => (
       <>
-        {([['file.new', FilePlus2], ['file.duplicate', Files], ['file.rename', PenLine], ['file.list', FolderOpen], ['file.importTex', FileDown], ['file.exportTex', FileUp], ['file.print', Printer]] as const)
+        {([['file.new', FilePlus2], ['file.duplicate', Files], ['file.rename', PenLine], ['file.list', FolderOpen], ['file.importDocx', FileDown], ['file.exportDocx', FileUp], ['file.exportTex', FileCode2], ['file.publish', Send], ['file.print', Printer]] as const)
           .filter(([id]) => id === 'file.print' || isEnabled(ctx, id))
           .map(([id, Icon]) => (
             <MenuItem key={id} hint={command(id)?.keys} onClick={() => { close(); run(id); }}>

@@ -1,10 +1,10 @@
 /**
  * Mes documents (/documents, 12/10/2026) : les documents de l'éditeur « façon Word » du membre
- * (devoirs rédigés, fiches de cours, brouillons d'exercices…). Nouveau, ouvrir, dupliquer, supprimer.
+ * (devoirs rédigés, fiches de cours, brouillons d'exercices…). Nouveau, importer un Word, ouvrir, dupliquer, supprimer.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Copy, FilePlus2, FileText, Loader2, RotateCcw, Search, Sigma, Trash2 } from 'lucide-react';
+import { Copy, FileDown, FilePlus2, FileText, Loader2, RotateCcw, Search, Sigma, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -13,6 +13,7 @@ import { isModerator } from '@/lib/features';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { CardsSkeleton, EmptyState, Page, PageHeader } from '@/components/space/Page';
 import { documentsAPI, type DocumentSummary } from '@/lib/api/documentsApi';
+import { useDocxImport } from './useDocxImport';
 
 const when = (iso: string) => {
   const d = new Date(iso);
@@ -91,13 +92,21 @@ export const MesDocuments: React.FC = () => {
     } catch { toast.error('Le document n’a pas pu être supprimé.'); }
   };
 
+  const docx = useDocxImport();
   const header = (
     <PageHeader eyebrow={teacherTools ? 'Outils prof' : 'Mon suivi'} title="Mes documents"
       subtitle="Rédige tes fiches, tes devoirs et tes exercices comme dans Word, avec des équations faciles à écrire : Alt+= puis tape ta formule."
       actions={isAuthenticated ? (
-        <button type="button" onClick={create} disabled={creating} className="fd-btn-primary min-h-10">
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />} Nouveau document
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={docx.open} disabled={docx.busy} className="fd-btn-ghost min-h-10"
+            title="Un document Word (.docx) devient un document FIDNI : équations Word comprises">
+            {docx.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Importer un Word
+          </button>
+          <button type="button" onClick={create} disabled={creating} className="fd-btn-primary min-h-10">
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />} Nouveau document
+          </button>
+          {docx.input}
+        </div>
       ) : undefined} />
   );
 

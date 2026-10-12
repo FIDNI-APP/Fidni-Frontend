@@ -5,12 +5,14 @@
  * de suite (et le navigateur prévient si l'envoi est encore en cours).
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, Check, ChevronLeft, CloudOff, Loader2 } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { AlertTriangle, Check, ChevronLeft, CloudOff, Loader2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import WordEditor, { type Entete } from '@/components/editor/word/WordEditor';
 import { documentsAPI, type DocumentFull, type Marges, type Orientation } from '@/lib/api/documentsApi';
+import { PublishDialog } from './PublishDialog';
+import { useDocxImport } from './useDocxImport';
 
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
 const DELAY = 1000;
@@ -24,6 +26,11 @@ export const DocumentEditor: React.FC = () => {
   const [title, setTitle] = useState('');
   const [save, setSave] = useState<SaveState>('saved');
   const titleRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  // Dernier état du document (pour « Publier sur FIDNI ») ; ce qui part à l'enregistrement le met à jour.
+  const htmlRef = useRef('');
+  const enteteRef = useRef<Record<string, unknown>>({});
+  const [publishing, setPublishing] = useState(false);
 
   // Modifications pas encore envoyées, regroupées (le dernier état l'emporte).
   const pending = useRef<Partial<DocumentFull>>({});
@@ -40,10 +47,22 @@ export const DocumentEditor: React.FC = () => {
     setDoc(null);
     setLoadError(null);
     documentsAPI.get(id)
-      .then((d) => { if (!cancelled) { setDoc(d); setTitle(d.title); document.title = `${d.title} · Fidni`; } })
+      .then((d) => {
+        if (cancelled) return;
+        setDoc(d); setTitle(d.title); document.title = `${d.title} · Fidni`;
+        htmlRef.current = d.html; enteteRef.current = d.entete ?? {};
+      })
       .catch((e) => { if (!cancelled) setLoadError(e?.response?.status === 404 ? 'introuvable' : 'reseau'); });
     return () => { cancelled = true; };
   }, [id, isAuthenticated]);
+
+  // Document qui vient d'être importé de Word : ce qui n'a pas pu l'être est dit une fois.
+  useEffect(() => {
+    const notes = (location.state as { avertissements?: string[] } | null)?.avertissements;
+    if (!notes) return;
+    notes.forEach((n) => toast(n, { icon: '⚠️', duration: 12000 }));
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate]);
 
   const flush = useCallback(async () => {
     if (timer.current) { window.clearTimeout(timer.current); timer.current = null; }
@@ -94,9 +113,15 @@ export const DocumentEditor: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [flush]);
 
-  const onChange = useCallback((html: string) => queue({ html }), [queue]);
+  const onChange = useCallback((html: string) => { htmlRef.current = html; queue({ html }); }, [queue]);
   const onLayoutChange = useCallback((l: { orientation: Orientation; marges: Marges }) => queue(l), [queue]);
-  const onEnteteChange = useCallback((entete: Entete) => queue({ entete } as Partial<DocumentFull>), [queue]);
+  const onEnteteChange = useCallback((entete: Entete) => { enteteRef.current = entete as Record<string, unknown>; queue({ entete } as Partial<DocumentFull>); }, [queue]);
+  const docx = useDocxImport(flush);
+  const exportDocx = async () => {
+    await flush();
+    const t = toast.loading('Conversion en Word…');
+    try { await documentsAPI.downloadDocx(id, title); toast.success('Document Word téléchargé', { id: t }); } catch { toast.error('La conversion en Word a échoué.', { id: t }); }
+  };
 
   const commitTitle = () => {
     const t = title.trim() || 'Document sans titre';
@@ -157,7 +182,11 @@ export const DocumentEditor: React.FC = () => {
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
         aria-label="Nom du document"
         className="min-w-0 max-w-[min(420px,50vw)] flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-center text-[14px] font-semibold text-white placeholder:text-white/60 hover:border-white/30 focus:border-white/60 focus:bg-white/10 focus:outline-none sm:flex-none sm:text-left" />
-      <span className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-white/85" role="status">
+      <button type="button" onClick={() => setPublishing(true)} title="Publier ce document comme exercice, devoir ou leçon"
+        className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
+        <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Publier sur FIDNI</span>
+      </button>
+      <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] text-white/85" role="status">
         {status.icon} {status.text}
         {save === 'error' && (
           <button type="button" onClick={() => { void flush(); }} className="ml-1 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-0.5 font-semibold hover:bg-white/25">
@@ -178,7 +207,14 @@ export const DocumentEditor: React.FC = () => {
           duplicate,
           rename: () => titleRef.current?.select(),
           list: () => { void flush().then(() => navigate('/documents')); },
+          importDocx: docx.open,
+          exportDocx: () => { void exportDocx(); },
+          publish: () => setPublishing(true),
         }} />
+      {docx.input}
+      {publishing && (
+        <PublishDialog html={htmlRef.current} title={title} entete={enteteRef.current} onClose={() => setPublishing(false)} beforeLeave={flush} />
+      )}
     </div>
   );
 };

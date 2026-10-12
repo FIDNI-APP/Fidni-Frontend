@@ -12,7 +12,7 @@
  * Sert aussi à modifier un contenu (ouvert directement sur « Écrire »).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, Eye, FileJson, FileText, GraduationCap, Heading, LayoutList, Loader2, Plus,
   Search, Text, X,
@@ -35,6 +35,7 @@ import { JsonImportModal } from '@/components/common/JsonImportModal';
 import { SharedToolbarProvider, SharedToolbarSlot } from '@/components/editor/SharedToolbar';
 import { checkStructureMath } from '@/lib/mathCheck';
 import SheetEditor from '@/components/paper/SheetEditor';
+import { documentToPrefill, type ContentPrefill } from '@/pages/documents/publishDraft';
 import type { ClassLevelModel, SubjectModel } from '@/types';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -103,7 +104,17 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
   const { user, isLoading: authLoading } = useAuth();
 
   const [step, setStep] = useState(editing ? 1 : 0);
-  const [d, setD] = useState<Draft>(() => starter(contentType));
+  // « Publier sur FIDNI » depuis Mes documents : le document arrive découpé (questions, parties).
+  const prefill = (useLocation().state as { prefill?: ContentPrefill } | null)?.prefill;
+  const [importedFrom] = useState(() => (!editing && prefill ? prefill.from : null));
+  const [d, setD] = useState<Draft>(() => {
+    if (editing || !prefill) return starter(contentType);
+    const base = starter(prefill.type);
+    return {
+      ...base, title: prefill.title.slice(0, 200), durationMinutes: prefill.durationMinutes ?? base.durationMinutes,
+      blocks: prefill.blocks?.length ? prefill.blocks : base.blocks, sections: prefill.sections?.length ? prefill.sections : base.sections,
+    };
+  });
   const patch = (p: Partial<Draft>) => setD((prev) => ({ ...prev, ...p }));
   const [loading, setLoading] = useState(editing);
   const [restored, setRestored] = useState(false);
@@ -186,7 +197,7 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
 
   // ── Nouveau contenu : brouillon gardé dans ce navigateur
   useEffect(() => {
-    if (editing || !user) return;
+    if (editing || !user || importedFrom) return;
     try {
       const raw = localStorage.getItem(draftKey(user.id));
       if (raw) {
@@ -341,6 +352,12 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
             </button>
           </div>
         )}
+        {importedFrom && !editing && (
+          <div className="mt-4 rounded-xl border border-brand-line bg-brand-soft px-4 py-2.5 text-[13px] text-ink-soft">
+            Repris de ton document <strong className="text-ink">« {importedFrom} »</strong>, déjà découpé
+            {d.type === 'lesson' ? ' en parties' : ' en questions'}. Choisis le niveau et le chapitre, puis vérifie le découpage à l’étape « Écrire ».
+          </div>
+        )}
         {error && <p role="alert" className="mt-4 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-[13px] text-[#9c3b2e]">{error}</p>}
 
         {/* ─────────────── Étape 1 : le contenu */}
@@ -352,7 +369,15 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
                 <div className="grid gap-2 sm:grid-cols-3">
                   {TYPES.map((t) => (
                     <button key={t.key} type="button" aria-pressed={d.type === t.key}
-                      onClick={() => { if (t.key !== d.type) setD((p) => ({ ...starter(t.key), title: p.title, levelIds: p.levelIds, chapterIds: p.chapterIds, school: p.school })); }}
+                      onClick={() => {
+                        if (t.key === d.type) return;
+                        // Contenu repris d'un document : redécoupé pour le nouveau type plutôt que perdu.
+                        const re = importedFrom && prefill ? documentToPrefill(prefill.source.html, t.key, d.title, prefill.source.duree) : null;
+                        setD((p) => ({
+                          ...starter(t.key), title: p.title, levelIds: p.levelIds, chapterIds: p.chapterIds, school: p.school,
+                          ...(re ? { blocks: re.blocks?.length ? re.blocks : starter(t.key).blocks, sections: re.sections?.length ? re.sections : starter(t.key).sections, durationMinutes: re.durationMinutes ?? starter(t.key).durationMinutes } : {}),
+                        }));
+                      }}
                       className={`rounded-2xl border p-3.5 text-left transition-colors ${d.type === t.key ? 'border-ink bg-white ring-1 ring-ink' : 'border-line bg-white hover:border-ink/40'}`}>
                       <span className="block text-[14.5px] font-semibold text-ink">{t.label}</span>
                       <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{t.hint}</span>

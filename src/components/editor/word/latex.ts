@@ -1,7 +1,6 @@
 /**
- * Documents ↔ LaTeX (12/10/2026) : « Exporter en LaTeX (.tex) » et « Importer un fichier LaTeX » de
- * l'éditeur de documents, pour les profs qui ont déjà leurs devoirs en LaTeX (ou qui veulent les finir sous
- * Overleaf). Sous-ensemble courant d'un sujet de maths : sections, gras/italique, listes, formules en
+ * Documents → LaTeX (12/10/2026) : « Exporter en LaTeX (.tex) » de l'éditeur de documents, pour les profs
+ * qui veulent finir un sujet sous Overleaf (l'import .tex a été retiré au profit de l'import Word). Sous-ensemble courant d'un sujet de maths : sections, gras/italique, listes, formules en
  * ligne et centrées (equation, align…), encadrés (théorème, définition…), tableaux simples, saut de page.
  * Ce qui n'est pas compris reste du texte : rien n'est perdu sans le dire.
  */
@@ -14,15 +13,6 @@ const ENV_TITLES: Record<string, string> = {
   theoreme: 'Théorème', propriete: 'Propriété', definition: 'Définition', lemme: 'Lemme', corollaire: 'Corollaire',
   exemple: 'Exemple', remarque: 'Remarque', preuve: 'Preuve', methode: 'Méthode', attention: 'Attention',
 };
-/** Environnements LaTeX courants (anglais et français) → type d'encadré FIDNI. */
-const ENV_TO_CALLOUT: Record<string, string> = {
-  theorem: 'theorem', theoreme: 'theorem', thm: 'theorem', proposition: 'property', propriete: 'property', prop: 'property',
-  definition: 'definition', defn: 'definition', def: 'definition', lemma: 'lemma', lemme: 'lemma', corollary: 'corollary',
-  corollaire: 'corollary', example: 'example', exemple: 'example', remark: 'remark', remarque: 'remark', rem: 'remark',
-  proof: 'proof', preuve: 'proof', demonstration: 'proof', methode: 'method', method: 'method', attention: 'warning',
-};
-const DISPLAY_ENVS = ['equation', 'equation*', 'align', 'align*', 'gather', 'gather*', 'multline', 'multline*', 'eqnarray', 'eqnarray*'];
-
 // ─────────────────────────────── Export
 
 const texEscape = (s: string) => s
@@ -136,112 +126,4 @@ ${envs}
 ${body}
 \\end{document}
 `;
-}
-
-// ─────────────────────────────── Import
-
-const htmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-/** Commandes de texte courantes → HTML ; formules en ligne laissées en `$…$`. */
-function inlineFromTex(src: string): string {
-  // On protège les formules en ligne avant d'échapper le reste.
-  const maths: { tex: string; display: boolean }[] = [];
-  let s = src.replace(/\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$|\\\(([\s\S]+?)\\\)|\$([^$]+?)\$/g,
-    (_m, d1: string | undefined, d2: string | undefined, a: string | undefined, b: string | undefined) => {
-      const display = d1 !== undefined || d2 !== undefined;
-      maths.push({ tex: (d1 ?? d2 ?? a ?? b ?? '').trim(), display });
-      return `\u0000${maths.length - 1}\u0000`;
-    });
-  s = htmlEscape(s)
-    .replace(/\\textbf\{([^{}]*)\}/g, '<strong>$1</strong>')
-    .replace(/\\(?:emph|textit)\{([^{}]*)\}/g, '<em>$1</em>')
-    .replace(/\\underline\{([^{}]*)\}/g, '<u>$1</u>')
-    .replace(/\\(?:text|textrm|textsf|texttt|mbox)\{([^{}]*)\}/g, '$1')
-    .replace(/\\href\{([^{}]*)\}\{([^{}]*)\}/g, (_m, url: string, t: string) => (/^https?:/.test(url) ? `<a href="${url}">${t}</a>` : t))
-    .replace(/\\\\(\[[^\]]*\])?/g, '<br>')
-    .replace(/~/g, '\u00a0')
-    .replace(/\\([#%&_{}$])/g, '$1')
-    .replace(/\\(?:noindent|medskip|bigskip|smallskip|centering|par|hfill|vfill|indent)\b/g, '')
-    .replace(/``|''/g, '"');
-  // eslint-disable-next-line no-control-regex -- jetons de protection
-  return s.replace(/\u0000(\d+)\u0000/g, (_m, i: string) => {
-    const f = maths[Number(i)];
-    if (!f) return '';
-    return f.display ? `$$${htmlEscape(f.tex)}$$` : `$${htmlEscape(f.tex)}$`;
-  }).trim();
-}
-
-/** Fichier .tex → HTML du document (formules `$…$` / `$$…$$`, encadrés, listes, tableaux). */
-export function latexToHtml(tex: string): { html: string; title: string } {
-  let s = tex.replace(/\r\n?/g, '\n');
-  // Commentaires (pas les « \% »).
-  s = s.replace(/(^|[^\\])%[^\n]*/g, '$1');
-  const title = (s.match(/\\title\{([^{}]*)\}/)?.[1] || '').trim();
-  const begin = s.indexOf('\\begin{document}');
-  if (begin >= 0) s = s.slice(begin + '\\begin{document}'.length);
-  s = s.replace(/\\end\{document\}[\s\S]*$/, '').replace(/\\maketitle/g, '');
-  // Formules en ligne mises de côté : un `\begin{pmatrix}` écrit dans `$…$` n'est pas un bloc.
-  const inlineMaths: string[] = [];
-  s = s.replace(/\\\(([\s\S]+?)\\\)|(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g, (_m, a: string | undefined, b: string | undefined) => {
-    inlineMaths.push((a ?? b ?? '').trim());
-    return `\u0001${inlineMaths.length - 1}\u0001`;
-  });
-  const out: string[] = [];
-  const parts: { kind: 'text' | 'html'; v: string }[] = [];
-  // Formules centrées et environnements de bloc, découpés avant les paragraphes.
-  const blockRe = new RegExp(
-    String.raw`\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$|\\begin\{(${DISPLAY_ENVS.map((e) => e.replace('*', '\\*')).join('|')})\}([\s\S]+?)\\end\{\3\}`
-    + String.raw`|\\begin\{(itemize|enumerate)\}([\s\S]+?)\\end\{\5\}|\\begin\{(tabular)\}\{[^}]*\}([\s\S]+?)\\end\{tabular\}`
-    + String.raw`|\\begin\{(center|flushleft|flushright|quote)\}([\s\S]+?)\\end\{\9\}`
-    + String.raw`|\\begin\{(\w+)\}(?:\[([^\]]*)\])?([\s\S]+?)\\end\{\11\}|\\(newpage|clearpage|pagebreak)\b`
-    + String.raw`|\\(section|subsection|subsubsection)\*?\{([^{}]*)\}`, 'g');
-  let last = 0;
-  let m: RegExpExecArray | null;
-  const pushText = (t: string) => { if (t.trim()) parts.push({ kind: 'text', v: t }); };
-  while ((m = blockRe.exec(s)) !== null) {
-    pushText(s.slice(last, m.index));
-    last = m.index + m[0].length;
-    if (m[1] !== undefined || m[2] !== undefined) {
-      parts.push({ kind: 'html', v: `<p>$$${htmlEscape((m[1] ?? m[2]).trim())}$$</p>` });
-    } else if (m[3]) {
-      // align / equation… : en `aligned` (KaTeX), étiquettes retirées.
-      const body = m[4].replace(/\\label\{[^}]*\}/g, '').replace(/\\nonumber|\\notag/g, '').trim();
-      const tex = /align|eqnarray/.test(m[3]) ? `\\begin{aligned}${body}\\end{aligned}` : /gather|multline/.test(m[3]) ? `\\begin{gathered}${body}\\end{gathered}` : body;
-      parts.push({ kind: 'html', v: `<p>$$${htmlEscape(tex)}$$</p>` });
-    } else if (m[5]) {
-      const tag = m[5] === 'itemize' ? 'ul' : 'ol';
-      const items = m[6].split(/\\item\b/).slice(1).map((it) => `<li><p>${inlineFromTex(it.replace(/^\[[^\]]*\]/, ''))}</p></li>`);
-      parts.push({ kind: 'html', v: `<${tag}>${items.join('')}</${tag}>` });
-    } else if (m[7]) {
-      const rows = m[8].replace(/\\hline|\\cline\{[^}]*\}/g, '').split(/\\\\/).map((r) => r.trim()).filter(Boolean)
-        .map((r) => `<tr>${r.split('&').map((c) => `<td><p>${inlineFromTex(c)}</p></td>`).join('')}</tr>`);
-      parts.push({ kind: 'html', v: `<table><tbody>${rows.join('')}</tbody></table>` });
-    } else if (m[9]) {
-      const inner = latexToHtml(`\\begin{document}${m[10]}\\end{document}`).html;
-      parts.push({ kind: 'html', v: m[9] === 'center' ? inner.replace(/<p>/g, '<p style="text-align: center">') : inner });
-    } else if (m[11]) {
-      const type = ENV_TO_CALLOUT[m[11].toLowerCase().replace(/\*$/, '')];
-      const inner = latexToHtml(`\\begin{document}${m[13]}\\end{document}`).html || '<p></p>';
-      if (type) {
-        const name = m[12] ? `<p><strong>${inlineFromTex(m[12])}</strong></p>` : '';
-        parts.push({ kind: 'html', v: `<div data-callout-type="${type}">${name}${inner}</div>` });
-      } else {
-        parts.push({ kind: 'html', v: inner });
-      }
-    } else if (m[14]) {
-      parts.push({ kind: 'html', v: '<div data-page-break=""></div>' });
-    } else if (m[15]) {
-      const tag = m[15] === 'section' ? 'h1' : m[15] === 'subsection' ? 'h2' : 'h3';
-      parts.push({ kind: 'html', v: `<${tag}>${inlineFromTex(m[16])}</${tag}>` });
-    }
-  }
-  pushText(s.slice(last));
-  parts.forEach((p) => {
-    if (p.kind === 'html') { out.push(p.v); return; }
-    p.v.split(/\n\s*\n/).map((para) => para.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean)
-      .forEach((para) => out.push(`<p>${inlineFromTex(para)}</p>`));
-  });
-  // eslint-disable-next-line no-control-regex -- jetons de protection
-  const restore = (h: string): string => h.replace(/\u0001(\d+)\u0001/g, (m0, i: string) => (inlineMaths[Number(i)] !== undefined ? `$${htmlEscape(inlineMaths[Number(i)])}$` : m0));
-  return { html: restore(out.join('')), title };
 }
