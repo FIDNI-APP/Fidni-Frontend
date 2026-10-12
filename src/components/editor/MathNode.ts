@@ -86,9 +86,20 @@ const SOURCE_RE = /\$\$([\s\S]+?)\$\$|\$(?!\$)([^$\n]+?)\$/g;
  * HTML enregistré (formules en texte `$…$`) → HTML où chaque formule est un `<span data-math>` que
  * l'éditeur reconnaît comme nœud. Le texte des balises code/pre n'est pas touché.
  */
+/**
+ * Formules avec un `<` ou `>` brut (contenus importés : « $0<u_n<2$ ») : le navigateur y verrait une balise.
+ * L'affichage du site (TipTapRenderer) lit ces formules dans le texte brut ; on fait de même : dans un
+ * `$…$` qui ne contient aucune vraie balise, `<` et `>` deviennent `&lt;` / `&gt;` avant la lecture du HTML.
+ */
+const escapeRawMath = (html: string) => html.replace(/\$\$([\s\S]+?)\$\$|\$(?!\$)([^$\n]+?)\$/g, (m, d: string | undefined, i: string | undefined) => {
+  const inner = d ?? i ?? '';
+  if (!/[<>]/.test(inner) || /<\/?[a-zA-Z][^<>]*>/.test(inner)) return m;
+  return m.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+});
+
 export function mathifyHtml(html: string): string {
   if (!html || !html.includes('$') || typeof DOMParser === 'undefined') return html || '';
-  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+  const doc = new DOMParser().parseFromString(`<body>${escapeRawMath(html)}</body>`, 'text/html');
   const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => (n.parentElement?.closest('code, pre, [data-math]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });
@@ -259,9 +270,19 @@ export const MathNode = Node.create<MathNodeOptions>({
     ];
   },
 
-  // Coller du texte qui contient des formules.
+  // Coller du texte qui contient des formules : `$…$`, `$$…$$`, et aussi `\(…\)` / `\[…\]` (documents LaTeX,
+  // réponses d'assistants) qui deviennent des formules au lieu de rester du code.
   addPasteRules() {
     return [
+      new PasteRule({
+        find: /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g,
+        handler: ({ state, range, match }) => {
+          const display = match[1] !== undefined;
+          const latex = (display ? match[1] : match[2] ?? '').replace(/\$/g, '').trim();
+          if (!latex) return null;
+          state.tr.replaceWith(range.from, range.to, this.type.create({ latex, display }));
+        },
+      }),
       new PasteRule({
         find: /\$\$([^$]+?)\$\$|\$(?!\$)([^$\n]+?)\$/g,
         handler: ({ state, range, match }) => {

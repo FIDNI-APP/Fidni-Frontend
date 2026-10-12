@@ -155,7 +155,8 @@ function decorateCallouts(html: string): string {
     const head = doc.createElement('div');
     head.className = 'callout-head';
     const k = doc.createElement('span');
-    k.className = 'callout-kind';
+    // « Théorème 2 » déjà numéroté par son auteur : la feuille imprimée n'ajoute pas son propre numéro.
+    k.className = /\d/.test(kind) ? 'callout-kind has-num' : 'callout-kind';
     k.textContent = kind;
     head.appendChild(k);
     if (name) {

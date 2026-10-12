@@ -12,7 +12,7 @@
  * - Images (variant "full") : bouton, glisser-déposer ou coller ; elles partent sur S3 et le HTML
  *   garde l'URL stable (jamais de base64).
  */
-import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -25,7 +25,7 @@ import { FileHandler } from '@tiptap/extension-file-handler';
 import katex from 'katex';
 import {
   AlignCenter, AlignLeft, Bold, ChevronDown, Heading1, Heading2, ImageIcon, Italic, List, ListOrdered,
-  Loader2, MessageSquare, Palette, Redo, Sigma, Trash2, Undo, X,
+  Loader2, Maximize2, MessageSquare, Palette, Redo, Sigma, Trash2, Undo, X,
 } from 'lucide-react';
 
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
@@ -34,6 +34,15 @@ import { colorOptions, mathFormulaCategories, mathSymbolGroups } from './editorC
 import { CalloutExtension } from './extensions/CalloutExtension';
 import { CALLOUT_CONFIGS, CalloutType } from '@/types/callout';
 import { useSharedToolbar } from './SharedToolbar';
+import { EquationNode, type ActiveEquation } from './word/EquationNode';
+import { TV_MARK } from './word/tvMark';
+import { PageSpacers } from '@/components/paper/livePagination';
+import { FrenchTypography } from './word/frenchTypography';
+
+// Éditeur « façon Word » (12/10/2026) : chargés seulement quand on s'en sert (équation ouverte, plein écran).
+const EquationRibbon = lazy(() => import('./word/EquationRibbon'));
+const WordEditor = lazy(() => import('./word/WordEditor'));
+const VariationTableDialog = lazy(() => import('./word/VariationTable'));
 
 export interface CompactTipTapEditorProps {
   content?: string;
@@ -50,6 +59,20 @@ export interface CompactTipTapEditorProps {
   footer?: React.ReactNode;
   /** Nom du champ pour les lecteurs d'écran (sinon le texte d'exemple). */
   ariaLabel?: string;
+  /**
+   * Équations « façon Word » (création de contenus, 12/10/2026) : Alt+= ou « Équation » ouvre un champ
+   * visuel dans la ligne (MathLive), l'onglet Équation (galeries, symboles) s'affiche dans la barre, et
+   * « Plein écran » ouvre le champ dans l'éditeur de documents complet.
+   */
+  wordMath?: boolean;
+  /** Titre de la fenêtre plein écran (« Énoncé de la question 2 »…). */
+  fullscreenTitle?: string;
+  /**
+   * Écriture sur la feuille (12/10/2026) : pas de cadre, la typographie de la feuille imprimée (fp-rich),
+   * et des espaces de pagination posés par la feuille (PageSpacers). `onEditor` donne l'éditeur à la feuille.
+   */
+  paper?: boolean;
+  onEditor?: (editor: Editor | null) => void;
   className?: string;
 }
 
@@ -334,6 +357,18 @@ const FormulaForm: React.FC<{
 // ============================================
 // Éditeur
 // ============================================
+/** Fenêtre du tableau de variations (chargée à la demande), relue depuis la formule s'il y en a une. */
+const TvDialogLoader: React.FC<{ latex?: string; onClose: () => void; onSubmit: (latex: string) => void }> = ({ latex, onClose, onSubmit }) => {
+  const [initial, setInitial] = useState<unknown>(undefined);
+  useEffect(() => {
+    let alive = true;
+    import('./word/VariationTable').then((m) => { if (alive) setInitial(latex ? m.tvFromLatex(latex) : null); });
+    return () => { alive = false; };
+  }, [latex]);
+  if (initial === undefined) return null;
+  return <VariationTableDialog initial={initial as never} onClose={onClose} onSubmit={onSubmit} />;
+};
+
 const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   content = '',
   onChange,
@@ -344,9 +379,18 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   autoFocus = false,
   footer,
   ariaLabel,
+  wordMath = false,
+  fullscreenTitle,
+  paper = false,
+  onEditor,
   className = '',
 }) => {
   const comment = variant === 'comment';
+  const word = wordMath && !comment;
+  const [eq, setEq] = useState<ActiveEquation | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  // Tableau de variations : nouveau (pos absente) ou à modifier (formule à pos).
+  const [tv, setTv] = useState<{ pos?: number; latex?: string } | null>(null);
   const [composer, setComposer] = useState<MathAttrs | null>(null);
   const [editing, setEditing] = useState<(MathAttrs & { pos: number }) | null>(null);
   const [showColors, setShowColors] = useState(false);
@@ -385,11 +429,18 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
         ...(comment ? { code: false, codeBlock: false, blockquote: false, horizontalRule: false, trailingNode: false } : {}),
       }),
       Placeholder.configure({ placeholder: () => placeholderRef.current ?? '' }),
-      MathNode.configure({ onEdit: (attrs, pos) => onEditRef.current(attrs, pos) }),
+      word
+        ? EquationNode.configure({
+          onEdit: (attrs, pos) => onEditRef.current(attrs, pos), onActive: (e) => setEq(e),
+          onOpenSpecial: (attrs, pos) => { if (!attrs.latex.startsWith(TV_MARK)) return false; setTv({ pos, latex: attrs.latex }); return true; },
+        })
+        : MathNode.configure({ onEdit: (attrs, pos) => onEditRef.current(attrs, pos) }),
     ];
     if (comment) return base;
     return [
       ...base,
+      ...(paper ? [PageSpacers] : []),
+      ...(word ? [FrenchTypography] : []),
       TextStyle,
       Color,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -402,11 +453,11 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       }),
       CalloutExtension,
     ];
-  }, [comment]);
+  }, [comment, word, paper]);
 
   const editorProps = useMemo(() => ({
     attributes: {
-      class: 'fd-editor-body',
+      class: paper ? 'fd-editor-body fp-rich' : 'fd-editor-body',
       style: `min-height: ${minHeight}`,
       role: 'textbox',
       'aria-multiline': 'true',
@@ -436,6 +487,15 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       onChangeRef.current?.(html);
     },
   });
+
+  // Écriture sur la feuille : la feuille connaît l'éditeur (pagination à l'intérieur du champ).
+  const onEditorRef = useRef(onEditor);
+  onEditorRef.current = onEditor;
+  useEffect(() => {
+    if (!editor) return;
+    onEditorRef.current?.(editor);
+    return () => onEditorRef.current?.(null);
+  }, [editor]);
 
   const ui = useEditorState({
     editor,
@@ -555,10 +615,29 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   };
 
   const run = (fn: (chain: ReturnType<Editor['chain']>) => ReturnType<Editor['chain']>) => () => fn(editor.chain().focus()).run();
-  const formulaButton = (
+  const formulaButton = word ? (
+    // Comme dans l'éditeur de documents : une équation s'ouvre dans la ligne, on y tape directement.
+    <ToolbarButton label="Équation (Alt+=)" wide active={!!eq} onClick={() => { if (eq) eq.close('after'); else editor.chain().focus(touched.current ? undefined : 'end').insertEquation().run(); }}>
+      <Sigma className="h-4 w-4" /> Équation
+    </ToolbarButton>
+  ) : (
     <ToolbarButton label="Formule" wide active={!!composer} onClick={() => (composer ? closeComposer() : openComposer())}>
       <Sigma className="h-4 w-4" /> Formule
     </ToolbarButton>
+  );
+  const tableButton = word && (
+    <ToolbarButton label="Tableau de variations / de signes" wide onClick={() => { eq?.close('after'); setTv({}); }}>
+      <span className="text-[13px] leading-none">↗↘</span> <span className="hidden sm:inline">Tableau de var.</span>
+    </ToolbarButton>
+  );
+  const fullscreenButton = word && (
+    <ToolbarButton label="Plein écran : ouvrir dans l’éditeur de documents" wide onClick={() => { eq?.close('after'); setFullscreen(true); }}>
+      <Maximize2 className="h-4 w-4" /> <span className="hidden sm:inline">Plein écran</span>
+    </ToolbarButton>
+  );
+  // Équation ouverte : l'onglet Équation sous la barre (galeries de structures, symboles, options).
+  const equationRibbon = word && eq && (
+    <Suspense fallback={null}><EquationRibbon editor={editor} eq={eq} /></Suspense>
   );
 
   const composerPanel = composer && (
@@ -594,10 +673,12 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       <ToolbarButton label="Image" onClick={() => fileRef.current?.click()}><ImageIcon className="h-4 w-4" /></ToolbarButton>
       <Divider />
       {formulaButton}
+      {tableButton}
       <ToolbarButton label="Encarts" wide buttonRef={calloutRef} active={showCallouts} onClick={() => setShowCallouts((v) => !v)}>
         <MessageSquare className="h-4 w-4" /> Encarts <ChevronDown className={`h-3 w-3 transition-transform ${showCallouts ? 'rotate-180' : ''}`} />
       </ToolbarButton>
       <span className="ml-auto flex items-center">
+        {fullscreenButton}
         <ToolbarButton label="Annuler (Ctrl+Z)" disabled={!ui?.canUndo} onClick={run((c) => c.undo())}><Undo className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton label="Rétablir (Ctrl+Y)" disabled={!ui?.canRedo} onClick={run((c) => c.redo())}><Redo className="h-4 w-4" /></ToolbarButton>
       </span>
@@ -641,13 +722,14 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
 
   const sharedMode = !!shared && !comment;
   return (
-    <div className={`fd-editor rounded-xl border border-line bg-white transition-shadow focus-within:border-[#b9d9c6] focus-within:ring-2 focus-within:ring-brand/10 ${className}`}
+    <div className={paper ? `fd-editor fd-editor-paper ${className}` : `fd-editor rounded-xl border border-line bg-white transition-shadow focus-within:border-[#b9d9c6] focus-within:ring-2 focus-within:ring-brand/10 ${className}`}
       // Barre partagée : ce champ devient le champ actif dès qu'on y clique ou qu'on y entre au clavier.
       onFocusCapture={sharedMode ? () => shared.setActive(myId) : undefined}
       onPointerDownCapture={sharedMode ? () => shared.setActive(myId) : undefined}>
       {!comment && !sharedMode && toolbar}
+      {!comment && !sharedMode && equationRibbon}
       {!comment && !sharedMode && composerPanel}
-      {sharedMode && shared.active === myId && shared.slot && createPortal(<>{toolbar}{composerPanel}</>, shared.slot)}
+      {sharedMode && shared.active === myId && shared.slot && createPortal(<>{toolbar}{equationRibbon}{composerPanel}</>, shared.slot)}
       <EditorContent editor={editor} />
       {imageNote && (
         <p role="status" className={`flex items-center gap-1.5 border-t border-line px-3.5 py-2 text-[12.5px] ${imageNote.busy ? 'text-ink-faint' : 'text-[#a23b34]'}`}>
@@ -659,6 +741,34 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       )}
       {comment && composerPanel}
       {comment && toolbar}
+
+      {tv && createPortal(
+        <Suspense fallback={null}>
+          <TvDialogLoader latex={tv.latex} onClose={() => { setTv(null); focusNow(); }} onSubmit={(latex) => {
+            if (tv.pos !== undefined) editor.chain().focus().updateMathAt(tv.pos, { latex, display: true }).run();
+            else editor.chain().focus(touched.current ? undefined : 'end').insertMath(latex, true).run();
+            setTv(null);
+          }} />
+        </Suspense>,
+        document.body,
+      )}
+
+      {/* Plein écran : le champ dans l'éditeur de documents complet ; chaque modification revient au champ. */}
+      {fullscreen && createPortal(
+        <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label={fullscreenTitle || 'Éditeur plein écran'}>
+          <Suspense fallback={<div className="flex h-full items-center justify-center bg-[#e9e6e0]"><Loader2 className="h-6 w-6 animate-spin text-brand" /></div>}>
+            <WordEditor initialContent={lastHtml.current} onChange={(html) => onChangeRef.current?.(html)}
+              titleBar={<>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{fullscreenTitle?.replace(/\s*\([^)]*\)/g, '').replace(/[.…]+$/, '') || 'Modifier le texte'}</span>
+                <button type="button" onClick={() => setFullscreen(false)}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white px-3 text-[13px] font-semibold text-brand-hover hover:bg-white/90">
+                  Terminé
+                </button>
+              </>} />
+          </Suspense>
+        </div>,
+        document.body,
+      )}
 
       {/* Bulle de modification, accrochée à la formule cliquée. */}
       <FloatingPanel anchorRef={editAnchor} open={!!editing} onClose={() => closeEdit(false)} placement="bottom-start"
