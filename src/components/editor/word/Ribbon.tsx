@@ -15,7 +15,7 @@ import {
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { CALLOUT_CONFIGS, type CalloutType } from '@/types/callout';
 import { colorOptions } from '../editorConfig';
-import { BigButton, Group, MenuButton, MenuItem, SmallButton, keepFocus } from './RibbonParts';
+import { BigButton, Group, MenuButton, MenuItem, SmallButton, Tex, keepFocus } from './RibbonParts';
 import { EquationInsertButton, EquationTab } from './EquationTab';
 import { FONT_SIZES, ZOOMS, command, isActive, isEnabled, type Ctx, type Params } from './commands';
 
@@ -238,6 +238,7 @@ const InsertTab: React.FC<{ ctx: Ctx; run: Run }> = ({ ctx, run }) => {
       </Group>
       <Group label="Symboles">
         <EquationInsertButton run={run} disabled={off} />
+        <Cmd ctx={ctx} run={run} id="insert.variationTable" big label="Tableau de var." icon={<span className="wd-tv-icon"><Tex tex="\nearrow\searrow" /></span>} />
       </Group>
     </>
   );

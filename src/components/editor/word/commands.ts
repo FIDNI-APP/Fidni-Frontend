@@ -19,6 +19,8 @@ export interface EditorUi {
   openLink: () => void;
   openFind: (replace: boolean) => void;
   openCommandSearch: () => void;
+  /** Tableau de variations / de signes (fenêtre). */
+  openVariationTable?: () => void;
   print: () => void;
   zoom: number;
   setZoom: (zoom: number) => void;
@@ -140,6 +142,8 @@ const COMMANDS: CommandSpec[] = [
       if (b) chain(c).insertMath(b.tex, true).run();
       else chain(c).insertEquation().run();
     } },
+  { id: 'insert.variationTable', label: 'Tableau de variations / de signes', location: 'Insertion › Symboles',
+    run: (c) => { c.eq?.close('after'); c.ui.openVariationTable?.(); }, enabled: (c) => !!c.ui.openVariationTable },
   { id: 'insert.inlineFormula', label: 'Formule LaTeX ($…$)', location: 'Insertion › Symboles', hidden: true, enabled: inText,
     run: (c, p) => { const tex = str(p, 'latex'); if (tex) chain(c).insertMath(tex, p?.display === true).run(); } },
 

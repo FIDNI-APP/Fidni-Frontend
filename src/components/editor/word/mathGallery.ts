@@ -296,6 +296,25 @@ export const STRUCTURES: MathGallery[] = [
     ],
   },
   {
+    id: 'aligned', label: 'Calcul\naligné', picture: '\\begin{aligned}a&=b\\\\&=c\\end{aligned}',
+    sections: [
+      { name: 'Calculs pas à pas (Maj+Entrée : nouvelle ligne)', templates: [
+        t('al.eq2', 'Calcul aligné sur = (2 lignes)', '\\begin{aligned}⬚&=⬚\\\\&=⬚\\end{aligned}'),
+        t('al.eq3', 'Calcul aligné sur = (3 lignes)', '\\begin{aligned}⬚&=⬚\\\\&=⬚\\\\&=⬚\\end{aligned}'),
+        t('al.iff', 'Équivalences alignées', '\\begin{aligned}⬚&\\iff ⬚\\\\&\\iff ⬚\\end{aligned}'),
+        t('al.imp', 'Implications alignées', '\\begin{aligned}⬚&\\implies ⬚\\\\&\\implies ⬚\\end{aligned}'),
+        t('al.ineq', 'Inégalités alignées', '\\begin{aligned}⬚&\\le ⬚\\\\&\\le ⬚\\end{aligned}'),
+      ] },
+      { name: 'Systèmes alignés', templates: [
+        t('al.sys2', 'Système aligné (2 équations)', '\\left\\lbrace\\begin{aligned}⬚&=⬚\\\\⬚&=⬚\\end{aligned}\\right.'),
+        t('al.sys3', 'Système aligné (3 équations)', '\\left\\lbrace\\begin{aligned}⬚&=⬚\\\\⬚&=⬚\\\\⬚&=⬚\\end{aligned}\\right.'),
+      ] },
+      { name: 'Exemples', templates: [
+        t('al.ex', 'Développement', '\\begin{aligned}(a+b)^{2}&=(a+b)(a+b)\\\\&=a^{2}+2ab+b^{2}\\end{aligned}'),
+      ] },
+    ],
+  },
+  {
     id: 'matrix', label: 'Matrice', picture: '\\begin{bmatrix}1&0\\\\0&1\\end{bmatrix}',
     sections: [
       { name: 'Matrices vides', templates: [

@@ -270,9 +270,19 @@ export const MathNode = Node.create<MathNodeOptions>({
     ];
   },
 
-  // Coller du texte qui contient des formules.
+  // Coller du texte qui contient des formules : `$…$`, `$$…$$`, et aussi `\(…\)` / `\[…\]` (documents LaTeX,
+  // réponses d'assistants) qui deviennent des formules au lieu de rester du code.
   addPasteRules() {
     return [
+      new PasteRule({
+        find: /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g,
+        handler: ({ state, range, match }) => {
+          const display = match[1] !== undefined;
+          const latex = (display ? match[1] : match[2] ?? '').replace(/\$/g, '').trim();
+          if (!latex) return null;
+          state.tr.replaceWith(range.from, range.to, this.type.create({ latex, display }));
+        },
+      }),
       new PasteRule({
         find: /\$\$([^$]+?)\$\$|\$(?!\$)([^$\n]+?)\$/g,
         handler: ({ state, range, match }) => {

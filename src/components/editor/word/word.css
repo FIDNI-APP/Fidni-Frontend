@@ -59,6 +59,7 @@
 .wd-split { display: flex; flex-direction: column; width: 64px; height: 68px; border-radius: .45rem; overflow: hidden; }
 .wd-split-top { flex: 1; display: flex; align-items: center; justify-content: center; }
 .wd-split-bottom { padding-bottom: .25rem; font-size: 11.5px; white-space: nowrap; }
+.wd-tv-icon { font-size: 15px; color: #15633c; }
 .wd-eq-icon { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-style: italic; line-height: 1; color: #15633c; }
 
 /* Onglet Équation */
@@ -72,6 +73,13 @@
 .wd-chip:hover { background: #f2f1ee; color: #1a1a1a; }
 .wd-chip.is-active { background: #1a1a1a; color: #fff; }
 .wd-tile { display: flex; align-items: center; justify-content: center; min-height: 54px; padding: .25rem; border-radius: 4px; background: #fff; box-shadow: inset 0 0 0 1px #efece6; overflow: hidden; font-size: 13px; }
+.wd-tile-wrap { position: relative; display: block; }
+.wd-tile-wrap .wd-tile { width: 100%; }
+.wd-fav { position: absolute; top: 2px; right: 2px; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+  border-radius: 4px; color: #b5b0a7; background: rgba(255,255,255,.9); opacity: 0; transition: opacity .12s; }
+.wd-tile-wrap:hover .wd-fav, .wd-fav:focus-visible, .wd-fav.is-on { opacity: 1; }
+.wd-fav.is-on { color: #c0892f; }
+.wd-fav.is-on svg { fill: currentColor; }
 .wd-tile:hover { box-shadow: inset 0 0 0 1.5px #1a7a4a; background: #f7fbf8; }
 .wd-builtin { display: block; width: 100%; margin-bottom: .25rem; padding: .35rem .5rem .45rem; border-radius: .45rem; text-align: left; }
 .wd-builtin:hover { background: #eaf3ed; }

@@ -20,6 +20,7 @@ import { Ribbon, type TabId } from './Ribbon';
 import { Tex } from './RibbonParts';
 import { runCommand, searchableCommands, type Ctx, type EditorUi, type Marges, type Orientation, type Params } from './commands';
 import { searchableEquations } from './mathGallery';
+import { VariationTableDialog, tvFromLatex, type TVSpec } from './VariationTable';
 import { useLivePagination } from '@/components/paper/livePagination';
 import { DENSITIES, SHEET_CONTENT_CSS, densityVars } from '@/components/paper/sheetStyles';
 import { sheetHeaderBlocks } from '@/components/paper/paperBlocks';
@@ -292,6 +293,8 @@ export const WordEditor: React.FC<WordEditorProps> = ({
 }) => {
   const [entete, setEnteteState] = useState<Entete>(enteteProp ?? {});
   const [enteteDialog, setEnteteDialog] = useState(false);
+  // Tableau de variations : nouveau (pos absente) ou à modifier (formule à pos).
+  const [tv, setTv] = useState<{ pos?: number; spec?: TVSpec | null } | null>(null);
   const setEntete = useCallback((e: Entete) => { setEnteteState(e); onEnteteChange?.(e); }, [onEnteteChange]);
   const [eq, setEq] = useState<ActiveEquation | null>(null);
   const [tab, setTab] = useState<TabId>('accueil');
@@ -338,6 +341,12 @@ export const WordEditor: React.FC<WordEditorProps> = ({
       if (latex !== null && editorRef.current) editorRef.current.chain().updateMathAt(pos, { ...attrs, latex: latex.replace(/\$/g, '') }).run();
     },
     onActiveEquation,
+    onOpenSpecial: (attrs: MathAttrs, pos: number) => {
+      const spec = tvFromLatex(attrs.latex);
+      if (!spec) return false;
+      setTv({ pos, spec });
+      return true;
+    },
     onFiles: (ed, files, pos) => uploadRef.current(ed, files, pos),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
@@ -487,6 +496,7 @@ export const WordEditor: React.FC<WordEditorProps> = ({
     openLink: () => setLink(String(editor?.getAttributes('link').href || '')),
     openFind: (replace) => setFind({ replace }),
     openCommandSearch: () => setPalette(true),
+    openVariationTable: () => setTv({}),
     print,
     zoom,
     setZoom: (z) => setZoom(Math.max(25, Math.min(300, Math.round(z)))),
@@ -647,6 +657,13 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         if (files.length) uploadRef.current(editor, files);
       }} />
       {palette && <CommandSearch run={run} onClose={() => { setPalette(false); }} />}
+      {tv && (
+        <VariationTableDialog initial={tv.spec} onClose={() => { setTv(null); editor.commands.focus(); }} onSubmit={(latex) => {
+          if (tv.pos !== undefined) editor.chain().focus().updateMathAt(tv.pos, { latex, display: true }).run();
+          else editor.chain().focus().insertMath(latex, true).run();
+          setTv(null);
+        }} />
+      )}
       {enteteDialog && <EnteteDialog value={entete} onClose={() => setEnteteDialog(false)} onSubmit={(e) => { setEntete(e); setEnteteDialog(false); }} />}
       {link !== null && (
         <LinkDialog initial={link} onClose={() => { setLink(null); editor.commands.focus(); }} onSubmit={(url) => {

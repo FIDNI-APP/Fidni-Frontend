@@ -35,11 +35,13 @@ import { CalloutExtension } from './extensions/CalloutExtension';
 import { CALLOUT_CONFIGS, CalloutType } from '@/types/callout';
 import { useSharedToolbar } from './SharedToolbar';
 import { EquationNode, type ActiveEquation } from './word/EquationNode';
+import { TV_MARK } from './word/tvMark';
 import { PageSpacers } from '@/components/paper/livePagination';
 
 // Éditeur « façon Word » (12/10/2026) : chargés seulement quand on s'en sert (équation ouverte, plein écran).
 const EquationRibbon = lazy(() => import('./word/EquationRibbon'));
 const WordEditor = lazy(() => import('./word/WordEditor'));
+const VariationTableDialog = lazy(() => import('./word/VariationTable'));
 
 export interface CompactTipTapEditorProps {
   content?: string;
@@ -354,6 +356,18 @@ const FormulaForm: React.FC<{
 // ============================================
 // Éditeur
 // ============================================
+/** Fenêtre du tableau de variations (chargée à la demande), relue depuis la formule s'il y en a une. */
+const TvDialogLoader: React.FC<{ latex?: string; onClose: () => void; onSubmit: (latex: string) => void }> = ({ latex, onClose, onSubmit }) => {
+  const [initial, setInitial] = useState<unknown>(undefined);
+  useEffect(() => {
+    let alive = true;
+    import('./word/VariationTable').then((m) => { if (alive) setInitial(latex ? m.tvFromLatex(latex) : null); });
+    return () => { alive = false; };
+  }, [latex]);
+  if (initial === undefined) return null;
+  return <VariationTableDialog initial={initial as never} onClose={onClose} onSubmit={onSubmit} />;
+};
+
 const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   content = '',
   onChange,
@@ -374,6 +388,8 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   const word = wordMath && !comment;
   const [eq, setEq] = useState<ActiveEquation | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // Tableau de variations : nouveau (pos absente) ou à modifier (formule à pos).
+  const [tv, setTv] = useState<{ pos?: number; latex?: string } | null>(null);
   const [composer, setComposer] = useState<MathAttrs | null>(null);
   const [editing, setEditing] = useState<(MathAttrs & { pos: number }) | null>(null);
   const [showColors, setShowColors] = useState(false);
@@ -413,7 +429,10 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       }),
       Placeholder.configure({ placeholder: () => placeholderRef.current ?? '' }),
       word
-        ? EquationNode.configure({ onEdit: (attrs, pos) => onEditRef.current(attrs, pos), onActive: (e) => setEq(e) })
+        ? EquationNode.configure({
+          onEdit: (attrs, pos) => onEditRef.current(attrs, pos), onActive: (e) => setEq(e),
+          onOpenSpecial: (attrs, pos) => { if (!attrs.latex.startsWith(TV_MARK)) return false; setTv({ pos, latex: attrs.latex }); return true; },
+        })
         : MathNode.configure({ onEdit: (attrs, pos) => onEditRef.current(attrs, pos) }),
     ];
     if (comment) return base;
@@ -604,6 +623,11 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       <Sigma className="h-4 w-4" /> Formule
     </ToolbarButton>
   );
+  const tableButton = word && (
+    <ToolbarButton label="Tableau de variations / de signes" wide onClick={() => { eq?.close('after'); setTv({}); }}>
+      <span className="text-[13px] leading-none">↗↘</span> <span className="hidden sm:inline">Tableau de var.</span>
+    </ToolbarButton>
+  );
   const fullscreenButton = word && (
     <ToolbarButton label="Plein écran : ouvrir dans l’éditeur de documents" wide onClick={() => { eq?.close('after'); setFullscreen(true); }}>
       <Maximize2 className="h-4 w-4" /> <span className="hidden sm:inline">Plein écran</span>
@@ -647,6 +671,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       <ToolbarButton label="Image" onClick={() => fileRef.current?.click()}><ImageIcon className="h-4 w-4" /></ToolbarButton>
       <Divider />
       {formulaButton}
+      {tableButton}
       <ToolbarButton label="Encarts" wide buttonRef={calloutRef} active={showCallouts} onClick={() => setShowCallouts((v) => !v)}>
         <MessageSquare className="h-4 w-4" /> Encarts <ChevronDown className={`h-3 w-3 transition-transform ${showCallouts ? 'rotate-180' : ''}`} />
       </ToolbarButton>
@@ -714,6 +739,17 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       )}
       {comment && composerPanel}
       {comment && toolbar}
+
+      {tv && createPortal(
+        <Suspense fallback={null}>
+          <TvDialogLoader latex={tv.latex} onClose={() => { setTv(null); focusNow(); }} onSubmit={(latex) => {
+            if (tv.pos !== undefined) editor.chain().focus().updateMathAt(tv.pos, { latex, display: true }).run();
+            else editor.chain().focus(touched.current ? undefined : 'end').insertMath(latex, true).run();
+            setTv(null);
+          }} />
+        </Suspense>,
+        document.body,
+      )}
 
       {/* Plein écran : le champ dans l'éditeur de documents complet ; chaque modification revient au champ. */}
       {fullscreen && createPortal(

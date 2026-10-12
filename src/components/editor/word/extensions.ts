@@ -111,6 +111,7 @@ export interface WordExtensionsOptions {
   placeholder: () => string;
   onEditFormula: (attrs: MathAttrs, pos: number) => void;
   onActiveEquation: (eq: ActiveEquation | null) => void;
+  onOpenSpecial?: (attrs: MathAttrs, pos: number) => boolean;
   onFiles: (editor: Editor, files: File[], pos?: number) => void;
 }
 
@@ -139,7 +140,7 @@ export function wordExtensions(o: WordExtensionsOptions) {
     CalloutExtension,
     PageBreak,
     Indent,
-    EquationNode.configure({ onEdit: o.onEditFormula, onActive: o.onActiveEquation }),
+    EquationNode.configure({ onEdit: o.onEditFormula, onActive: o.onActiveEquation, onOpenSpecial: o.onOpenSpecial }),
     // Vraies pages (12/10/2026) : espaces posés par la pagination avant ce qui déborderait.
     PageSpacers,
   ];

@@ -36,6 +36,8 @@ export interface ActiveEquation {
 
 export interface EquationNodeOptions {
   onEdit?: (attrs: MathAttrs, pos: number) => void;
+  /** Formule « objet » (tableau de variations…) : ouverte dans sa propre fenêtre ; true = prise en charge. */
+  onOpenSpecial?: (attrs: MathAttrs, pos: number) => boolean;
   /** Une équation s'ouvre (handle) ou se referme (null). */
   onActive?: (eq: ActiveEquation | null) => void;
 }
@@ -76,7 +78,7 @@ function nextNumber(editor: Editor) {
 
 export const EquationNode = MathNode.extend<EquationNodeOptions>({
   addOptions() {
-    return { onEdit: undefined, onActive: undefined };
+    return { onEdit: undefined, onActive: undefined, onOpenSpecial: undefined };
   },
 
   addNodeView() {
@@ -173,6 +175,8 @@ export const EquationNode = MathNode.extend<EquationNodeOptions>({
 
       const open: Opener = (caret = 'end', template) => {
         if (field || !editor.isEditable) return;
+        const at0 = pos();
+        if (!template && at0 !== undefined && options.onOpenSpecial?.(attrs(), at0)) return;
         loadMathLive().then((MF) => {
           if (field || editor.isDestroyed || !dom.isConnected) return;
           const mf = new MF();
@@ -195,6 +199,13 @@ export const EquationNode = MathNode.extend<EquationNodeOptions>({
             close(dir === 'backward' || dir === 'upward' ? 'before' : 'after');
           });
           mf.addEventListener('keydown', (e) => {
+            // Maj+Entrée : nouvelle ligne d'un calcul aligné, d'un système ou d'une matrice.
+            if (e.key === 'Enter' && e.shiftKey) {
+              e.preventDefault();
+              e.stopPropagation();
+              if (mf.executeCommand('addRowAfter')) commit();
+              return;
+            }
             if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
               e.preventDefault();
               e.stopPropagation();
