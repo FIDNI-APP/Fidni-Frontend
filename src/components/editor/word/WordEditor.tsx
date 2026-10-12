@@ -20,6 +20,9 @@ import { Ribbon, type TabId } from './Ribbon';
 import { Tex } from './RibbonParts';
 import { runCommand, searchableCommands, type Ctx, type EditorUi, type Marges, type Orientation, type Params } from './commands';
 import { searchableEquations } from './mathGallery';
+import { useLivePagination } from '@/components/paper/livePagination';
+import { DENSITIES, SHEET_CONTENT_CSS, densityVars } from '@/components/paper/sheetStyles';
+import { sheetHeaderBlocks } from '@/components/paper/paperBlocks';
 import './word.css';
 
 export interface WordEditorProps {
@@ -33,7 +36,65 @@ export interface WordEditorProps {
   titleBar?: React.ReactNode;
   file?: EditorUi['file'];
   placeholder?: string;
+  /** En-tête FIDNI de la première page (documents) : absent = pas d'option d'en-tête. */
+  entete?: Entete;
+  onEnteteChange?: (e: Entete) => void;
+  /** Titre imprimé dans l'en-tête et en pied de page. */
+  documentTitle?: string;
 }
+
+export interface Entete {
+  actif?: boolean;
+  type?: string;
+  etablissement?: string;
+  professeur?: string;
+  classe?: string;
+  annee?: string;
+  duree?: string;
+  consignes?: string;
+  nom_prenom?: boolean;
+}
+
+const ENTETE_FIELDS: { key: keyof Entete; label: string; placeholder: string; wide?: boolean }[] = [
+  { key: 'type', label: 'Type de document', placeholder: 'Ex. : Devoir surveillé n° 1' },
+  { key: 'classe', label: 'Classe', placeholder: 'Ex. : 2ème Bac SM 3' },
+  { key: 'etablissement', label: 'Établissement', placeholder: 'Ex. : Lycée Moulay Youssef, Rabat' },
+  { key: 'professeur', label: 'Professeur', placeholder: 'Ex. : M. Alaoui' },
+  { key: 'annee', label: 'Année scolaire', placeholder: 'Ex. : 2026-2027' },
+  { key: 'duree', label: 'Durée', placeholder: 'Ex. : 2 h' },
+  { key: 'consignes', label: 'Consignes', placeholder: 'Ex. : La calculatrice est autorisée.', wide: true },
+];
+
+/** Mise en page › En-tête : les champs imprimés en tête de la première page. */
+const EnteteDialog: React.FC<{ value: Entete; onSubmit: (e: Entete) => void; onClose: () => void }> = ({ value, onSubmit, onClose }) => {
+  const [v, setV] = useState<Entete>(value);
+  return (
+    <div className="wd-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <form className="wd-dialog" style={{ width: 'min(560px, 100%)' }} role="dialog" aria-label="En-tête FIDNI"
+        onSubmit={(e) => { e.preventDefault(); onSubmit({ ...v, actif: true }); }}>
+        <h2 className="text-[15px] font-semibold text-ink">En-tête FIDNI</h2>
+        <p className="mt-1 text-[12.5px] text-ink-faint">Imprimé en haut de la première page, comme sur les feuilles d’exercices FIDNI.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {ENTETE_FIELDS.map((f) => (
+            <label key={f.key} className={`flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft ${f.wide ? 'sm:col-span-2' : ''}`}>
+              {f.label}
+              <input className="wd-input w-full font-normal" value={String(v[f.key] ?? '')} placeholder={f.placeholder}
+                onChange={(e) => setV({ ...v, [f.key]: e.target.value })} />
+            </label>
+          ))}
+        </div>
+        <label className="mt-3 inline-flex items-center gap-2 text-[13px] text-ink-soft">
+          <input type="checkbox" className="accent-[#1a7a4a]" checked={v.nom_prenom !== false} onChange={(e) => setV({ ...v, nom_prenom: e.target.checked })} />
+          Cases « Nom et prénom » pour l’élève
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="wd-text-btn">Annuler</button>
+          <button type="submit" className="rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-hover">Appliquer</button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 const MARGINS: Record<Marges, { x: number; y: number }> = {
   normale: { x: 2.5, y: 2.5 },
@@ -227,7 +288,11 @@ function mod(e: KeyboardEvent) { return e.ctrlKey || e.metaKey; }
 export const WordEditor: React.FC<WordEditorProps> = ({
   initialContent, onChange, orientation: orientationProp = 'portrait', marges: margesProp = 'normale', onLayoutChange,
   titleBar, file, placeholder = 'Commence à écrire… (Alt+= pour une équation)',
+  entete: enteteProp, onEnteteChange, documentTitle = '',
 }) => {
+  const [entete, setEnteteState] = useState<Entete>(enteteProp ?? {});
+  const [enteteDialog, setEnteteDialog] = useState(false);
+  const setEntete = useCallback((e: Entete) => { setEnteteState(e); onEnteteChange?.(e); }, [onEnteteChange]);
   const [eq, setEq] = useState<ActiveEquation | null>(null);
   const [tab, setTab] = useState<TabId>('accueil');
   const [zoom, setZoom] = useState(100);
@@ -237,9 +302,11 @@ export const WordEditor: React.FC<WordEditorProps> = ({
   const [palette, setPalette] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [imageNote, setImageNote] = useState<{ busy: boolean; text: string } | null>(null);
-  const [pages, setPages] = useState({ count: 1, current: 1 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const zoomRef = useRef(100);
+  const pendingAlign = useMemo<(() => void)[]>(() => [], []);
   const fileRef = useRef<HTMLInputElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const tabBeforeEq = useRef<TabId>('accueil');
 
@@ -327,22 +394,84 @@ export const WordEditor: React.FC<WordEditorProps> = ({
     onLayoutChange?.({ orientation, marges: m });
   }, [orientation, onLayoutChange]);
 
-  // Impression / PDF : une copie de la feuille, seule dans la page, en A4 (marges données par @page).
+  // Impression / PDF (12/10/2026) : exactement les pages de l'écran. Pour chaque page, une feuille A4 qui
+  // montre, à travers sa zone de texte, la partie du document que l'écran place sur cette page (les espaces
+  // de pagination sont déjà posés : rien ne déborde d'une zone à l'autre). @page sans marge.
   const print = useCallback(() => {
     eq?.close('after');
-    const sheet = sheetRef.current?.querySelector('.wd-doc');
-    if (!sheet) return;
-    const m = MARGINS[marges];
+    const flow = flowRef.current;
+    if (!flow) return;
+    const g = geometryRef.current;
+    const scale = (zoomRef.current || 100) / 100;
+    // Unités de page dans l'ordre du document : rangées entières, ou paragraphes d'un champ découpable.
+    const units = (root: HTMLElement) => {
+      const out: HTMLElement[] = [];
+      root.querySelectorAll<HTMLElement>('[data-pg-row]').forEach((row) => {
+        if (!row.hasAttribute('data-pg-split')) { out.push(row); return; }
+        const pm = row.querySelector<HTMLElement>('.ProseMirror');
+        Array.from(pm?.children ?? []).forEach((c) => { if (!c.classList.contains('pg-spacer')) out.push(c as HTMLElement); });
+      });
+      return out;
+    };
+    const flowTop = flow.getBoundingClientRect().top;
+    const live = units(flow).map((el) => {
+      const y = (el.getBoundingClientRect().top - flowTop) / scale;
+      return { page: Math.max(0, Math.floor((y + 1) / g.stride)), y };
+    });
     const style = document.createElement('style');
-    style.textContent = `@page { size: A4 ${orientation === 'paysage' ? 'landscape' : 'portrait'}; margin: ${m.y}cm ${m.x}cm; }`;
+    style.textContent = `@page { size: A4 ${g.landscape ? 'landscape' : 'portrait'}; margin: 0; }`;
     const root = document.createElement('div');
     root.className = 'wd-print-root';
-    const copy = sheet.cloneNode(true) as HTMLElement;
-    copy.removeAttribute('contenteditable');
-    root.appendChild(copy);
+    for (let p = 0; p < g.pages; p += 1) {
+      const first = live.findIndex((u) => u.page === p);
+      const page = document.createElement('div');
+      page.className = 'wd-print-page';
+      page.style.cssText = `width:${g.w}mm;height:${g.h}mm;`;
+      const zone = document.createElement('div');
+      zone.className = 'wd-print-zone';
+      zone.style.cssText = `top:${g.m.y}cm;left:${g.m.x}cm;right:${g.m.x}cm;height:${g.zone + 24}px;`;
+      if (first >= 0) {
+        // Seulement ce que l'écran place sur cette page (pas de dérive d'une page à l'autre), calé comme à l'écran.
+        const copy = flow.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'));
+        copy.querySelectorAll<HTMLElement>('.pg-spacer').forEach((el) => { el.style.display = 'none'; });
+        units(copy).forEach((el, i) => { if (live[i]?.page !== p) el.style.display = 'none'; });
+        copy.querySelectorAll<HTMLElement>('[data-pg-row][data-pg-split]').forEach((row) => {
+          if (!Array.from(row.querySelectorAll('.ProseMirror > *')).some((c) => (c as HTMLElement).style.display !== 'none' && !c.classList.contains('pg-spacer'))) row.style.display = 'none';
+        });
+        copy.style.cssText = 'position:absolute;left:0;right:0;top:0;margin:0;';
+        zone.appendChild(copy);
+        page.appendChild(zone);
+        root.appendChild(page);
+        // Décalage : le premier élément de la page à la même hauteur qu'à l'écran.
+        const want = live[first].y - p * g.stride;
+        pendingAlign.push(() => {
+          const el = units(copy)[first];
+          if (!el) return;
+          const got = el.getBoundingClientRect().top - copy.getBoundingClientRect().top;
+          copy.style.top = `${want - got}px`;
+        });
+      } else {
+        page.appendChild(zone);
+        root.appendChild(page);
+      }
+      const foot = document.createElement('div');
+      foot.className = 'fp-page-foot';
+      foot.style.cssText = `left:${g.m.x}cm;right:${g.m.x}cm;bottom:${Math.max(0.4, g.m.y / 2 - 0.2)}cm;`;
+      const left = document.createElement('span');
+      left.textContent = g.title ? `Fidni · ${g.title}` : '';
+      const right = document.createElement('span');
+      right.textContent = `${p + 1} / ${g.pages}`;
+      foot.append(left, right);
+      page.appendChild(foot);
+    }
     document.head.appendChild(style);
     document.body.appendChild(root);
     document.body.classList.add('wd-printing');
+    // Mesures faites une fois la copie dans la page (hors impression : elle est masquée, on la mesure en écran).
+    root.style.cssText = 'display:block;position:absolute;left:-10000px;top:0;visibility:hidden;';
+    pendingAlign.splice(0).forEach((f) => f());
+    root.style.cssText = '';
     const done = () => {
       style.remove();
       root.remove();
@@ -351,7 +480,7 @@ export const WordEditor: React.FC<WordEditorProps> = ({
     };
     window.addEventListener('afterprint', done);
     window.setTimeout(() => window.print(), 50);
-  }, [eq, marges, orientation]);
+  }, [eq]);
 
   const ui: EditorUi = {
     openImage: () => fileRef.current?.click(),
@@ -366,6 +495,11 @@ export const WordEditor: React.FC<WordEditorProps> = ({
     marges,
     setMarges,
     file,
+    entete: onEnteteChange ? {
+      actif: !!entete.actif,
+      toggle: () => setEntete({ ...entete, actif: !entete.actif }),
+      edit: () => setEnteteDialog(true),
+    } : undefined,
   };
   const ctx: Ctx | null = editor ? { editor, eq, ui } : null;
   const ctxRef = useRef(ctx);
@@ -403,37 +537,50 @@ export const WordEditor: React.FC<WordEditorProps> = ({
     return () => ro.disconnect();
   }, []);
 
-  // Pages : la feuille grandit par pages entières ; page courante = celle du curseur.
-  const pageH = (orientation === 'paysage' ? 210 : 297) * MM;
+  // Vraies pages (12/10/2026) : pagination en direct (components/paper/livePagination), comme la feuille de
+  // l'assistant. Rien ne coupe un paragraphe, une formule centrée ou un tableau ; un titre reste avec la suite.
+  const m = MARGINS[marges];
+  const landscape = orientation === 'paysage';
+  const pageWmm = landscape ? 297 : 210;
+  const pageHmm = landscape ? 210 : 297;
+  const PAGE_GAP = 24;
+  const stride = pageHmm * MM + PAGE_GAP;
+  const zone = (pageHmm - 2 * m.y * 10) * MM;
+  const { pages: pageCount } = useLivePagination(flowRef, {
+    height: zone - 2, stride, zoom: zoom / 100, enabled: !narrow,
+    editors: () => (editor ? new Map([['doc', editor]]) : new Map()),
+  });
+  const pages = narrow ? 1 : pageCount;
+  zoomRef.current = zoom;
+  const geometryRef = useRef({ pages, stride, zone, w: pageWmm, h: pageHmm, m, landscape, title: documentTitle });
+  geometryRef.current = { pages, stride, zone, w: pageWmm, h: pageHmm, m, landscape, title: documentTitle };
+
+  // Page du curseur (barre d'état).
   useEffect(() => {
-    const sheet = sheetRef.current;
-    if (!sheet || !editor) return;
+    if (!editor) return;
     const measure = () => {
-      const content = sheet.querySelector('.wd-doc') as HTMLElement | null;
-      const m = MARGINS[marges];
-      const used = (content?.scrollHeight ?? 0) + 2 * m.y * 10 * MM;
-      const count = Math.max(1, Math.ceil(used / pageH));
-      let current = 1;
+      const flow = flowRef.current;
+      if (!flow || narrow) return;
       try {
         const coords = editor.view.coordsAtPos(editor.state.selection.from);
-        const top = sheet.getBoundingClientRect().top;
-        const scale = zoom / 100;
-        current = Math.min(count, Math.max(1, Math.floor((coords.top - top) / scale / pageH) + 1));
+        const y = (coords.top - flow.getBoundingClientRect().top) / (zoom / 100);
+        setCurrentPage(Math.min(pages, Math.max(1, Math.floor(y / stride) + 1)));
       } catch { /* position hors vue */ }
-      setPages((p) => (p.count === count && p.current === current ? p : { count, current }));
     };
     measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(sheet);
     editor.on('selectionUpdate', measure);
-    return () => { ro.disconnect(); editor.off('selectionUpdate', measure); };
-  }, [editor, pageH, marges, zoom]);
+    return () => { editor.off('selectionUpdate', measure); };
+  }, [editor, pages, stride, zoom, narrow]);
+
+  const today = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  const headerBlocks = entete.actif ? sheetHeaderBlocks({
+    kindLabel: entete.type || 'Document', subjects: [], levels: [], title: documentTitle || 'Sans titre',
+    facts: [entete.duree ? `Durée : ${entete.duree}` : null, today],
+    school: entete.etablissement || '', teacher: entete.professeur || '', className: entete.classe || '', schoolYear: entete.annee || '',
+    instructions: entete.consignes || '', studentLine: entete.nom_prenom !== false,
+  }) : [];
 
   if (!editor || !ctx) return null;
-
-  const m = MARGINS[marges];
-  const pageW = orientation === 'paysage' ? 297 : 210;
-  const pageHmm = orientation === 'paysage' ? 210 : 297;
 
   return (
     <div className="wd-root">
@@ -445,23 +592,38 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         if (e.target === e.currentTarget) { e.preventDefault(); editor.chain().focus('end').run(); }
       }}>
         {find && <FindPanel editor={editor} replace={find.replace} onClose={() => { setFind(null); editor.commands.focus(); }} />}
+        <style>{SHEET_CONTENT_CSS}</style>
         <div className="wd-zoom" style={{ zoom: zoom / 100, width: narrow ? '100%' : undefined }}>
-          <div ref={sheetRef} className={`wd-sheet ${narrow ? 'is-narrow' : ''}`} style={narrow ? undefined : {
-            width: `${pageW}mm`,
-            minHeight: `${pages.count * pageHmm}mm`,
-            padding: `${m.y}cm ${m.x}cm`,
-            ['--wd-page-h' as string]: `${pageHmm}mm`,
-          }} onMouseDown={(e) => {
-            // Clic dans une marge : curseur au plus près, comme sur une vraie page.
-            if (e.target === e.currentTarget) { e.preventDefault(); editor.chain().focus(e.clientY > (e.currentTarget.getBoundingClientRect().top + 40) ? 'end' : 'start').run(); }
-          }}>
-            <EditorContent editor={editor} />
+          <div className={`wd-pages ${narrow ? 'is-narrow' : ''}`} style={narrow ? undefined : { width: `${pageWmm}mm`, minHeight: pages * stride - PAGE_GAP }}
+            onMouseDown={(e) => {
+              // Clic dans une marge ou entre deux feuilles : curseur au plus près, comme sur une vraie page.
+              const t = e.target as HTMLElement;
+              if (t.classList.contains('wd-pages') || t.classList.contains('wd-page')) { e.preventDefault(); editor.chain().focus('end').run(); }
+            }}>
+            {!narrow && Array.from({ length: pages }, (_, i) => (
+              <div key={i} className="wd-page" style={{ top: i * stride, height: `${pageHmm}mm` }}>
+                <div className="fp-page-foot" style={{ left: `${m.x}cm`, right: `${m.x}cm`, bottom: `${Math.max(0.4, m.y / 2 - 0.2)}cm` }}>
+                  <span>{documentTitle ? `Fidni · ${documentTitle}` : ''}</span><span>{i + 1} / {pages}</span>
+                </div>
+              </div>
+            ))}
+            <div ref={flowRef} className="wd-flow" style={narrow ? undefined : { margin: `${m.y}cm ${m.x}cm 0` }}>
+              {headerBlocks.length > 0 && (
+                <div data-pg-row="entete" className="fp-content wd-entete" style={densityVars(DENSITIES[0])}
+                  title="En-tête FIDNI : Mise en page › En-tête" onDoubleClick={() => setEnteteDialog(true)}>
+                  {headerBlocks.map((h) => <div key={h.key} className="fp-blk">{h.node}</div>)}
+                </div>
+              )}
+              <div data-pg-row="doc" data-pg-split="">
+                <EditorContent editor={editor} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="wd-status" aria-live="polite">
-        {!narrow && <span>Page {pages.current} sur {pages.count}</span>}
+        {!narrow && <span>Page {currentPage} sur {pages}</span>}
         <span>{state?.words ?? 0} mot{(state?.words ?? 0) > 1 ? 's' : ''}</span>
         <span className="hidden sm:inline">Français</span>
         {eq && <span className="font-semibold text-brand">Équation : Tab = case suivante · Échap = sortir</span>}
@@ -485,6 +647,7 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         if (files.length) uploadRef.current(editor, files);
       }} />
       {palette && <CommandSearch run={run} onClose={() => { setPalette(false); }} />}
+      {enteteDialog && <EnteteDialog value={entete} onClose={() => setEnteteDialog(false)} onSubmit={(e) => { setEntete(e); setEnteteDialog(false); }} />}
       {link !== null && (
         <LinkDialog initial={link} onClose={() => { setLink(null); editor.commands.focus(); }} onSubmit={(url) => {
           setLink(null);

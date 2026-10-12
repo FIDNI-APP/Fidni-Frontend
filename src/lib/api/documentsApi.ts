@@ -19,6 +19,8 @@ export interface DocumentFull {
   html: string;
   orientation: Orientation;
   marges: Marges;
+  /** En-tête FIDNI de la première page. */
+  entete?: Record<string, string | boolean>;
   created_at: string;
   updated_at: string;
 }

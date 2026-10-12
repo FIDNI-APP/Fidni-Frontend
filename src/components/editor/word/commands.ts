@@ -26,6 +26,8 @@ export interface EditorUi {
   setOrientation: (o: Orientation) => void;
   marges: Marges;
   setMarges: (m: Marges) => void;
+  /** En-tête FIDNI de la première page (documents). */
+  entete?: { actif: boolean; toggle: () => void; edit: () => void };
   /** Fichier : actions fournies par la page (nouveau, dupliquer…), absentes dans un éditeur intégré. */
   file?: { newDocument?: () => void; duplicate?: () => void; rename?: () => void; list?: () => void };
 }
@@ -159,6 +161,11 @@ const COMMANDS: CommandSpec[] = [
   { id: 'layout.marginsNormal', label: 'Marges normales', location: 'Mise en page › Marges', run: (c) => c.ui.setMarges('normale'), active: (c) => c.ui.marges === 'normale' },
   { id: 'layout.marginsNarrow', label: 'Marges étroites', location: 'Mise en page › Marges', run: (c) => c.ui.setMarges('etroite'), active: (c) => c.ui.marges === 'etroite' },
   { id: 'layout.marginsWide', label: 'Marges larges', location: 'Mise en page › Marges', run: (c) => c.ui.setMarges('large'), active: (c) => c.ui.marges === 'large' },
+
+  { id: 'layout.entete', label: 'En-tête FIDNI (établissement, classe, nom et prénom)', location: 'Mise en page › En-tête',
+    run: (c) => c.ui.entete?.toggle(), enabled: (c) => !!c.ui.entete, active: (c) => !!c.ui.entete?.actif },
+  { id: 'layout.enteteEdit', label: 'Modifier l’en-tête', location: 'Mise en page › En-tête',
+    run: (c) => c.ui.entete?.edit(), enabled: (c) => !!c.ui.entete },
 
   // ── Affichage
   { id: 'view.zoomIn', label: 'Zoom avant', location: 'Affichage › Zoom', keys: 'Ctrl+Alt+=', run: (c) => c.ui.setZoom(ZOOMS.find((z) => z > c.ui.zoom) ?? c.ui.zoom), enabled: (c) => c.ui.zoom < ZOOMS[ZOOMS.length - 1] },

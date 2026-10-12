@@ -259,6 +259,14 @@ const LayoutTab: React.FC<{ ctx: Ctx; run: Run }> = ({ ctx, run }) => (
     <Group label="Saut">
       <Cmd ctx={ctx} run={run} id="insert.pageBreak" big icon={<SeparatorHorizontal className={big} />} />
     </Group>
+    {ctx.ui.entete && (
+      <Group label="En-tête">
+        <Cmd ctx={ctx} run={run} id="layout.entete" big label="En-tête FIDNI" icon={<PanelTop className={big} />} />
+        <div className="wd-stack">
+          <Cmd ctx={ctx} run={run} id="layout.enteteEdit" showLabel label="Modifier…" icon={<PenLine className={ico} />} />
+        </div>
+      </Group>
+    )}
   </>
 );
 

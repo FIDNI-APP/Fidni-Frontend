@@ -9,7 +9,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, Check, ChevronLeft, CloudOff, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import WordEditor from '@/components/editor/word/WordEditor';
+import WordEditor, { type Entete } from '@/components/editor/word/WordEditor';
 import { documentsAPI, type DocumentFull, type Marges, type Orientation } from '@/lib/api/documentsApi';
 
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
@@ -96,6 +96,7 @@ export const DocumentEditor: React.FC = () => {
 
   const onChange = useCallback((html: string) => queue({ html }), [queue]);
   const onLayoutChange = useCallback((l: { orientation: Orientation; marges: Marges }) => queue(l), [queue]);
+  const onEnteteChange = useCallback((entete: Entete) => queue({ entete } as Partial<DocumentFull>), [queue]);
 
   const commitTitle = () => {
     const t = title.trim() || 'Document sans titre';
@@ -171,6 +172,7 @@ export const DocumentEditor: React.FC = () => {
     <div className="fixed inset-0 z-40">
       <WordEditor key={doc.id} initialContent={doc.html} onChange={onChange}
         orientation={doc.orientation} marges={doc.marges} onLayoutChange={onLayoutChange} titleBar={titleBar}
+        entete={doc.entete ?? {}} onEnteteChange={onEnteteChange} documentTitle={title}
         file={{
           newDocument,
           duplicate,

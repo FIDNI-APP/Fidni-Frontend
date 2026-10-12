@@ -376,7 +376,7 @@ export const SheetEditor: React.FC<SheetEditorProps> = (p) => {
 
 const SHEET_EDITOR_CSS = `
   .se-wrap { display: flex; justify-content: center; padding: 4px 0 32px; }
-  .se-pages { position: relative; flex-shrink: 0; }
+  .se-pages { position: relative; display: flow-root; flex-shrink: 0; }
   .se-page { position: absolute; left: 0; right: 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06); }
   .se-flow { z-index: 1; }
   .se-row { position: relative; }

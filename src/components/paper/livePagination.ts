@@ -75,7 +75,7 @@ function setEditorSpacers(editor: Editor, spacers: Spacers) {
 
 // ─────────────────────────────── Calcul
 
-export interface Atom { height: number; keepWithNext?: boolean }
+export interface Atom { height: number; keepWithNext?: boolean; /** Après un saut de page : nouvelle page. */ breakBefore?: boolean }
 
 /** Espace avant chaque atome ; zone de texte de la page p = [p × stride, p × stride + height]. */
 export function liveSpacers(atoms: Atom[], height: number, stride: number) {
@@ -91,6 +91,11 @@ export function liveSpacers(atoms: Atom[], height: number, stride: number) {
     while (y + s >= page * stride + height - 0.5) page += 1;
     if (y < page * stride) s = page * stride - y;
     y += s;
+    if (atoms[i].breakBefore && y > page * stride + 0.5) {
+      page += 1;
+      s += page * stride - y;
+      y = page * stride;
+    }
     let needed = atoms[i].height;
     if (atoms[i].keepWithNext && i + 1 < atoms.length) needed += Math.min(atoms[i + 1].height, height / 3);
     if (y > page * stride + 0.5 && y + needed > page * stride + height + 0.5 && needed <= height) {
@@ -131,9 +136,16 @@ export function useLivePagination(flowRef: React.RefObject<HTMLElement | null>, 
   const run = useCallback(() => {
     const flow = flowRef.current;
     const { height, stride, editors, zoom = 1, enabled = true } = optsRef.current;
-    if (!flow || !enabled || height <= 0) return;
+    if (!flow || height <= 0) return;
+    if (!enabled) {
+      // Pagination coupée (écran étroit) : on retire les espaces déjà posés.
+      setRowSpacers((prev) => (Object.keys(prev).length ? {} : prev));
+      setPages(1);
+      editors().forEach((ed) => setEditorSpacers(ed, new Map()));
+      return;
+    }
     const top = flow.getBoundingClientRect().top;
-    type A = { el: HTMLElement; row: string; index: number; kwn: boolean };
+    type A = { el: HTMLElement; row: string; index: number; kwn: boolean; brk?: boolean };
     const list: A[] = [];
     flow.querySelectorAll<HTMLElement>('[data-pg-row]').forEach((row) => {
       const key = row.dataset.pgRow || '';
@@ -142,9 +154,11 @@ export function useLivePagination(flowRef: React.RefObject<HTMLElement | null>, 
       const pm = row.querySelector<HTMLElement>('.ProseMirror');
       if (!pm) return;
       let index = 0;
+      let afterBreak = false;
       Array.from(pm.children).forEach((c) => {
         if (c.classList.contains('pg-spacer')) return;
-        if (index > 0) list.push({ el: c as HTMLElement, row: key, index, kwn: /^H[1-6]$/.test(c.tagName) });
+        if (index > 0) list.push({ el: c as HTMLElement, row: key, index, kwn: /^H[1-6]$/.test(c.tagName), brk: afterBreak });
+        afterBreak = c.hasAttribute('data-page-break');
         index += 1;
       });
     });
@@ -162,6 +176,7 @@ export function useLivePagination(flowRef: React.RefObject<HTMLElement | null>, 
     const atoms: Atom[] = list.map((a, i) => ({
       height: Math.max(0, (i + 1 < list.length ? natural[i + 1] : flowBottom) - natural[i]),
       keepWithNext: a.kwn,
+      breakBefore: a.brk,
     }));
     // La première rangée commence au haut de la première zone : décalage éventuel avant elle.
     const offset = natural[0];
