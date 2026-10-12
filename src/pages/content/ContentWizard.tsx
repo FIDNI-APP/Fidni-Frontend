@@ -36,6 +36,7 @@ import { SharedToolbarProvider, SharedToolbarSlot } from '@/components/editor/Sh
 import { checkStructureMath } from '@/lib/mathCheck';
 import SheetEditor from '@/components/paper/SheetEditor';
 import { documentToPrefill, type ContentPrefill } from '@/pages/documents/publishDraft';
+import { loadSerie, nextInSerie, stopSerie } from '@/pages/documents/serie';
 import type { ClassLevelModel, SubjectModel } from '@/types';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -97,7 +98,13 @@ function buildStructure(d: Draft): FlexibleExerciseStructure | FlexibleLessonStr
 // Un seul brouillon de contenu nouveau par compte (son type en fait partie).
 const draftKey = (userId: string | number) => `fidni:brouillon-contenu:${userId}`;
 
-export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ contentType = 'exercise' }) => {
+// Série de TD : un assistant neuf pour chaque exercice (clé = rang dans la série).
+export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = (props) => {
+  const serie = (useLocation().state as { serie?: { index: number } } | null)?.serie;
+  return <WizardPage key={serie ? `serie-${serie.index}` : 'contenu'} {...props} />;
+};
+
+const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType = 'exercise' }) => {
   const { id } = useParams<{ id: string }>();
   const editing = !!id;
   const navigate = useNavigate();
@@ -105,13 +112,20 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
 
   const [step, setStep] = useState(editing ? 1 : 0);
   // « Publier sur FIDNI » depuis Mes documents : le document arrive découpé (questions, parties).
-  const prefill = (useLocation().state as { prefill?: ContentPrefill } | null)?.prefill;
+  const navState = useLocation().state as { prefill?: ContentPrefill; serie?: { index: number } } | null;
+  const prefill = navState?.prefill;
   const [importedFrom] = useState(() => (!editing && prefill ? prefill.from : null));
+  // Série de TD en cours (exercice publié l'un après l'autre).
+  const [serie] = useState(() => {
+    const s = !editing && navState?.serie ? loadSerie() : null;
+    return s && s.index === navState?.serie?.index ? s : null;
+  });
   const [d, setD] = useState<Draft>(() => {
     if (editing || !prefill) return starter(contentType);
     const base = starter(prefill.type);
     return {
-      ...base, title: prefill.title.slice(0, 200), durationMinutes: prefill.durationMinutes ?? base.durationMinutes,
+      ...base, ...(serie?.carry ?? {}),
+      title: prefill.title.slice(0, 200), durationMinutes: prefill.durationMinutes ?? base.durationMinutes,
       blocks: prefill.blocks?.length ? prefill.blocks : base.blocks, sections: prefill.sections?.length ? prefill.sections : base.sections,
     };
   });
@@ -259,6 +273,10 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
         schoolId: d.school.id, durationMinutes: d.durationMinutes, isNationalExam: d.isNationalExam, nationalYear: d.nationalYear,
       }, id);
       if (!editing) dropDraft();
+      if (serie) {
+        nextInSerie(navigate, { id: res.id ?? '', title: d.title }, { levelIds: d.levelIds, subjectId: d.subjectId, chapterIds: d.chapterIds, school: d.school });
+        return;
+      }
       navigate(`${typeDef.base}/${res.id ?? id}`);
     } catch (e) {
       const data = (e as { response?: { data?: Record<string, unknown> } })?.response?.data;
@@ -352,7 +370,22 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
             </button>
           </div>
         )}
-        {importedFrom && !editing && (
+        {serie && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-gold-line bg-gold-soft px-4 py-2.5 text-[13px] text-ink-soft" role="status">
+            <span>
+              Série <strong className="text-ink">« {serie.from} »</strong> : exercice <strong className="text-ink">{serie.index + 1} sur {serie.items.length}</strong>
+              {serie.published.length > 0 && <> · {serie.published.length} publié{serie.published.length > 1 ? 's' : ''}</>}
+              {serie.carry && <> · niveau et chapitre repris de l’exercice précédent : vérifie-les</>}
+            </span>
+            <span className="ml-auto flex gap-3">
+              <button type="button" className="font-semibold text-ink underline-offset-2 hover:underline"
+                onClick={() => { dropDraft(); nextInSerie(navigate, null); }}>Passer cet exercice</button>
+              <button type="button" className="font-semibold text-ink underline-offset-2 hover:underline"
+                onClick={() => { dropDraft(); stopSerie(navigate); }}>Arrêter la série</button>
+            </span>
+          </div>
+        )}
+        {importedFrom && !editing && !serie && (
           <div className="mt-4 rounded-xl border border-brand-line bg-brand-soft px-4 py-2.5 text-[13px] text-ink-soft">
             Repris de ton document <strong className="text-ink">« {importedFrom} »</strong>, déjà découpé
             {d.type === 'lesson' ? ' en parties' : ' en questions'}. Choisis le niveau et le chapitre, puis vérifie le découpage à l’étape « Écrire ».
@@ -683,7 +716,8 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
               <button type="button" onClick={publish} disabled={saving || mathErrors.length > 0 || step1Missing.length > 0 || step2Missing.length > 0}
                 data-tour="creer-enregistrer" className="fd-btn-primary min-h-12 w-full justify-center text-[15px] disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                {editing ? 'Enregistrer les modifications' : 'Publier'}
+                {editing ? 'Enregistrer les modifications'
+                  : serie && serie.index + 1 < serie.items.length ? `Publier et passer au suivant (${serie.index + 2}/${serie.items.length})` : 'Publier'}
               </button>
               {(step1Missing.length > 0 || step2Missing.length > 0) && (
                 <p className="text-[12.5px] text-[#9c3b2e]">Il manque {[...step1Missing, ...step2Missing].join(', ')}.</p>

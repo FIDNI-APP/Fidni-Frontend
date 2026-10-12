@@ -7,9 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import { Send, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { WizardContentType } from '@/lib/api/contentWriteApi';
-import { describePrefill, documentToPrefill } from './publishDraft';
+import { describePrefill, documentToPrefill, plainText, serieToPrefills, splitExercises } from './publishDraft';
+import { startSerie } from './serie';
+import { Excerpt } from './Excerpt';
 
-const TYPES: { key: WizardContentType; label: string; hint: string; base: string }[] = [
+type PublishType = WizardContentType | 'serie';
+const TYPES: { key: PublishType; label: string; hint: string; base: string }[] = [
+  { key: 'serie', label: 'Série d’exercices (TD)', hint: 'Chaque exercice devient un contenu à part ; tu valides ses informations une à une.', base: '/exercises' },
   { key: 'exam', label: 'Devoir ou examen', hint: 'Chaque titre (« Exercice 1 »…) ouvre une partie.', base: '/exams' },
   { key: 'exercise', label: 'Exercice', hint: 'Une liste numérotée = une question par élément.', base: '/exercises' },
   { key: 'lesson', label: 'Leçon', hint: 'Chaque titre ouvre une partie du cours.', base: '/lessons' },
@@ -17,13 +21,17 @@ const TYPES: { key: WizardContentType; label: string; hint: string; base: string
 
 export const PublishDialog: React.FC<{
   html: string; title: string; entete?: Record<string, unknown>; onClose: () => void; beforeLeave: () => Promise<void>;
-}> = ({ html, title, entete, onClose, beforeLeave }) => {
+  documentId?: number | string;
+}> = ({ html, title, entete, onClose, beforeLeave, documentId }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  // Un devoir s'il a un en-tête de devoir, sinon un exercice.
-  const [type, setType] = useState<WizardContentType>(entete?.actif ? 'exam' : 'exercise');
-  const prefill = useMemo(() => documentToPrefill(html, type, title, entete?.duree), [html, type, title, entete?.duree]);
+  const exercises = useMemo(() => splitExercises(html).exercises, [html]);
+  // Plusieurs « Exercice N » sans en-tête de devoir : une série de TD ; un en-tête : un devoir ; sinon un exercice.
+  const [type, setType] = useState<PublishType>(entete?.actif ? 'exam' : exercises.length >= 2 ? 'serie' : 'exercise');
+  const [keep, setKeep] = useState<number[]>(() => exercises.map((_, i) => i));
+  const prefill = useMemo(() => documentToPrefill(html, type === 'serie' ? 'exercise' : type, title, entete?.duree), [html, type, title, entete?.duree]);
   const empty = !html.replace(/<[^>]*>/g, '').trim();
+  const serieEmpty = type === 'serie' && !keep.length;
 
   const go = async () => {
     // Un brouillon de contenu en cours (un seul par compte) serait remplacé : on demande.
@@ -32,13 +40,17 @@ export const PublishDialog: React.FC<{
         && !window.confirm('Un brouillon de contenu non publié est en cours dans « Ajouter un contenu ». Le remplacer par ce document ?')) return;
     } catch { /* stockage bloqué */ }
     await beforeLeave();
+    if (type === 'serie') {
+      startSerie(navigate, title, serieToPrefills(html, title, keep), documentId);
+      return;
+    }
     navigate(`${TYPES.find((t) => t.key === type)?.base ?? '/exercises'}/new`, { state: { prefill } });
   };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 px-4" role="dialog" aria-modal="true" aria-labelledby="pub-title"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
-      <div className="w-full max-w-[460px] rounded-2xl bg-white p-5 shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-[500px] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 id="pub-title" className="text-[16px] font-semibold text-ink">Publier sur FIDNI</h2>
@@ -58,13 +70,41 @@ export const PublishDialog: React.FC<{
             </label>
           ))}
         </fieldset>
-        <p className="mt-3 text-[13px] text-ink-soft" role="status">
-          {empty ? 'Le document est vide.' : <>Découpage trouvé : <strong className="text-ink">{describePrefill(prefill)}</strong>. Tu pourras le corriger.</>}
-        </p>
+        {type === 'serie' ? (
+          <div className="mt-3" role="status">
+            {exercises.length ? (
+              <>
+                <p className="mb-1.5 text-[13px] text-ink-soft">
+                  <strong className="text-ink">{exercises.length} exercice{exercises.length > 1 ? 's' : ''}</strong> trouvé{exercises.length > 1 ? 's' : ''} : coche ceux à publier.
+                </p>
+                <ul className="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-line p-1.5">
+                  {exercises.map((ex, i) => (
+                    <li key={i}>
+                      <label className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[#f7f6f3]">
+                        <input type="checkbox" className="mt-0.5 accent-[#1f7a4d]" checked={keep.includes(i)}
+                          onChange={(e) => setKeep((k) => (e.target.checked ? [...k, i].sort((a, b) => a - b) : k.filter((x) => x !== i)))} />
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-medium text-ink">{ex.title}</span>
+                          <span className="line-clamp-2 block text-[12px] leading-snug text-ink-faint">{plainText(ex.html) ? <Excerpt text={plainText(ex.html).slice(0, 160)} /> : '(vide)'}</span>
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-[13px] text-ink-soft">Aucun « Exercice 1 », « Exercice 2 »… trouvé dans le document : choisis plutôt « Exercice ».</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-[13px] text-ink-soft" role="status">
+            {empty ? 'Le document est vide.' : <>Découpage trouvé : <strong className="text-ink">{describePrefill(prefill)}</strong>. Tu pourras le corriger.</>}
+          </p>
+        )}
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="fd-btn-ghost min-h-10">Annuler</button>
-          <button type="button" onClick={() => { void go(); }} disabled={empty} className="fd-btn-primary min-h-10 disabled:opacity-50">
-            <Send className="h-4 w-4" /> Continuer
+          <button type="button" onClick={() => { void go(); }} disabled={empty || serieEmpty || (type === 'serie' && !exercises.length)} className="fd-btn-primary min-h-10 disabled:opacity-50">
+            <Send className="h-4 w-4" /> {type === 'serie' && keep.length ? `Publier ${keep.length} exercice${keep.length > 1 ? 's' : ''}` : 'Continuer'}
           </button>
         </div>
       </div>

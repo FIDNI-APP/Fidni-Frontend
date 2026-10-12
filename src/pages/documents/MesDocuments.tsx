@@ -6,14 +6,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Copy, FileDown, FilePlus2, FileText, Loader2, RotateCcw, Search, Sigma, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { isModerator } from '@/lib/features';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { CardsSkeleton, EmptyState, Page, PageHeader } from '@/components/space/Page';
 import { documentsAPI, type DocumentSummary } from '@/lib/api/documentsApi';
 import { useDocxImport } from './useDocxImport';
+import { Excerpt } from './Excerpt';
 
 const when = (iso: string) => {
   const d = new Date(iso);
@@ -22,26 +21,6 @@ const when = (iso: string) => {
   if (days < 2) return 'hier';
   if (days < 7) return `il y a ${days} jours`;
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-};
-
-/** Aperçu du texte : les formules `$…$` / `$$…$$` rendues en ligne ; une formule coupée par l'aperçu est retirée. */
-const Excerpt: React.FC<{ text: string }> = ({ text }) => {
-  const parts: React.ReactNode[] = [];
-  const re = /\$\$([\s\S]+?)\$\$|\$([^$]+?)\$/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    // Numéro d'équation (`\tag{1}`) : seulement en mode centré, pas dans un aperçu en ligne.
-    const tex = (m[1] ?? m[2] ?? '').replace(/\\tag\{[^{}]*\}/g, '');
-    let html = '';
-    try { html = katex.renderToString(tex, { throwOnError: false, strict: false, trust: false }); } catch { html = ''; }
-    parts.push(html ? <span key={m.index} dangerouslySetInnerHTML={{ __html: html }} /> : tex);
-    last = m.index + m[0].length;
-  }
-  const rest = text.slice(last);
-  parts.push(rest.includes('$') ? `${rest.slice(0, rest.indexOf('$')).trimEnd()} …` : rest);
-  return <>{parts}</>;
 };
 
 export const MesDocuments: React.FC = () => {

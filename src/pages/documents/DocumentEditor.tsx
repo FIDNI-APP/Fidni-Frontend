@@ -58,9 +58,15 @@ export const DocumentEditor: React.FC = () => {
 
   // Document qui vient d'être importé de Word : ce qui n'a pas pu l'être est dit une fois.
   useEffect(() => {
-    const notes = (location.state as { avertissements?: string[] } | null)?.avertissements;
-    if (!notes) return;
-    notes.forEach((n) => toast(n, { icon: '⚠️', duration: 12000 }));
+    const st = location.state as { avertissements?: string[]; serieTerminee?: { published: unknown[]; skipped: number } } | null;
+    const notes = st?.avertissements;
+    const fin = st?.serieTerminee;
+    if (!notes && !fin) return;
+    notes?.forEach((n) => toast(n, { icon: '⚠️', duration: 12000 }));
+    if (fin) {
+      const n = fin.published.length;
+      toast.success(`${n} exercice${n > 1 ? 's' : ''} publié${n > 1 ? 's' : ''} sur FIDNI${fin.skipped ? ` (${fin.skipped} passé${fin.skipped > 1 ? 's' : ''})` : ''}`, { duration: 8000 });
+    }
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
 
@@ -213,7 +219,7 @@ export const DocumentEditor: React.FC = () => {
         }} />
       {docx.input}
       {publishing && (
-        <PublishDialog html={htmlRef.current} title={title} entete={enteteRef.current} onClose={() => setPublishing(false)} beforeLeave={flush} />
+        <PublishDialog html={htmlRef.current} title={title} entete={enteteRef.current} onClose={() => setPublishing(false)} beforeLeave={flush} documentId={id} />
       )}
     </div>
   );

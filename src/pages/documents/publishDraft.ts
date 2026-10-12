@@ -66,10 +66,10 @@ const sub = (html: string): SubQuestionBlock => {
 };
 
 /** Les blocs d'une partie (entre deux titres). */
-function exerciseBlocksOf(els: Element[]): ExerciseBlock[] {
+function exerciseBlocksOf(els: Element[], wholeAsQuestion = true): ExerciseBlock[] {
   const out: ExerciseBlock[] = [];
   let context: Element[] = [];
-  let current: { html: string[]; subs: string[][] } | null = null;
+  let current: { html: string[]; subs: string[][]; letter?: boolean } | null = null;
   const flushContext = () => {
     if (context.some((e) => text(e) || e.querySelector('img'))) out.push({ id: newId(), type: 'context', content: { type: 'text', html: outer(context) }, subQuestions: [] });
     context = [];
@@ -108,12 +108,19 @@ function exerciseBlocksOf(els: Element[]): ExerciseBlock[] {
       target.content = { type: 'text', html: (target.content?.html || '') + el.outerHTML };
       continue;
     }
-    lastListQ = null;
     const t = text(el);
-    if (el.tagName === 'P' && QUESTION_RE.test(t)) {
+    // « a) … » juste après une liste numérotée : sous-question de sa dernière question.
+    if (lastListQ && !current && el.tagName === 'P' && SUB_RE.test(t)) {
+      lastListQ.subQuestions = [...(lastListQ.subQuestions || []), sub(stripLead(el, SUB_RE))];
+      continue;
+    }
+    lastListQ = null;
+    if (el.tagName === 'P' && (QUESTION_RE.test(t) || ((!current || current.letter) && SUB_RE.test(t)))) {
+      // « 1) … », ou « a) … » sans question numérotée avant : une question.
+      const re = QUESTION_RE.test(t) ? QUESTION_RE : SUB_RE;
       flushQuestion();
       flushContext();
-      current = { html: [stripLead(el, QUESTION_RE)], subs: [] };
+      current = { html: [stripLead(el, re)], subs: [], letter: re === SUB_RE };
     } else if (el.tagName === 'P' && current && SUB_RE.test(t)) {
       current.subs.push([stripLead(el, SUB_RE)]);
     } else if (current) {
@@ -126,6 +133,10 @@ function exerciseBlocksOf(els: Element[]): ExerciseBlock[] {
   }
   flushQuestion();
   flushContext();
+  // Pas de question numérotée (exercice de TD rédigé d'un bloc) : l'énoncé entier est la question.
+  if (wholeAsQuestion && out.length && out.every((b) => b.type === 'context')) {
+    return [question(out.map((b) => b.content?.html || '').join(''))];
+  }
   return out;
 }
 
@@ -135,6 +146,65 @@ const topLevel = (html: string): Element[] => {
     .filter((e) => !e.hasAttribute('data-page-break') && e.tagName !== 'HR');
 };
 const isHeading = (e: Element) => /^H[1-6]$/.test(e.tagName);
+
+/** « Exercice 3 : », « EXERCICE N°2 (4 pts) - », « Exercice8 : », « Problème » en début de titre ou de paragraphe. */
+const EXO_RE = /^\s*((?:exercice|exercise|exo|probl[eè]me|activit[eé])\s*(?:n\s*[°o]\s*)?\d*\s*(?:\([^)]{0,30}\))?)\s*[:.\-–—)]?\s*/i;
+
+/** Texte lisible d'un morceau de HTML (aperçus). */
+export const plainText = (html: string) => (new DOMParser().parseFromString(`<div>${html.replace(/<\/(p|li|h\d)>/g, '</$1> ')}</div>`, 'text/html').body.textContent || '')
+  .replace(/\s+/g, ' ').trim();
+
+export interface ExercisePart {
+  /** « Exercice 7 », « Exercice 2 (4 pts) ». */
+  title: string;
+  /** Énoncé, sans la ligne « Exercice 7 : ». */
+  html: string;
+}
+
+/** Un élément est-il le début d'un exercice ? → son titre et ce qui le suit dans le même paragraphe. */
+function exerciseStart(el: Element): { title: string; rest: string } | null {
+  if (!/^(H[1-6]|P)$/.test(el.tagName)) return null;
+  const t = text(el);
+  const m = t.match(EXO_RE);
+  if (!m || !/\d|probl/i.test(m[1]) || (el.tagName === 'P' && t.length > m[0].length && !/[:.\-–—)]\s*$/.test(m[0]) && !/\d\s*$/.test(m[1]))) return null;
+  const title = m[1].replace(/\s+/g, ' ').replace(/^(\D+?)(\d)/, (_x, a: string, b: string) => `${a.trim()} ${b}`).trim();
+  // Le reste du paragraphe (« soit l'ensemble … ») commence l'énoncé.
+  return { title: title.charAt(0).toUpperCase() + title.slice(1), rest: el.tagName === 'P' && t.length > m[0].length ? stripMarker(el) : '' };
+}
+
+/** Le paragraphe sans son « Exercice 8 : » (qui peut courir sur plusieurs morceaux : gras, puis « : »). */
+function stripMarker(el: Element): string {
+  const clone = el.cloneNode(true) as Element;
+  let n = ((clone.textContent || '').match(EXO_RE)?.[0] ?? '').length;
+  const walker = clone.ownerDocument.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node && n > 0; node = walker.nextNode()) {
+    const v = node.textContent || '';
+    node.textContent = v.slice(Math.min(n, v.length));
+    n -= Math.min(n, v.length);
+  }
+  return text(clone) ? clone.outerHTML : '';
+}
+
+/** Série de TD : le document découpé en exercices (ce qui précède le premier est le titre de la série). */
+export function splitExercises(html: string): { preamble: string; exercises: ExercisePart[] } {
+  const els = topLevel(html);
+  const exercises: ExercisePart[] = [];
+  const pre: Element[] = [];
+  let cur: { title: string; parts: string[] } | null = null;
+  for (const el of els) {
+    const start = exerciseStart(el);
+    if (start) {
+      if (cur) exercises.push({ title: cur.title, html: cur.parts.join('') });
+      cur = { title: start.title, parts: start.rest ? [start.rest] : [] };
+    } else if (cur) {
+      cur.parts.push(el.outerHTML);
+    } else {
+      pre.push(el);
+    }
+  }
+  if (cur) exercises.push({ title: cur.title, html: cur.parts.join('') });
+  return { preamble: pre.map((e) => text(e)).filter(Boolean).join(' · ').slice(0, 120), exercises };
+}
 
 /** Durée de l'en-tête (« 2 h », « 1h30 », « 90 min ») en minutes. */
 export function parseDuration(s: unknown): number | null {
@@ -179,11 +249,19 @@ export function documentToPrefill(html: string, type: WizardContentType, title: 
   // Exercice : les titres sont gardés comme contexte ; devoir : ils ouvrent les parties.
   const blocks: ExerciseBlock[] = [];
   let part: Element[] = [];
+  const marked = els.some((e) => exerciseStart(e));
   for (const el of els) {
-    if (type === 'exam' && isHeading(el)) {
-      blocks.push(...exerciseBlocksOf(part));
+    const start = type === 'exam' ? exerciseStart(el) : null;
+    if (type === 'exam' && (start || (!marked && isHeading(el)))) {
+      // Avant le premier exercice : le titre du sujet, gardé comme texte d'introduction.
+      blocks.push(...exerciseBlocksOf(part, blocks.length > 0));
       part = [];
-      blocks.push({ id: newId(), type: 'section', content: { type: 'text', html: text(el) } });
+      blocks.push({ id: newId(), type: 'section', content: { type: 'text', html: start ? start.title : text(el) } });
+      if (start?.rest) part.push(...topLevel(start.rest));
+    } else if (type === 'exercise' && start === null && exerciseStart(el) && !part.length) {
+      // Un exercice seul : sa ligne « Exercice 7 : » n'est pas un énoncé.
+      const st = exerciseStart(el);
+      if (st?.rest) part.push(...topLevel(st.rest));
     } else {
       part.push(el);
     }
@@ -191,6 +269,15 @@ export function documentToPrefill(html: string, type: WizardContentType, title: 
   blocks.push(...exerciseBlocksOf(part));
   if (!blocks.some((b) => b.type === 'question')) blocks.push(question(''));
   return { type, title, from: title, source: { html, duree }, blocks, durationMinutes: type === 'exam' ? parseDuration(duree) ?? 120 : null };
+}
+
+/** Série de TD → un brouillon d'exercice par exercice coché. */
+export function serieToPrefills(html: string, serieTitle: string, keep?: number[]): ContentPrefill[] {
+  const { exercises } = splitExercises(html);
+  return exercises
+    .map((ex, i) => ({ ex, i }))
+    .filter(({ i }) => !keep || keep.includes(i))
+    .map(({ ex }) => ({ ...documentToPrefill(ex.html, 'exercise', `${serieTitle} — ${ex.title}`.slice(0, 200)), from: `${serieTitle} — ${ex.title}` }));
 }
 
 /** Résumé du découpage pour la fenêtre « Publier sur FIDNI ». */
