@@ -99,7 +99,7 @@ export const MesDocuments: React.FC = () => {
       actions={isAuthenticated ? (
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={docx.open} disabled={docx.busy} className="fd-btn-ghost min-h-10"
-            title="Un document Word (.docx) devient un document FIDNI : équations Word comprises">
+            title="Un document Word (.docx) devient un document FIDNI : équations Word et MathType comprises">
             {docx.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Importer un Word
           </button>
           <button type="button" onClick={create} disabled={creating} className="fd-btn-primary min-h-10">
