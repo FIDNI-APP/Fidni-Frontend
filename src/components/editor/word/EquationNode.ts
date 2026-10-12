@@ -229,23 +229,29 @@ export const EquationNode = MathNode.extend<EquationNodeOptions>({
             commit();
           }
           options.onActive?.(handle());
-        }).catch(() => {
+        }).catch((e) => {
           // MathLive indisponible (réseau) : la bulle LaTeX classique.
+          console.error('MathLive indisponible', e);
           const at = pos();
           if (at !== undefined) options.onEdit?.(attrs(), at);
         });
       };
       openers.set(dom, open);
 
+      // Ouverture dès l'appui : le champ qui devient actif fait apparaître la barre d'outils partagée
+      // au-dessus (« Ajouter un contenu »), la page descend et le relâchement tombait à côté de la
+      // formule : le premier clic restait sans effet.
       dom.addEventListener('mousedown', (e) => {
         if (field) return;
         e.preventDefault();
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        open('end');
       });
       dom.addEventListener('click', (e) => {
         if (field) return;
         e.preventDefault();
         e.stopPropagation();
-        open('end');
       });
       paint();
 

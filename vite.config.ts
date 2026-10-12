@@ -22,6 +22,10 @@ export default defineConfig(({ mode }) => ({
         splitStrings: true,
         stringArrayThreshold: 0.75,
         identifierNamesGenerator: 'hexadecimal',
+        // Chemins d'import laissés tels quels : l'obfuscation passe avant Vite (fichiers .ts), et un
+        // `import('./x')` dont le chemin était caché n'était plus résolu (« Failed to resolve module
+        // specifier ») — MathLive ne s'ouvrait plus en production (12/10/2026).
+        reservedStrings: ['^\\.{1,2}/', '^@/'],
       }
     })] : [])
   ],

@@ -12,8 +12,10 @@ import type { MathfieldElement } from 'mathlive';
 let loading: Promise<typeof MathfieldElement> | null = null;
 
 export function loadMathLive(): Promise<typeof MathfieldElement> {
-  loading ??= Promise.all([import('mathlive'), import('mathlive/fonts.css')])
-    .then(([ml]) => {
+  // Import relatif (mathliveLib.ts) : un `import('mathlive')` ne survivait pas à l'obfuscation en production
+  // (MathLive ne s'ouvrait pas, la page se rechargeait puis tombait sur le LaTeX brut).
+  loading ??= import('./mathliveLib')
+    .then((ml) => {
       const MF = ml.MathfieldElement;
       MF.fontsDirectory = null;
       MF.soundsDirectory = null;
