@@ -182,7 +182,8 @@ export const EquationNode = MathNode.extend<EquationNodeOptions>({
           tag = m ? m[1] : null;
           mf.className = 'wd-mathfield';
           mf.defaultMode = 'math';
-          mf.smartFence = true;
+          // Pas de fermeture automatique : les intervalles à la française ([0;1[, ]0;+∞[) se tapent tels quels.
+          mf.smartFence = false;
           mf.mathVirtualKeyboardPolicy = 'auto';
           mf.popoverPolicy = 'auto';
           mf.setAttribute('aria-label', 'Équation');

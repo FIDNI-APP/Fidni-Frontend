@@ -42,11 +42,19 @@ const REPLACEMENTS: [RegExp, string][] = [
   [/\\C\b/g, '\\mathbb{C}'],
   [/\\P\b/g, '\\mathbb{P}'],
   [/\\mathrlap\b/g, '\\rlap'],
+  // MathLive écrit `\middle{|}` (crochets avec séparateur) : KaTeX veut `\middle|`.
+  [/\\(middle|left|right)\{([^{}\s]+)\}/g, '\\$1$2 '],
+  // `log_2` tapé au clavier donne `\log_{_2}` (indice d'un indice vide) : un seul indice.
+  [/_\{_\{([^{}]*)\}\}/g, '_{$1}'],
+  [/_\{_([^{}])\}/g, '_{$1}'],
 ];
 
-/** LaTeX sorti de MathLive → LaTeX enregistré (KaTeX). Les `$` n'y ont pas leur place (délimiteurs). */
+/**
+ * LaTeX sorti de MathLive → LaTeX enregistré (KaTeX). Un `$` (même échappé `\$`) couperait les délimiteurs
+ * `$…$` du HTML enregistré (rendu, PDF, recherche) : il est retiré.
+ */
 export function toStoredLatex(latex: string): string {
   let s = latex;
   for (const [re, by] of REPLACEMENTS) s = s.replace(re, by);
-  return s.replace(/\$/g, '\\$').trim();
+  return s.replace(/\\?\$/g, '').trim();
 }
