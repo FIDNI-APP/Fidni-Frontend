@@ -153,6 +153,7 @@
 .wd-doc .math-node.is-selected { background: #eaf3ed; box-shadow: 0 0 0 2px #1a7a4a; }
 .wd-doc .math-node.is-editing { cursor: text; background: #f3f8f5; box-shadow: 0 0 0 1px #9cc9ad; overflow: visible; }
 .wd-doc .ProseMirror-selectednode { outline: none; }
+.wd-doc p:has(> .math-node-display) > .ProseMirror-separator, .wd-doc p:has(> .math-node-display) > .ProseMirror-trailingBreak { display: none !important; }
 .wd-mathfield { display: inline-block; min-width: 2.5em; max-width: 100%; padding: 0 2px; border: 0; background: transparent; font-size: 1.1em; outline: none; vertical-align: middle; }
 .math-node-display .wd-mathfield { display: block; width: 100%; text-align: center; font-size: 1.2em; }
 .wd-mathfield::part(virtual-keyboard-toggle), .wd-mathfield::part(menu-toggle) { display: none; }

@@ -86,9 +86,20 @@ const SOURCE_RE = /\$\$([\s\S]+?)\$\$|\$(?!\$)([^$\n]+?)\$/g;
  * HTML enregistré (formules en texte `$…$`) → HTML où chaque formule est un `<span data-math>` que
  * l'éditeur reconnaît comme nœud. Le texte des balises code/pre n'est pas touché.
  */
+/**
+ * Formules avec un `<` ou `>` brut (contenus importés : « $0<u_n<2$ ») : le navigateur y verrait une balise.
+ * L'affichage du site (TipTapRenderer) lit ces formules dans le texte brut ; on fait de même : dans un
+ * `$…$` qui ne contient aucune vraie balise, `<` et `>` deviennent `&lt;` / `&gt;` avant la lecture du HTML.
+ */
+const escapeRawMath = (html: string) => html.replace(/\$\$([\s\S]+?)\$\$|\$(?!\$)([^$\n]+?)\$/g, (m, d: string | undefined, i: string | undefined) => {
+  const inner = d ?? i ?? '';
+  if (!/[<>]/.test(inner) || /<\/?[a-zA-Z][^<>]*>/.test(inner)) return m;
+  return m.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+});
+
 export function mathifyHtml(html: string): string {
   if (!html || !html.includes('$') || typeof DOMParser === 'undefined') return html || '';
-  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+  const doc = new DOMParser().parseFromString(`<body>${escapeRawMath(html)}</body>`, 'text/html');
   const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => (n.parentElement?.closest('code, pre, [data-math]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });

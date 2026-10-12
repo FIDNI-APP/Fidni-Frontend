@@ -39,11 +39,13 @@ interface Props {
   landscape?: boolean;
   onLayout?: (layout: SheetLayout) => void;
   className?: string;
+  /** Seulement mesurer (palier et nombre de pages), sans dessiner les pages : l'écriture sur la feuille. */
+  measureOnly?: boolean;
 }
 
 interface Measure { heights: number[] }
 
-export const PagedSheet: React.FC<Props> = ({ blocks, version, density, footer, landscape, onLayout, className = '' }) => {
+export const PagedSheet: React.FC<Props> = ({ blocks, version, density, footer, landscape, onLayout, className = '', measureOnly = false }) => {
   const measureRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<{ level: number; pageOf: number[]; pages: number; subjectPages: number } | null>(null);
   const [tick, setTick] = useState(0);
@@ -124,7 +126,7 @@ export const PagedSheet: React.FC<Props> = ({ blocks, version, density, footer, 
       <div ref={measureRef} className="fp-content fp-measure" aria-hidden>
         {blocks.map((b) => <div key={b.key} className="fp-blk">{b.node}</div>)}
       </div>
-      <div ref={pagesRef} className={`fp-pages ${className}`} style={{ zoom }}>
+      {!measureOnly && <div ref={pagesRef} className={`fp-pages ${className}`} style={{ zoom }}>
         {(state ? pages : [blocks]).map((pageBlocks, p) => (
           <div key={p} className="fp-page" style={{ width: `${W}mm`, height: `${H}mm`, padding: `${d.margins.top}mm ${d.margins.right}mm ${d.margins.bottom}mm ${d.margins.left}mm` }}
             aria-label={`Page ${p + 1}`}>
@@ -137,7 +139,7 @@ export const PagedSheet: React.FC<Props> = ({ blocks, version, density, footer, 
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </>
   );
 };

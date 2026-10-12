@@ -14,7 +14,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, Eye, FileJson, GraduationCap, Loader2, Search, X,
+  AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, Eye, FileJson, FileText, GraduationCap, Heading, LayoutList, Loader2, Plus,
+  Search, Text, X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
@@ -33,6 +34,7 @@ import { SchoolPicker, type SchoolValue } from '@/components/common/SchoolPicker
 import { JsonImportModal } from '@/components/common/JsonImportModal';
 import { SharedToolbarProvider, SharedToolbarSlot } from '@/components/editor/SharedToolbar';
 import { checkStructureMath } from '@/lib/mathCheck';
+import SheetEditor from '@/components/paper/SheetEditor';
 import type { ClassLevelModel, SubjectModel } from '@/types';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -110,6 +112,14 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
   const [tried, setTried] = useState(false); // « Suivant » cliqué : les champs manquants s'affichent
   const [showJson, setShowJson] = useState(false);
   const [showPreview, setShowPreview] = useState(false); // téléphone : aperçu à la demande
+  // Écrire sur la feuille FIDNI (12/10/2026) ou dans le formulaire d'avant ; choix retenu.
+  const [view, setViewState] = useState<'feuille' | 'formulaire'>(() => {
+    try { return localStorage.getItem('fidni:assistant-vue') === 'formulaire' ? 'formulaire' : 'feuille'; } catch { return 'feuille'; }
+  });
+  const setView = (v: 'feuille' | 'formulaire') => { setViewState(v); try { localStorage.setItem('fidni:assistant-vue', v); } catch { /* rien */ } };
+  const [sheetOnePage, setSheetOnePage] = useState(true);
+  const [sheetSolutions, setSheetSolutions] = useState(false);
+  const [sheetInfo, setSheetInfo] = useState<{ pages: number; printPages: number; density: number } | null>(null);
 
   const [levels, setLevels] = useState<ClassLevelModel[]>([]);
   const [subjects, setSubjects] = useState<SubjectModel[]>([]);
@@ -275,6 +285,16 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
     </div>
   );
 
+  const viewSwitch = (
+    <div role="group" aria-label="Façon d’écrire" className="inline-flex rounded-xl bg-[#f2f1ee] p-0.5">
+      {([['feuille', 'Sur la feuille', FileText], ['formulaire', 'Formulaire', LayoutList]] as const).map(([v, label, Icon]) => (
+        <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors ${view === v ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
+          <Icon className="h-3.5 w-3.5" /> {label}
+        </button>
+      ))}
+    </div>
+  );
   const chosenLevels = levels.filter((l) => d.levelIds.includes(Number(l.id)));
   const chosenChapters = chapters.filter((c) => d.chapterIds.includes(c.id));
   const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -509,11 +529,12 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
         )}
 
         {/* ─────────────── Étape 2 : écrire */}
-        {step === 1 && (
+        {step === 1 && view === 'formulaire' && (
           <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <SharedToolbarProvider>
             <div className="min-w-0" data-tour="creer-blocs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                {viewSwitch}
                 <p className="text-[13px] text-ink-faint">Équation : <kbd className="rounded bg-[#f2f1ee] px-1 font-sans">Alt</kbd>+<kbd className="rounded bg-[#f2f1ee] px-1 font-sans">=</kbd> (ou <code className="rounded bg-[#f2f1ee] px-1">$…$</code>), puis tape ta formule.</p>
                 <button type="button" onClick={() => setShowJson(true)} data-tour="creer-importer"
                   className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
@@ -534,6 +555,72 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = ({ c
             </div>
             </SharedToolbarProvider>
             <div className="sticky top-20 hidden max-h-[calc(100vh-7rem)] overflow-y-auto lg:block">{preview}</div>
+          </div>
+        )}
+
+        {step === 1 && view === 'feuille' && (
+          <div className="mt-6" data-tour="creer-blocs">
+            <SharedToolbarProvider>
+              {/* Barre de la feuille : ajouter, corrigé, une page ; puis la barre de mise en forme du champ actif. */}
+              <div className="sticky top-[60px] z-30 -mx-1 mb-3 space-y-2 bg-paper/95 px-1 pb-2 pt-1 backdrop-blur">
+                <div className="flex flex-wrap items-center gap-2">
+                  {viewSwitch}
+                  <span className="mx-1 hidden h-6 w-px bg-line sm:block" />
+                  {d.type === 'lesson' ? (
+                    <button type="button" onClick={() => patch({ sections: [...d.sections, newLessonSection()] })} className="fd-btn-primary min-h-9 px-3 text-[13px]">
+                      <Plus className="h-4 w-4" /> Partie
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => patch({ blocks: [...d.blocks, newQuestion()] })} className="fd-btn-primary min-h-9 px-3 text-[13px]">
+                        <Plus className="h-4 w-4" /> Question
+                      </button>
+                      <button type="button" onClick={() => patch({ blocks: [...d.blocks, { id: Math.random().toString(36).slice(2, 9), type: 'context', content: { type: 'text', html: '' }, subQuestions: [] }] })}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink-soft hover:border-ink/40 hover:text-ink">
+                        <Text className="h-4 w-4" /> Texte
+                      </button>
+                      {d.type === 'exam' && (
+                        <button type="button" onClick={() => patch({ blocks: [...d.blocks, newSection(d.blocks.filter((b) => b.type === 'section').length + 1)] })}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink-soft hover:border-ink/40 hover:text-ink">
+                          <Heading className="h-4 w-4" /> Exercice {d.blocks.filter((b) => b.type === 'section').length + 1}
+                        </button>
+                      )}
+                      <label className="ml-1 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-soft">
+                        <input type="checkbox" className="accent-[#1a7a4a]" checked={sheetSolutions} onChange={(e) => setSheetSolutions(e.target.checked)} />
+                        Corrigé sur la feuille
+                      </label>
+                    </>
+                  )}
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-soft" title="Texte, interlignes et marges se resserrent comme à l’impression (jamais sous 9 pt)">
+                    <input type="checkbox" className="accent-[#1a7a4a]" checked={sheetOnePage} onChange={(e) => setSheetOnePage(e.target.checked)} />
+                    Tenir sur 1 page
+                  </label>
+                  {sheetInfo && (
+                    <span className={`text-[12.5px] font-semibold ${sheetOnePage && sheetInfo.pages > 1 ? 'text-gold-strong' : 'text-brand-hover'}`}>
+                      <FileText className="mr-1 inline h-3.5 w-3.5" />
+                      {sheetInfo.pages} page{sheetInfo.pages > 1 ? 's' : ''}
+                      {sheetOnePage && sheetInfo.density > 0 ? ' · resserrée' : ''}
+                    </span>
+                  )}
+                  <button type="button" onClick={() => setShowJson(true)} data-tour="creer-importer"
+                    className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+                    <FileJson className="h-3.5 w-3.5" /> Importer un fichier
+                  </button>
+                </div>
+                <SharedToolbarSlot />
+              </div>
+              {tried && step2Missing.length > 0 && <p className="mb-3 text-[13px] text-[#9c3b2e]">Écris {step2Missing.join(' et ')}.</p>}
+              <SheetEditor
+                type={d.type} title={d.title} kindLabel={d.type === 'exam' ? 'Examen' : d.type === 'lesson' ? 'Leçon' : 'Exercice'}
+                levels={levels.filter((l) => d.levelIds.includes(Number(l.id))).map((l) => l.name)}
+                subjects={subjects.filter((x) => Number(x.id) === subjectId).map((x) => x.name)}
+                difficultyLabel={d.type !== 'lesson' ? DIFFICULTIES.find((x) => x.key === d.difficulty)?.label : undefined}
+                durationLabel={d.type === 'exam' && d.durationMinutes ? (d.durationMinutes >= 60 ? `${Math.floor(d.durationMinutes / 60)} h${d.durationMinutes % 60 ? ` ${String(d.durationMinutes % 60).padStart(2, '0')}` : ''}` : `${d.durationMinutes} min`) : undefined}
+                blocks={d.blocks} onBlocks={(blocks) => patch({ blocks })}
+                sections={d.sections} onSections={(sections) => patch({ sections })}
+                onePage={sheetOnePage} showSolutions={sheetSolutions} onShowSolutions={() => setSheetSolutions(true)}
+                onLayout={setSheetInfo} />
+            </SharedToolbarProvider>
           </div>
         )}
 

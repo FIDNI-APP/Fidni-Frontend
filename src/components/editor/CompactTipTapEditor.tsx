@@ -35,6 +35,7 @@ import { CalloutExtension } from './extensions/CalloutExtension';
 import { CALLOUT_CONFIGS, CalloutType } from '@/types/callout';
 import { useSharedToolbar } from './SharedToolbar';
 import { EquationNode, type ActiveEquation } from './word/EquationNode';
+import { PageSpacers } from '@/components/paper/livePagination';
 
 // Éditeur « façon Word » (12/10/2026) : chargés seulement quand on s'en sert (équation ouverte, plein écran).
 const EquationRibbon = lazy(() => import('./word/EquationRibbon'));
@@ -63,6 +64,12 @@ export interface CompactTipTapEditorProps {
   wordMath?: boolean;
   /** Titre de la fenêtre plein écran (« Énoncé de la question 2 »…). */
   fullscreenTitle?: string;
+  /**
+   * Écriture sur la feuille (12/10/2026) : pas de cadre, la typographie de la feuille imprimée (fp-rich),
+   * et des espaces de pagination posés par la feuille (PageSpacers). `onEditor` donne l'éditeur à la feuille.
+   */
+  paper?: boolean;
+  onEditor?: (editor: Editor | null) => void;
   className?: string;
 }
 
@@ -359,6 +366,8 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
   ariaLabel,
   wordMath = false,
   fullscreenTitle,
+  paper = false,
+  onEditor,
   className = '',
 }) => {
   const comment = variant === 'comment';
@@ -410,6 +419,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
     if (comment) return base;
     return [
       ...base,
+      ...(paper ? [PageSpacers] : []),
       TextStyle,
       Color,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -422,11 +432,11 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       }),
       CalloutExtension,
     ];
-  }, [comment, word]);
+  }, [comment, word, paper]);
 
   const editorProps = useMemo(() => ({
     attributes: {
-      class: 'fd-editor-body',
+      class: paper ? 'fd-editor-body fp-rich' : 'fd-editor-body',
       style: `min-height: ${minHeight}`,
       role: 'textbox',
       'aria-multiline': 'true',
@@ -456,6 +466,15 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       onChangeRef.current?.(html);
     },
   });
+
+  // Écriture sur la feuille : la feuille connaît l'éditeur (pagination à l'intérieur du champ).
+  const onEditorRef = useRef(onEditor);
+  onEditorRef.current = onEditor;
+  useEffect(() => {
+    if (!editor) return;
+    onEditorRef.current?.(editor);
+    return () => onEditorRef.current?.(null);
+  }, [editor]);
 
   const ui = useEditorState({
     editor,
@@ -676,7 +695,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
 
   const sharedMode = !!shared && !comment;
   return (
-    <div className={`fd-editor rounded-xl border border-line bg-white transition-shadow focus-within:border-[#b9d9c6] focus-within:ring-2 focus-within:ring-brand/10 ${className}`}
+    <div className={paper ? `fd-editor fd-editor-paper ${className}` : `fd-editor rounded-xl border border-line bg-white transition-shadow focus-within:border-[#b9d9c6] focus-within:ring-2 focus-within:ring-brand/10 ${className}`}
       // Barre partagée : ce champ devient le champ actif dès qu'on y clique ou qu'on y entre au clavier.
       onFocusCapture={sharedMode ? () => shared.setActive(myId) : undefined}
       onPointerDownCapture={sharedMode ? () => shared.setActive(myId) : undefined}>
