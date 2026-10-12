@@ -143,6 +143,26 @@
 .wd-doc.resize-cursor, .ProseMirror.resize-cursor { cursor: col-resize; }
 .wd-doc .tableWrapper { overflow-x: auto; }
 
+/* Encarts : leur nature en tête, numérotée comme en LaTeX (Théorème 1, Définition 2…), un compteur par type. */
+.wd-doc { counter-reset: wd-thm wd-prop wd-def wd-lem wd-cor wd-ex; }
+.wd-doc [data-callout-type]::before { display: block; margin-bottom: 2pt; font-family: 'DM Sans', system-ui, sans-serif; font-size: 8pt;
+  font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.wd-doc [data-callout-type="theorem"] { counter-increment: wd-thm; }
+.wd-doc [data-callout-type="theorem"]::before { content: "Théorème " counter(wd-thm); }
+.wd-doc [data-callout-type="property"] { counter-increment: wd-prop; }
+.wd-doc [data-callout-type="property"]::before { content: "Propriété " counter(wd-prop); }
+.wd-doc [data-callout-type="definition"] { counter-increment: wd-def; }
+.wd-doc [data-callout-type="definition"]::before { content: "Définition " counter(wd-def); }
+.wd-doc [data-callout-type="lemma"] { counter-increment: wd-lem; }
+.wd-doc [data-callout-type="lemma"]::before { content: "Lemme " counter(wd-lem); }
+.wd-doc [data-callout-type="corollary"] { counter-increment: wd-cor; }
+.wd-doc [data-callout-type="corollary"]::before { content: "Corollaire " counter(wd-cor); }
+.wd-doc [data-callout-type="example"] { counter-increment: wd-ex; }
+.wd-doc [data-callout-type="example"]::before { content: "Exemple " counter(wd-ex); }
+.wd-doc [data-callout-type="remark"]::before { content: "Remarque"; }
+.wd-doc [data-callout-type="proof"]::before { content: "Preuve"; }
+.wd-doc [data-callout-type="method"]::before { content: "Méthode"; }
+.wd-doc [data-callout-type="warning"]::before { content: "Attention"; }
 /* Encarts (mêmes couleurs que l'éditeur des contenus) */
 .wd-doc [data-callout-type] { border-radius: .5rem; padding: .7em; margin: .7em 0; border-left: 4px solid; }
 .wd-doc [data-callout-type="theorem"] { background: #eff6ff; border-left-color: #1a1a1a; color: #1e3a8a; }
@@ -167,6 +187,7 @@
 .wd-doc .math-node.is-selected { background: #eaf3ed; box-shadow: 0 0 0 2px #1a7a4a; }
 .wd-doc .math-node.is-editing { cursor: text; background: #f3f8f5; box-shadow: 0 0 0 1px #9cc9ad; overflow: visible; }
 .wd-doc .ProseMirror-selectednode { outline: none; }
+.wd-doc:focus, .wd-doc:focus-visible { outline: none; }
 .wd-doc p:has(> .math-node-display) > .ProseMirror-separator, .wd-doc p:has(> .math-node-display) > .ProseMirror-trailingBreak { display: none !important; }
 .wd-mathfield { display: inline-block; min-width: 2.5em; max-width: 100%; padding: 0 2px; border: 0; background: transparent; font-size: 1.1em; outline: none; vertical-align: middle; }
 .math-node-display .wd-mathfield { display: block; width: 100%; text-align: center; font-size: 1.2em; }

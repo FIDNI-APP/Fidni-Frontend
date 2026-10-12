@@ -37,6 +37,7 @@ import { useSharedToolbar } from './SharedToolbar';
 import { EquationNode, type ActiveEquation } from './word/EquationNode';
 import { TV_MARK } from './word/tvMark';
 import { PageSpacers } from '@/components/paper/livePagination';
+import { FrenchTypography } from './word/frenchTypography';
 
 // Éditeur « façon Word » (12/10/2026) : chargés seulement quand on s'en sert (équation ouverte, plein écran).
 const EquationRibbon = lazy(() => import('./word/EquationRibbon'));
@@ -439,6 +440,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
     return [
       ...base,
       ...(paper ? [PageSpacers] : []),
+      ...(word ? [FrenchTypography] : []),
       TextStyle,
       Color,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),

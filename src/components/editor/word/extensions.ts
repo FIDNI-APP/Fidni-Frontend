@@ -19,6 +19,7 @@ import type { CommandProps, Editor } from '@tiptap/core';
 import { CalloutExtension } from '../extensions/CalloutExtension';
 import { EquationNode, type ActiveEquation } from './EquationNode';
 import { PageSpacers } from '@/components/paper/livePagination';
+import { FrenchTypography } from './frenchTypography';
 import type { MathAttrs } from '../MathNode';
 
 declare module '@tiptap/core' {
@@ -143,5 +144,6 @@ export function wordExtensions(o: WordExtensionsOptions) {
     EquationNode.configure({ onEdit: o.onEditFormula, onActive: o.onActiveEquation, onOpenSpecial: o.onOpenSpecial }),
     // Vraies pages (12/10/2026) : espaces posés par la pagination avant ce qui déborderait.
     PageSpacers,
+    FrenchTypography,
   ];
 }

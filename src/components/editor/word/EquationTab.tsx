@@ -313,6 +313,10 @@ export const EquationTab: React.FC<{ ctx: Ctx; run: Run }> = ({ ctx, run: baseRu
       <div className="wd-stack">
         <SmallButton showLabel label="Numéroter" title="Numéro à la marge droite (équation centrée)" icon={<Hash className="h-4 w-4" />}
           active={isActive(ctx, 'equation.number')} onClick={() => run('equation.number')} />
+        {ctx.ui.renumberEquations && (
+          <SmallButton showLabel label="Renuméroter" title="Numéros (1), (2)… dans l’ordre du document" icon={<Hash className="h-4 w-4 opacity-60" />}
+            onClick={() => run('equation.renumber')} />
+        )}
         <SmallButton showLabel label="Fermer" title="Fermer l’équation et revenir au texte (Échap)" icon={<LogOut className="h-4 w-4" />}
           disabled={!isEnabled(ctx, 'equation.close')} onClick={() => run('equation.close')} />
       </div>

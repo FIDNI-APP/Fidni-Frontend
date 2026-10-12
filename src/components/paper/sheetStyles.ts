@@ -124,6 +124,21 @@ export const SHEET_CONTENT_CSS = `
   .fp-l-indent { margin-left: 3mm; }
   .fp-notes { margin: ${s(10)} 0 ${s(4)}; padding: ${s(5)} 9pt; border: 0.6pt dashed #cfcdc8; border-radius: 3pt; font-size: ${f(0.909)}; }
 
+  /* Encadrés numérotés comme en LaTeX (amsthm) : Théorème 1, 2… ; un compteur par type, sur toute la feuille. */
+  .fp-pages, .fp-measure, .se-flow { counter-reset: fp-thm fp-prop fp-def fp-lem fp-cor fp-ex; }
+  .fp-rich [data-callout-type="theorem"] { counter-increment: fp-thm; }
+  .fp-rich [data-callout-type="theorem"] > .callout-head .callout-kind:not(.has-num)::after { content: " " counter(fp-thm); }
+  .fp-rich [data-callout-type="property"] { counter-increment: fp-prop; }
+  .fp-rich [data-callout-type="property"] > .callout-head .callout-kind:not(.has-num)::after { content: " " counter(fp-prop); }
+  .fp-rich [data-callout-type="definition"] { counter-increment: fp-def; }
+  .fp-rich [data-callout-type="definition"] > .callout-head .callout-kind:not(.has-num)::after { content: " " counter(fp-def); }
+  .fp-rich [data-callout-type="lemma"] { counter-increment: fp-lem; }
+  .fp-rich [data-callout-type="lemma"] > .callout-head .callout-kind:not(.has-num)::after { content: " " counter(fp-lem); }
+  .fp-rich [data-callout-type="corollary"] { counter-increment: fp-cor; }
+  .fp-rich [data-callout-type="corollary"] > .callout-head .callout-kind:not(.has-num)::after { content: " " counter(fp-cor); }
+  .fp-rich [data-callout-type="example"] { counter-increment: fp-ex; }
+  .fp-rich [data-callout-type="example"] > .callout-head .callout-kind:not(.has-num)::after { content: " " counter(fp-ex); }
+
   /* Contenu riche (HTML des exercices, rendu KaTeX) */
   .fp-rich [data-callout-type] { border: 0.6pt solid #e2ded6 !important; border-left: 2.4pt solid #1a7a4a !important;
     border-radius: 3pt; padding: ${s(5)} 9pt !important; margin: ${s(6)} 0 !important; background: #fbfaf8 !important; color: inherit !important; }

@@ -21,6 +21,7 @@ import { Tex } from './RibbonParts';
 import { runCommand, searchableCommands, type Ctx, type EditorUi, type Marges, type Orientation, type Params } from './commands';
 import { searchableEquations } from './mathGallery';
 import { VariationTableDialog, tvFromLatex, type TVSpec } from './VariationTable';
+import { htmlToLatex, latexToHtml } from './latex';
 import { useLivePagination } from '@/components/paper/livePagination';
 import { DENSITIES, SHEET_CONTENT_CSS, densityVars } from '@/components/paper/sheetStyles';
 import { sheetHeaderBlocks } from '@/components/paper/paperBlocks';
@@ -309,6 +310,7 @@ export const WordEditor: React.FC<WordEditorProps> = ({
   const zoomRef = useRef(100);
   const pendingAlign = useMemo<(() => void)[]>(() => [], []);
   const fileRef = useRef<HTMLInputElement>(null);
+  const texRef = useRef<HTMLInputElement>(null);
   const flowRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const tabBeforeEq = useRef<TabId>('accueil');
@@ -444,9 +446,12 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         const copy = flow.cloneNode(true) as HTMLElement;
         copy.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'));
         copy.querySelectorAll<HTMLElement>('.pg-spacer').forEach((el) => { el.style.display = 'none'; });
-        units(copy).forEach((el, i) => { if (live[i]?.page !== p) el.style.display = 'none'; });
+        // Ce qui n'est pas sur cette page : replié (hauteur nulle) plutôt que retiré, pour que les compteurs
+        // (Théorème 1, 2…) continuent d'une page à l'autre comme à l'écran.
+        const fold = (el: HTMLElement) => { el.dataset.pgOff = ''; el.style.cssText += ';height:0;min-height:0;margin:0;padding:0;border:0;overflow:hidden;visibility:hidden;'; };
+        units(copy).forEach((el, i) => { if (live[i]?.page !== p) fold(el); });
         copy.querySelectorAll<HTMLElement>('[data-pg-row][data-pg-split]').forEach((row) => {
-          if (!Array.from(row.querySelectorAll('.ProseMirror > *')).some((c) => (c as HTMLElement).style.display !== 'none' && !c.classList.contains('pg-spacer'))) row.style.display = 'none';
+          if (!Array.from(row.querySelectorAll('.ProseMirror > *')).some((c) => !(c as HTMLElement).hasAttribute('data-pg-off') && !c.classList.contains('pg-spacer'))) fold(row);
         });
         copy.style.cssText = 'position:absolute;left:0;right:0;top:0;margin:0;';
         zone.appendChild(copy);
@@ -497,6 +502,34 @@ export const WordEditor: React.FC<WordEditorProps> = ({
     openFind: (replace) => setFind({ replace }),
     openCommandSearch: () => setPalette(true),
     openVariationTable: () => setTv({}),
+    latex: {
+      exportTex: () => {
+        if (!editor) return;
+        const tex = htmlToLatex(toStoredHtml(editor.getHTML()), documentTitle);
+        const url = URL.createObjectURL(new Blob([tex], { type: 'application/x-tex;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(documentTitle || 'document').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}.tex`;
+        a.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      importTex: () => texRef.current?.click(),
+    },
+    // (1), (2)… dans l'ordre du document, après un ajout ou une suppression.
+    renumberEquations: () => {
+      if (!editor) return;
+      eq?.close('after');
+      const tr = editor.state.tr;
+      let n = 0;
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'math') return;
+        const latex = String(node.attrs.latex);
+        if (!/\\tag\{[^{}]*\}\s*$/.test(latex)) return;
+        n += 1;
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, latex: latex.replace(/\\tag\{[^{}]*\}\s*$/, `\\tag{${n}}`) });
+      });
+      if (n) editor.view.dispatch(tr);
+    },
     print,
     zoom,
     setZoom: (z) => setZoom(Math.max(25, Math.min(300, Math.round(z)))),
@@ -655,6 +688,17 @@ export const WordEditor: React.FC<WordEditorProps> = ({
         const files = Array.from(e.target.files ?? []).filter((f) => IMAGE_TYPES.includes(f.type));
         e.target.value = '';
         if (files.length) uploadRef.current(editor, files);
+      }} />
+      <input ref={texRef} type="file" accept=".tex,text/x-tex,application/x-tex,text/plain" className="hidden" onChange={async (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = '';
+        if (!f || f.size > 2_000_000) return;
+        const { html } = latexToHtml(await f.text());
+        if (!html) return;
+        // Document vide : le fichier le remplace ; sinon il s'insère au curseur.
+        if (editor.isEmpty) editor.commands.setContent(mathifyHtml(html));
+        else editor.chain().focus().insertContent(mathifyHtml(html)).run();
+        onChangeRef.current(toStoredHtml(editor.getHTML()));
       }} />
       {palette && <CommandSearch run={run} onClose={() => { setPalette(false); }} />}
       {tv && (

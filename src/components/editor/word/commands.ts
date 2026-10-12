@@ -32,6 +32,10 @@ export interface EditorUi {
   entete?: { actif: boolean; toggle: () => void; edit: () => void };
   /** Fichier : actions fournies par la page (nouveau, dupliquer…), absentes dans un éditeur intégré. */
   file?: { newDocument?: () => void; duplicate?: () => void; rename?: () => void; list?: () => void };
+  /** LaTeX : exporter le document en .tex, importer un fichier .tex (au curseur). */
+  latex?: { exportTex: () => void; importTex: () => void };
+  /** Renuméroter les équations (1), (2)… dans l'ordre du document. */
+  renumberEquations?: () => void;
 }
 
 export interface Ctx {
@@ -67,6 +71,8 @@ const COMMANDS: CommandSpec[] = [
   { id: 'file.duplicate', label: 'Dupliquer le document', location: 'Fichier', run: (c) => c.ui.file?.duplicate?.(), enabled: (c) => !!c.ui.file?.duplicate },
   { id: 'file.rename', label: 'Renommer', location: 'Fichier', run: (c) => c.ui.file?.rename?.(), enabled: (c) => !!c.ui.file?.rename },
   { id: 'file.list', label: 'Mes documents', location: 'Fichier', run: (c) => c.ui.file?.list?.(), enabled: (c) => !!c.ui.file?.list },
+  { id: 'file.exportTex', label: 'Exporter en LaTeX (.tex)', location: 'Fichier', run: (c) => c.ui.latex?.exportTex(), enabled: (c) => !!c.ui.latex },
+  { id: 'file.importTex', label: 'Importer un fichier LaTeX (.tex)', location: 'Fichier', run: (c) => c.ui.latex?.importTex(), enabled: (c) => !!c.ui.latex && !c.eq },
   { id: 'file.print', label: 'Imprimer / PDF', location: 'Fichier', keys: 'Ctrl+P', run: (c) => c.ui.print() },
 
   // ── Accueil › Presse-papiers et modification
@@ -180,6 +186,8 @@ const COMMANDS: CommandSpec[] = [
   { id: 'equation.display', label: 'Équation centrée (affichage)', location: 'Équation › Options', run: (c) => c.eq?.setDisplay(true), enabled: (c) => !!c.eq, active: (c) => !!c.eq?.display },
   { id: 'equation.inline', label: 'Équation dans la ligne', location: 'Équation › Options', run: (c) => c.eq?.setDisplay(false), enabled: (c) => !!c.eq, active: (c) => !!c.eq && !c.eq.display },
   { id: 'equation.number', label: 'Numéroter l’équation', location: 'Équation › Options', run: (c) => c.eq?.toggleNumber(), enabled: (c) => !!c.eq, active: (c) => !!c.eq?.numbered },
+  { id: 'equation.renumber', label: 'Renuméroter les équations', location: 'Équation › Options',
+    run: (c) => c.ui.renumberEquations?.(), enabled: (c) => !!c.ui.renumberEquations },
   { id: 'equation.close', label: 'Fermer l’équation', location: 'Équation › Options', keys: 'Échap', run: (c) => c.eq?.close('after'), enabled: (c) => !!c.eq },
   { id: 'equation.insertStructure', label: 'Insérer une structure', location: 'Équation › Structures', hidden: true,
     run: (c, p) => {
