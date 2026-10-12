@@ -1,0 +1,193 @@
+/* Éditeur de documents « façon Word » (12/10/2026) — couleurs FIDNI (encre, papier, vert de marque). */
+
+.wd-root { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #f2f1ee; color: #1a1a1a; }
+
+/* Barre de titre */
+.wd-titlebar { display: flex; align-items: center; gap: .75rem; min-height: 44px; padding: .35rem .75rem; background: #1a7a4a; color: #fff; }
+
+/* Ruban */
+.wd-ribbon { background: #fbfaf8; border-bottom: 1px solid #e7e3dc; flex-shrink: 0; }
+.wd-tabs { display: flex; align-items: center; gap: .125rem; padding: .25rem .5rem 0; overflow-x: auto; scrollbar-width: none; }
+.wd-tabs::-webkit-scrollbar { display: none; }
+.wd-tabs > .wd-small.has-label { font-weight: 700; color: #15633c; padding: 0 .7rem; }
+.wd-tabs > * { flex-shrink: 0; }
+.wd-tab { position: relative; flex-shrink: 0; padding: .45rem .8rem .55rem; font-size: 13px; font-weight: 600; color: #4b4843; border-radius: .5rem .5rem 0 0; transition: color .15s, background-color .15s; }
+.wd-tab:hover { background: #f2f1ee; color: #1a1a1a; }
+.wd-tab.is-active { color: #15633c; }
+.wd-tab.is-active::after { content: ''; position: absolute; left: .7rem; right: .7rem; bottom: 0; height: 3px; border-radius: 3px; background: #1a7a4a; }
+.wd-tab.is-contextual { color: #9a6e1c; }
+.wd-tab.is-contextual.is-active::after { background: #c0892f; }
+.wd-tellme { display: inline-flex; align-items: center; gap: .35rem; height: 28px; margin-left: .35rem; padding: 0 .65rem; border: 1px solid #e7e3dc; border-radius: 999px; background: #fff; font-size: 12px; color: #6b6862; white-space: nowrap; }
+.wd-tellme:hover { border-color: #1a1a1a; color: #1a1a1a; }
+@media (max-width: 900px) { .wd-tellme span { display: none; } }
+
+.wd-panel { display: flex; align-items: stretch; gap: 0; min-height: 96px; padding: .3rem .35rem .15rem; overflow-x: auto; overflow-y: hidden; border-top: 1px solid #efece6; }
+.wd-group { display: flex; flex-direction: column; flex-shrink: 0; padding: 0 .45rem; border-right: 1px solid #e7e3dc; }
+.wd-group:last-child { border-right: 0; }
+.wd-group-body { display: flex; align-items: center; gap: .2rem; flex: 1; }
+.wd-group-label { padding-top: .15rem; font-size: 11px; color: #6b6862; text-align: center; white-space: nowrap; }
+.wd-stack { display: flex; flex-direction: column; justify-content: center; gap: .15rem; }
+
+.wd-big { display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: .2rem; min-width: 52px; height: 68px; padding: .35rem .35rem .25rem; border-radius: .45rem; color: #33302b; transition: background-color .15s; }
+.wd-big-icon { display: inline-flex; align-items: center; justify-content: center; height: 30px; }
+.wd-big-label { font-size: 11.5px; line-height: 1.15; white-space: nowrap; }
+.wd-big:hover:not(:disabled), .wd-struct:hover, .wd-split-top:hover:not(:disabled), .wd-split-bottom:hover:not(:disabled) { background: #f2f1ee; }
+.wd-big.is-active, .wd-struct.is-active { background: #eaf3ed; color: #15633c; }
+.wd-big:disabled, .wd-small:disabled, .wd-split button:disabled, .wd-style:disabled, .wd-picker:disabled { opacity: .35; pointer-events: none; }
+
+.wd-small { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; min-width: 28px; height: 28px; padding: 0 .3rem; border-radius: .4rem; color: #33302b; font-size: 12.5px; white-space: nowrap; transition: background-color .15s; }
+.wd-small.has-label { justify-content: flex-start; padding: 0 .5rem 0 .4rem; }
+.wd-small:hover:not(:disabled) { background: #f2f1ee; }
+.wd-small.is-active { background: #eaf3ed; color: #15633c; box-shadow: inset 0 0 0 1px #cfe6d8; }
+
+.wd-picker { display: inline-flex; align-items: center; justify-content: space-between; gap: .3rem; height: 28px; padding: 0 .45rem; border: 1px solid #e7e3dc; border-radius: .4rem; background: #fff; font-size: 12.5px; color: #1a1a1a; }
+.wd-picker:hover { border-color: #9a958c; }
+
+/* Styles (galerie) */
+.wd-styles .wd-group-body { gap: .25rem; }
+.wd-style { display: flex; flex-direction: column; justify-content: center; width: 74px; height: 62px; padding: .25rem .4rem; border: 1px solid #e7e3dc; border-radius: .45rem; background: #fff; text-align: left; overflow: hidden; }
+.wd-style:hover { border-color: #9a958c; }
+.wd-style.is-active { border-color: #1a7a4a; box-shadow: 0 0 0 1px #1a7a4a; }
+.wd-style-sample { font-size: 14px; line-height: 1.2; white-space: nowrap; }
+.wd-style-name { margin-top: .2rem; font-size: 11px; color: #6b6862; }
+.wd-style-h1 .wd-style-sample { font-family: 'Fraunces', Georgia, serif; font-size: 17px; font-weight: 600; color: #15633c; }
+.wd-style-h2 .wd-style-sample { font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 600; color: #15633c; }
+.wd-style-h3 .wd-style-sample { font-size: 13.5px; font-weight: 700; color: #33302b; }
+.wd-style-quote .wd-style-sample { font-style: italic; color: #4b4843; }
+
+/* Bouton partagé « Équation » */
+.wd-split { display: flex; flex-direction: column; width: 64px; height: 68px; border-radius: .45rem; overflow: hidden; }
+.wd-split-top { flex: 1; display: flex; align-items: center; justify-content: center; }
+.wd-split-bottom { padding-bottom: .25rem; font-size: 11.5px; white-space: nowrap; }
+.wd-eq-icon { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-style: italic; line-height: 1; color: #15633c; }
+
+/* Onglet Équation */
+.wd-structures .wd-group-body { gap: .1rem; }
+.wd-struct { display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: .15rem; min-width: 50px; height: 68px; padding: .25rem .25rem; border-radius: .45rem; color: #33302b; }
+.wd-struct-label { font-size: 11px; line-height: 1.1; white-space: pre-line; text-align: center; }
+.wd-struct-pic { display: flex; align-items: center; justify-content: center; width: 46px; height: 34px; overflow: hidden; border-radius: 4px; background: #fff; box-shadow: inset 0 0 0 1px #efece6; font-size: 11px; }
+.wd-sym { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 3px; background: #fff; font-size: 12px; box-shadow: inset 0 0 0 1px #efece6; overflow: hidden; }
+.wd-sym:hover { box-shadow: inset 0 0 0 1.5px #1a7a4a; }
+.wd-chip { padding: .2rem .6rem; border-radius: 999px; font-size: 12px; font-weight: 600; color: #6b6862; }
+.wd-chip:hover { background: #f2f1ee; color: #1a1a1a; }
+.wd-chip.is-active { background: #1a1a1a; color: #fff; }
+.wd-tile { display: flex; align-items: center; justify-content: center; min-height: 54px; padding: .25rem; border-radius: 4px; background: #fff; box-shadow: inset 0 0 0 1px #efece6; overflow: hidden; font-size: 13px; }
+.wd-tile:hover { box-shadow: inset 0 0 0 1.5px #1a7a4a; background: #f7fbf8; }
+.wd-builtin { display: block; width: 100%; margin-bottom: .25rem; padding: .35rem .5rem .45rem; border-radius: .45rem; text-align: left; }
+.wd-builtin:hover { background: #eaf3ed; }
+.wd-builtin-label { display: block; font-size: 11.5px; font-weight: 600; color: #6b6862; }
+.wd-builtin-tex { display: block; max-width: 100%; overflow-x: auto; font-size: 13px; }
+.wd-builtin-tex .katex-display { margin: .2rem 0 0; }
+
+/* Menus */
+.wd-menu { border: 1px solid #e7e3dc; border-radius: .75rem; background: #fff; box-shadow: 0 18px 48px -12px rgba(20, 18, 16, .22); }
+.wd-menu-item { display: flex; align-items: center; gap: .5rem; width: 100%; padding: .4rem .6rem; border-radius: .4rem; font-size: 13px; color: #1a1a1a; text-align: left; }
+.wd-menu-item:hover:not(:disabled) { background: #f2f1ee; }
+.wd-menu-item.is-active { background: #eaf3ed; color: #15633c; font-weight: 600; }
+.wd-menu-item:disabled { opacity: .4; }
+.wd-menu-hint { margin-left: auto; font-size: 11.5px; color: #9a958c; }
+.wd-menu-heading { margin: .15rem 0 .3rem; padding: .2rem .45rem; border-radius: .3rem; background: #f7f6f3; font-size: 11.5px; font-weight: 700; color: #33302b; }
+
+/* Zone de travail : la feuille sur fond gris */
+.wd-canvas { position: relative; flex: 1; min-height: 0; overflow: auto; padding: 1.25rem 1rem 2.5rem; background: #e9e6e0; }
+.wd-zoom { width: max-content; margin: 0 auto; }
+.wd-sheet {
+  box-sizing: border-box; margin: 0 auto; background: #fff; cursor: text;
+  box-shadow: 0 1px 3px rgba(20, 18, 16, .12), 0 8px 24px -12px rgba(20, 18, 16, .18);
+  /* Une fine ligne grise entre deux pages (la feuille grandit par pages entières). */
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--wd-page-h) - 1px), #d9d5ce calc(var(--wd-page-h) - 1px), #d9d5ce var(--wd-page-h));
+}
+.wd-sheet .ProseMirror { outline: none; }
+.wd-sheet.is-narrow { width: 100%; min-height: 100%; padding: 1.25rem 1rem 3rem; background-image: none; }
+@media (max-width: 640px) { .wd-canvas { padding: .5rem .5rem 1.5rem; } }
+
+/* Le document */
+.wd-doc { font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 12pt; line-height: 1.5; color: #1a1a1a; overflow-wrap: anywhere; min-height: 4cm; }
+.wd-doc p { margin: 0 0 .5em; }
+.wd-doc h1 { font-family: 'Fraunces', Georgia, serif; font-size: 20pt; font-weight: 600; line-height: 1.25; color: #15633c; margin: .6em 0 .35em; }
+.wd-doc h2 { font-family: 'Fraunces', Georgia, serif; font-size: 15pt; font-weight: 600; line-height: 1.3; color: #15633c; margin: .6em 0 .3em; }
+.wd-doc h3 { font-size: 12.5pt; font-weight: 700; color: #33302b; margin: .55em 0 .25em; }
+.wd-doc > :first-child { margin-top: 0; }
+.wd-doc ul { list-style: disc; padding-left: 1.4em; margin: 0 0 .5em; }
+.wd-doc ol { list-style: decimal; padding-left: 1.6em; margin: 0 0 .5em; }
+.wd-doc li > p { margin: 0 0 .15em; }
+.wd-doc a { color: #15633c; text-decoration: underline; text-underline-offset: 2px; }
+.wd-doc blockquote { border-left: 3px solid #e7e3dc; padding-left: .8em; color: #33302b; font-style: italic; margin: 0 0 .5em; }
+.wd-doc hr { border: 0; border-top: 1px solid #cfcdc8; margin: 1em 0; }
+.wd-doc mark { border-radius: 2px; padding: 0 1px; }
+.wd-doc .content-image { display: block; margin: .5em auto; max-width: 100%; }
+.wd-doc p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; color: #9a958c; pointer-events: none; }
+.wd-doc .wd-page-break { position: relative; height: 0; margin: 1.2em 0; border-top: 1px dashed #9a958c; }
+.wd-doc .wd-page-break::after { content: 'Saut de page'; position: absolute; left: 50%; top: -.65em; transform: translateX(-50%); padding: 0 .5em; background: #fff; font-size: 9pt; color: #9a958c; }
+.wd-doc .ProseMirror-selectednode.wd-page-break { border-top-color: #1a7a4a; }
+
+/* Tableaux */
+.wd-doc table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: .5em 0; }
+.wd-doc td, .wd-doc th { position: relative; min-width: 2em; border: 1px solid #9a958c; padding: .25em .45em; vertical-align: top; }
+.wd-doc th { background: #f7f6f3; font-weight: 700; text-align: left; }
+.wd-doc td > p, .wd-doc th > p { margin: 0; }
+.wd-doc .selectedCell::after { content: ''; position: absolute; inset: 0; background: rgba(26, 122, 74, .12); pointer-events: none; }
+.wd-doc .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: #1a7a4a; pointer-events: none; }
+.wd-doc.resize-cursor, .ProseMirror.resize-cursor { cursor: col-resize; }
+.wd-doc .tableWrapper { overflow-x: auto; }
+
+/* Encarts (mêmes couleurs que l'éditeur des contenus) */
+.wd-doc [data-callout-type] { border-radius: .5rem; padding: .7em; margin: .7em 0; border-left: 4px solid; }
+.wd-doc [data-callout-type="theorem"] { background: #eff6ff; border-left-color: #1a1a1a; color: #1e3a8a; }
+.wd-doc [data-callout-type="property"] { background: #f2f1ee; border-left-color: #33302b; color: #312e81; }
+.wd-doc [data-callout-type="definition"] { background: #f7f6f3; border-left-color: #1a1a1a; color: #4c1d95; }
+.wd-doc [data-callout-type="lemma"] { background: #ecfeff; border-left-color: #06b6d4; color: #164e63; }
+.wd-doc [data-callout-type="corollary"] { background: #f0fdfa; border-left-color: #14b8a6; color: #134e4a; }
+.wd-doc [data-callout-type="example"] { background: #fffbeb; border-left-color: #f59e0b; color: #78350f; }
+.wd-doc [data-callout-type="remark"] { background: #f8fafc; border-left-color: #94a3b8; color: #1e293b; }
+.wd-doc [data-callout-type="proof"] { background: #ecfdf5; border-left-color: #10b981; color: #064e3b; }
+.wd-doc [data-callout-type="method"] { background: #faf5ff; border-left-color: #a855f7; color: #581c87; }
+.wd-doc [data-callout-type="warning"] { background: #fef2f2; border-left-color: #ef4444; color: #7f1d1d; }
+
+/* Équations */
+.wd-doc .math-node { cursor: pointer; border-radius: 4px; padding: 0 2px; transition: background-color .15s, box-shadow .15s; }
+.wd-doc .math-node-inline { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: bottom; }
+.wd-doc .math-node-display { display: block; margin: .35em 0; padding: .15em 0; text-align: center; overflow-x: auto; overflow-y: hidden; }
+.wd-doc .math-node-display .katex-display { margin: 0; }
+.wd-doc .math-node:hover { background: #eaf3ed; box-shadow: 0 0 0 1px #cfe6d8; }
+.wd-doc .math-node.is-selected { background: #eaf3ed; box-shadow: 0 0 0 2px #1a7a4a; }
+.wd-doc .math-node.is-editing { cursor: text; background: #f3f8f5; box-shadow: 0 0 0 1px #9cc9ad; overflow: visible; }
+.wd-doc .ProseMirror-selectednode { outline: none; }
+.wd-mathfield { display: inline-block; min-width: 2.5em; max-width: 100%; padding: 0 2px; border: 0; background: transparent; font-size: 1.1em; outline: none; vertical-align: middle; }
+.math-node-display .wd-mathfield { display: block; width: 100%; text-align: center; font-size: 1.2em; }
+.wd-mathfield::part(virtual-keyboard-toggle), .wd-mathfield::part(menu-toggle) { display: none; }
+@media (pointer: coarse) { .wd-mathfield::part(virtual-keyboard-toggle) { display: flex; } }
+.wd-mathfield { --selection-background-color: #cfe6d8; --caret-color: #1a7a4a; --placeholder-color: #9a958c; --contains-highlight-background-color: transparent; }
+
+/* Rechercher / remplacer, palette, fenêtres */
+.wd-find { position: sticky; top: 0; z-index: 5; float: right; width: min(380px, 100%); margin: -0.5rem -0.25rem .5rem .5rem; padding: .5rem; border: 1px solid #e7e3dc; border-radius: .75rem; background: #fff; box-shadow: 0 12px 32px -12px rgba(20, 18, 16, .25); }
+.wd-input { height: 30px; padding: 0 .55rem; border: 1px solid #e7e3dc; border-radius: .45rem; font-size: 13px; outline: none; }
+.wd-input:focus { border-color: #1a7a4a; box-shadow: 0 0 0 2px rgba(26, 122, 74, .15); }
+.wd-text-btn { padding: .3rem .6rem; border-radius: .45rem; font-size: 12.5px; font-weight: 600; color: #33302b; }
+.wd-text-btn:hover:not(:disabled) { background: #f2f1ee; }
+.wd-text-btn:disabled { opacity: .4; }
+.wd-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 1rem 1rem; background: rgba(20, 18, 16, .28); }
+.wd-palette { width: min(620px, 100%); border-radius: .9rem; background: #fff; box-shadow: 0 24px 64px -16px rgba(20, 18, 16, .4); overflow: hidden; }
+.wd-palette-row { display: flex; align-items: center; gap: .75rem; width: 100%; padding: .5rem .65rem; border-radius: .5rem; font-size: 13.5px; text-align: left; }
+.wd-palette-row.is-active { background: #eaf3ed; }
+.wd-palette-tex { display: inline-flex; align-items: center; max-width: 40%; max-height: 30px; overflow: hidden; font-size: 11px; }
+.wd-dialog { width: min(420px, 100%); padding: 1.1rem; border-radius: .9rem; background: #fff; box-shadow: 0 24px 64px -16px rgba(20, 18, 16, .4); }
+
+/* Barre d'état */
+.wd-status { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; height: 28px; padding: 0 .75rem; background: #fbfaf8; border-top: 1px solid #e7e3dc; font-size: 12px; color: #4b4843; white-space: nowrap; overflow: hidden; }
+.wd-status-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; }
+.wd-status-btn:hover { background: #f2f1ee; }
+.wd-zoom-range { width: 110px; accent-color: #1a7a4a; }
+@media (max-width: 640px) { .wd-zoom-range { width: 64px; } .wd-status { gap: .6rem; } }
+
+/* Impression : seule la copie de la feuille (WordEditor › print), en A4 ; marges données par @page */
+.wd-print-root { display: none; }
+@media print {
+  body.wd-printing > *:not(.wd-print-root) { display: none !important; }
+  body.wd-printing .wd-print-root { display: block; }
+  .wd-print-root .wd-page-break { break-after: page; border: 0; margin: 0; }
+  .wd-print-root .wd-page-break::after { content: none; }
+  .wd-print-root .math-node { box-shadow: none !important; background: none !important; }
+  .wd-print-root p.is-editor-empty:first-child::before { content: none; }
+  .wd-print-root [data-callout-type], .wd-print-root th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

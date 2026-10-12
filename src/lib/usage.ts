@@ -35,6 +35,8 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/statistiques', label: 'Mes statistiques (ancienne page)', group: 'Mon espace' },
   { pattern: '/reviser', label: 'Réviser', group: 'Mon espace' },
   { pattern: '/enregistrements', label: 'Mes enregistrements', group: 'Mon espace' },
+  { pattern: '/documents', label: 'Mes documents', group: 'Mon espace' },
+  { pattern: '/documents/:id', label: 'Éditeur de documents', group: 'Mon espace' },
   { pattern: '/notebooks', label: 'Cahiers', group: 'Mon espace' },
   { pattern: '/notebooks/:id/pdf', label: 'Cahier : impression', group: 'Mon espace' },
   { pattern: '/revision-lists', label: 'Révisions', group: 'Mon espace' },

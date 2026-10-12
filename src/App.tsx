@@ -95,6 +95,9 @@ const PaperExport = page(() => import('./pages/PaperExport'), 'PaperExport');
 const MesEnregistrements = page(() => import('./pages/enregistrements/MesEnregistrements'), 'MesEnregistrements');
 // Réviser (11/10/2026) : prochain DS, à refaire et listes sur une seule page (remplace /revision-lists).
 const Reviser = page(() => import('./pages/reviser/Reviser'), 'Reviser');
+// Éditeur de documents « façon Word » avec équations (12/10/2026), inspiré de wordcraft.
+const MesDocuments = page(() => import('./pages/documents/MesDocuments'), 'MesDocuments');
+const DocumentEditor = page(() => import('./pages/documents/DocumentEditor'), 'DocumentEditor');
 const TestPlanPage = page(() => import('./pages/devoirs/TestPlanPage'), 'default');
 const MockExamPage = page(() => import('./pages/devoirs/MockExamPage'), 'default');
 const StudentNotebook = page(() => import('@/components/profile/StudentNotebook'), 'default');
@@ -364,6 +367,17 @@ function App() {
                       </NavbarWrapper>
                     } />
                     <Route path="/saved" element={<Navigate to="/enregistrements?onglet=favoris" replace />} />
+                    <Route path="/documents" element={
+                      <NavbarWrapper>
+                        <MesDocuments />
+                      </NavbarWrapper>
+                    } />
+                    {/* Plein écran, comme une application : ruban, feuille A4, barre d'état. */}
+                    <Route path="/documents/:id" element={
+                      <NavbarWrapper showNavbar={false} showFooter={false}>
+                        <DocumentEditor />
+                      </NavbarWrapper>
+                    } />
                     <Route path="/classrooms" element={
                       <NavbarWrapper>
                         <ClassroomsPage />

@@ -27,6 +27,7 @@ const SECTION_LABELS: Record<string, string> = {
   profile: 'Profil',
   saved: 'Mes enregistrements',
   enregistrements: 'Mes enregistrements',
+  documents: 'Mes documents',
   reviser: 'Réviser',
   'revision-lists': 'Réviser',
   revisions: 'Réviser',
