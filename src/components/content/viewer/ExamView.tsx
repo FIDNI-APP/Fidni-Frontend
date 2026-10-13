@@ -40,6 +40,8 @@ interface Props {
   onSaveScore?: (sessionId: string | number, score: number, maxScore: number) => Promise<unknown>;
   /** Une solution vient d'être ouverte (« * » : toutes). */
   onSolutionOpen?: (path: string) => void;
+  /** Une indication vient d'être ouverte (journal de « Ma progression »). */
+  onHintOpen?: (path: string) => void;
   sessionCount: number;
   onOpenHistory: () => void;
   /** Pied de la feuille (j'aime, signaler une erreur). */
@@ -192,7 +194,7 @@ function useEpreuve(examId: number | string, durationMin: number, onDone: (secon
 
 export const ExamView: React.FC<Props> = ({
   content, isAuthenticated, questionProgress, questionDates, onQuestionAssess, onAssessMany,
-  onSaveSession, onSaveScore, onSolutionOpen, sessionCount, onOpenHistory, footer, onReport, onAttemptChange, children,
+  onSaveSession, onSaveScore, onSolutionOpen, onHintOpen, sessionCount, onOpenHistory, footer, onReport, onAttemptChange, children,
 }) => {
   const structure = content.structure as unknown as FlexibleExerciseStructure | undefined;
   const { intro, parts } = useMemo(() => splitExam(structure), [structure]);
@@ -529,6 +531,7 @@ export const ExamView: React.FC<Props> = ({
                     onAssessMany={assessMany}
                     assessOptions={EXAM_OPTIONS}
                     onSolutionOpen={onSolutionOpen}
+                    onHintOpen={onHintOpen}
                     interactive={isAuthenticated}
                     showAllSolutions={showAll}
                     compact={false}

@@ -1,58 +1,54 @@
-// « Ma progression » (refonte du 11/10/2026, même langage que Réviser) : la page commence par ce qu'il faut faire.
-//   1. Ton prochain pas : le chapitre à travailler maintenant (S'entraîner / Le cours), puis le bilan en chiffres
-//      positifs (chapitres commencés, questions réussies cette semaine, temps, série) ;
-//   2. Tes notions : points forts et notions à retravailler (seulement s'il y en a) ;
-//   3. Mon programme : les chapitres, à renforcer d'abord ; le détail du chapitre choisi à côté (téléphone : dessous) ;
-//   4. Mon activité : un seul graphique (cette semaine / depuis le début).
-// Première visite : un seul état vide (« Commencer un exercice de mon niveau »), puis le programme. Sans classe :
-// un état vide qui mène à la scolarité du profil. Professeur : la page explique qu'elle suit le travail d'un élève.
-// Affichage immédiat au retour sur la page (dernières données gardées), mise à jour en arrière-plan.
-// Données : GET /api/stats/progression/ (backend apps/users/progression.py).
-import { useCallback, useEffect, useState } from 'react';
+// « Ma progression », la maîtrise d'abord (refonte du 13/10/2026). Trois questions, trois blocs, visibles sans défiler :
+//   1. Ton prochain objectif (le plus visible) : une seule priorité, pourquoi, un bouton, les exercices ciblés ;
+//   2. Ma progression : maîtrise estimée, évolution sur 30 jours, chapitres évalués — chacun avec sa portée et son
+//      « comment c'est calculé » ; la régularité au second plan (« Mon activité ») ;
+//   3. Mes chapitres : les prioritaires avec leur état et une action ; le détail (« Pourquoi ce statut ? ») à part.
+// Ordinateur : l'objectif à gauche, la progression et les chapitres à droite. Téléphone : dans cet ordre.
+// Sans classe : un état qui mène à la scolarité du profil. Professeur : la page explique qu'elle suit un élève.
+// « ?chapitre=12 » (quiz, profil…) ouvre le détail de ce chapitre.
+// Données : GET /api/stats/progression/ (apps/users/progression.py, maitrise.py, objectif.py), gardées pour le retour.
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, GraduationCap, RotateCcw, Sprout, TrendingUp, Users } from 'lucide-react';
+import { GraduationCap, RotateCcw, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
 import { exercisesHome } from '@/components/layout/nav';
-import { Page, PageHeader, EmptyState, CardsSkeleton } from '@/components/space/Page';
+import { Page, PageHeader, EmptyState } from '@/components/space/Page';
 import { useProgression } from './useProgression';
-import { Overview } from './Overview';
-import { Notions } from './Notions';
-import { Programme, type Focus } from './Programme';
-import { Activity } from './Activity';
-import { pickNextStep } from './nextStep';
-import { lessonsHub } from './links';
+import { Objectif } from './Objectif';
+import { MaProgression } from './MaProgression';
+import { MesChapitres } from './MesChapitres';
+import { ChapitreSheet } from './ChapitreSheet';
 
 export function ProgressionPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { data, failed, reload, update } = useProgression(isAuthenticated && user ? String(user.id) : null);
-  // « ?chapitre=12 » (quiz, accueil, profil…) : ce chapitre est choisi d'office et amené à l'écran.
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const [openId, setOpenId] = useState<number | null>(null);
   const initial = Number(params.get('chapitre')) || null;
-  const [focus, setFocus] = useState<Focus | null>(null);
-  useEffect(() => { if (initial) setFocus({ id: initial, at: Date.now() }); }, [initial]);
-  const show = useCallback((id: number) => setFocus({ id, at: Date.now() }), []);
+  useEffect(() => { if (initial) setOpenId(initial); }, [initial]);
+  const close = useCallback(() => {
+    setOpenId(null);
+    if (params.get('chapitre')) { params.delete('chapitre'); setParams(params, { replace: true }); }
+  }, [params, setParams]);
   const goalSaved = useCallback((minutes: number) => {
-    update((d) => ({ ...d, time: { ...d.time, goal_minutes: minutes } }));
+    update((d) => ({ ...d, time: { ...d.time, goal_minutes: minutes },
+      ...(d.regularite ? { regularite: { ...d.regularite, objectif_minutes: minutes } } : {}) }));
   }, [update]);
+  const opened = useMemo(() => data?.chapters.find((c) => c.id === openId) ?? null, [data, openId]);
 
   if (!authLoading && !isAuthenticated) return <Navigate to="/" replace />;
 
   const isTeacher = user?.profile?.user_type === 'teacher';
   const levelLink = user ? `/profile/${user.username}/edit#scolarite` : '/complete-profile';
-  const home = exercisesHome(user);
-  const nothingYet = !!data && data.summary.questions === 0 && data.time.total_seconds === 0
-    && data.chapters.every((c) => c.status === 'todo');
-  const noLevel = !!data && !data.level && data.chapters.length === 0;
-
-  const subtitle = isTeacher && nothingYet ? 'Le suivi d’un élève : son programme, ce qu’il maîtrise et quoi travailler.'
-    : data?.level ? `Ton programme de ${data.level.name} : où tu en es, et quoi travailler maintenant.`
-      : 'Ce que tu as travaillé, et quoi faire ensuite.';
+  const noLevel = !!data && !data.level;
+  const nothingYet = !!data && !data.apercu?.commence && data.time.total_seconds === 0;
 
   return (
     <Page>
-      <SEO title="Ma progression | Fidni" description="Ce que tu maîtrises et ce qui reste à travailler." noindex />
-      <PageHeader eyebrow="Mon suivi" icon={TrendingUp} title="Ma progression" subtitle={subtitle} />
+      <SEO title="Ma progression | Fidni" description="Où tu en es, si tu progresses, et quoi travailler maintenant." noindex />
+      <PageHeader eyebrow="Mon suivi" icon={TrendingUp} title="Ma progression"
+        subtitle={<span className="hidden sm:inline">{data?.level ? `${data.level.name} : où tu en es, si tu progresses, et quoi faire maintenant.` : 'Où tu en es, si tu progresses, et quoi faire maintenant.'}</span>} />
 
       {failed && !data && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
@@ -64,7 +60,7 @@ export function ProgressionPage() {
 
       {data && (isTeacher && (nothingYet || noLevel) ? (
         <EmptyState icon={Users} tone="ink" title="Cette page suit le travail d’un élève"
-          text="Tes élèves y voient leur programme, ce qu’ils maîtrisent et quoi travailler ensuite. Leur travail se suit depuis tes classes."
+          text="Tes élèves y voient où ils en sont, s’ils progressent et quoi travailler ensuite. Leur travail se suit depuis tes classes."
           action={<Link to="/classrooms" className="fd-btn-primary min-h-10">Voir mes classes</Link>}
           secondary={<Link to="/exercises" className="fd-btn-ghost min-h-10">Voir les exercices</Link>} />
       ) : noLevel ? (
@@ -72,44 +68,37 @@ export function ProgressionPage() {
           <EmptyState icon={GraduationCap} tone="gold" title="Indique ta classe"
             text="Fidni t’affichera le programme de ta classe, ce que tu maîtrises déjà et le chapitre à travailler ensuite."
             action={<Link to={levelLink} className="fd-btn-primary min-h-10">Indiquer ma classe</Link>}
-            secondary={<Link to="/exercises" className="fd-btn-ghost min-h-10">Voir les exercices</Link>} />
+            secondary={<Link to={exercisesHome(user)} className="fd-btn-ghost min-h-10">Voir les exercices</Link>} />
         </div>
       ) : (
-        <div className="flex flex-col gap-10">
-          {nothingYet ? (
-            <div data-tour="prog-resume">
-              <EmptyState icon={Sprout} title="Ta progression commence ici"
-                text="Fais un exercice de ton niveau, puis dis pour chaque question si tu l’as réussie : cette page te montrera ce que tu maîtrises et quoi travailler ensuite."
-                action={<Link to={home} className="fd-btn-primary min-h-10">Commencer un exercice de mon niveau</Link>}
-                secondary={<Link to={lessonsHub(home) ?? '/lessons'} className="fd-btn-ghost min-h-10"><BookOpen className="h-4 w-4" /> Les leçons</Link>} />
-            </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-5">
+          {data.objectif ? (
+            <Objectif data={data.objectif} className="lg:row-span-2" />
           ) : (
-            <>
-              <Overview data={data} onShow={show} />
-              <Notions strengths={data.strengths} weaknesses={data.weaknesses} onShow={show} />
-            </>
+            <div data-tour="prog-resume" className="lg:row-span-2">
+              <EmptyState icon={TrendingUp} title="Ta progression commence ici"
+                text="Fais un exercice de ton niveau, puis dis pour chaque question si tu l’as réussie : Fidni te dira où tu en es et quoi travailler."
+                action={<Link to={exercisesHome(user)} className="fd-btn-primary min-h-10">Commencer un exercice</Link>} />
+            </div>
           )}
-          {/* Chapitre montré d'office : celui du prochain pas (première visite : le plus fourni en exercices). */}
-          <Programme chapters={data.chapters} levelName={data.level?.name ?? null} levelLink={levelLink}
-            preferred={pickNextStep(data)?.chapter.id ?? null} focus={focus} exercisesTo={nothingYet ? undefined : home} />
-          {!nothingYet && <Activity data={data} onShow={show} onGoalSaved={goalSaved} />}
+          {data.apercu && (
+            <MaProgression apercu={data.apercu} chapters={data.chapters} regularite={data.regularite ?? null} onGoalSaved={goalSaved} />
+          )}
+          <MesChapitres chapters={data.chapters} onOpen={setOpenId} className="lg:col-start-2" />
         </div>
       ))}
+
+      <ChapitreSheet chapter={opened} onClose={close} />
     </Page>
   );
 }
 
 function Skeleton() {
   return (
-    <div className="flex flex-col gap-10" role="status" aria-label="Chargement">
-      <div>
-        <div className="mb-3 h-6 w-44 animate-pulse rounded bg-[#efece6]" />
-        <div className="h-[188px] animate-pulse rounded-3xl border border-line bg-white" />
-      </div>
-      <div>
-        <div className="mb-3 h-6 w-40 animate-pulse rounded bg-[#efece6]" />
-        <CardsSkeleton n={4} />
-      </div>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-5" role="status" aria-label="Chargement">
+      <div className="h-[360px] animate-pulse rounded-2xl border border-line bg-white lg:row-span-2 lg:h-auto" />
+      <div className="h-[260px] animate-pulse rounded-2xl border border-line bg-white" />
+      <div className="h-[320px] animate-pulse rounded-2xl border border-line bg-white" />
     </div>
   );
 }

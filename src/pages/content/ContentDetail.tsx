@@ -21,7 +21,6 @@ import {
   examContentAPI,
   lessonContentAPI,
   getContentStatistics,
-  markSolutionViewed,
   undoSolutionViewed,
   voteComment,
   updateComment,
@@ -58,6 +57,7 @@ import type { FlexibleExerciseStructure } from '@/components/content/editor/Flex
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import { questionNumbering } from '@/lib/reportTargets';
 import { trackAction } from '@/lib/usage';
+import { forgetHelp, recordHelp } from '@/lib/helpTracking';
 import { SimilarContents } from '@/components/content/viewer/SimilarContents';
 import { contentHub, DETAIL_MAX_WIDTH } from '@/components/content/viewer/pageHelpers';
 import { hubPath } from '@/lib/api/hubApi';
@@ -466,13 +466,16 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
   };
 
-  // Solution ouverte : enregistrée une fois par contenu (statistiques « sans regarder la solution »,
-  // onglet Activité, rattrapage). Les visiteurs ne laissent pas de trace.
-  const solutionMarked = useRef<Set<string>>(new Set());
-  const handleSolutionOpen = useCallback(() => {
-    if (!isAuthenticated || !id || contentType === 'lesson' || solutionMarked.current.has(id)) return;
-    solutionMarked.current.add(id);
-    markSolutionViewed(contentType, id).catch(() => { solutionMarked.current.delete(id); });
+  // Solution ou indication ouverte, par question (13/10/2026) : journal de « Ma progression » (réussi sans aide ?) ;
+  // une solution marque aussi le contenu « solution vue » (statistiques, onglet Activité, rattrapage). Les visiteurs
+  // ne laissent pas de trace.
+  const handleSolutionOpen = useCallback((path: string) => {
+    if (!isAuthenticated || !id || contentType === 'lesson') return;
+    recordHelp(id, path, 'solution');
+  }, [isAuthenticated, id, contentType]);
+  const handleHintOpen = useCallback((path: string) => {
+    if (!isAuthenticated || !id || contentType === 'lesson') return;
+    recordHelp(id, path, 'indice');
   }, [isAuthenticated, id, contentType]);
 
   // Auto-évaluation : un clic par question, « Tout réussi », et le résultat du contenu se déduit tout
@@ -617,7 +620,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     try {
       await undoSolutionViewed(contentType, id);
       // La prochaine solution ouverte compte de nouveau.
-      solutionMarked.current.delete(id);
+      forgetHelp(id);
       if (statistics) {
         setStatistics({ ...statistics, user_viewed_solution: false });
       }
@@ -875,6 +878,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             onSaveExamSession={isAuthenticated ? timerHook.saveExamSession : undefined}
             onSaveExamScore={isAuthenticated ? timerHook.saveExamScore : undefined}
             onSolutionOpen={handleSolutionOpen}
+            onHintOpen={handleHintOpen}
             onReport={openReport}
             onExamAttemptChange={setExamRunning}
           >

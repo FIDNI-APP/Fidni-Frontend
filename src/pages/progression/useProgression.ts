@@ -2,6 +2,8 @@
 // page : la dernière réponse est gardée (mémoire + onglet), puis rafraîchie en arrière-plan.
 // `reload()` : nouvel essai après un échec (bouton « Réessayer ») ; `update(fn)` : changement fait sur la page
 // (objectif quotidien), gardé aussi dans le cache pour ne pas réapparaître à l'ancienne valeur au retour.
+// Clé : l'identifiant du compte (String(user.id)) partout — page, profil, quiz (13/10/2026 : le profil et le quiz
+// passaient le pseudo, le cache n'était jamais partagé). Une réponse d'avant la maîtrise (sans `apercu`) est ignorée.
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api/apiClient';
 import type { ProgressionData } from './types';
@@ -10,11 +12,11 @@ const KEY = 'fidni.progression';
 let memory: { user: string; data: ProgressionData } | null = null;
 
 function read(user: string): ProgressionData | null {
-  if (memory?.user === user) return memory.data;
+  if (memory?.user === user && memory.data.apercu) return memory.data;
   try {
     const raw = sessionStorage.getItem(KEY);
     const saved = raw ? JSON.parse(raw) as { user: string; data: ProgressionData } : null;
-    return saved?.user === user ? saved.data : null;
+    return saved?.user === user && saved.data?.apercu ? saved.data : null;
   } catch {
     return null;
   }

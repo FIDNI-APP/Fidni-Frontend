@@ -62,6 +62,8 @@ interface ExerciseRendererProps {
   assessOptions?: AssessmentStatus[];
   /** Une solution vient d'être ouverte (chemin de la question) : mesure, « solution vue ». */
   onSolutionOpen?: (path: string) => void;
+  /** Une indication vient d'être ouverte (chemin de la question) : journal de « Ma progression » (autonomie). */
+  onHintOpen?: (path: string) => void;
   interactive?: boolean;
   /** External control for showing all solutions */
   showAllSolutions?: boolean;
@@ -510,8 +512,8 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
 const ReadingQuestionBody: React.FC<{
   path: string; points?: number; hint?: ContentBlock; solution?: ContentBlock; locked: boolean; globalShow: boolean;
   progress?: ProgressData; onAssess?: AssessHandler; canAssess: boolean; assessOptions?: AssessmentStatus[];
-  onSolutionOpen?: (path: string) => void; onReport?: (path: string) => void;
-}> = ({ path, points, hint, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onReport }) => {
+  onSolutionOpen?: (path: string) => void; onHintOpen?: (path: string) => void; onReport?: (path: string) => void;
+}> = ({ path, points, hint, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onHintOpen, onReport }) => {
   const hasSolution = Boolean(solution?.html) && !locked;
   const { shown, toggle, openedHere } = useSolutionState(path, globalShow, locked, onSolutionOpen);
   // Indication : cachée pendant l'épreuve comme la solution ; une solution ouverte la montre aussi (la
@@ -519,7 +521,7 @@ const ReadingQuestionBody: React.FC<{
   const hasHint = Boolean(hint?.html) && !locked;
   const [hintOpen, setHintOpen] = useState(false);
   const toggleHint = () => {
-    if (!hintOpen) trackAction('voir-indication');
+    if (!hintOpen) { trackAction('voir-indication'); onHintOpen?.(path); }
     setHintOpen(!hintOpen);
   };
   const hintShown = hasHint && (hintOpen || (hasSolution && shown));
@@ -627,6 +629,7 @@ interface QuestionRendererProps {
   onAssessMany?: AssessManyHandler;
   assessOptions?: AssessmentStatus[];
   onSolutionOpen?: (path: string) => void;
+  onHintOpen?: (path: string) => void;
   interactive: boolean;
   isFirst?: boolean;
   /** Juste après un texte d'introduction (variante « lecture » : un peu moins d'espace). */
@@ -724,13 +727,13 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
 /** Question en variante « lecture » : numéro en marge, énoncé, puis sa barre et ses sous-questions. */
 const ReadingQuestion: React.FC<QuestionRendererProps> = ({
-  block, questionIndex, globalShowSolutions, progress, onAssess, assessOptions, onSolutionOpen,
+  block, questionIndex, globalShowSolutions, progress, onAssess, assessOptions, onSolutionOpen, onHintOpen,
   interactive, isFirst = false, afterContext = false, locked = false, onReport,
 }) => {
   const path = block.id;
   const subs = block.subQuestions ?? [];
   const canAssess = interactive && !!onAssess && !locked;
-  const common = { locked, globalShow: globalShowSolutions, progress, onAssess, canAssess, assessOptions, onSolutionOpen, onReport };
+  const common = { locked, globalShow: globalShowSolutions, progress, onAssess, canAssess, assessOptions, onSolutionOpen, onHintOpen, onReport };
   return (
     <div id={subs.length ? undefined : questionAnchor(path)} className={`scroll-mt-24 ${isFirst ? '' : afterContext ? 'mt-6' : 'mt-8 sm:mt-10'}`}>
       <div className="group/q flex items-start gap-2.5 sm:gap-3">
@@ -792,6 +795,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   onAssessMany,
   assessOptions,
   onSolutionOpen,
+  onHintOpen,
   interactive = false,
   showAllSolutions = false,
   compact = true,
@@ -843,6 +847,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                 onAssessMany={onAssessMany}
                 assessOptions={assessOptions}
                 onSolutionOpen={onSolutionOpen}
+                onHintOpen={onHintOpen}
                 interactive={interactive}
                 isFirst={index === 0 || (reading && structure.blocks[index - 1]?.type === 'section')}
                 afterContext={structure.blocks[index - 1]?.type === 'context'}

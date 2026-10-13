@@ -37,6 +37,7 @@ import { BansCard } from '@/components/pilotage/BansCard';
 import type { Funnel } from '@/components/pilotage/FunnelCard';
 import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
 import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
+import { AvisDiagnosticsCard, type AvisDiagnostic } from '@/components/pilotage/AvisDiagnosticsCard';
 import { KpiTile } from '@/components/pilotage/KpiTile';
 import { DayChart } from '@/components/pilotage/DayChart';
 import { MembersCard } from '@/components/pilotage/MembersCard';
@@ -68,6 +69,7 @@ interface Overview {
   /** Absents d'un serveur plus ancien : les blocs correspondants ne s'affichent pas. */
   funnel?: Funnel;
   auth_doors?: AuthDoor[];
+  avis_diagnostics?: AvisDiagnostic[];
 }
 interface FilterValue { filter: string; type: 'exercise' | 'exam' | 'lesson'; value: string; label: string; count: number; visits: number; anon: number }
 interface UserRow {
@@ -158,6 +160,10 @@ function normalizeOverview(raw: unknown, requestedDays: number): Overview {
     } : undefined,
     auth_doors: Array.isArray(raw.auth_doors)
       ? list(raw.auth_doors, (d) => ({ source: str(d.source, 'autre'), count: num(d.count), visits: num(d.visits), anon: num(d.anon) }))
+      : undefined,
+    avis_diagnostics: Array.isArray(raw.avis_diagnostics)
+      ? list(raw.avis_diagnostics, (a) => ({ sujet: str(a.sujet, 'autre'), oui: num(a.oui), non: num(a.non), total: num(a.total),
+        accord: a.accord === null || a.accord === undefined ? null : num(a.accord) }))
       : undefined,
   };
 }
@@ -551,6 +557,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       </section>
 
       {data.auth_doors && <ErrorBoundary variant="block" label="Portes d’inscription" resetKey={data.generated_at}><AuthDoorsCard doors={data.auth_doors} days={data.days} /></ErrorBoundary>}
+      {data.avis_diagnostics && <ErrorBoundary variant="block" label="Avis sur les diagnostics" resetKey={data.generated_at}><AvisDiagnosticsCard avis={data.avis_diagnostics} days={data.days} /></ErrorBoundary>}
 
       </div>
     </div>

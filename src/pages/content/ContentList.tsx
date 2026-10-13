@@ -31,7 +31,8 @@ import {
 } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
-import { exerciseContentAPI, examContentAPI, lessonContentAPI, markSolutionViewed } from '@/lib/api';
+import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api';
+import { recordHelp } from '@/lib/helpTracking';
 import type { AssessSource, PaginatedResponse } from '@/lib/api/contentItemApi';
 import { ContentListCard } from '@/components/content/ContentListCard';
 import { CatchUpBanner } from '@/components/content/listing/CatchUpBanner';
@@ -703,12 +704,11 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
   }, [isAuthenticated, openModal, config.api, itemProgress]);
 
-  // Mode Énoncés : solution ouverte enregistrée une fois par contenu, comme sur sa page (ContentDetail).
-  const solutionMarked = useRef(new Set<string>());
-  const handleSolutionOpen = useCallback((itemId: string) => {
-    if (!isAuthenticated || contentType === 'lesson' || solutionMarked.current.has(itemId)) return;
-    solutionMarked.current.add(itemId);
-    markSolutionViewed(contentType, itemId).catch(() => { solutionMarked.current.delete(itemId); });
+  // Mode Énoncés : solution ou indication ouverte, par question, comme sur sa page (ContentDetail, journal de
+  // « Ma progression »).
+  const handleHelpOpen = useCallback((itemId: string, path: string, kind: 'indice' | 'solution') => {
+    if (!isAuthenticated || contentType === 'lesson') return;
+    recordHelp(itemId, path, kind);
   }, [isAuthenticated, contentType]);
 
   // Handle vote
@@ -1247,7 +1247,8 @@ export const ContentList: React.FC<ContentListProps> = ({
                       }}
                       progressData={progressData}
                       onAssess={(path, status, source) => handleAssess(id, path, status, source)}
-                      onSolutionOpen={() => handleSolutionOpen(id)}
+                      onSolutionOpen={(path) => handleHelpOpen(id, path, 'solution')}
+                      onHintOpen={(path) => handleHelpOpen(id, path, 'indice')}
                       showAllSolutions={showAllSolutions}
                     />
                     </FicheSlot>

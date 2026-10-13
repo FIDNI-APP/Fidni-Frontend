@@ -24,6 +24,7 @@ import {
 } from '@/lib/api/devoirsApi';
 import { STATUS } from '@/pages/progression/status';
 import { Meter } from '@/pages/progression/ui';
+import { ETAT } from '@/pages/progression/etat';
 import { TestFormModal } from '@/components/devoirs/TestFormModal';
 import { GradeForm } from '@/components/devoirs/GradeForm';
 import { Countdown, DifficultyDot, GradeBadge } from '@/components/devoirs/ui';
@@ -309,7 +310,8 @@ function ChapterRow({ chapter: c, testId, quizDone }: { chapter: PlanChapter; te
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14.5px] font-semibold text-ink">{c.name}</p>
           <p className="text-[12px] text-ink-faint">
-            <span className={c.status === 'weak' ? st.text : ''}>{st.label}</span>
+            {/* État de Ma progression (13/10/2026) ; « pas encore évalué » : l'ancien état, plus parlant ici. */}
+            <span className={c.status === 'weak' ? st.text : ''}>{c.etat && c.etat !== 'non_evalue' ? ETAT[c.etat].label : st.label}</span>
             {c.mastery !== null && <> · <span className="fd-nums">{c.mastery} %</span></>}
             {c.review.length > 0 && <> · {plural(c.review.length, 'exercice', 'exercices')} à revoir</>}
           </p>

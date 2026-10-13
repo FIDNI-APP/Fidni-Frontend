@@ -344,7 +344,6 @@ export const ProfilePage: React.FC = () => {
           <div className="mt-8">
             {panel('overview', (
               <ProfileOverview
-                username={name}
                 profile={p}
                 userType={userType}
                 goals={userType !== 'teacher' ? (p.subject_grades ?? []) : undefined}

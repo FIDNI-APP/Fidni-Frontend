@@ -110,7 +110,7 @@ const MissingBanner: React.FC<{ chapter: { id: number; name: string | null; hub_
 
 const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry }) => {
   const isTeacher = user.profile?.user_type === 'teacher';
-  const data = useQuizChapters(user.username, isTeacher);
+  const data = useQuizChapters(user.username, isTeacher, user.id);
   const [searchParams, setSearchParams] = useSearchParams();
   // Arrivée depuis un lien (?chapitre=, ?retour=) : gardée ici, puis l'adresse est nettoyée.
   const [wanted, setWanted] = useState<number | null>(() => Number(searchParams.get('chapitre')) || null);

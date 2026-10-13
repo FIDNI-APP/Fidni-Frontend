@@ -79,7 +79,10 @@ export type UsageAction =
   | 'quiz-refait' | 'mode-revision' | 'barre-mobile' | 'visite-auto' | 'visite-passee' | 'visite-finie'
   | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google'
   // Dossiers des listes (10/10/2026)
-  | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee';
+  | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee'
+  // Ma progression refondue (13/10/2026) et bloc « Où j'en suis » de l'accueil
+  | 'prog-objectif' | 'prog-objectif-exercice' | 'prog-fiche' | 'prog-chapitre' | 'prog-chapitre-action' | 'prog-calcul'
+  | 'prog-activite-detail' | 'accueil-objectif' | 'accueil-progression';
 
 function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.
@@ -176,4 +179,10 @@ export function trackAuthOpen(source: string) {
   trackAction('auth-ouverte');
   const s = source.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 30);
   if (s) send('filtre', `auth:porte:${s}`);
+}
+
+/** « Ce diagnostic te semble juste ? » (Ma progression, 13/10/2026) : sujet = état d'un chapitre (« a_consolider ») ou
+ *  type d'objectif (« objectif-verifier ») ; compté au Pilotage (Usage › Avis sur les diagnostics). */
+export function trackDiagnosticFeedback(sujet: string, juste: boolean) {
+  if (/^[a-z_-]{1,30}$/.test(sujet)) send('filtre', `prog:avis:${sujet}:${juste ? 'oui' : 'non'}`);
 }

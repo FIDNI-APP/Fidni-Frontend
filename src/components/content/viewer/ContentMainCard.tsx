@@ -63,6 +63,8 @@ interface ContentMainCardProps {
   onSaveExamScore?: (sessionId: string | number, score: number, maxScore: number) => Promise<unknown>;
   /** Une solution vient d'être ouverte (« * » : toutes d'un coup). */
   onSolutionOpen?: (path: string) => void;
+  /** Une indication vient d'être ouverte (journal de « Ma progression »). */
+  onHintOpen?: (path: string) => void;
   /** Ouvre « Signaler une erreur » (avec la question concernée si elle est connue). */
   onReport?: (path?: string) => void;
   /** Examen : épreuve chronométrée en cours ou non. */
@@ -75,7 +77,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   content, contentType, voteCount, likeCount, dislikeCount, userVote, onVote, isAuthenticated,
   timer, isTimerRunning, startTimer, stopTimer, resetTimer, saveSession, formatCurrentTime, getSessionCount, loadHistory, saving,
   questionProgress, questionDates, onQuestionAssess, onAssessMany, onSaveExamSession, onSaveExamScore, onSolutionOpen,
-  onReport, onExamAttemptChange, children,
+  onHintOpen, onReport, onExamAttemptChange, children,
 }) => {
   const [showAllSolutions, setShowAllSolutions] = useState(false);
   const toggleAllSolutions = () => {
@@ -151,6 +153,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
           onSaveSession={onSaveExamSession}
           onSaveScore={onSaveExamScore}
           onSolutionOpen={onSolutionOpen}
+          onHintOpen={onHintOpen}
           sessionCount={getSessionCount()}
           onOpenHistory={loadHistory}
           footer={sheetFooter}
@@ -239,6 +242,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
             compact={false}
             variant="reading"
             onSolutionOpen={onSolutionOpen}
+            onHintOpen={onHintOpen}
             onReport={onReport}
           />
         </div>

@@ -34,7 +34,7 @@ import { ExerciseRenderer, type AssessChanges } from '@/components/content/viewe
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { api } from '@/lib/api/apiClient';
 import { assessQuestions, type AssessSource } from '@/lib/api/contentItemApi';
-import { markSolutionViewed } from '@/lib/api/statisticsApi';
+import { recordHelp } from '@/lib/helpTracking';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import type { AssessmentStatus } from '@/types/content';
 import { trackAction } from '@/lib/usage';
@@ -112,7 +112,6 @@ export const RevisionListDetail: React.FC = () => {
   progressRef.current = progress;
   const [busy, setBusy] = useState(false);
   const tracked = useRef(false);
-  const solutionSeen = useRef(new Set<number>());
   const cardRef = useRef<HTMLElement | null>(null);
   const { setCrumbs } = useBreadcrumb();
   const crumbTitle = list?.name ?? null;
@@ -291,13 +290,8 @@ export const RevisionListDetail: React.FC = () => {
     }
   };
 
-  // Solution ouverte en mode révision : comptée une fois par exercice (« résolu seul », rattrapage), comme sur sa page.
-  const solutionOpened = (content: Content) => {
-    const cid = Number(content.id);
-    if (solutionSeen.current.has(cid)) return;
-    solutionSeen.current.add(cid);
-    markSolutionViewed(content.type === 'exam' ? 'exam' : 'exercise', String(cid)).catch(() => { solutionSeen.current.delete(cid); });
-  };
+  // Solution ou indication ouverte en mode révision, par question, comme sur sa page (journal de « Ma progression »).
+  const helpOpened = (content: Content, path: string, kind: 'indice' | 'solution') => recordHelp(content.id, path, kind);
 
   if (authLoading || (loading && !loadError)) {
     return (
@@ -478,7 +472,8 @@ export const RevisionListDetail: React.FC = () => {
                       [path]: progressRef.current[Number(item.content_object.id)]?.[path]?.status === status ? null : status,
                     }, source)}
                     onAssessMany={(changes, source) => assess(item.content_object, changes, source)}
-                    onSolutionOpen={() => solutionOpened(item.content_object)}
+                    onSolutionOpen={(path) => helpOpened(item.content_object, path, 'solution')}
+                    onHintOpen={(path) => helpOpened(item.content_object, path, 'indice')}
                   />
                 ) : (
                   <p className="text-sm italic text-ink-faint">L’énoncé n’est pas disponible ici : ouvre l’exercice.</p>
