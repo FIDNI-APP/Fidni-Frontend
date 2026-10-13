@@ -3,6 +3,7 @@
  * Backend : apps/interactions/devoirs.py (/api/devoirs/).
  */
 import { api } from './apiClient';
+import type { Etat } from '@/pages/progression/types';
 
 export type TestKind = 'ds' | 'controle' | 'blanc';
 export interface NamedRef { id: number; name: string }
@@ -49,6 +50,9 @@ export interface PlanChapter {
   notions: { best: { label: string; pct: number }[]; worst: { label: string; pct: number }[] };
   /** Page d'exercices du chapitre au niveau de l'élève (« S'entraîner ») ; null hors de son niveau. */
   hub_url?: string | null;
+  /** État de « Ma progression » (13/10/2026), null hors du programme de l'élève. */
+  etat?: Etat | null;
+  raison?: string | null;
 }
 
 export interface PlanExercise {

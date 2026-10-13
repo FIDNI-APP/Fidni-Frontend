@@ -10,8 +10,9 @@ import { pct, type QuizChapter, type SkillAssessment } from './types';
 /** Ordre du « prochain quiz » : là où le quiz apprend le plus à l'élève d'abord. */
 const RANK: Record<ChapterStatus, number> = { weak: 0, started: 1, todo: 2, good: 3, mastered: 4 };
 
-export function useQuizChapters(username: string | null, isTeacher: boolean) {
-  const progression = useProgression(username && !isTeacher ? username : null);
+export function useQuizChapters(username: string | null, isTeacher: boolean, userId?: string | number | null) {
+  // Cache de Ma progression : clé = identifiant du compte (le même que la page, 13/10/2026).
+  const progression = useProgression(userId != null && !isTeacher ? String(userId) : null);
   const [available, setAvailable] = useState<Record<string, number> | null>(null);
   const [availableFailed, setAvailableFailed] = useState(false);
   const [mine, setMine] = useState<SkillAssessment[] | null>(null);

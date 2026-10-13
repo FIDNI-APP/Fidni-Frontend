@@ -5,9 +5,11 @@
 
 export const PRACTICE_QUERY = '?sort=easiest&todo=true';
 
-/** Exercices du chapitre, du plus facile au plus difficile, sans les réussis. */
-export const practiceUrl = (hubUrl: string | null | undefined, chapterId: number | string) =>
-  hubUrl ? `${hubUrl}${PRACTICE_QUERY}` : `/exercises?chapters=${chapterId}`;
+/** Exercices du chapitre, du plus facile au plus difficile, sans les réussis ; `difficulty` : seulement ce niveau. */
+export const practiceUrl = (hubUrl: string | null | undefined, chapterId: number | string, difficulty?: string) => {
+  const only = difficulty ? `&difficulties=${difficulty}` : '';
+  return hubUrl ? `${hubUrl}${PRACTICE_QUERY}${only}` : `/exercises?chapters=${chapterId}${only}`;
+};
 
 /** Page d'exercices → page de leçons à la même adresse (/exercises/niveau/… → /lessons/niveau/…). */
 export const lessonsHub = (hubUrl: string | null | undefined) =>
@@ -23,3 +25,20 @@ export const quizUrl = (chapterId: number | string, retour?: string) =>
 
 /** Chapitre sans exercice encore : « Le cours » passe devant « S'entraîner » (qui mènerait à une liste vide). */
 export const courseFirst = (c: { contents: number }) => !c.contents;
+
+/** Lien d'une action de « Ma progression » (objectif, chapitre) : s'entraîner (à la bonne difficulté), le cours, le
+ *  quiz, le DS blanc, les devoirs ou le Bac national du chapitre. */
+export function actionUrl(
+  action: { kind: string; difficulte?: string; test_id?: number },
+  chapter: { id: number; hub_url?: string | null } | null,
+): string {
+  const hub = chapter?.hub_url ?? null;
+  switch (action.kind) {
+    case 'cours': return chapter ? lessonsUrl(hub, chapter.id) : '/lessons';
+    case 'quiz': return chapter ? quizUrl(chapter.id, '/progression') : '/skill-iq';
+    case 'ds_blanc': return action.test_id ? `/revisions/ds/${action.test_id}/blanc` : '/reviser?onglet=ds';
+    case 'devoirs': return hub ? hub.replace(/^\/exercises\//, '/exams/') : '/exams';
+    case 'nationaux': return '/exams/nationaux';
+    default: return chapter ? practiceUrl(hub, chapter.id, action.difficulte) : '/exercises';
+  }
+}

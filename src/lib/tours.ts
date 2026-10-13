@@ -107,7 +107,7 @@ export const TOURS: Tour[] = [
       { target: 'menu-mobile', title: 'Le menu', body: 'Toutes les rubriques : leçons, exercices, devoirs, Bac national, concours, ton suivi et ton compte.' },
       { target: 'recherche', title: 'Rechercher', body: 'Un mot-clé, un chapitre ou un théorème (ex. « TVI ») pour trouver un contenu.' },
       { target: 'notifications', title: 'Notifications', body: 'Quand quelqu’un commente un contenu sur lequel tu as travaillé, ou répond à ton commentaire, la cloche te prévient. Un clic et tu peux lui répondre.' },
-      { target: 'home-stats', title: 'Ta semaine', body: 'Ta semaine en une ligne : ta série, tes questions et ta réussite des 7 derniers jours. Touche-la pour le détail dans Ma progression.' },
+      { target: 'home-stats', title: 'Où j’en suis', body: 'Ta maîtrise, ton évolution sur 30 jours et ta priorité du moment, en bref. Le détail et le « pourquoi » sont dans Ma progression.' },
       { target: 'home-reco', title: 'Pour toi', body: 'Des contenus choisis d’après ton niveau et ton travail : la suite de tes chapitres en cours, ce qui est à retravailler, des nouveautés. Ouvre une carte pour commencer.' },
       { target: 'nav-compte', title: 'Ton compte', body: 'Ton profil et tes paramètres.' },
       { target: 'aide', title: 'Un doute ?', body: 'Chaque page a son guide : touche ? pour le revoir en entier.' },
@@ -286,11 +286,11 @@ export const TOURS: Tour[] = [
     id: 'progression',
     match: /^\/progression\/?$/,
     requires: 'prog-resume',
-    version: 2, // refonte du 11/10/2026 : « Ton prochain pas » en tête de page
+    version: 3, // refonte du 13/10/2026 : la maîtrise d'abord (objectif, progression, chapitres)
     steps: [
-      { target: 'prog-resume', title: 'Ton prochain pas', body: 'Le chapitre à travailler maintenant, choisi d’après tes réponses, et ce que tu as déjà fait cette semaine. Nouveau ici ? Commence par un exercice de ton niveau.' },
-      { target: 'prog-carte', title: 'Ton programme', body: 'Tous tes chapitres, ceux à renforcer d’abord. Touche un chapitre : ce que tu réussis, ce qui reste à travailler et de quoi t’entraîner.' },
-      { target: 'prog-activite', title: 'Ton activité', body: 'Ton temps de travail de la semaine et ton objectif (touche-le pour le changer), ou tout ce que tu as réussi depuis le début.' },
+      { target: 'prog-resume', title: 'Ton prochain objectif', body: 'Une seule priorité, choisie d’après tes résultats, avec de quoi t’y mettre tout de suite. « Pourquoi cet objectif ? » te montre sur quoi Fidni s’appuie.' },
+      { target: 'prog-activite', title: 'Ma progression', body: 'Ta maîtrise estimée, ton évolution sur 30 jours et tes chapitres évalués. Touche un chiffre pour voir comment il est calculé.' },
+      { target: 'prog-carte', title: 'Mes chapitres', body: 'Les chapitres à travailler en priorité, chacun avec son action. Touche un chapitre pour savoir pourquoi il a ce statut.' },
     ],
   },
   {

@@ -79,3 +79,12 @@ export const hasWeekData = (data: Overview) =>
 /** Assez de données pour un graphique « Toi et ta classe » utile ? */
 export const hasClassChart = (p: WeeklyProgress | null): p is WeeklyProgress =>
   !!p?.has_classroom && p.you.length > 1 && p.you.filter((v) => v > 0).length >= 2;
+
+/** L'action principale vise-t-elle déjà ce que propose « Où j'en suis » (même DS, ou contenu à reprendre du même
+ *  chapitre) ? Le bloc mène alors à Ma progression plutôt qu'à un second bouton vers la même chose. */
+export function sameTarget(choice: NextChoice, objectif: { ds: { id: number } | null; chapitre: { name: string } | null } | null): boolean {
+  if (!objectif) return false;
+  if (choice.kind === 'ds') return !!objectif.ds && objectif.ds.id === choice.test.id;
+  if (choice.kind === 'resume') return !!objectif.chapitre && choice.item.chapter === objectif.chapitre.name;
+  return false;
+}

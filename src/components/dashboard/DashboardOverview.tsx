@@ -1,9 +1,11 @@
 /**
  * Accueil de l'élève connecté — « ce que tu fais maintenant » (refonte du 11/10/2026 : l'accueil empilait
  * bonjour, bandeau DS, bande de stats, Reprendre/À refaire, graphique souvent vide et grosses cartes).
- *   1. bonjour (date, niveau) et ta semaine en UNE ligne (si tu as déjà travaillé) ;
+ *   1. bonjour (date, niveau) ;
  *   2. UNE action principale (NextAction : préparer un DS proche › reprendre › commencer), ou « Tes premiers pas »
  *      pour un nouvel élève (niveau, premier exercice, premier DS annoncé : pas de quiz, aucun n'est prêt) ;
+ *      puis « Où j'en suis » (13/10/2026, à la place de la ligne « ta semaine ») : maîtrise, évolution, chapitres
+ *      évalués et la priorité du moment — mêmes calculs que Ma progression (GET /api/stats/apercu/) ;
  *   3. au plus trois blocs calmes : Ton prochain DS (s'il n'est pas déjà l'action), À refaire (3), Pour toi (3).
  * « Toi et ta classe » seulement avec des données ; le détail est dans Ma progression (/progression).
  * Données : /api/dashboard/overview/ (que des chiffres enregistrés), /api/devoirs/, /api/revision-lists/suggestions/,
@@ -22,11 +24,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { trackAction } from '@/lib/usage';
 import { NextAction } from './NextAction';
 import { FirstSteps } from './FirstSteps';
-import { WeekLine } from './WeekLine';
+import { OuJenSuis } from './OuJenSuis';
+import { useApercu } from './useApercu';
 import { RedoBlock } from './RedoBlock';
 import { ForYou } from './ForYou';
 import { ClassChart } from './ClassChart';
-import { REDO_SHOWN, chooseNext, easiest, firstSteps, hasClassChart, hasWeekData } from './home';
+import { REDO_SHOWN, chooseNext, easiest, firstSteps, hasClassChart, hasWeekData, sameTarget } from './home';
 
 // Le formulaire « Annoncer un DS » n'est chargé qu'à l'ouverture (taxonomie, animations).
 const TestFormModal = lazy(() => import('@/components/devoirs/TestFormModal').then((m) => ({ default: m.TestFormModal })));
@@ -59,6 +62,7 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   const [redo, setRedo] = useState<{ count: number; results: ToRedoItem[] } | null>(null);
   const [weekly, setWeekly] = useState<WeeklyProgress | null>(null);
   const ds = useNextTest();
+  const apercu = useApercu(user && !isTeacher ? String(user.id) : null);
   const { later, dismiss } = useAnnounceLater();
   // Formulaire « Annoncer un DS » : monté au premier clic, gardé ensuite (animation de fermeture).
   const [announce, setAnnounce] = useState<'closed' | 'open' | 'never'>('never');
@@ -119,9 +123,7 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
       <PageHeader
         eyebrow={<>{today}{data?.level ? ` · ${data.level.name}` : ''}</>}
         title={<>{hello}{username ? <>, <span className="italic">{username}</span></> : ''}</>}
-        subtitle={subtitle}>
-        {data && !newcomer && hasWeekData(data) && <WeekLine data={data} />}
-      </PageHeader>
+        subtitle={subtitle} />
 
       <div className="flex flex-col gap-10">
         {failed ? (
@@ -137,6 +139,11 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
           <FirstSteps steps={steps} data={data} exercise={easiest(recs?.exercises ?? [])} levelLink={levelLink} onAnnounce={openAnnounce} />
         ) : (
           <NextAction choice={choice} data={data} />
+        )}
+
+        {!isTeacher && !newcomer && !failed && (
+          <OuJenSuis data={apercu.data} failed={apercu.failed} onRetry={apercu.reload}
+            sameAsHero={!!choice && sameTarget(choice, apercu.data?.objectif ?? null)} />
         )}
 
         {(showDs || showRedo) && (

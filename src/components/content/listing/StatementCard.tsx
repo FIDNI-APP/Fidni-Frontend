@@ -46,7 +46,9 @@ interface StatementCardProps {
   onAddToList: () => void;
   progressData: ProgressData;
   onAssess: (path: string, status: AssessmentStatus, source?: AssessSource) => void;
-  onSolutionOpen: () => void;
+  onSolutionOpen: (path: string) => void;
+  /** Indication ouverte (journal de « Ma progression »). */
+  onHintOpen?: (path: string) => void;
   showAllSolutions: boolean;
 }
 
@@ -59,7 +61,7 @@ const mini = 'inline-flex h-7 w-7 items-center justify-center rounded-lg transit
 export const StatementCard: React.FC<StatementCardProps> = ({
   item, kind, path, from, isAuthenticated, hideLevel, saved, onToggleSave, completion, onSetCompletion, vote, onVote,
   timer, savingTimer, sessionCount, onToggleTimer, onResetTimer, onSaveTimer, onAddToList,
-  progressData, onAssess, onSolutionOpen, showAllSolutions,
+  progressData, onAssess, onSolutionOpen, onHintOpen, showAllSolutions,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
@@ -170,6 +172,7 @@ export const StatementCard: React.FC<StatementCardProps> = ({
                 progress={progressData}
                 onAssess={onAssess}
                 onSolutionOpen={onSolutionOpen}
+                onHintOpen={onHintOpen}
                 interactive={isAuthenticated}
                 showAllSolutions={showAllSolutions}
                 compact={false}
