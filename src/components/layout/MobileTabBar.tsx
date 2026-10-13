@@ -18,6 +18,7 @@ import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { trackAction } from '@/lib/usage';
+import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { TABBAR_VAR, sectionHome, useMobileTabBarVisible } from './nav';
 
 // 56 px d'onglets + 1 px de bordure, plus la zone du geste d'accueil (iPhone).
@@ -37,6 +38,7 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
   const { isAuthenticated, user } = useAuth();
   const { crumbs, section } = useBreadcrumb();
   const visible = useMobileTabBarVisible();
+  const quizNouveau = useQuizNouveau().menu;
 
   // Hauteur publiée pour les éléments fixés en bas (0 sur ordinateur : la barre y est masquée).
   useEffect(() => {
@@ -116,7 +118,11 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
             data-tour="menu-mobile"
             className={`${cell} ${menuOpen ? 'font-semibold text-ink' : 'font-medium text-ink-faint hover:text-ink-soft'}`}
           >
-            <span aria-hidden className={pill(menuOpen)}><Menu className="h-5 w-5" /></span>
+            <span aria-hidden className={`relative ${pill(menuOpen)}`}>
+              <Menu className="h-5 w-5" />
+              {/* « Nouveau » dans le menu (quiz par chapitre, skilliq/annonce.ts) : on l'ouvre pour le voir. */}
+              {quizNouveau && <span className="absolute right-2 top-0.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" />}
+            </span>
             <span>Menu</span>
           </button>
         </li>

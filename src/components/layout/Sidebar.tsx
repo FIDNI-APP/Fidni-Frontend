@@ -16,6 +16,7 @@ import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
 import { canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
+import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
 
@@ -31,6 +32,8 @@ interface NavItem {
   exclude?: string[];
   /** Rubrique rangée par niveaux : ses niveaux s'affichent dessous quand on y est (et seulement alors). */
   levels?: LevelBase;
+  /** Pastille « Nouveau » tant que la page n'a pas été découverte (skilliq/annonce.ts). */
+  nouveau?: 'quiz';
 }
 
 interface NavGroup {
@@ -71,7 +74,7 @@ const FOLLOW_GROUP: NavGroup = {
   items: [
     { to: '/progression', label: 'Ma progression', icon: TrendingUp, match: ['/progression'] },
     { to: '/reviser', label: 'Réviser', icon: CalendarCheck, match: ['/reviser', '/revisions', '/revision-lists', '/profile/revision-lists'] },
-    { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'] },
+    { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'], nouveau: 'quiz' },
     { to: '/enregistrements', label: 'Mes enregistrements', icon: BookmarkIcon, match: ['/enregistrements', '/saved', '/notebooks'] },
   ],
 };
@@ -353,6 +356,21 @@ const NavIcon: React.FC<{ icon: NavItem['icon']; active: boolean }> = ({ icon: I
   </span>
 );
 
+/** « Nouveau » des quiz : sous le libellé dans la barre (240 px : à côté, il le coupait), à droite dans le tiroir
+ *  du téléphone, point doré sur l'icône quand la barre est repliée. */
+const QuizNouveau: React.FC<{ place: 'dessous' | 'droite' | 'point'; active: boolean }> = ({ place, active }) => {
+  const { menu } = useQuizNouveau();
+  if (!menu) return null;
+  if (place === 'point') return <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label="nouveau" />;
+  return (
+    <span className={cx('shrink-0 rounded-full px-1.5 font-bold uppercase tracking-[.06em]',
+      place === 'dessous' ? 'mt-0.5 py-px text-[9.5px] leading-[14px]' : 'ml-auto mr-1 py-0.5 text-[10px]',
+      active ? 'bg-white/15 text-white' : 'bg-gold text-white')}>
+      Nouveau
+    </span>
+  );
+};
+
 const NavRow: React.FC<{
   item: NavItem; href: string; active: boolean; collapsed: boolean; drawer?: boolean; onNavigate?: () => void;
   /** Rubrique à niveaux : chevron du menu déroulant, à droite du lien. */
@@ -385,13 +403,19 @@ const NavRow: React.FC<{
       aria-label={collapsed ? item.label : undefined}
       aria-current={active ? 'page' : undefined}
       className={cx(
-        'group flex items-center rounded-xl transition-colors',
+        'group relative flex items-center rounded-xl transition-colors',
         collapsed ? 'mx-auto h-11 w-11 justify-center' : cx('gap-2.5 px-1.5', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]'),
         active ? 'bg-ink font-semibold text-white' : 'font-medium text-ink-soft hover:bg-[#f7f6f3] hover:text-ink',
       )}
     >
       <NavIcon icon={Icon} active={active} />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && (item.nouveau && !drawer ? (
+        <span className="flex min-w-0 flex-col items-start py-1">
+          <span className="max-w-full truncate">{item.label}</span>
+          <QuizNouveau place="dessous" active={active} />
+        </span>
+      ) : <span className="truncate">{item.label}</span>)}
+      {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
     </Link>
   );
 };

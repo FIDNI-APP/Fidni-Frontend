@@ -2,8 +2,9 @@
  * Accueil de l'élève connecté — « ce que tu fais maintenant » (refonte du 11/10/2026 : l'accueil empilait
  * bonjour, bandeau DS, bande de stats, Reprendre/À refaire, graphique souvent vide et grosses cartes).
  *   1. bonjour (date, niveau) ;
+ *   (13/10/2026) bandeau « Nouveau · Quiz par chapitre » tant que la page des quiz n'a pas été ouverte (QuizAnnonce) ;
  *   2. UNE action principale (NextAction : préparer un DS proche › reprendre › commencer), ou « Tes premiers pas »
- *      pour un nouvel élève (niveau, premier exercice, premier DS annoncé : pas de quiz, aucun n'est prêt) ;
+ *      pour un nouvel élève (niveau, premier exercice, premier DS annoncé) ;
  *      puis « Où j'en suis » (13/10/2026, à la place de la ligne « ta semaine ») : maîtrise, évolution, chapitres
  *      évalués et la priorité du moment — mêmes calculs que Ma progression (GET /api/stats/apercu/) ;
  *   3. au plus trois blocs calmes : Ton prochain DS (s'il n'est pas déjà l'action), À refaire (3), Pour toi (3).
@@ -29,6 +30,7 @@ import { useApercu } from './useApercu';
 import { RedoBlock } from './RedoBlock';
 import { ForYou } from './ForYou';
 import { ClassChart } from './ClassChart';
+import { QuizAnnonce } from './QuizAnnonce';
 import { REDO_SHOWN, chooseNext, easiest, firstSteps, hasClassChart, hasWeekData, sameTarget } from './home';
 
 // Le formulaire « Annoncer un DS » n'est chargé qu'à l'ouverture (taxonomie, animations).
@@ -126,6 +128,7 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
         subtitle={subtitle} />
 
       <div className="flex flex-col gap-10">
+        <QuizAnnonce />
         {failed ? (
           <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
             <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ton accueil n’a pas pu se charger. Vérifie ta connexion.</p>

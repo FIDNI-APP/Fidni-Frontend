@@ -29,6 +29,7 @@ import { QuizList } from '@/components/skilliq/QuizList';
 import { QuizResult } from '@/components/skilliq/QuizResult';
 import { QuizRunner } from '@/components/skilliq/QuizRunner';
 import { useQuizChapters } from '@/components/skilliq/useQuizChapters';
+import { quizDecouvert, quizDejaDecouvert } from '@/components/skilliq/annonce';
 import { isFresh, quizKey, safeReturn, takenOn, type ActiveQuiz, type CorrectionItem, type QuizChapter, type QuizEnCours, type QuizQuestion, type SkillAssessment } from '@/components/skilliq/types';
 
 const SUBTITLE = 'Toutes les questions d’un chapitre, chronométrées, corrigées une à une, et ton bilan théorème par théorème.';
@@ -135,6 +136,8 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     getEnCours().then((rows) => setEnCours(Object.fromEntries(rows.map((r) => [quizKey(r.niveau, r.chapitre), r])))).catch(() => {});
   };
   useEffect(refreshEnCours, []);
+  // Page découverte : plus de « Nouveau » dans le menu ni sur l'accueil (skilliq/annonce.ts).
+  useEffect(() => { if (!quizDejaDecouvert()) { trackAction('quiz-decouvert'); quizDecouvert(); } }, []);
   const request = useRef(0);
   // Barre de niveaux : null = mon niveau (par défaut), sinon un autre niveau choisi par l'élève.
   const [view, setView] = useState<number | null>(null);
