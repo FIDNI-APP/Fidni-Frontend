@@ -23,17 +23,14 @@ export function MesChapitres({ chapters, onOpen, className = '' }: {
   const shown = all ? ordered : ordered.slice(0, TOP);
   return (
     <section data-tour="prog-carte" aria-labelledby="chapitres-titre" className={`rounded-2xl border border-line bg-white ${className}`}>
-      <div className="flex items-baseline justify-between gap-3 px-5 pb-2 pt-5 sm:px-6">
-        <h2 id="chapitres-titre" className="fd-display text-[20px] text-ink">Mes chapitres</h2>
-        <p className="text-[12.5px] text-ink-faint">{all ? 'Tout le programme' : 'À travailler en priorité'}</p>
-      </div>
+      <h2 id="chapitres-titre" className="fd-display px-5 pb-2 pt-5 text-[20px] text-ink sm:px-6">Mes chapitres</h2>
       <ul className="divide-y divide-line">
         {shown.map((c) => <Row key={c.id} c={c} onOpen={onOpen} />)}
       </ul>
       {ordered.length > TOP && (
         <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all}
           className="flex min-h-12 w-full items-center justify-center gap-1 border-t border-line text-[13.5px] font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink">
-          {all ? 'Seulement les prioritaires' : `Tout le programme (${ordered.length})`}
+          {all ? 'Moins' : `Tout le programme (${ordered.length})`}
           <ChevronDown className={`h-4 w-4 transition-transform ${all ? 'rotate-180' : ''}`} />
         </button>
       )}

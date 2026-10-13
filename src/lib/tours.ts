@@ -287,9 +287,9 @@ export const TOURS: Tour[] = [
     requires: 'prog-resume',
     version: 3, // refonte du 13/10/2026 : la maîtrise d'abord (objectif, progression, chapitres)
     steps: [
-      { target: 'prog-resume', title: 'Ton prochain objectif', body: 'Une seule priorité, choisie d’après tes résultats, avec de quoi t’y mettre tout de suite. « Pourquoi cet objectif ? » te montre sur quoi Fidni s’appuie.' },
-      { target: 'prog-activite', title: 'Ma progression', body: 'Ta maîtrise estimée, ton évolution sur 30 jours et tes chapitres évalués. Touche un chiffre pour voir comment il est calculé.' },
-      { target: 'prog-carte', title: 'Mes chapitres', body: 'Les chapitres à travailler en priorité, chacun avec son action. Touche un chapitre pour savoir pourquoi il a ce statut.' },
+      { target: 'prog-resume', title: 'Ton objectif', body: 'Une seule priorité, d’après tes résultats. « Pourquoi ? » dit sur quoi Fidni s’appuie.' },
+      { target: 'prog-activite', title: 'Tes chiffres', body: 'Maîtrise, évolution sur 30 jours, chapitres évalués. Touche un chiffre pour le détail.' },
+      { target: 'prog-carte', title: 'Mes chapitres', body: 'Les prioritaires d’abord. Touche un chapitre pour voir ce qui lui manque.' },
     ],
   },
   {

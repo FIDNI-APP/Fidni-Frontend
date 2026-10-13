@@ -13,13 +13,12 @@ export function EvolutionSheet({ open, onClose, evolution, serie }: {
   return (
     <Sheet open={open} onClose={onClose} labelId="evolution-titre" title="Évolution sur 30 jours"
       subtitle={e.mesurable && e.delta !== null
-        ? <><b className="fd-nums text-ink">{signed(e.delta)} points</b> en 30 jours, calculé sur {e.chapitres_compares} chapitres évalués aux deux dates. Les autres ne sont pas comptés.</>
-        : 'Pas encore assez de résultats pour mesurer ta progression.'}>
+        ? <><b className="fd-nums text-ink">{signed(e.delta)} points</b>, sur les {e.chapitres_compares} chapitres évalués il y a 30 jours et aujourd’hui.</>
+        : 'Pas encore assez de résultats.'}>
       {!e.mesurable && (
         <div className="rounded-xl bg-paper px-4 py-3 text-[13.5px] leading-relaxed text-ink-soft">
-          <p>Pour comparer, il faut au moins 2 chapitres évalués il y a 30 jours et aujourd’hui, et 6 questions évaluées pendant la période.</p>
-          {e.disponible_le && <p className="mt-1.5">Ta première évaluation est récente : la comparaison sera possible à partir du <b className="text-ink">{shortDate(e.disponible_le)}</b>.</p>}
-          <p className="mt-1.5">Termine une courte évaluation (3 exercices, en disant pour chaque question si tu l’as réussie) pour établir ton point de départ.</p>
+          <p>Il faut 2 chapitres évalués il y a 30 jours et aujourd’hui.</p>
+          {e.disponible_le && <p className="mt-1.5">Possible dès le <b className="text-ink">{shortDate(e.disponible_le)}</b>.</p>}
         </div>
       )}
       {e.mises_en_garde.length > 0 && (
@@ -32,7 +31,7 @@ export function EvolutionSheet({ open, onClose, evolution, serie }: {
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-[.08em] text-ink-faint">Maîtrise estimée, semaine par semaine</p>
           <Sparkline values={serie.map((p) => p.pct)} dates={serie.map((p) => p.date)} color="#1a7a4a" height={96}
             format={(v) => `${v} %`} label="Maîtrise estimée par semaine" />
-          <p className="mt-2 text-[12px] leading-relaxed text-ink-faint">La courbe compte tous tes chapitres évalués à chaque date ; le chiffre en haut ne compare que les mêmes chapitres.</p>
+
         </div>
       )}
       {(e.detail?.length ?? 0) > 0 && (
@@ -53,7 +52,7 @@ export function EvolutionSheet({ open, onClose, evolution, serie }: {
         </>
       )}
       {e.chapitres_exclus.length > 0 && (
-        <p className="mt-3 text-[12.5px] leading-relaxed text-ink-faint">Pas comptés (pas encore évalués il y a 30 jours) : {e.chapitres_exclus.join(', ')}.</p>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-ink-faint">Pas comptés : {e.chapitres_exclus.join(', ')}.</p>
       )}
     </Sheet>
   );

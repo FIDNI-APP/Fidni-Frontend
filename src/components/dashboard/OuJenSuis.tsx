@@ -1,10 +1,10 @@
 // « Où j'en suis » (13/10/2026) : la progression en bref sur l'accueil (la page la plus vue) et sur le profil.
 // Trois chiffres avec leur portée (maîtrise estimée, évolution sur 30 jours, chapitres évalués), le chapitre
-// prioritaire et la phrase de l'objectif, un bouton en contour (la carte « Reprendre » reste la seule action pleine)
+// prioritaire et le titre de l'objectif (avec son DS), un bouton en contour (la carte « Reprendre » reste la seule action pleine)
 // et « Ma progression ». Mêmes calculs que /progression (backend apps/users/maitrise.py, objectif.py).
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronRight, RotateCcw } from 'lucide-react';
+import { ArrowRight, CalendarClock, ChevronRight, RotateCcw } from 'lucide-react';
 import { trackAction } from '@/lib/usage';
 import { actionUrl } from '@/pages/progression/links';
 import { EtatPill } from '@/pages/progression/Objectif';
@@ -55,9 +55,13 @@ export const OuJenSuis: React.FC<{
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold text-ink">
               {o.chapitre && <EtatPill etat={o.chapitre.etat} enProgres={o.chapitre.en_progres} size="sm" />}
+              {o.ds && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-[#8a6318]">
+                  <CalendarClock className="h-3 w-3" aria-hidden /> DS {o.ds.quand}
+                </span>
+              )}
               <span className="min-w-0">{o.titre}</span>
             </p>
-            <p className="mt-0.5 line-clamp-2 text-[13px] leading-relaxed text-ink-faint">{o.phrase}</p>
           </div>
           <Link to={to} onClick={() => trackAction('accueil-objectif')}
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-ink/80 bg-white px-4 text-[14px] font-semibold text-ink transition-colors hover:bg-ink hover:text-white">

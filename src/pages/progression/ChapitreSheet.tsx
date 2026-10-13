@@ -1,17 +1,17 @@
-// Détail d'un chapitre de « Ma progression » (13/10/2026) : « Pourquoi ce statut ? » (les critères observés),
-// réussite par difficulté, tentatives, dernière évaluation, maîtrise durable, autonomie (seul / de moins en moins
-// d'aide) et les trois progressions (parcours, résultats, apprentissages). Actions en bas. Les théorèmes des
-// questions (à la place des notions depuis le 13/10/2026) ne sont pas montrés : ils choisissent les exercices.
+// Détail d'un chapitre de « Ma progression » (13/10/2026) : ce qui manque pour « Maîtrisé » (les critères remplis
+// sont repliés), réussite par difficulté, deux repères, l'autonomie quand elle est mesurée, les contenus à revoir.
+// Peu de texte : des repères et des chiffres. Actions en bas. Les théorèmes des questions ne sont pas montrés.
 import { Link } from 'react-router-dom';
-import { CheckCircle2, CircleDashed, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, ChevronDown, CircleDashed, Clock } from 'lucide-react';
 import { Sheet } from '@/components/space/Sheet';
 import { trackAction } from '@/lib/usage';
 import { actionUrl, lessonsUrl, practiceUrl, quizUrl } from './links';
 import { chapterAction } from './actions';
-import { DIFF_LABEL, ETAT } from './etat';
+import { DIFF_LABEL } from './etat';
 import { EtatPill } from './Objectif';
 import { Avis } from './Avis';
-import { daysAgo, shortDate } from './format';
+import { daysAgo } from './format';
 import type { ChapterProgress, Critere, Difficulte } from './types';
 
 const CRITERE_ICON = { ok: CheckCircle2, a_faire: CircleDashed, en_attente: Clock } as const;
@@ -39,33 +39,15 @@ export function ChapitreSheet({ chapter, onClose }: { chapter: ChapterProgress |
       )}>
       {c && (
         <div className="flex flex-col gap-6">
-          <Block title="Pourquoi ce statut ?">
-            <ul className="space-y-2">
-              {(c.criteres ?? []).map((k) => <CritereRow key={k.cle} k={k} />)}
-            </ul>
-          </Block>
+          <Criteres key={c.id} criteres={c.criteres ?? []} />
 
           <Block title="Où j’en suis">
             <Difficulties chapter={c} />
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
               <Fact k="Questions évaluées" v={String(c.reussite?.questions ?? 0)} />
-              <Fact k="Exercices évalués" v={String(c.exercices_evalues ?? 0)} />
               <Fact k="Dernière évaluation" v={c.derniere_evaluation ? daysAgo(c.derniere_evaluation) : '—'} />
-              <Fact k="Maîtrise durable" v={durable(c)} />
+              <Autonomie chapter={c} />
             </dl>
-          </Block>
-
-          <Block title="Autonomie">
-            <Autonomie chapter={c} />
-          </Block>
-
-          <Block title="Mes 3 progressions">
-            <ul className="space-y-2.5 text-[13px] leading-relaxed">
-              <li><b className="font-semibold text-ink">Parcours</b> <span className="text-ink-soft">— {c.travailles ?? 0} exercice{(c.travailles ?? 0) > 1 ? 's' : ''} travaillé{(c.travailles ?? 0) > 1 ? 's' : ''} sur {c.contents} disponibles.</span></li>
-              <li><b className="font-semibold text-ink">Résultats</b> <span className="text-ink-soft">— {c.reussite?.pct !== null && c.reussite?.pct !== undefined ? `${c.reussite.pct} % de réussite` : 'pas encore assez de questions'}{c.tendance !== null && c.tendance !== undefined ? `, ${c.tendance >= 0 ? '+' : '−'}${Math.abs(c.tendance)} pts en 30 jours` : ''}.</span></li>
-              <li><b className="font-semibold text-ink">Apprentissages</b> <span className="text-ink-soft">— {ETAT[etat].label.toLowerCase()} ; {durable(c).toLowerCase()}.</span></li>
-            </ul>
-            <p className="mt-2 text-[12px] leading-relaxed text-ink-faint">Finir tous les exercices ne veut pas dire tout maîtriser, et on peut maîtriser sans tout faire : c’est la troisième qui compte le plus.</p>
           </Block>
 
           {c.review.length > 0 && (
@@ -81,15 +63,6 @@ export function ChapitreSheet({ chapter, onClose }: { chapter: ChapterProgress |
       )}
     </Sheet>
   );
-}
-
-function durable(c: ChapterProgress) {
-  const d = c.durable;
-  if (!d) return '—';
-  if (d.etat === 'confirmee') return `Confirmée le ${shortDate(d.le!)}`;
-  if (d.etat === 'n_a_pas_tenu') return `N’a pas tenu le ${shortDate(d.le!)}`;
-  if (d.etat === 'a_verifier') return d.due ? 'À revérifier maintenant' : `À revérifier dès le ${shortDate(d.a_partir_du!)}`;
-  return 'Pas encore mesurée';
 }
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
@@ -148,14 +121,32 @@ function Autonomie({ chapter: c }: { chapter: ChapterProgress }) {
   const seul = c.autonomie?.seul;
   const tr = c.autonomie?.transfert;
   return (
-    <div className="space-y-2 text-[13px] leading-relaxed">
-      <p className="text-ink-soft"><b className="font-semibold text-ink">Je sais résoudre seul :</b>{' '}
-        {seul && seul.pct !== null ? `${seul.pct} % de tes réussites sans indice ni solution.`
-          : `pas encore assez de recul (${seul?.suivies ?? 0}/${seul?.min ?? 5} réussites suivies).`}</p>
-      <p className="text-ink-soft"><b className="font-semibold text-ink">Je m’en passe de plus en plus :</b>{' '}
-        {tr && tr.visible ? `après une aide, tu as réussi seul la question suivante ${tr.reussis} fois sur ${tr.essais}.`
-          : 'pas encore assez de recul.'}</p>
-      <p className="text-[12px] text-ink-faint">Les indications et les solutions sont faites pour apprendre : l’important est d’en avoir de moins en moins besoin.</p>
-    </div>
+    <>
+      {seul && seul.pct !== null && <Fact k="Réussi sans aide" v={`${seul.pct} %`} />}
+      {tr && tr.visible && <Fact k="Seul après une aide" v={`${tr.reussis} fois sur ${tr.essais}`} />}
+    </>
+  );
+}
+
+/** Ce qui manque pour « Maîtrisé » ; les critères remplis restent repliés (« 3 critères remplis »). */
+function Criteres({ criteres }: { criteres: Critere[] }) {
+  const [open, setOpen] = useState(false);
+  const manque = criteres.filter((k) => k.etat !== 'ok');
+  const ok = criteres.filter((k) => k.etat === 'ok');
+  return (
+    <Block title={manque.length ? 'Pour passer « Maîtrisé »' : 'Maîtrisé'}>
+      {manque.length > 0 && <ul className="space-y-2">{manque.map((k) => <CritereRow key={k.cle} k={k} />)}</ul>}
+      {ok.length > 0 && (
+        <>
+          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+            className={`inline-flex min-h-9 items-center gap-1.5 text-[13px] font-medium text-ink-faint hover:text-ink ${manque.length ? 'mt-1.5' : ''}`}>
+            <CheckCircle2 className="h-4 w-4 text-brand" aria-hidden />
+            {manque.length ? `${ok.length} critère${ok.length > 1 ? 's' : ''} rempli${ok.length > 1 ? 's' : ''}` : 'Tous les critères remplis'}
+            <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+          </button>
+          {open && <ul className="mt-1 space-y-2">{ok.map((k) => <CritereRow key={k.cle} k={k} />)}</ul>}
+        </>
+      )}
+    </Block>
   );
 }

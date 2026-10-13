@@ -47,8 +47,7 @@ export function ProgressionPage() {
   return (
     <Page>
       <SEO title="Ma progression | Fidni" description="Où tu en es, si tu progresses, et quoi travailler maintenant." noindex />
-      <PageHeader eyebrow="Mon suivi" icon={TrendingUp} title="Ma progression"
-        subtitle={<span className="hidden sm:inline">{data?.level ? `${data.level.name} : où tu en es, si tu progresses, et quoi faire maintenant.` : 'Où tu en es, si tu progresses, et quoi faire maintenant.'}</span>} />
+      <PageHeader eyebrow={data?.level ? `Mon suivi · ${data.level.name}` : 'Mon suivi'} icon={TrendingUp} title="Ma progression" />
 
       {failed && !data && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
