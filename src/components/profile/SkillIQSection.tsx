@@ -286,7 +286,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
   const browse = variant !== 'student' && data.elsewhere > 0;
   const other = (
     <OtherLevel availableByLevel={data.availableAll} mine={data.mine} fresh={data.fresh} excludeLevelId={data.level?.id ?? null} standalone={browse}
-      onStart={(q, again) => (again ? redo : start)(q)} />
+      enCours={enCours} onStart={(q, again) => (again ? redo : start)(q)} onView={showLast} />
   );
 
   // Élève : niveaux au choix dès qu'un autre niveau a des quiz ; le sien est montré d'abord.
@@ -332,7 +332,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
       {data.loading ? <PageSkeleton />
         : shown ? (
           <LevelQuizzes fixedLevelId={shown.id} availableByLevel={data.availableAll} mine={data.mine} fresh={data.fresh}
-            onStart={(q, again) => (again ? redo : start)(q)} />
+            enCours={enCours} onStart={(q, again) => (again ? redo : start)(q)} onView={showLast} />
         ) : hasHere ? (
           <QuizList data={data} enCours={enCours} onStart={startChapter} onView={(c) => showLast(fromChapter(c))}>
             {data.elsewhere > 0 && !levelBar && other}

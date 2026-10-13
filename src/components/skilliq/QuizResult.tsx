@@ -241,7 +241,7 @@ export const QuizResult: React.FC<{
         </section>
       ) : dernier && (
         <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[13.5px] text-ink-faint">
-          La correction de ce passage n’a pas été gardée (passage d’avant le 14 octobre). {plural(total, 'question')}.
+          La correction de ce passage n’a pas été gardée (passage d’avant la mise à jour des quiz). {plural(total, 'question')}.
         </p>
       )}
     </div>

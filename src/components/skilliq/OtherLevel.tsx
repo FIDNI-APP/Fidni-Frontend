@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { getTaxonomy, type TaxonomyLevel } from './api';
 import { QuizRow } from './QuizRow';
-import { isFresh, quizKey, takenOn, type ActiveQuiz, type SkillAssessment } from './types';
+import { isFresh, quizKey, takenOn, type ActiveQuiz, type QuizEnCours, type SkillAssessment } from './types';
 
 interface Props {
   /** Quiz prêts par niveau : { "<niveau>": { "<chapitre>": nombre } } (un quiz = chapitre + niveau). */
@@ -19,7 +19,12 @@ interface Props {
   fixedLevelId?: number;
   /** Quiz sortis récemment ({chapitre: date}) : étiquette « Nouveau ». */
   fresh?: Record<string, string>;
+  /** Quiz commencés (clé : niveau:chapitre) : « Reprendre ». */
+  enCours?: Record<string, QuizEnCours>;
+  /** `redo` : quiz déjà passé et pas de passage en cours (nouveau tirage). */
   onStart: (q: ActiveQuiz, redo: boolean) => void;
+  /** Rouvrir le dernier résultat d'un quiz passé. */
+  onView?: (q: ActiveQuiz) => void;
 }
 
 /** Niveaux qui ont au moins un quiz prêt, avec leurs chapitres prêts (par matière, sans doublon). */
@@ -40,7 +45,7 @@ export function levelsWithQuizzes(levels: TaxonomyLevel[], availableByLevel: Rec
     .filter((l) => l.count > 0);
 }
 
-export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByLevel, mine, excludeLevelId, fixedLevelId, fresh = {}, onStart }) => {
+export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByLevel, mine, excludeLevelId, fixedLevelId, fresh = {}, enCours = {}, onStart, onView }) => {
   const [levels, setLevels] = useState<TaxonomyLevel[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [levelId, setLevelId] = useState<number | null>(fixedLevelId ?? null);
@@ -95,10 +100,12 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByL
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
             {s.chapters.map((c) => {
               const t = takenOn(mine, c.id, level.id);
+              const started = enCours[quizKey(level.id, c.id)] ?? null;
+              const q: ActiveQuiz = { id: c.id, name: c.name, subject: s.name, hub_url: t?.hub_url ?? null, levelId: level.id };
               return (
                 <QuizRow key={c.id} name={c.name} ready={availableByLevel[String(level.id)]?.[String(c.id)] ?? 0} taken={t}
-                  isNew={isFresh(fresh[quizKey(level.id, c.id)], t)}
-                  onStart={() => onStart({ id: c.id, name: c.name, subject: s.name, hub_url: t?.hub_url ?? null, levelId: level.id }, !!t)} />
+                  isNew={isFresh(fresh[quizKey(level.id, c.id)], t)} enCours={started}
+                  onStart={() => onStart(q, !!t && !started)} onView={onView && t ? () => onView(q) : undefined} />
               );
             })}
           </ul>
