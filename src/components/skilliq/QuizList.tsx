@@ -47,7 +47,7 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({
             <h3 className="fd-display mt-2 text-[22px] leading-tight text-ink sm:text-[24px]">{chapter.name}</h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-faint">
               <Clock className="h-3.5 w-3.5" aria-hidden />
-              <span className="fd-nums">{quizSize(chapter.ready)} questions · environ {estMinutes(chapter.ready)} min</span>
+              <span className="fd-nums">{quizSize(chapter.ready)} questions · chrono {estMinutes(chapter.ready)} min</span>
               {chapter.subfield && <span>· {chapter.subfield}</span>}
             </p>
           </div>
@@ -57,7 +57,7 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({
         </button>
       </div>
       <p className="border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] text-ink-faint sm:px-6">
-        Corrigé à la fin, avec les explications. Ton score s’ajoute à Ma progression.
+        Chaque réponse est corrigée tout de suite, puis tu vois ce que tu maîtrises, théorème par théorème. Ton score s’ajoute à Ma progression.
       </p>
     </div>
   );

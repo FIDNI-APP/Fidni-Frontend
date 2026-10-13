@@ -336,10 +336,11 @@ export const TOURS: Tour[] = [
     id: 'skilliq',
     match: /^\/skill-iq\/?$/,
     requires: 'skilliq-niveaux',
-    version: 3, // nouvelle page : prochain quiz + quiz du niveau rangés par thème
+    version: 4, // 13/10/2026 : minuteur, correction après chaque question, bilan par théorème, choix du niveau
     steps: [
-      { target: 'skilliq-hero', title: 'Quiz par chapitre', body: 'Des quiz courts, un par chapitre, pour mesurer où tu en es. Refais-le plus tard : tu vois ta progression.' },
-      { target: 'skilliq-niveaux', title: 'Tous tes quiz', body: 'Les quiz prêts de ton niveau, rangés par thème. Ton dernier score s’affiche à côté : refais-le plus tard pour voir ta progression.' },
+      { target: 'skilliq-hero', title: 'Quiz par chapitre', body: '10 questions chronométrées, comme en concours. Chaque réponse est corrigée tout de suite, et la fin du quiz te dit, théorème par théorème, ce que tu maîtrises.' },
+      { target: 'skilliq-choix-niveau', title: 'Ton niveau, ou un autre', body: 'Tes quiz s’affichent d’abord. Tu peux aussi passer ceux d’un autre niveau, pour revoir l’année d’avant par exemple.' },
+      { target: 'skilliq-niveaux', title: 'Tous tes quiz', body: 'Les quiz prêts, rangés par thème. Ton dernier score s’affiche à côté : refais-le plus tard pour voir ta progression.' },
     ],
   },
 

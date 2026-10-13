@@ -3,10 +3,11 @@
 //  - aucun quiz prêt pour son niveau (la production aujourd'hui) : un état vide honnête, avec de quoi travailler
 //    tout de suite (les exercices de son chapitre le plus fragile, sa progression) et les chapitres prévus, repliés ;
 //  - des quiz prêts : le prochain à passer (le chapitre le plus fragile pas encore testé), puis tous les quiz du niveau ;
-//  - « Un autre niveau ? » seulement s'il existe des quiz ailleurs ; visiteur : une invitation à créer son compte.
+//  - barre de niveaux (13/10/2026) : « Mon niveau » par défaut, puis les autres niveaux qui ont des quiz, au choix ;
+//    visiteur : une invitation à créer son compte.
 // Lien profond : /skill-iq?chapitre=<id>[&retour=/revisions/ds/12] lance le quiz, ou dit qu'il n'est pas encore prêt ;
 // `retour` donne « Retour à mon DS » après le résultat. Les éléments sont dans components/skilliq/.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Brain, ChevronLeft, Dumbbell, Hourglass, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,17 +18,17 @@ import { profileLevel } from '@/lib/api/hubApi';
 import { trackAction } from '@/lib/usage';
 import { practiceUrl } from '@/pages/progression/links';
 import type { User } from '@/types';
-import { findChapter, getQuiz } from '@/components/skilliq/api';
+import { findChapter, getQuiz, getTaxonomy, type TaxonomyLevel } from '@/components/skilliq/api';
 import { ComingSoon } from '@/components/skilliq/ComingSoon';
 import { SEO } from '@/components/layout/SEO';
-import { OtherLevel } from '@/components/skilliq/OtherLevel';
+import { LevelQuizzes, OtherLevel, levelsWithQuizzes } from '@/components/skilliq/OtherLevel';
 import { QuizList } from '@/components/skilliq/QuizList';
 import { QuizResult } from '@/components/skilliq/QuizResult';
 import { QuizRunner } from '@/components/skilliq/QuizRunner';
 import { useQuizChapters } from '@/components/skilliq/useQuizChapters';
 import { safeReturn, type ActiveQuiz, type QuizChapter, type QuizQuestion, type SkillAssessment } from '@/components/skilliq/types';
 
-const SUBTITLE = '10 questions, corrigées à la fin, pour mesurer ta maîtrise d’un chapitre.';
+const SUBTITLE = '10 questions chronométrées, corrigées une à une, et ton bilan théorème par théorème.';
 
 /** Page sur /skill-iq ; simple colonne quand le composant est affiché dans le profil (?tab=skilliq). */
 const Shell: React.FC<{ narrow?: boolean; children: React.ReactNode }> = ({ narrow = false, children }) => {
@@ -118,8 +119,21 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
   const [missing, setMissing] = useState<{ id: number; name: string | null; hub_url: string | null } | null>(null);
   const [active, setActive] = useState<ActiveQuiz | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
+  const [seconds, setSeconds] = useState(600);
   const [result, setResult] = useState<SkillAssessment | null>(null);
   const request = useRef(0);
+  // Barre de niveaux : null = mon niveau (par défaut), sinon un autre niveau choisi par l'élève.
+  const [view, setView] = useState<number | null>(null);
+  const [taxonomy, setTaxonomy] = useState<TaxonomyLevel[] | null>(null);
+  const student = !isTeacher && !!(data.level ?? profileLevel(user));
+  useEffect(() => {
+    if (!student) return;
+    let alive = true;
+    getTaxonomy().then((t) => { if (alive) setTaxonomy(t); }).catch(() => { if (alive) setTaxonomy([]); });
+    return () => { alive = false; };
+  }, [student]);
+  const otherLevels = useMemo(() => levelsWithQuizzes(taxonomy ?? [], data.available, data.level?.id ?? null),
+    [taxonomy, data.available, data.level?.id]);
 
   useEffect(() => {
     if (!searchParams.has('chapitre') && !searchParams.has('retour')) return;
@@ -137,7 +151,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     setMissing(null);
     window.scrollTo({ top: 0 });
     getQuiz(q.id)
-      .then((qs) => { if (request.current === id) setQuestions(qs); })
+      .then((r) => { if (request.current === id) { setSeconds(r.seconds); setQuestions(r.questions); } })
       .catch(() => { if (request.current === id) setQuestions([]); });
   };
 
@@ -192,7 +206,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
               secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">Retour aux quiz</button>} />
           </div>
         ) : (
-          <QuizRunner quiz={active} questions={questions} onQuit={close}
+          <QuizRunner quiz={active} questions={questions} seconds={seconds} onQuit={close}
             onDone={(r) => { setResult(r); data.refreshMine(); window.scrollTo({ top: 0 }); }} />
         )}
       </Shell>
@@ -210,9 +224,34 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
       onStart={(q, again) => (again ? redo : start)(q)} />
   );
 
+  // Élève : niveaux au choix dès qu'un autre niveau a des quiz ; le sien est montré d'abord.
+  const levelBar = variant === 'student' && otherLevels.length > 0;
+  const shown = levelBar ? otherLevels.find((l) => l.id === view) ?? null : null;
+
   return (
     <Shell>
-      <Header subtitle={hasHere || browse ? SUBTITLE : undefined} />
+      <Header subtitle={hasHere || browse || levelBar ? SUBTITLE : undefined} />
+
+      {levelBar && !data.loading && (
+        <div role="tablist" aria-label="Niveau des quiz" className="mb-5 flex flex-wrap items-center gap-2" data-tour="skilliq-choix-niveau">
+          <button type="button" role="tab" aria-selected={!shown} onClick={() => setView(null)}
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-[13px] font-semibold transition-colors ${
+              !shown ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+            Mon niveau{level ? <span className={`font-normal ${!shown ? 'text-white/75' : 'text-ink-faint'}`}>· {level.name}</span> : null}
+          </button>
+          {otherLevels.map((l) => {
+            const on = shown?.id === l.id;
+            return (
+              <button key={l.id} type="button" role="tab" aria-selected={on} onClick={() => setView(l.id)}
+                className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-[13px] font-semibold transition-colors ${
+                  on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
+                {l.name}
+                <span className={`fd-nums text-[11.5px] ${on ? 'text-white/70' : 'text-ink-faint'}`}>{l.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {data.failed && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
@@ -224,8 +263,11 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
       {missing && <MissingBanner chapter={missing} retour={retour} onClose={() => setMissing(null)} />}
 
       {data.loading ? <PageSkeleton />
-        : hasHere ? (
-          <QuizList data={data} onStart={startChapter}>{data.elsewhere > 0 && other}</QuizList>
+        : shown ? (
+          <LevelQuizzes fixedLevelId={shown.id} available={data.available} taken={data.taken}
+            onStart={(q, again) => (again ? redo : start)(q)} />
+        ) : hasHere ? (
+          <QuizList data={data} onStart={startChapter}>{data.elsewhere > 0 && !levelBar && other}</QuizList>
         ) : browse ? (
           <Section id="tous-les-quiz" title="Choisis un niveau"
             hint={variant === 'no-level' ? (
@@ -240,7 +282,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
           <div className="flex flex-col gap-3">
             <ComingSoon variant={variant} fragile={data.fragile} exercisesHref={exercisesHome(user)}
               chapters={data.chapters} levelName={level?.name ?? null} username={user.username} quiet={!!missing} />
-            {variant === 'student' && data.elsewhere > 0 && other}
+            {variant === 'student' && data.elsewhere > 0 && !levelBar && other}
           </div>
         )}
     </Shell>

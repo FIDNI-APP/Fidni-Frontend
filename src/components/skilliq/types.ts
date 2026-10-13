@@ -83,11 +83,11 @@ export const previousPct = (a: SkillAssessment) =>
 /** « Retour à mon DS » : seulement vers un plan de DS du site (jamais une adresse extérieure). */
 export const safeReturn = (r: string | null) => (r && /^\/revisions\/ds\/\d+$/.test(r) ? r : null);
 
-/** Un quiz = au plus 10 questions tirées au hasard. */
+/** Un quiz = au plus 10 questions (une par théorème d'abord). */
 export const quizSize = (ready: number) => Math.min(Math.max(ready, 1), 10);
 
-/** Durée annoncée : environ 45 s par question, jamais moins de 2 min. */
-export const estMinutes = (ready: number) => Math.max(2, Math.round(quizSize(ready) * 0.75));
+/** Durée du minuteur : 1 min par question (le chrono s'arrête pendant la correction de chaque question). */
+export const estMinutes = (ready: number) => quizSize(ready);
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 

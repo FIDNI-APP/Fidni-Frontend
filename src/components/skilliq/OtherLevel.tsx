@@ -13,24 +13,14 @@ interface Props {
   excludeLevelId?: number | null;
   /** Ouvert d'emblée, sans repli (professeur, élève sans niveau). */
   standalone?: boolean;
+  /** Un seul niveau, choisi ailleurs (barre de niveaux de la page, 13/10/2026) : pas d'onglets ici. */
+  fixedLevelId?: number;
   onStart: (q: ActiveQuiz, redo: boolean) => void;
 }
 
-const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, taken, excludeLevelId, onStart }) => {
-  const [levels, setLevels] = useState<TaxonomyLevel[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [levelId, setLevelId] = useState<number | null>(null);
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    setFailed(false);
-    getTaxonomy().then((l) => { if (alive) setLevels(l); }).catch(() => { if (alive) setFailed(true); });
-    return () => { alive = false; };
-  }, [attempt]);
-
-  // Niveaux qui ont au moins un quiz prêt, avec leurs chapitres prêts (par matière, sans doublon).
-  const withQuizzes = useMemo(() => (levels ?? [])
+/** Niveaux qui ont au moins un quiz prêt, avec leurs chapitres prêts (par matière, sans doublon). */
+export function levelsWithQuizzes(levels: TaxonomyLevel[], available: Record<string, number>, excludeLevelId?: number | null) {
+  return levels
     .filter((l) => l.id !== excludeLevelId)
     .map((l) => {
       const subjects = l.subjects.map((s) => {
@@ -41,7 +31,24 @@ const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, taken, e
       }).filter((s) => s.chapters.length > 0);
       return { ...l, subjects, count: subjects.reduce((n, s) => n + s.chapters.length, 0) };
     })
-    .filter((l) => l.count > 0), [levels, available, excludeLevelId]);
+    .filter((l) => l.count > 0);
+}
+
+export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, taken, excludeLevelId, fixedLevelId, onStart }) => {
+  const [levels, setLevels] = useState<TaxonomyLevel[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [levelId, setLevelId] = useState<number | null>(fixedLevelId ?? null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { if (fixedLevelId != null) setLevelId(fixedLevelId); }, [fixedLevelId]);
+
+  useEffect(() => {
+    let alive = true;
+    setFailed(false);
+    getTaxonomy().then((l) => { if (alive) setLevels(l); }).catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [attempt]);
+
+  const withQuizzes = useMemo(() => levelsWithQuizzes(levels ?? [], available, excludeLevelId), [levels, available, excludeLevelId]);
 
   if (failed) {
     return (
@@ -61,7 +68,7 @@ const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, taken, e
 
   return (
     <div className="flex flex-col gap-4">
-      {withQuizzes.length > 1 && (
+      {withQuizzes.length > 1 && fixedLevelId == null && (
         <div role="tablist" aria-label="Niveau" className="flex flex-wrap gap-2">
           {withQuizzes.map((l) => {
             const on = l.id === level.id;

@@ -1,6 +1,6 @@
 // Appels du quiz par chapitre (tous réservés aux connectés, sauf la taxonomie).
 import { api } from '@/lib/api/apiClient';
-import type { QuizQuestion, SkillAssessment } from './types';
+import type { CorrectionItem, QuizQuestion, SkillAssessment } from './types';
 
 /** Nombre de questions actives par chapitre : quels quiz existent vraiment ({ "18": 12 }). */
 export const getAvailable = async () => ((await api.get('/skill-assessments/available/')).data ?? {}) as Record<string, number>;
@@ -8,11 +8,18 @@ export const getAvailable = async () => ((await api.get('/skill-assessments/avai
 /** Dernier résultat de l'élève pour chaque chapitre passé. */
 export const getMine = async () => ((await api.get('/skill-assessments/my/')).data ?? []) as SkillAssessment[];
 
-/** 10 questions tirées au hasard (404 s'il n'y en a aucune). */
-export const getQuiz = async (chapterId: number) =>
-  ((await api.get(`/skill-assessments/quiz/${chapterId}/`)).data?.questions ?? []) as QuizQuestion[];
+/** 10 questions (une par théorème d'abord ; 404 s'il n'y en a aucune) et la durée du minuteur, en secondes. */
+export const getQuiz = async (chapterId: number) => {
+  const data = (await api.get(`/skill-assessments/quiz/${chapterId}/`)).data ?? {};
+  const questions = (data.questions ?? []) as QuizQuestion[];
+  return { questions, seconds: Number(data.duree_secondes) || questions.length * 60 };
+};
 
-/** Envoi des réponses : résultat + correction. */
+/** Correction d'une question dès qu'on y a répondu : bonne réponse, explication, théorèmes. */
+export const checkAnswer = async (questionId: number, answer: number) =>
+  (await api.post(`/skill-assessments/verifier/${questionId}/`, { answer })).data as CorrectionItem;
+
+/** Envoi des réponses (-1 : sans réponse, temps écoulé) : résultat, correction et bilan par théorème. */
 export const submitQuiz = async (chapterId: number, answers: Record<number, number>, timeSpent: number) =>
   (await api.post(`/skill-assessments/submit/${chapterId}/`, { answers, time_spent: timeSpent })).data as SkillAssessment;
 
