@@ -2,7 +2,8 @@
 // objectif.py depuis le 13/10/2026) et de GET /api/stats/apercu/ (bloc « Où j'en suis » de l'accueil).
 export type ChapterStatus = 'mastered' | 'good' | 'weak' | 'started' | 'todo';
 
-export interface NotionStat { label: string; pct: number; questions: number }
+/** Théorème d'une question (meta.theorems) : nom exact de la base ; jamais montré à l'élève. */
+export interface TheoremeStat { label: string; pct: number; questions: number }
 
 export interface ChapterProgress {
   id: number;
@@ -19,7 +20,7 @@ export interface ChapterProgress {
   contents: number;
   done: number;
   review: { id: number; title: string; url: string }[];
-  notions: { best: NotionStat[]; worst: NotionStat[] };
+  theoremes?: { best: TheoremeStat[]; worst: TheoremeStat[] };
   last_at: string | null;
   /** Page d'exercices du chapitre au niveau de l'élève ; null si le chapitre n'est pas de son niveau. */
   hub_url?: string | null;
@@ -42,7 +43,7 @@ export interface ChapterProgress {
   exercices_reussis?: number;
   travailles?: number;
   derniere_evaluation?: string | null;
-  notions_couvertes?: { reussies: number; dispo: number; manquantes: string[] };
+  theoremes_couverts?: { reussis: number; dispo: number; manquants: string[] };
   commence?: boolean;
 }
 
@@ -112,7 +113,7 @@ export interface RatedItem {
   pct: number;
   chapter_id: number | null;
   chapter: string | null;
-  source: 'notion' | 'skilliq';
+  source: 'theoreme' | 'skilliq';
   questions: number | null;
   url: string;
   hub_url?: string | null;

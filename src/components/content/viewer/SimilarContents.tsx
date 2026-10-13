@@ -1,5 +1,5 @@
 // « Pour continuer » : sous un exercice, un examen ou une leçon, les contenus les plus semblables
-// (mêmes notions, même chapitre, même niveau — backend apps/things/similar.py), chacun avec sa raison.
+// (mêmes théorèmes dans les questions, même chapitre, même niveau — backend apps/things/similar.py), chacun avec sa raison.
 // 11/10/2026 : une liste calme dans une seule carte (avant : une grille de cartes, longue sur téléphone).
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';

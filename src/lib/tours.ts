@@ -70,7 +70,7 @@ const SOLUTION: TourStep = {
 const AUTO_EVAL: TourStep = {
   target: 'auto-eval',
   title: 'Tu avais trouvé ?',
-  body: "Sous chaque solution ouverte : Réussi ou À revoir (re-clique pour effacer). Fidni repère tes notions à retravailler.",
+  body: "Sous chaque solution ouverte : Réussi ou À revoir (re-clique pour effacer). Fidni repère ce que tu dois retravailler.",
 };
 const VOTE: TourStep = {
   target: 'vote',
@@ -200,7 +200,6 @@ export const TOURS: Tour[] = [
     steps: [
       { target: 'activite-bilan', title: 'Ton bilan', body: 'Tes questions réussies, en partie et à revoir, à côté de la réussite des autres élèves.' },
       { target: 'activite-questions', title: 'Question par question', body: 'Une colonne par question : la part d’élèves qui la réussissent. Clique une colonne pour le détail, et pour revenir à la question.' },
-      { target: 'activite-notions', title: 'Tes notions', body: 'Les plus faibles d’abord : c’est là qu’il faut retravailler.' },
     ],
   },
 

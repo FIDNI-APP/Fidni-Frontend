@@ -7,16 +7,16 @@
  *  2. Question par question — une colonne par question (part des élèves qui la réussissent) ; on clique
  *                             une colonne pour le détail et pour revenir à la question.
  *  3. Les autres élèves     — combien ont terminé, réussite, temps (répartition).
- *  (+ Tes notions, quand il y a des auto-évaluations.)
  * Que des chiffres enregistrés ; palette encre / vert / or.
  * 11/10/2026 : titres serif, « à revoir » en or (le rouge reste aux erreurs), squelette au chargement.
+ * 13/10/2026 : plus de carte « Tes notions » (les théorèmes des questions ne sont pas montrés aux élèves).
  */
 
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRight, BadgeCheck, Check, Info, RotateCcw, Sparkles, Target, Timer, Users } from 'lucide-react';
+import { AlertCircle, ArrowRight, BadgeCheck, Check, Info, RotateCcw, Sparkles, Timer, Users } from 'lucide-react';
 import { CardsSkeleton } from '@/components/space/Page';
 import { type ContentStatistics } from '@/lib/api';
-import { type PerQuestionStat, type SkillMastery } from '@/lib/api/statisticsApi';
+import { type PerQuestionStat } from '@/lib/api/statisticsApi';
 import { type QuestionNumber } from '@/lib/reportTargets';
 
 // En dessous, les pourcentages des autres élèves reposent sur trop peu de monde : on le dit.
@@ -57,10 +57,6 @@ const formatTime = (seconds: number | null | undefined) => {
   return m > 0 ? `${m} min ${s.toString().padStart(2, '0')}` : `${s} s`;
 };
 
-// Libellé lisible d'une notion : fourni par le serveur (référentiel des notions), sinon l'identifiant.
-const skillLabel = (s: SkillMastery) =>
-  s.label ?? s.skill.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
-
 const plural = (n: number, one: string, many = `${one}s`) => (n > 1 ? many : one);
 
 export const ActivitySection: React.FC<ActivitySectionProps> = ({
@@ -88,7 +84,6 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({
 
   const assessed = statistics.user_assessed;
   const nStudents = statistics.total_participants;
-  const perSkill = (statistics.per_skill || []).slice().sort((a, b) => a.mastery_pct - b.mastery_pct);
 
   return (
     <div className="flex flex-col gap-4">
@@ -100,8 +95,6 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({
         numbering={numbering} onGoToQuestion={onGoToQuestion} />
 
       <Others statistics={statistics} contentLabel={contentLabel} />
-
-      {perSkill.length > 0 && <Notions skills={perSkill} />}
     </div>
   );
 };
@@ -436,39 +429,5 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dt className="text-[11.5px] text-ink-faint mt-0.5 leading-snug">{label}</dt>
       <dd className="text-[19px] font-bold text-ink fd-nums leading-tight">{value}</dd>
     </div>
-  );
-}
-
-/* ───────────────────────────── Tes notions ───────────────────────────── */
-
-function Notions({ skills }: { skills: SkillMastery[] }) {
-  const weak = skills.filter((s) => s.mastery_pct < 50);
-  return (
-    <section data-tour="activite-notions" className="bg-white border border-line rounded-2xl p-5 sm:p-6">
-      <h3 className="fd-display text-[18px] leading-tight text-ink">Tes notions</h3>
-      <p className="text-[12.5px] text-ink-faint mt-0.5">Ta maîtrise de chaque notion de {skills.length > 1 ? 'ces questions' : 'cette question'}, d’après tes auto-évaluations.</p>
-      {weak.length > 0 && (
-        <p className="mt-3 flex items-start gap-2 text-[13px] text-ink-soft">
-          <Target className="w-4 h-4 mt-0.5 text-gold-strong flex-shrink-0" />
-          <span><b className="text-ink">À retravailler :</b> {weak.slice(0, 3).map(skillLabel).join(', ')}.</span>
-        </p>
-      )}
-      <ul className="mt-3 grid sm:grid-cols-2 gap-x-8 gap-y-2.5">
-        {skills.map((s) => {
-          const low = s.mastery_pct < 50;
-          return (
-            <li key={s.skill} className="min-w-0">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[13px] text-ink truncate" title={skillLabel(s)}>{skillLabel(s)}</span>
-                <span className={`text-[12px] fd-nums ${low ? 'text-gold-strong font-semibold' : 'text-ink-faint'}`}>{s.mastery_pct} %</span>
-              </div>
-              <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee] overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${Math.max(s.mastery_pct, 3)}%`, background: low ? C.gold : C.brand }} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }

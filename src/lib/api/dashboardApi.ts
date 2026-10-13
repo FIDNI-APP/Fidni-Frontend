@@ -134,8 +134,9 @@ export interface DashboardOverview {
   review: OverviewContent[];
   chapters: OverviewChapter[];
   coverage: { total: number; touched: number };
-  /** chapter_id : le chapitre où la notion a été le plus travaillée (ouvre Ma progression dessus). */
-  weak_notions: { slug: string; label: string; assessed: number; mastery_pct: number; chapter_id?: number | null }[];
+  /** Théorèmes les moins réussis (meta.theorems des questions), pas affichés aux élèves ; chapter_id : le chapitre
+   *  où le théorème a été le plus travaillé. */
+  weak_theorems: { name: string; label: string; assessed: number; mastery_pct: number; chapter_id?: number | null }[];
 }
 
 export async function getDashboardOverview(): Promise<DashboardOverview> {

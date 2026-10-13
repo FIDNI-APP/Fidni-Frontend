@@ -29,10 +29,12 @@ import type { Difficulty } from '@/types';
 // « section » : une partie d'examen (Exercice 1, Problème…) ; la numérotation des questions repart à 1.
 export type BlockType = 'context' | 'question' | 'section';
 
-// Schéma v2.1 — métadonnées pédagogiques par question (toutes optionnelles,
-// rétro-compatible v2.0). `skills` alimente le diagnostic « maîtrise par notion ».
+// Schéma v2.1 — métadonnées pédagogiques par question (toutes optionnelles, rétro-compatible v2.0).
+// `theorems` (13/10/2026, à la place des anciennes notions `skills`) : noms exacts des théorèmes de la base que la
+// question utilise ; ils rangent la question dans son chapitre (Ma progression) et choisissent les exercices
+// proposés. Jamais montrés aux élèves.
 export interface QuestionMeta {
-  skills?: string[];
+  theorems?: string[];
   difficulty?: Difficulty;
   expected_seconds?: number;
   common_mistakes?: string[];
@@ -103,47 +105,47 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; active: string }[]
 ];
 
 // =====================
-// META EDITOR (v2.1 — notions/difficulté/temps par question)
+// META EDITOR (v2.1 — théorèmes/difficulté/temps par question)
 // =====================
 
-const slugify = (s: string) =>
-  s.trim().toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-
-// Référentiel des notions (liste fermée côté serveur, apps/caracteristics/notions.py) — chargé une
-// fois, partagé par tous les MetaEditor. On ne crée pas de notion ici : même notion = même
-// identifiant partout, sinon les statistiques se dispersent.
-interface NotionRef { slug: string; label: string; chapter: string | null; count: number }
-let SKILL_CACHE: NotionRef[] | null = null;
+// Théorèmes de la base (programme officiel, apps/caracteristics/programme.py) — chargés une fois, partagés par tous
+// les MetaEditor. Liste fermée : on n'en crée pas ici (même théorème = même nom partout).
+interface TheoremRef { name: string; chapters: string[] }
+let THEOREM_CACHE: TheoremRef[] | null = null;
 const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) => void }> = ({ meta, onChange }) => {
-  const skills = meta?.skills || [];
-  const count = skills.length + (meta?.difficulty ? 1 : 0) + (meta?.expected_seconds ? 1 : 0);
+  const theorems = meta?.theorems || [];
+  const count = theorems.length + (meta?.difficulty ? 1 : 0) + (meta?.expected_seconds ? 1 : 0);
   // Ouvert d'emblée si des métadonnées existent déjà (à l'édition d'un exercice existant).
   const [open, setOpen] = useState(count > 0);
   const [draft, setDraft] = useState('');
-  const [vocab, setVocab] = useState<NotionRef[]>(SKILL_CACHE || []);
+  const [vocab, setVocab] = useState<TheoremRef[]>(THEOREM_CACHE || []);
   const [focused, setFocused] = useState(false);
-  const skillInputRef = useRef<HTMLDivElement>(null);
+  const theoremInputRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open || SKILL_CACHE) return;
-    api.get('/skills/').then(r => { SKILL_CACHE = r.data || []; setVocab(SKILL_CACHE ?? []); }).catch(() => {});
+    if (!open || THEOREM_CACHE) return;
+    api.get('/theorems/', { params: { page_size: 500 } }).then(r => {
+      const rows = Array.isArray(r.data) ? r.data : r.data?.results || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      THEOREM_CACHE = rows.map((t: any) => ({ name: t.name, chapters: (t.chapters || []).map((c: { name: string }) => c.name) }));
+      setVocab(THEOREM_CACHE ?? []);
+    }).catch(() => {});
   }, [open]);
 
-  const addSkill = (slug: string) => {
-    if (slug && !skills.includes(slug)) onChange({ ...meta, skills: [...skills, slug] });
+  const addTheorem = (name: string) => {
+    if (name && !theorems.includes(name)) onChange({ ...meta, theorems: [...theorems, name] });
     setDraft('');
   };
-  const removeSkill = (s: string) => onChange({ ...meta, skills: skills.filter(x => x !== s) });
-  const labelOf = (slug: string) => vocab.find(v => v.slug === slug)?.label ?? slug;
+  const removeTheorem = (name: string) => {
+    const rest = theorems.filter(x => x !== name);
+    onChange({ ...meta, theorems: rest.length ? rest : undefined });
+  };
 
   const q = fold(draft.trim());
-  const qSlug = slugify(draft);
   const suggestions = vocab
-    .filter(v => !skills.includes(v.slug) && (!q || fold(v.label).includes(q) || v.slug.includes(qSlug)))
+    .filter(v => !theorems.includes(v.name) && (!q || fold(v.name).includes(q) || v.chapters.some(c => fold(c).includes(q))))
     .slice(0, 8);
 
   return (
@@ -156,7 +158,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
       >
         <SlidersHorizontal className="w-3.5 h-3.5" style={{ color: '#6b6862' }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: '#33302b' }}>Métadonnées pédagogiques</span>
-        <span style={{ fontSize: 11, color: '#9a958c' }}>notions · difficulté · temps</span>
+        <span style={{ fontSize: 11, color: '#9a958c' }}>théorèmes · difficulté · temps</span>
         {count > 0 && (
           <span style={{ fontSize: 10.5, fontWeight: 700, color: '#15633c', background: '#eaf3ed', padding: '1px 7px', borderRadius: 99 }}>{count}</span>
         )}
@@ -165,48 +167,48 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
 
       {open && (
         <div className="flex flex-col gap-2.5" style={{ padding: '4px 11px 12px' }}>
-          {/* Notions — autocomplete sur le vocabulaire existant */}
+          {/* Théorèmes — autocomplete sur la liste de la base (nom ou chapitre) */}
           <div>
             <div className="flex flex-wrap gap-1.5 items-center">
-              {skills.map(s => (
-                <span key={s} className="inline-flex items-center gap-1" style={chipStyle}>
-                  {labelOf(s)}
-                  <button type="button" onClick={() => removeSkill(s)} aria-label={`Retirer ${labelOf(s)}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#6b6862' }}>
+              {theorems.map(t => (
+                <span key={t} className="inline-flex items-center gap-1" style={chipStyle}>
+                  {t}
+                  <button type="button" onClick={() => removeTheorem(t)} aria-label={`Retirer ${t}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#6b6862' }}>
                     <XIcon className="w-3 h-3" />
                   </button>
                 </span>
               ))}
-              <div className="relative" ref={skillInputRef}>
+              <div className="relative" ref={theoremInputRef}>
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setTimeout(() => setFocused(false), 150)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (suggestions[0]) addSkill(suggestions[0].slug); } }}
-                  placeholder="+ notion (cherche dans la liste)"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (suggestions[0]) addTheorem(suggestions[0].name); } }}
+                  placeholder="+ théorème (nom ou chapitre)"
                   style={{ fontSize: 12, border: '1px solid #e7e3dc', borderRadius: 8, padding: '4px 9px', outline: 'none', minWidth: 210 }}
                 />
                 {focused && (suggestions.length > 0 || q) && (
-                  <FloatingPanel anchorRef={skillInputRef} open offset={4}
+                  <FloatingPanel anchorRef={theoremInputRef} open offset={4}
                     style={{ minWidth: 220, background: '#fff', border: '1px solid #e7e3dc', borderRadius: 10, boxShadow: '0 8px 24px rgba(20,18,16,.12)', padding: 4, maxHeight: 220, overflowY: 'auto' }}
                   >
                     {suggestions.map(v => (
                       <button
-                        key={v.slug}
+                        key={v.name}
                         type="button"
-                        onMouseDown={(e) => { e.preventDefault(); addSkill(v.slug); }}
+                        onMouseDown={(e) => { e.preventDefault(); addTheorem(v.name); }}
                         className="w-full flex items-center justify-between gap-3 text-left"
                         style={{ padding: '6px 9px', borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#33302b' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = '#f7f6f3'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <span>{v.label}</span>
-                        <span style={{ fontSize: 10.5, color: '#9a958c', whiteSpace: 'nowrap' }}>{v.chapter ?? 'Transversal'}</span>
+                        <span>{v.name}</span>
+                        <span style={{ fontSize: 10.5, color: '#9a958c', whiteSpace: 'nowrap' }}>{v.chapters[0] ?? ''}{v.chapters.length > 1 ? ` +${v.chapters.length - 1}` : ''}</span>
                       </button>
                     ))}
                     {q && suggestions.length === 0 && (
                       <p style={{ padding: '6px 9px', fontSize: 12, color: '#6b6862', margin: 0 }}>
-                        Aucune notion ne correspond. Choisis la plus proche, ou signale-la pour qu’on l’ajoute.
+                        Aucun théorème ne correspond. Une question de pur calcul n’en a pas besoin.
                       </p>
                     )}
                   </FloatingPanel>
@@ -214,7 +216,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
               </div>
             </div>
             <p style={{ fontSize: 10.5, color: '#9a958c', marginTop: 4 }}>
-              Notions tirées d’une liste commune à tout le site : les statistiques restent cohérentes d’un exercice à l’autre.
+              Seulement ceux que la solution utilise vraiment. Jamais montrés aux élèves : ils rangent la question dans son chapitre et choisissent les exercices proposés.
             </p>
           </div>
 

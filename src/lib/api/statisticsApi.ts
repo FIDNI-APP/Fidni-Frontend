@@ -21,13 +21,6 @@ export interface TimeHistogram {
   user_bucket: number | null;
 }
 
-export interface SkillMastery {
-  label?: string;
-  skill: string;
-  assessed: number;
-  mastery_pct: number;
-}
-
 export interface ContentStatistics {
   total_participants: number;
   success_count: number;
@@ -52,7 +45,6 @@ export interface ContentStatistics {
   time_histogram: TimeHistogram | null;
   per_question: PerQuestionStat[];
   trap_question: PerQuestionStat | null;
-  per_skill: SkillMastery[];
   user_assessed: boolean;
 }
 

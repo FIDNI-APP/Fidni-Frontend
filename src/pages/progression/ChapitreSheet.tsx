@@ -1,6 +1,7 @@
 // Détail d'un chapitre de « Ma progression » (13/10/2026) : « Pourquoi ce statut ? » (les critères observés),
 // réussite par difficulté, tentatives, dernière évaluation, maîtrise durable, autonomie (seul / de moins en moins
-// d'aide), notions, et les trois progressions (parcours, résultats, apprentissages). Actions en bas.
+// d'aide) et les trois progressions (parcours, résultats, apprentissages). Actions en bas. Les théorèmes des
+// questions (à la place des notions depuis le 13/10/2026) ne sont pas montrés : ils choisissent les exercices.
 import { Link } from 'react-router-dom';
 import { CheckCircle2, CircleDashed, Clock } from 'lucide-react';
 import { Sheet } from '@/components/space/Sheet';
@@ -57,16 +58,6 @@ export function ChapitreSheet({ chapter, onClose }: { chapter: ChapterProgress |
           <Block title="Autonomie">
             <Autonomie chapter={c} />
           </Block>
-
-          {((c.notions?.best.length ?? 0) + (c.notions?.worst.length ?? 0) > 0 || (c.notions_couvertes?.dispo ?? 0) > 0) && (
-            <Block title="Notions">
-              {c.notions?.worst.length ? <p className="text-[13px] text-ink-soft">À retravailler : {c.notions.worst.map((n) => `${n.label} (${n.pct} %)`).join(', ')}</p> : null}
-              {c.notions?.best.length ? <p className="mt-1 text-[13px] text-ink-soft">Tu réussis : {c.notions.best.map((n) => n.label).join(', ')}</p> : null}
-              {c.notions_couvertes && c.notions_couvertes.dispo > 0 && (
-                <p className="mt-1 text-[12.5px] text-ink-faint">{c.notions_couvertes.reussies} notion{c.notions_couvertes.reussies > 1 ? 's' : ''} réussie{c.notions_couvertes.reussies > 1 ? 's' : ''} sur {c.notions_couvertes.dispo} présentes dans les exercices.</p>
-              )}
-            </Block>
-          )}
 
           <Block title="Mes 3 progressions">
             <ul className="space-y-2.5 text-[13px] leading-relaxed">
