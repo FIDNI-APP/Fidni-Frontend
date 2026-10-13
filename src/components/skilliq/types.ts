@@ -19,7 +19,25 @@ export interface SkillAssessment {
   hub_url?: string | null;
   /** Correction, seulement dans la réponse à l'envoi. */
   correction?: CorrectionItem[];
+  /** Bilan du dernier passage par théorème (vide pour les passages d'avant le 13/10/2026). */
+  par_theoreme?: TheoremReport | Record<string, never>;
 }
+
+/** Un théorème du chapitre : questions justes / posées sur ce passage (100 % = toutes justes). */
+export interface TheoremScore { id: number; name: string; justes: number; total: number; pct: number }
+
+export interface TheoremReport {
+  /** Du moins maîtrisé au mieux maîtrisé. */
+  theoremes: TheoremScore[];
+  /** Théorèmes du chapitre absents de ce tirage. */
+  non_evalues: { id: number; name: string }[];
+  a_revoir: string[];
+  /** Tous les théorèmes évalués à 100 % et aucun oublié. */
+  complet: boolean;
+}
+
+export const hasReport = (r: SkillAssessment['par_theoreme']): r is TheoremReport =>
+  !!r && Array.isArray((r as TheoremReport).theoremes) && (r as TheoremReport).theoremes.length > 0;
 
 export interface CorrectionItem {
   id: number;
@@ -27,6 +45,8 @@ export interface CorrectionItem {
   correct_answer: number;
   is_correct: boolean;
   explanation: string;
+  /** Théorèmes évalués par la question. */
+  theoremes?: string[];
 }
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
