@@ -284,12 +284,13 @@ export const TOURS: Tour[] = [
   {
     id: 'progression',
     match: /^\/progression\/?$/,
-    requires: 'prog-resume',
-    version: 3, // refonte du 13/10/2026 : la maîtrise d'abord (objectif, progression, chapitres)
+    requires: 'prog-tuiles',
+    version: 5, // tableau de bord en onglets du 13/10/2026 : période, tuiles, graphique, onglets
     steps: [
-      { target: 'prog-resume', title: 'Ton objectif', body: 'Une seule priorité, d’après tes résultats. « Pourquoi ? » dit sur quoi Fidni s’appuie.' },
-      { target: 'prog-activite', title: 'Tes chiffres', body: 'Maîtrise, évolution sur 30 jours, chapitres évalués. Touche un chiffre pour le détail.' },
-      { target: 'prog-carte', title: 'Mes chapitres', body: 'Les prioritaires d’abord. Touche un chapitre pour voir ce qui lui manque.' },
+      { target: 'prog-periode', title: 'La période', body: '7 jours, 30 jours, 3 mois ou depuis le début : tout le tableau suit.' },
+      { target: 'prog-tuiles', title: 'Tes chiffres', body: 'Questions réussies, note aux examens, temps, jours actifs. Touche une tuile pour son graphique.' },
+      { target: 'prog-graphique', title: 'Jour par jour', body: 'Touche une barre pour voir ce que tu as fait ce jour-là.' },
+      { target: 'prog-onglets', title: 'Tout en onglets', body: 'Tes points faibles (les théorèmes à retravailler), tes chapitres (ta note aux examens) et ton temps.' },
     ],
   },
   {

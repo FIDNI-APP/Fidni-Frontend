@@ -76,7 +76,7 @@ export type UsageAction =
   | 'partager' | 'chrono-demarre' | 'epreuve-demarree' | 'epreuve-terminee' | 'similaire' | 'suivant-apres-resultat'
   | 'ressenti' | 'cloche' | 'retour-liste' | 'sommaire-lecon' | 'affichage-enonces' | 'charger-plus' | 'recherche-vide'
   | 'accueil-reprendre' | 'accueil-pour-toi' | 'annoncer-ds' | 'prog-entrainer' | 'prog-cours' | 'prog-quiz'
-  | 'quiz-refait' | 'quiz-dernier-resultat' | 'quiz-repris' | 'quiz-bandeau' | 'quiz-decouvert' | 'mode-revision' | 'barre-mobile' | 'visite-auto' | 'visite-passee' | 'visite-finie'
+  | 'quiz-refait' | 'quiz-dernier-resultat' | 'quiz-repris' | 'quiz-bandeau' | 'quiz-decouvert' | 'prog-periode' | 'prog-tuile' | 'prog-jour' | 'prog-temps-detail' | 'prog-point-faible' | 'prog-onglet' | 'mode-revision' | 'barre-mobile' | 'visite-auto' | 'visite-passee' | 'visite-finie'
   | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google'
   // Dossiers des listes (10/10/2026)
   | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee'
