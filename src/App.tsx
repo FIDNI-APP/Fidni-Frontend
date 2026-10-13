@@ -18,6 +18,7 @@ import { TourProvider } from '@/components/tour/TourProvider';
 import Footer from './components/layout/Footer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
+import { rechargerSiNouvelleVersion, surveillerNouvelleVersion } from './lib/nouvelleVersion';
 
 // Learning paths
 
@@ -46,6 +47,9 @@ window.addEventListener('vite:preloadError', (event) => {
 });
 // Chargement réussi : on réarme pour la prochaine mise en ligne.
 window.setTimeout(() => { try { sessionStorage.removeItem(RELOAD_FLAG); } catch { /* rien */ } }, 10000);
+// Les anciens fichiers restant servis (cache Cloudflare), un onglet ouvert ne voyait jamais la nouvelle version :
+// on la guette (lib/nouvelleVersion.tsx) et on recharge au prochain changement de page.
+surveillerNouvelleVersion();
 
 const page = <M,>(loader: () => Promise<M>, name: keyof M) =>
   lazy(async () => {
@@ -217,6 +221,11 @@ const ScrollToTopOnNavigate = () => {
   useLayoutEffect(() => {
     if (hash || navigationType === 'POP') return;
     window.scrollTo(0, 0);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Nouvelle version en ligne : la page d'arrivée se charge directement avec elle (pas sur une redirection
+  // « replace », qui peut suivre un enregistrement : /documents/new → /documents/42).
+  useLayoutEffect(() => {
+    if (navigationType !== 'REPLACE') rechargerSiNouvelleVersion();
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   // Mesure d'usage (Pilotage) : le motif de la page seulement.
   useEffect(() => { trackPage(pathname); }, [pathname]);
