@@ -18,14 +18,22 @@ export function loadTaxonomy(): Promise<TaxLevel[]> {
   return cache;
 }
 
-export function useTaxonomy() {
+/** Niveaux, matières et chapitres ; `failed` + `retry` : le chargement a échoué (sinon un formulaire vide, muet). */
+export function useTaxonomyState() {
   const [levels, setLevels] = useState<TaxLevel[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
-    loadTaxonomy().then((l) => { if (alive) setLevels(l); }).catch(() => {});
+    setFailed(false);
+    loadTaxonomy().then((l) => { if (alive) setLevels(l); }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, []);
-  return levels;
+  }, [attempt]);
+  return { levels, failed, retry: () => setAttempt((n) => n + 1) };
+}
+
+export function useTaxonomy() {
+  return useTaxonomyState().levels;
 }
 
 export interface RevisionLabels { levelId: number | null; subjectId: number | null; chapterIds: number[] }

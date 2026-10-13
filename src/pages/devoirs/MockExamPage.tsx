@@ -56,6 +56,13 @@ export default function MockExamPage() {
   const [actError, setActError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Écart entre l'heure du serveur et celle du téléphone : le chronomètre suit le serveur (une horloge de téléphone
+  // décalée de 5 min faisait perdre ou gagner 5 min ; le temps final est mesuré par le serveur).
+  const [offset, setOffset] = useState(0);
+  const receive = useCallback((d: Data) => {
+    if (d.now) setOffset(Date.parse(d.now) - Date.now());
+    setData(d);
+  }, []);
   const [progress, setProgress] = useState<Record<number, Progress>>({});
   const progressRef = useRef(progress);
   progressRef.current = progress;
@@ -70,9 +77,9 @@ export default function MockExamPage() {
 
   const load = useCallback(() => {
     if (!id) return;
-    devoirsApi.mock(Number(id)).then(setData)
+    devoirsApi.mock(Number(id)).then(receive)
       .catch((e) => setError(e?.response?.status === 404 ? 'missing' : 'failed'));
-  }, [id]);
+  }, [id, receive]);
   useEffect(() => {
     if (!authLoading && !isAuthenticated) { navigate('/login'); return; }
     if (isAuthenticated) load();
@@ -80,7 +87,7 @@ export default function MockExamPage() {
 
   const phase: 'intro' | 'running' | 'review' = !data?.started_at ? 'intro' : !data.done_at ? 'running' : 'review';
   const total = (data?.minutes ?? 0) * 60;
-  const elapsed = data?.started_at ? Math.max(0, Math.floor((now - Date.parse(data.started_at)) / 1000)) : 0;
+  const elapsed = data?.started_at ? Math.max(0, Math.floor((now + offset - Date.parse(data.started_at)) / 1000)) : 0;
   const remaining = total - elapsed;
 
   // Pendant l'épreuve : l'horloge avance chaque seconde ; quitter la page demande confirmation ;
@@ -121,7 +128,7 @@ export default function MockExamPage() {
     setActError(false);
     try {
       const next = await devoirsApi.mockAction(data.test.id, action, action === 'finish' ? elapsed : undefined);
-      setData(next);
+      receive(next);
       setNow(Date.now());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {

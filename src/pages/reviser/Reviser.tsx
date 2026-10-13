@@ -36,7 +36,11 @@ const ago = (days: number | null) => (days === null ? '' : days <= 0 ? 'aujourd�
 
 /* ───────────────────────── 1. Prochain DS ───────────────────────── */
 
-const NextTestHero: React.FC<{ test: UpcomingTest; others: UpcomingTest[]; onEdit: (t: UpcomingTest) => void }> = ({ test, others, onEdit }) => (
+const NextTestHero: React.FC<{
+  test: UpcomingTest; others: UpcomingTest[]; onEdit: (t: UpcomingTest) => void;
+  /** « Un autre DS blanc » : en tirer un nouveau (le lien ouvrait la correction de celui déjà fait). */
+  onNewMock: (t: UpcomingTest) => void; busy: boolean;
+}> = ({ test, others, onEdit, onNewMock, busy }) => (
   <div className="overflow-hidden rounded-3xl border border-line bg-white">
     <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
       <div className="flex items-start gap-4 sm:flex-1">
@@ -66,11 +70,24 @@ const NextTestHero: React.FC<{ test: UpcomingTest; others: UpcomingTest[]; onEdi
           )}
         </div>
       </div>
-      {/* 11/10/2026 : le DS blanc est l'action principale (avant : « Continuer ma préparation », DS blanc en petit). */}
+      {/* 11/10/2026 : le DS blanc est l'action principale (avant : « Continuer ma préparation », DS blanc en petit).
+          13/10/2026 : commencé → « Reprendre » ; fait → un nouveau sujet (le lien rouvrait l'ancien, terminé). */}
       <div className="flex flex-col gap-2 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-        <Link to={`/revisions/ds/${test.id}/blanc`} className="fd-btn-primary min-h-12 w-full justify-center text-[15px]" data-tour="reviser-preparer">
-          <Timer className="h-4 w-4" /> {test.mock_done_at ? 'Un autre DS blanc' : 'Lancer le DS blanc'}
-        </Link>
+        {test.mock_done_at ? (
+          <button type="button" onClick={() => onNewMock(test)} disabled={busy}
+            className="fd-btn-primary min-h-12 w-full justify-center text-[15px] disabled:opacity-60" data-tour="reviser-preparer">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />} Un autre DS blanc
+          </button>
+        ) : (
+          <Link to={`/revisions/ds/${test.id}/blanc`} className="fd-btn-primary min-h-12 w-full justify-center text-[15px]" data-tour="reviser-preparer">
+            <Timer className="h-4 w-4" /> {test.mock_started_at ? 'Reprendre le DS blanc' : 'Lancer le DS blanc'}
+          </Link>
+        )}
+        {test.mock_done_at && (
+          <Link to={`/revisions/ds/${test.id}/blanc`} className="inline-flex min-h-10 items-center justify-center gap-1 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
+            <ClipboardCheck className="h-4 w-4" /> Ma correction
+          </Link>
+        )}
         <Link to={`/revisions/ds/${test.id}`} className="inline-flex min-h-10 items-center justify-center gap-1 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
           Réviser chapitre par chapitre <ArrowRight className="h-4 w-4" />
         </Link>
@@ -80,7 +97,20 @@ const NextTestHero: React.FC<{ test: UpcomingTest; others: UpcomingTest[]; onEdi
       <button type="button" onClick={() => onEdit(test)} className="inline-flex min-h-9 items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
         <Pencil className="h-3.5 w-3.5" /> Modifier
       </button>
-      {others.length > 0 && <span className="text-ink-faint sm:ml-auto">Puis : {others.map((o) => `${testTitle(o)} (${new Date(`${o.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})`).join(' · ')}</span>}
+      {/* Les DS suivants : des liens vers leur préparation (avant : du texte, injoignables). */}
+      {others.length > 0 && (
+        <span className="text-ink-faint sm:ml-auto">
+          Puis :{' '}
+          {others.map((o, i) => (
+            <React.Fragment key={o.id}>
+              {i > 0 && ' · '}
+              <Link to={`/revisions/ds/${o.id}`} className="font-semibold text-ink-soft underline decoration-line underline-offset-2 hover:text-ink">
+                {testTitle(o)} ({new Date(`${o.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
+              </Link>
+            </React.Fragment>
+          ))}
+        </span>
+      )}
     </div>
   </div>
 );
@@ -239,6 +269,7 @@ export const Reviser: React.FC = () => {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [allRedo, setAllRedo] = useState(false);
   const [ranging, setRanging] = useState(false);
+  const [newMock, setNewMock] = useState(false);
 
   const load = useCallback(() => {
     setFailed(false);
@@ -271,6 +302,19 @@ export const Reviser: React.FC = () => {
     setTestModal(null);
     if (isNew && t.days_left >= 0) navigate(`/revisions/ds/${t.id}`);
     else load();
+  };
+
+  // « Un autre DS blanc » : un nouveau sujet, puis sa page (présentation, « Commencer »).
+  const anotherMock = async (t: UpcomingTest) => {
+    setNewMock(true);
+    try {
+      await devoirsApi.mockAction(t.id, 'new');
+      navigate(`/revisions/ds/${t.id}/blanc`);
+    } catch {
+      window.alert('Le nouveau DS blanc n’a pas pu être préparé. Vérifie ta connexion et réessaie.');
+    } finally {
+      setNewMock(false);
+    }
   };
 
   const removeList = async (list: RevisionList) => {
@@ -350,7 +394,7 @@ export const Reviser: React.FC = () => {
         <Section id="prochain-ds" title={upcoming.length > 1 ? 'Mes prochains DS' : 'Mon prochain DS'}>
           <div data-tour="revisions-ds">
             {tests === null ? <CardsSkeleton n={1} />
-              : next ? <NextTestHero test={next} others={upcoming.slice(1)} onEdit={(t) => setTestModal({ test: t })} />
+              : next ? <NextTestHero test={next} others={upcoming.slice(1)} onEdit={(t) => setTestModal({ test: t })} onNewMock={anotherMock} busy={newMock} />
                 : <NoTestCard hasPast={past.length > 0} onAdd={() => setTestModal({ test: null })} />}
             {past.length > 0 && (
               <PastTests tests={past} onChange={(n) => setTests((cur) => cur?.map((x) => (x.id === n.id ? { ...x, ...n } : x)) ?? cur)} />

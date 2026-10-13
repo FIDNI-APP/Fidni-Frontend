@@ -1,10 +1,11 @@
 // Annoncer un DS (ou le modifier) : type, matière, date, chapitres au programme (08/10/2026).
-// Le niveau vient du profil ; sans niveau, l'élève le choisit d'abord.
+// Le niveau vient du profil ; sans niveau, l'élève le choisit d'abord. Modifier : le niveau du DS (13/10/2026 : il
+// était deviné par ses chapitres, et « Suites numériques », en 1ère comme en 2ème Bac, ouvrait la 1ère Bac).
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ArrowRight, Check, Loader2, Trash2, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Loader2, RotateCcw, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTaxonomy } from '@/components/revision/RevisionLabelPicker';
+import { useTaxonomyState } from '@/components/revision/RevisionLabelPicker';
 import { devoirsApi, KIND_LABEL, type TestKind, type UpcomingTest } from '@/lib/api/devoirsApi';
 
 const KINDS: TestKind[] = ['ds', 'controle', 'blanc'];
@@ -33,7 +34,7 @@ export const TestFormModal: React.FC<{
   onDeleted?: (id: number) => void;
 }> = ({ open, test, onClose, onSaved, onDeleted }) => {
   const { user } = useAuth();
-  const levels = useTaxonomy();
+  const { levels, failed: taxonomyFailed, retry: retryTaxonomy } = useTaxonomyState();
   const editing = !!test;
   const [levelId, setLevelId] = useState<number | null>(null);
   const [kind, setKind] = useState<TestKind>('ds');
@@ -51,7 +52,7 @@ export const TestFormModal: React.FC<{
     setSubjectId(test?.subject?.id ?? null);
     setDate(test?.date ?? '');
     setChapterIds(test?.chapters.map((c) => c.id) ?? []);
-    setLevelId(profileLevelId(user));
+    setLevelId(test?.class_level?.id ?? profileLevelId(user));
   }, [open, test, user]);
 
   const level = levels.find((l) => l.id === levelId) ?? null;
@@ -61,18 +62,26 @@ export const TestFormModal: React.FC<{
     if (!open || subjectId || subjects.length !== 1) return;
     setSubjectId(subjects[0].id);
   }, [open, subjects, subjectId]);
-  // DS modifié dont le niveau n'est pas celui du profil : retrouver le niveau par sa matière.
+  // DS sans niveau enregistré : le niveau qui a TOUS ses chapitres, celui du profil d'abord (un chapitre seul ne
+  // suffit pas : plusieurs existent dans deux niveaux).
   useEffect(() => {
-    if (!open || !test?.subject || level?.subjects.some((s) => s.id === test.subject?.id)) return;
-    const found = levels.find((l) => l.subjects.some((s) => s.id === test.subject?.id && s.chapters.some((c) => test.chapters.some((x) => x.id === c.id))));
+    if (!open || !test || test.class_level || !levels.length) return;
+    const hasAll = (l: (typeof levels)[number]) =>
+      test.chapters.every((x) => l.subjects.some((s) => s.chapters.some((c) => c.id === x.id)));
+    const own = levels.find((l) => l.id === profileLevelId(user));
+    if (own && hasAll(own)) return;
+    const found = levels.find(hasAll);
     if (found) setLevelId(found.id);
-  }, [open, test, levels, level]);
+  }, [open, test, levels, user]);
 
   const subject = subjects.find((s) => s.id === subjectId) ?? null;
   const chapters = subject?.chapters ?? [];
   const toggle = (id: number) => setChapterIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   const today = isoDay(new Date());
   const ready = !!date && chapterIds.length > 0;
+  // Changer les chapitres d'un DS dont le DS blanc est commencé ou fait : le serveur en tire un nouveau (dit avant).
+  const chaptersChanged = !!test && (chapterIds.length !== test.chapters.length || chapterIds.some((id) => !test.chapters.some((c) => c.id === id)));
+  const mockState = test?.mock_done_at ? 'fait' : test?.mock_started_at ? 'commencé' : null;
 
   const close = () => { if (!saving) onClose(); };
   useEffect(() => {
@@ -154,6 +163,13 @@ export const TestFormModal: React.FC<{
                 </div>
               </div>
 
+              {taxonomyFailed && !levels.length && (
+                <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-3 py-2.5">
+                  <p className="flex-1 text-[13px] text-[#a23b34]">Les chapitres n’ont pas pu se charger. Vérifie ta connexion.</p>
+                  <button type="button" onClick={retryTaxonomy} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+                </div>
+              )}
+
               {levels.length > 0 && !level && (
                 <div>
                   <span className={label}>Ton niveau</span>
@@ -207,7 +223,8 @@ export const TestFormModal: React.FC<{
                     Chapitres au programme
                     {chapterIds.length > 0 && <span className="ml-1.5 font-semibold text-brand-hover">· {chapterIds.length} choisi{chapterIds.length > 1 ? 's' : ''}</span>}
                   </span>
-                  <div className="-m-1 flex max-h-[232px] flex-wrap gap-1.5 overflow-y-auto p-1">
+                  {/* Téléphone : toute la liste (la fenêtre défile) ; une liste qui défilait dans la fenêtre cachait des choix. */}
+                  <div className="-m-1 flex flex-wrap gap-1.5 p-1 sm:max-h-[232px] sm:overflow-y-auto">
                     {chapters.map((c) => {
                       const on = chapterIds.includes(c.id);
                       return (
@@ -217,6 +234,9 @@ export const TestFormModal: React.FC<{
                       );
                     })}
                   </div>
+                  {chaptersChanged && mockState && (
+                    <p className="mt-2 text-[12.5px] text-gold-strong">Ton DS blanc {mockState} sera remplacé par un nouveau sujet sur ces chapitres.</p>
+                  )}
                 </div>
               )}
               {level && !subject && subjects.length > 1 && (

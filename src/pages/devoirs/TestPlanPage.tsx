@@ -36,7 +36,8 @@ const minutesLabel = (s: number) => {
   const m = Math.max(1, Math.round(s / 60));
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
 };
-const durationLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
+// « 1 h 05 » (avant : « 1 h 5 »).
+const durationLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m / 60} h`);
 const MOCK_DIFFICULTIES: { key: MockDifficulty; label: string }[] = [
   { key: '', label: 'Mélangée' }, { key: 'easy', label: 'Facile' }, { key: 'medium', label: 'Moyenne' }, { key: 'hard', label: 'Difficile' },
 ];
@@ -50,6 +51,8 @@ export default function TestPlanPage() {
   const [editing, setEditing] = useState(false);
   const [editingGrade, setEditingGrade] = useState(false);
   const [busy, setBusy] = useState(false);
+  // « Un autre DS blanc », réglages : un échec réseau ne disait rien (le bouton revenait, sans changement).
+  const [actionFailed, setActionFailed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showExercises, setShowExercises] = useState(false);
   const { setCrumbs } = useBreadcrumb();
@@ -109,10 +112,14 @@ export default function TestPlanPage() {
   const setTest = (next: UpcomingTest) => setPlan((p) => (p ? { ...p, test: { ...p.test, ...next } } : p));
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
-    try { await fn(); load(); } finally { setBusy(false); }
+    setActionFailed(false);
+    try { await fn(); load(); } catch { setActionFailed(true); } finally { setBusy(false); }
   };
   const blancUrl = `/revisions/ds/${t.id}/blanc`;
   const chapterNames = [...new Set((mock?.exercises ?? []).map((e) => e.chapter).filter(Boolean))] as string[];
+  // Chapitres du DS sans exercice long : le DS blanc ne les couvre pas (avant : rien ne le disait).
+  const uncovered = mock?.chapters_covered && mock.exercises.length
+    ? plan.chapters.filter((c) => !mock.chapters_covered!.includes(c.id)).map((c) => c.name) : [];
 
   return (
     <Page>
@@ -189,6 +196,11 @@ export default function TestPlanPage() {
                     {plural(mock.exercises.length, 'exercice', 'exercices')} de 3 questions au moins
                     {chapterNames.length > 0 && <> · {chapterNames.join(' · ')}</>}
                   </p>
+                  {uncovered.length > 0 && (
+                    <p className="mt-1 text-[12.5px] text-[#f3dca9]">
+                      Pas d’exercice long pour {uncovered.join(', ')} : révise {uncovered.length > 1 ? 'ces chapitres' : 'ce chapitre'} avec « S’entraîner » ci-dessous.
+                    </p>
+                  )}
                   {mock.settings && mock.minutes < mock.settings.minutes - 10 && (
                     <p className="mt-1 text-[12.5px] text-[#f3dca9]">
                       Sujet plus court que {durationLabel(mock.settings.minutes)} : il n’y a pas encore assez d’exercices longs dans ces chapitres.
@@ -217,6 +229,9 @@ export default function TestPlanPage() {
                 {showSettings && (
                   <MockSettings settings={mock.settings} busy={busy} started={!!mock.started_at && !mock.done_at}
                     onChange={(minutes, difficulty) => run(() => devoirsApi.mockSettings(t.id, minutes, difficulty))} />
+                )}
+                {actionFailed && (
+                  <p role="alert" className="pb-1 text-[12.5px] font-semibold text-[#f3dca9]">Ça n’a pas marché : vérifie ta connexion et réessaie.</p>
                 )}
                 {mock.difficulty_respected === false && (
                   <p className="pb-1 text-[12.5px] text-[#f3dca9]">Pas assez d’exercices longs de cette difficulté : d’autres complètent le sujet.</p>
@@ -307,7 +322,8 @@ function ChapterRow({ chapter: c, testId, quizDone }: { chapter: PlanChapter; te
     <li id={`chapitre-${c.id}`} className="scroll-mt-24 px-4 py-3.5 sm:px-5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Icon className={`h-[18px] w-[18px] shrink-0 ${st.text}`} aria-hidden />
-        <div className="min-w-0 flex-1">
+        {/* basis : sur téléphone, les boutons passent à la ligne au lieu d'écraser le texte en une colonne étroite. */}
+        <div className="min-w-0 flex-1 basis-[200px]">
           <p className="truncate text-[14.5px] font-semibold text-ink">{c.name}</p>
           <p className="text-[12px] text-ink-faint">
             {/* État de Ma progression (13/10/2026) ; « pas encore évalué » : l'ancien état, plus parlant ici. */}

@@ -12,10 +12,14 @@ export interface UpcomingTest {
   id: number;
   kind: TestKind;
   subject: NamedRef | null;
+  /** Niveau du DS (« Modifier » ouvre ses chapitres, pas ceux d'un autre niveau). */
+  class_level?: NamedRef | null;
   chapters: NamedRef[];
   date: string;            // AAAA-MM-JJ
-  days_left: number;       // négatif : passé
+  days_left: number;       // négatif : passé (recalculé à la date du téléphone, voir `local`)
   grade: number | null;    // sur 20
+  /** DS blanc commencé (et pas encore terminé si mock_done_at est nul) : « Reprendre ». */
+  mock_started_at?: string | null;
   mock_done_at: string | null;
   mock_seconds: number | null;
   created_at: string;
@@ -88,6 +92,10 @@ export interface MockExam {
   difficulty_respected?: boolean;
   /** Questions au moins par exercice du DS blanc (3). */
   min_questions?: number;
+  /** Chapitres du DS que le sujet couvre (les autres n'ont pas d'exercice long). */
+  chapters_covered?: number[];
+  /** Heure du serveur : le chronomètre s'y recale (horloge du téléphone décalée). */
+  now?: string;
 }
 
 export type MockDifficulty = '' | 'easy' | 'medium' | 'hard';
@@ -130,17 +138,31 @@ export const longDate = (iso: string) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
+/** Jours avant le DS à la date du téléphone. Le serveur compte en UTC : entre minuit et 1 h (heure du Maroc), il
+ *  disait encore « Demain » le jour du DS. */
+const daysUntil = (iso: string) => {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.round((new Date(`${iso}T12:00:00`).getTime() - today.getTime()) / 86400000);
+};
+const local = <T extends UpcomingTest | null>(t: T): T => (t ? { ...t, days_left: daysUntil(t.date) } : t);
+type MockWithTest = MockExam & { test: UpcomingTest };
+const localMock = (m: MockWithTest): MockWithTest => ({ ...m, test: local(m.test) });
+
 export const devoirsApi = {
-  list: async (): Promise<UpcomingTest[]> => (await api.get('/devoirs/')).data,
-  next: async (): Promise<UpcomingTest | null> => (await api.get('/devoirs/prochain/')).data.test,
-  create: async (data: TestPayload): Promise<UpcomingTest> => (await api.post('/devoirs/', data)).data,
-  update: async (id: number, data: TestPayload): Promise<UpcomingTest> => (await api.patch(`/devoirs/${id}/`, data)).data,
+  list: async (): Promise<UpcomingTest[]> => ((await api.get('/devoirs/')).data as UpcomingTest[]).map(local),
+  next: async (): Promise<UpcomingTest | null> => local((await api.get('/devoirs/prochain/')).data.test as UpcomingTest | null),
+  create: async (data: TestPayload): Promise<UpcomingTest> => local((await api.post('/devoirs/', data)).data as UpcomingTest),
+  update: async (id: number, data: TestPayload): Promise<UpcomingTest> => local((await api.patch(`/devoirs/${id}/`, data)).data as UpcomingTest),
   remove: async (id: number): Promise<void> => { await api.delete(`/devoirs/${id}/`); },
-  plan: async (id: number): Promise<TestPlan> => (await api.get(`/devoirs/${id}/plan/`)).data,
-  mock: async (id: number): Promise<MockExam & { test: UpcomingTest }> => (await api.get(`/devoirs/${id}/ds-blanc/`)).data,
-  mockAction: async (id: number, action: 'start' | 'finish' | 'new', seconds?: number): Promise<MockExam & { test: UpcomingTest }> =>
-    (await api.post(`/devoirs/${id}/ds-blanc/`, { action, seconds })).data,
+  plan: async (id: number): Promise<TestPlan> => {
+    const p = (await api.get(`/devoirs/${id}/plan/`)).data as TestPlan;
+    return { ...p, test: local(p.test) };
+  },
+  mock: async (id: number): Promise<MockWithTest> => localMock((await api.get(`/devoirs/${id}/ds-blanc/`)).data),
+  mockAction: async (id: number, action: 'start' | 'finish' | 'new', seconds?: number): Promise<MockWithTest> =>
+    localMock((await api.post(`/devoirs/${id}/ds-blanc/`, { action, seconds })).data),
   /** Durée et difficulté du DS blanc : enregistrées, et un nouveau sujet est tiré. */
-  mockSettings: async (id: number, minutes: number, difficulty: MockDifficulty): Promise<MockExam & { test: UpcomingTest }> =>
-    (await api.post(`/devoirs/${id}/ds-blanc/`, { action: 'settings', minutes, difficulty })).data,
+  mockSettings: async (id: number, minutes: number, difficulty: MockDifficulty): Promise<MockWithTest> =>
+    localMock((await api.post(`/devoirs/${id}/ds-blanc/`, { action: 'settings', minutes, difficulty })).data),
 };
