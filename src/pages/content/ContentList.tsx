@@ -49,7 +49,7 @@ import { SignupStrip } from '@/components/auth/SignupPrompt';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
-import { isModerator } from '@/lib/features';
+import { canCreateContent } from '@/lib/features';
 import { Page, EmptyState } from '@/components/space/Page';
 import type { Difficulty } from '@/types';
 import type {
@@ -239,7 +239,8 @@ export const ContentList: React.FC<ContentListProps> = ({
   const { openModal } = useAuthModal();
   const phone = usePhone();
   // Publier : auteurs (profs) et modérateurs ; pour un élève, le bouton ne servait à rien.
-  const canPublish = isModerator(user) || user?.profile?.user_type === 'teacher';
+  // Création de contenu : l'équipe seulement pour l'instant (12/10/2026).
+  const canPublish = canCreateContent(user);
 
   const listRef = useRef<HTMLDivElement>(null);
 

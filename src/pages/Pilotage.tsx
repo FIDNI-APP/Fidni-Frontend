@@ -1,6 +1,10 @@
 /**
- * Pilotage — tableau de bord des administrateurs, en quatre onglets :
- *  - Aperçu : quatre chiffres sur la période choisie (cliquer sur l'un affiche sa courbe), les contenus les plus vus ;
+ * Pilotage — tableau de bord des administrateurs, en plusieurs onglets :
+ *  - Aperçu (refondu le 12/10/2026, « moniteur ») : bandeau « En ce moment » (ce qui attend, activité du jour vs hier),
+ *    huit tuiles avec leur petite courbe (les quatre premières choisissent la grande courbe), carte « Membres »
+ *    (anneau des actifs + parcours des inscrits, ex-Entonnoir), « Activité en direct », contenus les plus vus.
+ *    Le direct vient de /api/pilotage/direct/, relu toutes les 30 s quand la page est visible
+ *    (components/pilotage/livePilotage, StatusStrip, KpiTile, Sparkline, RingGauge, MembersCard, LiveActivity, DayChart) ;
  *  - À traiter : signalements d'erreurs, corrections « à vérifier » à valider ;
  *  - Membres : recherche, filtres rapides, fiche dépliable avec les dernières actions ;
  *  - Usage (06/10/2026) : membres qui se servent de chaque fonctionnalité, pages les plus visitées, filtres et
@@ -9,16 +13,17 @@
  *  - Membres : aussi « Un membre n'arrive pas à se connecter ? » (components/pilotage/LoginDiagnostic) et
  *    « Comptes bannis » (components/pilotage/BansCard, 11/10/2026) ;
  *  - IA : un document (PDF, Word, photos) → fiches préparées par l'IA, relues puis publiées (components/pilotage/IATab).
- * Audit du 10/10/2026 : « Entonnoir » dans l'Aperçu (components/pilotage/FunnelCard), « Écarts de difficulté » dans
+ * Audit du 10/10/2026 : « Entonnoir » dans l'Aperçu (aujourd'hui dans MembersCard), « Écarts de difficulté » dans
  * À traiter (DifficultyGapsPanel), « Portes d'inscription » dans Usage (AuthDoorsCard).
  * Données : /api/pilotage/?jours=7|30|90, /api/pilotage/utilisateurs/ (+ /<id>/) — backend apps/users/admin_dashboard.py.
  * Les comptes maison (admins, compte éditorial, compte de test) sont exclus des chiffres.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
-  Activity, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GraduationCap, Loader2,
-  LineChart, MessageSquare, PenLine, RefreshCw, RotateCcw, Search, ShieldCheck, UserPlus,
+  Activity, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge,
+  GraduationCap, Loader2, LineChart, MessageSquare, PenLine, RefreshCw, Repeat, RotateCcw, Search, ShieldCheck, Sparkles,
+  UserPlus, Users, type LucideIcon,
 } from 'lucide-react';
 import { SerieModal, type SerieTarget } from '@/components/pilotage/SerieModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,9 +34,16 @@ import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
 import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
 import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
 import { BansCard } from '@/components/pilotage/BansCard';
-import { FunnelCard, type Funnel } from '@/components/pilotage/FunnelCard';
+import type { Funnel } from '@/components/pilotage/FunnelCard';
 import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
 import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
+import { KpiTile } from '@/components/pilotage/KpiTile';
+import { DayChart } from '@/components/pilotage/DayChart';
+import { MembersCard } from '@/components/pilotage/MembersCard';
+import { StatusStrip, type StatusPillDef } from '@/components/pilotage/StatusStrip';
+import { LiveActivity } from '@/components/pilotage/LiveActivity';
+import { LivePill } from '@/components/pilotage/LivePill';
+import { useLivePilotage, type LiveData, type LiveStatus } from '@/components/pilotage/livePilotage';
 import { PAGES, pageInfo } from '@/lib/usage';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
@@ -150,14 +162,16 @@ function normalizeOverview(raw: unknown, requestedDays: number): Overview {
   };
 }
 
-const METRICS: { key: MetricKey; label: string; hint: string; unit: [string, string]; color: string; icon: React.ElementType }[] = [
-  { key: 'views', label: 'Vues des contenus', unit: ['vue', 'vues'], color: '#1a1a1a', icon: Eye,
+const METRICS: {
+  key: MetricKey; label: string; hint: string; unit: [string, string]; short: [string, string]; color: string; icon: LucideIcon;
+}[] = [
+  { key: 'views', label: 'Vues des contenus', unit: ['vue', 'vues'], short: ['vue', 'vues'], color: '#1a1a1a', icon: Eye,
     hint: 'Visiteurs compris : une vue par personne et par contenu sur 24 h. Robots et comptes maison exclus.' },
-  { key: 'active', label: 'Membres actifs', unit: ['membre actif', 'membres actifs'], color: '#1a7a4a', icon: Activity,
+  { key: 'active', label: 'Membres actifs', unit: ['membre actif', 'membres actifs'], short: ['membre', 'membres'], color: '#1a7a4a', icon: Activity,
     hint: 'Inscrits ayant fait au moins une action : consultation, exercice, commentaire, test…' },
-  { key: 'signups', label: 'Inscriptions', unit: ['inscription', 'inscriptions'], color: '#b8872b', icon: UserPlus,
+  { key: 'signups', label: 'Inscriptions', unit: ['inscription', 'inscriptions'], short: ['compte', 'comptes'], color: '#b8872b', icon: UserPlus,
     hint: 'Nouveaux comptes créés.' },
-  { key: 'work', label: 'Travail des élèves', unit: ['action', 'actions'], color: '#6b6862', icon: PenLine,
+  { key: 'work', label: 'Travail des élèves', unit: ['action', 'actions'], short: ['action', 'actions'], color: '#6b6862', icon: PenLine,
     hint: 'Questions auto-évaluées et contenus terminés.' },
 ];
 
@@ -184,149 +198,175 @@ function ago(iso: string | null): string {
 
 /* ───────────────────────────── Aperçu ───────────────────────────── */
 
-const Delta: React.FC<{ m: Metric; days: number }> = ({ m, days }) => {
-  if (m.previous === null) return null;
-  const d = m.value - m.previous;
+const ANON_COLOR = '#c0892f';
+const card = 'rounded-2xl border border-line bg-white';
+
+/** Contenus les plus vus sur la période : rang, titre, vues (barre), membres lecteurs. */
+const TopContents: React.FC<{ items: Overview['top_contents']; days: number }> = ({ items, days }) => {
+  const [all, setAll] = useState(false);
+  const max = Math.max(1, ...items.map((c) => c.views));
+  const shown = all ? items : items.slice(0, 6);
   return (
-    <span className={`fd-nums ${d > 0 ? 'text-brand' : 'text-ink-faint'}`}>
-      {d === 0 ? 'autant' : `${d > 0 ? '+' : '−'}${fmt(Math.abs(d))}`} vs les {days} j d’avant
-    </span>
+    <section className={`${card} flex h-full flex-col p-4 sm:p-5`} aria-labelledby="pilotage-top">
+      <h2 id="pilotage-top" className="fd-display text-[16px] text-ink">Contenus les plus vus</h2>
+      <p className="mt-0.5 text-[12px] text-ink-faint">Sur {days} j, visiteurs compris.</p>
+      {items.length === 0 ? (
+        <p className="mt-4 text-[13px] text-ink-faint">Aucune vue enregistrée sur la période.</p>
+      ) : (
+        <ol className="-mx-2 mt-3 flex flex-col gap-0.5">
+          {shown.map((c, i) => (
+            <li key={c.id}>
+              <Link to={c.url} className="group block rounded-xl px-2 py-2 transition-colors hover:bg-[#faf9f7]">
+                <span className="flex items-baseline gap-2">
+                  <span className="fd-nums w-4 shrink-0 text-[11.5px] text-ink-faint">{i + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink group-hover:text-brand" title={c.title}>{c.title}</span>
+                  <span className="fd-nums shrink-0 text-[13px] font-semibold text-ink">{fmt(c.views)}</span>
+                </span>
+                <span className="ml-6 mt-1.5 block h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+                  <span className="block h-full rounded-full bg-ink/70" style={{ width: `${Math.max((c.views / max) * 100, 2)}%` }} />
+                </span>
+                <span className="fd-nums ml-6 mt-1 block text-[11.5px] text-ink-faint">
+                  {TYPE_LABEL[c.type] ?? c.type}{c.readers ? ` · ${plural(c.readers, ['membre', 'membres'])}` : ''}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      )}
+      {items.length > 6 && (
+        <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all}
+          className="mt-auto inline-flex items-center gap-1 self-start pt-3 text-[12.5px] font-semibold text-ink-soft hover:text-ink">
+          <ChevronDown className={`h-4 w-4 transition-transform ${all ? 'rotate-180' : ''}`} aria-hidden />
+          {all ? 'Replier' : `Tout voir (${items.length})`}
+        </button>
+      )}
+    </section>
   );
 };
 
-const MetricTile: React.FC<{
-  def: typeof METRICS[number]; m: Metric; days: number; selected: boolean; onSelect: () => void; extra?: string;
-}> = ({ def, m, days, selected, onSelect, extra }) => (
-  <button type="button" onClick={onSelect} aria-pressed={selected}
-    className={`fd-card w-full p-4 text-left transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${selected ? 'ring-2 ring-ink/80' : 'hover:shadow-md'}`}>
-    <span className="flex items-center gap-2 text-[12.5px] font-medium text-ink-soft">
-      <span className="h-2 w-2 rounded-full" style={{ background: def.color }} aria-hidden />
-      {def.label}
-    </span>
-    <span className="fd-nums mt-2 block text-[28px] font-bold leading-none text-ink">{fmt(m.value)}</span>
-    <span className="mt-1.5 block text-[12px] leading-snug text-ink-faint">
-      <Delta m={m} days={days} />{extra ? <>{m.previous !== null ? ' · ' : ''}{extra}</> : null}
-    </span>
-  </button>
+/** Pied d'une tuile sans série : lien vers l'onglet concerné. */
+const TileLink: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className="inline-flex items-center gap-0.5 text-[12.5px] font-semibold text-ink-soft group-hover:text-ink">
+    {children} <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+  </span>
 );
 
-/** Une barre par jour ; la valeur s'affiche au survol, au clavier et au toucher. */
-const DayChart: React.FC<{ series: Day[]; def: typeof METRICS[number]; headline: string; viewsSince: string }> = ({ series, def, headline, viewsSince }) => {
-  const [hover, setHover] = useState<number | null>(null);
-  const values = series.map((d) => d[def.key]);
-  const max = Math.max(1, ...values.map((v) => v ?? 0));
-  const shown = hover !== null ? series[hover] : null;
-  const shownValue = shown ? shown[def.key] : null;
-  const hasGap = values.some((v) => v === null);
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-[13px] text-ink-soft">
-          {shown ? dayLabel(shown.date, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Jour par jour'}
-        </span>
-        <span className="fd-nums text-[13px] font-semibold text-ink">
-          {shown ? (shownValue === null ? 'pas encore mesuré' : plural(shownValue, def.unit)) : headline}
-        </span>
-      </div>
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-line" aria-hidden />
-        <span className="fd-nums pointer-events-none absolute -top-2 right-0 bg-white pl-1 text-[10.5px] text-ink-faint" aria-hidden>{fmt(max)}</span>
-        <div className={`flex h-40 items-end ${series.length > 40 ? 'gap-px' : 'gap-[3px]'}`} onMouseLeave={() => setHover(null)}>
-          {series.map((d, i) => {
-            const v = d[def.key];
-            return (
-              <button key={d.date} type="button" aria-label={`${dayLabel(d.date)} : ${v === null ? 'pas encore mesuré' : plural(v, def.unit)}`}
-                onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onClick={() => setHover(i)}
-                className="flex h-full flex-1 items-end rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-                {v === null ? (
-                  <span className="block h-full w-full rounded-t-[3px]" style={{ backgroundImage: 'repeating-linear-gradient(135deg, #ebe8e2 0 3px, transparent 3px 6px)' }} />
-                ) : (
-                  <span className="block w-full rounded-t-[3px] transition-opacity" style={{
-                    height: v ? `${Math.max(3, (v / max) * 100)}%` : '2px',
-                    background: v ? def.color : '#e7e3dc',
-                    opacity: hover === null || hover === i ? 1 : 0.4,
-                  }} />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-ink-faint">
-        <span>{series[0] ? dayLabel(series[0].date) : ''}</span>
-        <span>aujourd’hui</span>
-      </div>
-      <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">
-        {def.hint}
-        {hasGap && <> Les vues sont comptées jour par jour depuis le {dayLabel(viewsSince, { day: 'numeric', month: 'long' })} (zone hachurée : avant).</>}
-      </p>
-    </div>
-  );
-};
-
-const OverviewTab: React.FC<{ data: Overview; onOpenTodo: () => void; todoCount: number }> = ({ data, onOpenTodo, todoCount }) => {
+const OverviewTab: React.FC<{
+  data: Overview; live: LiveData | null; liveStatus: LiveStatus; reportsOpen: number; verifyLeft: number; onGo: (tab: TabKey) => void;
+}> = ({ data, live, liveStatus, reportsOpen, verifyLeft, onGo }) => {
   const [metric, setMetric] = useState<MetricKey>('views');
   const def = METRICS.find((m) => m.key === metric)!;
   const m = data.metrics[metric];
   const headline = metric === 'active'
     ? `${plural(m.value, def.unit)} différents sur ${data.days} j`
     : `${plural(m.value, def.unit)} sur ${data.days} j`;
-  const maxViews = Math.max(1, ...data.top_contents.map((c) => c.views));
+  const dates = data.series.map((d) => d.date);
+  const today = live?.today ?? null;
+  // Le direct est plus frais que l'aperçu : ses compteurs l'emportent dès qu'il a répondu.
+  const reports = live ? live.todo.reports_open : reportsOpen;
+  const verify = live ? live.todo.a_verifier : verifyLeft;
+  const gaps = data.todo.difficulty_gaps ? data.todo.difficulty_gaps.length : null;
+  const anon = data.anonymes;
+  const funnel = data.funnel;
+  const d7 = funnel && funnel.d7_eligible ? Math.round((funnel.back_d7 / funnel.d7_eligible) * 100) : null;
+
+  const pills: StatusPillDef[] = [
+    { key: 'reports', count: reports, one: 'signalement ouvert', many: 'signalements ouverts', icon: Flag, tone: 'red',
+      onClick: () => onGo('a-traiter'), title: 'Erreurs signalées par les élèves' },
+    { key: 'verify', count: verify, one: 'contenu à vérifier', many: 'contenus à vérifier', icon: ShieldCheck, tone: 'gold',
+      onClick: () => onGo('a-traiter'), title: 'Corrections affichées avec le bandeau «\u00a0à vérifier\u00a0»' },
+    { key: 'ia-run', count: live ? live.todo.ia_en_cours : null, one: 'travail IA en cours', many: 'travaux IA en cours', icon: Sparkles,
+      tone: 'brand', running: true, onClick: () => onGo('ia') },
+    { key: 'ia-read', count: live ? live.todo.ia_a_relire : null, one: 'à relire (IA)', many: 'à relire (IA)', icon: ClipboardCheck,
+      tone: 'ink', onClick: () => onGo('ia'), title: 'Fiches préparées par l’IA, prêtes à être relues' },
+    { key: 'gaps', count: gaps, one: 'ressenti à revoir', many: 'ressentis à revoir', icon: Gauge, tone: 'ink',
+      onClick: () => onGo('a-traiter'), title: 'Difficulté affichée et ressenti des élèves trop éloignés' },
+  ];
+
+  const subFor = (key: MetricKey) => [
+    today ? `aujourd’hui : ${fmt(today[key])}` : null,
+    key === 'signups' ? `${fmt(data.members_total)} en tout` : null,
+    key === 'views' && data.metrics.views.previous === null ? `depuis le ${dayLabel(data.views_since)}` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div className="space-y-4">
-      {todoCount > 0 && (
-        <button type="button" onClick={onOpenTodo}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#ecdcb6] bg-gold-soft px-4 py-3 text-left text-[13.5px] text-ink hover:border-gold-strong">
-          <span><strong className="fd-nums">{todoCount}</strong> élément{todoCount > 1 ? 's' : ''} à traiter : signalements d’erreurs ou corrections à valider.</span>
-          <span className="inline-flex shrink-0 items-center gap-1 font-semibold text-gold-strong">Voir <ChevronRight className="h-4 w-4" /></span>
-        </button>
-      )}
+      <ErrorBoundary variant="block" label="En ce moment" resetKey={`${data.generated_at}-${live?.generated_at ?? ''}`}>
+        <StatusStrip pills={pills} today={today} yesterday={live?.yesterday ?? null} status={liveStatus}
+          lastActivityAt={live?.activity[0]?.at ?? null} />
+      </ErrorBoundary>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" role="group" aria-label="Choisir le chiffre à afficher">
-        {METRICS.map((d) => (
-          <MetricTile key={d.key} def={d} m={data.metrics[d.key]} days={data.days} selected={metric === d.key} onSelect={() => setMetric(d.key)}
-            extra={d.key === 'signups' ? `${fmt(data.members_total)} inscrits en tout`
-              : d.key === 'views' && data.metrics.views.previous === null ? `depuis le ${dayLabel(data.views_since)}` : undefined} />
-        ))}
+      <ErrorBoundary variant="block" label="Chiffres de la période" resetKey={data.generated_at}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" role="group" aria-label="Chiffres de la période (les quatre premiers choisissent la courbe)">
+          {METRICS.map((d) => {
+            const v = data.metrics[d.key];
+            return (
+              <KpiTile key={d.key} icon={d.icon} accent={d.color} label={d.label} hint={d.hint}
+                value={v.value} unit={v.value > 1 ? d.short[1] : d.short[0]}
+                delta={{ now: v.value, before: v.previous, days: data.days }} sub={subFor(d.key) || undefined}
+                spark={{ values: data.series.map((s) => s[d.key]), dates, color: d.color, label: d.label, format: (n) => plural(n, d.unit) }}
+                mode="toggle" selected={metric === d.key} onClick={() => setMetric(d.key)} />
+            );
+          })}
+          <KpiTile icon={Users} accent={ANON_COLOR} label="Visiteurs" value={anon.current.visits} unit={anon.current.visits > 1 ? 'visites' : 'visite'}
+            hint="Personnes non connectées, comptées une fois par jour. Ouvre l’onglet Visiteurs."
+            delta={anon.previous ? { now: anon.current.visits, before: anon.previous.visits, days: data.days } : undefined}
+            sub={today ? `aujourd’hui : ${fmt(today.visitors)}` : undefined}
+            spark={{ values: anon.series.map((s) => s.anon), dates: anon.series.map((s) => s.date), color: ANON_COLOR, label: 'Visiteurs',
+              format: (n) => plural(n, ['visiteur', 'visiteurs']) }}
+            mode="link" onClick={() => onGo('visiteurs')} />
+          <KpiTile icon={Repeat} accent="#1a7a4a" label="Retour après 7 jours" value={d7} unit="%"
+            hint="Inscrits depuis 7 jours ou plus, revenus entre le 7e et le 13e jour après leur inscription."
+            sub={!funnel ? undefined : funnel.d7_eligible
+              ? `${fmt(funnel.back_d7)} sur ${plural(funnel.d7_eligible, ['inscrit', 'inscrits'])} depuis 7 j ou plus`
+              : 'personne n’est inscrit depuis 7 j'}
+            footer={(
+              <span className="mb-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+                <span className="block h-full rounded-full bg-brand" style={{ width: `${d7 ?? 0}%` }} />
+              </span>
+            )} />
+          <KpiTile icon={Flag} accent="#a23b34" label="Signalements ouverts" value={reports} tone={reports ? 'alert' : 'neutral'}
+            sub={reports ? 'erreurs signalées par les élèves' : 'aucun en attente'}
+            footer={<TileLink>À traiter</TileLink>} mode="link" onClick={() => onGo('a-traiter')} />
+          <KpiTile icon={ShieldCheck} accent="#c0892f" label="Contenus à vérifier" value={verify} tone={verify ? 'warn' : 'neutral'}
+            sub={verify ? 'corrections avec le bandeau «\u00a0à vérifier\u00a0»' : 'tout est relu'}
+            footer={<TileLink>À traiter</TileLink>} mode="link" onClick={() => onGo('a-traiter')} />
+        </div>
+      </ErrorBoundary>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className={`${card} flex min-w-0 flex-col p-4 sm:p-5 lg:col-span-2`} aria-labelledby="pilotage-courbe">
+          <div className="mb-3">
+            <h2 id="pilotage-courbe" className="fd-display flex items-center gap-2 text-[16px] text-ink">
+              <def.icon className="h-4 w-4 shrink-0" style={{ color: def.color }} aria-hidden /> {def.label}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-ink-faint">Jour par jour. Un clic sur l’une des quatre premières tuiles change de chiffre.</p>
+          </div>
+          <ErrorBoundary variant="block" label={def.label} resetKey={`${metric}-${data.generated_at}`}>
+            <DayChart key={`${metric}-${data.days}`} series={data.series.map((d) => ({ date: d.date, value: d[metric] }))}
+              color={def.color} unit={def.unit} headline={headline} hint={def.hint}
+              measuredSince={metric === 'views' ? data.views_since : undefined} />
+          </ErrorBoundary>
+        </section>
+        <div className="min-w-0">
+          <ErrorBoundary variant="block" label="Membres" resetKey={data.generated_at}>
+            <MembersCard active={data.metrics.active.value} total={data.members_total} days={data.days} funnel={funnel} />
+          </ErrorBoundary>
+        </div>
       </div>
 
-      <section className="fd-card p-5" aria-label={def.label}>
-        <h2 className="fd-display mb-3 text-[16px] text-ink">{def.label}</h2>
-        <ErrorBoundary variant="block" label={def.label} resetKey={`${metric}-${data.generated_at}`}>
-          <DayChart key={`${metric}-${data.days}`} series={data.series} def={def} headline={headline} viewsSince={data.views_since} />
-        </ErrorBoundary>
-      </section>
-
-      {data.funnel && <ErrorBoundary variant="block" label="Entonnoir" resetKey={data.generated_at}><FunnelCard funnel={data.funnel} days={data.days} /></ErrorBoundary>}
-
-      <section className="fd-card p-5">
-        <h2 className="fd-display text-[16px] text-ink">Contenus les plus vus</h2>
-        <p className="mt-0.5 text-[12px] text-ink-faint">Sur les {data.days} derniers jours, visiteurs compris.</p>
-        {data.top_contents.length === 0 ? (
-          <p className="mt-4 text-[13px] text-ink-faint">Aucune vue enregistrée sur la période.</p>
-        ) : (
-          <ol className="mt-3 divide-y divide-[#f2f1ee]">
-            {data.top_contents.map((c) => (
-              <li key={c.id}>
-                <Link to={c.url} className="group block py-2.5">
-                  <span className="flex items-baseline gap-2">
-                    <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink group-hover:text-brand">{c.title}</span>
-                    <span className="hidden shrink-0 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] text-ink-soft sm:inline">{TYPE_LABEL[c.type] ?? c.type}</span>
-                    <span className="fd-nums w-16 shrink-0 text-right text-[13px] font-semibold text-ink">{fmt(c.views)}</span>
-                  </span>
-                  <span className="mt-1.5 flex items-center gap-2">
-                    <span className="h-1.5 flex-1 rounded-full bg-[#f2f1ee]">
-                      <span className="block h-full rounded-full bg-ink/70" style={{ width: `${(c.views / maxViews) * 100}%` }} />
-                    </span>
-                    <span className="fd-nums w-16 shrink-0 text-right text-[11.5px] text-ink-faint">{c.readers ? plural(c.readers, ['membre', 'membres']) : ''}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="min-w-0 lg:col-span-2">
+          <ErrorBoundary variant="block" label="Activité en direct" resetKey={live?.generated_at ?? liveStatus}>
+            <LiveActivity events={live?.activity ?? null} status={liveStatus} />
+          </ErrorBoundary>
+        </div>
+        <div className="min-w-0">
+          <ErrorBoundary variant="block" label="Contenus les plus vus" resetKey={data.generated_at}>
+            <TopContents items={data.top_contents} days={data.days} />
+          </ErrorBoundary>
+        </div>
+      </div>
     </div>
   );
 };
@@ -896,6 +936,9 @@ export default function Pilotage() {
   const [refreshing, setRefreshing] = useState(false);
   const [reportsOpen, setReportsOpen] = useState<number | null>(null);
   const [validated, setValidated] = useState<Set<number>>(new Set());
+  // Le direct (/api/pilotage/direct/) : relu toutes les 30 s tant que la page est visible.
+  const live = useLivePilotage(!!user?.is_superuser);
+  const refreshLive = live.refresh;
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -915,6 +958,12 @@ export default function Pilotage() {
   }, [days]);
 
   useEffect(() => { if (user?.is_superuser) load(); }, [user?.is_superuser, load]);
+  // De retour sur l'Aperçu (après avoir traité un signalement, par exemple) : relire le direct tout de suite.
+  const prevTab = useRef(tab);
+  useEffect(() => {
+    if (tab === 'apercu' && prevTab.current !== 'apercu') refreshLive();
+    prevTab.current = tab;
+  }, [tab, refreshLive]);
 
   const toggleVerified = async (id: number, verifie: boolean) => {
     await api.post(`/contents/${id}/verification/`, { verifie });
@@ -933,15 +982,18 @@ export default function Pilotage() {
     { key: 'usage', label: 'Usage' },
     { key: 'visiteurs', label: 'Visiteurs' },
     { key: 'quiz', label: 'Quiz' },
-    { key: 'ia', label: 'IA' },
+    { key: 'ia', label: 'IA', badge: live.data?.todo.ia_a_relire },
   ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint"><ShieldCheck className="h-3.5 w-3.5" /> Administration</p>
-          <h1 className="fd-display mt-1 text-[28px] leading-tight text-ink md:text-[32px]">Pilotage</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h1 className="fd-display text-[28px] leading-tight text-ink md:text-[32px]">Pilotage</h1>
+            <LivePill status={live.status} updatedAt={live.updatedAt} />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div role="radiogroup" aria-label="Période" className="inline-flex rounded-xl border border-line bg-[#faf9f7] p-0.5">
@@ -952,7 +1004,8 @@ export default function Pilotage() {
               </button>
             ))}
           </div>
-          <button type="button" onClick={load} disabled={refreshing} title={data ? `Mis à jour ${ago(data.generated_at)}` : 'Actualiser'}
+          <button type="button" onClick={() => { load(); refreshLive(); }} disabled={refreshing}
+            title={data ? `Chiffres de la période mis à jour ${ago(data.generated_at)}` : 'Actualiser'}
             aria-label="Actualiser" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-white text-ink-soft hover:border-ink hover:text-ink">
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -989,7 +1042,8 @@ export default function Pilotage() {
       ) : tab === 'usage' ? (
         <UsageTab data={data} />
       ) : tab === 'visiteurs' ? (
-        <VisitorsTab data={data.anonymes} days={data.days} />
+        <VisitorsTab data={data.anonymes} days={data.days}
+          signupSeries={{ values: data.series.map((d) => d.signups), dates: data.series.map((d) => d.date) }} />
       ) : tab === 'a-traiter' ? (
         <div>
           <ErrorBoundary variant="block" label="Signalements" resetKey={data.generated_at}><ReportsPanel onOpenCountChange={setReportsOpen} /></ErrorBoundary>
@@ -999,7 +1053,8 @@ export default function Pilotage() {
           )}
         </div>
       ) : (
-        <OverviewTab data={data} todoCount={todoCount} onOpenTodo={() => setParam('onglet', 'a-traiter')} />
+        <OverviewTab data={data} live={live.data} liveStatus={live.status} reportsOpen={reportsOpen ?? 0} verifyLeft={verifyLeft}
+          onGo={(t) => setParam('onglet', t)} />
       )}
       </ErrorBoundary>
     </div>

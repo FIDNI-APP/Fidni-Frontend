@@ -38,6 +38,7 @@ import SheetEditor from '@/components/paper/SheetEditor';
 import { documentToPrefill, type ContentPrefill } from '@/pages/documents/publishDraft';
 import { loadSerie, nextInSerie, stopSerie } from '@/pages/documents/serie';
 import type { ClassLevelModel, SubjectModel } from '@/types';
+import { canCreateContent } from '@/lib/features';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -297,6 +298,19 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <p className="mb-4 text-ink-soft">Connecte-toi pour ajouter un contenu.</p>
         <Link to="/login" className="fd-btn-primary">Se connecter</Link>
+      </div>
+    );
+  }
+  // Création de contenu : l'équipe seulement pour l'instant (12/10/2026 ; le serveur refuse aussi).
+  if (!canCreateContent(user)) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
+        <p className="fd-display mb-2 text-[22px] text-ink">Création réservée à l’équipe</p>
+        <p className="mb-5 text-[14.5px] leading-relaxed text-ink-soft">
+          Pour l’instant, seule l’équipe Fidni publie des exercices, des leçons et des devoirs. Tu peux toujours préparer
+          tes fiches TD à partir des exercices du site.
+        </p>
+        <Link to="/exercises" className="fd-btn-primary">Voir les exercices</Link>
       </div>
     );
   }

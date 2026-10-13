@@ -18,6 +18,7 @@ import { HelpCircle, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { TOURS, resolveText, stepKey, type Tour, type TourContext, type TourStep } from '@/lib/tours';
+import { canCreateContent } from '@/lib/features';
 
 const SEEN_KEY = 'fidni.visites-vues';
 
@@ -96,6 +97,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const context: TourContext = useMemo(() => ({
     kind: /^\/exams/.test(pathname) ? 'exam' : /^\/lessons/.test(pathname) ? 'lesson' : 'exercise',
     isTeacher: user?.profile?.user_type === 'teacher',
+    canCreate: canCreateContent(user),
   }), [pathname, user]);
   // Lus par la surveillance ci-dessous sans la relancer à chaque changement.
   const contextRef = useRef(context);

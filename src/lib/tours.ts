@@ -17,6 +17,8 @@
 export interface TourContext {
   kind: 'exercise' | 'exam' | 'lesson';
   isTeacher: boolean;
+  /** Peut publier un contenu (l'équipe seulement pour l'instant, lib/features canCreateContent). */
+  canCreate: boolean;
 }
 
 type Text = string | ((c: TourContext) => string);
@@ -137,7 +139,7 @@ export const TOURS: Tour[] = [
         ? 'Ouvre la leçon pour la lire en entier et poser tes questions.'
         : 'Ouvre-le pour travailler : solutions question par question, chrono, discussion et statistiques.' },
       { target: 'liste-fiche', title: 'Fiche TD', body: 'Regroupe les exercices de ton choix (glisse-les, ou « + Fiche » sur une carte) en une fiche à imprimer ; elle est rangée dans Réviser.' },
-      { target: 'liste-creer', title: 'Publier', body: (c) => `Tu peux aussi partager ${un(c)} que tu as rédigé.`, when: (c) => c.isTeacher },
+      { target: 'liste-creer', title: 'Publier', body: (c) => `Tu peux aussi partager ${un(c)} que tu as rédigé.`, when: (c) => c.canCreate },
     ],
   },
 

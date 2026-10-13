@@ -2,10 +2,13 @@
  * Pilotage › Visiteurs (09/10/2026) : les visiteurs NON connectés, à part des membres.
  * Données : bloc `anonymes` de /api/pilotage/ (backend apps/users/admin_dashboard._anonymous).
  * « Visites » = personnes distinctes chaque jour, additionnées sur la période (venir 3 jours = 3 visites).
+ * Tuiles du haut (12/10/2026) : celles de l'Aperçu (KpiTile), avec la petite courbe jour par jour de `series`.
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { BookOpen, FileText, UserPlus, Users } from 'lucide-react';
 import { pageInfo } from '@/lib/usage';
+import { KpiTile } from './KpiTile';
 
 export interface AnonDay { date: string; anon: number | null; members: number | null; anon_pages: number | null; anon_contents: number | null }
 interface AnonTotals { visits: number; member_visits: number; pages: number; contents: number; contents_all: number }
@@ -27,25 +30,6 @@ const dayLabel = (iso: string, opts: Intl.DateTimeFormatOptions = { day: 'numeri
 const TYPE_LABEL: Record<string, string> = { exercise: 'Exercice', exam: 'Examen', lesson: 'Leçon' };
 const ANON = '#c0892f';
 const MEMBER = '#1a1a1a';
-
-const Trend: React.FC<{ now: number; before: number | undefined }> = ({ now, before }) => {
-  if (before === undefined) return null;
-  if (before === 0) return now ? <span className="text-brand">nouveau</span> : null;
-  const p = Math.round(((now - before) / before) * 100);
-  if (p === 0) return <span className="text-ink-faint">stable</span>;
-  return <span className={p > 0 ? 'text-brand' : 'text-[#a23b34]'}>{p > 0 ? '↑' : '↓'} {Math.abs(p)} % vs avant</span>;
-};
-
-const Tile: React.FC<{ label: string; value: string; sub?: React.ReactNode; dot?: string }> = ({ label, value, sub, dot }) => (
-  <div className="fd-card p-4">
-    <span className="flex items-center gap-2 text-[12.5px] font-medium text-ink-soft">
-      {dot && <span className="h-2 w-2 rounded-full" style={{ background: dot }} aria-hidden />}
-      {label}
-    </span>
-    <span className="fd-nums mt-2 block text-[28px] font-bold leading-none text-ink">{value}</span>
-    {sub && <span className="mt-1.5 block text-[12px] leading-snug text-ink-faint">{sub}</span>}
-  </div>
-);
 
 /** Une barre par jour : visiteurs (or) empilés sur les membres (encre). */
 const SplitChart: React.FC<{ series: AnonDay[]; since: string }> = ({ series, since }) => {
@@ -107,10 +91,21 @@ const Bar: React.FC<{ value: number; max: number; color?: string }> = ({ value, 
 
 const TOP = 12;
 
-export const VisitorsTab: React.FC<{ data: AnonymousStats; days: number }> = ({ data, days }) => {
+const plural = (n: number, [one, many]: [string, string]) => `${fmt(n)} ${n > 1 ? many : one}`;
+
+export const VisitorsTab: React.FC<{
+  data: AnonymousStats;
+  days: number;
+  /** Inscriptions jour par jour (series de l'aperçu), pour la courbe de la tuile « Inscriptions ». */
+  signupSeries?: { values: (number | null)[]; dates: string[] };
+}> = ({ data, days, signupSeries }) => {
   const [allPages, setAllPages] = useState(false);
   const c = data.current;
-  const p = data.previous ?? undefined;
+  const p = data.previous;
+  const dates = data.series.map((d) => d.date);
+  const spark = (pick: (d: AnonDay) => number | null, label: string, unit: [string, string]) => ({
+    values: data.series.map(pick), dates, color: ANON, label, format: (n: number) => plural(n, unit),
+  });
   const sinceLabel = dayLabel(data.since, { day: 'numeric', month: 'long' });
   const totalVisits = c.visits + c.member_visits;
   const maxPage = Math.max(1, ...data.pages.map((x) => x.views));
@@ -124,14 +119,24 @@ export const VisitorsTab: React.FC<{ data: AnonymousStats; days: number }> = ({ 
         Personnes qui utilisent Fidni sans être connectées, sur {days} j (mesuré depuis le {sinceLabel}). Robots et comptes maison exclus.
       </p>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Visites de visiteurs" dot={ANON} value={fmt(c.visits)}
-          sub={<>{totalVisits ? `${pct(c.visits, totalVisits)} % des visites du site` : 'aucune visite'}{p && <> · <Trend now={c.visits} before={p.visits} /></>}</>} />
-        <Tile label="Pages vues par les visiteurs" value={fmt(c.pages)}
-          sub={c.visits ? `${(c.pages / c.visits).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} pages par visite` : undefined} />
-        <Tile label="Contenus ouverts par les visiteurs" value={fmt(c.contents)}
-          sub={c.contents_all ? `${pct(c.contents, c.contents_all)} % de toutes les vues de contenus` : undefined} />
-        <Tile label="Inscriptions" dot="#b8872b" value={fmt(data.signups)}
-          sub={c.visits ? `${(data.signups / c.visits * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % des visites anonymes${signupPage ? ` · page Inscription vue ${fmt(signupPage.views)} fois` : ''}` : undefined} />
+        <KpiTile icon={Users} accent={ANON} label="Visites de visiteurs" value={c.visits} unit={c.visits > 1 ? 'visites' : 'visite'}
+          delta={p ? { now: c.visits, before: p.visits, days } : undefined}
+          sub={totalVisits ? `${pct(c.visits, totalVisits)} % des visites du site` : 'aucune visite'}
+          spark={spark((d) => d.anon, 'Visites de visiteurs', ['visiteur', 'visiteurs'])} />
+        <KpiTile icon={FileText} accent={ANON} label="Pages vues par les visiteurs" value={c.pages} unit={c.pages > 1 ? 'pages' : 'page'}
+          delta={p ? { now: c.pages, before: p.pages, days } : undefined}
+          sub={c.visits ? `${(c.pages / c.visits).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} pages par visite` : undefined}
+          spark={spark((d) => d.anon_pages, 'Pages vues par les visiteurs', ['page', 'pages'])} />
+        <KpiTile icon={BookOpen} accent={ANON} label="Contenus ouverts par les visiteurs" value={c.contents} unit={c.contents > 1 ? 'contenus' : 'contenu'}
+          delta={p ? { now: c.contents, before: p.contents, days } : undefined}
+          sub={c.contents_all ? `${pct(c.contents, c.contents_all)} % de toutes les vues de contenus` : undefined}
+          spark={spark((d) => d.anon_contents, 'Contenus ouverts par les visiteurs', ['contenu', 'contenus'])} />
+        <KpiTile icon={UserPlus} accent="#b8872b" label="Inscriptions" value={data.signups} unit={data.signups > 1 ? 'comptes' : 'compte'}
+          sub={c.visits ? `${(data.signups / c.visits * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % des visites anonymes${signupPage ? ` · page Inscription vue ${fmt(signupPage.views)} fois` : ''}` : undefined}
+          spark={signupSeries ? {
+            values: signupSeries.values, dates: signupSeries.dates, color: '#b8872b', label: 'Inscriptions',
+            format: (n: number) => plural(n, ['inscription', 'inscriptions']),
+          } : undefined} />
       </div>
 
       <section className="fd-card p-5">

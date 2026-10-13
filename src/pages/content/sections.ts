@@ -9,7 +9,7 @@ export const SECTION_OF: Record<ContentKind, HubSection> = { exercise: 'exercise
 export const LIST_SEO: Record<ContentKind, { title: string; description: string }> = {
   exercise: {
     title: 'Exercices de maths corrigés – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
-    description: 'Exercices de maths corrigés pour le lycée au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC (BIOF). Classés par chapitre, avec solutions détaillées. Gratuit.',
+    description: 'Exercices de maths corrigés pour le lycée au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM, PC et SVT (BIOF). Classés par chapitre, avec solutions détaillées. Gratuit.',
   },
   lesson: {
     title: 'Cours de maths – Tronc commun, 1ère et 2ème Bac (Maroc) | Fidni',
@@ -17,7 +17,7 @@ export const LIST_SEO: Record<ContentKind, { title: string; description: string 
   },
   exam: {
     title: 'Devoirs surveillés et examens de maths corrigés – Bac Maroc | Fidni',
-    description: 'Devoirs surveillés et sujets d’examen de maths corrigés pour le Bac au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC. Barème, durée, corrigé détaillé et épreuve chronométrée.',
+    description: 'Devoirs surveillés et sujets d’examen de maths corrigés pour le Bac au Maroc : Tronc commun, 1ère Bac SM, 2ème Bac SM, PC et SVT. Barème, durée, corrigé détaillé et épreuve chronométrée.',
   },
 };
 
@@ -26,7 +26,7 @@ export const NATIONAL = {
   title: 'Bac national',
   subtitle: 'Les sujets du Bac national, corrigés, pour t’entraîner en conditions réelles.',
   seoTitle: 'Examens nationaux de maths corrigés – Bac Maroc | Fidni',
-  seoDescription: 'Sujets d’examen national de mathématiques du Bac marocain (2ème Bac SM et PC), avec corrigé détaillé et épreuve chronométrée.',
+  seoDescription: 'Sujets d’examen national de mathématiques du Bac marocain (2ème Bac SM, PC et SVT), avec corrigé détaillé et épreuve chronométrée.',
 };
 
 /** Titres et mots des rubriques pour les dossiers (mêmes titres que le menu). */

@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Eye, PenLine, Plus, Target, ThumbsUp } from 'lucide-react';
 import { EmptyState } from '@/components/space/Page';
+import { useAuth } from '@/contexts/AuthContext';
+import { canCreateContent } from '@/lib/features';
 
 /** Une publication de l'utilisateur (GET /users/<u>/contributions/). */
 export interface PublishedItem {
@@ -58,11 +60,17 @@ const contentPath = (item: PublishedItem) =>
 /** Publications en une carte : titre, matière · chapitre, votes et vues ; « Voir les N » déplie le reste. */
 export const PublicationsList: React.FC<{ items: PublishedItem[]; isOwner: boolean }> = ({ items, isOwner }) => {
   const [all, setAll] = useState(false);
+  const { user } = useAuth();
   if (items.length === 0) {
-    return isOwner ? (
+    // Création de contenu : l'équipe seulement pour l'instant (12/10/2026).
+    return isOwner ? (canCreateContent(user) ? (
       <QuietEmpty icon={PenLine} title="Tu n’as rien publié pour l’instant"
         text="Proposer un exercice est un bon moyen de vérifier que tu maîtrises un chapitre."
         action={<Link to="/exercises/new" className="fd-btn-ghost min-h-10 text-[13px]"><Plus className="h-4 w-4" /> Proposer un exercice</Link>} />
+    ) : (
+      <EmptyState compact icon={PenLine} tone="ink" title="Rien de publié pour l’instant"
+        text="Tes exercices, leçons et examens publiés apparaîtront ici." />
+    )
     ) : (
       <EmptyState compact icon={PenLine} tone="ink" title="Rien de publié pour l’instant"
         text="Ses exercices, leçons et examens apparaîtront ici." />

@@ -78,9 +78,10 @@ export const getHub = async (section: string, level: string, chapter?: string) =
 export const hubPath = (section: string, levelSlug: string, chapterSlug?: string) =>
   `/${section}/niveau/${levelSlug}${chapterSlug ? `/${chapterSlug}` : ''}`;
 
-/** Même résultat que django.utils.text.slugify (« 2ème Bac SM » → « 2eme-bac-sm »). */
+/** Même résultat que hubs.slug du back (« 2ème Bac SM » → « 2eme-bac-sm ») : django slugify, le « / » séparant
+ *  deux mots (« 2ème Bac PC/SVT » → « 2eme-bac-pc-svt »). */
 export const slugify = (s: string) =>
-  s.normalize('NFKD').replace(/[^\p{ASCII}]/gu, '').toLowerCase()
+  s.replace(/\//g, ' ').normalize('NFKD').replace(/[^\p{ASCII}]/gu, '').toLowerCase()
     .replace(/[^\w\s-]/g, '').replace(/[-\s]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
 
 interface ProfileLike {

@@ -13,6 +13,7 @@ import WordEditor, { type Entete } from '@/components/editor/word/WordEditor';
 import { documentsAPI, type DocumentFull, type Marges, type Orientation } from '@/lib/api/documentsApi';
 import { PublishDialog } from './PublishDialog';
 import { useDocxImport } from './useDocxImport';
+import { canCreateContent, isTeacherOrAdmin } from '@/lib/features';
 
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
 const DELAY = 1000;
@@ -20,7 +21,11 @@ const DELAY = 1000;
 export const DocumentEditor: React.FC = () => {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  // « Publier sur FIDNI » : création de contenu, l'équipe seulement pour l'instant (12/10/2026).
+  const canPublish = canCreateContent(user);
+  // « Mes documents » : enseignants et équipe ; sinon retour à la page qui l'explique.
+  const allowed = isTeacherOrAdmin(user);
   const [doc, setDoc] = useState<DocumentFull | null>(null);
   const [loadError, setLoadError] = useState<'introuvable' | 'reseau' | null>(null);
   const [title, setTitle] = useState('');
@@ -38,11 +43,11 @@ export const DocumentEditor: React.FC = () => {
   const inflight = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) navigate('/documents', { replace: true });
-  }, [authLoading, isAuthenticated, navigate]);
+    if (!authLoading && (!isAuthenticated || !allowed)) navigate('/documents', { replace: true });
+  }, [authLoading, isAuthenticated, allowed, navigate]);
 
   useEffect(() => {
-    if (!isAuthenticated || !id) return;
+    if (!isAuthenticated || !allowed || !id) return;
     let cancelled = false;
     setDoc(null);
     setLoadError(null);
@@ -54,7 +59,7 @@ export const DocumentEditor: React.FC = () => {
       })
       .catch((e) => { if (!cancelled) setLoadError(e?.response?.status === 404 ? 'introuvable' : 'reseau'); });
     return () => { cancelled = true; };
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, allowed]);
 
   // Document qui vient d'être importé de Word : ce qui n'a pas pu l'être est dit une fois.
   useEffect(() => {
@@ -188,11 +193,13 @@ export const DocumentEditor: React.FC = () => {
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
         aria-label="Nom du document"
         className="min-w-0 max-w-[min(420px,50vw)] flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-center text-[14px] font-semibold text-white placeholder:text-white/60 hover:border-white/30 focus:border-white/60 focus:bg-white/10 focus:outline-none sm:flex-none sm:text-left" />
-      <button type="button" onClick={() => setPublishing(true)} title="Publier ce document comme exercice, devoir ou leçon"
-        className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
-        <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Publier sur FIDNI</span>
-      </button>
-      <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] text-white/85" role="status">
+      {canPublish && (
+        <button type="button" onClick={() => setPublishing(true)} title="Publier ce document comme exercice, devoir ou leçon"
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
+          <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Publier sur FIDNI</span>
+        </button>
+      )}
+      <span className={`${canPublish ? 'ml-3' : 'ml-auto'} inline-flex items-center gap-1.5 text-[12px] text-white/85`} role="status">
         {status.icon} {status.text}
         {save === 'error' && (
           <button type="button" onClick={() => { void flush(); }} className="ml-1 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-0.5 font-semibold hover:bg-white/25">
@@ -215,10 +222,10 @@ export const DocumentEditor: React.FC = () => {
           list: () => { void flush().then(() => navigate('/documents')); },
           importDocx: docx.open,
           exportDocx: () => { void exportDocx(); },
-          publish: () => setPublishing(true),
+          publish: canPublish ? () => setPublishing(true) : undefined,
         }} />
       {docx.input}
-      {publishing && (
+      {publishing && canPublish && (
         <PublishDialog html={htmlRef.current} title={title} entete={enteteRef.current} onClose={() => setPublishing(false)} beforeLeave={flush} documentId={id} />
       )}
     </div>

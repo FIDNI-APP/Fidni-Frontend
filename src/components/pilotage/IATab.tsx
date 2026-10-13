@@ -17,7 +17,7 @@ import {
 } from '@/lib/api/iaApi';
 import { checkStructureMath } from '@/lib/mathCheck';
 
-const NIVEAUX = ['Tronc commun Sciences', '1ère Bac SM', '2ème Bac SM', '2ème Bac PC'];
+const NIVEAUX = ['Tronc commun Sciences', '1ère Bac SM', '2ème Bac SM', '2ème Bac PC/SVT'];
 const HADDAR = 'M. Haddar, professeur de mathématiques';
 const DROITS: { key: string; label: string; hint: string; origine: Origine; credit?: string }[] = [
   { key: 'haddar', label: 'Document de M. Haddar', hint: 'Publié avec son accord, « Proposé par M. Haddar ».', origine: 'autorise', credit: HADDAR },
