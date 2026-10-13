@@ -14,7 +14,7 @@ export interface FolderItem {
   count: number;
   /** « 12 exercices ». */
   countLabel: string;
-  /** Deuxième information : « 9 chapitres sur 14 », « 2ème Bac SM · 2ème Bac PC ». */
+  /** Deuxième information : « 9 chapitres sur 14 », « 2ème Bac SM · 2ème Bac PC/SVT ». */
   sub?: string;
   /** Élève connecté : contenus du dossier terminés (réussis / à revoir). */
   progress?: { done: number; success: number } | null;

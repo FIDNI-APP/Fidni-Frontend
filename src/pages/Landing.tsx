@@ -73,7 +73,7 @@ export function Landing() {
     <div style={{ background: PAPER }}>
       <SEO
         title="Fidni – Exercices de maths corrigés, cours et examens | Lycée et Bac au Maroc"
-        description="Exercices de maths corrigés, cours et devoirs surveillés pour les lycéens marocains : Tronc commun, 1ère Bac SM, 2ème Bac SM et PC (BIOF). Solutions détaillées, suivi de progression. Gratuit."
+        description="Exercices de maths corrigés, cours et devoirs surveillés pour les lycéens marocains : Tronc commun, 1ère Bac SM, 2ème Bac SM, PC et SVT (BIOF). Solutions détaillées, suivi de progression. Gratuit."
         keywords={['exercices maths maroc', 'exercices corrigés', '2 bac sm', '1 bac sm', 'tronc commun', 'bac maroc', 'cours de maths', 'devoirs surveillés']}
         ogType="website"
         canonicalUrl="/"
@@ -298,7 +298,7 @@ const PILLARS = [
     icon: FileText,
     title: 'Bac national corrigé',
     desc: 'Les sujets du Bac national corrigés en détail, pour t\'entraîner en conditions réelles, le chrono en main.',
-    sample: '2ème Bac SM · 2ème Bac PC',
+    sample: '2ème Bac SM · 2ème Bac PC/SVT',
     link: '/exams/nationaux',
     cta: 'Voir les sujets du Bac',
   },

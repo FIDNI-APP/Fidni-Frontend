@@ -17,3 +17,16 @@ export function canSeeParcours(user: { is_superuser?: boolean; is_staff?: boolea
 export function isModerator(user: { is_superuser?: boolean; is_staff?: boolean } | null | undefined): boolean {
   return !!(user?.is_superuser || user?.is_staff);
 }
+
+type RoleUser = { is_superuser?: boolean; is_staff?: boolean; profile?: { user_type?: string } | null } | null | undefined;
+
+/** Création de contenu (exercice, leçon, examen, « Publier sur FIDNI ») : l'équipe seulement pour l'instant
+ *  (12/10/2026 ; le serveur refuse aussi : config/permissions.py CanCreateContent). */
+export function canCreateContent(user: RoleUser): boolean {
+  return isModerator(user);
+}
+
+/** « Mes documents » et outils prof : enseignant déclaré ou équipe (serveur : IsTeacherOrAdmin). */
+export function isTeacherOrAdmin(user: RoleUser): boolean {
+  return user?.profile?.user_type === 'teacher' || isModerator(user);
+}

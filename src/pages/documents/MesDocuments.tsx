@@ -1,13 +1,14 @@
 /**
  * Mes documents (/documents, 12/10/2026) : les documents de l'éditeur « façon Word » du membre
  * (devoirs rédigés, fiches de cours, brouillons d'exercices…). Nouveau, importer un Word, ouvrir, dupliquer, supprimer.
+ * Réservé aux enseignants (déclarés) et à l'équipe pour l'instant (12/10/2026 ; serveur : IsTeacherOrAdmin).
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Copy, FileDown, FilePlus2, FileText, Loader2, RotateCcw, Search, Sigma, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { isModerator } from '@/lib/features';
+import { isTeacherOrAdmin } from '@/lib/features';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { CardsSkeleton, EmptyState, Page, PageHeader } from '@/components/space/Page';
 import { documentsAPI, type DocumentSummary } from '@/lib/api/documentsApi';
@@ -25,7 +26,7 @@ const when = (iso: string) => {
 
 export const MesDocuments: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const teacherTools = user?.profile?.user_type === 'teacher' || isModerator(user);
+  const teacherTools = isTeacherOrAdmin(user);
   const openSignup = useOpenSignup('documents');
   const navigate = useNavigate();
   const [docs, setDocs] = useState<DocumentSummary[] | null>(null);
@@ -37,7 +38,7 @@ export const MesDocuments: React.FC = () => {
     setFailed(false);
     documentsAPI.list().then(setDocs).catch(() => setFailed(true));
   };
-  useEffect(() => { if (isAuthenticated) load(); }, [isAuthenticated]);
+  useEffect(() => { if (isAuthenticated && teacherTools) load(); }, [isAuthenticated, teacherTools]);
 
   const shown = useMemo(() => {
     const f = q.trim().toLowerCase();
@@ -73,9 +74,9 @@ export const MesDocuments: React.FC = () => {
 
   const docx = useDocxImport();
   const header = (
-    <PageHeader eyebrow={teacherTools ? 'Outils prof' : 'Mon suivi'} title="Mes documents"
+    <PageHeader eyebrow="Outils prof" title="Mes documents"
       subtitle="Rédige tes fiches, tes devoirs et tes exercices comme dans Word, avec des équations faciles à écrire : Alt+= puis tape ta formule."
-      actions={isAuthenticated ? (
+      actions={isAuthenticated && teacherTools ? (
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={docx.open} disabled={docx.busy} className="fd-btn-ghost min-h-10"
             title="Un document Word (.docx) devient un document FIDNI : équations Word et MathType comprises">
@@ -98,6 +99,18 @@ export const MesDocuments: React.FC = () => {
           text="Crée un compte gratuit pour rédiger et enregistrer tes documents, puis les imprimer ou les garder en PDF."
           action={<button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary min-h-10">Créer un compte</button>}
           secondary={<button type="button" onClick={() => openSignup('login')} className="fd-btn-ghost min-h-10">Se connecter</button>} />
+      </Page>
+    );
+  }
+
+  // Élève : l'éditeur est réservé aux enseignants pour l'instant.
+  if (!teacherTools) {
+    return (
+      <Page>
+        {header}
+        <EmptyState icon={Sigma} tone="ink" title="Réservé aux enseignants pour l’instant"
+          text="L’éditeur de documents avec équations est ouvert aux professeurs. Il le sera bientôt pour tout le monde."
+          action={<Link to="/" className="fd-btn-primary min-h-10">Retour à l’accueil</Link>} />
       </Page>
     );
   }

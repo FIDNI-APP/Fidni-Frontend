@@ -18,7 +18,7 @@ const LEVELS = [
   { slug: 'tronc-commun-sciences', name: 'Tronc commun Sciences' },
   { slug: '1ere-bac-sm', name: '1ère Bac SM' },
   { slug: '2eme-bac-sm', name: '2ème Bac SM' },
-  { slug: '2eme-bac-pc', name: '2ème Bac PC' },
+  { slug: '2eme-bac-pc-svt', name: '2ème Bac PC/SVT' },
 ];
 
 const colLink = 'inline-flex min-h-9 items-center text-[13.5px] text-ink-soft transition-colors hover:text-brand-hover md:min-h-7';

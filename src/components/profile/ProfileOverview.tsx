@@ -11,6 +11,8 @@ import { STATUS } from '@/pages/progression/status';
 import { practiceUrl, quizUrl } from '@/pages/progression/links';
 import { hubPath, profileLevel } from '@/lib/api/hubApi';
 import { GoalsList, PublicationsList, type Goal, type PublishedItem } from './ProfileBilanSection';
+import { useAuth } from '@/contexts/AuthContext';
+import { canCreateContent } from '@/lib/features';
 
 type LevelProfile = {
   user_type?: string;
@@ -110,6 +112,8 @@ const ProgressSummary: React.FC<{ username: string; profile: Props['profile']; e
 };
 
 export const ProfileOverview: React.FC<Props> = ({ username, profile, userType, goals, editUrl, contributions }) => {
+  const { user: viewer } = useAuth();
+  const canCreate = canCreateContent(viewer);
   const isTeacher = userType === 'teacher';
   const publications = (
     <Section id="publications" title="Mes publications" count={contributions.length}>
@@ -132,8 +136,8 @@ export const ProfileOverview: React.FC<Props> = ({ username, profile, userType, 
                 </span>
               </span>
             </CardLink>
-            {/* Sans publication, l'état vide propose déjà d'en faire une. */}
-            {contributions.length > 0 && (
+            {/* Sans publication, l'état vide propose déjà d'en faire une. Création : l'équipe seulement (12/10/2026). */}
+            {contributions.length > 0 && canCreate && (
               <CardLink to="/exercises/new">
                 <span className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden><PenLine className="h-4 w-4" /></span>

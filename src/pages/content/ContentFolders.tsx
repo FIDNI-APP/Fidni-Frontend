@@ -24,7 +24,7 @@ import {
   getLevelFolders, getNationalYears, hubPath, profileLevel, yearPath,
   type HubFolder, type HubInfo, type LevelFolders, type YearFolders,
 } from '@/lib/api/hubApi';
-import { isModerator } from '@/lib/features';
+import { canCreateContent } from '@/lib/features';
 import { trackAction, trackHubChoice } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, SECTION_OF, SECTION_TEXT, plural, type ContentKind } from './sections';
 
@@ -54,10 +54,10 @@ const ErrorBox: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
   </div>
 );
 
-/** Publier : auteurs (profs) et modérateurs. */
+/** Publier : l'équipe seulement pour l'instant (12/10/2026). */
 const CreateButton: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   const { user } = useAuth();
-  if (!(isModerator(user) || user?.profile?.user_type === 'teacher')) return null;
+  if (!canCreateContent(user)) return null;
   const t = SECTION_TEXT[kind];
   return (
     <Link to={`${t.basePath}/new`} className="fd-btn-ghost min-h-10 flex-shrink-0" aria-label={t.createLabel}>
@@ -174,7 +174,7 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
   const location = useLocation();
   const navigationType = useNavigationType();
   const { isAuthenticated, user } = useAuth();
-  const canCreate = isModerator(user) || user?.profile?.user_type === 'teacher';
+  const canCreate = canCreateContent(user);
   const { setCrumbs } = useBreadcrumb();
   const levelsPath = `${t.basePath}?niveau=tous`;
 

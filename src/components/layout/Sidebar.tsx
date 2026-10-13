@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
-import { canSeeParcours, isModerator } from '@/lib/features';
+import { canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { sectionHome, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
@@ -73,13 +73,11 @@ const FOLLOW_GROUP: NavGroup = {
     { to: '/reviser', label: 'Réviser', icon: CalendarCheck, match: ['/reviser', '/revisions', '/revision-lists', '/profile/revision-lists'] },
     { to: '/skill-iq', label: 'Quiz par chapitre', icon: Brain, match: ['/skill-iq'] },
     { to: '/enregistrements', label: 'Mes enregistrements', icon: BookmarkIcon, match: ['/enregistrements', '/saved', '/notebooks'] },
-    // Éditeur de documents avec équations (12/10/2026) ; chez un prof, il est dans « Outils prof ».
-    { to: '/documents', label: 'Mes documents', icon: FileText, match: ['/documents'] },
   ],
 };
 
-// Outils prof (12/10/2026) : profs et modération. Créer un contenu, rédiger dans l'éditeur « façon Word »
-// (équations), suivre ses classes ; ces entrées quittent alors « Mon suivi ».
+// Outils prof (12/10/2026) : profs et modération. Créer un contenu (équipe seulement pour l'instant), rédiger
+// dans l'éditeur « façon Word » (« Mes documents » : enseignants et équipe seulement), suivre ses classes.
 const TEACHER_GROUP: NavGroup = {
   title: 'Outils prof',
   tour: 'nav-outils-prof',
@@ -226,18 +224,20 @@ const SidebarInner: React.FC<{
   const showParcours = canSeeParcours(user);
   const hasClassroom = useHasClassroom();
   const levels = useLevels();
-  const teacherTools = user?.profile?.user_type === 'teacher' || isModerator(user);
+  const teacherTools = isTeacherOrAdmin(user);
+  const canCreate = canCreateContent(user);
 
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
     const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/learning-path') };
     if (!isAuthenticated) return [HOME_GROUP, work];
     if (teacherTools) {
-      const follow = { ...FOLLOW_GROUP, items: FOLLOW_GROUP.items.filter((it) => it.to !== '/documents') };
-      return [HOME_GROUP, work, TEACHER_GROUP, follow];
+      // « Ajouter un contenu » : l'équipe seulement pour l'instant (12/10/2026).
+      const tools = { ...TEACHER_GROUP, items: TEACHER_GROUP.items.filter((it) => canCreate || it.to !== '/exercises/new') };
+      return [HOME_GROUP, work, tools, FOLLOW_GROUP];
     }
     return hasClassroom ? [HOME_GROUP, work, FOLLOW_GROUP, CLASS_GROUP] : [HOME_GROUP, work, FOLLOW_GROUP];
-  }, [isAuthenticated, showParcours, hasClassroom, teacherTools]);
+  }, [isAuthenticated, showParcours, hasClassroom, teacherTools, canCreate]);
 
   // Section imposée par la page (ex. un sujet du Bac national, sous /exams/123 comme un DS) :
   // explicite (BreadcrumbContext.section), sinon l'adresse du premier élément du fil d'Ariane.
