@@ -35,6 +35,12 @@ const markSeen = (tour: Tour) => {
 // Lancement automatique : UNE fois par visite, la toute première (11/10/2026 : relancée à chaque nouvelle
 // version, elle revenait à chaque mise à jour du site). Une visite enrichie depuis la dernière vue est
 // seulement signalée par un point sur le bouton « ? ».
+/** Visite déjà présentée autrement (fenêtre « Nouveautés » vue jusqu'au bout) : pas de lancement automatique,
+ * elle reste au bouton « ? ». */
+export const marquerVisiteVue = (id: string) => {
+  const tour = TOURS.find((t) => t.id === id);
+  if (tour) markSeen(tour);
+};
 const everSeen = (tour: Tour) => readSeen()[tour.id] !== undefined;
 const hasNews = (tour: Tour) => everSeen(tour) && (readSeen()[tour.id] ?? 0) < (tour.version ?? 1);
 
@@ -51,8 +57,9 @@ export function findTarget(names: string | string[] | undefined): HTMLElement | 
   return null;
 }
 
-/** Une fenêtre est ouverte (bandeau cookies, conditions, connexion, menu mobile…) : on attend. */
-const somethingOpen = () =>
+/** Une fenêtre est ouverte (bandeau cookies, conditions, connexion, menu mobile…) : on attend. Aussi lu par la
+ * fenêtre « Nouveautés » (components/nouveautes), qui attend de même son tour. */
+export const somethingOpen = () =>
   document.body.classList.contains('mobile-menu-open')
   // Une autre demande est déjà à l'écran (« Tu avais trouvé ? ») : une seule à la fois.
   || !!findTarget('trouve')

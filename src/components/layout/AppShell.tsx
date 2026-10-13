@@ -6,6 +6,7 @@ import { OnboardingBanner } from './OnboardingBanner';
 import { MobileTabBar } from './MobileTabBar';
 import { TABBAR_OFFSET } from './nav';
 import { IdentityGate } from '@/components/profile/IdentityForm';
+import { Nouveautes } from '@/components/nouveautes/Nouveautes';
 import Footer from './Footer';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
 
@@ -67,6 +68,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showFooter = true 
         <div className="flex-1 flex flex-col min-w-0" style={{ paddingBottom: TABBAR_OFFSET }}>
           <OnboardingBanner />
           <IdentityGate />
+          <Nouveautes />
           <TopBar onOpenMobile={() => setMobileOpen(true)} />
           <main className="flex-grow">{children}</main>
           {showFooter && <Footer />}

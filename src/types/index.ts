@@ -128,6 +128,8 @@ export interface User {
   has_password?: boolean;
   /** Compte relié à un compte Google (« Continuer avec Google »). */
   google_linked?: boolean;
+  /** Fenêtres « Nouveautés » à lui montrer (14/10/2026, backend users/nouveautes.py) : ids du registre front. */
+  nouveautes?: string[];
 }
 
 // =====================

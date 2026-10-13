@@ -115,11 +115,18 @@ export default {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%':      { transform: 'translateY(-7px)' },
         },
+        // Fenêtre « Nouveautés » (14/10/2026) : barres qui montent, s'étirent, courbes qui se tracent.
+        grandir: { 'from': { transform: 'scaleY(0)' }, 'to': { transform: 'scaleY(1)' } },
+        etirer:  { 'from': { transform: 'scaleX(0)' }, 'to': { transform: 'scaleX(1)' } },
+        trace:   { 'from': { strokeDashoffset: '200' }, 'to': { strokeDashoffset: '0' } },
       },
       animation: {
         'fade-up': 'fadeUp .4s cubic-bezier(.25,.46,.45,.94) both',
         'slide-in': 'slideIn .35s ease both',
         'floaty':   'floaty 4s ease-in-out infinite',
+        'grandir':  'grandir .55s cubic-bezier(.22,1,.36,1) both',
+        'etirer':   'etirer .7s cubic-bezier(.22,1,.36,1) both',
+        'trace':    'trace 1.1s cubic-bezier(.45,0,.2,1) both',
       },
     },
   },

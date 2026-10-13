@@ -15,8 +15,9 @@ import { DayBars } from './DayBars';
 const ICONE = { exercise: FileText, exam: ClipboardList, lesson: BookOpen } as const;
 const TYPE = { exercise: 'Exercice', exam: 'Examen', lesson: 'Leçon' } as const;
 
-const Barre: React.FC<{ label: React.ReactNode; sub?: React.ReactNode; secondes: number; max: number; onClick: () => void; icon?: React.ReactNode }> = ({
-  label, sub, secondes, max, onClick, icon,
+/** Une barre de temps cliquable (aussi montrée, animée, dans la fenêtre « Nouveautés » : `anime`, `delai` en ms). */
+export const Barre: React.FC<{ label: React.ReactNode; sub?: React.ReactNode; secondes: number; max: number; onClick: () => void; icon?: React.ReactNode; anime?: boolean; delai?: number }> = ({
+  label, sub, secondes, max, onClick, icon, anime = false, delai = 0,
 }) => (
   <li>
     <button type="button" onClick={onClick} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-[#faf9f7] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
@@ -27,7 +28,8 @@ const Barre: React.FC<{ label: React.ReactNode; sub?: React.ReactNode; secondes:
           <span className="fd-nums shrink-0 text-[12.5px] font-semibold text-ink-soft">{duration(secondes)}</span>
         </span>
         <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-[#f2f1ee]">
-          <span className="block h-full rounded-full" style={{ width: `${Math.max(2, (secondes / max) * 100)}%`, background: COULEUR.temps }} />
+          <span className={`block h-full rounded-full ${anime ? 'origin-left animate-etirer' : ''}`}
+            style={{ width: `${Math.max(2, (secondes / max) * 100)}%`, background: COULEUR.temps, animationDelay: anime ? `${delai}ms` : undefined }} />
         </span>
         {sub && <span className="mt-1 block text-[11.5px] text-ink-faint">{sub}</span>}
       </span>

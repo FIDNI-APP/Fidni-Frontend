@@ -24,8 +24,9 @@ const entrainer = (p: PointFaible) => {
   return p.id ? `${base}${base.includes('?') ? '&' : '?'}theorems=${p.id}` : base;
 };
 
-const Ligne: React.FC<{ p: PointFaible; compact?: boolean }> = ({ p, compact = false }) => {
-  const [open, setOpen] = useState(false);
+const Ligne: React.FC<{ p: PointFaible; compact?: boolean; ouvert?: boolean }> = ({ p, compact = false, ouvert }) => {
+  const [ouvre, setOpen] = useState(false);
+  const open = ouvert ?? ouvre;
   return (
     <li className="px-4 py-3.5 sm:px-5">
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
@@ -79,7 +80,8 @@ const Ligne: React.FC<{ p: PointFaible; compact?: boolean }> = ({ p, compact = f
   );
 };
 
-export const PointsFaibles: React.FC<{ points: PointFaible[]; compact?: boolean }> = ({ points, compact = false }) => {
+/** `ouverts` : noms des théorèmes dont les questions à refaire sont dépliées d'office (fenêtre « Nouveautés »). */
+export const PointsFaibles: React.FC<{ points: PointFaible[]; compact?: boolean; ouverts?: string[] }> = ({ points, compact = false, ouverts }) => {
   const [tous, setTous] = useState(false);
   if (!points.length) {
     return (
@@ -92,7 +94,7 @@ export const PointsFaibles: React.FC<{ points: PointFaible[]; compact?: boolean 
   const shown = tous || compact ? points : points.slice(0, VISIBLES);
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-white">
-      <ul className="divide-y divide-line">{shown.map((p) => <Ligne key={p.nom} p={p} compact={compact} />)}</ul>
+      <ul className="divide-y divide-line">{shown.map((p) => <Ligne key={p.nom} p={p} compact={compact} ouvert={ouverts?.includes(p.nom)} />)}</ul>
       {!compact && points.length > VISIBLES && (
         <button type="button" onClick={() => setTous((v) => !v)} aria-expanded={tous}
           className="flex min-h-11 w-full items-center justify-center gap-1.5 border-t border-line text-[13px] font-semibold text-ink-soft hover:text-ink">

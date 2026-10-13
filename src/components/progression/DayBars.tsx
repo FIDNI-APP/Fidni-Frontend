@@ -29,7 +29,9 @@ export const DayBars: React.FC<{
   onPick?: (date: string) => void;
   emptyText?: string;
   height?: number;
-}> = ({ rows, series, pas, describe, headline, tick = (v) => String(v), selected = null, onPick, emptyText, height = 190 }) => {
+  /** Les barres montent une à une à l'affichage (fenêtre « Nouveautés ») ; un nombre = après ce délai (ms). */
+  anime?: boolean | number;
+}> = ({ rows, series, pas, describe, headline, tick = (v) => String(v), selected = null, onPick, emptyText, height = 190, anime = false }) => {
   const [hover, setHover] = useState<number | null>(null);
   const total = (r: BarRow) => series.reduce((s, x) => s + Number(r[x.key] || 0), 0);
   const max = Math.max(0, ...rows.map(total));
@@ -82,8 +84,8 @@ export const DayBars: React.FC<{
                 onClick={() => { setHover(i); if (onPick && t > 0) onPick(r.date); }}
                 className={`flex h-full min-w-0 flex-1 items-end justify-center rounded-[4px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                   on ? 'bg-ink/[.05]' : ''} ${onPick && t > 0 ? 'cursor-pointer' : 'cursor-default'}`}>
-                <span className="flex w-full max-w-[24px] flex-col-reverse gap-[2px] transition-opacity duration-200"
-                  style={{ height: t ? `${Math.max(2, (t / top) * 100)}%` : '2px', opacity: hover === null || on ? 1 : 0.4 }}>
+                <span className={`flex w-full max-w-[24px] flex-col-reverse gap-[2px] transition-opacity duration-200 ${anime !== false ? 'origin-bottom animate-grandir' : ''}`}
+                  style={{ height: t ? `${Math.max(2, (t / top) * 100)}%` : '2px', opacity: hover === null || on ? 1 : 0.4, animationDelay: anime !== false ? `${(typeof anime === 'number' ? anime : 0) + i * 45}ms` : undefined }}>
                   {t === 0 ? <span className="block h-[2px] w-full rounded-full bg-[#e7e3dc]" /> : parts.map((s, k) => (
                     <span key={s.key} className={`block w-full ${k === parts.length - 1 ? 'rounded-t-[4px]' : ''}`}
                       style={{ flexGrow: Number(r[s.key]), flexBasis: 0, minHeight: 2, background: s.color }} />
