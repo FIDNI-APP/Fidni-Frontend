@@ -27,12 +27,18 @@ export const Delta: React.FC<{ a: SkillAssessment; long?: boolean; className?: s
   );
 };
 
+/** Étiquette « Nouveau » : quiz sorti il y a moins de 14 jours, pas encore passé. */
+export const NewBadge: React.FC = () => (
+  <span className="inline-flex items-center rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[.06em] text-white">Nouveau</span>
+);
+
 export const QuizRow: React.FC<{
   name: string;
   ready: number;
   taken: SkillAssessment | null;
+  isNew?: boolean;
   onStart: () => void;
-}> = ({ name, ready, taken, onStart }) => {
+}> = ({ name, ready, taken, isNew = false, onStart }) => {
   const score = taken ? pct(taken) : null;
   return (
     <li className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5">
@@ -42,7 +48,7 @@ export const QuizRow: React.FC<{
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-semibold leading-snug text-ink">{name}</p>
+        <p className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug text-ink">{name}{isNew && <NewBadge />}</p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-faint">
           {taken ? (
             <>

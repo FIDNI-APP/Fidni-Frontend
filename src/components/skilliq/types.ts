@@ -17,9 +17,29 @@ export interface SkillAssessment {
   attempts?: number;
   /** Page d'exercices du chapitre au niveau de l'élève ; null hors de son niveau. */
   hub_url?: string | null;
+  /** Niveau du quiz passé (null : passage d'avant le découpage par niveau). */
+  class_level?: number | null;
   /** Correction, seulement dans la réponse à l'envoi. */
   correction?: CorrectionItem[];
+  /** Bilan du dernier passage par théorème (vide pour les passages d'avant le 13/10/2026). */
+  par_theoreme?: TheoremReport | Record<string, never>;
 }
+
+/** Un théorème du chapitre : questions justes / posées sur ce passage (100 % = toutes justes). */
+export interface TheoremScore { id: number; name: string; justes: number; total: number; pct: number }
+
+export interface TheoremReport {
+  /** Du moins maîtrisé au mieux maîtrisé. */
+  theoremes: TheoremScore[];
+  /** Théorèmes du chapitre absents de ce tirage. */
+  non_evalues: { id: number; name: string }[];
+  a_revoir: string[];
+  /** Tous les théorèmes évalués à 100 % et aucun oublié. */
+  complet: boolean;
+}
+
+export const hasReport = (r: SkillAssessment['par_theoreme']): r is TheoremReport =>
+  !!r && Array.isArray((r as TheoremReport).theoremes) && (r as TheoremReport).theoremes.length > 0;
 
 export interface CorrectionItem {
   id: number;
@@ -27,6 +47,8 @@ export interface CorrectionItem {
   correct_answer: number;
   is_correct: boolean;
   explanation: string;
+  /** Théorèmes évalués par la question. */
+  theoremes?: string[];
 }
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -47,10 +69,24 @@ export interface QuizChapter {
   last_at: string | null;
   /** Dernier passage de l'élève. */
   taken: SkillAssessment | null;
+  /** Quiz sorti il y a moins de 14 jours, pas encore passé depuis (étiquette « Nouveau »). */
+  fresh: boolean;
 }
 
 /** Quiz ouvert : le chapitre, et d'où l'on vient pour la suite. */
-export interface ActiveQuiz { id: number; name: string; subject: string | null; hub_url: string | null }
+export interface ActiveQuiz {
+  id: number; name: string; subject: string | null; hub_url: string | null;
+  /** Niveau du quiz (un quiz = chapitre + niveau) ; absent : celui de l'élève. */
+  levelId?: number | null;
+}
+
+/** Clé d'un quiz : niveau + chapitre (« Nouveau », résultats). */
+export const quizKey = (levelId: number | null | undefined, chapterId: number) => `${levelId ?? ''}:${chapterId}`;
+
+/** Dernier résultat de l'élève sur le quiz (chapitre, niveau) ; un passage sans niveau compte pour le sien. */
+export const takenOn = (mine: SkillAssessment[], chapterId: number, levelId: number | null | undefined, ownLevelId?: number | null) =>
+  mine.find((a) => a.chapter === chapterId && a.class_level === levelId)
+  ?? (levelId === ownLevelId ? mine.find((a) => a.chapter === chapterId && a.class_level == null) : undefined) ?? null;
 
 export const DIFFICULTY: Record<Difficulty, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
 
@@ -63,11 +99,15 @@ export const previousPct = (a: SkillAssessment) =>
 /** « Retour à mon DS » : seulement vers un plan de DS du site (jamais une adresse extérieure). */
 export const safeReturn = (r: string | null) => (r && /^\/revisions\/ds\/\d+$/.test(r) ? r : null);
 
-/** Un quiz = au plus 10 questions tirées au hasard. */
-export const quizSize = (ready: number) => Math.min(Math.max(ready, 1), 10);
+/** Un quiz = toutes les questions du chapitre, 30 au plus (une par théorème d'abord). */
+export const quizSize = (ready: number) => Math.min(Math.max(ready, 1), 30);
 
-/** Durée annoncée : environ 45 s par question, jamais moins de 2 min. */
-export const estMinutes = (ready: number) => Math.max(2, Math.round(quizSize(ready) * 0.75));
+/** « Nouveau » : quiz sorti récemment (date de mise en ligne), pas passé depuis sa sortie. */
+export const isFresh = (since: string | undefined, taken: SkillAssessment | null | undefined) =>
+  !!since && (!taken || new Date(taken.completed_at) < new Date(since));
+
+/** Durée du minuteur : 1 min par question (le chrono s'arrête pendant la correction de chaque question). */
+export const estMinutes = (ready: number) => quizSize(ready);
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 

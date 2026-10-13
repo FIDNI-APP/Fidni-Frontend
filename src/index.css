@@ -19,6 +19,10 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: #b8b4ac; }
 
 /* Reusable design-system primitives — flat bordered cards, ink buttons */
+/* Texte des questions de quiz en police LaTeX (13/10/2026) : KaTeX_Main, la Computer Modern de KaTeX, chargée avec
+   katex.min.css (TipTapRenderer) ; Times à défaut. Un peu plus grande : elle paraît plus petite que la police du site. */
+.fd-latex { font-family: KaTeX_Main, "Latin Modern Roman", "Times New Roman", serif; font-size: 1.08em; }
+
 .fd-card {
   background: #fff;
   border: 1px solid #e7e3dc;
