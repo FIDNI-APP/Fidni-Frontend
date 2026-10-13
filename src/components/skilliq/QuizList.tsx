@@ -6,7 +6,7 @@ import { Section, StatTile } from '@/components/space/Page';
 import type { ChapterStatus } from '@/pages/progression/types';
 import { ChapterPlan } from './ChapterPlan';
 import { NewBadge, QuizRow, ScoreRing } from './QuizRow';
-import { bySubfield, estMinutes, pct, quizSize, type QuizChapter } from './types';
+import { bySubfield, estMinutes, pct, quizKey, quizSize, type QuizChapter, type QuizEnCours } from './types';
 import type { QuizChapters } from './useQuizChapters';
 
 const REASON: Record<ChapterStatus, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
@@ -18,7 +18,7 @@ const REASON: Record<ChapterStatus, { label: string; icon: React.ComponentType<{
 };
 
 /** Le quiz à passer maintenant (ou, tous passés, celui à refaire). */
-const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({ chapter, onStart }) => {
+const NextQuizCard: React.FC<{ chapter: QuizChapter; enCours: QuizEnCours | null; onStart: () => void }> = ({ chapter, enCours, onStart }) => {
   const taken = chapter.taken;
   const reason = REASON[chapter.status];
   const ReasonIcon = reason.icon;
@@ -54,7 +54,7 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({
           </div>
         </div>
         <button type="button" onClick={onStart} className="fd-btn-primary min-h-11 w-full justify-center text-[14px] sm:w-auto">
-          {taken ? 'Refaire le quiz' : 'Commencer le quiz'} <ArrowRight className="h-4 w-4" aria-hidden />
+          {enCours ? `Reprendre le quiz (${enCours.repondues}/${enCours.total})` : taken ? 'Refaire le quiz' : 'Commencer le quiz'} <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
       <p className="border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] text-ink-faint sm:px-6">
@@ -66,9 +66,14 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({
 
 export const QuizList: React.FC<{
   data: QuizChapters;
+  /** Quiz commencés (clé : niveau:chapitre). */
+  enCours?: Record<string, QuizEnCours>;
   onStart: (c: QuizChapter) => void;
+  /** Rouvrir le dernier résultat d'un quiz passé. */
+  onView?: (c: QuizChapter) => void;
   children?: React.ReactNode;
-}> = ({ data, onStart, children }) => {
+}> = ({ data, enCours = {}, onStart, onView, children }) => {
+  const started = (c: QuizChapter) => enCours[quizKey(data.level?.id ?? null, c.id)] ?? null;
   const { ready, soon, next, redo, mine, level } = data;
   const featured = next ?? redo;
   const doneHere = ready.filter((c) => c.taken);
@@ -89,7 +94,7 @@ export const QuizList: React.FC<{
       {featured && (
         <Section id="prochain-quiz" title={next ? 'Ton prochain quiz' : 'À refaire'}
           hint={next ? undefined : 'Tu as passé tous les quiz de ton niveau : refais le moins réussi.'}>
-          <NextQuizCard chapter={featured} onStart={() => onStart(featured)} />
+          <NextQuizCard chapter={featured} enCours={started(featured)} onStart={() => onStart(featured)} />
         </Section>
       )}
 
@@ -100,7 +105,8 @@ export const QuizList: React.FC<{
             <div key={name}>
               {groups.length > 1 && <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{name}</h3>}
               <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
-                {list.map((c) => <QuizRow key={c.id} name={c.name} ready={c.ready} taken={c.taken} isNew={c.fresh} onStart={() => onStart(c)} />)}
+                {list.map((c) => <QuizRow key={c.id} name={c.name} ready={c.ready} taken={c.taken} isNew={c.fresh}
+                  enCours={started(c)} onStart={() => onStart(c)} onView={onView && c.taken ? () => onView(c) : undefined} />)}
               </ul>
             </div>
           ))}

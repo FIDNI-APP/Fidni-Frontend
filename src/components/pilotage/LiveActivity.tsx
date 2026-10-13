@@ -1,13 +1,15 @@
 /**
  * Pilotage › Aperçu — « Activité en direct » (12/10/2026) : les dernières actions des membres (inscriptions,
- * consultations, contenus réussis ou à revoir, commentaires, solutions, quiz), relues toutes les 30 s.
+ * consultations, contenus réussis ou à revoir, commentaires, solutions, quiz avec leur score ; depuis le 14/10/2026
+ * aussi les questions évaluées (regroupées), les indices et solutions ouverts, les favoris, les DS annoncés),
+ * relues toutes les 30 s.
  * Tableau sur ordinateur, lignes empilées sur téléphone ; une ligne arrivée à la relecture s'éclaire un instant.
  */
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Activity, BookOpen, CheckCircle2, ChevronDown, Eye, GraduationCap, Loader2, MessageSquare, RotateCcw, UserPlus,
-  type LucideIcon,
+  Activity, Bookmark, BookOpen, CalendarClock, CheckCircle2, ChevronDown, Eye, GraduationCap, Lightbulb, ListChecks, Loader2,
+  MessageSquare, RotateCcw, UserPlus, type LucideIcon,
 } from 'lucide-react';
 import { agoShort, useNow, type LiveEvent, type LiveStatus } from './livePilotage';
 
@@ -22,6 +24,10 @@ const KINDS: Record<string, KindStyle> = {
   comment: { label: 'Commentaire', cls: 'border-[#dbe3ec] bg-[#eef2f6] text-[#3d5a73]', icon: MessageSquare },
   solution: { label: 'Solution', cls: 'border-brand-line bg-white text-brand-hover', icon: BookOpen },
   skilliq: { label: 'Quiz', cls: 'border-gold-line bg-white text-gold-strong', icon: GraduationCap },
+  evaluation: { label: 'Évaluation', cls: 'border-brand-line bg-white text-brand-hover', icon: ListChecks },
+  aide: { label: 'Aide ouverte', cls: 'border-line bg-white text-ink-soft', icon: Lightbulb },
+  favori: { label: 'Favori', cls: 'border-line bg-white text-ink-soft', icon: Bookmark },
+  ds: { label: 'DS annoncé', cls: 'border-gold-line bg-gold-soft text-gold-strong', icon: CalendarClock },
 };
 const OTHER: KindStyle = { label: 'Action', cls: 'border-line bg-[#f2f1ee] text-ink-soft', icon: Activity };
 
@@ -38,14 +44,19 @@ const exactTime = (iso: string) => new Date(iso).toLocaleString('fr-FR', {
 const What: React.FC<{ e: LiveEvent }> = ({ e }) => {
   if (e.content) {
     return (
-      <Link to={e.content.url} title={e.content.title} className="block truncate text-[13px] text-ink hover:text-brand hover:underline">
-        {e.content.title}
-      </Link>
+      <span className="block min-w-0">
+        <Link to={e.content.url} title={e.content.title} className="block truncate text-[13px] text-ink hover:text-brand hover:underline">
+          {e.content.title}
+        </Link>
+        {(e.kind === 'evaluation' || e.kind === 'aide') && (
+          <span className="block truncate text-[11.5px] text-ink-faint">{e.label.replace(/^A (évalué|ouvert) /, '')}</span>
+        )}
+      </span>
     );
   }
-  if (e.kind === 'skilliq') {
-    const chapter = e.label.replace(/^test\s+skill\s*iq\s*:?\s*/i, '').trim();
-    return <span className="block truncate text-[13px] text-ink-soft" title={e.label}>{chapter || 'Quiz par chapitre'}</span>;
+  if (e.kind === 'skilliq' || e.kind === 'ds') {
+    const text = e.label.replace(/^test\s+skill\s*iq\s*:?\s*/i, '').replace(/^quiz\s+/i, '').replace(/^A annoncé un /, '').trim();
+    return <span className="block truncate text-[13px] text-ink-soft" title={e.label}>{text || 'Quiz par chapitre'}</span>;
   }
   return <span className="block text-[13px] text-ink-faint" aria-hidden>—</span>;
 };
@@ -115,7 +126,7 @@ export const LiveActivity: React.FC<{ events: LiveEvent[] | null; status: LiveSt
                       <Icon className="h-3 w-3 shrink-0" aria-hidden /> {k.label}
                     </span>
                   </span>
-                  <span className={`order-4 col-span-3 min-w-0 sm:col-span-1 ${!e.content && e.kind !== 'skilliq' ? 'hidden sm:block' : ''}`}>
+                  <span className={`order-4 col-span-3 min-w-0 sm:col-span-1 ${!e.content && e.kind !== 'skilliq' && e.kind !== 'ds' ? 'hidden sm:block' : ''}`}>
                     <What e={e} />
                   </span>
                 </li>

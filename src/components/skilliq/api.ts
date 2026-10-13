@@ -1,7 +1,7 @@
 // Appels du quiz par chapitre (tous réservés aux connectés, sauf la taxonomie). Un quiz = (chapitre, niveau) depuis
 // le 13/10/2026 : `levelId` absent = le niveau de l'élève.
 import { api } from '@/lib/api/apiClient';
-import { quizKey, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
+import { quizKey, type CorrectionItem, type QuizEnCours, type QuizQuestion, type QuizStart, type SkillAssessment } from './types';
 
 const level = (levelId?: number | null) => (levelId ? { niveau: levelId } : {});
 
@@ -22,16 +22,27 @@ export const getNew = async () => {
 /** Dernier résultat de l'élève pour chaque chapitre passé. */
 export const getMine = async () => ((await api.get('/skill-assessments/my/')).data ?? []) as SkillAssessment[];
 
-/** Les questions du quiz (une par théorème d'abord ; 404 s'il n'y en a aucune) et la durée du minuteur, en secondes. */
-export const getQuiz = async (chapterId: number, levelId?: number | null) => {
-  const data = (await api.get(`/skill-assessments/quiz/${chapterId}/`, { params: level(levelId) })).data ?? {};
+/** Le quiz (une par théorème d'abord ; 404 s'il n'y en a aucune) : le passage commencé s'il y en a un (reprise :
+ *  mêmes questions, corrections déjà vues, temps restant), sinon un nouveau tirage ; `nouveau` : toujours un nouveau. */
+export const getQuiz = async (chapterId: number, levelId?: number | null, nouveau = false): Promise<QuizStart> => {
+  const params = { ...level(levelId), ...(nouveau ? { nouveau: 1 } : {}) };
+  const data = (await api.get(`/skill-assessments/quiz/${chapterId}/`, { params })).data ?? {};
   const questions = (data.questions ?? []) as QuizQuestion[];
-  return { questions, seconds: Number(data.duree_secondes) || questions.length * 60 };
+  const seconds = Number(data.duree_secondes) || questions.length * 60;
+  return { questions, seconds, left: Number(data.restant_secondes ?? seconds), reprise: !!data.reprise,
+    verifiees: (data.verifiees ?? []) as CorrectionItem[] };
 };
 
-/** Correction d'une question dès qu'on y a répondu : bonne réponse, explication, théorèmes. */
-export const checkAnswer = async (questionId: number, answer: number) =>
-  (await api.post(`/skill-assessments/verifier/${questionId}/`, { answer })).data as CorrectionItem;
+/** Correction d'une question de son passage dès qu'on y a répondu (réponse verrouillée) ; `temps` : minuteur utilisé. */
+export const checkAnswer = async (questionId: number, answer: number, temps: number) =>
+  (await api.post(`/skill-assessments/verifier/${questionId}/`, { answer, temps })).data as CorrectionItem;
+
+/** Quiz commencés, pas encore envoyés (« Reprendre »). */
+export const getEnCours = async () => ((await api.get('/skill-assessments/en-cours/')).data ?? []) as QuizEnCours[];
+
+/** Dernier résultat d'un quiz, avec sa correction figée (« Voir mon dernier résultat »). */
+export const getLastResult = async (chapterId: number, levelId?: number | null) =>
+  (await api.get(`/skill-assessments/chapter/${chapterId}/`, { params: level(levelId) })).data as SkillAssessment;
 
 /** Envoi des réponses (-1 : sans réponse, temps écoulé) : résultat, correction et bilan par théorème. */
 export const submitQuiz = async (chapterId: number, levelId: number | null | undefined, answers: Record<number, number>, timeSpent: number) =>

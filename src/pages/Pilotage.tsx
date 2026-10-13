@@ -21,8 +21,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
-  Activity, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge,
-  GraduationCap, Loader2, LineChart, MessageSquare, PenLine, RefreshCw, Repeat, RotateCcw, Search, ShieldCheck, Sparkles,
+  Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge,
+  Loader2, LineChart, PenLine, RefreshCw, Repeat, RotateCcw, Search, ShieldCheck, Sparkles,
   UserPlus, Users, type LucideIcon,
 } from 'lucide-react';
 import { SerieModal, type SerieTarget } from '@/components/pilotage/SerieModal';
@@ -43,6 +43,7 @@ import { DayChart } from '@/components/pilotage/DayChart';
 import { MembersCard } from '@/components/pilotage/MembersCard';
 import { StatusStrip, type StatusPillDef } from '@/components/pilotage/StatusStrip';
 import { LiveActivity } from '@/components/pilotage/LiveActivity';
+import { MemberJournal } from '@/components/pilotage/MemberJournal';
 import { LivePill } from '@/components/pilotage/LivePill';
 import { useLivePilotage, type LiveData, type LiveStatus } from '@/components/pilotage/livePilotage';
 import { PAGES, pageInfo } from '@/lib/usage';
@@ -79,7 +80,6 @@ interface UserRow {
   stats: { views: number; completions: number; questions: number; comments: number; study_minutes: number };
 }
 interface UsersPage { count: number; pages: number; results: UserRow[]; counts: Record<string, number> }
-interface ActivityEvent { at: string; kind: string; username: string | null; label: string; content?: ContentRef }
 
 const PERIODS = [7, 30, 90];
 type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'visiteurs' | 'quiz' | 'ia';
@@ -182,9 +182,6 @@ const METRICS: {
 ];
 
 const TYPE_LABEL: Record<string, string> = { exercise: 'Exercice', exam: 'Examen', lesson: 'Leçon' };
-const KIND_ICON: Record<string, React.ElementType> = {
-  signup: UserPlus, view: Eye, complete: CheckCircle2, comment: MessageSquare, solution: BookOpen, skilliq: GraduationCap,
-};
 
 const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString('fr-FR');
 const plural = (n: number, [one, many]: [string, string]) => `${fmt(n)} ${n > 1 ? many : one}`;
@@ -771,21 +768,13 @@ const FILTERS: { key: string; label: string; hint?: string }[] = [
 ];
 
 const MemberDetail: React.FC<{ row: UserRow }> = ({ row }) => {
-  const [events, setEvents] = useState<ActivityEvent[] | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    api.get(`/pilotage/utilisateurs/${row.id}/`)
-      .then((r) => { if (!cancelled) setEvents(r.data.activity); })
-      .catch(() => { if (!cancelled) setEvents([]); });
-    return () => { cancelled = true; };
-  }, [row.id]);
   const stats: [string, string][] = [
     ['Consultations', fmt(row.stats.views)], ['Contenus terminés', fmt(row.stats.completions)],
     ['Questions évaluées', fmt(row.stats.questions)], ['Commentaires', fmt(row.stats.comments)],
     ['Temps d’étude', row.stats.study_minutes ? `${fmt(row.stats.study_minutes)} min` : '—'],
   ];
   return (
-    <div className="grid gap-5 border-t border-[#f2f1ee] bg-[#faf9f7] px-4 py-4 md:grid-cols-[1fr_1.3fr]">
+    <div className="grid gap-5 border-t border-[#f2f1ee] bg-[#faf9f7] px-4 py-4 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
       <div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 md:grid-cols-2">
           {stats.map(([k, v]) => (
@@ -801,29 +790,9 @@ const MemberDetail: React.FC<{ row: UserRow }> = ({ row }) => {
           Ouvrir le profil <ChevronRight className="h-3.5 w-3.5" />
         </Link>
       </div>
-      <div>
-        <h3 className="mb-1 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Dernières actions</h3>
-        {!events ? (
-          <Loader2 className="mt-2 h-4 w-4 animate-spin text-ink-faint" />
-        ) : events.length === 0 ? (
-          <p className="text-[12.5px] text-ink-faint">Aucune action enregistrée.</p>
-        ) : (
-          <ul>
-            {events.slice(0, 8).map((ev, i) => {
-              const Icon = KIND_ICON[ev.kind] ?? Activity;
-              return (
-                <li key={i} className="flex items-start gap-2.5 py-1.5 text-[12.5px] leading-snug text-ink-soft">
-                  <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden />
-                  <span className="min-w-0 flex-1">
-                    {ev.label}
-                    {ev.content && <> <Link to={ev.content.url} className="text-ink hover:text-brand">« {ev.content.title} »</Link></>}
-                  </span>
-                  <span className="shrink-0 text-[11px] text-ink-faint">{ago(ev.at)}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      <div className="min-w-0">
+        <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Journal d’activité</h3>
+        <MemberJournal userId={row.id} />
       </div>
     </div>
   );

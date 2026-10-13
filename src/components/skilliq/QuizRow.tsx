@@ -1,8 +1,9 @@
-// Une ligne de quiz : le chapitre, son dernier score (ou la durée), « Passer » ou « Refaire ».
+// Une ligne de quiz : le chapitre, son dernier score (ou la durée), « Passer » ou « Refaire ». 14/10/2026 : un quiz
+// commencé se reprend (« Reprendre ») ; un quiz passé rouvre son dernier résultat (clic sur la ligne, `onView`).
 import React from 'react';
-import { Brain, Play, RotateCcw } from 'lucide-react';
+import { Brain, ChevronRight, Play, RotateCcw } from 'lucide-react';
 import { ProgressRing } from '@/components/ui/ProgressRing';
-import { RING, estMinutes, frDate, pct, previousPct, quizSize, type SkillAssessment } from './types';
+import { RING, estMinutes, frDate, pct, previousPct, quizSize, type QuizEnCours, type SkillAssessment } from './types';
 
 /** Petit anneau du dernier score (hors .fd-card : la règle CSS des cartes forcerait le vert). */
 export const ScoreRing: React.FC<{ value: number; size?: number }> = ({ value, size = 44 }) => (
@@ -37,31 +38,52 @@ export const QuizRow: React.FC<{
   ready: number;
   taken: SkillAssessment | null;
   isNew?: boolean;
+  /** Passage commencé, pas encore envoyé : « Reprendre ». */
+  enCours?: QuizEnCours | null;
   onStart: () => void;
-}> = ({ name, ready, taken, isNew = false, onStart }) => {
+  /** Rouvrir le dernier résultat (quiz déjà passé). */
+  onView?: () => void;
+}> = ({ name, ready, taken, isNew = false, enCours = null, onStart, onView }) => {
   const score = taken ? pct(taken) : null;
-  return (
-    <li className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5">
+  const view = taken && onView ? onView : null;
+  const body = (
+    <>
       {score !== null ? <ScoreRing value={score} /> : (
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f6f3] text-ink-faint ring-1 ring-line" aria-hidden>
           <Brain className="h-[18px] w-[18px]" />
         </span>
       )}
-      <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug text-ink">{name}{isNew && <NewBadge />}</p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-faint">
-          {taken ? (
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug text-ink">{name}{isNew && <NewBadge />}</span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-faint">
+          {enCours ? (
+            <span className="fd-nums font-medium text-gold-strong">Commencé · {enCours.repondues}/{enCours.total} corrigées</span>
+          ) : taken ? (
             <>
               <span>Fait le {frDate(taken.completed_at)}</span>
               <Delta a={taken} />
+              {view && <span className="font-medium text-ink-soft">· Voir mon résultat</span>}
             </>
           ) : <span className="fd-nums">{quizSize(ready)} questions · {estMinutes(ready)} min</span>}
-        </p>
-      </div>
-      <button type="button" onClick={onStart} className="fd-btn-ghost min-h-10 shrink-0 text-[13px]"
-        aria-label={`${taken ? 'Refaire' : 'Passer'} le quiz « ${name} »`}>
-        {taken ? <RotateCcw className="hidden h-4 w-4 sm:block" aria-hidden /> : <Play className="hidden h-4 w-4 sm:block" aria-hidden />}
-        {taken ? 'Refaire' : 'Passer'}
+        </span>
+      </span>
+      {view && <ChevronRight className="hidden h-4 w-4 shrink-0 text-ink-faint sm:block" aria-hidden />}
+    </>
+  );
+  const label = enCours ? 'Reprendre' : taken ? 'Refaire' : 'Passer';
+  return (
+    <li className="flex min-h-16 items-center gap-2 px-2 py-2 sm:px-3">
+      {view ? (
+        <button type="button" onClick={view} aria-label={`Voir mon dernier résultat au quiz « ${name} »`}
+          className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 text-left transition-colors hover:bg-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+          {body}
+        </button>
+      ) : <div className="flex min-w-0 flex-1 items-center gap-3 px-2 py-1">{body}</div>}
+      <button type="button" onClick={onStart} className={`${enCours ? 'fd-btn-primary' : 'fd-btn-ghost'} min-h-10 shrink-0 text-[13px]`}
+        aria-label={`${label} le quiz « ${name} »`}>
+        {enCours ? <Play className="hidden h-4 w-4 sm:block" aria-hidden /> : taken ? <RotateCcw className="hidden h-4 w-4 sm:block" aria-hidden />
+          : <Play className="hidden h-4 w-4 sm:block" aria-hidden />}
+        {label}
       </button>
     </li>
   );

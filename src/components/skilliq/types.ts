@@ -19,8 +19,10 @@ export interface SkillAssessment {
   hub_url?: string | null;
   /** Niveau du quiz passé (null : passage d'avant le découpage par niveau). */
   class_level?: number | null;
-  /** Correction, seulement dans la réponse à l'envoi. */
+  /** Correction : dans la réponse à l'envoi, et dans le dernier résultat (GET chapter/<id>/, figée). */
   correction?: CorrectionItem[];
+  /** La correction du dernier passage est gardée (« Voir mon dernier résultat »). */
+  a_correction?: boolean;
   /** Bilan du dernier passage par théorème (vide pour les passages d'avant le 13/10/2026). */
   par_theoreme?: TheoremReport | Record<string, never>;
 }
@@ -43,6 +45,10 @@ export const hasReport = (r: SkillAssessment['par_theoreme']): r is TheoremRepor
 
 export interface CorrectionItem {
   id: number;
+  /** Énoncé et réponses figés (dernier résultat ; aussi à la correction de chaque question). */
+  question?: string;
+  options?: string[];
+  /** Réponse de l'élève ; -1 ou null : sans réponse. */
   your_answer: number | null;
   correct_answer: number;
   is_correct: boolean;
@@ -50,6 +56,23 @@ export interface CorrectionItem {
   /** Théorèmes évalués par la question. */
   theoremes?: string[];
 }
+
+/** Quiz commencé, pas encore envoyé (GET /skill-assessments/en-cours/) : « Reprendre ». */
+export interface QuizEnCours { chapitre: number; niveau: number; repondues: number; total: number; maj: string }
+
+/** Un passage chargé (GET quiz/<id>/) : nouveau tirage, ou reprise d'un passage commencé. */
+export interface QuizStart {
+  questions: QuizQuestion[];
+  /** Durée totale du minuteur et temps restant (reprise), en secondes. */
+  seconds: number;
+  left: number;
+  reprise: boolean;
+  /** Corrections déjà données (reprise). */
+  verifiees: CorrectionItem[];
+}
+
+/** Réponse donnée (pas « sans réponse »). */
+export const answered = (c: Pick<CorrectionItem, 'your_answer'>) => c.your_answer !== null && c.your_answer >= 0;
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export interface QuizQuestion { id: number; question: string; options: string[]; difficulty: Difficulty }
