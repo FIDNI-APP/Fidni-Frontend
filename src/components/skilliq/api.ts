@@ -1,16 +1,30 @@
-// Appels du quiz par chapitre (tous réservés aux connectés, sauf la taxonomie).
+// Appels du quiz par chapitre (tous réservés aux connectés, sauf la taxonomie). Un quiz = (chapitre, niveau) depuis
+// le 13/10/2026 : `levelId` absent = le niveau de l'élève.
 import { api } from '@/lib/api/apiClient';
-import type { CorrectionItem, QuizQuestion, SkillAssessment } from './types';
+import { quizKey, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
 
-/** Nombre de questions actives par chapitre : quels quiz existent vraiment ({ "18": 12 }). */
-export const getAvailable = async () => ((await api.get('/skill-assessments/available/')).data ?? {}) as Record<string, number>;
+const level = (levelId?: number | null) => (levelId ? { niveau: levelId } : {});
+
+/** Quiz prêts d'un niveau (le sien par défaut) : { "18": 12 } = 12 questions pour le chapitre 18. */
+export const getAvailable = async (levelId?: number | null) =>
+  ((await api.get('/skill-assessments/available/', { params: level(levelId) })).data ?? {}) as Record<string, number>;
+
+/** Quiz prêts de tous les niveaux : { "<niveau>": { "<chapitre>": nombre } } (barre de niveaux). */
+export const getAvailableAll = async () =>
+  ((await api.get('/skill-assessments/available/', { params: { tous: 1 } })).data ?? {}) as Record<string, Record<string, number>>;
+
+/** Quiz sortis depuis moins de 14 jours : { "<niveau>:<chapitre>": date } (étiquette « Nouveau »). */
+export const getNew = async () => {
+  const rows = ((await api.get('/skill-assessments/nouveaux/')).data ?? []) as { niveau: number; chapitre: number; depuis: string }[];
+  return Object.fromEntries(rows.map((r) => [quizKey(r.niveau, r.chapitre), r.depuis])) as Record<string, string>;
+};
 
 /** Dernier résultat de l'élève pour chaque chapitre passé. */
 export const getMine = async () => ((await api.get('/skill-assessments/my/')).data ?? []) as SkillAssessment[];
 
-/** 10 questions (une par théorème d'abord ; 404 s'il n'y en a aucune) et la durée du minuteur, en secondes. */
-export const getQuiz = async (chapterId: number) => {
-  const data = (await api.get(`/skill-assessments/quiz/${chapterId}/`)).data ?? {};
+/** Les questions du quiz (une par théorème d'abord ; 404 s'il n'y en a aucune) et la durée du minuteur, en secondes. */
+export const getQuiz = async (chapterId: number, levelId?: number | null) => {
+  const data = (await api.get(`/skill-assessments/quiz/${chapterId}/`, { params: level(levelId) })).data ?? {};
   const questions = (data.questions ?? []) as QuizQuestion[];
   return { questions, seconds: Number(data.duree_secondes) || questions.length * 60 };
 };
@@ -20,8 +34,8 @@ export const checkAnswer = async (questionId: number, answer: number) =>
   (await api.post(`/skill-assessments/verifier/${questionId}/`, { answer })).data as CorrectionItem;
 
 /** Envoi des réponses (-1 : sans réponse, temps écoulé) : résultat, correction et bilan par théorème. */
-export const submitQuiz = async (chapterId: number, answers: Record<number, number>, timeSpent: number) =>
-  (await api.post(`/skill-assessments/submit/${chapterId}/`, { answers, time_spent: timeSpent })).data as SkillAssessment;
+export const submitQuiz = async (chapterId: number, levelId: number | null | undefined, answers: Record<number, number>, timeSpent: number) =>
+  (await api.post(`/skill-assessments/submit/${chapterId}/`, { answers, time_spent: timeSpent, ...level(levelId) })).data as SkillAssessment;
 
 export interface TaxonomyLevel {
   id: number;

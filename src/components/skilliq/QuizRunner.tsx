@@ -5,29 +5,13 @@
 //  - « Valider » corrige la question tout de suite (POST /skill-assessments/verifier/<id>/) : bonne réponse,
 //    explication, théorème ; la réponse est alors verrouillée.
 // Une question peut être laissée pour plus tard. Quitter avec des réponses demande confirmation (elles seraient perdues).
+// Textes en police LaTeX (.fd-latex) ; la difficulté des questions n'est pas montrée (elle ne sert qu'au score).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRight, Check, ChevronLeft, Clock, Loader2, Pause, X } from 'lucide-react';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
 import { MathText } from './MathText';
-import { DIFFICULTY, plural, type ActiveQuiz, type CorrectionItem, type Difficulty, type QuizQuestion, type SkillAssessment } from './types';
-
-const LEVEL: Record<Difficulty, number> = { easy: 1, medium: 2, hard: 3 };
-
-/** Difficulté en trois crans (et en mots). */
-const DifficultyMark: React.FC<{ value: Difficulty }> = ({ value }) => {
-  const n = LEVEL[value] ?? 1;
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-[#f7f6f3] px-2.5 py-1 text-[12px] font-semibold text-ink-soft">
-      <span className="flex items-end gap-[2px]" aria-hidden>
-        {[1, 2, 3].map((i) => (
-          <span key={i} className={`w-[3px] rounded-full ${i <= n ? 'bg-ink-soft' : 'bg-[#d8d4cc]'}`} style={{ height: 4 + i * 3 }} />
-        ))}
-      </span>
-      {DIFFICULTY[value] ?? 'Facile'}
-    </span>
-  );
-};
+import { plural, type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
 
 const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line bg-[#faf9f7] px-1.5 font-sans text-[11px] font-semibold text-ink-faint">
@@ -59,9 +43,9 @@ const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion }> = ({ c, q }) =>
       {c.is_correct ? 'Bonne réponse' : <>Pas tout à fait : la bonne réponse est {String.fromCharCode(65 + c.correct_answer)}</>}
     </p>
     {!c.is_correct && (
-      <p className="mt-1 text-[13.5px] font-semibold text-ink"><MathText text={q.options[c.correct_answer] ?? ''} /></p>
+      <p className="mt-1 text-[13.5px] font-semibold text-ink"><MathText text={q.options[c.correct_answer] ?? ''} className="fd-latex" /></p>
     )}
-    {c.explanation && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft"><MathText text={c.explanation} /></p>}
+    {c.explanation && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft"><MathText text={c.explanation} className="fd-latex" /></p>}
     {c.theoremes && c.theoremes.length > 0 && (
       <p className="mt-2 text-[12px] text-ink-faint">{c.theoremes.length > 1 ? 'Théorèmes' : 'Théorème'} : {c.theoremes.join(' · ')}</p>
     )}
@@ -119,7 +103,7 @@ export const QuizRunner: React.FC<{
     // Sans réponse : -1, compté faux par le serveur.
     const all = Object.fromEntries(questions.map((x) => [x.id, answers[x.id] ?? -1]));
     try {
-      onDone(await submitQuiz(quiz.id, all, Math.round(used.current / 1000)));
+      onDone(await submitQuiz(quiz.id, quiz.levelId, all, Math.round(used.current / 1000)));
     } catch {
       setError(true);
       setSubmitting(false);
@@ -274,9 +258,8 @@ export const QuizRunner: React.FC<{
       </nav>
 
       <section className="rounded-3xl border border-line bg-white p-5 sm:p-7" aria-labelledby="quiz-question">
-        <DifficultyMark value={q.difficulty} />
-        <h2 id="quiz-question" className="mt-3 text-[17px] font-semibold leading-relaxed text-ink sm:text-[18px]">
-          <MathText text={q.question} />
+        <h2 id="quiz-question" className="text-[17px] font-semibold leading-relaxed text-ink sm:text-[18px]">
+          <MathText text={q.question} className="fd-latex" />
         </h2>
         <div role="radiogroup" aria-labelledby="quiz-question" className="mt-5 flex flex-col gap-2.5">
           {q.options.map((opt, i) => {
@@ -295,7 +278,7 @@ export const QuizRunner: React.FC<{
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold ${dot}`} aria-hidden>
                   {right ? <Check className="h-4 w-4" /> : wrong ? <X className="h-4 w-4" /> : String.fromCharCode(65 + i)}
                 </span>
-                <MathText text={opt} className={`min-w-0 flex-1 text-[15px] leading-snug ${selected || right ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
+                <MathText text={opt} className={`fd-latex min-w-0 flex-1 text-[15px] leading-snug ${selected || right ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
                 {i < 9 && !correction && <span className="hidden sm:inline-flex" aria-hidden><Kbd>{i + 1}</Kbd></span>}
               </button>
             );

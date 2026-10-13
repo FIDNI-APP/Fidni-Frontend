@@ -4,8 +4,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useProgression } from '@/pages/progression/useProgression';
 import type { ChapterStatus } from '@/pages/progression/types';
-import { getAvailable, getMine } from './api';
-import { pct, type QuizChapter, type SkillAssessment } from './types';
+import { getAvailable, getAvailableAll, getMine, getNew } from './api';
+import { isFresh, pct, quizKey, takenOn, type QuizChapter, type SkillAssessment } from './types';
 
 /** Ordre du « prochain quiz » : là où le quiz apprend le plus à l'élève d'abord. */
 const RANK: Record<ChapterStatus, number> = { weak: 0, started: 1, todo: 2, good: 3, mastered: 4 };
@@ -16,6 +16,9 @@ export function useQuizChapters(username: string | null, isTeacher: boolean, use
   const [available, setAvailable] = useState<Record<string, number> | null>(null);
   const [availableFailed, setAvailableFailed] = useState(false);
   const [mine, setMine] = useState<SkillAssessment[] | null>(null);
+  const [fresh, setFresh] = useState<Record<string, string>>({});
+  // Quiz prêts de tous les niveaux (un quiz = chapitre + niveau) : barre de niveaux, autres niveaux.
+  const [availableAll, setAvailableAll] = useState<Record<string, Record<string, number>>>({});
 
   useEffect(() => {
     if (!username) return;
@@ -26,6 +29,9 @@ export function useQuizChapters(username: string | null, isTeacher: boolean, use
     getMine()
       .then((m) => { if (alive) setMine(m); })
       .catch(() => { if (alive) setMine([]); });
+    // « Nouveau » : un échec ne retire que l'étiquette.
+    getNew().then((f) => { if (alive) setFresh(f); }).catch(() => {});
+    getAvailableAll().then((a) => { if (alive) setAvailableAll(a); }).catch(() => {});
     return () => { alive = false; };
   }, [username]);
 
@@ -38,7 +44,12 @@ export function useQuizChapters(username: string | null, isTeacher: boolean, use
   // Élève : sans le programme, la page ne peut rien proposer de juste ; professeur : sans la liste des quiz.
   const failed = isTeacher ? availableFailed : progression.failed && !data;
 
-  const taken = useMemo(() => new Map((mine ?? []).map((a) => [a.chapter, a])), [mine]);
+  // Résultats du quiz de SON niveau, chapitre par chapitre (un passage sans niveau compte pour le sien).
+  const levelId = data?.level?.id ?? null;
+  const taken = useMemo(() => new Map((mine ?? []).flatMap((a) => {
+    const t = takenOn(mine ?? [], a.chapter, levelId, levelId);
+    return t ? [[a.chapter, t] as const] : [];
+  })), [mine, levelId]);
 
   const chapters = useMemo<QuizChapter[]>(() => {
     if (isTeacher || !data?.level) return [];
@@ -54,21 +65,21 @@ export function useQuizChapters(username: string | null, isTeacher: boolean, use
       hub_url: c.hub_url ?? null,
       last_at: c.last_at,
       taken: taken.get(c.id) ?? null,
+      fresh: isFresh(fresh[quizKey(levelId, c.id)], taken.get(c.id)),
     }));
-  }, [data, available, taken, isTeacher]);
+  }, [data, available, taken, isTeacher, fresh, levelId]);
 
   const ready = useMemo(() => chapters.filter((c) => c.ready > 0), [chapters]);
   const soon = useMemo(() => chapters.filter((c) => c.ready === 0), [chapters]);
 
   /** Quiz prêts hors du niveau de l'élève (autre niveau, ou tous pour un professeur). */
-  const elsewhere = useMemo(() => {
-    const mineIds = new Set(chapters.map((c) => c.id));
-    return Object.entries(available ?? {}).filter(([id, n]) => n > 0 && !mineIds.has(Number(id))).length;
-  }, [available, chapters]);
+  const elsewhere = useMemo(() => Object.entries(availableAll)
+    .filter(([lv]) => Number(lv) !== levelId)
+    .reduce((n, [, byChapter]) => n + Object.values(byChapter).filter((x) => x > 0).length, 0), [availableAll, levelId]);
 
-  /** Prochain quiz : prêt, pas encore passé, sur le chapitre le plus fragile. */
+  /** Prochain quiz : prêt, pas encore passé ; un quiz qui vient de sortir d'abord, puis le chapitre le plus fragile. */
   const next = useMemo(() => [...ready].filter((c) => !c.taken).sort((a, b) =>
-    RANK[a.status] - RANK[b.status] || (a.mastery ?? 101) - (b.mastery ?? 101) || a.name.localeCompare(b.name, 'fr'))[0] ?? null,
+    Number(b.fresh) - Number(a.fresh) || RANK[a.status] - RANK[b.status] || (a.mastery ?? 101) - (b.mastery ?? 101) || a.name.localeCompare(b.name, 'fr'))[0] ?? null,
   [ready]);
 
   /** Tous passés : le plus faible score, à refaire. */
@@ -96,6 +107,8 @@ export function useQuizChapters(username: string | null, isTeacher: boolean, use
     redo,
     fragile,
     available: available ?? {},
+    availableAll,
+    fresh,
     mine: mine ?? [],
     taken,
     refreshMine,

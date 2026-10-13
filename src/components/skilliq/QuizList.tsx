@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Circle, CircleDashed, Clock, Play, RotateCcw,
 import { Section, StatTile } from '@/components/space/Page';
 import type { ChapterStatus } from '@/pages/progression/types';
 import { ChapterPlan } from './ChapterPlan';
-import { QuizRow, ScoreRing } from './QuizRow';
+import { NewBadge, QuizRow, ScoreRing } from './QuizRow';
 import { bySubfield, estMinutes, pct, quizSize, type QuizChapter } from './types';
 import type { QuizChapters } from './useQuizChapters';
 
@@ -35,6 +35,7 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; onStart: () => void }> = ({
             )}
           </span>
           <div className="min-w-0">
+            {chapter.fresh && <span className="mr-2"><NewBadge /></span>}
             {taken ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Ton score le plus bas : <span className="fd-nums">{pct(taken)} %</span>
@@ -99,7 +100,7 @@ export const QuizList: React.FC<{
             <div key={name}>
               {groups.length > 1 && <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{name}</h3>}
               <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
-                {list.map((c) => <QuizRow key={c.id} name={c.name} ready={c.ready} taken={c.taken} onStart={() => onStart(c)} />)}
+                {list.map((c) => <QuizRow key={c.id} name={c.name} ready={c.ready} taken={c.taken} isNew={c.fresh} onStart={() => onStart(c)} />)}
               </ul>
             </div>
           ))}

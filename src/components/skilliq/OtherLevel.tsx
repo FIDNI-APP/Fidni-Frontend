@@ -4,25 +4,31 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { getTaxonomy, type TaxonomyLevel } from './api';
 import { QuizRow } from './QuizRow';
-import type { ActiveQuiz, SkillAssessment } from './types';
+import { isFresh, quizKey, takenOn, type ActiveQuiz, type SkillAssessment } from './types';
 
 interface Props {
-  available: Record<string, number>;
-  taken: Map<number, SkillAssessment>;
+  /** Quiz prêts par niveau : { "<niveau>": { "<chapitre>": nombre } } (un quiz = chapitre + niveau). */
+  availableByLevel: Record<string, Record<string, number>>;
+  /** Tous les résultats de l'élève (un par chapitre et par niveau). */
+  mine: SkillAssessment[];
   /** Niveau de l'élève, déjà montré au-dessus. */
   excludeLevelId?: number | null;
   /** Ouvert d'emblée, sans repli (professeur, élève sans niveau). */
   standalone?: boolean;
   /** Un seul niveau, choisi ailleurs (barre de niveaux de la page, 13/10/2026) : pas d'onglets ici. */
   fixedLevelId?: number;
+  /** Quiz sortis récemment ({chapitre: date}) : étiquette « Nouveau ». */
+  fresh?: Record<string, string>;
   onStart: (q: ActiveQuiz, redo: boolean) => void;
 }
 
 /** Niveaux qui ont au moins un quiz prêt, avec leurs chapitres prêts (par matière, sans doublon). */
-export function levelsWithQuizzes(levels: TaxonomyLevel[], available: Record<string, number>, excludeLevelId?: number | null) {
+export function levelsWithQuizzes(levels: TaxonomyLevel[], availableByLevel: Record<string, Record<string, number>>,
+  excludeLevelId?: number | null) {
   return levels
     .filter((l) => l.id !== excludeLevelId)
     .map((l) => {
+      const available = availableByLevel[String(l.id)] ?? {};
       const subjects = l.subjects.map((s) => {
         const seen = new Set<number>();
         const chapters = s.chapters.filter((c) => available[String(c.id)] > 0 && !seen.has(c.id) && (seen.add(c.id), true))
@@ -34,7 +40,7 @@ export function levelsWithQuizzes(levels: TaxonomyLevel[], available: Record<str
     .filter((l) => l.count > 0);
 }
 
-export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, taken, excludeLevelId, fixedLevelId, onStart }) => {
+export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByLevel, mine, excludeLevelId, fixedLevelId, fresh = {}, onStart }) => {
   const [levels, setLevels] = useState<TaxonomyLevel[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [levelId, setLevelId] = useState<number | null>(fixedLevelId ?? null);
@@ -48,7 +54,7 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, t
     return () => { alive = false; };
   }, [attempt]);
 
-  const withQuizzes = useMemo(() => levelsWithQuizzes(levels ?? [], available, excludeLevelId), [levels, available, excludeLevelId]);
+  const withQuizzes = useMemo(() => levelsWithQuizzes(levels ?? [], availableByLevel, excludeLevelId), [levels, availableByLevel, excludeLevelId]);
 
   if (failed) {
     return (
@@ -88,10 +94,11 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ available, t
           {level.subjects.length > 1 && <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{s.name}</h3>}
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
             {s.chapters.map((c) => {
-              const t = taken.get(c.id) ?? null;
+              const t = takenOn(mine, c.id, level.id);
               return (
-                <QuizRow key={c.id} name={c.name} ready={available[String(c.id)]} taken={t}
-                  onStart={() => onStart({ id: c.id, name: c.name, subject: s.name, hub_url: t?.hub_url ?? null }, !!t)} />
+                <QuizRow key={c.id} name={c.name} ready={availableByLevel[String(level.id)]?.[String(c.id)] ?? 0} taken={t}
+                  isNew={isFresh(fresh[quizKey(level.id, c.id)], t)}
+                  onStart={() => onStart({ id: c.id, name: c.name, subject: s.name, hub_url: t?.hub_url ?? null, levelId: level.id }, !!t)} />
               );
             })}
           </ul>

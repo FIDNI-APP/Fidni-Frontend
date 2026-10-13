@@ -83,24 +83,24 @@ const Mistake: React.FC<{ c: CorrectionItem; q: QuizQuestion; n: number }> = ({ 
       <XCircle className="h-4 w-4" aria-hidden /> Question {n}
       {c.theoremes && c.theoremes.length > 0 && <span className="font-normal text-ink-faint">· {c.theoremes.join(' · ')}</span>}
     </p>
-    <p className="mt-1.5 text-[14.5px] font-semibold leading-relaxed text-ink"><MathText text={q.question} /></p>
+    <p className="mt-1.5 text-[14.5px] font-semibold leading-relaxed text-ink"><MathText text={q.question} className="fd-latex" /></p>
     <dl className="mt-2 grid gap-1 text-[13.5px] text-ink-soft">
       <div>
         <dt className="inline">Ta réponse : </dt>
         <dd className="inline">
           {c.your_answer !== null && q.options[c.your_answer] !== undefined
-            ? <MathText text={q.options[c.your_answer]} className="line-through decoration-[#a23b34]/60" />
+            ? <MathText text={q.options[c.your_answer]} className="fd-latex line-through decoration-[#a23b34]/60" />
             : <i>pas de réponse</i>}
         </dd>
       </div>
       <div>
         <dt className="inline">Bonne réponse : </dt>
-        <dd className="inline font-semibold text-ink"><MathText text={q.options[c.correct_answer] ?? ''} /></dd>
+        <dd className="inline font-semibold text-ink"><MathText text={q.options[c.correct_answer] ?? ''} className="fd-latex" /></dd>
       </div>
     </dl>
     {c.explanation && (
       <p className="mt-3 rounded-xl bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink-soft ring-1 ring-[#f1e4e1]">
-        <MathText text={c.explanation} />
+        <MathText text={c.explanation} className="fd-latex" />
       </p>
     )}
   </li>
@@ -205,9 +205,9 @@ export const QuizResult: React.FC<{
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-label="Bonne réponse" />
                         <span className="min-w-0">
                           <span className="fd-nums text-ink-faint">{(order.get(c.id) ?? 0) + 1}. </span>
-                          <MathText text={q.question} />
-                          <span className="mt-0.5 block text-ink"><MathText text={q.options[c.correct_answer] ?? ''} className="font-semibold" /></span>
-                          {c.explanation && <span className="mt-1 block text-[12.5px] text-ink-faint"><MathText text={c.explanation} /></span>}
+                          <MathText text={q.question} className="fd-latex" />
+                          <span className="mt-0.5 block text-ink"><MathText text={q.options[c.correct_answer] ?? ''} className="fd-latex font-semibold" /></span>
+                          {c.explanation && <span className="mt-1 block text-[12.5px] text-ink-faint"><MathText text={c.explanation} className="fd-latex" /></span>}
                         </span>
                       </li>
                     );

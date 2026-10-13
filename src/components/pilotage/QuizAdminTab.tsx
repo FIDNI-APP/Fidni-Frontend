@@ -2,6 +2,7 @@
 // Une question nouvelle est un brouillon ; « Mettre en ligne » publie le quiz du chapitre, qui apparaît alors
 // aux élèves dans « Quiz par chapitre » (10 questions à chaque passage, une par théorème d'abord).
 // Chaque question est rattachée aux théorèmes qu'elle évalue : bilan « maîtrisé / à revoir » pour l'élève.
+// Un quiz = (chapitre, niveau) depuis le 13/10/2026 : l'onglet de niveau choisit le quiz (jamais partagé entre niveaux).
 // Questions importées (rédigées par Claude d'après les résultats des élèves, `a_relire`) : jamais montrées aux
 // élèves avant d'être validées ici, une à une ou toutes celles du chapitre une fois relues.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,7 +24,7 @@ interface Question {
   source?: string; a_relire?: boolean; motif?: string; theoremes?: TheoremRef[];
 }
 interface Detail {
-  chapitre: { id: number; name: string; domaine: string; niveaux: string[]; theoremes: ChapterTheorem[] };
+  chapitre: { id: number; name: string; domaine: string; niveau: { id: number; name: string }; niveaux: string[]; theoremes: ChapterTheorem[] };
   questions: Question[]; par_quiz: number; min_en_ligne: number; passages: number;
 }
 type Draft = Omit<Question, 'id' | 'en_ligne'> & { id?: number; en_ligne?: boolean };
@@ -198,12 +199,14 @@ const QuestionCard: React.FC<{
   );
 };
 
-const ChapterQuiz: React.FC<{ chapterId: number; onBack: () => void; onChanged: () => void }> = ({ chapterId, onBack, onChanged }) => {
+const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; onBack: () => void; onChanged: () => void }> = ({ chapterId, levelId, onBack, onChanged }) => {
   const [data, setData] = useState<Detail | null>(null);
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const load = useCallback(() => api.get(`/pilotage/quiz/chapitre/${chapterId}/`).then((r) => setData(r.data)), [chapterId]);
+  const niveau = { niveau: levelId };
+  const load = useCallback(() => api.get(`/pilotage/quiz/chapitre/${chapterId}/`, { params: { niveau: levelId } })
+    .then((r) => setData(r.data)), [chapterId, levelId]);
   useEffect(() => { load(); }, [load]);
 
   if (!data) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-ink-faint" /></div>;
@@ -217,13 +220,13 @@ const ChapterQuiz: React.FC<{ chapterId: number; onBack: () => void; onChanged: 
     const body = { question: d.question, options: d.options, correct_answer: d.correct_answer, difficulty: d.difficulty,
       explanation: d.explanation, theoremes: (d.theoremes ?? []).map((t) => t.id) };
     if (d.id) await api.patch(`/pilotage/quiz/question/${d.id}/`, body);
-    else await api.post(`/pilotage/quiz/chapitre/${chapterId}/`, body);
+    else await api.post(`/pilotage/quiz/chapitre/${chapterId}/`, { ...body, ...niveau });
     setEditing(null); await load(); onChanged();
   };
   const publish = async (on: boolean) => {
     setBusy(true); setMsg(null);
     try {
-      await api.post(`/pilotage/quiz/chapitre/${chapterId}/publier/`, { en_ligne: on });
+      await api.post(`/pilotage/quiz/chapitre/${chapterId}/publier/`, { en_ligne: on, ...niveau });
       setMsg({ ok: true, text: on ? 'Quiz en ligne : les élèves le voient dans « Quiz par chapitre ».' : 'Quiz retiré : les élèves ne le voient plus.' });
       await load(); onChanged();
     } catch (e) { setMsg({ ok: false, text: errorText(e, 'Échec.') }); } finally { setBusy(false); }
@@ -232,7 +235,7 @@ const ChapterQuiz: React.FC<{ chapterId: number; onBack: () => void; onChanged: 
     if (!window.confirm(`Tu as relu les ${toReview} questions rédigées par Claude ? Elles deviendront publiables${online ? ' et seront aussitôt en ligne' : ''}.`)) return;
     setBusy(true); setMsg(null);
     try {
-      const r = await api.post(`/pilotage/quiz/chapitre/${chapterId}/valider/`, {});
+      const r = await api.post(`/pilotage/quiz/chapitre/${chapterId}/valider/`, niveau);
       setMsg({ ok: true, text: `${r.data.validees} question${r.data.validees > 1 ? 's' : ''} validée${r.data.validees > 1 ? 's' : ''}${r.data.en_ligne ? ' et en ligne' : ' : mets le quiz en ligne quand tu veux'}.` });
       await load(); onChanged();
     } catch (e) { setMsg({ ok: false, text: errorText(e, 'Échec.') }); } finally { setBusy(false); }
@@ -245,11 +248,11 @@ const ChapterQuiz: React.FC<{ chapterId: number; onBack: () => void; onChanged: 
       </button>
       <div className="fd-card flex flex-wrap items-start justify-between gap-3 p-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{data.chapitre.domaine} · {data.chapitre.niveaux.join(', ')}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{data.chapitre.domaine} · quiz {data.chapitre.niveau.name}</p>
           <h2 className="fd-display mt-1 text-[20px] leading-tight text-ink">{data.chapitre.name}</h2>
           <p className="mt-1 text-[12.5px] text-ink-faint">
             {total} question{total > 1 ? 's' : ''} · {online} en ligne{toReview ? ` · ${toReview} à relire` : ''} · {data.passages} passage{data.passages > 1 ? 's' : ''} d’élèves.
-            Chaque passage tire {data.par_quiz} questions, une par théorème d’abord.
+            Chaque passage pose toutes les questions en ligne ({data.par_quiz} au plus), dans un ordre au hasard.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -328,7 +331,7 @@ export const QuizAdminTab: React.FC = () => {
     on: a.on + (r.en_ligne > 0 ? 1 : 0), draft: a.draft + (r.en_ligne === 0 && r.total > 0 ? 1 : 0), review: a.review + r.a_relire,
   }), { on: 0, draft: 0, review: 0 });
 
-  if (open !== null) return <ChapterQuiz chapterId={open} onBack={() => { setOpen(null); load(); }} onChanged={load} />;
+  if (open !== null) return <ChapterQuiz chapterId={open} levelId={Number(level)} onBack={() => { setOpen(null); load(); }} onChanged={load} />;
 
   return (
     <div className="space-y-4">

@@ -40,8 +40,8 @@ export const ComingSoon: React.FC<{
           <>
             <span className="block text-balance">
               {student
-                ? 'Pour chaque chapitre, 10 questions corrigées pour mesurer ta maîtrise en quelques minutes. En attendant, le meilleur entraînement reste les exercices.'
-                : 'Pour chaque chapitre, 10 questions corrigées pour que tes élèves mesurent leur maîtrise. En attendant, les exercices corrigés sont là.'}
+                ? 'Pour chaque chapitre, des questions chronométrées et corrigées pour mesurer ta maîtrise, théorème par théorème. En attendant, le meilleur entraînement reste les exercices.'
+                : 'Pour chaque chapitre, des questions corrigées pour que tes élèves mesurent leur maîtrise. En attendant, les exercices corrigés sont là.'}
             </span>
             {variant === 'student' && fragile && (
               <span className="mt-4 flex justify-center">
