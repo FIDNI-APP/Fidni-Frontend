@@ -21,6 +21,8 @@ import { SignupCard } from '@/components/auth/SignupPrompt';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { DIFFICULTY, feltTooltip } from '@/components/content/listing/listingUtils';
 import { trackAction } from '@/lib/usage';
+import { questionNumbering } from '@/lib/reportTargets';
+import { QuestionChart } from './QuestionChart';
 
 /** L'examen propose « En partie » (la moitié des points) ; l'exercice garde Réussi / À revoir. */
 const EXAM_OPTIONS: AssessmentStatus[] = ['success', 'partial', 'review'];
@@ -94,7 +96,6 @@ function splitExam(structure?: FlexibleExerciseStructure): { intro: ExerciseBloc
 }
 
 const fmtPts = (n: number) => (Math.round(n * 100) / 100).toString().replace('.', ',');
-const plainTitle = (h: string) => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 function durationLabel(min: number) {
   const h = Math.floor(min / 60), m = min % 60;
@@ -307,7 +308,6 @@ export const ExamView: React.FC<Props> = ({
   const feltLabel = felt ? (felt.differs ? DIFFICULTY[felt.level]?.label : 'Comme annoncé') : null;
 
   const confirmFinish = () => { if (window.confirm('Terminer l’épreuve et passer à la correction ?')) epreuve.finish(); };
-  const goTo = (id: string) => document.getElementById(`exam-part-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const levelName = content.class_levels?.[0]?.name;
 
   // ── Épreuve : lancement dans la fiche du sujet ; pendant l'épreuve, le compte à rebours (colonne de droite
@@ -394,11 +394,17 @@ export const ExamView: React.FC<Props> = ({
     </div>
   );
 
-  const copiePanel = !isAuthenticated ? (
-    <SignupCard title="Obtiens ta note" benefits={false} tour="examen-copie"
-      text="Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice." />
-  ) : (
-    <div className="rounded-2xl border border-line bg-white p-5" data-tour="examen-copie">
+  // Parties de l'histogramme (titres de questionNumbering) dans l'ordre des exercices : leur note à côté du titre.
+  const chartParts = useMemo(() => [...new Set(questionNumbering(structure).map((r) => r.part).filter(Boolean))] as string[], [structure]);
+  const partScore = (label: string) => {
+    const sc = scores[chartParts.indexOf(label)];
+    if (!sc) return null;
+    return sc.corrected > 0 ? `${fmtPts(sc.got)} / ${fmtPts(sc.max)}` : `${fmtPts(sc.max)} pts`;
+  };
+  // Ta copie (note estimée), en tête de l'histogramme « Question par question » (15/10/2026 : à la place de
+  // l'onglet Activité ; Natsu : « à droite à la place de Ta copie, en vertical »).
+  const copieHeader = isAuthenticated ? (
+    <>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Ta copie</span>
         {sessionCount > 0 && (
@@ -415,42 +421,27 @@ export const ExamView: React.FC<Props> = ({
             {total > 0 && total !== 20 && <span className="ml-auto text-[12px] text-ink-faint fd-nums">soit {fmtPts(Math.round((got / total) * 200) / 10)} / 20</span>}
           </div>
           <p className="mt-1.5 text-[12px] leading-snug text-ink-faint">
-            Note estimée d’après ton auto-évaluation{attemptStart ? ' de ce passage' : ''}{corrected < total ? `, sur ${fmtPts(corrected)} points corrigés` : ''}.
+            Note estimée d’après ton auto-évaluation{attemptStart ? ' de ce passage' : ''}{corrected < total ? `, sur ${fmtPts(corrected)} points corrigés` : ''}
+            {questionCount > 0 ? ` · ${assessedCount} / ${questionCount} questions corrigées` : ''}.
           </p>
         </>
       ) : (
         <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">
           {attemptStart
             ? 'Corrige ce passage question par question : ta note s’affiche ici.'
-            : 'Après l’épreuve, ouvre chaque solution et dis si tu avais trouvé : ta note estimée s’affiche ici.'}
+            : 'Après l’épreuve, dis pour chaque question si tu l’as réussie : ta note estimée s’affiche ici.'}
         </p>
       )}
+    </>
+  ) : undefined;
 
-      {parts.length > 1 && (
-        <ol className="mt-4 flex flex-col gap-0.5 border-t border-line pt-3">
-          {parts.map((p, i) => {
-            const sc = scores[i];
-            return (
-              <li key={p.id}>
-                <button type="button" onClick={() => goTo(p.id)}
-                  className="-mx-2 w-[calc(100%+1rem)] rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[#f7f6f3]">
-                  <span className="flex items-baseline justify-between gap-2 text-[13px]">
-                    <span className="truncate font-medium text-ink">{plainTitle(p.titleHtml)}</span>
-                    <span className="shrink-0 text-ink-faint fd-nums">
-                      {sc.corrected > 0 ? <><b className="text-ink">{fmtPts(sc.got)}</b> / {fmtPts(sc.max)}</> : `${fmtPts(sc.max)} pts`}
-                    </span>
-                  </span>
-                  <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f2f1ee]">
-                    <span className="block h-full rounded-full bg-brand" style={{ width: `${sc.count ? (sc.assessed / sc.count) * 100 : 0}%` }} />
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-      {questionCount > 0 && (
-        <p className="mt-3 text-[12px] text-ink-faint fd-nums">{assessedCount} / {questionCount} questions corrigées</p>
+  const copiePanel = (
+    <div className="flex flex-col gap-4">
+      <QuestionChart structure={structure} progress={progress ?? {}} options={EXAM_OPTIONS} tour="examen-copie"
+        onAssess={(path, st) => assessOne(path, st, 'question')} partScore={partScore} header={copieHeader} />
+      {!isAuthenticated && (
+        <SignupCard title="Obtiens ta note" benefits={false}
+          text="Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice." />
       )}
     </div>
   );
@@ -546,14 +537,14 @@ export const ExamView: React.FC<Props> = ({
           </section>
         </div>
 
-        {/* Téléphone : la copie (note, barème par exercice) après le sujet, dès qu'il y a une note (pas pendant l'épreuve). */}
-        {!locked && (corrected > 0 || !isAuthenticated) && <div id="ta-copie" className="scroll-mt-24 fd-exam-narrow">{copiePanel}</div>}
+        {/* Téléphone : la copie et « Question par question » après le sujet (pas pendant l'épreuve). */}
+        {!locked && <div id="ta-copie" className="scroll-mt-24 fd-exam-narrow">{copiePanel}</div>}
         {/* Pas d’annonce pendant une épreuve chronométrée. */}
         {!locked && <AdSlot />}
         {children}
       </div>
 
-      <aside className="fd-exam-aside sticky top-20 flex-col gap-4">
+      <aside className="fd-exam-aside sticky top-20 max-h-[calc(100vh-6rem)] flex-col gap-4 overflow-y-auto pb-2">
         {locked ? timerPanel : copiePanel}
       </aside>
     </div>

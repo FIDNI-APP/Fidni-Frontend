@@ -53,6 +53,14 @@ export interface SolutionViewTrackingResponse {
   message: string;
 }
 
+/** Réussite de la classe sur une question (vrais élèves) ; « review » compte aussi les anciens « failed ». */
+export interface QuestionStat { total: number; success: number; partial: number; review: number }
+
+/** Réussite de la classe question par question, affichée à côté de chaque question (QuestionPulse). */
+export async function getQuestionStats(contentId: string): Promise<{ eleves: number; questions: Record<string, QuestionStat> }> {
+  return (await api.get(`/contents/${contentId}/question_stats/`)).data;
+}
+
 /**
  * Get statistics for any content item
  */

@@ -25,7 +25,8 @@ import { contentHub } from './pageHelpers';
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
 // La discussion est sous le contenu, dans l'onglet principal (plus d'onglet Discussions).
-export type ContentTab = 'exercise' | 'proposals' | 'activity';
+// Plus d'onglet « Activité » (15/10/2026) : la réussite de la classe est à côté de chaque question.
+export type ContentTab = 'exercise' | 'proposals';
 
 interface ContentHeaderProps {
   content: ContentItem;
@@ -154,11 +155,10 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
     minutes > 0 ? (exam ? durationLabel(minutes) : `≈ ${durationLabel(minutes)}`) : null,
   ].filter(Boolean).join(' · ');
 
-  // short : libellé sur téléphone, pour que les trois onglets tiennent sur une ligne.
+  // short : libellé sur téléphone, pour que les onglets tiennent sur une ligne.
   const tabs: { id: ContentTab; label: string; short?: string; count?: number }[] = isLesson ? [] : [
     { id: 'exercise', label: exam ? 'Sujet' : 'Exercice' },
     { id: 'proposals', label: 'Solutions des élèves', short: 'Solutions', count: solutionCount },
-    { id: 'activity', label: 'Activité' },
   ];
 
   return (

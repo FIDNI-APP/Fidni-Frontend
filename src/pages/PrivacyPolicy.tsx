@@ -218,7 +218,7 @@ const sections: LegalSection[] = [
       <>
         <p>Vous disposez des droits suivants sur vos données :</p>
         <ul className={ul}>
-          <li><strong>Accès et portabilité :</strong> téléchargez toutes vos données dans <em>Paramètres → Mes données</em>.</li>
+          <li><strong>Accès et portabilité :</strong> sur simple demande à <Mail />, nous vous envoyons une copie de toutes vos données, dans un format lisible et réutilisable, sous un mois.</li>
           <li><strong>Rectification :</strong> modifiez vos informations dans <em>Paramètres</em>.</li>
           <li><strong>Effacement :</strong> supprimez votre compte dans <em>Paramètres → Mes données</em>.</li>
           <li><strong>Opposition et limitation</strong> du traitement, et <strong>retrait du consentement</strong> à tout moment.</li>

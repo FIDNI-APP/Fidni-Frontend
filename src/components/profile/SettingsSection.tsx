@@ -5,13 +5,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, ChevronRight, Download, Eye, EyeOff, KeyRound, Loader2, LogOut, MailCheck, Monitor, Moon, Sun, Trash2, UserPen, X,
+  Check, ChevronRight, Eye, EyeOff, KeyRound, Loader2, LogOut, MailCheck, Monitor, Moon, Sun, Trash2, UserPen, X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CardLink, Section } from '@/components/space/Page';
 import { requestPasswordReset } from '@/lib/api/authApi';
-import { changePassword, deleteMyAccount, downloadMyData, updateUserInfo, updateUserProfile } from '@/lib/api/userApi';
+import { changePassword, deleteMyAccount, updateUserInfo, updateUserProfile } from '@/lib/api/userApi';
 import { LEGAL } from '@/lib/legal';
 
 /** Erreur axios telle que lue ici. */
@@ -274,23 +274,12 @@ export const SettingsSection: React.FC = () => {
   };
 
   /* ── Tes données ── */
-  const [exporting, setExporting] = useState(false);
-  const [dataMsg, setDataMsg] = useState<Msg>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const exportData = async () => {
-    if (!user?.username) return;
-    setExporting(true);
-    setDataMsg(null);
-    try { await downloadMyData(user.username); }
-    catch { setDataMsg({ kind: 'error', text: 'Le téléchargement a échoué. Réessaie dans un instant.' }); }
-    finally { setExporting(false); }
-  };
 
   const doLogout = async () => {
     try {
@@ -501,16 +490,6 @@ export const SettingsSection: React.FC = () => {
       {/* ── Tes données ── */}
       <Section id="donnees" title="Tes données">
         <Card>
-          <Row title="Télécharger mes données"
-            hint="Un fichier avec tout ce que Fidni conserve sur ton compte : profil, progression, publications, favoris, historique…"
-            aside={(
-              <button type="button" onClick={exportData} disabled={exporting} className="fd-btn-ghost min-h-10 disabled:opacity-60">
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {exporting ? 'Préparation…' : 'Télécharger (JSON)'}
-              </button>
-            )}>
-            <Note msg={dataMsg} onClose={() => setDataMsg(null)} />
-          </Row>
           <Row title="Se déconnecter" hint="Sur cet appareil seulement."
             aside={<button type="button" onClick={() => setLogoutOpen(true)} className="fd-btn-ghost min-h-10"><LogOut className="h-4 w-4" /> Se déconnecter</button>} />
           <Row title="Supprimer mon compte"

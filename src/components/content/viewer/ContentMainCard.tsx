@@ -27,6 +27,8 @@ import { SHEET_TEXT_PX } from './pageHelpers';
 import { Chrono } from './Chrono';
 import { FoldedSolution } from './FoldedSolution';
 import { trackAction } from '@/lib/usage';
+import { questionNumbering } from '@/lib/reportTargets';
+import { QuestionChart } from './QuestionChart';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -202,8 +204,17 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   }
 
   const canToggle = questionsWithSolutions > 0 || hasSolution;
+  // « Question par question » (réussite des élèves, ton résultat, s'évaluer sans ouvrir la solution) : colonne de
+  // droite comme l'examen ; sur téléphone, après la feuille (15/10/2026, à la place de l'onglet Activité).
+  const hasChart = questionNumbering(content.structure).length > 0;
+  const chart = hasChart ? (
+    <QuestionChart structure={content.structure} progress={questionProgress ?? {}} options={['success', 'review']}
+      onAssess={onQuestionAssess ? (path, st) => onQuestionAssess(path, st, 'question') : undefined} />
+  ) : null;
   return (
-    <div className="flex flex-col gap-8 sm:gap-10">
+    <div className="fd-exam-layout">
+    <div className={hasChart ? 'fd-exam-grid' : ''}>
+    <div className={`flex min-w-0 flex-col gap-8 sm:gap-10 ${hasChart ? 'fd-exam-main' : ''}`}>
       <ReadingStyles />
       <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
         {/* Barre de la feuille : toutes les solutions à gauche, chrono à droite. */}
@@ -272,8 +283,12 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
 
         {sheetFooter}
       </article>
+      {chart && <div className="fd-exam-narrow print:hidden">{chart}</div>}
       <AdSlot />
       <div className="flex flex-col gap-8 sm:gap-10 print:hidden">{children}</div>
+    </div>
+    {chart && <aside className="fd-exam-aside sticky top-20 max-h-[calc(100vh-6rem)] flex-col gap-4 overflow-y-auto pb-2 print:hidden">{chart}</aside>}
+    </div>
     </div>
   );
 };

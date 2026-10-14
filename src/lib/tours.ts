@@ -148,13 +148,13 @@ export const TOURS: Tour[] = [
     id: 'exercice',
     match: /^\/exercises\/\d+\/?$/,
     requires: 'detail-onglets',
-    version: 4, // 11/10/2026 : bouton « Indication » (la méthode) avant « Voir la solution »
-    autoSteps: ['indication', 'solution', 'auto-eval', 'detail-solutions', 'detail-terminer'],
+    version: 5, // 15/10/2026 : réussite de la classe à côté de chaque question (plus d'onglet Activité)
+    autoSteps: ['indication', 'solution', 'reussite', 'detail-solutions', 'detail-terminer'],
     steps: [
       {
         target: 'detail-onglets',
         title: 'Les onglets',
-        body: 'Solutions des élèves pour comparer ta démarche, Activité pour te situer. Les questions et la discussion sont en bas de l’exercice.',
+        body: 'Solutions des élèves pour comparer ta démarche. Les questions et la discussion sont en bas de l’exercice.',
       },
       { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => `En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque ${le(c)} « À revoir ».` },
       { target: 'detail-progression', title: 'Ta progression', body: 'Elle se remplit à mesure que tu dis si tu avais trouvé : en vert les questions réussies, en or celles à revoir.' },
@@ -162,6 +162,7 @@ export const TOURS: Tour[] = [
       INDICATION,
       SOLUTION,
       AUTO_EVAL,
+      { target: 'reussite', title: 'Question par question', body: 'À droite (sous l’exercice sur téléphone) : la part d’élèves qui réussissent chaque question ; la pastille au bout, c’est toi. Clique une ligne pour le détail, et pour dire si tu l’as réussie sans ouvrir la solution.' },
       { target: 'detail-chrono', title: 'Chronomètre', body: 'Lance le chrono quand tu commences ; en pause, ✓ enregistre ton temps. Tes temps sont dans le menu ⋯.' },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-le à tes favoris.' },
       { target: 'detail-liste', title: 'Liste de révision', body: 'En bas de la page (ou dans le menu ⋯) : range-le dans une liste pour le réviser plus tard ou l’imprimer.' },
@@ -176,7 +177,7 @@ export const TOURS: Tour[] = [
     id: 'examen',
     match: /^\/exams\/\d+\/?$/,
     requires: 'examen-fiche',
-    version: 4, // 11/10/2026 : bouton « Indication » (la méthode) avant « Voir la solution »
+    version: 5, // 15/10/2026 : réussite de la classe à côté de chaque question (plus d'onglet Activité)
     autoSteps: ['examen-epreuve', 'indication', 'solution', 'examen-copie'],
     steps: [
       { target: 'examen-fiche', title: 'Le sujet', body: 'Durée, barème, nombre d’exercices : comme la copie distribuée en classe.' },
@@ -184,22 +185,13 @@ export const TOURS: Tour[] = [
       INDICATION,
       SOLUTION,
       AUTO_EVAL,
-      { target: 'examen-copie', title: 'Ta copie', body: 'Évalue chaque question après l’épreuve : ta note estimée se calcule avec le barème, exercice par exercice.' },
-      { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche, Activité pour te situer. Les questions et la discussion sont en bas du sujet.' },
+      { target: 'examen-copie', title: 'Ta copie', body: 'Après l’épreuve, dis pour chaque question si tu l’as réussie (ici ou sous sa solution) : ta note estimée se calcule avec le barème. Chaque ligne montre aussi la part d’élèves qui réussissent la question.' },
+      { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche. Les questions et la discussion sont en bas du sujet.' },
       { target: 'detail-terminer', title: 'Où en es-tu ?', body: 'Après l’épreuve, en haut du sujet (et rappelé en bas) : « Tout réussi » coche toutes les questions, puis décoche celles que tu as ratées. Ta note se calcule avec le barème.' },
       { target: 'detail-imprimer', title: 'Imprimer / PDF', body: 'Télécharge le sujet en PDF pour le faire sur papier.' },
       { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ranger dans une liste de révision, revoir tes passages, ou signaler une erreur.' },
       VOTE,
       SIGNALER,
-    ],
-  },
-  {
-    id: 'activite',
-    match: /^\/(exercises|exams)\/\d+\/?$/,
-    requires: 'activite-bilan',
-    steps: [
-      { target: 'activite-bilan', title: 'Ton bilan', body: 'Tes questions réussies, en partie et à revoir, à côté de la réussite des autres élèves.' },
-      { target: 'activite-questions', title: 'Question par question', body: 'Une colonne par question : la part d’élèves qui la réussissent. Clique une colonne pour le détail, et pour revenir à la question.' },
     ],
   },
 

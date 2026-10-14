@@ -12,7 +12,8 @@ const PAGE_PAD = 2 * 32 + 2; // md:px-8 de la page + bordures de la feuille
 /** Examen : feuille (sm:px-8) + colonne « copie » (272 px) et son écart (32 px). */
 export const EXAM_TWO_COLUMNS_PX = SHEET_TEXT_PX + 2 * 32 + 2 + 32 + 272;
 export const DETAIL_MAX_WIDTH = {
-  exercise: SHEET_TEXT_PX + 2 * 40 + PAGE_PAD, // feuille en sm:px-10
+  // Exercice : la feuille et la colonne « Question par question » (15/10/2026), comme l'examen.
+  exercise: EXAM_TWO_COLUMNS_PX + 2 * 32,
   lesson: 200 + 40 + SHEET_TEXT_PX + 2 * 48 + PAGE_PAD, // sommaire (200 px, écart 40 px), feuille en sm:px-12
   exam: EXAM_TWO_COLUMNS_PX + 2 * 32,
 } as const;

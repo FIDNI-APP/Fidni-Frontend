@@ -20,13 +20,12 @@ import {
   exerciseContentAPI,
   examContentAPI,
   lessonContentAPI,
-  getContentStatistics,
-  undoSolutionViewed,
   voteComment,
   updateComment,
   deleteComment,
-  type ContentStatistics
 } from '@/lib/api';
+import { getQuestionStats, type QuestionStat } from '@/lib/api/statisticsApi';
+import { QuestionStatsContext } from '@/components/content/viewer/questionStats';
 import { assessQuestions, saveSessionScore, type AssessSource, type TimerSession } from '@/lib/api/contentItemApi';
 import type { VoteValue, Comment } from '@/types';
 import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus, Felt } from '@/types/content';
@@ -39,7 +38,6 @@ import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
 import { api } from '@/lib/api/apiClient';
-import { ActivitySection } from '@/components/activity/ActivitySection';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
 import { CommentSection } from '@/components/interactions/CommentSection';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
@@ -52,12 +50,11 @@ import { SignupBanner, SignupCard } from '@/components/auth/SignupPrompt';
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { AddToNotebookModal } from '@/components/notebook/AddToNotebookModal';
 import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
-import { questionAnchor, type AssessChanges } from '@/components/content/viewer/ExerciseRenderer';
+import type { AssessChanges } from '@/components/content/viewer/ExerciseRenderer';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
-import { questionNumbering } from '@/lib/reportTargets';
 import { trackAction } from '@/lib/usage';
-import { forgetHelp, recordHelp } from '@/lib/helpTracking';
+import { recordHelp } from '@/lib/helpTracking';
 import { SimilarContents } from '@/components/content/viewer/SimilarContents';
 import { contentHub, DETAIL_MAX_WIDTH } from '@/components/content/viewer/pageHelpers';
 import { hubPath } from '@/lib/api/hubApi';
@@ -279,8 +276,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   useEffect(() => { setFinishFrom('top'); }, [id]);
 
   // Statistics state
-  const [statistics, setStatistics] = useState<ContentStatistics | null>(null);
-  const [loadingStatistics, setLoadingStatistics] = useState(false);
+  // Réussite de la classe question par question (pastille à côté de chaque question) ; {} en attendant.
+  const [questionStats, setQuestionStats] = useState<Record<string, QuestionStat>>({});
 
   // Comments state (placeholder - structured content may not have comments yet)
   const [comments, setComments] = useState<Comment[]>([]);
@@ -363,25 +360,17 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   }, [id, config, isAuthenticated, authLoading, contentType, reloadKey]);
 
   useEffect(() => { setActiveTab('exercise'); }, [id]);
-  // Statistiques : chargées à l'ouverture de l'onglet Activité.
-  useEffect(() => {
-    const loadStatistics = async () => {
-      if (activeTab !== 'activity' || !id || contentType === 'lesson') return;
-
-      setLoadingStatistics(true);
-      try {
-        const stats = await getContentStatistics(contentType, id);
-        setStatistics(stats);
-      } catch (err) {
-        console.error('Failed to load statistics:', err);
-        setStatistics(null);
-      } finally {
-        setLoadingStatistics(false);
-      }
-    };
-
-    loadStatistics();
-  }, [activeTab, id, contentType]);
+  // Réussite de la classe : chargée avec la page, relue peu après chaque auto-évaluation (le serveur efface son cache).
+  const loadQuestionStats = useCallback(() => {
+    if (!id || contentType === 'lesson') return;
+    getQuestionStats(id).then((r) => setQuestionStats(r.questions || {})).catch(() => {});
+  }, [id, contentType]);
+  useEffect(() => { setQuestionStats({}); loadQuestionStats(); }, [loadQuestionStats]);
+  const statsTimer = useRef<number>();
+  const refreshQuestionStats = () => {
+    window.clearTimeout(statsTimer.current);
+    statsTimer.current = window.setTimeout(loadQuestionStats, 700);
+  };
 
   // Solutions des élèves : chargées tout de suite pour la pastille de l'onglet.
   const [proposedSolutions, setProposedSolutions] = useState<ProposedSolution[] | null>(null);
@@ -514,6 +503,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     if (Object.values(changes).some((s) => s && s !== 'success')) setRevisionNudge((n) => n + 1);
     try {
       const r = await assessQuestions(id, changes, { source, ...(sendCompletion ? { completion: target } : {}) });
+      refreshQuestionStats();
       if (r?.item_progress) {
         setQuestionDates(Object.fromEntries(Object.entries(r.item_progress)
           .filter(([, v]) => v?.assessed_at).map(([p, v]) => [p, String(v.assessed_at)])));
@@ -611,21 +601,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     } catch (err) {
       console.error('Failed to delete session:', err);
       throw err;
-    }
-  };
-
-  // Remove solution view flag
-  const handleRemoveSolutionFlag = async () => {
-    if (!id || contentType === 'lesson') return;
-    try {
-      await undoSolutionViewed(contentType, id);
-      // La prochaine solution ouverte compte de nouveau.
-      forgetHelp(id);
-      if (statistics) {
-        setStatistics({ ...statistics, user_viewed_solution: false });
-      }
-    } catch (err) {
-      console.error('Failed to remove solution flag:', err);
     }
   };
 
@@ -834,7 +809,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           onSetVerified={isModerator(user) ? handleSetVerified : undefined}
           activeTab={activeTab}
           onTabChange={(t) => {
-            if (t === 'activity') trackAction('onglet-activite');
             if (t === 'proposals') trackAction('onglet-solutions');
             setActiveTab(t);
           }}
@@ -852,6 +826,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         )}
 
         {activeTab === 'exercise' && (
+          <QuestionStatsContext.Provider value={isLesson ? null : questionStats}>
           <ContentMainCard
             content={content}
             contentType={contentType}
@@ -884,6 +859,12 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           >
             {afterSheet}
           </ContentMainCard>
+          </QuestionStatsContext.Provider>
+        )}
+
+        {/* Avis de l'IA sur le contenu (administrateurs) : sous la feuille, depuis la fin de l'onglet Activité. */}
+        {activeTab === 'exercise' && user?.is_superuser && id && !isLesson && !examRunning && (
+          <div className="mt-6 max-w-3xl"><AIVerdictPanel contentId={id} /></div>
         )}
 
         {activeTab === 'proposals' && !isLesson && id && (
@@ -895,26 +876,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               onRequireLogin={() => openModal('solution')}
               onChanged={loadProposedSolutions}
             />
-          </div>
-        )}
-
-        {activeTab === 'activity' && !isLesson && (
-          <div className="flex max-w-3xl flex-col gap-4">
-            <ActivitySection
-              statistics={statistics}
-              loading={loadingStatistics}
-              contentType={contentType}
-              onRemoveSolutionFlag={handleRemoveSolutionFlag}
-              onGoToQuestions={() => { setActiveTab('exercise'); window.scrollTo({ top: 0 }); }}
-              totalQuestions={leafPaths.length}
-              numbering={questionNumbering(content.structure)}
-              onGoToQuestion={(path) => {
-                setActiveTab('exercise');
-                window.setTimeout(() => document.getElementById(questionAnchor(path))
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
-              }}
-            />
-            {user?.is_superuser && id && <AIVerdictPanel contentId={id} />}
           </div>
         )}
       </div>

@@ -6,5 +6,5 @@ export const LEGAL = {
   publisher: 'Oussama Hadder',
   contactEmail: 'contact@fidni.fr',
   site: 'https://fidni.fr',
-  updated: '11 octobre 2026',
+  updated: '15 octobre 2026',
 } as const;

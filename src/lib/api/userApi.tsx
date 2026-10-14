@@ -235,19 +235,6 @@ export const updateOnboardingStep = async (data: any) => {
 };
 
 // Complete onboarding
-/** Télécharge toutes ses données au format JSON (RGPD : accès et portabilité). */
-export const downloadMyData = async (username: string) => {
-  const response = await api.get('/auth/my-data/', { responseType: 'blob' });
-  const url = URL.createObjectURL(response.data);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `fidni-mes-donnees-${username}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
-
 /** Supprime son propre compte (mot de passe exigé s'il en a un : pas pour un compte créé avec Google).
  *  Les contributions restent sous « Compte supprimé ». */
 export const deleteMyAccount = async (password?: string) => {
