@@ -21,7 +21,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
-  Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge,
+  Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge, Inbox,
   Loader2, LineChart, PenLine, RefreshCw, Repeat, RotateCcw, Search, ShieldCheck, Sparkles,
   UserPlus, Users, type LucideIcon,
 } from 'lucide-react';
@@ -30,6 +30,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { IATab } from '@/components/pilotage/IATab';
+import { ValidationTab } from '@/components/pilotage/ValidationTab';
 import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
 import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
 import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
@@ -82,7 +83,7 @@ interface UserRow {
 interface UsersPage { count: number; pages: number; results: UserRow[]; counts: Record<string, number> }
 
 const PERIODS = [7, 30, 90];
-type TabKey = 'apercu' | 'a-traiter' | 'membres' | 'usage' | 'visiteurs' | 'quiz' | 'ia';
+type TabKey = 'apercu' | 'a-traiter' | 'validation' | 'membres' | 'usage' | 'visiteurs' | 'quiz' | 'ia';
 
 /* Réponse de /api/pilotage/ remise en forme une seule fois (10/10/2026) : un champ absent, nul ou d'un autre
  * type (serveur plus ancien ou plus récent que la page) devient une valeur vide au lieu de faire planter
@@ -278,6 +279,8 @@ const OverviewTab: React.FC<{
       onClick: () => onGo('a-traiter'), title: 'Erreurs signalées par les élèves' },
     { key: 'verify', count: verify, one: 'contenu à vérifier', many: 'contenus à vérifier', icon: ShieldCheck, tone: 'gold',
       onClick: () => onGo('a-traiter'), title: 'Corrections affichées avec le bandeau «\u00a0à vérifier\u00a0»' },
+    { key: 'brouillons', count: live ? live.todo.brouillons : null, one: 'contenu à valider', many: 'contenus à valider',
+      icon: Inbox, tone: 'gold', onClick: () => onGo('validation'), title: 'Exercices, cours et devoirs préparés par Claude' },
     { key: 'ia-run', count: live ? live.todo.ia_en_cours : null, one: 'travail IA en cours', many: 'travaux IA en cours', icon: Sparkles,
       tone: 'brand', running: true, onClick: () => onGo('ia') },
     { key: 'ia-read', count: live ? live.todo.ia_a_relire : null, one: 'à relire (IA)', many: 'à relire (IA)', icon: ClipboardCheck,
@@ -903,7 +906,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
 export default function Pilotage() {
   const { user, isLoading } = useAuth();
   const [params, setParams] = useSearchParams();
-  const tab = (['apercu', 'a-traiter', 'membres', 'usage', 'visiteurs', 'quiz', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
+  const tab = (['apercu', 'a-traiter', 'validation', 'membres', 'usage', 'visiteurs', 'quiz', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
   const days = PERIODS.includes(Number(params.get('periode'))) ? Number(params.get('periode')) : 30;
   const setParam = (key: string, value: string) => setParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n; }, { replace: true });
 
@@ -954,6 +957,7 @@ export default function Pilotage() {
   const tabs: { key: TabKey; label: string; badge?: number }[] = [
     { key: 'apercu', label: 'Aperçu' },
     { key: 'a-traiter', label: 'À traiter', badge: todoCount },
+    { key: 'validation', label: 'À valider', badge: live.data?.todo.brouillons },
     { key: 'membres', label: 'Membres', badge: undefined },
     { key: 'usage', label: 'Usage' },
     { key: 'visiteurs', label: 'Visiteurs' },
@@ -1013,6 +1017,8 @@ export default function Pilotage() {
         <QuizAdminTab />
       ) : tab === 'ia' ? (
         <IATab />
+      ) : tab === 'validation' ? (
+        <ValidationTab />
       ) : !data ? (
         error ? null : <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-ink-faint" /></div>
       ) : tab === 'usage' ? (

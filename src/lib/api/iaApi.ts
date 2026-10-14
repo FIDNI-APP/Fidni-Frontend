@@ -84,6 +84,30 @@ export const fixReport = async (reportId: number, instruction?: string) =>
 export const lastReportJob = async (reportId: number) =>
   (await api.get(`/pilotage/signalements/${reportId}/ia/derniere/`)).data as IAJobDetail | null;
 
+/* Contenus préparés par Claude (onglet « À valider », backend apps/ia/depot.py) : mêmes actions que les brouillons
+   de l'IA (getJob, publishJob, askCorrection, rejectJob), listés à part, en cartes. */
+export type BrouillonStatut = 'a_valider' | 'publies' | 'rejetes';
+export interface Brouillon {
+  id: number; status: IAStatus; etape: string; error: string; created_at: string; updated_at: string;
+  cle: string; titre: string; type: 'exercice' | 'examen' | 'lecon' | null; niveaux: string[]; chapitres: string[];
+  difficulte: string | null; credit: string; ecole: string; document: string; extrait: string;
+  questions: number; parties: number; sections: number; solutions: number; indications: number; figures: number;
+  theoremes: string[]; nb_theoremes: number;
+  commentaires: number; erreurs: number; doublons: number; avertissements: number; a_verifier: boolean;
+  remplace: { id: number; titre: string; type: string } | null;
+  publie: { id: number; titre: string; type: string } | null;
+  corrections: number;
+}
+export interface BrouillonDetail extends IAJobDetail {
+  depot?: boolean;
+  remplace?: { id: number; titre: string; type: string } | null;
+  carte?: Brouillon;
+}
+
+export const listBrouillons = async (statut: BrouillonStatut) =>
+  (await api.get('/pilotage/brouillons/', { params: { statut } })).data as
+    { compte: Record<BrouillonStatut, number>; ia_configuree: boolean; results: Brouillon[] };
+
 export const isRunning = (s: IAStatus) => s === 'en_attente' || s === 'en_cours';
 
 /** Message d'erreur de l'API (detail, ou premier champ en erreur). */
