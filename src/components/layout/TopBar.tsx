@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, Search as SearchIcon, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Menu, Moon, Search as SearchIcon, ChevronRight, ChevronLeft, Sun } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useBreadcrumb, type Crumb } from '@/contexts/BreadcrumbContext';
 import { TourHelpButton } from '@/components/tour/TourProvider';
 import { useAuth } from '@/contexts/AuthContext';
@@ -215,6 +216,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
           <SearchIcon className="h-5 w-5" />
         </button>
 
+        {/* Mode sombre / clair (15/10/2026) ; « comme l'appareil » reste dans Paramètres. */}
+        <ThemeToggle />
+
         {/* Notifications (membres connectés) */}
         <NotificationBell />
 
@@ -225,5 +229,17 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
         />
       </div>
     </header>
+  );
+};
+
+/** Lune / soleil : bascule entre clair et sombre (le choix est gardé ; Paramètres propose aussi « comme l'appareil »). */
+const ThemeToggle: React.FC = () => {
+  const { effectiveTheme, setTheme } = useTheme();
+  const dark = effectiveTheme === 'dark';
+  return (
+    <button type="button" className={BAR_ICON_BTN} onClick={() => { trackAction('mode-sombre'); setTheme(dark ? 'light' : 'dark'); }}
+      aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'} title={dark ? 'Mode clair' : 'Mode sombre'}>
+      {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </button>
   );
 };

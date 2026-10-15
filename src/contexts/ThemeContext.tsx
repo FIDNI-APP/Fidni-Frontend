@@ -21,7 +21,8 @@ export const useTheme = () => {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme');
-    return (saved as Theme) || 'system';
+    // Sans choix enregistré : clair (le mode sombre se choisit avec la lune de la barre du haut ou dans Paramètres).
+    return (saved as Theme) || 'light';
   });
 
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');

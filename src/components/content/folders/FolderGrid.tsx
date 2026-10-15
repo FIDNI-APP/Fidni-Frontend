@@ -63,7 +63,7 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
   return (
     <Link to={item.to} onClick={item.onOpen}
       aria-label={`${item.name} : ${item.countLabel}${p && done > 0 ? `, ${success} réussi${success > 1 ? 's' : ''}, ${done - success} à revoir` : ''}`}
-      className="group relative block h-[150px] rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper sm:h-[168px]">
+      className="fd-fixe group relative block h-[150px] rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper sm:h-[168px]">
       {/* Dos du dossier et son onglet */}
       <span aria-hidden className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#d9a94c]" />
       <span aria-hidden className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-tl-none bg-[#d9a94c]" />
@@ -74,13 +74,13 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
       </span>
       <span aria-hidden className="absolute left-[14%] right-[7%] top-[22px] h-[58%] rotate-[1.5deg] rounded-md bg-[#fdfcfa] shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform delay-75 duration-300 ease-out group-hover:-translate-y-2 group-hover:rotate-[3deg] motion-reduce:transform-none" />
       {/* Face avant : nom, nombre de contenus, avancement */}
-      <span className="absolute inset-x-0 bottom-0 top-[40%] flex origin-bottom flex-col justify-end rounded-[14px] p-3.5 shadow-[0_10px_22px_-12px_rgba(120,80,10,.55)] transition-transform duration-300 ease-out [transform:perspective(800px)_rotateX(0deg)] group-hover:[transform:perspective(800px)_rotateX(-16deg)] motion-reduce:transform-none sm:p-4"
+      <span className="absolute inset-x-0 bottom-0 flex min-h-[60%] origin-bottom flex-col justify-end rounded-[14px] p-3.5 shadow-[0_10px_22px_-12px_rgba(120,80,10,.55)] transition-transform duration-300 ease-out [transform:perspective(800px)_rotateX(0deg)] group-hover:[transform:perspective(800px)_rotateX(-16deg)] motion-reduce:transform-none sm:p-4"
         style={{ background: 'linear-gradient(180deg, #f7dc9e 0%, #eec574 100%)' }}>
         <span aria-hidden className="absolute inset-x-0 top-0 h-px rounded-t-[14px] bg-white/60" />
         {item.badge && (
           <span className="absolute right-2.5 top-2.5 rounded-full bg-white/85 px-2 py-0.5 text-[10.5px] font-semibold text-[#7a5a14] shadow-sm">{item.badge}</span>
         )}
-        <span className="text-[14px] font-semibold leading-snug text-[#3a2a07] line-clamp-2 sm:text-[15px]">{item.name}</span>
+        <span className="shrink-0 text-[14px] font-semibold leading-snug text-[#3a2a07] line-clamp-2 sm:text-[15px]">{item.name}</span>
         <span className="fd-nums mt-0.5 truncate text-[12px] text-[#6f5419]">
           {item.countLabel}
           {item.sub && <> · {item.sub}</>}

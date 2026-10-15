@@ -5,6 +5,7 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import './assets/fonts/fonts.css';
 import './index.css';
+import './styles/mode-sombre.css';
 
 // Pas de <StrictMode> : en mode développement, il exécute chaque effet deux fois
 // (double requête, double chargement). fidni.fr étant servi par le serveur de dev

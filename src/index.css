@@ -307,6 +307,90 @@ html {
    Components should prefer these over hard-coded hex so the whole
    app stays visually consistent.
    ────────────────────────────────────────────────────────────── */
+/* Mode sombre (15/10/2026) : canaux RVB des couleurs nommées (tailwind.config.js), clair puis sombre. Les couleurs
+   écrites en dur dans les composants sont traitées par src/styles/mode-sombre.css (scripts/generer-mode-sombre.mjs). */
+:root {
+  --c-paper: 250 249 247;
+  --c-surface: 255 255 255;
+  --c-line: 231 227 220;
+  --c-ink: 26 26 26;
+  --c-ink-soft: 51 48 43;
+  --c-ink-muted: 75 72 67;
+  --c-ink-faint: 107 104 98;
+  --c-brand: 26 122 74;
+  --c-brand-hover: 21 99 60;
+  --c-brand-soft: 234 243 237;
+  --c-brand-line: 207 230 216;
+  --c-gold: 192 137 47;
+  --c-gold-strong: 154 110 28;
+  --c-gold-soft: 250 243 226;
+  --c-gold-line: 236 220 180;
+  --c-lav-50: 250 249 247;
+  --c-lav-100: 247 246 243;
+  --c-lav-200: 242 241 238;
+  --c-lav-300: 231 227 220;
+  --c-lav-400: 207 205 200;
+  --c-lav-500: 154 149 140;
+  --c-lav-600: 107 104 98;
+  --c-lav-700: 51 48 43;
+  --c-lav-800: 26 26 26;
+  --c-lav-900: 20 20 20;
+  color-scheme: light;
+}
+.dark {
+  --c-paper: 25 24 22;
+  --c-surface: 36 34 31;
+  --c-line: 58 55 50;
+  --c-ink: 236 233 228;
+  --c-ink-soft: 214 209 201;
+  --c-ink-muted: 190 184 175;
+  --c-ink-faint: 156 150 141;
+  --c-brand: 46 160 102;
+  --c-brand-hover: 106 199 146;
+  --c-brand-soft: 30 54 41;
+  --c-brand-line: 47 86 64;
+  --c-gold: 212 164 82;
+  --c-gold-strong: 232 192 122;
+  --c-gold-soft: 55 45 27;
+  --c-gold-line: 88 72 43;
+  --c-lav-50: 30 29 26;
+  --c-lav-100: 36 34 31;
+  --c-lav-200: 44 42 38;
+  --c-lav-300: 58 55 50;
+  --c-lav-400: 82 78 72;
+  --c-lav-500: 134 128 120;
+  --c-lav-600: 170 164 155;
+  --c-lav-700: 214 209 201;
+  --c-lav-800: 236 233 228;
+  --c-lav-900: 244 242 238;
+  --paper: rgb(25 24 22);
+  --surface: rgb(36 34 31);
+  --line: rgb(58 55 50);
+  --ink: rgb(236 233 228);
+  --ink-soft: rgb(214 209 201);
+  --ink-muted: rgb(190 184 175);
+  --ink-faint: rgb(156 150 141);
+  --brand: rgb(46 160 102);
+  --brand-hover: rgb(106 199 146);
+  --brand-soft: rgb(30 54 41);
+  --brand-line: rgb(47 86 64);
+  --gold: rgb(212 164 82);
+  --gold-strong: rgb(232 192 122);
+  --gold-soft: rgb(55 45 27);
+  --gold-line: rgb(88 72 43);
+  --bg: rgb(25 24 22);
+  --neutral: #5b5853;
+  color-scheme: dark;
+}
+.dark body { background: rgb(var(--c-paper)); color: rgb(var(--c-ink)); }
+/* Encre en fond (boutons, pastilles actives) : le texte blanc devient sombre pour rester lisible. */
+.dark .bg-ink, .dark .bg-accent, .dark .bg-ink .text-white, .dark .bg-accent .text-white,
+.dark .bg-ink .text-white\/70 { color: rgb(var(--c-paper)); }
+/* Figures et images des contenus : fond blanc, les tracés (noirs) restent lisibles. */
+.dark [class*="tiptap"] img, .dark .fd-read img, .dark .fd-sol img, .dark .fd-card-preview img {
+  background: #fff; border-radius: 6px;
+}
+
 :root {
   /* Surfaces */
   --paper:      #faf9f7; /* app background — warm paper */

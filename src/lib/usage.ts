@@ -69,7 +69,7 @@ export const pageInfo = (pattern: string) => LABELS.get(pattern) ?? { pattern, l
 
 export type UsageAction =
   | 'voir-solution' | 'voir-indication' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'rattrapage-liste' | 'imprimer'
-  | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions'
+  | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions' | 'mode-sombre'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
   | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri'
   // Audit du 10/10/2026 (même liste fermée que apps/users/usage.py ACTIONS)

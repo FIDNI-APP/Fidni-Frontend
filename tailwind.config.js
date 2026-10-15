@@ -6,53 +6,51 @@ export default {
       colors: {
         // "Ink & paper" warm-neutral scale (replaces the old lavender ramp)
         lavender: {
-          50:  '#faf9f7',
-          100: '#f7f6f3',
-          200: '#f2f1ee',
-          300: '#e7e3dc',
-          400: '#cfcdc8',
-          500: '#9a958c',
-          600: '#6b6862',
-          700: '#33302b',
-          800: '#1a1a1a',
-          900: '#141414',
+          50:  'rgb(var(--c-lav-50) / <alpha-value>)',
+          100: 'rgb(var(--c-lav-100) / <alpha-value>)',
+          200: 'rgb(var(--c-lav-200) / <alpha-value>)',
+          300: 'rgb(var(--c-lav-300) / <alpha-value>)',
+          400: 'rgb(var(--c-lav-400) / <alpha-value>)',
+          500: 'rgb(var(--c-lav-500) / <alpha-value>)',
+          600: 'rgb(var(--c-lav-600) / <alpha-value>)',
+          700: 'rgb(var(--c-lav-700) / <alpha-value>)',
+          800: 'rgb(var(--c-lav-800) / <alpha-value>)',
+          900: 'rgb(var(--c-lav-900) / <alpha-value>)',
         },
-        // ── Canonical palette. Direct hex (NOT var()) so Tailwind utilities
-        //    always render regardless of CSS-var resolution. These mirror the
-        //    :root values in src/index.css (kept in sync; :root drives the
-        //    inline `var(--…)` styles in Landing/Home).
-        paper:   '#faf9f7',
-        surface: '#ffffff',
-        line:    '#e7e3dc',
+        // ── Canonical palette. Mode sombre (15/10/2026) : variables CSS en canaux RVB (--c-*, index.css :root et
+        //    .dark), l'opacité Tailwind (bg-ink/10…) reste possible avec <alpha-value>.
+        paper:   'rgb(var(--c-paper) / <alpha-value>)',
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        line:    'rgb(var(--c-line) / <alpha-value>)',
         ink: {
-          DEFAULT: '#1a1a1a',
-          soft:    '#33302b',
-          muted:   '#4b4843',
-          faint:   '#6b6862',
+          DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)',
+          soft:    'rgb(var(--c-ink-soft) / <alpha-value>)',
+          muted:   'rgb(var(--c-ink-muted) / <alpha-value>)',
+          faint:   'rgb(var(--c-ink-faint) / <alpha-value>)',
         },
         // Brand green — marks action / progress only. Prefer this over the
         // legacy `accent` token below (which is INK BLACK, kept for back-compat).
         brand: {
-          DEFAULT: '#1a7a4a',
-          hover:   '#15633c',
-          soft:    '#eaf3ed',
-          line:    '#cfe6d8',
+          DEFAULT: 'rgb(var(--c-brand) / <alpha-value>)',
+          hover:   'rgb(var(--c-brand-hover) / <alpha-value>)',
+          soft:    'rgb(var(--c-brand-soft) / <alpha-value>)',
+          line:    'rgb(var(--c-brand-line) / <alpha-value>)',
         },
         // Gold — BRAND IDENTITY only (logo echo): active tab, section/structure
         // labels, title accent bar, brand badges. NOT for actions (use brand
         // green) or success. Refined deeper than the bright logo so it reads.
         gold: {
-          DEFAULT: '#c0892f',
-          strong:  '#9a6e1c',
-          soft:    '#faf3e2',
-          line:    '#ecdcb4',
+          DEFAULT: 'rgb(var(--c-gold) / <alpha-value>)',
+          strong:  'rgb(var(--c-gold-strong) / <alpha-value>)',
+          soft:    'rgb(var(--c-gold-soft) / <alpha-value>)',
+          line:    'rgb(var(--c-gold-line) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#1a1a1a', // ⚠ black, not the brand — use `brand` for green
-          hover: '#000000',
-          soft: '#f2f1ee',
-          softer: '#f7f6f3',
-          border: '#e7e3dc',
+          DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)', // ⚠ black, not the brand — use `brand` for green
+          hover: 'rgb(var(--c-ink) / <alpha-value>)',
+          soft: 'rgb(var(--c-lav-200) / <alpha-value>)',
+          softer: 'rgb(var(--c-lav-100) / <alpha-value>)',
+          border: 'rgb(var(--c-line) / <alpha-value>)',
         },
         // Subject themes — monochrome (identified by label, not colour)
         subject: {

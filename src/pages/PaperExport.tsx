@@ -75,6 +75,13 @@ const contentKindLabel = (item: PaperItem) => (item.kind === 'exam'
   : item.kind === 'lesson' ? 'Leçon' : 'Exercice');
 
 export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
+  // Feuille façon sujet : toujours claire (impression), même en mode sombre.
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains("dark");
+    root.classList.remove("dark");
+    return () => { if (wasDark) root.classList.add("dark"); };
+  }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
