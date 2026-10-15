@@ -11,7 +11,7 @@
 //   corriger ») ; la colonne de droite ne montre que le compte à rebours pendant l'épreuve, sinon ta copie
 //   (qui sert aussi de sommaire). Sur téléphone, la copie passe après le sujet. Logique de l'épreuve inchangée.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Eye, EyeOff, Flag, Pause, Play, RotateCcw, Timer } from 'lucide-react';
+import { CheckCheck, CheckCircle2, Eye, EyeOff, Flag, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import type { AssessmentStatus, ContentExam } from '@/types/content';
 import type { ExerciseBlock, FlexibleExerciseStructure } from '../editor/FlexibleExerciseEditor';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
@@ -403,13 +403,25 @@ export const ExamView: React.FC<Props> = ({
   };
   // Ta copie (note estimée), en tête de l'histogramme « Question par question » (15/10/2026 : à la place de
   // l'onglet Activité ; Natsu : « à droite à la place de Ta copie, en vertical »).
+  // « Tout réussi » en tête de la copie (Natsu, 15/10/2026) : toutes les questions d'un coup ; re-cliquer les efface.
+  const allPaths = parts.flatMap((p) => p.questions.map((q) => q.path));
+  const allSuccess = allPaths.length > 0 && allPaths.every((p) => progress?.[p] === 'success');
+  const toutReussi = () => assessMany(Object.fromEntries(allPaths.map((p) => [p, allSuccess ? null : 'success'])), 'tout');
   const copieHeader = isAuthenticated ? (
     <>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Ta copie</span>
         {sessionCount > 0 && (
-          <button type="button" onClick={onOpenHistory} className="-my-2 min-h-10 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
+          <button type="button" onClick={onOpenHistory} className="-my-2 ml-auto min-h-10 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
             {sessionCount} passage{sessionCount > 1 ? 's' : ''}
+          </button>
+        )}
+        {allPaths.length > 0 && (
+          <button type="button" onClick={toutReussi} aria-pressed={allSuccess}
+            title={allSuccess ? 'Tout réussi : clique pour effacer' : 'Marquer toutes les questions comme réussies'}
+            className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[12px] font-semibold transition-colors ${
+              allSuccess ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-soft hover:border-brand-line hover:text-brand-hover'}`}>
+            <CheckCheck className="h-3.5 w-3.5" aria-hidden /> Tout réussi
           </button>
         )}
       </div>
@@ -429,7 +441,7 @@ export const ExamView: React.FC<Props> = ({
         <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">
           {attemptStart
             ? 'Corrige ce passage question par question : ta note s’affiche ici.'
-            : 'Après l’épreuve, dis pour chaque question si tu l’as réussie : ta note estimée s’affiche ici.'}
+            : 'Coche tes questions réussies : ta note s’affiche ici, tu te situes face aux autres élèves et tu enrichis leurs statistiques.'}
         </p>
       )}
     </>
