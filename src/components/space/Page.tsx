@@ -11,6 +11,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
+import { t } from '@/i18n';
 
 type Width = 'narrow' | 'default' | 'wide' | 'full';
 // full : listes de cartes (3 colonnes sur grand écran).
@@ -39,8 +40,8 @@ export const PageHeader: React.FC<{
   <header className="mb-6 sm:mb-8">
     {back && (
       <Link to={back.to}
-        className="mb-3 inline-flex min-h-10 items-center gap-1 rounded-lg pr-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink">
-        <ChevronLeft className="h-4 w-4" /> {back.label}
+        className="mb-3 inline-flex min-h-10 items-center gap-1 rounded-lg pe-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink">
+        <ChevronLeft className="h-4 w-4" /> {t(back.label)}
       </Link>
     )}
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -129,7 +130,7 @@ export const StatTile: React.FC<{ label: string; value: React.ReactNode; hint?: 
   label, value, hint, className = '',
 }) => (
   <div className={`rounded-2xl border border-line bg-white px-4 py-3.5 ${className}`}>
-    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{label}</p>
+    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t(label)}</p>
     <p className="fd-nums mt-1 text-[24px] font-bold leading-none text-ink">{value}</p>
     {hint && <p className="mt-1.5 text-[12px] leading-snug text-ink-faint">{hint}</p>}
   </div>
@@ -143,7 +144,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   label: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-line bg-white p-1 scrollbar-hide">
+    <div role="tablist" aria-label={t(label)} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-line bg-white p-1 scrollbar-hide">
       {options.map((o) => {
         const active = o.key === value;
         const Icon = o.icon;
@@ -152,7 +153,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
             className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors ${
               active ? 'bg-ink text-white' : 'text-ink-faint hover:bg-[#f7f6f3] hover:text-ink'}`}>
             {Icon && <Icon className="h-4 w-4" />}
-            {o.label}
+            {t(o.label)}
             {o.count != null && (
               <span className={`fd-nums rounded-full px-1.5 text-[11.5px] ${active ? 'bg-white/15 text-white' : 'bg-[#f2f1ee] text-ink-faint'}`}>{o.count}</span>
             )}
@@ -167,14 +168,14 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
 export const SplitBar: React.FC<{ success: number; review: number; total: number; className?: string }> = ({
   success, review, total, className = '',
 }) => {
-  const t = Math.max(total, 1);
-  const s = Math.min(success, t);
-  const r = Math.min(review, t - s);
+  const tot = Math.max(total, 1);
+  const s = Math.min(success, tot);
+  const r = Math.min(review, tot - s);
   return (
     <span className={`flex h-1.5 overflow-hidden rounded-full bg-[#f2f1ee] ${className}`}
-      role="img" aria-label={`${s} réussi${s > 1 ? 's' : ''}, ${r} à revoir, sur ${total}`}>
-      <span className="h-full bg-brand" style={{ width: `${(s / t) * 100}%` }} />
-      <span className="h-full bg-gold" style={{ width: `${(r / t) * 100}%` }} />
+      role="img" aria-label={s > 1 ? t('{s} réussis, {r} à revoir, sur {total}', { s, r, total }) : t('{s} réussi, {r} à revoir, sur {total}', { s, r, total })}>
+      <span className="h-full bg-brand" style={{ width: `${(s / tot) * 100}%` }} />
+      <span className="h-full bg-gold" style={{ width: `${(r / tot) * 100}%` }} />
     </span>
   );
 };
@@ -191,7 +192,7 @@ export const CardLink: React.FC<{ to: string; children: React.ReactNode; classNa
 
 /** Squelette d'une liste de cartes. */
 export const CardsSkeleton: React.FC<{ n?: number; className?: string }> = ({ n = 3, className = '' }) => (
-  <div className={`grid gap-3 ${className}`} role="status" aria-label="Chargement">
+  <div className={`grid gap-3 ${className}`} role="status" aria-label={t('Chargement')}>
     {Array.from({ length: n }, (_, i) => (
       <div key={i} className="animate-pulse rounded-2xl border border-line bg-white p-4">
         <div className="h-4 w-2/3 rounded bg-[#efece6]" />

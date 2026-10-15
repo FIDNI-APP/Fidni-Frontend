@@ -18,6 +18,7 @@ import { createPathChapter, createVideo, getLearningPath } from '@/lib/api/Learn
 import { getChapters } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { t } from '@/i18n';
 import type { VideoType } from '@/types';
 
 interface VideoForm {
@@ -87,7 +88,7 @@ export const CreatePathChapter: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load data:', error);
-      setError('Impossible de charger le parcours. Réessaie.');
+      setError(t('Impossible de charger le parcours. Réessaie.'));
     } finally {
       setFetchingData(false);
     }
@@ -122,7 +123,7 @@ export const CreatePathChapter: React.FC = () => {
 
 const validateForm = (): boolean => {
   if (!formData.chapter || !formData.title) {
-    setError('Choisis un chapitre et donne-lui un titre.');
+    setError(t('Choisis un chapitre et donne-lui un titre.'));
     return false;
   }
 
@@ -130,7 +131,7 @@ const validateForm = (): boolean => {
   for (let i = 0; i < videos.length; i++) {
     const video = videos[i];
     if (!video.title || !video.url || !video.duration_seconds || video.duration_seconds <= 0) {
-      setError(`Vidéo ${i + 1} : remplis le titre, le lien et une durée supérieure à 0.`);
+      setError(t('Vidéo {n} : remplis le titre, le lien et une durée supérieure à 0.', { n: i + 1 }));
       return false;
     }
   }
@@ -164,7 +165,7 @@ const validateForm = (): boolean => {
     
     if (!chapterId) {
       console.error('No ID found in response:', chapterResponse);
-      throw new Error('Le chapitre a été créé, mais le serveur n’a pas renvoyé son identifiant.');
+      throw new Error(t('Le chapitre a été créé, mais le serveur n’a pas renvoyé son identifiant.'));
     }
     
     
@@ -186,7 +187,7 @@ const validateForm = (): boolean => {
       } catch (videoError: any) {
         console.error(`Failed to create video ${i + 1}:`, videoError);
         console.error('Video error details:', videoError.response?.data);
-        throw new Error(`Impossible de créer la vidéo ${i + 1} : ${videoError.response?.data?.message || videoError.message}`);
+        throw new Error(t('Impossible de créer la vidéo {n} : {detail}', { n: i + 1, detail: videoError.response?.data?.message || videoError.message }));
       }
     }
     
@@ -196,7 +197,7 @@ const validateForm = (): boolean => {
     }, 800);
   } catch (error: any) {
     console.error('Error details:', error.response?.data || error);
-    setError(error.response?.data?.message || error.message || 'Impossible de créer le chapitre. Vérifie les champs et réessaie.');
+    setError(error.response?.data?.message || error.message || t('Impossible de créer le chapitre. Vérifie les champs et réessaie.'));
   } finally {
     setLoading(false);
   }
@@ -208,7 +209,7 @@ const validateForm = (): boolean => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600">Chargement du parcours…</p>
+          <p className="text-gray-600">{t('Chargement du parcours…')}</p>
         </div>
       </div>
     );
@@ -228,13 +229,13 @@ const validateForm = (): boolean => {
               onClick={() => navigate(`/learning-path/${id}`)}
               className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Retour au parcours
+              <ArrowLeft className="w-5 h-5 me-2" />
+              {t('Retour au parcours')}
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">Ajouter un chapitre</h1>
+            <h1 className="text-3xl font-bold text-gray-800">{t('Ajouter un chapitre')}</h1>
             {learningPath && (
               <p className="text-gray-600 mt-2">
-                Adding to: <span className="font-semibold">{learningPath.title}</span>
+                {t('Adding to:')} <span className="font-semibold">{learningPath.title}</span>
               </p>
             )}
           </div>
@@ -243,7 +244,7 @@ const validateForm = (): boolean => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Chapter Info Card */}
             <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-800 mb-6">Chapitre</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">{t('Chapitre')}</h2>
               
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
@@ -256,7 +257,7 @@ const validateForm = (): boolean => {
                 {/* Select Chapter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Chapter <span className="text-red-500">*</span>
+                    {t('Select Chapter')} <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.chapter} // Change from chapter_id to chapter
@@ -270,7 +271,7 @@ const validateForm = (): boolean => {
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
-                    <option value="">Choisir un chapitre</option>
+                    <option value="">{t('Choisir un chapitre')}</option>
                     {chapters.map((chapter) => (
                       <option key={chapter.id} value={chapter.id}>
                         {chapter.name}
@@ -280,8 +281,8 @@ const validateForm = (): boolean => {
                   
                   {chapters.length === 0 && (
                     <p className="mt-2 text-sm text-amber-600 flex items-center">
-                      <Info className="w-4 h-4 mr-1" />
-                      Aucun chapitre disponible : vérifie que le parcours a une matière et un niveau.
+                      <Info className="w-4 h-4 me-1" />
+                      {t('Aucun chapitre disponible : vérifie que le parcours a une matière et un niveau.')}
                     </p>
                   )}
                 </div>
@@ -289,7 +290,7 @@ const validateForm = (): boolean => {
                 {/* Order */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Position dans le parcours <span className="text-red-500">*</span>
+                    {t('Position dans le parcours')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -299,43 +300,43 @@ const validateForm = (): boolean => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Ordre d’apparition du chapitre dans le parcours
+                    {t('Ordre d’apparition du chapitre dans le parcours')}
                   </p>
                 </div>
 
                 {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Titre du chapitre <span className="text-red-500">*</span>
+                    {t('Titre du chapitre')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Titre affiché pour ce chapitre"
+                    placeholder={t('Titre affiché pour ce chapitre')}
                   />
                 </div>
 
                 {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
+                    {t('Description')}
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                    placeholder="Ce que couvre ce chapitre, en quelques mots…"
+                    placeholder={t('Ce que couvre ce chapitre, en quelques mots…')}
                   />
                 </div>
 
                 {/* Estimated Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Durée estimée (minutes)
+                    <Clock className="w-4 h-4 inline me-1" />
+                    {t('Durée estimée (minutes)')}
                   </label>
                   <input
                     type="number"
@@ -351,7 +352,7 @@ const validateForm = (): boolean => {
             {/* Videos Section */}
             <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800">Vidéos du chapitre</h2>
+                <h2 className="text-xl font-bold text-gray-800">{t('Vidéos du chapitre')}</h2>
                 <Button
                   type="button"
                   onClick={addVideo}
@@ -359,8 +360,8 @@ const validateForm = (): boolean => {
                   size="sm"
                   className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Ajouter une vidéo
+                  <Plus className="w-4 h-4 me-2" />
+                  {t('Ajouter une vidéo')}
                 </Button>
               </div>
 
@@ -374,8 +375,8 @@ const validateForm = (): boolean => {
                   >
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-medium text-gray-800">
-                        <PlayCircle className="w-5 h-5 inline mr-2 text-indigo-600" />
-                        Vidéo {index + 1}
+                        <PlayCircle className="w-5 h-5 inline me-2 text-indigo-600" />
+                        {t('Vidéo {n}', { n: index + 1 })}
                       </h3>
                       {videos.length > 1 && (
                         <button
@@ -392,21 +393,21 @@ const validateForm = (): boolean => {
                       {/* Video Title */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Titre <span className="text-red-500">*</span>
+                          {t('Titre')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={video.title}
                           onChange={(e) => updateVideo(index, 'title', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="Titre de la vidéo"
+                          placeholder={t('Titre de la vidéo')}
                         />
                       </div>
 
                       {/* Video Type */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Type
+                          {t('Type')}
                         </label>
                         <select
                           value={video.video_type}
@@ -415,39 +416,39 @@ const validateForm = (): boolean => {
                         >
                           {/* Mêmes valeurs que Video.VIDEO_TYPES côté serveur : « exercise » n'en faisait
                               pas partie et faisait échouer la création de la vidéo. */}
-                          <option value="introduction">Introduction</option>
-                          <option value="lesson">Vidéo de cours</option>
-                          <option value="explanation">Explication / exercice corrigé</option>
-                          <option value="demo">Démonstration</option>
-                          <option value="tips">Astuces</option>
-                          <option value="summary">Vidéo de synthèse</option>
+                          <option value="introduction">{t('Introduction')}</option>
+                          <option value="lesson">{t('Vidéo de cours')}</option>
+                          <option value="explanation">{t('Explication / exercice corrigé')}</option>
+                          <option value="demo">{t('Démonstration')}</option>
+                          <option value="tips">{t('Astuces')}</option>
+                          <option value="summary">{t('Vidéo de synthèse')}</option>
                         </select>
                       </div>
 
                       {/* Video URL */}
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Video URL <span className="text-red-500">*</span>
+                          {t('Video URL')} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <Link className="absolute start-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                           <input
                             type="url"
                             value={video.url}
                             onChange={(e) => updateVideo(index, 'url', e.target.value)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="Lien YouTube, Vimeo ou fichier vidéo"
+                            className="w-full ps-10 pe-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder={t('Lien YouTube, Vimeo ou fichier vidéo')}
                           />
                         </div>
                         <p className="mt-1 text-xs text-gray-500">
-                          Accepte les liens YouTube, Vimeo, S3 ou directs vers un fichier vidéo
+                          {t('Accepte les liens YouTube, Vimeo, S3 ou directs vers un fichier vidéo')}
                         </p>
                       </div>
 
                       {/* Duration */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Durée (secondes) <span className="text-red-500">*</span>
+                          {t('Durée (secondes)')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
@@ -462,7 +463,7 @@ const validateForm = (): boolean => {
                       {/* Order */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Ordre
+                          {t('Ordre')}
                         </label>
                         <input
                           type="number"
@@ -476,14 +477,14 @@ const validateForm = (): boolean => {
                       {/* Image d’aperçu (lien) */}
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Image d’aperçu (lien)
+                          {t('Image d’aperçu (lien)')}
                         </label>
                         <input
                           type="url"
                           value={video.thumbnail_url}
                           onChange={(e) => updateVideo(index, 'thumbnail_url', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="Facultatif : lien vers une image"
+                          placeholder={t('Facultatif : lien vers une image')}
                         />
                       </div>
                     </div>
@@ -499,7 +500,7 @@ const validateForm = (): boolean => {
                 variant="outline"
                 onClick={() => navigate(`/learning-path/${id}`)}
               >
-                Annuler
+                {t('Annuler')}
               </Button>
               <Button
                 type="submit"
@@ -508,13 +509,13 @@ const validateForm = (): boolean => {
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Création…
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2" />
+                    {t('Création…')}
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Créer le chapitre
+                    <Save className="w-4 h-4 me-2" />
+                    {t('Créer le chapitre')}
                   </>
                 )}
               </Button>

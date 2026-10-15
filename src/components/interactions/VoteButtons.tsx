@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
+import { t } from '@/i18n';
 
 type VoteValue = 1 | -1;
 
@@ -74,10 +75,10 @@ export function VoteButtons({
   };
 
   const s = size === 'sm'
-    ? { pill: 'h-9 px-3 gap-1.5 text-[13.5px]', icon: 'h-4 w-4', disc: 'h-7 w-7 -ml-1.5' }
+    ? { pill: 'h-9 px-3 gap-1.5 text-[13.5px]', icon: 'h-4 w-4', disc: 'h-7 w-7 -ms-1.5' }
     : size === 'lg'
-      ? { pill: 'h-11 px-4 gap-2 text-[15px]', icon: 'h-5 w-5', disc: 'h-8 w-8 -ml-1.5' }
-      : { pill: 'h-10 px-3.5 gap-2 text-[14px]', icon: 'h-[18px] w-[18px]', disc: 'h-8 w-8 -ml-1.5' };
+      ? { pill: 'h-11 px-4 gap-2 text-[15px]', icon: 'h-5 w-5', disc: 'h-8 w-8 -ms-1.5' }
+      : { pill: 'h-10 px-3.5 gap-2 text-[14px]', icon: 'h-[18px] w-[18px]', disc: 'h-8 w-8 -ms-1.5' };
 
   const liked = userVote === 1;
   const disliked = userVote === -1;
@@ -89,8 +90,8 @@ export function VoteButtons({
         type="button"
         onClick={(e) => { e.stopPropagation(); handleVote(1); }}
         aria-pressed={liked}
-        aria-label={`J'aime (${counts.likes})`}
-        title={liked ? 'Tu aimes ce contenu · cliquer pour retirer' : 'J’aime : ce contenu m’a aidé'}
+        aria-label={t("J'aime ({n})", { n: counts.likes })}
+        title={liked ? t('Tu aimes ce contenu · cliquer pour retirer') : t('J’aime : ce contenu m’a aidé')}
         className={`inline-flex items-center rounded-full border font-semibold fd-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${s.pill} ${
           liked
             ? 'border-brand-line bg-brand-soft text-brand-hover'
@@ -106,8 +107,8 @@ export function VoteButtons({
         )}
         <span>{counts.likes}</span>
         {badge && (
-          <span className="ml-0.5 rounded-full bg-white/80 px-1.5 py-px text-[10.5px] font-semibold text-brand-hover" title="Recommandé par les élèves">
-            Très utile
+          <span className="ms-0.5 rounded-full bg-white/80 px-1.5 py-px text-[10.5px] font-semibold text-brand-hover" title={t('Recommandé par les élèves')}>
+            {t('Très utile')}
           </span>
         )}
       </button>
@@ -116,8 +117,8 @@ export function VoteButtons({
         type="button"
         onClick={(e) => { e.stopPropagation(); handleVote(-1); }}
         aria-pressed={disliked}
-        aria-label={`Je n'aime pas (${counts.dislikes})`}
-        title={disliked ? 'Tu n’aimes pas ce contenu · cliquer pour retirer' : 'Je n’aime pas'}
+        aria-label={t("Je n'aime pas ({n})", { n: counts.dislikes })}
+        title={disliked ? t('Tu n’aimes pas ce contenu · cliquer pour retirer') : t('Je n’aime pas')}
         className={`inline-flex items-center rounded-full border fd-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${s.pill} ${
           disliked
             ? 'border-[#d6d2ca] bg-[#efede9] text-ink font-semibold'

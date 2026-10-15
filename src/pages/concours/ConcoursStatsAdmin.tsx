@@ -13,6 +13,7 @@ import {
   type ConcoursExamListItem, type ExamInsightCard,
 } from '@/lib/api/concoursApi';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
+import { t } from '@/i18n';
 
 export default function StatsAdmin() {
   const [exams, setExams] = useState<ConcoursExamListItem[]>([]);
@@ -39,20 +40,20 @@ export default function StatsAdmin() {
   return (
     <>
       <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
-        Statistiques des examens
+        {t('Statistiques des examens')}
       </h2>
       <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
-        Choisis un examen pour éditer son analyse comparative (la répartition par chapitre est automatique).
+        {t('Choisis un examen pour éditer son analyse comparative (la répartition par chapitre est automatique).')}
       </p>
       {exams.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 40 }}>
-          <p style={{ color: '#6b6862' }}>Aucun examen.</p>
+          <p style={{ color: '#6b6862' }}>{t('Aucun examen.')}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
           {exams.map(e => (
             <button key={e.id} className="fd-card flex items-center gap-3"
-                    style={{ padding: '12px 16px', cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+                    style={{ padding: '12px 16px', cursor: 'pointer', textAlign: 'start', border: 'none', width: '100%' }}
                     onClick={() => setSelected(e)}>
               <span style={{
                 background: '#f2f1ee', color: '#000000',
@@ -118,7 +119,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
       <div className="flex items-center justify-between mb-4">
         <div>
           <button onClick={onBack} className="fd-btn-ghost mb-2" style={{ padding: '5px 10px', fontSize: 12 }}>
-            ← Tous les examens
+            {t('← Tous les examens')}
           </button>
           <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
             {exam.concours_type_display} · {exam.title}
@@ -126,21 +127,21 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
         </div>
         <button className="fd-btn-primary" onClick={save} disabled={saving}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
-          {saved ? 'Enregistré' : 'Enregistrer'}
+          {saved ? t('Enregistré') : t('Enregistrer')}
         </button>
       </div>
 
       {/* Insight cards */}
       <div className="fd-card mb-4" style={{ padding: '20px 22px' }}>
         <div className="flex items-center justify-between mb-3">
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>Cards d'insight</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{t("Cards d'insight")}</h3>
           <button className="fd-btn-ghost" onClick={addCard} style={{ fontSize: 12, padding: '5px 10px' }}>
-            <Plus className="w-3.5 h-3.5" /> Ajouter
+            <Plus className="w-3.5 h-3.5" /> {t('Ajouter')}
           </button>
         </div>
         {cards.length === 0 ? (
           <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>
-            Aucune card. Ajoute des points clés (ex. récurrence d'un type de question).
+            {t("Aucune card. Ajoute des points clés (ex. récurrence d'un type de question).")}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
@@ -152,7 +153,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
                   <input
                     value={c.title}
                     onChange={e => updateCard(i, { title: e.target.value })}
-                    placeholder="Titre (ex. Récurrence)"
+                    placeholder={t('Titre (ex. Récurrence)')}
                     style={{
                       padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e7e3dc',
                       fontSize: 13, fontWeight: 600, color: '#1a1a1a', outline: 'none',
@@ -161,7 +162,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
                   <textarea
                     value={c.text}
                     onChange={e => updateCard(i, { text: e.target.value })}
-                    placeholder="Texte explicatif…"
+                    placeholder={t('Texte explicatif…')}
                     rows={2}
                     style={{
                       padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e7e3dc',
@@ -182,10 +183,10 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
       {/* Rich comparison */}
       <div className="fd-card" style={{ padding: '20px 22px' }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
-          Analyse comparative
+          {t('Analyse comparative')}
         </h3>
         <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 12 }}>
-          Texte libre : comparaison avec les autres concours, tendances sur les dernières années, etc.
+          {t('Texte libre : comparaison avec les autres concours, tendances sur les dernières années, etc.')}
         </p>
         <CompactTipTapEditor content={html} onChange={setHtml} />
       </div>

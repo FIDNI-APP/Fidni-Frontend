@@ -10,12 +10,15 @@ import { Pastilles } from '@/components/progression/DayPanel';
 import { decimal, longDate } from '@/pages/progression/format';
 import { Curseur, Ecran, Plateau, useCompte, useTimeline } from './Scene';
 import { DU_JOUR, JOUR, JOURS } from './demo';
+import { t } from '@/i18n';
 
 // Tuiles · caméra et barres · curseur · clic et détail du jour · la caméra descend au détail · pause
 const DUREES = [1500, 1100, 1000, 1100, 2800, 500] as const;
 const rien = () => undefined;
 const somme = (k: string) => JOURS.reduce((s, r) => s + Number(r[k]), 0);
-const describe = (r: BarRow) => `${r.reussies} réussie${Number(r.reussies) > 1 ? 's' : ''} · ${r.ratees} à revoir`;
+const describe = (r: BarRow) => (Number(r.reussies) > 1
+  ? t('{n} réussies · {m} à revoir', { n: r.reussies, m: r.ratees })
+  : t('{n} réussie · {m} à revoir', { n: r.reussies, m: r.ratees }));
 const BARRES = '[data-scene="graphique"] div.relative';
 
 const Tuiles: React.FC = () => {
@@ -23,10 +26,10 @@ const Tuiles: React.FC = () => {
   const note = useCompte(13.5, 1);
   return (
     <div className="grid grid-cols-2 gap-2.5">
-      <Tuile icon={CheckCircle2} label="Questions réussies" accent={COULEUR.reussies} selected onClick={rien}
+      <Tuile icon={CheckCircle2} label={t('Questions réussies')} accent={COULEUR.reussies} selected onClick={rien}
         value={reussies} ecart={{ texte: '↑ 18 %', sens: 1 }} jours={14}
         spark={{ values: JOURS.map((r) => Number(r.reussies)), color: COULEUR.reussies, height: 26 }} />
-      <Tuile icon={Trophy} label="Note moyenne aux examens" accent={COULEUR.note} selected={false} onClick={rien}
+      <Tuile icon={Trophy} label={t('Note moyenne aux examens')} accent={COULEUR.note} selected={false} onClick={rien}
         value={decimal(note)} unit="/ 20" ecart={{ texte: '↑ +1,5', sens: 1 }} jours={14}
         spark={{ values: [10.5, 12, 11.5, 13, 14.5], color: COULEUR.note, height: 26 }} />
     </div>
@@ -43,7 +46,7 @@ const SceneApercu: React.FC = () => {
         <section data-scene="graphique" className="mt-2.5 rounded-2xl border border-line bg-white p-3">
           <DayBars rows={JOURS} series={SERIES_QUESTIONS} pas="jour" describe={describe} height={84} anime={1500}
             selected={phase >= 3 ? JOUR : null}
-            headline={<>{somme('reussies')} <span className="text-[13px] font-semibold text-ink-faint">réussies sur 14 jours</span></>} />
+            headline={<>{somme('reussies')} <span className="text-[13px] font-semibold text-ink-faint">{t('réussies sur 14 jours')}</span></>} />
           {phase >= 3 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
               data-scene="jour" className="mt-3 rounded-xl border border-line bg-[#fcfbf9] px-3 py-2">

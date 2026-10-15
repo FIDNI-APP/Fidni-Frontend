@@ -3,6 +3,7 @@ import React from 'react';
 import { ChevronRight, CheckCircle, Lock, FileText, Video as VideoIcon } from 'lucide-react';
 import { PathChapter } from '@/types/index';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface VideoSidebarProps {
   chapters: PathChapter[];
@@ -34,7 +35,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-hidden flex flex-col">
       <div className="p-4 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-900">Course Content</h3>
+        <h3 className="font-semibold text-gray-900">{t('Course Content')}</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -59,10 +60,10 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-900 text-sm">
-                    Chapter {chapterIndex + 1}: {chapter.title}
+                    {t('Chapter {n}: {title}', { n: chapterIndex + 1, title: chapter.title })}
                   </h4>
                   <p className="text-xs text-gray-500">
-                    {chapter.user_progress?.progress_percentage || 0}% complete
+                    {t('{p}% complete', { p: chapter.user_progress?.progress_percentage || 0 })}
                   </p>
                 </div>
               </div>
@@ -81,7 +82,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                     onClick={() => isAccessible && onVideoSelect(chapter.id, video.id)}
                     disabled={!isAccessible}
                     className={cn(
-                      "w-full text-left p-3 rounded-lg mb-1 transition-colors flex items-center gap-3",
+                      "w-full text-start p-3 rounded-lg mb-1 transition-colors flex items-center gap-3",
                       isCurrent ? "bg-indigo-50 border border-indigo-200" :
                       isAccessible ? "hover:bg-gray-50" : "opacity-50 cursor-not-allowed"
                     )}
@@ -127,7 +128,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                   onClick={() => isQuizAccessible(chapter) && onQuizSelect(chapter.id)}
                   disabled={!isQuizAccessible(chapter)}
                   className={cn(
-                    "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 mt-2 border-t pt-3",
+                    "w-full text-start p-3 rounded-lg transition-colors flex items-center gap-3 mt-2 border-t pt-3",
                     isQuizAccessible(chapter) ? "hover:bg-gray-50" : "opacity-50 cursor-not-allowed"
                   )}
                 >
@@ -146,13 +147,13 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                   
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      Quiz du chapitre
+                      {t('Quiz du chapitre')}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {chapter.quiz.questions.length} questions
+                      {t('{n} questions', { n: chapter.quiz.questions.length })}
                       {chapter.user_progress?.quiz_score && (
-                        <span className="ml-2">
-                          • Last score: {chapter.user_progress.quiz_score}%
+                        <span className="ms-2">
+                          {t('• Last score: {s}%', { s: chapter.user_progress.quiz_score })}
                         </span>
                       )}
                     </div>

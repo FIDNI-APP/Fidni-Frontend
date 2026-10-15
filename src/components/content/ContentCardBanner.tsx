@@ -4,6 +4,7 @@
 import React from 'react';
 import { Bookmark, Loader2, Check, Edit, Trash2 } from 'lucide-react';
 import { DifficultyBars } from '@/components/common/DifficultyBars';
+import { t } from '@/i18n';
 
 export interface SubjectTheme {
   from: string;
@@ -106,36 +107,36 @@ export const ContentCardBanner: React.FC<ContentCardBannerProps> = ({
           {difficulty && (
             <span style={{ ...chip, background: difficulty.bg, color: difficulty.text }}>
               <DifficultyBars level={difficulty.level} size={10} />
-              {difficulty.label}
+              {t(difficulty.label)}
             </span>
           )}
           {isNationalExam && (
             <span style={{ ...chip, background: '#faf3e2', color: '#9a6e1c' }}>
-              National{nationalYear ? ` ${nationalYear}` : ''}
+              {t('National')}{nationalYear ? ` ${nationalYear}` : ''}
             </span>
           )}
           {isSolved && (
             <span style={{ ...chip, background: '#eaf3ed', color: '#15633c' }}>
-              <Check className="w-3 h-3" /> Résolu
+              <Check className="w-3 h-3" /> {t('Résolu')}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {showOwnerActions && onEdit && (
-            <button onClick={onEdit} style={iconBtn()} aria-label="Modifier" title="Modifier">
+            <button onClick={onEdit} style={iconBtn()} aria-label={t('Modifier')} title={t('Modifier')}>
               <Edit className="w-3.5 h-3.5" />
             </button>
           )}
           {showOwnerActions && onDelete && (
-            <button onClick={onDelete} style={iconBtn()} aria-label="Supprimer" title="Supprimer">
+            <button onClick={onDelete} style={iconBtn()} aria-label={t('Supprimer')} title={t('Supprimer')}>
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
           {onSave && (
             <button onClick={onSave} data-tour="favori" style={iconBtn(!!isSaved)}
-              aria-label={isSaved ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              title={isSaved ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
+              aria-label={isSaved ? t('Retirer des favoris') : t('Ajouter aux favoris')}
+              title={isSaved ? t('Retirer des favoris') : t('Ajouter aux favoris')}>
               {isSaving ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (

@@ -9,16 +9,17 @@ import React from 'react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
 import { ROMAN } from '@/lib/paperFont';
+import { t } from '@/i18n';
 
 export const LessonReader: React.FC<{ structure?: FlexibleLessonStructure }> = ({ structure }) => {
   const sections = structure?.sections ?? [];
   if (sections.length === 0) {
-    return <p className="py-10 text-center text-[14.5px] text-ink-faint">Cette leçon n’a pas encore de contenu.</p>;
+    return <p className="py-10 text-center text-[14.5px] text-ink-faint">{t('Cette leçon n’a pas encore de contenu.')}</p>;
   }
   return (
     <div className="fd-lesson">
       {sections.map((section, i) => {
-        const title = section.title || 'Partie sans titre';
+        const title = section.title || t('Partie sans titre');
         const num = ROMAN[i] || String(i + 1);
         return (
           <section key={section.id} className={i === 0 ? '' : 'mt-9 sm:mt-11'}>

@@ -73,17 +73,17 @@ export const DayChart: React.FC<DayChartProps> = ({ series, color, unit, headlin
         {/* Graduations : lignes fines, chiffres à gauche. */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           {scale.map((t) => (
-            <div key={t} className="absolute left-0 right-0 h-0" style={{ bottom: `${(t / top) * 100}%` }}>
-              <span className="fd-nums absolute left-0 top-0 w-7 -translate-y-1/2 pr-1.5 text-right text-[10.5px] leading-none text-ink-faint">{fmt(t)}</span>
-              <span className={`absolute left-8 right-0 top-0 border-t ${t === 0 ? 'border-[#e7e3dc]' : 'border-[#f2f1ee]'}`} />
+            <div key={t} className="absolute start-0 end-0 h-0" style={{ bottom: `${(t / top) * 100}%` }}>
+              <span className="fd-nums absolute start-0 top-0 w-7 -translate-y-1/2 pe-1.5 text-end text-[10.5px] leading-none text-ink-faint">{fmt(t)}</span>
+              <span className={`absolute start-8 end-0 top-0 border-t ${t === 0 ? 'border-[#e7e3dc]' : 'border-[#f2f1ee]'}`} />
             </div>
           ))}
           {avg > 0 && (
-            <div className="absolute left-8 right-0 border-t-2 border-dashed opacity-60" style={{ bottom: `${(avg / top) * 100}%`, borderColor: color }} />
+            <div className="absolute start-8 end-0 border-t-2 border-dashed opacity-60" style={{ bottom: `${(avg / top) * 100}%`, borderColor: color }} />
           )}
         </div>
 
-        <div className={`absolute inset-y-0 left-8 right-0 flex items-end ${series.length > 40 ? 'gap-px' : 'gap-[3px]'}`} onMouseLeave={() => setHover(null)}>
+        <div className={`absolute inset-y-0 start-8 end-0 flex items-end ${series.length > 40 ? 'gap-px' : 'gap-[3px]'}`} onMouseLeave={() => setHover(null)}>
           {series.map((d, i) => {
             const v = d.value;
             const on = hover === i;
@@ -106,7 +106,7 @@ export const DayChart: React.FC<DayChartProps> = ({ series, color, unit, headlin
         </div>
       </div>
 
-      <div className="mt-2 flex justify-between pl-8 text-[11px] text-ink-faint">
+      <div className="mt-2 flex justify-between ps-8 text-[11px] text-ink-faint">
         <span>{series[0] ? dayLabel(series[0].date) : ''}</span>
         {mid && <span className="hidden sm:inline">{dayLabel(mid.date)}</span>}
         <span>aujourd’hui</span>

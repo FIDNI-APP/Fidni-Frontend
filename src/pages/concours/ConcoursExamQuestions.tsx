@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
 import { TaxonomyPicker, type TaxonomySelection } from './TaxonomyPicker';
+import { t } from '@/i18n';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -108,7 +109,7 @@ const OptionsEditor = memo(function OptionsEditor({
 }: OptionsEditorProps) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 600, marginBottom: 4 }}>Options</div>
+      <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 600, marginBottom: 4 }}>{t('Options')}</div>
       {options.map((opt, oi) => (
         <div key={`${activeIdx}-${oi}`} className="flex items-start gap-2 mb-3">
           <input
@@ -127,7 +128,7 @@ const OptionsEditor = memo(function OptionsEditor({
               editorKey={`option-${activeIdx}-${oi}`}
               content={opt.text}
               onChange={(html) => setOptionText(oi, html)}
-              placeholder={`Option ${opt.key}…`}
+              placeholder={t('Option {k}…', { k: opt.key })}
               minHeight="48px"
             />
           </div>
@@ -179,7 +180,7 @@ export default function ConcoursExamQuestionsPage() {
         setStructure(s && s.questions ? s : { version: '1.0', questions: [] });
       } catch (ex) {
         console.error(ex);
-        setErr('Impossible de charger l\'examen.');
+        setErr(t("Impossible de charger l'examen."));
       } finally { setLoading(false); }
     })();
   }, [id]);
@@ -229,8 +230,8 @@ export default function ConcoursExamQuestionsPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#6b6862' }}>Accès réservé aux administrateurs.</p>
-          <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
+          <p style={{ color: '#6b6862' }}>{t('Accès réservé aux administrateurs.')}</p>
+          <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">{t('Retour')}</Link>
         </div>
       </div>
     );
@@ -248,8 +249,8 @@ export default function ConcoursExamQuestionsPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#6b6862' }}>{err || 'Examen introuvable.'}</p>
-          <Link to="/concours/admin" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
+          <p style={{ color: '#6b6862' }}>{err || t('Examen introuvable.')}</p>
+          <Link to="/concours/admin" className="fd-btn-primary mt-4 inline-flex">{t('Retour')}</Link>
         </div>
       </div>
     );
@@ -276,7 +277,7 @@ export default function ConcoursExamQuestionsPage() {
   };
 
   const removeQuestion = (idx: number) => {
-    if (!window.confirm('Supprimer cette question ?')) return;
+    if (!window.confirm(t('Supprimer cette question ?'))) return;
     setStructure(prev => ({
       ...prev,
       questions: prev.questions.filter((_, i) => i !== idx),
@@ -303,7 +304,7 @@ export default function ConcoursExamQuestionsPage() {
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1800);
     } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'Erreur lors de l\'enregistrement.');
+      setErr(e?.response?.data?.detail || t("Erreur lors de l'enregistrement."));
     } finally { setSaving(false); }
   };
 
@@ -317,12 +318,12 @@ export default function ConcoursExamQuestionsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
-      <SEO title={`Questions — ${exam.title} - Fidni`} description="Édition des questions" />
+      <SEO title={t('Questions — {titre} - Fidni', { titre: exam.title })} description={t('Édition des questions')} />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         <button onClick={() => navigate('/concours/admin')} className="fd-btn-ghost mb-3"
                 style={{ padding: '5px 10px', fontSize: 12 }}>
-          <ArrowLeft className="w-3 h-3" /> Admin concours
+          <ArrowLeft className="w-3 h-3" /> {t('Admin concours')}
         </button>
 
         {/* Header */}
@@ -339,19 +340,19 @@ export default function ConcoursExamQuestionsPage() {
               {exam.title}
             </h1>
             <p style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>
-              {structure.questions.length} question{structure.questions.length > 1 ? 's' : ''}
+              {structure.questions.length > 1 ? t('{n} questions', { n: structure.questions.length }) : t('{n} question', { n: structure.questions.length })}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {savedFlash && (
-              <span style={{ fontSize: 12, color: '#1a7a4a', fontWeight: 600 }}>✓ Enregistré</span>
+              <span style={{ fontSize: 12, color: '#1a7a4a', fontWeight: 600 }}>✓ {t('Enregistré')}</span>
             )}
             <button className="fd-btn-ghost" onClick={() => setShowImport(true)}>
-              <Upload className="w-4 h-4" /> Importer JSON
+              <Upload className="w-4 h-4" /> {t('Importer JSON')}
             </button>
             <button className="fd-btn-primary" onClick={save} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <SaveIcon className="w-4 h-4" />}
-              Enregistrer
+              {t('Enregistrer')}
             </button>
           </div>
         </div>
@@ -386,14 +387,14 @@ export default function ConcoursExamQuestionsPage() {
                   border: `1px solid ${i === activeIdx ? '#b8b4ac' : '#e7e3dc'}`,
                   color: i === activeIdx ? '#000000' : '#33302b',
                   fontSize: 13, fontWeight: i === activeIdx ? 700 : 500,
-                  textAlign: 'left', cursor: 'pointer',
+                  textAlign: 'start', cursor: 'pointer',
                 }}
               >
-                Question {i + 1}
+                {t('Question {n}', { n: i + 1 })}
               </button>
             ))}
             <button onClick={addQuestion} className="fd-btn-ghost" style={{ marginTop: 6, justifyContent: 'center' }}>
-              <Plus className="w-3.5 h-3.5" /> Ajouter
+              <Plus className="w-3.5 h-3.5" /> {t('Ajouter')}
             </button>
           </div>
 
@@ -401,13 +402,13 @@ export default function ConcoursExamQuestionsPage() {
           <div className="fd-card p-5">
             {!active ? (
               <p style={{ color: '#6b6862', fontSize: 13, padding: 24, textAlign: 'center' }}>
-                Aucune question. Clique sur "Ajouter" pour créer la première.
+                {t('Aucune question. Clique sur "Ajouter" pour créer la première.')}
               </p>
             ) : (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span style={{ fontSize: 12, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
-                    Question {activeIdx + 1} / {structure.questions.length}
+                    {t('Question {n} / {total}', { n: activeIdx + 1, total: structure.questions.length })}
                   </span>
                   <div className="flex items-center gap-1">
                     <button onClick={() => moveQuestion(activeIdx, -1)} className="fd-btn-ghost" style={{ padding: 5 }} disabled={activeIdx === 0}>
@@ -422,12 +423,12 @@ export default function ConcoursExamQuestionsPage() {
                   </div>
                 </div>
 
-                <Field label="Énoncé">
+                <Field label={t('Énoncé')}>
                   <EditorField
                     editorKey={`statement-${activeIdx}`}
                     content={active.statement}
                     onChange={setStatement}
-                    placeholder="Énoncé de la question…"
+                    placeholder={t('Énoncé de la question…')}
                     minHeight="120px"
                   />
                 </Field>
@@ -447,12 +448,12 @@ export default function ConcoursExamQuestionsPage() {
                     className="fd-btn-ghost"
                     style={{ fontSize: 11, alignSelf: 'flex-start' }}
                   >
-                    <Plus className="w-3 h-3" /> Ajouter une option
+                    <Plus className="w-3 h-3" /> {t('Ajouter une option')}
                   </button>
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Bonne réponse">
+                  <Field label={t('Bonne réponse')}>
                     <select
                       value={active.correct_key || ''}
                       onChange={(e) => updateQuestion(activeIdx, { correct_key: e.target.value })}
@@ -461,7 +462,7 @@ export default function ConcoursExamQuestionsPage() {
                       {active.options.map(o => <option key={o.key} value={o.key}>{o.key}</option>)}
                     </select>
                   </Field>
-                  <Field label="Points">
+                  <Field label={t('Points')}>
                     <input
                       type="number"
                       value={active.points ?? 1}
@@ -471,12 +472,12 @@ export default function ConcoursExamQuestionsPage() {
                   </Field>
                 </div>
 
-                <Field label="Explication">
+                <Field label={t('Explication')}>
                   <EditorField
                     editorKey={`explanation-${activeIdx}`}
                     content={active.explanation || ''}
                     onChange={setExplanation}
-                    placeholder="Pourquoi cette réponse est correcte…"
+                    placeholder={t('Pourquoi cette réponse est correcte…')}
                     minHeight="100px"
                   />
                 </Field>
@@ -646,31 +647,31 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
           data = JSON.parse(repaired);
           usedRepair = true;
         } catch (secondErr: any) {
-          setErr(`JSON invalide : ${firstErr?.message || 'erreur de parsing'}. Auto-réparation tentée mais ${secondErr?.message || 'toujours invalide'}.`);
+          setErr(t('JSON invalide : {e1}. Auto-réparation tentée mais {e2}.', { e1: firstErr?.message || t('erreur de parsing'), e2: secondErr?.message || t('toujours invalide') }));
           return;
         }
       } else {
-        setErr(`JSON invalide : ${firstErr?.message || 'erreur de parsing'}`);
+        setErr(t('JSON invalide : {e1}', { e1: firstErr?.message || t('erreur de parsing') }));
         return;
       }
     }
 
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      setErr('La racine doit être un objet { "version": "1.0", "questions": [...] }.');
+      setErr(t('La racine doit être un objet { "version": "1.0", "questions": [...] }.'));
       return;
     }
 
     const w: string[] = [];
     if (usedRepair) {
-      w.push('Auto-réparation appliquée : les backslashes LaTeX non échappés ont été doublés. Vérifie le rendu après import.');
+      w.push(t('Auto-réparation appliquée : les backslashes LaTeX non échappés ont été doublés. Vérifie le rendu après import.'));
     }
-    if (!data.version) w.push('Champ "version" absent — "1.0" sera utilisé.');
+    if (!data.version) w.push(t('Champ "version" absent — "1.0" sera utilisé.'));
     if (!Array.isArray(data.questions)) {
-      setErr('Le champ "questions" doit être un tableau.');
+      setErr(t('Le champ "questions" doit être un tableau.'));
       return;
     }
     if (data.questions.length === 0) {
-      setErr('Le tableau "questions" est vide.');
+      setErr(t('Le tableau "questions" est vide.'));
       return;
     }
 
@@ -679,14 +680,14 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
       const q = data.questions[i];
       const path = `questions[${i}]`;
       if (!q || typeof q !== 'object') {
-        setErr(`${path} doit être un objet.`); return;
+        setErr(t('{path} doit être un objet.', { path })); return;
       }
       const id = typeof q.id === 'string' && q.id ? q.id : `q${i + 1}`;
       const statement = typeof q.statement === 'string' ? q.statement : '';
-      if (!statement) w.push(`${path} : "statement" vide.`);
+      if (!statement) w.push(t('{path} : "statement" vide.', { path }));
 
       if (!Array.isArray(q.options) || q.options.length < 2) {
-        setErr(`${path}.options doit être un tableau d'au moins 2 éléments.`);
+        setErr(t("{path}.options doit être un tableau d'au moins 2 éléments.", { path }));
         return;
       }
       const options: { key: string; text: string }[] = [];
@@ -694,27 +695,27 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
       for (let j = 0; j < q.options.length; j++) {
         const o = q.options[j];
         if (!o || typeof o !== 'object') {
-          setErr(`${path}.options[${j}] doit être un objet.`); return;
+          setErr(t('{path}.options[{j}] doit être un objet.', { path, j })); return;
         }
         const key = typeof o.key === 'string' ? o.key.trim() : '';
-        if (!key) { setErr(`${path}.options[${j}].key est vide.`); return; }
+        if (!key) { setErr(t('{path}.options[{j}].key est vide.', { path, j })); return; }
         if (seenKeys.has(key)) {
-          setErr(`${path} : la clé "${key}" est dupliquée.`); return;
+          setErr(t('{path} : la clé "{key}" est dupliquée.', { path, key })); return;
         }
         seenKeys.add(key);
         const tx = typeof o.text === 'string' ? o.text : '';
-        if (!tx) w.push(`${path}.options[${j}] (key=${key}) : "text" vide.`);
+        if (!tx) w.push(t('{path}.options[{j}] (key={key}) : "text" vide.', { path, j, key }));
         options.push({ key, text: tx });
       }
 
       const correctKey = typeof q.correct_key === 'string' ? q.correct_key : '';
       if (!correctKey || !seenKeys.has(correctKey)) {
-        setErr(`${path}.correct_key "${correctKey}" doit correspondre à l'une des clés des options.`);
+        setErr(t("{path}.correct_key \"{correctKey}\" doit correspondre à l'une des clés des options.", { path, correctKey }));
         return;
       }
 
       const explanation = typeof q.explanation === 'string' ? q.explanation : '';
-      if (!explanation) w.push(`${path} : "explanation" vide — l'élève n'aura pas de justification.`);
+      if (!explanation) w.push(t("{path} : \"explanation\" vide — l'élève n'aura pas de justification.", { path }));
 
       const points = typeof q.points === 'number' && q.points > 0 ? q.points : 1;
 
@@ -762,7 +763,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
       >
         <div className="flex items-center justify-between mb-4">
           <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>
-            Importer un JSON
+            {t('Importer un JSON')}
           </h3>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
             <X className="w-5 h-5" />
@@ -770,7 +771,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
         </div>
 
         <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 12, lineHeight: 1.6 }}>
-          Colle un JSON respectant le schéma ci-dessous. Tu peux aussi
+          {t('Colle un JSON respectant le schéma ci-dessous. Tu peux aussi')}
           <button
             type="button"
             onClick={() => setShowPrompt(s => !s)}
@@ -780,9 +781,9 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
               padding: 0, margin: '0 4px', fontSize: 13, fontWeight: 600,
             }}
           >
-            {showPrompt ? 'masquer le prompt LLM' : 'afficher le prompt LLM'}
+            {showPrompt ? t('masquer le prompt LLM') : t('afficher le prompt LLM')}
           </button>
-          à donner à ChatGPT/Claude pour générer ce JSON automatiquement.
+          {t('à donner à ChatGPT/Claude pour générer ce JSON automatiquement.')}
         </p>
 
         {showPrompt && (
@@ -794,7 +795,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
           >
             <div className="flex items-center justify-between mb-2">
               <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
-                Prompt à coller dans le LLM
+                {t('Prompt à coller dans le LLM')}
               </span>
               <button
                 type="button"
@@ -803,7 +804,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                 style={{ padding: '4px 10px', fontSize: 11 }}
               >
                 {promptCopied ? <CheckIcon className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                {promptCopied ? 'Copié' : 'Copier'}
+                {promptCopied ? t('Copié') : t('Copier')}
               </button>
             </div>
             <textarea
@@ -849,8 +850,8 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
             color: '#9a6e1c', padding: '10px 12px', borderRadius: 10,
             fontSize: 12, marginTop: 10,
           }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Avertissements :</div>
-            <ul style={{ paddingLeft: 18, lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('Avertissements :')}</div>
+            <ul style={{ paddingInlineStart: 18, lineHeight: 1.6 }}>
               {warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           </div>
@@ -862,14 +863,14 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
             color: '#15633c', padding: '10px 12px', borderRadius: 10,
             fontSize: 12, marginTop: 10,
           }}>
-            ✓ JSON valide — <strong>{parsed.questions.length}</strong> question{parsed.questions.length > 1 ? 's' : ''} prête{parsed.questions.length > 1 ? 's' : ''} à importer.
+            ✓ {t('JSON valide —')} <strong>{parsed.questions.length}</strong> {parsed.questions.length > 1 ? t('questions prêtes à importer.') : t('question prête à importer.')}
           </div>
         )}
 
         {parsed && (
           <div style={{ marginTop: 14 }}>
-            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginRight: 10 }}>
-              Mode :
+            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginInlineEnd: 10 }}>
+              {t('Mode :')}
             </span>
             <div className="inline-flex" style={{
               background: '#f7f6f3', border: '1px solid #e7e3dc',
@@ -885,7 +886,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                   fontSize: 11, fontWeight: 600,
                 }}
               >
-                Ajouter ({currentCount} → {currentCount + parsed.questions.length})
+                {t('Ajouter ({a} → {b})', { a: currentCount, b: currentCount + parsed.questions.length })}
               </button>
               <button
                 type="button"
@@ -897,26 +898,26 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                   fontSize: 11, fontWeight: 600,
                 }}
               >
-                Remplacer ({currentCount} → {parsed.questions.length})
+                {t('Remplacer ({a} → {b})', { a: currentCount, b: parsed.questions.length })}
               </button>
             </div>
           </div>
         )}
 
         <div className="flex justify-end gap-2 mt-5">
-          <button className="fd-btn-ghost" onClick={onClose}>Annuler</button>
+          <button className="fd-btn-ghost" onClick={onClose}>{t('Annuler')}</button>
           <button
             className="fd-btn-primary"
             onClick={() => parsed && onApply(parsed, mode)}
             disabled={!parsed || !!err}
           >
             <Upload className="w-4 h-4" />
-            Importer
+            {t('Importer')}
           </button>
         </div>
 
         <p style={{ fontSize: 11, color: '#6b6862', marginTop: 10, fontStyle: 'italic' }}>
-          Note : l'import met à jour l'éditeur localement. N'oublie pas de cliquer sur <strong>Enregistrer</strong> pour sauvegarder côté serveur.
+          {t("Note : l'import met à jour l'éditeur localement. N'oublie pas de cliquer sur")} <strong>{t('Enregistrer')}</strong> {t('pour sauvegarder côté serveur.')}
         </p>
       </div>
     </div>

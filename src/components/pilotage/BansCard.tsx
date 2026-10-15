@@ -65,7 +65,7 @@ export const BansCard: React.FC = () => {
   return (
     <section className="fd-card mb-4 overflow-hidden">
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-[#faf9f7]">
+        className="flex w-full items-center gap-3 px-5 py-3.5 text-start hover:bg-[#faf9f7]">
         <Ban className="h-4 w-4 shrink-0 text-ink-soft" />
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-semibold text-ink">Comptes bannis</span>

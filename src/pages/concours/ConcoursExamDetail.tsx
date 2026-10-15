@@ -24,6 +24,7 @@ import { Page, PageHeader, Segmented, EmptyState, CardsSkeleton } from '@/compon
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
 import { ConcoursExamStatsTab } from './ConcoursExamStatsTab';
 import { ConcoursExamActivityTab } from './ConcoursExamActivityTab';
+import { t, dateLocale } from '@/i18n';
 
 type ExamTab = 'navigation' | 'stats' | 'activity';
 
@@ -100,10 +101,10 @@ export default function ConcoursExamDetailPage() {
 
   if (!exam) return (
     <Page>
-      <PageHeader back={{ to: '/concours', label: 'Concours' }} title="Sujet introuvable" />
-      <EmptyState icon={SearchX} tone="ink" title="Ce sujet n’existe plus"
-        text="Il a peut-être été retiré. Retrouve les autres annales sur la page des concours."
-        action={<Link to="/concours" className="fd-btn-primary min-h-10">Voir les concours</Link>} />
+      <PageHeader back={{ to: '/concours', label: t('Concours') }} title={t('Sujet introuvable')} />
+      <EmptyState icon={SearchX} tone="ink" title={t('Ce sujet n’existe plus')}
+        text={t('Il a peut-être été retiré. Retrouve les autres annales sur la page des concours.')}
+        action={<Link to="/concours" className="fd-btn-primary min-h-10">{t('Voir les concours')}</Link>} />
     </Page>
   );
 
@@ -134,7 +135,7 @@ export default function ConcoursExamDetailPage() {
       {/* ═══════════ En-tête (refonte du 11/10/2026) : sur le papier, comme le reste de l'espace élève ═══════════ */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8">
         <PageHeader
-          back={{ to: '/concours', label: 'Concours' }}
+          back={{ to: '/concours', label: t('Concours') }}
           eyebrow={(
             <>
               <Link to={`/concours?concours=${exam.concours_type}`} className="hover:underline">{exam.concours_type_display}</Link>
@@ -147,8 +148,8 @@ export default function ConcoursExamDetailPage() {
             <>
               {exam.description && <span className="block">{exam.description}</span>}
               <span className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
-                <span className="inline-flex items-center gap-1.5"><ListChecks className="w-4 h-4" aria-hidden /> {exam.question_count} questions</span>
-                <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" aria-hidden /> {exam.duration_minutes} min</span>
+                <span className="inline-flex items-center gap-1.5"><ListChecks className="w-4 h-4" aria-hidden /> {t('{n} questions', { n: exam.question_count })}</span>
+                <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" aria-hidden /> {exam.duration_minutes} {t('min')}</span>
               </span>
             </>
           )}
@@ -156,7 +157,7 @@ export default function ConcoursExamDetailPage() {
             <>
               <button type="button" onClick={onStartSimulation} disabled={starting} className="fd-btn-primary min-h-10 disabled:opacity-70">
                 {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                Lancer la simulation
+                {t('Lancer la simulation')}
               </button>
               <button
                 type="button"
@@ -168,20 +169,20 @@ export default function ConcoursExamDetailPage() {
                 {saving
                   ? <Loader2 className="w-4 h-4 animate-spin" />
                   : <Bookmark className="w-4 h-4" fill={exam.is_saved ? 'currentColor' : 'none'} />}
-                {exam.is_saved ? 'Enregistré' : 'Enregistrer'}
+                {exam.is_saved ? t('Enregistré') : t('Enregistrer')}
               </button>
             </>
           )}
         >
           <div className="mt-5" data-tour="concours-sujet-onglets">
             <Segmented<ExamTab>
-              label="Vues du sujet"
+              label={t('Vues du sujet')}
               value={activeTab}
               onChange={setActiveTab}
               options={[
-                { key: 'navigation', label: 'Navigation', icon: TabIcons.navigation },
-                { key: 'stats', label: 'Statistiques', icon: TabIcons.stats },
-                { key: 'activity', label: 'Activité', icon: TabIcons.activity },
+                { key: 'navigation', label: t('Navigation'), icon: TabIcons.navigation },
+                { key: 'stats', label: t('Statistiques'), icon: TabIcons.stats },
+                { key: 'activity', label: t('Activité'), icon: TabIcons.activity },
               ]}
             />
           </div>
@@ -205,13 +206,13 @@ export default function ConcoursExamDetailPage() {
         {activeTab === 'navigation' && (
         <div className="max-w-3xl mx-auto">
         <p className="mb-5 text-[13px] leading-relaxed text-ink-faint">
-          Mode révision : les réponses sont masquées. Réfléchis à chaque question, puis révèle le corrigé.
+          {t('Mode révision : les réponses sont masquées. Réfléchis à chaque question, puis révèle le corrigé.')}
         </p>
 
         {/* Questions (identité « encre et papier » : vert = bonne réponse, or = explication) */}
         {questions.length === 0 ? (
           <div className="fd-card px-6 py-14 text-center">
-            <p className="text-[14px] text-ink-faint">Aucune question disponible pour cet examen.</p>
+            <p className="text-[14px] text-ink-faint">{t('Aucune question disponible pour cet examen.')}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
@@ -221,23 +222,23 @@ export default function ConcoursExamDetailPage() {
               return (
                 <section
                   key={q.id || idx}
-                  aria-label={`Question ${idx + 1}`}
+                  aria-label={t('Question {n}', { n: idx + 1 })}
                   className="concours-question-card animate-fade-up rounded-2xl border border-line bg-white px-4 py-5 sm:px-7 sm:py-6"
                 >
                   {/* En-tête : numéro, points, « Révélée » */}
                   <div className="mb-4 flex items-center gap-3">
                     <span className="fd-nums text-[11.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
-                      Question {idx + 1}
+                      {t('Question {n}', { n: idx + 1 })}
                     </span>
                     <span className="h-px flex-1 bg-[#efece6]" aria-hidden />
                     {q.points && (
                       <span className="fd-nums text-[11.5px] font-semibold text-ink-faint">
-                        {q.points} pt{q.points > 1 ? 's' : ''}
+                        {q.points > 1 ? t('{n} pts', { n: q.points }) : t('{n} pt', { n: q.points })}
                       </span>
                     )}
                     {open && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-hover">
-                        <Check className="h-3 w-3" aria-hidden /> Révélée
+                        <Check className="h-3 w-3" aria-hidden /> {t("Révélée")}
                       </span>
                     )}
                   </div>
@@ -269,7 +270,7 @@ export default function ConcoursExamDetailPage() {
                           {showCorrect && (
                             <>
                               <Check className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
-                              <span className="sr-only">Bonne réponse</span>
+                              <span className="sr-only">{t('Bonne réponse')}</span>
                             </>
                           )}
                         </div>
@@ -287,8 +288,8 @@ export default function ConcoursExamDetailPage() {
                     onClick={() => setRevealed(prev => ({ ...prev, [idx]: !prev[idx] }))}
                   >
                     {open
-                      ? <><ChevronUp className="h-4 w-4" /> Masquer le corrigé</>
-                      : <><ChevronDown className="h-4 w-4" /> Voir le corrigé</>}
+                      ? <><ChevronUp className="h-4 w-4" /> {t('Masquer le corrigé')}</>
+                      : <><ChevronDown className="h-4 w-4" /> {t('Voir le corrigé')}</>}
                   </button>
 
                   {/* Explication */}
@@ -296,10 +297,10 @@ export default function ConcoursExamDetailPage() {
                     <div className="mt-4 animate-fade-up rounded-xl bg-gold-soft p-4 ring-1 ring-gold-line sm:px-5">
                       <div className="mb-2.5 flex items-center gap-2">
                         <Lightbulb className="h-4 w-4 text-gold-strong" aria-hidden />
-                        <span className="text-[13px] font-bold text-gold-strong">Explication</span>
+                        <span className="text-[13px] font-bold text-gold-strong">{t('Explication')}</span>
                         {correctOpt && (
-                          <span className="ml-auto rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-hover ring-1 ring-brand-line">
-                            Réponse : {q.correct_key}
+                          <span className="ms-auto rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-hover ring-1 ring-brand-line">
+                            {t('Réponse : {k}', { k: q.correct_key })}
                           </span>
                         )}
                       </div>
@@ -310,9 +311,9 @@ export default function ConcoursExamDetailPage() {
                   )}
                   {open && !q.explanation && (
                     <div className="mt-4 rounded-xl border border-brand-line bg-brand-soft px-4 py-3 text-[14px] font-semibold text-brand-hover">
-                      Bonne réponse : <strong>{q.correct_key}</strong>
+                      {t('Bonne réponse :')} <strong>{q.correct_key}</strong>
                       {correctOpt && (
-                        <span className="ml-2 font-normal text-ink-soft">
+                        <span className="ms-2 font-normal text-ink-soft">
                           — <ConcoursContentRenderer html={correctOpt.text} />
                         </span>
                       )}
@@ -330,7 +331,7 @@ export default function ConcoursExamDetailPage() {
         }}>
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="w-4 h-4 text-ink-faint" aria-hidden />
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>Commentaires</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{t('Commentaires')}</h3>
           </div>
           <CommentsBlock examId={exam.id} currentUserId={user?.id} canModerate={isModerator(user)}
                          onLogin={isAuthenticated ? undefined : () => openModal('commentaire')} />
@@ -360,7 +361,7 @@ export default function ConcoursExamDetailPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2" style={{ marginBottom: 6 }}>
                 <span className="truncate" style={{ fontSize: 12, fontWeight: 600, color: '#6b6862' }}>
-                  {revealedCount}/{questions.length} <span className="hidden sm:inline">corrigés </span>révélés
+                  {revealedCount}/{questions.length} <span className="hidden sm:inline">{t('corrigés')} </span>{t('révélés')}
                 </span>
                 <button
                   onClick={() => allRevealed ? setRevealed({}) : revealAll()}
@@ -369,7 +370,7 @@ export default function ConcoursExamDetailPage() {
                     background: 'none', border: 'none', cursor: 'pointer', minHeight: 28,
                   }}
                 >
-                  {allRevealed ? 'Tout masquer' : 'Tout révéler'}
+                  {allRevealed ? t('Tout masquer') : t('Tout révéler')}
                 </button>
               </div>
               <div style={{ height: 6, borderRadius: 99, background: '#efece6', overflow: 'hidden' }}>
@@ -395,8 +396,8 @@ export default function ConcoursExamDetailPage() {
               }}
             >
               {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              <span className="hidden sm:inline">Lancer la simulation</span>
-              <span className="sm:hidden">Simulation</span>
+              <span className="hidden sm:inline">{t('Lancer la simulation')}</span>
+              <span className="sm:hidden">{t('Simulation')}</span>
             </button>
           </div>
         </div>
@@ -429,14 +430,14 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
     if (!text.trim() || posting) return;
     setPosting(true); setErr('');
     try { await postExamComment(examId, text.trim()); setText(''); await refresh(); }
-    catch (e) { console.error(e); setErr("Ton commentaire n'a pas pu être publié. Réessaie."); }
+    catch (e) { console.error(e); setErr(t("Ton commentaire n'a pas pu être publié. Réessaie.")); }
     finally { setPosting(false); }
   };
 
   const remove = async (cid: number) => {
-    if (!window.confirm('Supprimer ce commentaire ?')) return;
+    if (!window.confirm(t('Supprimer ce commentaire ?'))) return;
     try { await deleteConcoursComment(cid); await refresh(); }
-    catch (e) { console.error(e); setErr("Le commentaire n'a pas pu être supprimé."); }
+    catch (e) { console.error(e); setErr(t("Le commentaire n'a pas pu être supprimé.")); }
   };
 
   return (
@@ -444,16 +445,16 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
       {onLogin ? (
         <div className="flex flex-wrap items-center justify-between gap-3"
              style={{ background: '#faf9f7', border: '1px solid #e7e3dc', borderRadius: 10, padding: '12px 14px' }}>
-          <p style={{ fontSize: 13, color: '#6b6862' }}>Connecte-toi pour poser une question ou partager une astuce.</p>
-          <button onClick={onLogin} className="fd-btn-primary">Se connecter</button>
+          <p style={{ fontSize: 13, color: '#6b6862' }}>{t('Connecte-toi pour poser une question ou partager une astuce.')}</p>
+          <button onClick={onLogin} className="fd-btn-primary">{t('Se connecter')}</button>
         </div>
       ) : (
       <div className="flex gap-2">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Pose une question ou partage une astuce…"
-          aria-label="Ton commentaire"
+          placeholder={t('Pose une question ou partage une astuce…')}
+          aria-label={t('Ton commentaire')}
           rows={2}
           style={{
             flex: 1, padding: '10px 14px', borderRadius: 10,
@@ -468,7 +469,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
           className="fd-btn-primary"
           style={{ alignSelf: 'flex-end', minWidth: 80 }}
         >
-          {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Publier'}
+          {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('Publier')}
         </button>
       </div>
       )}
@@ -479,7 +480,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
           <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: '#1a1a1a' }} />
         </div>
       ) : comments.length === 0 ? (
-        <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>Aucun commentaire pour le moment.</p>
+        <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>{t('Aucun commentaire pour le moment.')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {comments.map(c => (
@@ -500,16 +501,16 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
                 <div className="flex items-center gap-2 flex-wrap">
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.author.username}</span>
                   <span style={{ fontSize: 10, color: '#6b6862' }}>
-                    {new Date(c.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {new Date(c.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
                 <p style={{ fontSize: 13, color: '#33302b', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.content}</p>
               </div>
               {(canModerate || (currentUserId !== undefined && Number(currentUserId) === c.author.id)) && (
                 <button onClick={() => remove(c.id)}
-                        aria-label="Supprimer le commentaire" title="Supprimer le commentaire"
+                        aria-label={t('Supprimer le commentaire')} title={t('Supprimer le commentaire')}
                         className="inline-flex items-center justify-center"
-                        style={{ width: 32, height: 32, margin: '-6px -6px 0 0', background: 'transparent', border: 'none', color: '#a23b34', cursor: 'pointer', flexShrink: 0 }}>
+                        style={{ width: 32, height: 32, margin: '-6px 0 0 0', marginInlineEnd: -6, background: 'transparent', border: 'none', color: '#a23b34', cursor: 'pointer', flexShrink: 0 }}>
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}

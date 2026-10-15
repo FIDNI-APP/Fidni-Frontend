@@ -23,6 +23,7 @@ import { DIFFICULTY, feltTooltip } from '@/components/content/listing/listingUti
 import { trackAction } from '@/lib/usage';
 import { questionNumbering } from '@/lib/reportTargets';
 import { QuestionChart } from './QuestionChart';
+import { t } from '@/i18n';
 
 /** L'examen propose « En partie » (la moitié des points) ; l'exercice garde Réussi / À revoir. */
 const EXAM_OPTIONS: AssessmentStatus[] = ['success', 'partial', 'review'];
@@ -99,7 +100,7 @@ const fmtPts = (n: number) => (Math.round(n * 100) / 100).toString().replace('.'
 
 function durationLabel(min: number) {
   const h = Math.floor(min / 60), m = min % 60;
-  return h ? `${h} h${m ? ` ${String(m).padStart(2, '0')}` : ''}` : `${m} min`;
+  return h ? (m ? t('{h} h {m}', { h, m: String(m).padStart(2, '0') }) : t('{h} h', { h })) : t('{m} min', { m });
 }
 function clock(sec: number) {
   const s = Math.max(0, Math.round(sec));
@@ -305,9 +306,9 @@ export const ExamView: React.FC<Props> = ({
   }, []);
 
   const felt = content.felt;
-  const feltLabel = felt ? (felt.differs ? DIFFICULTY[felt.level]?.label : 'Comme annoncé') : null;
+  const feltLabel = felt ? (felt.differs ? (DIFFICULTY[felt.level]?.label ? t(DIFFICULTY[felt.level].label) : DIFFICULTY[felt.level]?.label) : t('Comme annoncé')) : null;
 
-  const confirmFinish = () => { if (window.confirm('Terminer l’épreuve et passer à la correction ?')) epreuve.finish(); };
+  const confirmFinish = () => { if (window.confirm(t('Terminer l’épreuve et passer à la correction ?'))) epreuve.finish(); };
   const levelName = content.class_levels?.[0]?.name;
 
   // ── Épreuve : lancement dans la fiche du sujet ; pendant l'épreuve, le compte à rebours (colonne de droite
@@ -316,12 +317,12 @@ export const ExamView: React.FC<Props> = ({
   const timerPanel = (
     <div className="rounded-2xl border border-line bg-white p-5" data-tour="examen-epreuve">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Épreuve en cours</span>
-        {epreuve.status === 'paused' && <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-faint">en pause</span>}
+        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Épreuve en cours')}</span>
+        {epreuve.status === 'paused' && <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-faint">{t('en pause')}</span>}
       </div>
       <div className="mt-2 flex items-baseline justify-between">
         <span role="timer" className={`fd-nums text-[32px] font-semibold leading-none ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>{clockLabel}</span>
-        <span className="text-[12px] text-ink-faint">{epreuve.remaining !== null ? 'restant' : 'écoulé'}</span>
+        <span className="text-[12px] text-ink-faint">{epreuve.remaining !== null ? t('restant') : t('écoulé')}</span>
       </div>
       {epreuve.remaining !== null && (
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]">
@@ -331,9 +332,9 @@ export const ExamView: React.FC<Props> = ({
       )}
       <div className="mt-4 grid grid-cols-2 gap-2">
         {epreuve.status === 'running'
-          ? <button type="button" onClick={epreuve.pause} className="fd-btn-ghost min-h-10 justify-center"><Pause className="h-4 w-4" /> Pause</button>
-          : <button type="button" onClick={epreuve.resume} className="fd-btn-ghost min-h-10 justify-center"><Play className="h-4 w-4" /> Reprendre</button>}
-        <button type="button" onClick={confirmFinish} className="fd-btn-primary min-h-10 justify-center"><Flag className="h-4 w-4" /> Terminer</button>
+          ? <button type="button" onClick={epreuve.pause} className="fd-btn-ghost min-h-10 justify-center"><Pause className="h-4 w-4" /> {t('Pause')}</button>
+          : <button type="button" onClick={epreuve.resume} className="fd-btn-ghost min-h-10 justify-center"><Play className="h-4 w-4" /> {t('Reprendre')}</button>}
+        <button type="button" onClick={confirmFinish} className="fd-btn-primary min-h-10 justify-center"><Flag className="h-4 w-4" /> {t('Terminer')}</button>
       </div>
     </div>
   );
@@ -346,7 +347,7 @@ export const ExamView: React.FC<Props> = ({
       className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
         showAll ? 'bg-brand-soft text-brand-hover' : 'border border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
       {showAll ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-      {showAll ? 'Masquer le corrigé' : 'Tout le corrigé'}
+      {showAll ? t('Masquer le corrigé') : t('Tout le corrigé')}
     </button>
   ) : null;
 
@@ -356,39 +357,39 @@ export const ExamView: React.FC<Props> = ({
     <div className="mt-5 border-t border-line pt-5" data-tour="examen-epreuve">
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={epreuve.start} className="fd-btn-primary min-h-11 justify-center px-5 text-[14px]">
-          <Play className="h-4 w-4" /> Lancer l’épreuve
+          <Play className="h-4 w-4" /> {t('Lancer l’épreuve')}
         </button>
         {toggleAll}
       </div>
       <p className="mt-2.5 text-[13px] leading-snug text-ink-faint">
         {durationMin
-          ? <>L’épreuve lance un compte à rebours de {durationLabel(durationMin)} ; les solutions restent cachées jusqu’à la fin.</>
-          : <>L’épreuve lance un chronomètre ; les solutions restent cachées jusqu’à la fin.</>}
+          ? <>{t('L’épreuve lance un compte à rebours de {duree} ; les solutions restent cachées jusqu’à la fin.', { duree: durationLabel(durationMin) })}</>
+          : <>{t('L’épreuve lance un chronomètre ; les solutions restent cachées jusqu’à la fin.')}</>}
       </p>
     </div>
   ) : locked ? (
     <p className="mt-5 flex items-start gap-2.5 rounded-xl border border-gold-line bg-gold-soft px-3.5 py-2.5 text-[13.5px] leading-snug text-gold-strong">
       <Timer className="mt-px h-4 w-4 shrink-0" aria-hidden />
-      <span><b className="font-semibold">Épreuve en cours.</b> Compose sur une feuille : les solutions s’afficheront à la fin.</span>
+      <span><b className="font-semibold">{t('Épreuve en cours.')}</b> {t('Compose sur une feuille : les solutions s’afficheront à la fin.')}</span>
     </p>
   ) : (
     <div className="mt-5 rounded-xl border border-brand-line bg-brand-soft/60 px-4 py-3">
       <p className="flex items-center gap-2 text-[14px] font-semibold text-ink">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-hidden />
-        {epreuve.timeUp ? 'Temps écoulé' : `Épreuve terminée en ${clock(epreuve.elapsed)}`}
+        {epreuve.timeUp ? t('Temps écoulé') : t('Épreuve terminée en {duree}', { duree: clock(epreuve.elapsed) })}
         {corrected > 0 && (
-          <a href="#ta-copie" className="ml-auto shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums fd-exam-narrow">
+          <a href="#ta-copie" className="ms-auto shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums fd-exam-narrow">
             {fmtPts(got)} / {fmtPts(total)}
           </a>
         )}
       </p>
       <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
-        À toi de corriger : ouvre la solution de chaque question et indique Réussi, En partie ou À revoir.
+        {t('À toi de corriger : ouvre la solution de chaque question et indique Réussi, En partie ou À revoir.')}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {toggleAll}
         <button type="button" onClick={epreuve.reset} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[13px] font-medium text-ink-faint hover:text-ink">
-          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Refaire l’épreuve
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> {t('Refaire l’épreuve')}
         </button>
       </div>
     </div>
@@ -399,7 +400,7 @@ export const ExamView: React.FC<Props> = ({
   const partScore = (label: string) => {
     const sc = scores[chartParts.indexOf(label)];
     if (!sc) return null;
-    return sc.corrected > 0 ? `${fmtPts(sc.got)} / ${fmtPts(sc.max)}` : `${fmtPts(sc.max)} pts`;
+    return sc.corrected > 0 ? `${fmtPts(sc.got)} / ${fmtPts(sc.max)}` : t('{n} pts', { n: fmtPts(sc.max) });
   };
   // Ta copie (note estimée), en tête de l'histogramme « Question par question » (15/10/2026 : à la place de
   // l'onglet Activité ; Natsu : « à droite à la place de Ta copie, en vertical »).
@@ -410,18 +411,18 @@ export const ExamView: React.FC<Props> = ({
   const copieHeader = isAuthenticated ? (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Ta copie</span>
+        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Ta copie')}</span>
         {sessionCount > 0 && (
-          <button type="button" onClick={onOpenHistory} className="-my-2 ml-auto min-h-10 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
-            {sessionCount} passage{sessionCount > 1 ? 's' : ''}
+          <button type="button" onClick={onOpenHistory} className="-my-2 ms-auto min-h-10 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
+            {sessionCount > 1 ? t('{n} passages', { n: sessionCount }) : t('{n} passage', { n: sessionCount })}
           </button>
         )}
         {allPaths.length > 0 && (
           <button type="button" onClick={toutReussi} aria-pressed={allSuccess}
-            title={allSuccess ? 'Tout réussi : clique pour effacer' : 'Marquer toutes les questions comme réussies'}
+            title={allSuccess ? t('Tout réussi : clique pour effacer') : t('Marquer toutes les questions comme réussies')}
             className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[12px] font-semibold transition-colors ${
               allSuccess ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-soft hover:border-brand-line hover:text-brand-hover'}`}>
-            <CheckCheck className="h-3.5 w-3.5" aria-hidden /> Tout réussi
+            <CheckCheck className="h-3.5 w-3.5" aria-hidden /> {t('Tout réussi')}
           </button>
         )}
       </div>
@@ -430,18 +431,18 @@ export const ExamView: React.FC<Props> = ({
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="fd-display text-[34px] leading-none text-ink" style={{ fontWeight: 700 }}>{fmtPts(got)}</span>
             <span className="text-[16px] text-ink-faint fd-nums">/ {fmtPts(total)}</span>
-            {total > 0 && total !== 20 && <span className="ml-auto text-[12px] text-ink-faint fd-nums">soit {fmtPts(Math.round((got / total) * 200) / 10)} / 20</span>}
+            {total > 0 && total !== 20 && <span className="ms-auto text-[12px] text-ink-faint fd-nums">{t('soit')} {fmtPts(Math.round((got / total) * 200) / 10)} / 20</span>}
           </div>
           <p className="mt-1.5 text-[12px] leading-snug text-ink-faint">
-            Note estimée d’après ton auto-évaluation{attemptStart ? ' de ce passage' : ''}{corrected < total ? `, sur ${fmtPts(corrected)} points corrigés` : ''}
-            {questionCount > 0 ? ` · ${assessedCount} / ${questionCount} questions corrigées` : ''}.
+            {attemptStart ? t('Note estimée d’après ton auto-évaluation de ce passage') : t('Note estimée d’après ton auto-évaluation')}{corrected < total ? t(', sur {n} points corrigés', { n: fmtPts(corrected) }) : ''}
+            {questionCount > 0 ? t(' · {a} / {b} questions corrigées', { a: assessedCount, b: questionCount }) : ''}.
           </p>
         </>
       ) : (
         <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">
           {attemptStart
-            ? 'Corrige ce passage question par question : ta note s’affiche ici.'
-            : 'Coche tes questions réussies : ta note s’affiche ici, tu te situes face aux autres élèves et tu enrichis leurs statistiques.'}
+            ? t('Corrige ce passage question par question : ta note s’affiche ici.')
+            : t('Coche tes questions réussies : ta note s’affiche ici, tu te situes face aux autres élèves et tu enrichis leurs statistiques.')}
         </p>
       )}
     </>
@@ -452,8 +453,8 @@ export const ExamView: React.FC<Props> = ({
       <QuestionChart structure={structure} progress={progress ?? {}} options={EXAM_OPTIONS} tour="examen-copie"
         onAssess={(path, st) => assessOne(path, st, 'question')} partScore={partScore} header={copieHeader} />
       {!isAuthenticated && (
-        <SignupCard title="Obtiens ta note" benefits={false}
-          text="Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice." />
+        <SignupCard title={t('Obtiens ta note')} benefits={false}
+          text={t('Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice.')} />
       )}
     </div>
   );
@@ -467,18 +468,18 @@ export const ExamView: React.FC<Props> = ({
         <div>
           {/* Téléphone : compte à rebours collé en haut pendant l'épreuve. */}
           {locked && (
-            <div className="sticky top-[68px] z-20 mb-3 flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/95 py-1 pl-4 pr-1 shadow-[0_2px_10px_rgba(20,18,16,.06)] backdrop-blur fd-exam-narrow">
+            <div className="sticky top-[68px] z-20 mb-3 flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/95 py-1 ps-4 pe-1 shadow-[0_2px_10px_rgba(20,18,16,.06)] backdrop-blur fd-exam-narrow">
               <span className="flex items-baseline gap-1.5">
                 <span role="timer" className={`text-[17px] font-semibold fd-nums ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>{clockLabel}</span>
-                <span className="text-[12px] text-ink-faint">{epreuve.status === 'paused' ? 'en pause' : epreuve.remaining !== null ? 'restant' : ''}</span>
+                <span className="text-[12px] text-ink-faint">{epreuve.status === 'paused' ? t('en pause') : epreuve.remaining !== null ? t('restant') : ''}</span>
               </span>
               <span className="flex items-center gap-1">
                 <button type="button" onClick={epreuve.status === 'running' ? epreuve.pause : epreuve.resume}
                   className="h-10 rounded-xl px-3 text-[13px] font-medium text-ink-soft hover:bg-[#f2f1ee]">
-                  {epreuve.status === 'running' ? 'Pause' : 'Reprendre'}
+                  {epreuve.status === 'running' ? t('Pause') : t('Reprendre')}
                 </button>
                 <button type="button" onClick={confirmFinish} className="h-10 rounded-xl bg-brand px-3.5 text-[13px] font-semibold text-white hover:bg-brand-hover">
-                  Terminer
+                  {t('Terminer')}
                 </button>
               </span>
             </div>
@@ -488,18 +489,18 @@ export const ExamView: React.FC<Props> = ({
           <section className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
             <div className="border-b border-line bg-[#fcfbf9] px-4 py-5 sm:px-8 sm:py-6" data-tour="examen-fiche">
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-10">
-                {durationMin > 0 && <Fact label="Durée" value={durationLabel(durationMin)} />}
-                {total > 0 && <Fact label="Barème" value={`${fmtPts(total)} points`} />}
-                {!noParts && parts.length > 0 && <Fact label="Exercices" value={String(parts.length)} />}
-                {levelName && <Fact label="Niveau" value={levelName} />}
-                {content.is_national_exam && <Fact label="Session" value={`Bac ${content.national_year ?? 'national'}`} />}
-                {felt && feltLabel && <Fact label="Ressenti des élèves" value={feltLabel} title={feltTooltip(felt)} />}
+                {durationMin > 0 && <Fact label={t('Durée')} value={durationLabel(durationMin)} />}
+                {total > 0 && <Fact label={t('Barème')} value={t('{n} points', { n: fmtPts(total) })} />}
+                {!noParts && parts.length > 0 && <Fact label={t('Exercices')} value={String(parts.length)} />}
+                {levelName && <Fact label={t('Niveau')} value={levelName} />}
+                {content.is_national_exam && <Fact label={t('Session')} value={content.national_year ? t('Bac {annee}', { annee: content.national_year }) : t('Bac national')} />}
+                {felt && feltLabel && <Fact label={t('Ressenti des élèves')} value={feltLabel} title={feltTooltip(felt)} />}
               </dl>
               {epreuveBlock}
             </div>
             {intro.length > 0 && (
               <div className="border-b border-line px-4 py-5 text-[14.5px] sm:px-8">
-                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Consignes</p>
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Consignes')}</p>
                 <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} variant="reading" />
               </div>
             )}
@@ -515,13 +516,13 @@ export const ExamView: React.FC<Props> = ({
                       <h2 className="fd-paper min-w-0 text-[20px] font-bold leading-snug text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
                       <span className="flex shrink-0 items-center gap-1.5">
                         {sc.corrected > 0 && !locked && (
-                          <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title="Tes points (auto-évaluation)">
+                          <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title={t('Tes points (auto-évaluation)')}>
                             {fmtPts(sc.got)} / {fmtPts(sc.max)}
                           </span>
                         )}
                         {sc.max > 0 && (
                           <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-gold-strong fd-nums">
-                            {fmtPts(sc.max)} pt{sc.max > 1 ? 's' : ''}
+                            {sc.max > 1 ? t('{n} pts', { n: fmtPts(sc.max) }) : t('{n} pt', { n: fmtPts(sc.max) })}
                           </span>
                         )}
                       </span>

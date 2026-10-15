@@ -10,6 +10,7 @@ import { getClassLevels, getExercises } from '@/lib/api';
 import { getHub, hubPath, type HubInfo } from '@/lib/api/hubApi';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import type { Content } from '@/types';
+import { t } from '@/i18n';
 
 interface Level { id: string; name: string; slug: string }
 
@@ -107,28 +108,27 @@ function Hero({ levels }: { levels: Level[] | null }) {
         <div>
           <span style={eyebrowChip}>
             <span style={{ width: 5, height: 5, borderRadius: 99, background: ACCENT }} />
-            La plateforme de maths des lycéens
+            {t('La plateforme de maths des lycéens')}
           </span>
 
           <h1 className="fd-display" style={heroTitle}>
-            Les maths, enfin
+            {t('Les maths, enfin')}
             <br />
-            <span style={{ color: ACCENT, fontStyle: 'italic', fontWeight: 500 }}>claires</span>
-            {' '}étape par étape.
+            <span style={{ color: ACCENT, fontStyle: 'italic', fontWeight: 500 }}>{t('claires')}</span>
+            {' '}{t('étape par étape.')}
           </h1>
 
           <p style={heroLede}>
-            Des exercices, des leçons et des sujets d'examen{' '}
-            <span style={{ color: INK, fontWeight: 600 }}>corrigés en détail</span>, du Tronc commun
-            au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.
+            {t("Des exercices, des leçons et des sujets d'examen")}{' '}
+            <span style={{ color: INK, fontWeight: 600 }}>{t('corrigés en détail')}</span>{t(", du Tronc commun au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.")}
           </p>
 
           <div className="flex flex-wrap items-center" style={{ gap: 12, marginBottom: 26 }}>
             <Link to="/signup" onClick={onSignupClick} style={btnPrimary}>
-              Créer un compte gratuit <ArrowRight className="w-4 h-4" />
+              {t('Créer un compte gratuit')} <ArrowRight className="w-4 h-4" />
             </Link>
             <Link to="/exercises" style={btnSecondary}>
-              Parcourir les exercices
+              {t('Parcourir les exercices')}
             </Link>
           </div>
 
@@ -136,7 +136,7 @@ function Hero({ levels }: { levels: Level[] | null }) {
 
           <div className="flex items-center" style={{ gap: 9, fontSize: 13, color: FAINT, marginTop: 22 }}>
             <Check className="w-4 h-4" style={{ color: ACCENT }} />
-            <span>Gratuit · inscription en moins d'une minute</span>
+            <span>{t("Gratuit · inscription en moins d'une minute")}</span>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ function LevelPicker({ levels }: { levels: Level[] | null }) {
   if (levels && levels.length === 0) return null; // niveaux indisponibles : on n'affiche rien
   return (
     <div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: SOFT, marginBottom: 9 }}>Tu es en :</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: SOFT, marginBottom: 9 }}>{t('Tu es en :')}</div>
       <div className="flex flex-wrap" style={{ gap: 8 }}>
         {levels === null
           ? [0, 1, 2, 3].map((i) => <span key={i} className="animate-pulse" style={{ ...levelChip, width: 110, background: LINE, borderColor: LINE }} />)
@@ -187,7 +187,7 @@ function WorkedExample() {
   ];
 
   return (
-    <div className="fd-card" style={{ overflow: 'hidden', boxShadow: '0 18px 50px rgba(20,18,16,.08)' }}>
+    <div className="fd-card fd-ltr" style={{ overflow: 'hidden', boxShadow: '0 18px 50px rgba(20,18,16,.08)' }}>
       {/* Header — looks like a real exercise sheet */}
       <div style={{ padding: '16px 22px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <span className="fd-nums" style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.06em', color: FAINT, textTransform: 'uppercase' }}>
@@ -266,8 +266,8 @@ function TrustRow() {
         {PROMISES.map(({ icon: Icon, title, text }) => (
           <div key={title} style={{ padding: '18px 20px', background: SURFACE }}>
             <Icon className="w-5 h-5" style={{ color: ACCENT, marginBottom: 10 }} />
-            <div style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{title}</div>
-            <div style={{ fontSize: 12.5, color: FAINT, marginTop: 3, lineHeight: 1.45 }}>{text}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{t(title)}</div>
+            <div style={{ fontSize: 12.5, color: FAINT, marginTop: 3, lineHeight: 1.45 }}>{t(text)}</div>
           </div>
         ))}
       </div>
@@ -308,9 +308,9 @@ function Pillars() {
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-20">
       <SectionHead
-        eyebrow="Trois manières de progresser"
-        title="Tout ce qu'il te faut, au même endroit"
-        subtitle="Apprends la notion, entraîne-toi dessus, puis mets-toi à l'épreuve. Le tout corrigé."
+        eyebrow={t('Trois manières de progresser')}
+        title={t("Tout ce qu'il te faut, au même endroit")}
+        subtitle={t("Apprends la notion, entraîne-toi dessus, puis mets-toi à l'épreuve. Le tout corrigé.")}
       />
       <div className="grid md:grid-cols-3 gap-4 md:gap-5 mt-10">
         {PILLARS.map(p => {
@@ -319,15 +319,15 @@ function Pillars() {
             <Link key={p.title} to={p.link} className="fd-card group" style={pillarCard}>
               <div style={pillarIcon}><Icon className="w-5 h-5" /></div>
               <h3 className="fd-display" style={{ fontSize: 20, fontWeight: 600, color: INK, letterSpacing: '-0.015em', marginBottom: 8 }}>
-                {p.title}
+                {t(p.title)}
               </h3>
-              <p style={{ fontSize: 13.5, color: FAINT, lineHeight: 1.55, marginBottom: 16, flexGrow: 1 }}>{p.desc}</p>
+              <p style={{ fontSize: 13.5, color: FAINT, lineHeight: 1.55, marginBottom: 16, flexGrow: 1 }}>{t(p.desc)}</p>
               <div style={{ fontFamily: MONO, fontSize: 11, color: '#9a958c', letterSpacing: '.02em', paddingTop: 14, borderTop: `1px solid ${LINE}`, marginBottom: 12 }}>
-                {p.sample}
+                {t(p.sample)}
               </div>
               <span style={pillarCta}>
-                {p.cta}
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                {t(p.cta)}
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
               </span>
             </Link>
           );
@@ -349,7 +349,7 @@ function HowItWorks() {
   return (
     <section style={{ background: SURFACE, borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-20">
-        <SectionHead eyebrow="Comment ça marche" title="Commence en trois étapes" />
+        <SectionHead eyebrow={t('Comment ça marche')} title={t('Commence en trois étapes')} />
         <div className="grid md:grid-cols-3 gap-8 md:gap-10 mt-12">
           {STEPS.map(s => (
             <div key={s.n}>
@@ -357,9 +357,9 @@ function HowItWorks() {
                 {s.n}
               </div>
               <h3 className="fd-display" style={{ fontSize: 19, fontWeight: 600, color: INK, letterSpacing: '-0.01em', marginBottom: 8, paddingTop: 14, borderTop: `1px solid ${INK}` }}>
-                {s.title}
+                {t(s.title)}
               </h3>
-              <p style={{ fontSize: 13.5, color: FAINT, lineHeight: 1.6, maxWidth: 300 }}>{s.desc}</p>
+              <p style={{ fontSize: 13.5, color: FAINT, lineHeight: 1.6, maxWidth: 300 }}>{t(s.desc)}</p>
             </div>
           ))}
         </div>
@@ -408,18 +408,18 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
         <div>
           <SectionHead
             align="left"
-            eyebrow="Le programme"
-            title="Du Tronc commun au Bac, ton sommaire de maths"
-            subtitle="Choisis ton niveau, puis un chapitre : tu tombes directement sur ses exercices corrigés."
+            eyebrow={t('Le programme')}
+            title={t('Du Tronc commun au Bac, ton sommaire de maths')}
+            subtitle={t('Choisis ton niveau, puis un chapitre : tu tombes directement sur ses exercices corrigés.')}
           />
           <Link to={levelUrl} style={{ ...btnSecondary, marginTop: 22 }}>
-            {level ? `Tous les exercices · ${level.name}` : 'Tout explorer'} <ArrowRight className="w-4 h-4" />
+            {level ? t('Tous les exercices · {level}', { level: level.name }) : t('Tout explorer')} <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
         <div>
           {levels && levels.length > 0 && (
-            <div role="tablist" aria-label="Niveau" className="flex flex-wrap" style={{ gap: 8, marginBottom: 14 }}>
+            <div role="tablist" aria-label={t('Niveau')} className="flex flex-wrap" style={{ gap: 8, marginBottom: 14 }}>
               {levels.map((l) => {
                 const on = l.slug === slug;
                 return (
@@ -441,8 +441,8 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
             </div>
           ) : chapters.length === 0 ? (
             <p style={{ fontSize: 14, color: FAINT, padding: '14px' }}>
-              {unavailable ? 'Le sommaire n’a pas pu s’afficher.' : 'Choisis un niveau pour voir ses chapitres.'}{' '}
-              <Link to="/exercises" style={{ color: ACCENT, fontWeight: 600 }}>Voir tous les exercices</Link>
+              {unavailable ? t('Le sommaire n’a pas pu s’afficher.') : t('Choisis un niveau pour voir ses chapitres.')}{' '}
+              <Link to="/exercises" style={{ color: ACCENT, fontWeight: 600 }}>{t('Voir tous les exercices')}</Link>
             </p>
           ) : (
             <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -459,7 +459,7 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
                       {c.name}
                     </span>
                     <span className="fd-nums" style={{ fontSize: 12.5, color: FAINT, whiteSpace: 'nowrap' }}>
-                      {c.count} exercice{c.count > 1 ? 's' : ''}
+                      {c.count > 1 ? t('{n} exercices', { n: c.count }) : t('{n} exercice', { n: c.count })}
                     </span>
                     <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: ACCENT, flexShrink: 0 }} />
                   </Link>
@@ -470,7 +470,7 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
           )}
           {chapters.length > MAX_CHAPTERS && (
             <Link to={levelUrl} className="fd-btn-ghost" style={{ marginTop: 12 }}>
-              Les {chapters.length} chapitres <ArrowRight className="w-3.5 h-3.5" />
+              {t('Les {n} chapitres', { n: chapters.length })} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           )}
         </div>
@@ -489,8 +489,8 @@ function PopularPreview({ items, loading, onVote }: {
     <section style={{ background: SURFACE, borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-20">
         <div className="flex items-end justify-between mb-9 flex-wrap gap-3">
-          <SectionHead align="left" eyebrow="Les préférés des élèves" title="Exercices les plus populaires" />
-          <Link to="/exercises" className="fd-btn-ghost">Voir tout <ArrowRight className="w-3.5 h-3.5" /></Link>
+          <SectionHead align="left" eyebrow={t('Les préférés des élèves')} title={t('Exercices les plus populaires')} />
+          <Link to="/exercises" className="fd-btn-ghost">{t('Voir tout')} <ArrowRight className="w-3.5 h-3.5" /></Link>
         </div>
         {loading ? (
           <div className="grid md:grid-cols-3 gap-4">
@@ -518,17 +518,17 @@ function FinalCTA() {
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24">
       <div style={{ borderRadius: 20, padding: '52px 32px', color: '#fff', background: ACCENT_HOVER, textAlign: 'center' }}>
         <h2 className="fd-display" style={{ fontSize: 'clamp(26px,3.5vw,36px)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14 }}>
-          Prêt à progresser ?
+          {t('Prêt à progresser ?')}
         </h2>
         <p style={{ fontSize: 15.5, color: '#cfe6d8', maxWidth: 460, margin: '0 auto 28px', lineHeight: 1.6 }}>
-          Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui. Aucune carte requise.
+          {t("Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui. Aucune carte requise.")}
         </p>
         <div className="flex flex-wrap items-center justify-center" style={{ gap: 12 }}>
           <Link to="/signup" onClick={onSignupClick} style={{ ...btnPrimary, background: '#fff', color: ACCENT_HOVER, border: '1px solid #fff' }}>
-            Créer un compte gratuit <ArrowRight className="w-4 h-4" />
+            {t('Créer un compte gratuit')} <ArrowRight className="w-4 h-4" />
           </Link>
           <Link to="/exercises" style={{ ...btnSecondary, background: 'transparent', borderColor: 'rgba(255,255,255,.28)', color: '#fff' }}>
-            Explorer d'abord
+            {t("Explorer d'abord")}
           </Link>
         </div>
       </div>
@@ -542,7 +542,7 @@ function SectionHead({ eyebrow, title, subtitle, align = 'center' }: {
   eyebrow: string; title: string; subtitle?: string; align?: 'center' | 'left';
 }) {
   return (
-    <div style={{ textAlign: align, maxWidth: align === 'center' ? 580 : undefined, margin: align === 'center' ? '0 auto' : undefined }}>
+    <div style={{ textAlign: align === 'left' ? 'start' : align, maxWidth: align === 'center' ? 580 : undefined, margin: align === 'center' ? '0 auto' : undefined }}>
       <span style={{ fontFamily: MONO, fontSize: 11.5, color: ACCENT, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>
         {eyebrow}
       </span>

@@ -61,6 +61,7 @@ import { SEO } from '@/components/layout/SEO';
 import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, hasListParams, plural } from './sections';
 import { FicheButton, FichePanel, FicheSlot, useFicheTD, type FicheContext } from '@/components/revision/FicheTD';
+import { t } from '@/i18n';
 
 type StructuredListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -190,7 +191,7 @@ const withoutPath = (progress: Record<string, AssessmentStatus> | undefined, pat
 
 /** Cartes fantômes pendant le premier chargement (même forme que les cartes). */
 const SkeletonCards: React.FC = () => (
-  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 min-[1700px]:grid-cols-3" role="status" aria-label="Chargement de la liste">
+  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 min-[1700px]:grid-cols-3" role="status" aria-label={t('Chargement de la liste')}>
     {[0, 1, 2, 3].map((i) => (
       <div key={i} className="animate-pulse rounded-2xl border border-line bg-white">
         <div className="px-4 pb-4 pt-4 sm:px-5">
@@ -200,7 +201,7 @@ const SkeletonCards: React.FC = () => (
           </div>
           <div className="mt-3 h-5 w-3/4 rounded bg-[#efece6]" />
           <div className="mt-2.5 h-3.5 w-1/2 rounded bg-[#f2f1ee]" />
-          <div className="mt-4 space-y-2 border-l-2 border-[#efece6] pl-3">
+          <div className="mt-4 space-y-2 border-s-2 border-[#efece6] ps-3">
             <div className="h-3 w-5/6 rounded bg-[#f4f2ee]" />
             <div className="h-3 w-2/3 rounded bg-[#f4f2ee]" />
           </div>
@@ -223,7 +224,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   const isNationalSection = contentType === 'exam' && national;
   // Dossier d'une année du Bac national : la liste de l'année (le filtre « Année du Bac » disparaît).
   const yearFolder = isNationalSection && nationalYear ? nationalYear : null;
-  const yearLabel = yearFolder === 'aucune' ? 'Année non précisée' : `Bac ${yearFolder}`;
+  const yearLabel = yearFolder === 'aucune' ? t('Année non précisée') : t('Bac {year}', { year: yearFolder });
   const baseConfig = CONTENT_TYPE_CONFIG[contentType];
   // Examens : « devoirs » dans la rubrique Devoirs (DS), « sujets » au Bac national (mêmes mots que les dossiers).
   const config = contentType !== 'exam' ? baseConfig : isNationalSection
@@ -390,11 +391,11 @@ export const ContentList: React.FC<ContentListProps> = ({
   const { setCrumbs } = useBreadcrumb();
   useEffect(() => {
     if (yearFolder) {
-      setCrumbs([{ label: NATIONAL.title, to: '/exams/nationaux' }, { label: yearLabel ?? '' }], '/exams/nationaux');
+      setCrumbs([{ label: t(NATIONAL.title), to: '/exams/nationaux' }, { label: yearLabel ?? '' }], '/exams/nationaux');
       return () => setCrumbs(null);
     }
     if (!hub) return;
-    const root = { label: config.title, to: allLevelsPath };
+    const root = { label: t(config.title), to: allLevelsPath };
     setCrumbs(hub.chapter
       ? [root, { label: hub.level.name, to: hub.level.url }, { label: hub.chapter.name }]
       : [root, { label: hub.level.name }], config.basePath);
@@ -895,7 +896,7 @@ export const ContentList: React.FC<ContentListProps> = ({
 
   // Cartes / Énoncés (ordinateur seulement).
   const viewToggle = (
-    <div data-tour="liste-vue" role="radiogroup" aria-label="Affichage" className="inline-flex rounded-xl border border-line bg-white p-0.5">
+    <div data-tour="liste-vue" role="radiogroup" aria-label={t('Affichage')} className="inline-flex rounded-xl border border-line bg-white p-0.5">
       {([
         ['card', 'Cartes', LayoutGrid],
         ['full', 'Énoncés', FileText],
@@ -905,21 +906,21 @@ export const ContentList: React.FC<ContentListProps> = ({
           type="button"
           role="radio"
           aria-checked={viewMode === mode}
-          aria-label={label}
+          aria-label={t(label)}
           onClick={() => setViewMode(mode)}
-          title={label}
+          title={t(label)}
           className={`inline-flex h-9 items-center gap-1.5 rounded-[10px] px-2.5 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
             viewMode === mode ? 'bg-[#f2f1ee] text-ink' : 'text-ink-faint hover:text-ink'}`}
         >
           <Icon className="h-4 w-4" />
-          <span className="hidden xl:inline">{label}</span>
+          <span className="hidden xl:inline">{t(label)}</span>
         </button>
       ))}
     </div>
   );
 
   const handleDeleteItem = async (id: string) => {
-    if (!window.confirm('Supprimer définitivement ce contenu ?')) return;
+    if (!window.confirm(t('Supprimer définitivement ce contenu ?'))) return;
     try {
       await config.api.delete(id);
       load(1);
@@ -934,15 +935,15 @@ export const ContentList: React.FC<ContentListProps> = ({
   const errorBox = (more: boolean) => (
     <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
       <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">
-        {more ? 'La suite de la liste n’a pas pu se charger.' : 'La liste n’a pas pu se charger.'} Vérifie ta connexion.
+        {more ? t('La suite de la liste n’a pas pu se charger.') : t('La liste n’a pas pu se charger.')}{' '}{t('Vérifie ta connexion.')}
       </p>
       <button type="button" onClick={() => load(more ? page + 1 : 1)} className="fd-btn-ghost min-h-10">
-        <RotateCcw className="h-4 w-4" /> Réessayer
+        <RotateCcw className="h-4 w-4" /> {t('Réessayer')}
       </button>
     </div>
   );
 
-  const chipBtn = 'inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#efece6] pl-3.5 pr-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-[#e7e3dc] hover:text-ink';
+  const chipBtn = 'inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#efece6] ps-3.5 pe-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-[#e7e3dc] hover:text-ink';
 
   // Liste vide : pourquoi, et quoi faire ensuite.
   const emptyState = () => {
@@ -958,51 +959,54 @@ export const ContentList: React.FC<ContentListProps> = ({
     let tone: 'brand' | 'gold' | 'ink' = 'ink';
     let actions: React.ReactNode = null;
     if (onlyTodo) {
-      title = 'Tout est réussi ici, bravo !';
-      text = `Tu as réussi tous les ${many} de cette liste. Choisis « Tout » pour les revoir.`;
+      title = t('Tout est réussi ici, bravo !');
+      text = t('Tu as réussi tous les {nouns} de cette liste. Choisis « Tout » pour les revoir.', { nouns: t(many) });
       icon = Check;
       tone = 'brand';
     } else if (only === 'showFailed') {
-      title = 'Rien à revoir ici';
-      text = `Aucun ${one} marqué « À revoir » dans cette liste. Continue comme ça !`;
+      title = t('Rien à revoir ici');
+      text = t('Aucun {noun} marqué « À revoir » dans cette liste. Continue comme ça !', { noun: t(one) });
       icon = Check;
       tone = 'brand';
     } else if (only === 'showCompleted') {
-      title = 'Rien de réussi ici pour l’instant';
-      text = `Quand tu marques un ${one} « Réussi », il apparaît ici.`;
+      title = t('Rien de réussi ici pour l’instant');
+      text = t('Quand tu marques un {noun} « Réussi », il apparaît ici.', { noun: t(one) });
       icon = Check;
     } else if (filterChips.length > 0) {
-      title = config.emptyMessage;
-      text = 'Aucun résultat avec ces filtres : retire-en un.';
+      title = t(config.emptyMessage);
+      text = t('Aucun résultat avec ces filtres : retire-en un.');
       icon = SearchX;
     } else if (hub?.chapter) {
-      title = `Pas encore ${ofNoun} sur ce chapitre`;
+      title = t('Pas encore {noun} sur ce chapitre', { noun: t(ofNoun) });
       const hasNeighbours = hub.chapters.some((c) => c.id !== hub.chapter!.id && c.count > 0);
+      const readCourse = hub.related.some((r) => r.section === 'lessons');
       text = hub.related.length > 0
-        ? `Ça arrive bientôt. En attendant, ${hub.related.some((r) => r.section === 'lessons') ? 'lis le cours' : 'regarde les autres rubriques'}${hasNeighbours ? ' ou un chapitre voisin' : ''}.`
-        : hasNeighbours ? 'Ça arrive bientôt. En attendant, essaie un chapitre voisin.' : 'Ça arrive bientôt.';
+        ? (readCourse
+          ? (hasNeighbours ? t('Ça arrive bientôt. En attendant, lis le cours ou un chapitre voisin.') : t('Ça arrive bientôt. En attendant, lis le cours.'))
+          : (hasNeighbours ? t('Ça arrive bientôt. En attendant, regarde les autres rubriques ou un chapitre voisin.') : t('Ça arrive bientôt. En attendant, regarde les autres rubriques.')))
+        : hasNeighbours ? t('Ça arrive bientôt. En attendant, essaie un chapitre voisin.') : t('Ça arrive bientôt.');
       icon = FolderOpen;
     } else if (hub) {
-      title = `Pas encore ${ofNoun} pour ce niveau`;
-      text = 'Ça arrive bientôt.';
+      title = t('Pas encore {noun} pour ce niveau', { noun: t(ofNoun) });
+      text = t('Ça arrive bientôt.');
       icon = FolderOpen;
     } else if (yearFolder) {
-      title = 'Aucun sujet pour cette année';
-      text = 'Les autres années du Bac national sont dans leurs dossiers.';
-      actions = <Link to="/exams/nationaux" className="fd-btn-primary min-h-10">Toutes les années</Link>;
+      title = t('Aucun sujet pour cette année');
+      text = t('Les autres années du Bac national sont dans leurs dossiers.');
+      actions = <Link to="/exams/nationaux" className="fd-btn-primary min-h-10">{t('Toutes les années')}</Link>;
     } else if (isNationalSection) {
-      title = 'Les sujets nationaux arrivent bientôt';
-      text = 'Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.';
-      actions = <Link to="/exams" className="fd-btn-primary min-h-10">Voir les devoirs surveillés</Link>;
+      title = t('Les sujets nationaux arrivent bientôt');
+      text = t('Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.');
+      actions = <Link to="/exams" className="fd-btn-primary min-h-10">{t('Voir les devoirs surveillés')}</Link>;
     } else {
-      title = 'Rien de publié ici pour le moment';
-      text = 'Les premiers contenus arrivent bientôt.';
+      title = t('Rien de publié ici pour le moment');
+      text = t('Les premiers contenus arrivent bientôt.');
     }
 
     if (only === 'todo' || only === 'showFailed' || only === 'showCompleted') {
       actions = (
         <button type="button" onClick={() => handleFilterChange(withoutChip(filters, only))} className="fd-btn-primary min-h-10">
-          Tout afficher
+          {t('Tout afficher')}
         </button>
       );
     } else if (filterChips.length > 0) {
@@ -1010,13 +1014,13 @@ export const ContentList: React.FC<ContentListProps> = ({
         <div className="flex flex-wrap items-center justify-center gap-2">
           {filterChips.map((chip) => (
             <button key={chip.key} type="button" onClick={() => handleFilterChange(withoutChip(filters, chip.key))} className={chipBtn}>
-              Retirer {chip.label} <X className="h-3.5 w-3.5" />
+              {t('Retirer {label}', { label: chip.label })} <X className="h-3.5 w-3.5" />
             </button>
           ))}
           {filterChips.length > 1 && (
             <button type="button" onClick={() => handleFilterChange(clearedFilters(fixed))}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-              <RotateCcw className="h-3.5 w-3.5" /> Tout effacer
+              <RotateCcw className="h-3.5 w-3.5" /> {t('Tout effacer')}
             </button>
           )}
         </div>
@@ -1045,10 +1049,10 @@ export const ContentList: React.FC<ContentListProps> = ({
           )}
           {neighbours.length > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="text-[12.5px] text-ink-faint">Chapitres voisins :</span>
+              <span className="text-[12.5px] text-ink-faint">{t('Chapitres voisins :')}</span>
               {neighbours.map((c) => (
                 <Link key={c.id} to={c.url} className="inline-flex min-h-10 items-center rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft hover:border-[#cfc9bf] hover:text-ink">
-                  {c.name} <span className="fd-nums ml-1.5 text-ink-faint">{c.count}</span>
+                  {c.name} <span className="fd-nums ms-1.5 text-ink-faint">{c.count}</span>
                 </Link>
               ))}
             </div>
@@ -1058,7 +1062,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     } else if (!isNationalSection && canPublish) {
       actions = (
         <button type="button" onClick={handleNewContentClick} className="fd-btn-ghost min-h-10">
-          <Plus className="h-4 w-4" /> {config.createLabel}
+          <Plus className="h-4 w-4" /> {t(config.createLabel)}
         </button>
       );
     }
@@ -1068,13 +1072,13 @@ export const ContentList: React.FC<ContentListProps> = ({
 
   // En-tête : les dossiers parents (chaque cran remonte d'un dossier), le titre, une ligne.
   const crumbs: Crumb[] = hub
-    ? [{ label: config.title, to: allLevelsPath }, ...(hub.chapter ? [{ label: hub.level.name, to: hub.level.url }] : [])]
+    ? [{ label: t(config.title), to: allLevelsPath }, ...(hub.chapter ? [{ label: hub.level.name, to: hub.level.url }] : [])]
     : isNationalSection
-      ? (yearFolder ? [{ label: NATIONAL.title, to: '/exams/nationaux' }] : [{ label: 'Toutes les années', to: '/exams/nationaux' }])
-      : [{ label: 'Tous les niveaux', to: allLevelsPath }];
+      ? (yearFolder ? [{ label: t(NATIONAL.title), to: '/exams/nationaux' }] : [{ label: t('Toutes les années'), to: '/exams/nationaux' }])
+      : [{ label: t('Tous les niveaux'), to: allLevelsPath }];
   const pageTitle = hub ? hub.h1
-    : yearFolder ? (yearFolder === 'aucune' ? 'Bac national : année non précisée' : `Bac national ${yearFolder}`)
-      : isNationalSection ? NATIONAL.title : unfiledOnly ? `${config.title} sans chapitre` : config.title;
+    : yearFolder ? (yearFolder === 'aucune' ? t('Bac national : année non précisée') : t('Bac national {year}', { year: yearFolder }))
+      : isNationalSection ? t(NATIONAL.title) : unfiledOnly ? t('{title} sans chapitre', { title: t(config.title) }) : t(config.title);
 
   // Où en est l'élève dans ce dossier : seulement quand toute la liste est là (sinon les nombres mentiraient).
   const mine = useMemo(() => {
@@ -1095,9 +1099,9 @@ export const ContentList: React.FC<ContentListProps> = ({
     <p className="fd-nums">
       <span className="font-medium text-ink-soft">{plural(totalCount, [one, many])}</span>
       {mine && mine.success > 0 && (
-        <> · <b className="font-semibold text-brand-hover">{mine.success}</b> {contentType === 'lesson' ? (mine.success > 1 ? 'lues' : 'lue') : (mine.success > 1 ? 'réussis' : 'réussi')}</>
+        <> · <b className="font-semibold text-brand-hover">{mine.success}</b> {contentType === 'lesson' ? (mine.success > 1 ? t('lues') : t('lue')) : (mine.success > 1 ? t('réussis') : t('réussi'))}</>
       )}
-      {mine && mine.review > 0 && <> · <b className="font-semibold text-gold-strong">{mine.review}</b> à revoir</>}
+      {mine && mine.review > 0 && <> · <b className="font-semibold text-gold-strong">{mine.review}</b> {t('à revoir')}</>}
     </p>
   ) : null;
 
@@ -1117,9 +1121,9 @@ export const ContentList: React.FC<ContentListProps> = ({
       {hub && <RelatedLinks related={hub.related} />}
       {/* Publier : réservé aux auteurs et aux modérateurs. */}
       {canPublish && (
-        <button onClick={handleNewContentClick} data-tour="liste-creer" className="fd-btn-ghost min-h-10" aria-label={config.createLabel}>
+        <button onClick={handleNewContentClick} data-tour="liste-creer" className="fd-btn-ghost min-h-10" aria-label={t(config.createLabel)}>
           <Plus className="h-4 w-4" />
-          <span>{config.createLabel}</span>
+          <span>{t(config.createLabel)}</span>
         </button>
       )}
     </>
@@ -1267,15 +1271,15 @@ export const ContentList: React.FC<ContentListProps> = ({
         {hasMore && !isLoading && items.length > 0 && !error?.more && (
           <div className="mt-8 flex flex-col items-center gap-2">
             <button type="button" onClick={handleLoadMore} disabled={loadingMore} className="fd-btn-ghost min-h-11 px-5 text-[13.5px]">
-              {loadingMore ? <><Loader2 className="h-4 w-4 animate-spin" /> Chargement…</> : <>Voir la suite</>}
+              {loadingMore ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('Chargement…')}</> : <>{t('Voir la suite')}</>}
             </button>
-            <p className="fd-nums text-[12px] text-ink-faint">{items.length} sur {totalCount} {totalCount > 1 ? many : one}</p>
+            <p className="fd-nums text-[12px] text-ink-faint">{t('{n} sur {total} {noun}', { n: items.length, total: totalCount, noun: t(totalCount > 1 ? many : one) })}</p>
           </div>
         )}
 
         {/* Toute la liste est là. */}
         {totalPages > 1 && !hasMore && (
-          <p className="fd-nums mt-8 text-center text-[12px] text-ink-faint">{items.length} sur {totalCount} {totalCount > 1 ? many : one}</p>
+          <p className="fd-nums mt-8 text-center text-[12px] text-ink-faint">{t('{n} sur {total} {noun}', { n: items.length, total: totalCount, noun: t(totalCount > 1 ? many : one) })}</p>
         )}
 
         {items.length > 0 && <AdSlot className="mt-10" />}

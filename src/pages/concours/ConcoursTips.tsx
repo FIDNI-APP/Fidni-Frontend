@@ -24,29 +24,30 @@ import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, Section, EmptyState, CardLink, CardsSkeleton } from '@/components/space/Page';
 import type { SubjectModel } from '@/types';
 import { ConcoursHeader } from './ConcoursHeader';
+import { t, dateLocale } from '@/i18n';
 
 /* ───────────────── Liste ───────────────── */
 
-const TipCard: React.FC<{ tip: ConcoursTip }> = ({ tip: t }) => (
+const TipCard: React.FC<{ tip: ConcoursTip }> = ({ tip }) => (
   <li>
-    <CardLink to={`/concours/tips/${t.id}`} className="h-full">
+    <CardLink to={`/concours/tips/${tip.id}`} className="h-full">
       <span className="flex h-full flex-col">
         <span className="flex items-center justify-between gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-soft text-gold-strong" aria-hidden>
             <Lightbulb className="h-4 w-4" />
           </span>
-          {(t.video_url || t.video_file) && (
+          {(tip.video_url || tip.video_file) && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">
-              <Play className="h-3 w-3" aria-hidden /> Vidéo
+              <Play className="h-3 w-3" aria-hidden /> {t('Vidéo')}
             </span>
           )}
         </span>
-        <span className="mt-3 block text-[14.5px] font-semibold leading-snug text-ink line-clamp-2">{t.title}</span>
-        {t.description && <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-faint line-clamp-2">{t.description}</span>}
+        <span className="mt-3 block text-[14.5px] font-semibold leading-snug text-ink line-clamp-2">{tip.title}</span>
+        {tip.description && <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-faint line-clamp-2">{tip.description}</span>}
         <span className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-ink-faint">
-          {t.subject_name && <span className="truncate rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">{t.subject_name}</span>}
-          <span className="ml-auto inline-flex shrink-0 items-center gap-1"><ThumbsUp className="h-3 w-3" aria-hidden /> {t.vote_count}<span className="sr-only"> votes</span></span>
-          <span className="inline-flex shrink-0 items-center gap-1"><Eye className="h-3 w-3" aria-hidden /> {t.view_count}<span className="sr-only"> vues</span></span>
+          {tip.subject_name && <span className="truncate rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">{tip.subject_name}</span>}
+          <span className="ms-auto inline-flex shrink-0 items-center gap-1"><ThumbsUp className="h-3 w-3" aria-hidden /> {tip.vote_count}<span className="sr-only"> {t('votes')}</span></span>
+          <span className="inline-flex shrink-0 items-center gap-1"><Eye className="h-3 w-3" aria-hidden /> {tip.view_count}<span className="sr-only"> {t('vues')}</span></span>
         </span>
       </span>
     </CardLink>
@@ -97,32 +98,32 @@ export function ConcoursTipsListPage() {
 
   return (
     <Page>
-      <SEO title="Astuces - Concours - Fidni" description="Astuces et techniques pour les concours" noindex={tips !== null && !total && !filtered} />
+      <SEO title={t('Astuces - Concours - Fidni')} description={t('Astuces et techniques pour les concours')} noindex={tips !== null && !total && !filtered} />
       <ConcoursHeader />
 
-      <Section id="astuces" title="Astuces" count={tips?.length}
-        hint={total ? 'Les techniques pour répondre vite et juste le jour J.' : undefined}>
+      <Section id="astuces" title={t('Astuces')} count={tips?.length}
+        hint={total ? t('Les techniques pour répondre vite et juste le jour J.') : undefined}>
         {(!!total || filtered) && (
           <div className="mb-5 flex flex-col gap-3">
             <label className="flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3.5 focus-within:border-ink-faint sm:max-w-sm">
               <Search className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
-              <span className="sr-only">Rechercher une astuce</span>
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher une astuce…"
+              <span className="sr-only">{t('Rechercher une astuce')}</span>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Rechercher une astuce…')}
                 className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint" />
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par concours">
-                <button type="button" aria-pressed={!filterType} className={chip(!filterType)} onClick={() => setFilterType(null)}>Tous</button>
+              <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('Filtrer par concours')}>
+                <button type="button" aria-pressed={!filterType} className={chip(!filterType)} onClick={() => setFilterType(null)}>{t('Tous')}</button>
                 {CONCOURS_TYPES.map((c) => (
                   <button key={c.id} type="button" aria-pressed={filterType === c.id} className={chip(filterType === c.id)} onClick={() => setFilterType(c.id)}>
-                    {c.label}
+                    {t(c.label)}
                   </button>
                 ))}
               </div>
-              <select value={filterSubjectId ?? ''} aria-label="Matière"
+              <select value={filterSubjectId ?? ''} aria-label={t('Matière')}
                 onChange={(e) => setFilterSubjectId(e.target.value ? Number(e.target.value) : null)}
                 className="min-h-10 rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft focus:border-ink-faint focus:outline-none">
-                <option value="">Toutes les matières</option>
+                <option value="">{t('Toutes les matières')}</option>
                 {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -132,15 +133,15 @@ export function ConcoursTipsListPage() {
         {tips === null ? <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
           : tips.length === 0 ? (
             filtered ? (
-              <EmptyState compact icon={SearchX} tone="ink" title="Aucune astuce ne correspond"
-                text="Essaie un autre mot ou retire un filtre."
-                action={<button type="button" className="fd-btn-ghost min-h-10" onClick={clear}>Effacer les filtres</button>} />
+              <EmptyState compact icon={SearchX} tone="ink" title={t('Aucune astuce ne correspond')}
+                text={t('Essaie un autre mot ou retire un filtre.')}
+                action={<button type="button" className="fd-btn-ghost min-h-10" onClick={clear}>{t('Effacer les filtres')}</button>} />
             ) : (
-              <EmptyState icon={Lightbulb} tone="gold" title="Les astuces arrivent bientôt"
-                text="Des techniques courtes, souvent en vidéo, pour gagner du temps le jour du concours. En attendant, entraîne-toi sur le Bac national."
+              <EmptyState icon={Lightbulb} tone="gold" title={t('Les astuces arrivent bientôt')}
+                text={t('Des techniques courtes, souvent en vidéo, pour gagner du temps le jour du concours. En attendant, entraîne-toi sur le Bac national.')}
                 action={(
                   <Link to="/exams/nationaux" className="fd-btn-primary min-h-11">
-                    <Landmark className="h-4 w-4" /> Réviser le Bac national
+                    <Landmark className="h-4 w-4" /> {t('Réviser le Bac national')}
                   </Link>
                 )} />
             )
@@ -197,10 +198,10 @@ export function ConcoursTipDetailPage() {
   if (!tip) {
     return (
       <Page width="narrow">
-        <PageHeader back={{ to: '/concours/tips', label: 'Astuces' }} title="Astuce introuvable" />
-        <EmptyState icon={SearchX} tone="ink" title="Cette astuce n’existe plus"
-          text="Elle a peut-être été retirée. Les autres t’attendent dans la liste."
-          action={<Link to="/concours/tips" className="fd-btn-primary min-h-10">Voir les astuces</Link>} />
+        <PageHeader back={{ to: '/concours/tips', label: t('Astuces') }} title={t('Astuce introuvable')} />
+        <EmptyState icon={SearchX} tone="ink" title={t('Cette astuce n’existe plus')}
+          text={t('Elle a peut-être été retirée. Les autres t’attendent dans la liste.')}
+          action={<Link to="/concours/tips" className="fd-btn-primary min-h-10">{t('Voir les astuces')}</Link>} />
       </Page>
     );
   }
@@ -227,8 +228,8 @@ export function ConcoursTipDetailPage() {
 
   return (
     <Page width="narrow">
-      <SEO title={`${tip.title} - Astuces - Fidni`} description={tip.description} />
-      <PageHeader back={{ to: '/concours/tips', label: 'Astuces' }} eyebrow="Astuce" icon={Lightbulb} title={tip.title} />
+      <SEO title={t('{title} - Astuces - Fidni', { title: tip.title })} description={tip.description} />
+      <PageHeader back={{ to: '/concours/tips', label: t('Astuces') }} eyebrow={t('Astuce')} icon={Lightbulb} title={tip.title} />
 
       <div className="flex flex-col gap-10">
         <article className="overflow-hidden rounded-3xl border border-line bg-white">
@@ -248,13 +249,13 @@ export function ConcoursTipDetailPage() {
           ) : (
             <div className="flex items-center gap-3 border-b border-line bg-gold-soft px-5 py-4 text-gold-strong">
               <Lightbulb className="h-5 w-5 shrink-0" aria-hidden />
-              <p className="text-[13px] font-medium">Pas de vidéo pour cette astuce : tout est dans le texte.</p>
+              <p className="text-[13px] font-medium">{t('Pas de vidéo pour cette astuce : tout est dans le texte.')}</p>
             </div>
           )}
 
           <div className="p-5 sm:p-6">
             {(tip.subject_name || tip.subfield_name || !!tip.chapter_names?.length) && (
-              <ul className="mb-4 flex flex-wrap gap-1.5" aria-label="Programme">
+              <ul className="mb-4 flex flex-wrap gap-1.5" aria-label={t('Programme')}>
                 {tip.subject_name && <li className="rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12px] font-semibold text-ink-soft">{tip.subject_name}</li>}
                 {tip.subfield_name && <li className="rounded-full bg-[#f7f6f3] px-2.5 py-1 text-[12px] text-ink-faint">{tip.subfield_name}</li>}
                 {tip.chapter_names?.map((n) => (
@@ -267,13 +268,13 @@ export function ConcoursTipDetailPage() {
             )}
 
             <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
-              <div className="inline-flex items-center rounded-full border border-line bg-[#f7f6f3] p-0.5" role="group" aria-label="Voter">
-                <button type="button" onClick={() => onVote(1)} disabled={busyVote} aria-pressed={tip.user_vote === 1} aria-label="Utile"
+              <div className="inline-flex items-center rounded-full border border-line bg-[#f7f6f3] p-0.5" role="group" aria-label={t('Voter')}>
+                <button type="button" onClick={() => onVote(1)} disabled={busyVote} aria-pressed={tip.user_vote === 1} aria-label={t('Utile')}
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${tip.user_vote === 1 ? 'bg-ink text-white' : 'text-ink-faint hover:text-ink'}`}>
                   <ThumbsUp className="h-4 w-4" />
                 </button>
                 <span className="fd-nums min-w-[30px] text-center text-[13px] font-bold text-ink">{tip.vote_count}</span>
-                <button type="button" onClick={() => onVote(-1)} disabled={busyVote} aria-pressed={tip.user_vote === -1} aria-label="Pas utile"
+                <button type="button" onClick={() => onVote(-1)} disabled={busyVote} aria-pressed={tip.user_vote === -1} aria-label={t('Pas utile')}
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${tip.user_vote === -1 ? 'bg-[#a23b34] text-white' : 'text-ink-faint hover:text-ink'}`}>
                   <ThumbsDown className="h-4 w-4" />
                 </button>
@@ -282,10 +283,10 @@ export function ConcoursTipDetailPage() {
                 className={`fd-btn-ghost min-h-10 ${tip.is_saved ? '!border-gold-line !bg-gold-soft !text-gold-strong' : ''}`}>
                 {busySave ? <Loader2 className="h-4 w-4 animate-spin" />
                   : <Bookmark className="h-4 w-4" fill={tip.is_saved ? 'currentColor' : 'none'} />}
-                {tip.is_saved ? 'Enregistrée' : 'Enregistrer'}
+                {tip.is_saved ? t('Enregistrée') : t('Enregistrer')}
               </button>
-              <span className="ml-auto inline-flex items-center gap-1 text-[12px] text-ink-faint">
-                <Eye className="h-3.5 w-3.5" aria-hidden /> {tip.view_count}<span className="sr-only"> vues</span>
+              <span className="ms-auto inline-flex items-center gap-1 text-[12px] text-ink-faint">
+                <Eye className="h-3.5 w-3.5" aria-hidden /> {tip.view_count}<span className="sr-only"> {t('vues')}</span>
               </span>
             </div>
           </div>
@@ -293,7 +294,7 @@ export function ConcoursTipDetailPage() {
 
         <section id="commentaires" aria-labelledby="commentaires-titre" className="scroll-mt-20">
           <h2 id="commentaires-titre" className="fd-display mb-3 flex items-center gap-2 text-[20px] leading-tight text-ink">
-            <MessageSquare className="h-4 w-4 text-ink-faint" aria-hidden /> Commentaires
+            <MessageSquare className="h-4 w-4 text-ink-faint" aria-hidden /> {t('Commentaires')}
           </h2>
           <TipCommentsBlock tipId={tip.id} currentUserId={user?.id} canModerate={isModerator(user)} />
         </section>
@@ -323,7 +324,7 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
   };
 
   const remove = async (cid: number) => {
-    if (!window.confirm('Supprimer ce commentaire ?')) return;
+    if (!window.confirm(t('Supprimer ce commentaire ?'))) return;
     await deleteConcoursComment(cid); await refresh();
   };
 
@@ -333,19 +334,19 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Ton commentaire…"
-          aria-label="Ton commentaire"
+          placeholder={t('Ton commentaire…')}
+          aria-label={t('Ton commentaire')}
           rows={2}
           className="min-h-[60px] flex-1 resize-y rounded-xl border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none focus:border-ink-faint"
         />
         <button type="button" onClick={post} disabled={!text.trim() || posting} className="fd-btn-primary min-h-10 justify-center self-end disabled:opacity-60">
-          {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier'}
+          {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('Publier')}
         </button>
       </div>
       {loading ? (
         <CardsSkeleton n={1} />
       ) : comments.length === 0 ? (
-        <p className="text-[13px] text-ink-faint">Pas encore de commentaire : pose ta question ou partage ton astuce.</p>
+        <p className="text-[13px] text-ink-faint">{t('Pas encore de commentaire : pose ta question ou partage ton astuce.')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {comments.map((c) => (
@@ -358,12 +359,12 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[12.5px] font-semibold text-ink">{c.author.username}</span>
-                  <span className="text-[11px] text-ink-faint">{new Date(c.created_at).toLocaleString('fr-FR')}</span>
+                  <span className="text-[11px] text-ink-faint">{new Date(c.created_at).toLocaleString(dateLocale())}</span>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-[13.5px] text-ink-soft">{c.content}</p>
               </div>
               {(canModerate || (currentUserId !== undefined && Number(currentUserId) === c.author.id)) && (
-                <button type="button" onClick={() => remove(c.id)} aria-label="Supprimer ce commentaire"
+                <button type="button" onClick={() => remove(c.id)} aria-label={t('Supprimer ce commentaire')}
                   className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-[#a23b34]">
                   <Trash2 className="h-4 w-4" />
                 </button>

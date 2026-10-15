@@ -5,9 +5,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarPlus, X } from 'lucide-react';
-import { testTitle } from '@/lib/api/devoirsApi';
+import { t } from '@/i18n';
 import { Section, SectionLink } from '@/components/space/Page';
-import { Countdown, DateTile, Readiness } from './ui';
+import { Countdown, DateTile, Readiness, testName } from './ui';
 import { nextTestVisible, type NextTestState } from './useNextTest';
 
 /** « Dénombrement, Suites numériques » : les chapitres à renforcer en or (et dits aux lecteurs d'écran). */
@@ -15,11 +15,11 @@ const ChapterLine: React.FC<{ names: string[]; weak: string[] }> = ({ names, wea
   <p className="mt-1 truncate text-[13px] text-ink-faint">
     {names.slice(0, 3).map((n, i) => (
       <React.Fragment key={n}>
-        {i > 0 && ', '}
-        {weak.includes(n) ? <span className="text-gold-strong">{n}<span className="sr-only"> (à renforcer)</span></span> : n}
+        {i > 0 && t(', ')}
+        {weak.includes(n) ? <span className="text-gold-strong">{n}<span className="sr-only"> {t('(à renforcer)')}</span></span> : n}
       </React.Fragment>
     ))}
-    {names.length > 3 && ` et ${names.length - 3} autre${names.length > 4 ? 's' : ''}`}
+    {names.length > 3 && <>{' '}{names.length > 4 ? t('et {n} autres', { n: names.length - 3 }) : t('et {n} autre', { n: names.length - 3 })}</>}
   </p>
 );
 
@@ -36,11 +36,11 @@ export const NextTestReminder: React.FC<{
 
   if (!test) {
     return (
-      <Section id="prochain-ds" title="Ton prochain DS" className={className}
+      <Section id="prochain-ds" title={t('Ton prochain DS')} className={className}
         action={(
-          <button type="button" onClick={onLater} aria-label="Plus tard (masquer pendant 14 jours)" title="Masquer pendant 14 jours"
+          <button type="button" onClick={onLater} aria-label={t('Plus tard (masquer pendant 14 jours)')} title={t('Masquer pendant 14 jours')}
             className="inline-flex min-h-10 items-center gap-1 font-medium text-ink-faint hover:text-ink">
-            <X className="h-3.5 w-3.5" aria-hidden /> Plus tard
+            <X className="h-3.5 w-3.5" aria-hidden /> {t('Plus tard')}
           </button>
         )}>
         <div className="flex items-start gap-3.5 rounded-2xl border border-dashed border-[#d8d4cc] bg-white p-4">
@@ -48,12 +48,12 @@ export const NextTestReminder: React.FC<{
             <CalendarPlus className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14.5px] font-semibold leading-snug text-ink">Un DS bientôt ?</p>
+            <p className="text-[14.5px] font-semibold leading-snug text-ink">{t('Un DS bientôt ?')}</p>
             <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">
-              Indique sa date et ses chapitres : tu auras une révision ciblée et un DS blanc.
+              {t('Indique sa date et ses chapitres : tu auras une révision ciblée et un DS blanc.')}
             </p>
             <button type="button" onClick={onAnnounce} className="fd-btn-ghost mt-3 min-h-10 text-[13px] font-semibold">
-              <CalendarPlus className="h-4 w-4" /> Annoncer mon DS
+              <CalendarPlus className="h-4 w-4" /> {t('Annoncer mon DS')}
             </button>
           </div>
         </div>
@@ -63,25 +63,25 @@ export const NextTestReminder: React.FC<{
 
   const soon = test.days_left <= 1;
   return (
-    <Section id="prochain-ds" title="Ton prochain DS" className={className}
-      action={<SectionLink to="/reviser#prochain-ds">Réviser</SectionLink>}>
+    <Section id="prochain-ds" title={t('Ton prochain DS')} className={className}
+      action={<SectionLink to="/reviser#prochain-ds">{t('Réviser')}</SectionLink>}>
       <Link to={`/revisions/ds/${test.id}`}
         className="group flex items-start gap-4 rounded-2xl border border-line bg-white p-4 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <DateTile date={test.date} size="sm" urgent={soon} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-[15px] font-semibold leading-snug text-ink group-hover:underline">{testTitle(test)}</span>
+            <span className="text-[15px] font-semibold leading-snug text-ink group-hover:underline">{testName(test)}</span>
             <Countdown days={test.days_left} />
           </div>
           {test.chapters.length > 0 && <ChapterLine names={test.chapters.map((c) => c.name)} weak={test.weak_chapters ?? []} />}
           <div className="mt-3 flex items-end gap-4">
             <div className="min-w-0 max-w-[220px] flex-1">
               {test.readiness == null
-                ? <p className="text-[12px] text-ink-faint">Pas encore de mesure : quelques exercices suffisent.</p>
+                ? <p className="text-[12px] text-ink-faint">{t('Pas encore de mesure : quelques exercices suffisent.')}</p>
                 : <Readiness value={test.readiness} compact />}
             </div>
-            <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-brand-hover">
-              Préparer <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <span className="ms-auto inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-brand-hover">
+              {t('Préparer')} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </span>
           </div>
         </div>

@@ -17,6 +17,7 @@ import {
   getSimulationRecap, type SimulationRecap, type BreakdownEntry,
 } from '@/lib/api/concoursApi';
 import { SEO } from '@/components/layout/SEO';
+import { t } from '@/i18n';
 
 export default function ConcoursRecapPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -74,14 +75,14 @@ export default function ConcoursRecapPage() {
       <div style={{ minHeight: '100vh', background: '#1a1a1a' }} className="flex items-center justify-center px-4">
         <div className="text-center" style={{ maxWidth: 360 }}>
           <p style={{ color: '#d8d4cc', fontSize: 14 }}>
-            Impossible d'afficher ce résultat pour le moment. Vérifie ta connexion et réessaie.
+            {t("Impossible d'afficher ce résultat pour le moment. Vérifie ta connexion et réessaie.")}
           </p>
           <button
             onClick={() => navigate('/concours/sessions')}
             className="fd-btn-ghost mt-4 inline-flex"
             style={{ background: 'rgba(255,255,255,.08)', color: '#d8d4cc', border: '1px solid rgba(255,255,255,.15)' }}
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Mon historique
+            <ArrowLeft className="w-3.5 h-3.5" /> {t('Mon historique')}
           </button>
         </div>
       </div>
@@ -108,7 +109,7 @@ export default function ConcoursRecapPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', paddingBottom: 60 }}>
-      <SEO title="Résultat - Fidni" description="Résultat de simulation" />
+      <SEO title={t('Résultat - Fidni')} description={t('Résultat de simulation')} />
 
       {/* Dark-mode + bigger LaTeX for the recap. */}
       <style>{`
@@ -132,7 +133,7 @@ export default function ConcoursRecapPage() {
           className="fd-btn-ghost mb-4"
           style={{ background: 'rgba(255,255,255,.08)', color: '#d8d4cc', border: '1px solid rgba(255,255,255,.15)' }}
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Mon historique
+          <ArrowLeft className="w-3.5 h-3.5" /> {t('Mon historique')}
         </button>
 
         {/* Score hero */}
@@ -146,24 +147,24 @@ export default function ConcoursRecapPage() {
           className="mb-6 px-5 py-6 sm:px-9 sm:py-8"
         >
           <div aria-hidden style={{
-            position: 'absolute', right: -40, bottom: -60, width: 240, height: 240,
+            position: 'absolute', insetInlineEnd: -40, bottom: -60, width: 240, height: 240,
             borderRadius: '50%', background: 'rgba(167,139,250,.15)',
           }} />
           <div className="flex items-center justify-between flex-wrap gap-4" style={{ position: 'relative' }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#b8b4ac', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-                {recap.concours_type.toUpperCase()} · {recap.mode === 'exam' ? 'Annale' : recap.mode === 'random_year' ? 'Année aléatoire' : 'Mix aléatoire'}
+                {recap.concours_type.toUpperCase()} · {recap.mode === 'exam' ? t('Annale') : recap.mode === 'random_year' ? t('Année aléatoire') : t('Mix aléatoire')}
               </div>
               <h1 style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginTop: 8 }}>
-                Résultat
+                {t('Résultat')}
               </h1>
               <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
-                {recap.correct_count} bonne{recap.correct_count > 1 ? 's' : ''} réponse{recap.correct_count > 1 ? 's' : ''} sur {recap.total_questions}
+                {recap.correct_count > 1 ? t('{n} bonnes réponses sur {total}', { n: recap.correct_count, total: recap.total_questions }) : t('{n} bonne réponse sur {total}', { n: recap.correct_count, total: recap.total_questions })}
               </p>
               <div className="flex items-center gap-2 mt-3">
                 <button onClick={() => navigate('/concours')} className="fd-btn-ghost"
                         style={{ background: 'rgba(255,255,255,.14)', color: '#fff', border: '1px solid rgba(255,255,255,.22)' }}>
-                  <Zap className="w-3.5 h-3.5" /> Nouvelle simulation
+                  <Zap className="w-3.5 h-3.5" /> {t('Nouvelle simulation')}
                 </button>
               </div>
             </div>
@@ -185,7 +186,7 @@ export default function ConcoursRecapPage() {
                     {overall}%
                   </div>
                   <div style={{ fontSize: 9, color: '#d8d4cc', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-                    Score
+                    {t('Score')}
                   </div>
                 </div>
               </div>
@@ -199,7 +200,7 @@ export default function ConcoursRecapPage() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
             <h2 style={{ fontSize: 12, color: '#b8b4ac', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 700 }}>
-              Par domaine
+              {t('Par domaine')}
             </h2>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
           </div>
@@ -230,7 +231,7 @@ export default function ConcoursRecapPage() {
                       padding: '12px 14px', borderRadius: 12,
                       background: isActive ? 'rgba(180,176,168,.15)' : 'transparent',
                       border: `1px solid ${isActive ? '#9a958c' : 'transparent'}`,
-                      cursor: 'pointer', textAlign: 'left',
+                      cursor: 'pointer', textAlign: 'start',
                       transition: 'all .15s',
                     }}
                   >
@@ -252,13 +253,13 @@ export default function ConcoursRecapPage() {
                     </div>
                     <div className="min-w-0">
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
-                        {b.subfield_name || b.subject_name || 'Sans matière'}
+                        {b.subfield_name || b.subject_name || t('Sans matière')}
                       </div>
                       {b.subject_name && b.subfield_name && (
                         <div style={{ fontSize: 11, color: '#b8b4ac', marginTop: 1 }}>{b.subject_name}</div>
                       )}
                       <div style={{ fontSize: 11, color: '#d8d4cc', marginTop: 2 }}>
-                        {b.correct} sur {b.total} correct{b.correct > 1 ? 'es' : 'e'}
+                        {b.correct > 1 ? t('{n} sur {total} correctes', { n: b.correct, total: b.total }) : t('{n} sur {total} correcte', { n: b.correct, total: b.total })}
                       </div>
                     </div>
                   </button>
@@ -281,19 +282,19 @@ export default function ConcoursRecapPage() {
               }}
             >
               <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
-                Domaine
+                {t('Domaine')}
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                {activeBreakdown.subfield_name || activeBreakdown.subject_name || 'Sans matière'}
+                {activeBreakdown.subfield_name || activeBreakdown.subject_name || t('Sans matière')}
               </h3>
               <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
-                {activeBreakdown.correct} sur {activeBreakdown.total} correct{activeBreakdown.correct > 1 ? 'es' : 'e'}
+                {activeBreakdown.correct > 1 ? t('{n} sur {total} correctes', { n: activeBreakdown.correct, total: activeBreakdown.total }) : t('{n} sur {total} correcte', { n: activeBreakdown.correct, total: activeBreakdown.total })}
               </p>
 
               <div style={{ height: 1, background: 'rgba(255,255,255,.08)', margin: '14px 0' }} />
 
               <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-                Sélection des questions
+                {t('Sélection des questions')}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {activeBreakdown.positions.map(p => {
@@ -305,7 +306,7 @@ export default function ConcoursRecapPage() {
                     <button
                       key={p}
                       onClick={() => pick(p)}
-                      aria-label={`Question ${p + 1} : ${st.label}`}
+                      aria-label={t('Question {n} : {label}', { n: p + 1, label: t(st.label) })}
                       aria-current={isCurrent ? 'true' : undefined}
                       style={{
                         minWidth: 40, minHeight: 38, padding: '7px 10px', borderRadius: 8,
@@ -328,7 +329,7 @@ export default function ConcoursRecapPage() {
                       width: 12, height: 12, borderRadius: 4, background: PILL[k].bg,
                       border: `1.5px ${k === 'skipped' ? 'dashed' : 'solid'} ${PILL[k].border}`,
                     }} />
-                    {PILL[k].label}
+                    {t(PILL[k].label)}
                   </span>
                 ))}
               </div>
@@ -375,7 +376,7 @@ function QuestionReview({ recap, pos, positions, onGo }: {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <p style={{ color: '#b8b4ac', fontSize: 13 }}>Sélectionne une question.</p>
+        <p style={{ color: '#b8b4ac', fontSize: 13 }}>{t('Sélectionne une question.')}</p>
       </div>
     );
   }
@@ -406,7 +407,7 @@ function QuestionReview({ recap, pos, positions, onGo }: {
       }}
     >
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Question {pos + 1}</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{t('Question {n}', { n: pos + 1 })}</h3>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase',
@@ -414,9 +415,9 @@ function QuestionReview({ recap, pos, positions, onGo }: {
           background: kind === 'skipped' ? 'rgba(255,255,255,.08)' : PILL[kind].bg,
           padding: '4px 10px', borderRadius: 99,
         }}>
-          {kind === 'correct' && <><Check className="w-3 h-3" /> Correct</>}
-          {kind === 'wrong' && <><X className="w-3 h-3" /> Incorrect</>}
-          {kind === 'skipped' && <><MinusCircle className="w-3 h-3" /> Non répondue</>}
+          {kind === 'correct' && <><Check className="w-3 h-3" /> {t('Correct')}</>}
+          {kind === 'wrong' && <><X className="w-3 h-3" /> {t('Incorrect')}</>}
+          {kind === 'skipped' && <><MinusCircle className="w-3 h-3" /> {t('Non répondue')}</>}
         </span>
       </div>
 
@@ -426,7 +427,7 @@ function QuestionReview({ recap, pos, positions, onGo }: {
 
       {kind === 'skipped' && (
         <p style={{ fontSize: 12, color: '#b8b4ac', marginBottom: 10 }}>
-          Tu n'as pas répondu : la bonne réponse est en vert.
+          {t("Tu n'as pas répondu : la bonne réponse est en vert.")}
         </p>
       )}
 
@@ -480,7 +481,7 @@ function QuestionReview({ recap, pos, positions, onGo }: {
         >
           <div className="flex items-center gap-2 mb-2">
             <Lightbulb className="w-4 h-4" style={{ color: '#fbbf24' }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#fbbf24' }}>Explication</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#fbbf24' }}>{t('Explication')}</span>
           </div>
           <div className="concours-dark-prose concours-recap-explanation" style={{ fontSize: 15, color: '#fff', lineHeight: 1.7 }}>
             <ConcoursContentRenderer html={q.explanation} />
@@ -495,14 +496,14 @@ function QuestionReview({ recap, pos, positions, onGo }: {
             disabled={prev === null}
             style={{ ...navBtn, opacity: prev === null ? .35 : 1 }}
           >
-            <ChevronLeft className="w-3.5 h-3.5" /> Précédente
+            <ChevronLeft className="w-3.5 h-3.5" /> {t('Précédente')}
           </button>
           <button
             onClick={() => next !== null && onGo(next)}
             disabled={next === null}
             style={{ ...navBtn, opacity: next === null ? .35 : 1 }}
           >
-            Suivante <ChevronRight className="w-3.5 h-3.5" />
+            {t('Suivante')} <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

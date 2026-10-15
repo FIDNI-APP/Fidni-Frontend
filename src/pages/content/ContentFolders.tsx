@@ -25,6 +25,7 @@ import {
   type HubFolder, type HubInfo, type LevelFolders, type YearFolders,
 } from '@/lib/api/hubApi';
 import { canCreateContent } from '@/lib/features';
+import { t } from '@/i18n';
 import { trackAction, trackHubChoice } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, SECTION_OF, SECTION_TEXT, plural, type ContentKind } from './sections';
 
@@ -47,9 +48,9 @@ function useScrollMemory(ready: boolean) {
 
 const ErrorBox: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
   <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-    <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Les dossiers n’ont pas pu se charger. Vérifie ta connexion.</p>
+    <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Les dossiers n’ont pas pu se charger. Vérifie ta connexion.')}</p>
     <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10">
-      <RotateCcw className="h-4 w-4" /> Réessayer
+      <RotateCcw className="h-4 w-4" /> {t('Réessayer')}
     </button>
   </div>
 );
@@ -58,10 +59,10 @@ const ErrorBox: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
 const CreateButton: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   const { user } = useAuth();
   if (!canCreateContent(user)) return null;
-  const t = SECTION_TEXT[kind];
+  const st = SECTION_TEXT[kind];
   return (
-    <Link to={`${t.basePath}/new`} className="fd-btn-ghost min-h-10 flex-shrink-0" aria-label={t.createLabel}>
-      <Plus className="h-4 w-4" /> <span>{t.createLabel}</span>
+    <Link to={`${st.basePath}/new`} className="fd-btn-ghost min-h-10 flex-shrink-0" aria-label={t(st.createLabel)}>
+      <Plus className="h-4 w-4" /> <span>{t(st.createLabel)}</span>
     </Link>
   );
 };
@@ -70,7 +71,7 @@ const CreateButton: React.FC<{ kind: ContentKind }> = ({ kind }) => {
 
 const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
   const section = SECTION_OF[kind];
-  const t = SECTION_TEXT[kind];
+  const st = SECTION_TEXT[kind];
   const location = useLocation();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const myLevel = profileLevel(user);
@@ -103,11 +104,11 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
       name: lv.name,
       to: lv.url,
       count: lv.count,
-      countLabel: plural(lv.count, t.noun),
+      countLabel: plural(lv.count, st.noun),
       sub: !lv.chapters_total ? undefined
-        : member ? `${lv.chapters_filled} chapitre${lv.chapters_filled > 1 ? 's' : ''} sur ${lv.chapters_total}`
-          : `${lv.chapters_filled} chapitre${lv.chapters_filled > 1 ? 's' : ''}`,
-      badge: myLevel && String(lv.id) === myLevel.id ? 'Ton niveau' : undefined,
+        : member ? (lv.chapters_filled > 1 ? t('{n} chapitres sur {total}', { n: lv.chapters_filled, total: lv.chapters_total }) : t('{n} chapitre sur {total}', { n: lv.chapters_filled, total: lv.chapters_total }))
+          : (lv.chapters_filled > 1 ? t('{n} chapitres', { n: lv.chapters_filled }) : t('{n} chapitre', { n: lv.chapters_filled })),
+      badge: myLevel && String(lv.id) === myLevel.id ? t('Ton niveau') : undefined,
       onOpen: () => trackAction('dossier-niveau'),
     })),
   }] : [];
@@ -115,18 +116,18 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
 
   return (
     <Page width="wide">
-      <SEO title={LIST_SEO[kind].title} description={LIST_SEO[kind].description} canonicalUrl={t.basePath} />
-      <FolderHeader title={t.title} count={data ? total : null}
-        summary={<p>{t.intro}</p>}
+      <SEO title={LIST_SEO[kind].title} description={LIST_SEO[kind].description} canonicalUrl={st.basePath} />
+      <FolderHeader title={t(st.title)} count={data ? total : null}
+        summary={<p>{t(st.intro)}</p>}
         actions={<CreateButton kind={kind} />} />
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data || (authLoading && !allLevels) ? <FolderSkeleton n={4} />
-          : <FolderGrid groups={groups} label={`Niveaux – ${t.title}`} />}
+          : <FolderGrid groups={groups} label={t('Niveaux – {title}', { title: t(st.title) })} />}
       {kind === 'exam' && (
         <Link to="/exams/nationaux"
           className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line bg-white px-4 py-3 text-[13.5px] text-ink-soft transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)]">
           <Landmark className="h-4 w-4 text-ink-faint" />
-          Les sujets du Bac national ont leur rubrique : <b className="font-semibold text-ink">Bac national</b>
+          {t('Les sujets du Bac national ont leur rubrique :')}{' '}<b className="font-semibold text-ink">{t('Bac national')}</b>
           <ArrowRight className="h-4 w-4" />
         </Link>
       )}
@@ -146,7 +147,7 @@ function useMemberView() {
 
 /** Dossiers regroupés par sous-domaine, dans l'ordre reçu (le serveur les trie dans l'ordre du programme officiel). */
 function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
-  const t = SECTION_TEXT[kind];
+  const st = SECTION_TEXT[kind];
   const groups: FolderGroup[] = [];
   for (const f of folders) {
     const title = f.subfield ?? null;
@@ -157,9 +158,9 @@ function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
       name: f.name,
       to: f.url,
       count: f.count,
-      countLabel: plural(f.count, t.noun),
+      countLabel: plural(f.count, st.noun),
       progress: f.mine ?? null,
-      doneWord: t.doneWord,
+      doneWord: st.doneWord,
       aussi: f.aussi,
       // Le chapitre choisi est compté à l'ouverture de sa liste (ContentList, trackHubChoice).
       onOpen: () => trackAction('dossier-chapitre'),
@@ -169,20 +170,20 @@ function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
 }
 
 const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () => void }> = ({ kind, hub, onProgress }) => {
-  const t = SECTION_TEXT[kind];
+  const st = SECTION_TEXT[kind];
   const section = SECTION_OF[kind];
   const location = useLocation();
   const navigationType = useNavigationType();
   const { isAuthenticated, user } = useAuth();
   const canCreate = canCreateContent(user);
   const { setCrumbs } = useBreadcrumb();
-  const levelsPath = `${t.basePath}?niveau=tous`;
+  const levelsPath = `${st.basePath}?niveau=tous`;
 
   // Barre du haut (téléphone : « ‹ Exercices » remonte aux niveaux) et entrée du menu.
   useEffect(() => {
-    setCrumbs([{ label: t.title, to: levelsPath }, { label: hub.level.name }], t.basePath);
+    setCrumbs([{ label: t(st.title), to: levelsPath }, { label: hub.level.name }], st.basePath);
     return () => setCrumbs(null);
-  }, [hub.level.name, t.title, t.basePath, levelsPath, setCrumbs]);
+  }, [hub.level.name, st.title, st.basePath, levelsPath, setCrumbs]);
 
   // Niveau choisi depuis le site, mesuré comme un filtre. Pas une arrivée directe (location.key « default »), ni un
   // retour (« Précédent »), ni la redirection automatique de l'élève vers son niveau (state.auto).
@@ -204,13 +205,13 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
     const g = groupFolders(folders, kind);
     // Contenus du niveau rangés dans aucun de ses chapitres : un dossier à part, sinon introuvables d'ici.
     if (hub.unfiled) {
-      g.push({ title: 'Autres', items: [{
-        key: 'sans-chapitre', name: 'Sans chapitre', count: hub.unfiled, countLabel: plural(hub.unfiled, t.noun),
-        to: `${t.basePath}?classLevels=${hub.level.id}&sansChapitre=true`, onOpen: () => trackAction('dossier-chapitre'),
+      g.push({ title: t('Autres'), items: [{
+        key: 'sans-chapitre', name: t('Sans chapitre'), count: hub.unfiled, countLabel: plural(hub.unfiled, st.noun),
+        to: `${st.basePath}?classLevels=${hub.level.id}&sansChapitre=true`, onOpen: () => trackAction('dossier-chapitre'),
       }] });
     }
     return g;
-  }, [folders, kind, hub.unfiled, hub.level.id, t.noun, t.basePath]);
+  }, [folders, kind, hub.unfiled, hub.level.id, st.noun, st.basePath]);
   const filled = folders.filter((f) => f.count > 0).length;
   // Où en est l'élève dans ce niveau (contenus terminés, tous chapitres confondus).
   const done = folders.reduce((n, f) => n + (f.mine?.done ?? 0), 0);
@@ -220,18 +221,20 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
     <Page width="wide">
       <SEO title={hub.title} description={hub.description} canonicalUrl={hub.url} noindex={!hub.indexable} />
       <FolderHeader
-        crumbs={[{ label: t.title, to: levelsPath }]}
+        crumbs={[{ label: t(st.title), to: levelsPath }]}
         title={hub.h1}
         emphasis={hub.level.name}
         summary={(
           <p className="fd-nums">
-            <span className="font-medium text-ink-soft">{plural(hub.count, t.noun)}</span>
-            {' '}dans {filled} chapitre{filled > 1 ? 's' : ''}{member && <> sur {folders.length}</>}
+            <span className="font-medium text-ink-soft">{plural(hub.count, st.noun)}</span>
+            {' '}{member
+              ? (filled > 1 ? t('dans {n} chapitres sur {total}', { n: filled, total: folders.length }) : t('dans {n} chapitre sur {total}', { n: filled, total: folders.length }))
+              : (filled > 1 ? t('dans {n} chapitres', { n: filled }) : t('dans {n} chapitre', { n: filled }))}
             {isAuthenticated && done > 0 && (
               <>
-                {' · '}<b className="font-semibold text-ink-soft">{done}</b> {done > 1 ? t.doneWord[1] : t.doneWord[0]}
-                {kind !== 'lesson' && success > 0 && <> · <b className="font-semibold text-brand-hover">{success}</b> réussi{success > 1 ? 's' : ''}</>}
-                {kind !== 'lesson' && done - success > 0 && <> · <b className="font-semibold text-gold-strong">{done - success}</b> à revoir</>}
+                {' · '}<b className="font-semibold text-ink-soft">{done}</b> {t(done > 1 ? st.doneWord[1] : st.doneWord[0])}
+                {kind !== 'lesson' && success > 0 && <> · <b className="font-semibold text-brand-hover">{success}</b> {success > 1 ? t('réussis') : t('réussi')}</>}
+                {kind !== 'lesson' && done - success > 0 && <> · <b className="font-semibold text-gold-strong">{done - success}</b> {t('à revoir')}</>}
               </>
             )}
           </p>
@@ -243,14 +246,14 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
         <CatchUpBanner kind={kind} level={hub.level.id} onEvaluated={onProgress} />
       )}
       {folders.length === 0 ? (
-        <EmptyState icon={Landmark} tone="ink" compact title="Aucun chapitre pour l’instant"
-          text="Aucun chapitre n’est encore rattaché à ce niveau." />
+        <EmptyState icon={Landmark} tone="ink" compact title={t('Aucun chapitre pour l’instant')}
+          text={t('Aucun chapitre n’est encore rattaché à ce niveau.')} />
       ) : (
-        <FolderGrid groups={groups} label={`Chapitres – ${hub.level.name}`} />
+        <FolderGrid groups={groups} label={t('Chapitres – {level}', { level: hub.level.name })} />
       )}
       {section === 'exams' && (
         <p className="mt-6 text-[13px] text-ink-faint">
-          Les sujets du Bac national sont dans <Link to="/exams/nationaux" className="font-semibold text-brand-hover hover:underline">Bac national</Link>.
+          {t('Les sujets du Bac national sont dans')}{' '}<Link to="/exams/nationaux" className="font-semibold text-brand-hover hover:underline">{t('Bac national')}</Link>.
         </p>
       )}
       {/* Présentation pour les moteurs de recherche (même texte que la page pré-remplie), en bas de page. */}
@@ -280,7 +283,7 @@ const YearsView: React.FC = () => {
     title: null,
     items: data.years.map((y) => ({
       key: y.year ?? 'aucune',
-      name: y.year ? `Bac ${y.year}` : 'Année non précisée',
+      name: y.year ? t('Bac {year}', { year: y.year }) : t('Année non précisée'),
       to: yearPath(y.year),
       count: y.count,
       countLabel: plural(y.count, ['sujet', 'sujets']),
@@ -294,16 +297,16 @@ const YearsView: React.FC = () => {
     <Page width="wide">
       <SEO title={NATIONAL.seoTitle} description={NATIONAL.seoDescription} canonicalUrl="/exams/nationaux"
         noindex={!!data && data.years.length === 0} />
-      <FolderHeader title={NATIONAL.title} count={data ? total : null}
-        summary={<p>{NATIONAL.subtitle} Un dossier par année.</p>}
+      <FolderHeader title={t(NATIONAL.title)} count={data ? total : null}
+        summary={<p>{t(NATIONAL.subtitle)} {t('Un dossier par année.')}</p>}
         actions={<CreateButton kind="exam" />} />
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data ? <FolderSkeleton n={6} />
           : data.years.length === 0 ? (
-            <EmptyState icon={Landmark} tone="gold" title="Les sujets nationaux arrivent bientôt"
-              text="Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés."
-              action={<Link to="/exams" className="fd-btn-primary min-h-10">Voir les devoirs surveillés</Link>} />
-          ) : <FolderGrid groups={groups} label="Années du Bac national" />}
+            <EmptyState icon={Landmark} tone="gold" title={t('Les sujets nationaux arrivent bientôt')}
+              text={t('Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.')}
+              action={<Link to="/exams" className="fd-btn-primary min-h-10">{t('Voir les devoirs surveillés')}</Link>} />
+          ) : <FolderGrid groups={groups} label={t('Années du Bac national')} />}
     </Page>
   );
 };

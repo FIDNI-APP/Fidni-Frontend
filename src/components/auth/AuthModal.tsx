@@ -10,6 +10,7 @@ import { requestPasswordReset, resendVerification, type SignupConsents } from '@
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { trackAction } from '@/lib/usage';
 import { LEGAL } from '@/lib/legal';
+import { t } from '@/i18n';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,8 +23,8 @@ type ApiError = { response?: { status?: number; data?: { code?: string; error?: 
 
 /** Message lisible pour une erreur d'API (le serveur répond parfois en anglais, ex. 429). */
 function apiErrorMessage(err: ApiError | null | undefined, fallback: string): string {
-  if (err?.response?.status === 429) return 'Trop de tentatives. Patiente quelques minutes avant de réessayer.';
-  if (!err?.response) return 'Connexion au serveur impossible. Vérifie ta connexion internet.';
+  if (err?.response?.status === 429) return t('Trop de tentatives. Patiente quelques minutes avant de réessayer.');
+  if (!err?.response) return t('Connexion au serveur impossible. Vérifie ta connexion internet.');
   return err.response.data?.error || fallback;
 }
 
@@ -31,18 +32,18 @@ function apiErrorMessage(err: ApiError | null | undefined, fallback: string): st
 function googleErrorMessage(err: ApiError): string {
   const code = err?.response?.data?.code;
   if (code === 'invalid_token') {
-    return 'La connexion avec Google a échoué ou a expiré. Recommence avec le bouton Google, ou utilise ton e-mail.';
+    return t('La connexion avec Google a échoué ou a expiré. Recommence avec le bouton Google, ou utilise ton e-mail.');
   }
-  if (code === 'account_disabled') return `Ce compte Fidni est désactivé. Si c’est une erreur, écris à ${LEGAL.contactEmail}.`;
+  if (code === 'account_disabled') return t('Ce compte Fidni est désactivé. Si c’est une erreur, écris à {email}.', { email: LEGAL.contactEmail });
   // 503 : les clés de Google sont injoignables depuis le serveur (pas la faute du jeton).
   if (code === 'google_unavailable' || err?.response?.status === 503) {
-    return 'La connexion avec Google est momentanément indisponible. Réessaie dans un instant, ou utilise ton e-mail.';
+    return t('La connexion avec Google est momentanément indisponible. Réessaie dans un instant, ou utilise ton e-mail.');
   }
-  return apiErrorMessage(err, 'La connexion avec Google a échoué. Réessaie.');
+  return apiErrorMessage(err, t('La connexion avec Google a échoué. Réessaie.'));
 }
 
 const inputClass =
-  'w-full pl-10 pr-3 py-2 border border-line rounded-lg bg-white text-ink ' +
+  'w-full ps-10 pe-3 py-2 border border-line rounded-lg bg-white text-ink ' +
   'placeholder-[#9a958c] focus:outline-none focus:border-brand transition-colors';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 'login' }) => {
@@ -80,7 +81,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     try {
       await resendVerification(email);
     } catch { /* generic response regardless */ }
-    setResendMsg('Si un compte existe, un nouveau lien vient d\'être envoyé.');
+    setResendMsg(t("Si un compte existe, un nouveau lien vient d'être envoyé."));
   };
 
   // Reset state when the modal opens.
@@ -141,7 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
 
     try {
       await login(formValues.identifier, formValues.password);
-      setSuccessMessage('Connexion réussie !');
+      setSuccessMessage(t('Connexion réussie !'));
       setTimeout(() => { onClose(); }, 900);
     } catch (err) {
       const data = (err as ApiError)?.response?.data;
@@ -151,8 +152,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
       setNeedsVerification(unverified);
       setUnverifiedEmail(unverified ? data?.email || formValues.identifier : '');
       setResendMsg('');
-      setError(unverified ? 'Confirme ton adresse e-mail pour te connecter.'
-        : apiErrorMessage(err as ApiError, 'Échec de la connexion. Réessaie.'));
+      setError(unverified ? t('Confirme ton adresse e-mail pour te connecter.')
+        : apiErrorMessage(err as ApiError, t('Échec de la connexion. Réessaie.')));
     } finally {
       setIsSubmitting(false);
     }
@@ -164,14 +165,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     setError('');
 
     if (formValues.password !== formValues.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas.');
+      setError(t('Les mots de passe ne correspondent pas.'));
       setIsSubmitting(false);
       return;
     }
     if (!acceptTerms || !ageOk) {
       setError(!acceptTerms
-        ? 'Accepte les conditions d’utilisation et la politique de confidentialité pour créer ton compte.'
-        : 'Coche la case sur l’âge : si tu as moins de 15 ans, demande d’abord l’accord d’un parent.');
+        ? t('Accepte les conditions d’utilisation et la politique de confidentialité pour créer ton compte.')
+        : t('Coche la case sur l’âge : si tu as moins de 15 ans, demande d’abord l’accord d’un parent.'));
       setIsSubmitting(false);
       return;
     }
@@ -186,7 +187,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         setResendMsg('');
       }
     } catch (err) {
-      setError(apiErrorMessage(err as ApiError, 'Échec de l\'inscription. Réessaie.'));
+      setError(apiErrorMessage(err as ApiError, t("Échec de l'inscription. Réessaie.")));
     } finally {
       setIsSubmitting(false);
     }
@@ -209,7 +210,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         navigate('/complete-profile');
         return;
       }
-      setSuccessMessage('Connexion réussie !');
+      setSuccessMessage(t('Connexion réussie !'));
       setTimeout(() => { onClose(); }, 900);
     } catch (err) {
       const data = (err as ApiError)?.response?.data;
@@ -230,8 +231,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     if (!googleConsent) return;
     if (!acceptTerms || !ageOk) {
       setError(!acceptTerms
-        ? 'Accepte les conditions d’utilisation et la politique de confidentialité pour continuer.'
-        : 'Coche la case sur l’âge : si tu as moins de 15 ans, demande d’abord l’accord d’un parent.');
+        ? t('Accepte les conditions d’utilisation et la politique de confidentialité pour continuer.')
+        : t('Coche la case sur l’âge : si tu as moins de 15 ans, demande d’abord l’accord d’un parent.'));
       return;
     }
     handleGoogle(googleConsent.credential, { accept_terms: true, age_ok: true });
@@ -245,7 +246,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
       await requestPasswordReset(formValues.identifier);
       setResetSent(true);
     } catch (err) {
-      setError(apiErrorMessage(err as ApiError, 'Impossible d’envoyer le lien pour le moment. Réessaie dans un instant.'));
+      setError(apiErrorMessage(err as ApiError, t('Impossible d’envoyer le lien pour le moment. Réessaie dans un instant.')));
     } finally {
       setIsSubmitting(false);
     }
@@ -260,21 +261,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
           className="mt-0.5 h-4 w-4 accent-[#1a7a4a] flex-shrink-0" />
         <span>
-          J’accepte les{' '}
-          <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">conditions d’utilisation</a>
-          {' '}et la{' '}
-          <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">politique de confidentialité</a>.
+          {t('J’accepte les')}{' '}
+          <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">{t('conditions d’utilisation')}</a>
+          {' '}{t('et la')}{' '}
+          <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">{t('politique de confidentialité')}</a>.
         </span>
       </label>
       <label className="flex items-start gap-2.5 text-sm text-ink-soft cursor-pointer">
         <input type="checkbox" checked={ageOk} onChange={(e) => setAgeOk(e.target.checked)}
           className="mt-0.5 h-4 w-4 accent-[#1a7a4a] flex-shrink-0" />
-        <span>J’ai 15 ans ou plus, <em>ou</em> un parent m’a donné son accord pour m’inscrire.</span>
+        <span>{t('J’ai 15 ans ou plus,')} <em>{t('ou')}</em> {t('un parent m’a donné son accord pour m’inscrire.')}</span>
       </label>
       <p className="text-xs text-ink-faint leading-relaxed">
-        Tes données servent uniquement à faire fonctionner ton compte (suivi, classes, feuilles d’exercices).
-        Elles ne sont ni vendues ni utilisées pour de la publicité ciblée. Tu peux les télécharger ou
-        supprimer ton compte à tout moment depuis tes paramètres.
+        {t('Tes données servent uniquement à faire fonctionner ton compte (suivi, classes, feuilles d’exercices). Elles ne sont ni vendues ni utilisées pour de la publicité ciblée. Tu peux les télécharger ou supprimer ton compte à tout moment depuis tes paramètres.')}
       </p>
     </div>
   );
@@ -303,23 +302,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         <div className="bg-ink p-6 text-white relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
-            aria-label="Fermer"
+            className="absolute top-4 end-4 text-white/70 hover:text-white transition-colors"
+            aria-label={t('Fermer')}
           >
             <X className="w-5 h-5" />
           </button>
           <h2 id="auth-modal-title" className="fd-display text-2xl" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
-            {googleConsent ? 'Encore une chose'
-              : activeTab === 'signup' ? 'Rejoindre Fidni' : forgot ? 'Mot de passe oublié' : 'Content de te revoir'}
+            {googleConsent ? t('Encore une chose')
+              : activeTab === 'signup' ? t('Rejoindre Fidni') : forgot ? t('Mot de passe oublié') : t('Content de te revoir')}
           </h2>
           <p className="mt-1 text-[#b8b4ac] text-sm">
             {googleConsent
-              ? 'Deux cases à cocher, et c’est parti.'
+              ? t('Deux cases à cocher, et c’est parti.')
               : activeTab === 'signup'
-                ? 'Crée un compte pour commencer à apprendre.'
+                ? t('Crée un compte pour commencer à apprendre.')
                 : forgot
-                  ? 'On t’envoie un lien pour en choisir un nouveau.'
-                  : 'Connecte-toi pour continuer à progresser.'}
+                  ? t('On t’envoie un lien pour en choisir un nouveau.')
+                  : t('Connecte-toi pour continuer à progresser.')}
           </p>
         </div>
 
@@ -327,20 +326,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         <div className={`flex border-b border-line ${googleConsent ? 'hidden' : ''}`}>
           <button onClick={() => switchTab('login')} className={tabClass(activeTab === 'login')}>
             <span className="flex items-center justify-center">
-              <LogIn className="w-4 h-4 mr-2" />
-              Connexion
+              <LogIn className="w-4 h-4 me-2" />
+              {t('Connexion')}
             </span>
             {activeTab === 'login' && (
-              <motion.div layoutId="authActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />
+              <motion.div layoutId="authActiveTab" className="absolute bottom-0 start-0 end-0 h-0.5 bg-brand" />
             )}
           </button>
           <button onClick={() => switchTab('signup')} className={tabClass(activeTab === 'signup')}>
             <span className="flex items-center justify-center">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Inscription
+              <UserPlus className="w-4 h-4 me-2" />
+              {t('Inscription')}
             </span>
             {activeTab === 'signup' && (
-              <motion.div layoutId="authActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />
+              <motion.div layoutId="authActiveTab" className="absolute bottom-0 start-0 end-0 h-0.5 bg-brand" />
             )}
           </button>
         </div>
@@ -351,14 +350,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
             {error && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 className="mb-4 p-3 bg-[#fdeceb] border border-[#f3c9c5] text-[#a23b34] rounded-lg flex items-start">
-                <AlertCircle className="w-5 h-5 mt-0.5 mr-2 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 mt-0.5 me-2 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </motion.div>
             )}
             {successMessage && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 className="mb-4 p-3 bg-brand-soft border border-brand-line text-brand-hover rounded-lg flex items-start">
-                <CheckCircle className="w-5 h-5 mt-0.5 mr-2 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 mt-0.5 me-2 flex-shrink-0" />
                 <span className="text-sm">{successMessage}</span>
               </motion.div>
             )}
@@ -379,24 +378,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                 />
               </div>
               <h3 className="fd-display text-ink" style={{ fontSize: 18, fontWeight: 600 }}>
-                {emailSendFailed ? "Compte créé, mais l'e-mail n'est pas parti" : 'Vérifie ta boîte mail'}
+                {emailSendFailed ? t("Compte créé, mais l'e-mail n'est pas parti") : t('Vérifie ta boîte mail')}
               </h3>
               <p className="text-sm text-ink-faint mt-2">
                 {emailSendFailed ? (
                   <>
-                    Ton compte <strong className="text-ink">{pendingEmail}</strong> existe bien, mais on n'a pas réussi
-                    à envoyer le lien de confirmation. Réessaie dans un instant — inutile de recréer un compte.
+                    {t('Ton compte')} <strong className="text-ink">{pendingEmail}</strong> {t("existe bien, mais on n'a pas réussi à envoyer le lien de confirmation. Réessaie dans un instant — inutile de recréer un compte.")}
                   </>
                 ) : (
                   <>
-                    On a envoyé un lien de confirmation à <strong className="text-ink">{pendingEmail}</strong>. Clique
-                    dessus pour activer ton compte, puis connecte-toi.
+                    {t('On a envoyé un lien de confirmation à')} <strong className="text-ink">{pendingEmail}</strong>{t('. Clique dessus pour activer ton compte, puis connecte-toi.')}
                   </>
                 )}
               </p>
               <button type="button" onClick={() => handleResend(pendingEmail)}
                 className="mt-4 text-sm font-semibold text-brand-hover hover:text-brand">
-                Renvoyer le lien
+                {t('Renvoyer le lien')}
               </button>
               {resendMsg && <p className="text-xs text-ink-faint mt-2">{resendMsg}</p>}
             </div>
@@ -408,7 +405,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
               <GoogleButton onCredential={(c) => handleGoogle(c)} busy={googleBusy} />
               <div className="mt-4 flex items-center gap-3 text-xs text-ink-faint">
                 <span className="h-px flex-1 bg-line" aria-hidden />
-                ou
+                {t('ou')}
                 <span className="h-px flex-1 bg-line" aria-hidden />
               </div>
             </div>
@@ -419,21 +416,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
           {googleConsent && !pendingEmail && (
             <form onSubmit={handleGoogleConsent} className="space-y-4">
               <p className="text-sm text-ink-soft leading-relaxed">
-                {googleConsent.name ? <>Bienvenue, <strong className="text-ink">{googleConsent.name}</strong> ! </> : null}
-                Pour utiliser Fidni avec ton adresse Google
-                {googleConsent.email ? <> <strong className="text-ink break-words">{googleConsent.email}</strong></> : null},
-                coche d’abord les deux cases.
+                {googleConsent.name ? <>{t('Bienvenue,')} <strong className="text-ink">{googleConsent.name}</strong> ! </> : null}
+                {t('Pour utiliser Fidni avec ton adresse Google')}
+                {googleConsent.email ? <> <strong className="text-ink break-words">{googleConsent.email}</strong></> : null}
+                {t(', coche d’abord les deux cases.')}
               </p>
               {consentFields}
               <Button type="submit" disabled={googleBusy}
                 className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg flex items-center justify-center">
-                {googleBusy ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion…</>)
-                            : (<><LogIn className="mr-2 h-4 w-4" />Continuer</>)}
+                {googleBusy ? (<><Loader2 className="me-2 h-4 w-4 animate-spin" />{t('Connexion…')}</>)
+                            : (<><LogIn className="me-2 h-4 w-4" />{t('Continuer')}</>)}
               </Button>
               <div className="text-center text-sm">
                 <button type="button" disabled={googleBusy} onClick={() => { setGoogleConsent(null); setError(''); }}
                   className="inline-flex items-center gap-1 text-brand-hover hover:text-brand font-medium">
-                  <ArrowLeft className="w-4 h-4" /> Retour
+                  <ArrowLeft className="w-4 h-4" /> {t('Retour')}
                 </button>
               </div>
             </form>
@@ -451,18 +448,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                       <div className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center bg-brand-soft">
                         <Mail className="w-6 h-6 text-brand-hover" />
                       </div>
-                      <h3 className="fd-display text-ink" style={{ fontSize: 18, fontWeight: 600 }}>Regarde ta boîte mail</h3>
+                      <h3 className="fd-display text-ink" style={{ fontSize: 18, fontWeight: 600 }}>{t('Regarde ta boîte mail')}</h3>
                       <p className="text-sm text-ink-faint mt-2">
-                        Si un compte correspond, un lien vient d’être envoyé. Il est valable 2 heures et ne sert qu’une fois.
-                        Pense à vérifier les spams.
+                        {t('Si un compte correspond, un lien vient d’être envoyé. Il est valable 2 heures et ne sert qu’une fois. Pense à vérifier les spams.')}
                       </p>
                     </div>
                   ) : (
                     <form onSubmit={handleForgot} className="space-y-4">
                       <div className="space-y-2">
-                        <label htmlFor="forgotIdentifier" className="block text-sm font-medium text-ink-soft">Ton e-mail (ou nom d'utilisateur)</label>
+                        <label htmlFor="forgotIdentifier" className="block text-sm font-medium text-ink-soft">{t("Ton e-mail (ou nom d'utilisateur)")}</label>
                         <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                             <Mail className="h-5 w-5 text-ink-faint" />
                           </div>
                           <input type="text" id="forgotIdentifier" name="identifier" value={formValues.identifier}
@@ -472,15 +468,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                       </div>
                       <Button type="submit" disabled={isSubmitting}
                         className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg flex items-center justify-center">
-                        {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Envoi…</>)
-                                      : (<><KeyRound className="mr-2 h-4 w-4" />Recevoir le lien</>)}
+                        {isSubmitting ? (<><Loader2 className="me-2 h-4 w-4 animate-spin" />{t('Envoi…')}</>)
+                                      : (<><KeyRound className="me-2 h-4 w-4" />{t('Recevoir le lien')}</>)}
                       </Button>
                     </form>
                   )}
                   <div className="text-center text-sm mt-4">
                     <button type="button" onClick={() => { setForgot(false); setResetSent(false); setError(''); }}
                       className="inline-flex items-center gap-1 text-brand-hover hover:text-brand font-medium">
-                      <ArrowLeft className="w-4 h-4" /> Retour à la connexion
+                      <ArrowLeft className="w-4 h-4" /> {t('Retour à la connexion')}
                     </button>
                   </div>
                 </motion.div>
@@ -489,9 +485,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                   initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
                   transition={{ duration: 0.25 }} onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="identifier" className="block text-sm font-medium text-ink-soft">Email ou nom d'utilisateur</label>
+                    <label htmlFor="identifier" className="block text-sm font-medium text-ink-soft">{t("Email ou nom d'utilisateur")}</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Mail className="h-5 w-5 text-ink-faint" />
                       </div>
                       <input type="text" id="identifier" name="identifier" value={formValues.identifier}
@@ -502,12 +498,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
 
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <label htmlFor="password" className="block text-sm font-medium text-ink-soft">Mot de passe</label>
+                      <label htmlFor="password" className="block text-sm font-medium text-ink-soft">{t('Mot de passe')}</label>
                       <button type="button" onClick={() => { setForgot(true); setError(''); setNeedsVerification(false); }}
-                        className="text-xs text-brand-hover hover:text-brand">Mot de passe oublié ?</button>
+                        className="text-xs text-brand-hover hover:text-brand">{t('Mot de passe oublié ?')}</button>
                     </div>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-ink-faint" />
                       </div>
                       <input type="password" id="password" name="password" value={formValues.password}
@@ -518,14 +514,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
 
                   <Button type="submit" disabled={isSubmitting}
                     className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg flex items-center justify-center">
-                    {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion…</>)
-                                  : (<><LogIn className="mr-2 h-4 w-4" />Connexion</>)}
+                    {isSubmitting ? (<><Loader2 className="me-2 h-4 w-4 animate-spin" />{t('Connexion…')}</>)
+                                  : (<><LogIn className="me-2 h-4 w-4" />{t('Connexion')}</>)}
                   </Button>
 
                   <div className="text-center text-sm text-ink-faint mt-4">
-                    Pas encore de compte ?{' '}
+                    {t('Pas encore de compte ?')}{' '}
                     <button type="button" onClick={() => switchTab('signup')} className="text-brand-hover hover:text-brand font-medium">
-                      Inscris-toi
+                      {t('Inscris-toi')}
                     </button>
                   </div>
                 </motion.form>
@@ -534,9 +530,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                   initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
                   transition={{ duration: 0.25 }} onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="username" className="block text-sm font-medium text-ink-soft">Nom d'utilisateur</label>
+                    <label htmlFor="username" className="block text-sm font-medium text-ink-soft">{t("Nom d'utilisateur")}</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <User className="h-5 w-5 text-ink-faint" />
                       </div>
                       <input type="text" id="username" name="username" value={formValues.username}
@@ -546,9 +542,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium text-ink-soft">Email</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-ink-soft">{t('Email')}</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Mail className="h-5 w-5 text-ink-faint" />
                       </div>
                       <input type="email" id="email" name="email" value={formValues.email}
@@ -558,9 +554,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="signupPassword" className="block text-sm font-medium text-ink-soft">Mot de passe</label>
+                    <label htmlFor="signupPassword" className="block text-sm font-medium text-ink-soft">{t('Mot de passe')}</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-ink-faint" />
                       </div>
                       <input type="password" id="signupPassword" name="password" value={formValues.password}
@@ -568,14 +564,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                         placeholder="••••••••" className={inputClass} aria-describedby="signupPasswordHint" />
                     </div>
                     <p id="signupPasswordHint" className="text-xs text-ink-faint">
-                      8 caractères minimum, pas uniquement des chiffres, et pas un mot de passe trop courant.
+                      {t('8 caractères minimum, pas uniquement des chiffres, et pas un mot de passe trop courant.')}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink-soft">Confirme le mot de passe</label>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink-soft">{t('Confirme le mot de passe')}</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-ink-faint" />
                       </div>
                       <input type="password" id="confirmPassword" name="confirmPassword" value={formValues.confirmPassword}
@@ -588,14 +584,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
 
                   <Button type="submit" disabled={isSubmitting}
                     className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg flex items-center justify-center">
-                    {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Création du compte…</>)
-                                  : (<><UserPlus className="mr-2 h-4 w-4" />Inscription</>)}
+                    {isSubmitting ? (<><Loader2 className="me-2 h-4 w-4 animate-spin" />{t('Création du compte…')}</>)
+                                  : (<><UserPlus className="me-2 h-4 w-4" />{t('Inscription')}</>)}
                   </Button>
 
                   <div className="text-center text-sm text-ink-faint mt-4">
-                    Déjà un compte ?{' '}
+                    {t('Déjà un compte ?')}{' '}
                     <button type="button" onClick={() => switchTab('login')} className="text-brand-hover hover:text-brand font-medium">
-                      Connecte-toi
+                      {t('Connecte-toi')}
                     </button>
                   </div>
                 </motion.form>
@@ -606,20 +602,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
           {/* Resend confirmation — after a failed login */}
           {needsVerification && !pendingEmail && !googleConsent && activeTab === 'login' && !forgot && (
             <div className="mt-4 text-center text-xs text-ink-faint">
-              Email non confirmé ?{' '}
+              {t('Email non confirmé ?')}{' '}
               <button type="button" onClick={() => handleResend(unverifiedEmail || formValues.identifier)}
                 className="font-semibold text-brand-hover hover:text-brand">
-                Renvoyer le lien de confirmation
+                {t('Renvoyer le lien de confirmation')}
               </button>
               {resendMsg && <p className="mt-1">{resendMsg}</p>}
             </div>
           )}
 
           <div className="mt-6 text-center text-xs text-ink-faint">
-            En continuant, tu acceptes les{' '}
-            <Link to="/terms-of-service" className="text-brand-hover hover:text-brand">Conditions d'utilisation</Link>
-            {' '}et la{' '}
-            <Link to="/privacy-policy" className="text-brand-hover hover:text-brand">Politique de confidentialité</Link> de Fidni.
+            {t('En continuant, tu acceptes les')}{' '}
+            <Link to="/terms-of-service" className="text-brand-hover hover:text-brand">{t("Conditions d'utilisation")}</Link>
+            {' '}{t('et la')}{' '}
+            <Link to="/privacy-policy" className="text-brand-hover hover:text-brand">{t('Politique de confidentialité')}</Link> {t('de Fidni.')}
           </div>
         </div>
       </motion.div>

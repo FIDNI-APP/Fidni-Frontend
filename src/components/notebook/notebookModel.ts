@@ -1,6 +1,7 @@
 // Cahiers de cours : forme des réponses de l'API (GET /notebooks/get_notebooks/, /notebooks/:id/) et petits calculs
 // partagés par l'onglet « Cahiers » de Mes enregistrements et la liseuse (/notebooks?nb=<id>).
 // Les identifiants arrivent en nombres : on compare toujours avec String().
+import { t, dateLocale } from '@/i18n';
 import { hubPath, slugify } from '@/lib/api/hubApi';
 
 export type Id = string | number;
@@ -20,7 +21,8 @@ export interface NbNotebook {
 
 export const sameId = (a: unknown, b: unknown) => String(a) === String(b);
 
-export const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n > 1 ? many : word}`;
+// Les mots (« leçon », « chapitres remplis »…) sont des clés de traduction : t() est appelé à l'affichage.
+export const plural = (n: number, word: string, many = `${word}s`) => t('{n} {mot}', { n, mot: t(n > 1 ? many : word) });
 
 /** Ce que montre la couverture : leçons rangées, chapitres remplis sur le programme, dernier ajout. */
 export function summarize(nb: NbNotebook) {
@@ -46,10 +48,10 @@ export function ago(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return '';
   const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const days = Math.round((start(new Date()) - start(d)) / 86_400_000);
-  if (days <= 0) return 'aujourd’hui';
-  if (days === 1) return 'hier';
-  if (days < 30) return `il y a ${days} j`;
-  return `le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+  if (days <= 0) return t('aujourd’hui');
+  if (days === 1) return t('hier');
+  if (days < 30) return t('il y a {n} j', { n: days });
+  return t('le {date}', { date: d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }) });
 }
 
 /** Chapitres du cahier : ceux qui ont des leçons d'abord (dans l'ordre du cahier), puis les vides. */

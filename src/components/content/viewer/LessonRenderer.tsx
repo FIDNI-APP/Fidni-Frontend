@@ -6,6 +6,7 @@
 import React from 'react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import type { FlexibleLessonStructure, SectionBlock, SubSectionBlock } from '@/components/content/editor/FlexibleLessonEditor';
+import { t } from '@/i18n';
 
 interface LessonRendererProps {
   structure: FlexibleLessonStructure;
@@ -44,8 +45,8 @@ const SectionRenderer: React.FC<{ section: SectionBlock; index: number }> = ({ s
     <div className="mt-8 first:mt-0">
       {/* data-outline-* : repères du sommaire de la leçon (components/lesson/useLessonOutline). */}
       <h3 className="fd-display text-2xl text-ink mb-4" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
-        data-outline-level="1" data-outline-num={`${index + 1}`} data-outline-title={section.title || 'Section sans titre'}>
-        <span className="fd-nums">{index + 1}.</span> {section.title || 'Section sans titre'}
+        data-outline-level="1" data-outline-num={`${index + 1}`} data-outline-title={section.title || t('Section sans titre')}>
+        <span className="fd-nums">{index + 1}.</span> {section.title || t('Section sans titre')}
       </h3>
 
       <RenderContent html={section.content?.html} className="prose prose-slate mb-4" />
@@ -70,7 +71,7 @@ export const LessonRenderer: React.FC<LessonRendererProps> = ({ structure }) => 
   if (!structure || !structure.sections || structure.sections.length === 0) {
     return (
       <div className="text-center text-ink-faint py-12">
-        <p>Aucune section à afficher pour le moment.</p>
+        <p>{t('Aucune section à afficher pour le moment.')}</p>
       </div>
     );
   }

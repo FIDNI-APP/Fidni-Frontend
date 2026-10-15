@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ADS_ENABLED, ADSENSE_CLIENT, ADSENSE_SLOT, CONSENT_EVENT, readConsent } from '@/lib/ads';
+import { t } from '@/i18n';
 
 const Unit: React.FC = () => {
   const pushed = useRef(false);
@@ -29,7 +30,7 @@ export const AdSlot: React.FC<{ className?: string }> = ({ className = '' }) => 
   if (!ADS_ENABLED || !ADSENSE_SLOT || !granted) return null;
   return (
     <div className={`fd-ad print:hidden ${className}`}>
-      <p className="text-[10px] uppercase tracking-widest text-[#9a958c] mb-1.5">Publicité</p>
+      <p className="text-[10px] uppercase tracking-widest text-[#9a958c] mb-1.5">{t('Publicité')}</p>
       {/* Nouvelle annonce à chaque page : la clé force un nouvel emplacement. */}
       <Unit key={pathname} />
     </div>

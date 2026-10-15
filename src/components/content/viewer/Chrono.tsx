@@ -6,6 +6,7 @@
  */
 import React from 'react';
 import { Check, Pause, Play, RotateCcw, Timer } from 'lucide-react';
+import { t } from '@/i18n';
 
 interface ChronoProps {
   timer: number;
@@ -29,7 +30,7 @@ export const Chrono: React.FC<ChronoProps> = ({
   const history = sessionCount > 0 && (
     <button type="button" onClick={onOpenHistory}
       className="inline-flex min-h-10 items-center px-1.5 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums sm:min-h-9 [@media(pointer:coarse)]:min-h-10">
-      {sessionCount} temps
+      {t('{n} temps', { n: sessionCount })}
     </button>
   );
 
@@ -37,9 +38,9 @@ export const Chrono: React.FC<ChronoProps> = ({
     return (
       <span className="inline-flex items-center gap-0.5" data-tour="detail-chrono">
         {history}
-        <button type="button" onClick={start} title="Me chronométrer" aria-label="Lancer le chronomètre"
+        <button type="button" onClick={start} title={t('Me chronométrer')} aria-label={t('Lancer le chronomètre')}
           className="inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10">
-          <Timer className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Chrono</span>
+          <Timer className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">{t('Chrono')}</span>
         </button>
       </span>
     );
@@ -49,24 +50,24 @@ export const Chrono: React.FC<ChronoProps> = ({
     <span className="inline-flex items-center gap-0.5" data-tour="detail-chrono">
       {history}
       <span role="timer" aria-live="off"
-        className={`inline-flex items-center rounded-full border pl-3 ${isRunning ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-gold-line bg-gold-soft text-gold-strong'}`}>
+        className={`inline-flex items-center rounded-full border ps-3 ${isRunning ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-gold-line bg-gold-soft text-gold-strong'}`}>
         <Timer className="h-3.5 w-3.5" aria-hidden />
-        <span className="ml-1.5 min-w-[3.2rem] text-[14px] font-semibold fd-nums">{format()}</span>
+        <span className="ms-1.5 min-w-[3.2rem] text-[14px] font-semibold fd-nums">{format()}</span>
         {isRunning ? (
-          <button type="button" onClick={stop} aria-label="Pause" title="Pause" className={`${iconBtn} hover:bg-brand-line`}>
+          <button type="button" onClick={stop} aria-label={t('Pause')} title={t('Pause')} className={`${iconBtn} hover:bg-brand-line`}>
             <Pause className="h-4 w-4" />
           </button>
         ) : (
           <>
-            <button type="button" onClick={start} aria-label="Reprendre" title="Reprendre" className={`${iconBtn} hover:bg-gold-line`}>
+            <button type="button" onClick={start} aria-label={t('Reprendre')} title={t('Reprendre')} className={`${iconBtn} hover:bg-gold-line`}>
               <Play className="h-4 w-4" />
             </button>
             {save && (
-              <button type="button" onClick={save} disabled={saving} aria-label="Enregistrer ce temps" title="Enregistrer ce temps" className={`${iconBtn} hover:bg-gold-line`}>
+              <button type="button" onClick={save} disabled={saving} aria-label={t('Enregistrer ce temps')} title={t('Enregistrer ce temps')} className={`${iconBtn} hover:bg-gold-line`}>
                 {saving ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Check className="h-4 w-4" />}
               </button>
             )}
-            <button type="button" onClick={reset} aria-label="Remettre à zéro" title="Remettre à zéro" className={`${iconBtn} hover:bg-gold-line`}>
+            <button type="button" onClick={reset} aria-label={t('Remettre à zéro')} title={t('Remettre à zéro')} className={`${iconBtn} hover:bg-gold-line`}>
               <RotateCcw className="h-3.5 w-3.5" />
             </button>
           </>

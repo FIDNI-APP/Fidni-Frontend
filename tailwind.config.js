@@ -81,7 +81,7 @@ export default {
         200: '2',
       },
       fontFamily: {
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        sans: ['DM Sans', 'Noto Sans Arabic', 'system-ui', 'sans-serif'],
         mono: ['DM Mono', 'ui-monospace', 'monospace'],
         // legacy
         trebuchet: ['Trebuchet MS', 'sans-serif'],

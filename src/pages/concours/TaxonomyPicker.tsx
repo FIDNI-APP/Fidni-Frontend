@@ -16,6 +16,7 @@ import {
 } from '@/lib/api/hierarchyApi';
 import { listConcoursTips, type ConcoursTip, type ConcoursType } from '@/lib/api/concoursApi';
 import type { SubjectModel, ChapterModel, Subfield } from '@/types';
+import { t } from '@/i18n';
 
 export interface TaxonomySelection {
   subjectId: number | null;
@@ -127,18 +128,18 @@ export function TaxonomyPicker({
 
   return (
     <div className={wrapperClass}>
-      <FieldGroup label="Matière" compact={compact}>
+      <FieldGroup label={t('Matière')} compact={compact}>
         <select
           value={value.subjectId ?? ''}
           onChange={(e) => onSubjectChange(e.target.value ? Number(e.target.value) : null)}
           style={inputStyle}
         >
-          <option value="">— Choisir —</option>
+          <option value="">{t('— Choisir —')}</option>
           {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </FieldGroup>
 
-      <FieldGroup label="Domaine" compact={compact}>
+      <FieldGroup label={t('Domaine')} compact={compact}>
         <select
           value={value.subfieldId ?? ''}
           onChange={(e) => onSubfieldChange(e.target.value ? Number(e.target.value) : null)}
@@ -146,14 +147,14 @@ export function TaxonomyPicker({
           style={{ ...inputStyle, opacity: !value.subjectId || subfields.length === 0 ? .5 : 1 }}
         >
           <option value="">
-            {!value.subjectId ? 'Sélectionne une matière' : subfields.length === 0 ? 'Aucun domaine' : '— Tous —'}
+            {!value.subjectId ? t('Sélectionne une matière') : subfields.length === 0 ? t('Aucun domaine') : t('— Tous —')}
           </option>
           {subfields.map(sf => <option key={sf.id} value={sf.id}>{sf.name}</option>)}
         </select>
       </FieldGroup>
 
       {showChapter && (
-        <FieldGroup label="Chapitre" compact={compact}>
+        <FieldGroup label={t('Chapitre')} compact={compact}>
           <select
             value={value.chapterId ?? ''}
             onChange={(e) => onChapterChange(e.target.value ? Number(e.target.value) : null)}
@@ -161,7 +162,7 @@ export function TaxonomyPicker({
             style={{ ...inputStyle, opacity: !value.subjectId || chapters.length === 0 ? .5 : 1 }}
           >
             <option value="">
-              {!value.subjectId ? 'Sélectionne une matière' : chapters.length === 0 ? 'Aucun chapitre' : '— Tous —'}
+              {!value.subjectId ? t('Sélectionne une matière') : chapters.length === 0 ? t('Aucun chapitre') : t('— Tous —')}
             </option>
             {chapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -169,7 +170,7 @@ export function TaxonomyPicker({
       )}
 
       {showTip && (
-        <FieldGroup label="Astuce" compact={compact}>
+        <FieldGroup label={t('Astuce')} compact={compact}>
           <select
             value={value.tipId ?? ''}
             onChange={(e) => onTipChange(e.target.value ? Number(e.target.value) : null)}
@@ -177,9 +178,9 @@ export function TaxonomyPicker({
             style={{ ...inputStyle, opacity: !value.chapterId ? .5 : 1 }}
           >
             <option value="">
-              {!value.chapterId ? 'Sélectionne un chapitre' : tips.length === 0 ? 'Aucune astuce' : '— Aucune —'}
+              {!value.chapterId ? t('Sélectionne un chapitre') : tips.length === 0 ? t('Aucune astuce') : t('— Aucune —')}
             </option>
-            {tips.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+            {tips.map(tip => <option key={tip.id} value={tip.id}>{tip.title}</option>)}
           </select>
         </FieldGroup>
       )}
@@ -244,13 +245,13 @@ export function MultiChapterPicker({
   if (!subjectId) {
     return (
       <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>
-        Sélectionne d'abord une matière.
+        {t("Sélectionne d'abord une matière.")}
       </p>
     );
   }
-  if (loading) return <p style={{ fontSize: 12, color: '#6b6862' }}>Chargement…</p>;
+  if (loading) return <p style={{ fontSize: 12, color: '#6b6862' }}>{t('Chargement…')}</p>;
   if (chapters.length === 0) {
-    return <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun chapitre disponible.</p>;
+    return <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>{t('Aucun chapitre disponible.')}</p>;
   }
 
   return (

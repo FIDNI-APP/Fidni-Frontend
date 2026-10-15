@@ -11,6 +11,7 @@ import { LearningPath, ProgressFilter, LearningPathSortOption } from '@/types/in
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 export const LearningPathList: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export const LearningPathList: React.FC = () => {
       setLearningPaths(data);
     } catch (err) {
       console.error('Failed to fetch learning paths:', err);
-      setError('Impossible de charger les parcours. Réessaie.');
+      setError(t('Impossible de charger les parcours. Réessaie.'));
     } finally {
       setLoading(false);
     }
@@ -135,33 +136,33 @@ export const LearningPathList: React.FC = () => {
       {/* Header */}
       <div className="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white pb-24 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
+          <div className="absolute top-0 start-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
         </div>
         
         <div className="container mx-auto px-4 py-16 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 mb-6">
-              <GraduationCap className="w-5 h-5 mr-2" />
-              <span className="text-sm font-medium">Parcours guidés</span>
+              <GraduationCap className="w-5 h-5 me-2" />
+              <span className="text-sm font-medium">{t('Parcours guidés')}</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Explore les parcours
+              {t('Explore les parcours')}
             </h1>
             <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
-              Des cours guidés, chapitre après chapitre, à ton rythme.
+              {t('Des cours guidés, chapitre après chapitre, à ton rythme.')}
             </p>
             
             {/* Search Bar */}
             <div className="relative max-w-2xl mx-auto">
               <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-xl -z-10"></div>
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+              <Search className="absolute start-4 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
               <Input
                 type="text"
-                placeholder="Rechercher un parcours…"
+                placeholder={t('Rechercher un parcours…')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white/5 backdrop-blur-sm border-white/20 text-white placeholder-purple-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                className="w-full ps-12 pe-4 py-4 bg-white/5 backdrop-blur-sm border-white/20 text-white placeholder-purple-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-transparent"
               />
             </div>
           </div>
@@ -177,8 +178,8 @@ export const LearningPathList: React.FC = () => {
               onClick={() => navigate('/learning-path/create')}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Nouveau parcours
+              <Plus className="w-4 h-4 me-2" />
+              {t('Nouveau parcours')}
             </Button>
           </div>
         )}
@@ -191,8 +192,8 @@ export const LearningPathList: React.FC = () => {
             className="w-full flex items-center justify-between"
           >
             <span className="flex items-center">
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
+              <Filter className="w-4 h-4 me-2" />
+              {t('Filters')}
             </span>
             <ChevronDown className={cn(
               "w-4 h-4 transition-transform",
@@ -207,22 +208,22 @@ export const LearningPathList: React.FC = () => {
           <div className="hidden md:block w-64 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
               <h3 className="font-semibold text-lg mb-4 flex items-center">
-                <Filter className="w-5 h-5 mr-2 text-indigo-600" />
-                Filters
+                <Filter className="w-5 h-5 me-2 text-indigo-600" />
+                {t('Filters')}
               </h3>
               
               <div className="space-y-6">
                 {/* Subject Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Matière
+                    {t('Matière')}
                   </label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Toutes les matières" />
+                      <SelectValue placeholder={t('Toutes les matières')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Toutes les matières</SelectItem>
+                      <SelectItem value="all">{t('Toutes les matières')}</SelectItem>
                       {uniqueSubjects.map(subject => (
                         <SelectItem key={subject!.id} value={subject!.id}>
                           {subject!.name}
@@ -235,17 +236,17 @@ export const LearningPathList: React.FC = () => {
                 {/* Difficulty Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Difficulté
+                    {t('Difficulté')}
                   </label>
                   <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Toutes les difficultés" />
+                      <SelectValue placeholder={t('Toutes les difficultés')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Toutes les difficultés</SelectItem>
-                      <SelectItem value="beginner">Débutant (&lt;10 h)</SelectItem>
-                      <SelectItem value="intermediate">Intermédiaire (10-30 h)</SelectItem>
-                      <SelectItem value="advanced">Avancé (30 h et +)</SelectItem>
+                      <SelectItem value="all">{t('Toutes les difficultés')}</SelectItem>
+                      <SelectItem value="beginner">{t('Débutant (<10 h)')}</SelectItem>
+                      <SelectItem value="intermediate">{t('Intermédiaire (10-30 h)')}</SelectItem>
+                      <SelectItem value="advanced">{t('Avancé (30 h et +)')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -254,17 +255,17 @@ export const LearningPathList: React.FC = () => {
                 {isAuthenticated && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Progression
+                      {t('Progression')}
                     </label>
                     <Select value={progressFilter} onValueChange={(value) => setProgressFilter(value as ProgressFilter)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Toute progression" />
+                        <SelectValue placeholder={t('Toute progression')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Toute progression</SelectItem>
-                        <SelectItem value="not_started">Pas commencé</SelectItem>
-                        <SelectItem value="in_progress">En cours</SelectItem>
-                        <SelectItem value="completed">Terminé</SelectItem>
+                        <SelectItem value="all">{t('Toute progression')}</SelectItem>
+                        <SelectItem value="not_started">{t('Pas commencé')}</SelectItem>
+                        <SelectItem value="in_progress">{t('En cours')}</SelectItem>
+                        <SelectItem value="completed">{t('Terminé')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -273,17 +274,17 @@ export const LearningPathList: React.FC = () => {
                 {/* Sort By */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Trier par
+                    {t('Trier par')}
                   </label>
                   <Select value={sortBy} onValueChange={(value) => setSortBy(value as LearningPathSortOption)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Trier par" />
+                      <SelectValue placeholder={t('Trier par')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="newest">Plus récents</SelectItem>
-                      <SelectItem value="popular">Plus populaires</SelectItem>
-                      <SelectItem value="duration">Durée</SelectItem>
-                      <SelectItem value="difficulty">Difficulté</SelectItem>
+                      <SelectItem value="newest">{t('Plus récents')}</SelectItem>
+                      <SelectItem value="popular">{t('Plus populaires')}</SelectItem>
+                      <SelectItem value="duration">{t('Durée')}</SelectItem>
+                      <SelectItem value="difficulty">{t('Difficulté')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -295,22 +296,22 @@ export const LearningPathList: React.FC = () => {
           {mobileFiltersOpen && (
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6 md:hidden">
               <h3 className="font-semibold text-lg mb-4 flex items-center">
-                <Filter className="w-5 h-5 mr-2 text-indigo-600" />
-                Filters
+                <Filter className="w-5 h-5 me-2 text-indigo-600" />
+                {t('Filters')}
               </h3>
               
               <div className="space-y-4">
                 {/* Subject Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Matière
+                    {t('Matière')}
                   </label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Toutes les matières" />
+                      <SelectValue placeholder={t('Toutes les matières')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Toutes les matières</SelectItem>
+                      <SelectItem value="all">{t('Toutes les matières')}</SelectItem>
                       {uniqueSubjects.map(subject => (
                         <SelectItem key={subject!.id} value={subject!.id}>
                           {subject!.name}
@@ -323,17 +324,17 @@ export const LearningPathList: React.FC = () => {
                 {/* Difficulty Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Difficulté
+                    {t('Difficulté')}
                   </label>
                   <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Toutes les difficultés" />
+                      <SelectValue placeholder={t('Toutes les difficultés')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Toutes les difficultés</SelectItem>
-                      <SelectItem value="beginner">Débutant (&lt;10 h)</SelectItem>
-                      <SelectItem value="intermediate">Intermédiaire (10-30 h)</SelectItem>
-                      <SelectItem value="advanced">Avancé (30 h et +)</SelectItem>
+                      <SelectItem value="all">{t('Toutes les difficultés')}</SelectItem>
+                      <SelectItem value="beginner">{t('Débutant (<10 h)')}</SelectItem>
+                      <SelectItem value="intermediate">{t('Intermédiaire (10-30 h)')}</SelectItem>
+                      <SelectItem value="advanced">{t('Avancé (30 h et +)')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -342,17 +343,17 @@ export const LearningPathList: React.FC = () => {
                 {isAuthenticated && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Progression
+                      {t('Progression')}
                     </label>
                     <Select value={progressFilter} onValueChange={(value) => setProgressFilter(value as ProgressFilter)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Toute progression" />
+                        <SelectValue placeholder={t('Toute progression')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Toute progression</SelectItem>
-                        <SelectItem value="not_started">Pas commencé</SelectItem>
-                        <SelectItem value="in_progress">En cours</SelectItem>
-                        <SelectItem value="completed">Terminé</SelectItem>
+                        <SelectItem value="all">{t('Toute progression')}</SelectItem>
+                        <SelectItem value="not_started">{t('Pas commencé')}</SelectItem>
+                        <SelectItem value="in_progress">{t('En cours')}</SelectItem>
+                        <SelectItem value="completed">{t('Terminé')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -361,17 +362,17 @@ export const LearningPathList: React.FC = () => {
                 {/* Sort By */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Trier par
+                    {t('Trier par')}
                   </label>
                   <Select value={sortBy} onValueChange={(value) => setSortBy(value as LearningPathSortOption)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Trier par" />
+                      <SelectValue placeholder={t('Trier par')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="newest">Plus récents</SelectItem>
-                      <SelectItem value="popular">Plus populaires</SelectItem>
-                      <SelectItem value="duration">Durée</SelectItem>
-                      <SelectItem value="difficulty">Difficulté</SelectItem>
+                      <SelectItem value="newest">{t('Plus récents')}</SelectItem>
+                      <SelectItem value="popular">{t('Plus populaires')}</SelectItem>
+                      <SelectItem value="duration">{t('Durée')}</SelectItem>
+                      <SelectItem value="difficulty">{t('Difficulté')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -384,18 +385,18 @@ export const LearningPathList: React.FC = () => {
             {/* Results Count */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                Showing <span className="font-medium">{filteredPaths.length}</span> learning paths
+                {t('Showing')} <span className="font-medium">{filteredPaths.length}</span> {t('learning paths')}
               </div>
               <div className="hidden md:block">
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as LearningPathSortOption)}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Trier par" />
+                    <SelectValue placeholder={t('Trier par')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">Plus récents</SelectItem>
-                    <SelectItem value="popular">Plus populaires</SelectItem>
-                    <SelectItem value="duration">Durée</SelectItem>
-                    <SelectItem value="difficulty">Difficulté</SelectItem>
+                    <SelectItem value="newest">{t('Plus récents')}</SelectItem>
+                    <SelectItem value="popular">{t('Plus populaires')}</SelectItem>
+                    <SelectItem value="duration">{t('Durée')}</SelectItem>
+                    <SelectItem value="difficulty">{t('Difficulté')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -415,15 +416,15 @@ export const LearningPathList: React.FC = () => {
                   variant="outline"
                   className="mt-4"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Réessayer
+                  <ArrowLeft className="w-4 h-4 me-2" />
+                  {t('Réessayer')}
                 </Button>
               </div>
             ) : filteredPaths.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                 <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun parcours trouvé</h3>
-                <p className="text-gray-500 mb-6">Modifie tes filtres ou ta recherche.</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">{t('Aucun parcours trouvé')}</h3>
+                <p className="text-gray-500 mb-6">{t('Modifie tes filtres ou ta recherche.')}</p>
                 <Button
                   onClick={() => {
                     setSearchTerm('');
@@ -433,7 +434,7 @@ export const LearningPathList: React.FC = () => {
                   }}
                   variant="outline"
                 >
-                  Effacer les filtres
+                  {t('Effacer les filtres')}
                 </Button>
               </div>
             ) : (
@@ -450,7 +451,7 @@ export const LearningPathList: React.FC = () => {
                         fetchLearningPaths();
                       } catch (err) {
                         console.error('Failed to delete learning path:', err);
-                        window.alert('Impossible de supprimer ce parcours. Réessaie dans un instant.');
+                        window.alert(t('Impossible de supprimer ce parcours. Réessaie dans un instant.'));
                       }
                     }}
                     isAdmin={user?.is_superuser}

@@ -4,6 +4,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MoreHorizontal, Pencil, Printer, Trash2 } from 'lucide-react';
+import { t } from '@/i18n';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { ago, plural, summarize, type NbNotebook } from '@/components/notebook/notebookModel';
 
@@ -19,7 +20,7 @@ export const NotebookCover: React.FC<{
   const menuBtn = useRef<HTMLButtonElement>(null);
   const squares = [...(notebook.sections ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).slice(0, MAX_SQUARES);
 
-  const item = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-[13.5px] font-medium transition-colors';
+  const item = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-start text-[13.5px] font-medium transition-colors';
 
   return (
     <li className="relative min-w-0">
@@ -30,19 +31,19 @@ export const NotebookCover: React.FC<{
           {Array.from({ length: 6 }, (_, i) => <span key={i} className="h-1.5 w-1.5 rounded-full bg-paper/30" />)}
         </span>
         <span className="flex min-w-0 flex-1 flex-col px-4 pb-4 pt-3.5">
-          <span className="truncate pr-9 text-[10.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
+          <span className="truncate pe-9 text-[10.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
             {notebook.subject?.name} · {notebook.class_level?.name}
           </span>
-          <span className="fd-display mt-1.5 line-clamp-2 pr-6 text-[19px] leading-snug text-ink">{notebook.title}</span>
+          <span className="fd-display mt-1.5 line-clamp-2 pe-6 text-[19px] leading-snug text-ink">{notebook.title}</span>
           <span className="fd-nums mt-1.5 text-[12.5px] text-ink-faint">
-            {lessons === 0 ? 'Encore vide'
-              : <>{plural(lessons, 'leçon')} · {plural(filled, 'chapitre')} sur {total}</>}
+            {lessons === 0 ? t('Encore vide')
+              : t('{lessons} · {chapters} sur {total}', { lessons: plural(lessons, 'leçon'), chapters: plural(filled, 'chapitre'), total })}
           </span>
 
           <span className="mt-auto pt-4">
             {total > 0 && (
               <span className="flex flex-wrap gap-[3px]" role="img"
-                aria-label={`${plural(filled, 'chapitre rempli', 'chapitres remplis')} sur ${total}`}>
+                aria-label={t('{count} sur {total}', { count: plural(filled, 'chapitre rempli', 'chapitres remplis'), total })}>
                 {squares.map((s) => (
                   <span key={s.id} title={s.chapter?.name}
                     className={`h-2 w-2 rounded-[2px] ${s.lesson_entries?.length ? 'bg-brand' : 'bg-[#ebe8e2]'}`} />
@@ -52,12 +53,12 @@ export const NotebookCover: React.FC<{
             <span className="mt-3 block border-t border-line pt-2.5 text-[12px] leading-snug text-ink-faint">
               {last ? (
                 <>
-                  <span className="block">Dernier ajout, {ago(last.at)}</span>
+                  <span className="block">{t('Dernier ajout, {when}', { when: ago(last.at) })}</span>
                   <span className="block truncate font-medium text-ink-soft">{last.title}</span>
                 </>
               ) : (
                 // La façon de le remplir est dite une fois, sous l'étagère.
-                <span className="block">Pas encore de leçon</span>
+                <span className="block">{t('Pas encore de leçon')}</span>
               )}
             </span>
           </span>
@@ -65,24 +66,24 @@ export const NotebookCover: React.FC<{
       </Link>
 
       <button ref={menuBtn} type="button" onClick={() => setMenu((v) => !v)}
-        aria-haspopup="menu" aria-expanded={menu} aria-label={`Actions du cahier ${notebook.title}`}
-        className="absolute right-1.5 top-1.5 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        aria-haspopup="menu" aria-expanded={menu} aria-label={t('Actions du cahier {title}', { title: notebook.title })}
+        className="absolute end-1.5 top-1.5 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <MoreHorizontal className="h-5 w-5" />
       </button>
       <FloatingPanel anchorRef={menuBtn} open={menu} onClose={() => setMenu(false)} placement="bottom-end" role="menu"
         className="w-52 rounded-xl border border-line bg-white p-1.5 shadow-[0_12px_32px_rgba(20,18,16,.14)]">
         <button type="button" role="menuitem" className={`${item} text-ink-soft hover:bg-[#f7f6f3] hover:text-ink`}
           onClick={() => { setMenu(false); onRename(); }}>
-          <Pencil className="h-4 w-4 text-ink-faint" /> Renommer
+          <Pencil className="h-4 w-4 text-ink-faint" /> {t('Renommer')}
         </button>
         <Link role="menuitem" to={`/notebooks/${notebook.id}/pdf`} className={`${item} text-ink-soft hover:bg-[#f7f6f3] hover:text-ink`}
           onClick={() => setMenu(false)}>
-          <Printer className="h-4 w-4 text-ink-faint" /> Imprimer
+          <Printer className="h-4 w-4 text-ink-faint" /> {t('Imprimer')}
         </Link>
         <span className="my-1 block h-px bg-line" aria-hidden />
         <button type="button" role="menuitem" className={`${item} text-[#a23b34] hover:bg-[#fbecea]`}
           onClick={() => { setMenu(false); onDelete(); }}>
-          <Trash2 className="h-4 w-4" /> Supprimer
+          <Trash2 className="h-4 w-4" /> {t('Supprimer')}
         </button>
       </FloatingPanel>
     </li>

@@ -2,6 +2,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { bySubfield, type QuizChapter } from './types';
+import { t } from '@/i18n';
 
 export const ChapterPlan: React.FC<{ title: React.ReactNode; meta?: React.ReactNode; chapters: QuizChapter[]; className?: string }> = ({
   title, meta, chapters, className = '',
@@ -17,7 +18,7 @@ export const ChapterPlan: React.FC<{ title: React.ReactNode; meta?: React.ReactN
       <div className="grid gap-x-8 gap-y-5 border-t border-line px-4 py-4 sm:grid-cols-2 sm:px-5">
         {groups.map(([name, list]) => (
           <div key={name} className="min-w-0">
-            <h3 className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{name}</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t(name)}</h3>
             <ul className="mt-2 flex flex-col gap-1.5">
               {list.map((c) => (
                 <li key={c.id} className="flex items-start gap-2 text-[13.5px] leading-snug text-ink-soft">

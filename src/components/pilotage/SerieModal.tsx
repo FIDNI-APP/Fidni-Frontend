@@ -108,7 +108,7 @@ export const SerieModal: React.FC<{ target: SerieTarget; onClose: () => void }> 
             </div>
             <div className="relative mt-2">
               <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-line" aria-hidden />
-              <span className="fd-nums pointer-events-none absolute -top-2 right-0 bg-white pl-1 text-[10.5px] text-ink-faint" aria-hidden>{fmt(max)}</span>
+              <span className="fd-nums pointer-events-none absolute -top-2 end-0 bg-white ps-1 text-[10.5px] text-ink-faint" aria-hidden>{fmt(max)}</span>
               <div className={`flex h-44 items-end ${pts.length > 40 ? 'gap-px' : 'gap-1'}`} onMouseLeave={() => setHover(null)}>
                 {pts.map((p, i) => (
                   <button key={p.debut} type="button" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onClick={() => setHover(i)}

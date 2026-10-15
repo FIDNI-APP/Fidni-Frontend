@@ -8,6 +8,7 @@ import { ChapterPlan } from './ChapterPlan';
 import { NewBadge, QuizRow, ScoreRing } from './QuizRow';
 import { bySubfield, estMinutes, pct, quizKey, quizSize, type QuizChapter, type QuizEnCours } from './types';
 import type { QuizChapters } from './useQuizChapters';
+import { t } from '@/i18n';
 
 const REASON: Record<ChapterStatus, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
   weak: { label: 'À renforcer d’après tes exercices', icon: Target, cls: 'bg-gold-soft text-gold-strong' },
@@ -35,30 +36,30 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; enCours: QuizEnCours | null
             )}
           </span>
           <div className="min-w-0">
-            {chapter.fresh && <span className="mr-2"><NewBadge /></span>}
+            {chapter.fresh && <span className="me-2"><NewBadge /></span>}
             {taken ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">
-                <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Ton score le plus bas : <span className="fd-nums">{pct(taken)} %</span>
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden /> {t('Ton score le plus bas :')} <span className="fd-nums">{pct(taken)} %</span>
               </span>
             ) : (
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${reason.cls}`}>
-                <ReasonIcon className="h-3.5 w-3.5" aria-hidden /> {reason.label}
+                <ReasonIcon className="h-3.5 w-3.5" aria-hidden /> {t(reason.label)}
               </span>
             )}
             <h3 className="fd-display mt-2 text-[22px] leading-tight text-ink sm:text-[24px]">{chapter.name}</h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-faint">
               <Clock className="h-3.5 w-3.5" aria-hidden />
-              <span className="fd-nums">{quizSize(chapter.ready)} questions · chrono {estMinutes(chapter.ready)} min</span>
+              <span className="fd-nums">{t('{n} questions · chrono {m} min', { n: quizSize(chapter.ready), m: estMinutes(chapter.ready) })}</span>
               {chapter.subfield && <span>· {chapter.subfield}</span>}
             </p>
           </div>
         </div>
         <button type="button" onClick={onStart} className="fd-btn-primary min-h-11 w-full justify-center text-[14px] sm:w-auto">
-          {enCours ? `Reprendre le quiz (${enCours.repondues}/${enCours.total})` : taken ? 'Refaire le quiz' : 'Commencer le quiz'} <ArrowRight className="h-4 w-4" aria-hidden />
+          {enCours ? t('Reprendre le quiz ({a}/{n})', { a: enCours.repondues, n: enCours.total }) : taken ? t('Refaire le quiz') : t('Commencer le quiz')} <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
       <p className="border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] text-ink-faint sm:px-6">
-        Chaque réponse est corrigée tout de suite, puis tu vois ce que tu maîtrises, théorème par théorème. Ton score s’ajoute à Ma progression.
+        {t('Chaque réponse est corrigée tout de suite, puis tu vois ce que tu maîtrises, théorème par théorème. Ton score s’ajoute à Ma progression.')}
       </p>
     </div>
   );
@@ -85,25 +86,25 @@ export const QuizList: React.FC<{
     <div className="flex flex-col gap-10">
       {mine.length > 0 && (
         <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-          <StatTile label="Quiz faits" value={mine.length} />
-          <StatTile label="Moyenne" value={average !== null ? `${average} %` : '—'} />
-          <StatTile label="À passer" value={ready.length - doneHere.length} hint={`sur ${ready.length} prêt${ready.length > 1 ? 's' : ''}`} />
+          <StatTile label={t('Quiz faits')} value={mine.length} />
+          <StatTile label={t('Moyenne')} value={average !== null ? `${average} %` : '—'} />
+          <StatTile label={t('À passer')} value={ready.length - doneHere.length} hint={ready.length > 1 ? t('sur {n} prêts', { n: ready.length }) : t('sur {n} prêt', { n: ready.length })} />
         </div>
       )}
 
       {featured && (
-        <Section id="prochain-quiz" title={next ? 'Ton prochain quiz' : 'À refaire'}
-          hint={next ? undefined : 'Tu as passé tous les quiz de ton niveau : refais le moins réussi.'}>
+        <Section id="prochain-quiz" title={next ? t('Ton prochain quiz') : t('À refaire')}
+          hint={next ? undefined : t('Tu as passé tous les quiz de ton niveau : refais le moins réussi.')}>
           <NextQuizCard chapter={featured} enCours={started(featured)} onStart={() => onStart(featured)} />
         </Section>
       )}
 
-      <Section id="tous-les-quiz" title="Tous les quiz de ton niveau" count={ready.length}
-        hint={level ? `${level.name} · rangés par thème` : undefined}>
+      <Section id="tous-les-quiz" title={t('Tous les quiz de ton niveau')} count={ready.length}
+        hint={level ? t('{niveau} · rangés par thème', { niveau: level.name }) : undefined}>
         <div data-tour="skilliq-niveaux" className="flex flex-col gap-5">
           {groups.map(([name, list]) => (
             <div key={name}>
-              {groups.length > 1 && <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{name}</h3>}
+              {groups.length > 1 && <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t(name)}</h3>}
               <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
                 {list.map((c) => <QuizRow key={c.id} name={c.name} ready={c.ready} taken={c.taken} isNew={c.fresh}
                   enCours={started(c)} onStart={() => onStart(c)} onView={onView && c.taken ? () => onView(c) : undefined} />)}
@@ -111,7 +112,7 @@ export const QuizList: React.FC<{
             </div>
           ))}
           {soon.length > 0 && (
-            <ChapterPlan title="Bientôt" meta={`chapitre${soon.length > 1 ? 's' : ''} sans quiz pour l’instant`} chapters={soon} />
+            <ChapterPlan title={t('Bientôt')} meta={soon.length > 1 ? t('chapitres sans quiz pour l’instant') : t('chapitre sans quiz pour l’instant')} chapters={soon} />
           )}
         </div>
       </Section>

@@ -14,6 +14,8 @@
  * Modifier le texte d'une visite ne la remontre pas ; augmenter `version` si.
  */
 
+import { t } from '@/i18n';
+
 export interface TourContext {
   kind: 'exercise' | 'exam' | 'lesson';
   isTeacher: boolean;
@@ -48,13 +50,15 @@ export interface Tour {
   version?: number;
 }
 
-export const resolveText = (t: Text, c: TourContext) => (typeof t === 'function' ? t(c) : t);
+/** Texte d'une étape, traduit (appelé au rendu : les textes ci-dessous restent en français, clés de src/i18n/ar/visites.json). */
+export const resolveText = (txt: Text, c: TourContext) => t(typeof txt === 'function' ? txt(c) : txt);
 
 /** Cible principale d'une étape (la première de la liste). */
 export const stepKey = (s: TourStep) => (Array.isArray(s.target) ? s.target[0] : s.target);
 
-const le = (c: TourContext) => (c.kind === 'lesson' ? 'la leçon' : c.kind === 'exam' ? "l'examen" : "l'exercice");
-const un = (c: TourContext) => (c.kind === 'lesson' ? 'une leçon' : c.kind === 'exam' ? 'un examen' : 'un exercice');
+/** Phrase entière selon le type de contenu (une clé de traduction par phrase, pas de morceaux collés). */
+const parType = (c: TourContext, lecon: string, examen: string, exercice: string) =>
+  c.kind === 'lesson' ? lecon : c.kind === 'exam' ? examen : exercice;
 
 // Étapes communes aux listes et aux pages de contenu.
 const INDICATION: TourStep = {
@@ -75,7 +79,9 @@ const AUTO_EVAL: TourStep = {
 const VOTE: TourStep = {
   target: 'vote',
   title: 'J’aime',
-  body: (c) => `${c.kind === 'lesson' ? 'Cette leçon t’a aidé' : 'Ce contenu t’a aidé'} ? Mets-lui un j’aime : les contenus aimés remontent dans les listes, ça guide les autres élèves.`,
+  body: (c) => (c.kind === 'lesson'
+    ? 'Cette leçon t’a aidé ? Mets-lui un j’aime : les contenus aimés remontent dans les listes, ça guide les autres élèves.'
+    : 'Ce contenu t’a aidé ? Mets-lui un j’aime : les contenus aimés remontent dans les listes, ça guide les autres élèves.'),
 };
 
 const SIGNALER: TourStep = {
@@ -129,7 +135,10 @@ export const TOURS: Tour[] = [
       { target: 'liste-tri', title: 'Trier', body: '« Pour toi » met en tête ce qui te fera progresser. Tu peux aussi trier du plus facile au plus difficile, ou par nouveauté.' },
       { target: 'liste-vue', title: 'Deux affichages', body: 'Cartes : un aperçu de chaque contenu (le début de l’énoncé, les exercices d’un sujet, le sommaire d’une leçon). Énoncés : le texte complet, avec chrono et auto-évaluation.' },
       { target: 'liste-chrono', title: 'Chronomètre', body: 'Lance-le avant de commencer, puis enregistre ton temps pour suivre tes progrès.' },
-      { target: 'liste-terminer', title: 'Terminé ?', body: (c) => `Marque ${le(c)} « Réussi » ou « À revoir » : ça alimente ta progression.` },
+      { target: 'liste-terminer', title: 'Terminé ?', body: (c) => parType(c,
+        'Marque la leçon « Réussi » ou « À revoir » : ça alimente ta progression.',
+        'Marque l’examen « Réussi » ou « À revoir » : ça alimente ta progression.',
+        'Marque l’exercice « Réussi » ou « À revoir » : ça alimente ta progression.') },
       { target: 'liste-revision', title: 'Liste de révision', body: 'Mets-le de côté dans une liste pour le retravailler ou l’imprimer.' },
       { target: 'favori', title: 'Favori', body: 'Enregistre-le : tu le retrouves dans Mon suivi › Mes enregistrements.' },
       SOLUTION,
@@ -139,7 +148,10 @@ export const TOURS: Tour[] = [
         ? 'Ouvre la leçon pour la lire en entier et poser tes questions.'
         : 'Ouvre-le pour travailler : solutions question par question, chrono, discussion et statistiques.' },
       { target: 'liste-fiche', title: 'Fiche TD', body: 'Regroupe les exercices de ton choix (glisse-les, ou « + Fiche » sur une carte) en une fiche à imprimer ; elle est rangée dans Réviser.' },
-      { target: 'liste-creer', title: 'Publier', body: (c) => `Tu peux aussi partager ${un(c)} que tu as rédigé.`, when: (c) => c.canCreate },
+      { target: 'liste-creer', title: 'Publier', body: (c) => parType(c,
+        'Tu peux aussi partager une leçon que tu as rédigé.',
+        'Tu peux aussi partager un examen que tu as rédigé.',
+        'Tu peux aussi partager un exercice que tu as rédigé.'), when: (c) => c.canCreate },
     ],
   },
 
@@ -156,7 +168,10 @@ export const TOURS: Tour[] = [
         title: 'Les onglets',
         body: 'Solutions des élèves pour comparer ta démarche. Les questions et la discussion sont en bas de l’exercice.',
       },
-      { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => `En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque ${le(c)} « À revoir ».` },
+      { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => parType(c,
+        'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque la leçon « À revoir ».',
+        'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque l’examen « À revoir ».',
+        'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque l’exercice « À revoir ».') },
       { target: 'detail-progression', title: 'Ta progression', body: 'Elle se remplit à mesure que tu dis si tu avais trouvé : en vert les questions réussies, en or celles à revoir.' },
       { target: 'detail-solutions', title: 'Toutes les solutions', body: 'Affiche ou masque d’un coup la solution de chaque question.' },
       INDICATION,

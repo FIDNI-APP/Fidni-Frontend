@@ -25,7 +25,7 @@ const Bar: React.FC<{ label: string; value: number; total: number; worst?: boole
       <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
         <span className="min-w-0 text-ink-soft">
           {label}
-          {worst && <span className="ml-1.5 whitespace-nowrap rounded-full bg-gold-soft px-1.5 py-px text-[10.5px] font-semibold text-gold-strong">plus grosse perte</span>}
+          {worst && <span className="ms-1.5 whitespace-nowrap rounded-full bg-gold-soft px-1.5 py-px text-[10.5px] font-semibold text-gold-strong">plus grosse perte</span>}
         </span>
         <span className="fd-nums shrink-0 text-ink-faint">
           {total > 0 ? <><b className="font-semibold text-ink">{fmt(value)}</b> / {fmt(total)}</> : '—'}

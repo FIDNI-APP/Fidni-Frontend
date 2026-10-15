@@ -318,7 +318,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
                 </div>
                 <p className="mt-1 text-[12px] text-ink-faint">
                   {(apercu.chapitres ?? []).join(' · ')}{apercu.theoremes?.length ? ` — ${apercu.theoremes.join(', ')}` : ''}
-                  <span className="ml-1 font-mono text-[11px]">({apercu.cle})</span>
+                  <span className="ms-1 font-mono text-[11px]">({apercu.cle})</span>
                 </p>
                 <div className="mt-5">
                   {apercu.erreur || !apercu.structure ? (
@@ -337,7 +337,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
             <section className="fd-card p-4" aria-labelledby="ia-points">
               <h3 id="ia-points" className="flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
                 <AlertTriangle className="h-4 w-4 text-gold-strong" /> Points à vérifier
-                <span className="fd-nums ml-auto text-[12px] font-normal text-ink-faint">{nbPoints}</span>
+                <span className="fd-nums ms-auto text-[12px] font-normal text-ink-faint">{nbPoints}</span>
               </h3>
               {nbPoints === 0 ? <p className="mt-2 text-[12.5px] text-ink-faint">Rien de signalé. Relis quand même l’énoncé face au document.</p> : (
                 <ul className="mt-2.5 space-y-2">
@@ -467,7 +467,7 @@ export const IATab: React.FC = () => {
                     <ul className="mt-1 divide-y divide-[#f2f1ee]">
                       {g.list.map((j) => (
                         <li key={j.id}>
-                          <button type="button" onClick={() => select(j.id)} className="group flex w-full items-center gap-3 py-2.5 text-left">
+                          <button type="button" onClick={() => select(j.id)} className="group flex w-full items-center gap-3 py-2.5 text-start">
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-[13.5px] font-medium text-ink group-hover:text-brand">
                                 {j.fiches?.length ? j.fiches.map((f) => f.titre).join(' · ') : j.document || `Travail ${j.id}`}

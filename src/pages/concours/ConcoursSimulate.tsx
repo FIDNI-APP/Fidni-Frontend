@@ -20,6 +20,7 @@ import {
   type SimulationSessionView,
 } from '@/lib/api/concoursApi';
 import { SEO } from '@/components/layout/SEO';
+import { t } from '@/i18n';
 
 const ghostDark: CSSProperties = {
   background: 'transparent', color: '#d8d4cc',
@@ -45,7 +46,7 @@ function QuestionPill({ index, current, answered, onClick, square = false }: {
     <button
       data-pos={index}
       onClick={onClick}
-      aria-label={`Question ${index + 1}${answered ? ', répondue' : ''}`}
+      aria-label={answered ? t('Question {n}, répondue', { n: index + 1 }) : t('Question {n}', { n: index + 1 })}
       aria-current={current ? 'step' : undefined}
       className={square ? undefined : 'flex-shrink-0'}
       style={{
@@ -121,7 +122,7 @@ export default function ConcoursSimulatePage() {
 
   const handleSubmit = useCallback(async (silent = false) => {
     if (!sess || submittedRef.current) return;
-    if (!silent && !window.confirm('Soumettre la simulation maintenant ?')) {
+    if (!silent && !window.confirm(t('Soumettre la simulation maintenant ?'))) {
       return;
     }
     submittedRef.current = true;
@@ -144,8 +145,8 @@ export default function ConcoursSimulatePage() {
       submittedRef.current = false;
       setSubmitting(false);
       setSubmitError(unsavedRef.current.size > 0
-        ? "Certaines réponses ne sont pas encore enregistrées. Vérifie ta connexion, puis réessaie."
-        : "Ta copie n'a pas pu être envoyée. Vérifie ta connexion, puis réessaie.");
+        ? t('Certaines réponses ne sont pas encore enregistrées. Vérifie ta connexion, puis réessaie.')
+        : t("Ta copie n'a pas pu être envoyée. Vérifie ta connexion, puis réessaie."));
     }
   }, [sess, navigate, markUnsaved]);
 
@@ -231,7 +232,7 @@ export default function ConcoursSimulatePage() {
   return (
     // Colonne flexible : sur téléphone, la barre Précédente / Suivante reste en bas même si la question est courte.
     <div className="flex flex-col lg:pb-8" style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff' }}>
-      <SEO title="Simulation - Fidni" description="Simulation de concours" />
+      <SEO title={t('Simulation - Fidni')} description={t('Simulation de concours')} />
 
       {/* Dark-mode + bigger LaTeX for the simulation runner. */}
       <style>{`
@@ -262,17 +263,17 @@ export default function ConcoursSimulatePage() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="truncate" style={{ fontSize: 11, letterSpacing: '.06em', color: '#b8b4ac', textTransform: 'uppercase', fontWeight: 700 }}>
-              <span className="hidden sm:inline">Simulation · </span>{sess.concours_type.toUpperCase()}
+              <span className="hidden sm:inline">{t('Simulation')} · </span>{sess.concours_type.toUpperCase()}
             </div>
             <div className="whitespace-nowrap" style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginTop: 2 }}>
-              <span className="sm:hidden">Q. </span><span className="hidden sm:inline">Question </span>{pos + 1} / {sess.total_questions}
+              <span className="sm:hidden">{t('Q.')} </span><span className="hidden sm:inline">{t('Question')} </span>{pos + 1} / {sess.total_questions}
             </div>
           </div>
           <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
             <div
               data-tour="simulation-chrono"
               role="timer"
-              aria-label="Temps restant"
+              aria-label={t('Temps restant')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '8px 12px', borderRadius: 10,
@@ -295,7 +296,7 @@ export default function ConcoursSimulatePage() {
               style={{ background: '#1a7a4a', padding: '9px 14px' }}
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Soumettre
+              {t('Soumettre')}
             </button>
           </div>
         </div>
@@ -306,7 +307,7 @@ export default function ConcoursSimulatePage() {
           data-tour="simulation-grille"
           className="lg:hidden concours-sim-strip flex gap-1.5 overflow-x-auto mt-2.5 -mx-4 px-4 pb-0.5"
           style={{ position: 'relative', WebkitOverflowScrolling: 'touch' }}
-          aria-label="Questions"
+          aria-label={t('Questions')}
         >
           {sess.questions_snapshot.map((_, i) => (
             <QuestionPill key={i} index={i} current={i === pos} answered={answered.has(i)} onClick={() => goTo(i)} />
@@ -331,7 +332,7 @@ export default function ConcoursSimulatePage() {
               style={{ background: '#1a7a4a', padding: '7px 12px', fontSize: 12 }}
             >
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              Réessayer
+              {t('Réessayer')}
             </button>
           </div>
         )}
@@ -377,7 +378,7 @@ export default function ConcoursSimulatePage() {
                     background: selected ? 'rgba(180,176,168,.18)' : 'rgba(255,255,255,.04)',
                     border: `1.5px solid ${selected ? '#9a958c' : 'rgba(255,255,255,.08)'}`,
                     color: '#fff',
-                    cursor: 'pointer', textAlign: 'left',
+                    cursor: 'pointer', textAlign: 'start',
                     transition: 'all .15s',
                   }}
                 >
@@ -404,7 +405,7 @@ export default function ConcoursSimulatePage() {
           {unsaved.has(pos) && (
             <p role="status" className="flex items-start gap-1.5 mt-3" style={{ fontSize: 12, color: '#fcd34d' }}>
               <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ marginTop: 2 }} />
-              Réponse pas encore enregistrée (connexion ?). Elle sera renvoyée quand tu rendras ta copie.
+              {t('Réponse pas encore enregistrée (connexion ?). Elle sera renvoyée quand tu rendras ta copie.')}
             </p>
           )}
 
@@ -416,14 +417,14 @@ export default function ConcoursSimulatePage() {
               className="fd-btn-ghost"
               style={{ ...ghostDark, opacity: pos === 0 ? .4 : 1 }}
             >
-              <ChevronLeft className="w-3.5 h-3.5" /> Précédente
+              <ChevronLeft className="w-3.5 h-3.5" /> {t('Précédente')}
             </button>
             <button
               onClick={() => choose('')}
               className="fd-btn-ghost"
               style={ghostDark}
             >
-              Effacer
+              {t('Effacer')}
             </button>
             <button
               onClick={() => goTo(Math.min(sess.total_questions - 1, pos + 1))}
@@ -431,7 +432,7 @@ export default function ConcoursSimulatePage() {
               className="fd-btn-primary"
               style={{ opacity: isLast ? .4 : 1 }}
             >
-              Suivante <ChevronRight className="w-3.5 h-3.5" />
+              {t('Suivante')} <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -451,7 +452,7 @@ export default function ConcoursSimulatePage() {
           }}
         >
           <div style={{ fontSize: 11, fontWeight: 700, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>
-            Questions
+            {t('Questions')}
           </div>
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
             {sess.questions_snapshot.map((_, i) => (
@@ -461,11 +462,11 @@ export default function ConcoursSimulatePage() {
           <div className="flex flex-col gap-1.5 mt-4" style={{ fontSize: 11, color: '#d8d4cc' }}>
             <div className="flex items-center gap-2">
               <span style={{ width: 12, height: 12, borderRadius: 4, background: 'rgba(34,197,94,.15)', border: '1.5px solid rgba(34,197,94,.4)' }} />
-              {answered.size} répondues
+              {t('{n} répondues', { n: answered.size })}
             </div>
             <div className="flex items-center gap-2">
               <span style={{ width: 12, height: 12, borderRadius: 4, border: '1.5px solid rgba(255,255,255,.12)' }} />
-              {sess.total_questions - answered.size} restantes
+              {t('{n} restantes', { n: sess.total_questions - answered.size })}
             </div>
           </div>
         </div>
@@ -489,7 +490,7 @@ export default function ConcoursSimulatePage() {
           className="flex-1 inline-flex items-center justify-center gap-1.5"
           style={{ ...ghostDark, ...barBtn, opacity: pos === 0 ? .4 : 1 }}
         >
-          <ChevronLeft className="w-4 h-4" /> Précédente
+          <ChevronLeft className="w-4 h-4" /> {t('Précédente')}
         </button>
         {answers[pos] && (
           <button
@@ -497,7 +498,7 @@ export default function ConcoursSimulatePage() {
             className="inline-flex items-center justify-center"
             style={{ ...ghostDark, ...barBtn, padding: '0 12px' }}
           >
-            Effacer
+            {t('Effacer')}
           </button>
         )}
         {isLast ? (
@@ -507,7 +508,7 @@ export default function ConcoursSimulatePage() {
             className="fd-btn-primary flex-1 justify-center"
             style={{ minHeight: 44, background: '#1a7a4a' }}
           >
-            <Send className="w-4 h-4" /> Terminer
+            <Send className="w-4 h-4" /> {t('Terminer')}
           </button>
         ) : (
           <button
@@ -515,7 +516,7 @@ export default function ConcoursSimulatePage() {
             className="fd-btn-primary flex-1 justify-center"
             style={{ minHeight: 44 }}
           >
-            Suivante <ChevronRight className="w-4 h-4" />
+            {t('Suivante')} <ChevronRight className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -524,7 +525,7 @@ export default function ConcoursSimulatePage() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Soumettre la simulation"
+          aria-label={t('Soumettre la simulation')}
           style={{
             position: 'fixed', inset: 0, zIndex: 60,
             background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)',
@@ -533,20 +534,20 @@ export default function ConcoursSimulatePage() {
           onClick={() => setShowConfirm(false)}
         >
           <div className="fd-card" style={{ maxWidth: 420, padding: 22 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>Soumettre la simulation ?</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>{t('Soumettre la simulation ?')}</h3>
             <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>
-              Tu as répondu à <strong style={{ color: '#1a1a1a' }}>{answered.size}</strong> question{answered.size > 1 ? 's' : ''} sur {sess.total_questions}.
-              Les questions non répondues compteront comme fausses.
+              {t('Tu as répondu à')} <strong style={{ color: '#1a1a1a' }}>{answered.size}</strong> {answered.size > 1 ? t('questions sur {total}.', { total: sess.total_questions }) : t('question sur {total}.', { total: sess.total_questions })}
+              {' '}{t('Les questions non répondues compteront comme fausses.')}
             </p>
             {unsaved.size > 0 && (
               <p style={{ fontSize: 13, color: '#9a6e1c', marginTop: 6 }}>
                 {unsaved.size > 1
-                  ? `${unsaved.size} réponses ne sont pas encore enregistrées : elles seront renvoyées avec ta copie.`
-                  : "1 réponse n'est pas encore enregistrée : elle sera renvoyée avec ta copie."}
+                  ? t('{n} réponses ne sont pas encore enregistrées : elles seront renvoyées avec ta copie.', { n: unsaved.size })
+                  : t("1 réponse n'est pas encore enregistrée : elle sera renvoyée avec ta copie.")}
               </p>
             )}
             <div className="flex justify-end gap-2 mt-4">
-              <button className="fd-btn-ghost" onClick={() => setShowConfirm(false)}>Continuer</button>
+              <button className="fd-btn-ghost" onClick={() => setShowConfirm(false)}>{t('Continuer')}</button>
               <button
                 className="fd-btn-primary"
                 onClick={() => { setShowConfirm(false); handleSubmit(true); }}
@@ -554,7 +555,7 @@ export default function ConcoursSimulatePage() {
                 style={{ background: '#1a7a4a' }}
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Soumettre
+                {t('Soumettre')}
               </button>
             </div>
           </div>

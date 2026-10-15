@@ -8,12 +8,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { decimal, parseDay } from '@/pages/progression/format';
 import { COULEUR } from './chart';
+import { t, dateLocale } from '@/i18n';
 
 export interface NotePoint { date: string; note: number; titre: string; url?: string }
 
 const GRADS = [0, 5, 10, 15, 20];
-const court = (iso: string) => parseDay(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-const long = (iso: string) => parseDay(iso).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const court = (iso: string) => parseDay(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
+const long = (iso: string) => parseDay(iso).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
 
 export const NotesChart: React.FC<{
   points: NotePoint[];
@@ -35,24 +36,24 @@ export const NotesChart: React.FC<{
   return (
     <div>
       <div className="mb-4 min-w-0" aria-live="polite">
-        <p className="truncate text-[12.5px] text-ink-faint">{shown ? `${long(shown.date)} · ${shown.titre}` : 'Sur la période'}</p>
+        <p className="truncate text-[12.5px] text-ink-faint">{shown ? `${long(shown.date)} · ${shown.titre}` : t('Sur la période')}</p>
         <p className="fd-nums mt-0.5 text-[18px] font-bold leading-tight text-ink sm:text-[20px]">
           {shown ? <>{decimal(shown.note)} <span className="text-[14px] font-semibold text-ink-faint">/ 20</span></> : headline}
         </p>
       </div>
-      <div className="relative" style={{ height }}>
+      <div className="relative fd-ltr" style={{ height }}>
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           {GRADS.map((g) => (
-            <div key={g} className="absolute left-0 right-0 h-0" style={{ bottom: `${y(g)}%` }}>
-              <span className="fd-nums absolute left-0 top-0 w-9 -translate-y-1/2 pr-1.5 text-right text-[10.5px] leading-none text-ink-faint">{g}</span>
-              <span className={`absolute left-10 right-0 top-0 border-t ${g === 0 ? 'border-[#e7e3dc]' : g === 10 ? 'border-[#e2ddd4]' : 'border-[#f2f1ee]'}`} />
+            <div key={g} className="absolute start-0 end-0 h-0" style={{ bottom: `${y(g)}%` }}>
+              <span className="fd-nums absolute start-0 top-0 w-9 -translate-y-1/2 pe-1.5 text-end text-[10.5px] leading-none text-ink-faint">{g}</span>
+              <span className={`absolute start-10 end-0 top-0 border-t ${g === 0 ? 'border-[#e7e3dc]' : g === 10 ? 'border-[#e2ddd4]' : 'border-[#f2f1ee]'}`} />
             </div>
           ))}
         </div>
         {!points.length ? (
           <div className="absolute inset-x-10 top-1/2 -translate-y-1/2 text-center text-[13px] text-ink-faint">{emptyText}</div>
         ) : (
-          <div className="absolute inset-y-0 left-10 right-0">
+          <div className="absolute inset-y-0 start-10 end-0">
             {points.length > 1 && (
               <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
                 <polyline fill="none" stroke={COULEUR.note} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"
@@ -63,7 +64,7 @@ export const NotesChart: React.FC<{
               const on = hover === i;
               return (
                 <button key={`${p.date}-${i}`} type="button"
-                  aria-label={`${p.titre}, ${long(p.date)} : ${decimal(p.note)} sur 20${p.url ? ' (ouvrir)' : ''}`}
+                  aria-label={p.url ? t('{titre}, {date} : {note} sur 20 (ouvrir)', { titre: p.titre, date: long(p.date), note: decimal(p.note) }) : t('{titre}, {date} : {note} sur 20', { titre: p.titre, date: long(p.date), note: decimal(p.note) })}
                   onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(i)} onBlur={() => setHover(null)}
                   onClick={() => { if (hover === i && p.url) navigate(p.url); else setHover(i); }}
                   className="absolute flex h-7 w-7 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
@@ -76,9 +77,9 @@ export const NotesChart: React.FC<{
           </div>
         )}
       </div>
-      <div className="mt-2 flex justify-between pl-10 text-[11px] text-ink-faint">
+      <div className="fd-ltr mt-2 flex justify-between ps-10 text-[11px] text-ink-faint">
         <span>{court(debut)}</span>
-        <span>aujourd’hui</span>
+        <span>{t('aujourd’hui')}</span>
       </div>
     </div>
   );

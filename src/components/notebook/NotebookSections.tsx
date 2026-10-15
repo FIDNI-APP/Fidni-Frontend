@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Printer, X } from 'lucide-react';
+import { t } from '@/i18n';
 import { chapterLessonsPath, plural, sameId, splitSections, type Id, type NbNotebook } from './notebookModel';
 
 interface Props {
@@ -22,7 +23,7 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
     <div>
       {filled.length > 0 && (
         <>
-          <p className="px-3 pb-2 text-[10.5px] font-bold uppercase tracking-[.1em] text-ink-faint">Chapitres · {filled.length}</p>
+          <p className="px-3 pb-2 text-[10.5px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Chapitres · {n}', { n: filled.length })}</p>
           <ul className="flex flex-col gap-0.5">
             {filled.map((s) => {
               const on = sameId(s.id, activeId);
@@ -30,7 +31,7 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
                 <li key={s.id}>
                   <button type="button" aria-current={on ? 'true' : undefined}
                     onClick={() => { onSelect(s.id); onPicked?.(); }}
-                    className={`flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-[13.5px] transition-colors ${
+                    className={`flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-start text-[13.5px] transition-colors ${
                       on ? 'bg-brand-soft font-semibold text-brand-hover' : 'font-medium text-ink-soft hover:bg-[#f7f6f3] hover:text-ink'}`}>
                     <span className="min-w-0 flex-1 truncate">{s.chapter?.name}</span>
                     <span className={`fd-nums shrink-0 rounded-full px-1.5 text-[11px] font-semibold ${on ? 'bg-white/80' : 'bg-[#f2f1ee] text-ink-faint'}`}
@@ -49,17 +50,17 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
         <details className={`group ${filled.length ? 'mt-3 border-t border-line pt-2' : ''}`} open={filled.length === 0}>
           <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-lg px-3 text-[12.5px] font-semibold text-ink-faint hover:text-ink [&::-webkit-details-marker]:hidden">
             <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" aria-hidden />
-            Chapitres sans leçon ({empty.length})
+            {t('Chapitres sans leçon ({n})', { n: empty.length })}
           </summary>
-          <p className="px-3 pb-1 text-[12px] leading-snug text-ink-faint">Touche un chapitre pour trouver ses leçons.</p>
+          <p className="px-3 pb-1 text-[12px] leading-snug text-ink-faint">{t('Touche un chapitre pour trouver ses leçons.')}</p>
           <ul className="flex flex-col gap-0.5">
             {empty.map((s) => (
               <li key={s.id}>
                 <Link to={chapterLessonsPath(notebook, s.chapter)} onClick={onPicked}
-                  aria-label={`${s.chapter?.name} : trouver une leçon`}
+                  aria-label={t('{name} : trouver une leçon', { name: s.chapter?.name })}
                   className="group/ch flex min-h-10 items-center gap-2 rounded-xl px-3 text-[13px] text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink focus-visible:bg-[#f7f6f3] focus-visible:text-ink">
                   <span className="min-w-0 flex-1 truncate">{s.chapter?.name}</span>
-                  <span className="hidden shrink-0 text-[12px] font-semibold text-brand-hover group-hover/ch:inline group-focus-visible/ch:inline">Trouver une leçon</span>
+                  <span className="hidden shrink-0 text-[12px] font-semibold text-brand-hover group-hover/ch:inline group-focus-visible/ch:inline">{t('Trouver une leçon')}</span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-[#cfcdc8] group-hover/ch:text-brand-hover group-focus-visible/ch:text-brand-hover" aria-hidden />
                 </Link>
               </li>
@@ -90,38 +91,38 @@ const NotebookSections: React.FC<Props> = (props) => {
       {/* Téléphone : sélecteur de chapitre (et impression) */}
       <div className="flex items-stretch border-b border-line bg-white md:hidden">
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}
-        className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 px-4 text-left">
+        className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 px-4 text-start">
         <span className="min-w-0 flex-1">
           <span className="block text-[10.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
-            {active ? `Chapitre ${position} sur ${filled.length}` : 'Chapitres du programme'}
+            {active ? t('Chapitre {position} sur {total}', { position, total: filled.length }) : t('Chapitres du programme')}
           </span>
           <span className="block truncate text-[14px] font-semibold text-ink">
-            {active ? active.chapter?.name : `${plural(empty.length, 'chapitre')} à remplir`}
+            {active ? active.chapter?.name : t('{count} à remplir', { count: plural(empty.length, 'chapitre') })}
           </span>
         </span>
         {active && <span className="fd-nums shrink-0 text-[12px] text-ink-faint">{plural(active.lesson_entries.length, 'leçon')}</span>}
         <ChevronDown className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
       </button>
       {props.printTo && (
-        <Link to={props.printTo} data-tour="cahier-imprimer" aria-label="Imprimer le cahier" title="Imprimer le cahier"
-          className="flex w-[52px] shrink-0 items-center justify-center border-l border-line text-ink-faint hover:bg-[#f7f6f3] hover:text-ink">
+        <Link to={props.printTo} data-tour="cahier-imprimer" aria-label={t('Imprimer le cahier')} title={t('Imprimer le cahier')}
+          className="flex w-[52px] shrink-0 items-center justify-center border-s border-line text-ink-faint hover:bg-[#f7f6f3] hover:text-ink">
           <Printer className="h-[18px] w-[18px]" />
         </Link>
       )}
       </div>
 
       {/* Ordinateur : colonne des chapitres */}
-      <nav aria-label="Chapitres du cahier" className="hidden h-full w-[264px] overflow-y-auto border-r border-line bg-white px-2 py-4 md:block">
+      <nav aria-label={t('Chapitres du cahier')} className="hidden h-full w-[264px] overflow-y-auto border-e border-line bg-white px-2 py-4 md:block">
         <ChapterList {...props} />
       </nav>
 
       {open && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-[rgba(20,18,16,.4)] md:hidden" onClick={() => setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Chapitres du cahier" onClick={(e) => e.stopPropagation()}
+          <div role="dialog" aria-modal="true" aria-label={t('Chapitres du cahier')} onClick={(e) => e.stopPropagation()}
             className="flex max-h-[80dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-12px_40px_rgba(20,18,16,.18)]">
-            <div className="flex shrink-0 items-center gap-2 border-b border-line py-2 pl-5 pr-2">
+            <div className="flex shrink-0 items-center gap-2 border-b border-line py-2 ps-5 pe-2">
               <p className="fd-display min-w-0 flex-1 truncate text-[19px] text-ink">{notebook.title}</p>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Fermer"
+              <button type="button" onClick={() => setOpen(false)} aria-label={t('Fermer')}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
                 <X className="h-5 w-5" />
               </button>

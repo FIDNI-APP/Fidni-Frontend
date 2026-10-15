@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, Check, ChevronLeft, CloudOff, Loader2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { t } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import WordEditor, { type Entete } from '@/components/editor/word/WordEditor';
 import { documentsAPI, type DocumentFull, type Marges, type Orientation } from '@/lib/api/documentsApi';
@@ -70,7 +71,12 @@ export const DocumentEditor: React.FC = () => {
     notes?.forEach((n) => toast(n, { icon: '⚠️', duration: 12000 }));
     if (fin) {
       const n = fin.published.length;
-      toast.success(`${n} exercice${n > 1 ? 's' : ''} publié${n > 1 ? 's' : ''} sur FIDNI${fin.skipped ? ` (${fin.skipped} passé${fin.skipped > 1 ? 's' : ''})` : ''}`, { duration: 8000 });
+      const sk = fin.skipped;
+      const many = n > 1;
+      const msg = !sk ? (many ? t('{n} exercices publiés sur FIDNI', { n }) : t('{n} exercice publié sur FIDNI', { n }))
+        : sk > 1 ? (many ? t('{n} exercices publiés sur FIDNI ({skipped} passés)', { n, skipped: sk }) : t('{n} exercice publié sur FIDNI ({skipped} passés)', { n, skipped: sk }))
+          : (many ? t('{n} exercices publiés sur FIDNI ({skipped} passé)', { n, skipped: sk }) : t('{n} exercice publié sur FIDNI ({skipped} passé)', { n, skipped: sk }));
+      toast.success(msg, { duration: 8000 });
     }
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
@@ -130,15 +136,15 @@ export const DocumentEditor: React.FC = () => {
   const docx = useDocxImport(flush);
   const exportDocx = async () => {
     await flush();
-    const t = toast.loading('Conversion en Word…');
-    try { await documentsAPI.downloadDocx(id, title); toast.success('Document Word téléchargé', { id: t }); } catch { toast.error('La conversion en Word a échoué.', { id: t }); }
+    const tid = toast.loading(t('Conversion en Word…'));
+    try { await documentsAPI.downloadDocx(id, title); toast.success(t('Document Word téléchargé'), { id: tid }); } catch { toast.error(t('La conversion en Word a échoué.'), { id: tid }); }
   };
 
   const commitTitle = () => {
-    const t = title.trim() || 'Document sans titre';
-    setTitle(t);
-    document.title = `${t} · Fidni`;
-    if (t !== doc?.title) { setDoc((d) => (d ? { ...d, title: t } : d)); queue({ title: t }); }
+    const name = title.trim() || 'Document sans titre';
+    setTitle(name);
+    document.title = `${name} · Fidni`;
+    if (name !== doc?.title) { setDoc((d) => (d ? { ...d, title: name } : d)); queue({ title: name }); }
   };
 
   const newDocument = async () => {
@@ -146,64 +152,64 @@ export const DocumentEditor: React.FC = () => {
     try {
       const d = await documentsAPI.create({ title: 'Document sans titre', html: '' });
       navigate(`/documents/${d.id}`);
-    } catch { toast.error('Le document n’a pas pu être créé.'); }
+    } catch { toast.error(t('Le document n’a pas pu être créé.')); }
   };
   const duplicate = async () => {
     await flush();
     try {
       const d = await documentsAPI.duplicate(id);
-      toast.success('Copie créée');
+      toast.success(t('Copie créée'));
       navigate(`/documents/${d.id}`);
-    } catch { toast.error('La copie n’a pas pu être créée.'); }
+    } catch { toast.error(t('La copie n’a pas pu être créée.')); }
   };
 
   if (loadError) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-paper px-4 text-center">
-        <p className="text-[16px] font-semibold text-ink">{loadError === 'introuvable' ? 'Ce document n’existe pas (ou plus).' : 'Le document n’a pas pu se charger.'}</p>
+        <p className="text-[16px] font-semibold text-ink">{loadError === 'introuvable' ? t('Ce document n’existe pas (ou plus).') : t('Le document n’a pas pu se charger.')}</p>
         <div className="flex gap-2">
-          {loadError === 'reseau' && <button type="button" onClick={() => window.location.reload()} className="fd-btn-primary min-h-10">Réessayer</button>}
-          <Link to="/documents" className="fd-btn-ghost min-h-10">Mes documents</Link>
+          {loadError === 'reseau' && <button type="button" onClick={() => window.location.reload()} className="fd-btn-primary min-h-10">{t('Réessayer')}</button>}
+          <Link to="/documents" className="fd-btn-ghost min-h-10">{t('Mes documents')}</Link>
         </div>
       </div>
     );
   }
   if (!doc) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#e9e6e0]" role="status" aria-label="Ouverture du document">
+      <div className="flex min-h-screen items-center justify-center bg-[#e9e6e0]" role="status" aria-label={t('Ouverture du document')}>
         <Loader2 className="h-6 w-6 animate-spin text-brand" />
       </div>
     );
   }
 
   const status = {
-    saved: { icon: <Check className="h-3.5 w-3.5" />, text: 'Enregistré' },
-    dirty: { icon: <span className="h-1.5 w-1.5 rounded-full bg-white/80" />, text: 'Modifié' },
-    saving: { icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />, text: 'Enregistrement…' },
-    error: { icon: <CloudOff className="h-3.5 w-3.5" />, text: 'Non enregistré' },
+    saved: { icon: <Check className="h-3.5 w-3.5" />, text: t('Enregistré') },
+    dirty: { icon: <span className="h-1.5 w-1.5 rounded-full bg-white/80" />, text: t('Modifié') },
+    saving: { icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />, text: t('Enregistrement…') },
+    error: { icon: <CloudOff className="h-3.5 w-3.5" />, text: t('Non enregistré') },
   }[save];
 
   const titleBar = (
     <>
-      <Link to="/documents" onClick={() => { void flush(); }} title="Mes documents"
-        className="inline-flex h-8 items-center gap-1 rounded-lg pl-1 pr-2 text-[13px] font-semibold text-white/90 hover:bg-white/10">
-        <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">Mes documents</span>
+      <Link to="/documents" onClick={() => { void flush(); }} title={t('Mes documents')}
+        className="inline-flex h-8 items-center gap-1 rounded-lg ps-1 pe-2 text-[13px] font-semibold text-white/90 hover:bg-white/10">
+        <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">{t('Mes documents')}</span>
       </Link>
       <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value.slice(0, 200))} onBlur={commitTitle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-        aria-label="Nom du document"
-        className="min-w-0 max-w-[min(420px,50vw)] flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-center text-[14px] font-semibold text-white placeholder:text-white/60 hover:border-white/30 focus:border-white/60 focus:bg-white/10 focus:outline-none sm:flex-none sm:text-left" />
+        aria-label={t('Nom du document')}
+        className="min-w-0 max-w-[min(420px,50vw)] flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-center text-[14px] font-semibold text-white placeholder:text-white/60 hover:border-white/30 focus:border-white/60 focus:bg-white/10 focus:outline-none sm:flex-none sm:text-start" />
       {canPublish && (
-        <button type="button" onClick={() => setPublishing(true)} title="Publier ce document comme exercice, devoir ou leçon"
-          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
-          <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Publier sur FIDNI</span>
+        <button type="button" onClick={() => setPublishing(true)} title={t('Publier ce document comme exercice, devoir ou leçon')}
+          className="ms-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
+          <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('Publier sur FIDNI')}</span>
         </button>
       )}
-      <span className={`${canPublish ? 'ml-3' : 'ml-auto'} inline-flex items-center gap-1.5 text-[12px] text-white/85`} role="status">
+      <span className={`${canPublish ? 'ms-3' : 'ms-auto'} inline-flex items-center gap-1.5 text-[12px] text-white/85`} role="status">
         {status.icon} {status.text}
         {save === 'error' && (
-          <button type="button" onClick={() => { void flush(); }} className="ml-1 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-0.5 font-semibold hover:bg-white/25">
-            <AlertTriangle className="h-3 w-3" /> Réessayer
+          <button type="button" onClick={() => { void flush(); }} className="ms-1 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-0.5 font-semibold hover:bg-white/25">
+            <AlertTriangle className="h-3 w-3" /> {t('Réessayer')}
           </button>
         )}
       </span>

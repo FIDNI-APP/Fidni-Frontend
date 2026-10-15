@@ -167,7 +167,7 @@ export const LogsConsole: React.FC = () => {
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BarChart3 className="w-4 h-4 inline mr-2" />
+            <BarChart3 className="w-4 h-4 inline me-2" />
             Analytics
           </button>
           <button
@@ -178,7 +178,7 @@ export const LogsConsole: React.FC = () => {
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            <AlertCircle className="w-4 h-4 inline mr-2" />
+            <AlertCircle className="w-4 h-4 inline me-2" />
             Errors
           </button>
         </div>
@@ -277,7 +277,7 @@ export const LogsConsole: React.FC = () => {
 
           <button
             onClick={() => { fetchErrors(); fetchStats(); }}
-            className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+            className="ms-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -291,13 +291,13 @@ export const LogsConsole: React.FC = () => {
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Severity</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Message</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Endpoint</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Count</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Last Seen</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Severity</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Status</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Message</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Endpoint</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Count</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Last Seen</th>
+                <th className="px-4 py-3 text-start text-xs font-semibold text-slate-600 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -377,19 +377,19 @@ export const LogsConsole: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-600">Endpoint:</span>
-                    <span className="ml-2 font-mono">{selectedError.method} {selectedError.endpoint}</span>
+                    <span className="ms-2 font-mono">{selectedError.method} {selectedError.endpoint}</span>
                   </div>
                   <div>
                     <span className="text-slate-600">Count:</span>
-                    <span className="ml-2 font-semibold">{selectedError.count}x</span>
+                    <span className="ms-2 font-semibold">{selectedError.count}x</span>
                   </div>
                   <div>
                     <span className="text-slate-600">User:</span>
-                    <span className="ml-2">{selectedError.user_email || 'Anonymous'}</span>
+                    <span className="ms-2">{selectedError.user_email || 'Anonymous'}</span>
                   </div>
                   <div>
                     <span className="text-slate-600">IP:</span>
-                    <span className="ml-2 font-mono">{selectedError.ip_address}</span>
+                    <span className="ms-2 font-mono">{selectedError.ip_address}</span>
                   </div>
                 </div>
               </div>
@@ -417,7 +417,7 @@ export const LogsConsole: React.FC = () => {
                   onClick={() => resolveError(selectedError.id)}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
                 >
-                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                  <CheckCircle className="w-4 h-4 inline me-2" />
                   Mark Resolved
                 </button>
                 <button

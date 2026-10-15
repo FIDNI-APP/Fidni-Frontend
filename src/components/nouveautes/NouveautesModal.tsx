@@ -15,6 +15,7 @@ import SceneTemps from './scene/SceneTemps';
 import SceneSombreBascule from './scene/SceneSombreBascule';
 import SceneSombreContenu from './scene/SceneSombreContenu';
 import SceneSombreReglage from './scene/SceneSombreReglage';
+import { t } from '@/i18n';
 
 const SCENES: Record<SceneId, React.FC> = {
   apercu: SceneApercu, faibles: SceneFaibles, chapitres: SceneChapitres, temps: SceneTemps,
@@ -108,8 +109,8 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFini
               <Scene />
             </motion.div>
           </AnimatePresence>
-          <button type="button" onClick={() => onClose('fermee')} aria-label="Fermer"
-            className="absolute right-2.5 top-2.5 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink-soft shadow-[0_2px_8px_rgba(20,18,16,.15)] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+          <button type="button" onClick={() => onClose('fermee')} aria-label={t('Fermer')}
+            className="absolute end-2.5 top-2.5 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink-soft shadow-[0_2px_8px_rgba(20,18,16,.15)] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
             <X className="h-[18px] w-[18px]" />
           </button>
         </div>
@@ -117,22 +118,22 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFini
         <div className="min-h-[132px] overflow-y-auto px-5 pt-4 sm:px-7 sm:pt-5">
           <p className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold uppercase tracking-[.08em] text-gold-strong">
-              <Sparkles className="h-3 w-3" aria-hidden /> Nouveau
+              <Sparkles className="h-3 w-3" aria-hidden /> {t('Nouveau')}
             </span>
-            <span className="text-[12.5px] font-semibold text-ink-faint">{nouveaute.sujet}</span>
+            <span className="text-[12.5px] font-semibold text-ink-faint">{t(nouveaute.sujet)}</span>
           </p>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={etape} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
-              <h2 id={titreId} className="fd-display mt-2.5 text-[21px] leading-tight text-ink sm:text-[24px]">{e.titre}</h2>
-              <p id={texteId} className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">{e.texte}</p>
+              <h2 id={titreId} className="fd-display mt-2.5 text-[21px] leading-tight text-ink sm:text-[24px]">{t(e.titre)}</h2>
+              <p id={texteId} className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">{t(e.texte)}</p>
             </motion.div>
           </AnimatePresence>
         </div>
 
         <div className="flex items-center gap-3 px-5 pb-5 pt-4 sm:px-7 sm:pb-6">
-          <div role="group" aria-label="Étapes" className="flex items-center">
+          <div role="group" aria-label={t('Étapes')} className="flex items-center">
             {nouveaute.etapes.map((x, i) => (
-              <button key={x.titre} type="button" onClick={() => aller(i)} aria-label={`Étape ${i + 1} sur ${n} : ${x.titre}`}
+              <button key={x.titre} type="button" onClick={() => aller(i)} aria-label={t('Étape {i} sur {n} : {titre}', { i: i + 1, n, titre: t(x.titre) })}
                 aria-current={i === etape ? 'step' : undefined}
                 className="group flex h-8 items-center px-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded">
                 <motion.span className={`block h-1.5 rounded-full ${i === etape ? 'bg-brand' : 'bg-[#dcd7cc] group-hover:bg-[#c5bfb2]'}`}
@@ -144,10 +145,10 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFini
           {/* Téléphone, dernière étape : la croix suffit, le bouton de la nouveauté garde toute la place. */}
           <button type="button" onClick={() => onClose('fermee')}
             className={`${derniere ? 'hidden sm:inline-flex sm:items-center' : ''} min-h-11 rounded-xl px-3 text-[13.5px] font-semibold text-ink-faint hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40`}>
-            {derniere ? 'Plus tard' : 'Passer'}
+            {derniere ? t('Plus tard') : t('Passer')}
           </button>
           <button ref={principal} type="button" onClick={() => (derniere ? onClose('cta') : aller(etape + 1))} className="fd-btn-primary min-h-11">
-            {derniere ? ctaLabel : 'Suivant'} <ArrowRight className="h-4 w-4" aria-hidden />
+            {derniere ? t(ctaLabel) : t('Suivant')} <ArrowRight className="h-4 w-4" aria-hidden />
           </button>
         </div>
       </motion.div>

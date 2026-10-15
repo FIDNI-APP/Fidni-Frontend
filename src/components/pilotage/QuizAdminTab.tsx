@@ -155,7 +155,7 @@ const QuestionCard: React.FC<{
         ))}
         {d.options.length < 6 && (
           <button type="button" onClick={() => set({ options: [...d.options, ''] })}
-            className="ml-6 text-[12.5px] font-medium text-ink-soft hover:text-ink">+ une réponse</button>
+            className="ms-6 text-[12.5px] font-medium text-ink-soft hover:text-ink">+ une réponse</button>
         )}
       </div>
 
@@ -175,7 +175,7 @@ const QuestionCard: React.FC<{
               <button key={t.id} type="button" aria-pressed={chosen.has(t.id)} onClick={() => toggleTheorem(t)}
                 title={t.niveaux.length ? `Au programme : ${t.niveaux.join(', ')}` : undefined}
                 className={`rounded-full border px-2.5 py-1 text-[12.5px] ${chosen.has(t.id) ? 'border-brand bg-brand-soft text-brand-hover' : 'border-line text-ink-soft hover:text-ink'}`}>
-                {chosen.has(t.id) && <Check className="mr-1 inline h-3 w-3" />}{t.name}
+                {chosen.has(t.id) && <Check className="me-1 inline h-3 w-3" />}{t.name}
               </button>
             ))}
           </div>
@@ -192,7 +192,7 @@ const QuestionCard: React.FC<{
         <button type="button" onClick={onCancel} className="min-h-10 rounded-xl px-3 text-[13px] text-ink-soft hover:bg-[#f2f1ee]">Annuler</button>
         {onDelete && (
           <button type="button" onClick={() => { if (window.confirm('Supprimer cette question ?')) onDelete(); }}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] text-ink-faint hover:text-[#a23b34]"><Trash2 className="h-3.5 w-3.5" /> Supprimer</button>
+            className="ms-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] text-ink-faint hover:text-[#a23b34]"><Trash2 className="h-3.5 w-3.5" /> Supprimer</button>
         )}
       </div>
     </div>
@@ -363,9 +363,9 @@ export const QuizAdminTab: React.FC = () => {
 
       <div className="fd-card p-2 sm:p-3">
         <div className="relative mb-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher un chapitre…" aria-label="Chercher un chapitre"
-            className="h-10 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-[13.5px] focus:border-brand focus:outline-none" />
+            className="h-10 w-full rounded-xl border border-line bg-white ps-9 pe-3 text-[13.5px] focus:border-brand focus:outline-none" />
         </div>
         {!rows ? <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-ink-faint" /></div>
           : groups.length === 0 ? <p className="px-3 py-6 text-center text-[13px] text-ink-faint">Aucun chapitre.</p>
@@ -374,7 +374,7 @@ export const QuizAdminTab: React.FC = () => {
                 <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{g}</p>
                 {list.map((r) => (
                   <button key={r.id} type="button" onClick={() => setOpen(r.id)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-paper">
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start hover:bg-paper">
                     <span className="min-w-0 flex-1 truncate text-[14px] text-ink">{r.name}</span>
                     {r.passages > 0 && <span className="hidden text-[12px] text-ink-faint sm:inline">{r.passages} passage{r.passages > 1 ? 's' : ''}</span>}
                     {r.a_relire > 0 && <ToReview n={r.a_relire} />}

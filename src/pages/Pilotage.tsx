@@ -232,10 +232,10 @@ const TopContents: React.FC<{ items: Overview['top_contents']; days: number }> =
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink group-hover:text-brand" title={c.title}>{c.title}</span>
                   <span className="fd-nums shrink-0 text-[13px] font-semibold text-ink">{fmt(c.views)}</span>
                 </span>
-                <span className="ml-6 mt-1.5 block h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
+                <span className="ms-6 mt-1.5 block h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
                   <span className="block h-full rounded-full bg-ink/70" style={{ width: `${Math.max((c.views / max) * 100, 2)}%` }} />
                 </span>
-                <span className="fd-nums ml-6 mt-1 block text-[11.5px] text-ink-faint">
+                <span className="fd-nums ms-6 mt-1 block text-[11.5px] text-ink-faint">
                   {TYPE_LABEL[c.type] ?? c.type}{c.readers ? ` · ${plural(c.readers, ['membre', 'membres'])}` : ''}
                 </span>
               </Link>
@@ -414,7 +414,7 @@ const TOP_PAGES = 15;
 /** Libellé d'une ligne d'usage : un clic ouvre sa courbe (jour par jour, semaine par semaine). */
 const SerieLabel: React.FC<{ label: string; onOpen: () => void }> = ({ label, onOpen }) => (
   <button type="button" onClick={onOpen} title="Voir l’évolution"
-    className="group inline-flex min-w-0 items-center gap-1 text-left text-ink hover:text-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded">
+    className="group inline-flex min-w-0 items-center gap-1 text-start text-ink hover:text-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded">
     <span className="truncate underline decoration-ink/20 decoration-dotted underline-offset-[3px] group-hover:decoration-brand">{label}</span>
     <LineChart className="h-3.5 w-3.5 shrink-0 text-ink-faint group-hover:text-brand" aria-hidden />
   </button>
@@ -484,7 +484,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
                   <SerieLabel label={f.label} onOpen={() => setSerie({ source: 'base', cle: f.key, label: f.label })} />
                   <span className="fd-nums shrink-0 text-ink-faint">
                     <b className="text-ink">{fmt(users)}</b> {users > 1 ? 'membres' : 'membre'} · {fmt(f.actions)} fois
-                    <span className="ml-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
+                    <span className="ms-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
                   </span>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]" title={`${share} % des membres actifs`}>
@@ -541,9 +541,9 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
                     ? <span className="min-w-0 flex-1"><SerieLabel label={r.label} onOpen={() => setSerie({ source: 'page', cle: r.key, label: r.label })} /></span>
                     : <span className="min-w-0 flex-1 truncate text-ink">{r.label}</span>}
                   {r.sub && <span className="hidden shrink-0 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] text-ink-soft sm:inline">{r.sub}</span>}
-                  <span className="fd-nums shrink-0 text-right text-ink-faint"><b className="text-ink">{fmt(r.views)}</b> vues · {fmt(r.visits)} visites</span>
+                  <span className="fd-nums shrink-0 text-end text-ink-faint"><b className="text-ink">{fmt(r.views)}</b> vues · {fmt(r.visits)} visites</span>
                 </div>
-                <div className="ml-7 mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
+                <div className="ms-7 mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
                   <div className="h-full rounded-full bg-ink/70 transition-[width] duration-500" style={{ width: `${Math.max((r.views / maxViews) * 100, 2)}%` }} />
                 </div>
               </li>
@@ -611,7 +611,7 @@ const ValueGroup: React.FC<{ label: string; values: FilterValue[] }> = ({ label,
               <span className="min-w-0 flex-1 truncate text-ink">{v.label}</span>
               <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(v.count)}</b> · {Math.round((v.count / Math.max(total, 1)) * 100)} %</span>
             </div>
-            <div className="ml-6 mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
+            <div className="ms-6 mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
               <div className="h-full rounded-full bg-brand/70" style={{ width: `${Math.max((v.count / max) * 100, 2)}%` }} />
             </div>
           </li>
@@ -697,7 +697,7 @@ const FiltersCard: React.FC<{
                   <SerieLabel label={f.label} onOpen={() => onOpenSerie(f)} />
                   <span className="fd-nums shrink-0 text-ink-faint">
                     <b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites
-                    <span className="ml-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
+                    <span className="ms-2 text-[11.5px]"><Trend now={f.actions} before={f.previous} /></span>
                   </span>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
@@ -836,9 +836,9 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative min-w-[200px] flex-1">
             <span className="sr-only">Rechercher un membre</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
             <input value={q} onChange={(ev) => setQ(ev.target.value)} placeholder="Pseudo, nom, e-mail, établissement…"
-              className="w-full rounded-xl border border-line bg-white py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
+              className="w-full rounded-xl border border-line bg-white py-2.5 ps-9 pe-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
           </label>
           <select aria-label="Trier" value={sort} onChange={(ev) => { setSort(ev.target.value); setPage(1); }}
             className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink">
@@ -853,7 +853,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
               <button key={f.key || 'tous'} type="button" aria-pressed={on} title={f.hint}
                 onClick={() => { setFilter(f.key); setPage(1); }}
                 className={`rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors ${on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-ink hover:text-ink'}`}>
-                {f.label}{n !== undefined && <span className={`fd-nums ml-1.5 ${on ? 'text-white/70' : 'text-ink-faint'}`}>{n}</span>}
+                {f.label}{n !== undefined && <span className={`fd-nums ms-1.5 ${on ? 'text-white/70' : 'text-ink-faint'}`}>{n}</span>}
               </button>
             );
           })}
@@ -869,7 +869,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
           return (
             <li key={r.id} className="border-b border-[#f2f1ee] last:border-b-0">
               <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : r.id)}
-                className={`flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-[#faf9f7] focus:outline-none focus-visible:bg-[#faf9f7] ${expanded ? 'bg-[#faf9f7]' : ''}`}>
+                className={`flex w-full items-center gap-3 px-5 py-3 text-start transition-colors hover:bg-[#faf9f7] focus:outline-none focus-visible:bg-[#faf9f7] ${expanded ? 'bg-[#faf9f7]' : ''}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-semibold uppercase text-ink-soft" aria-hidden>
                   {r.username.slice(0, 1)}
                 </span>
@@ -883,7 +883,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
                   </span>
                   <span className="block truncate text-[12px] text-ink-faint">{[r.class_level, r.school].filter(Boolean).join(' · ') || 'Niveau non renseigné'}</span>
                 </span>
-                <span className="shrink-0 text-right">
+                <span className="shrink-0 text-end">
                   <span className={`block text-[12.5px] ${r.last_activity ? 'text-ink-soft' : 'text-ink-faint'}`}>{r.last_activity ? ago(r.last_activity) : 'jamais actif'}</span>
                   <span className="hidden text-[11px] text-ink-faint sm:block">inscrit {ago(r.date_joined)}</span>
                 </span>

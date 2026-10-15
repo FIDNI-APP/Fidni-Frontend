@@ -2,6 +2,7 @@
 // échec n'empêche pas d'afficher les autres). Retirer un favori est immédiat, avec « Annuler » pendant 5 s.
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { t } from '@/i18n';
 import { getUserSavedExams, getUserSavedExercises, getUserSavedLessons } from '@/lib/api/userApi';
 import { examContentAPI, exerciseContentAPI, lessonContentAPI } from '@/lib/api';
 import type { ListItem, ListKind } from '@/components/content/listing/listingUtils';
@@ -50,7 +51,7 @@ export function useSaved(username: string | undefined) {
       await api.unsave(String(item.id));
     } catch {
       putBack(item, index);
-      toast.error('Le favori n’a pas pu être retiré.');
+      toast.error(t('Le favori n’a pas pu être retiré.'));
       return;
     }
     const undo = async () => {
@@ -60,15 +61,15 @@ export function useSaved(username: string | undefined) {
       } catch (e) {
         if (alreadySaved(e)) return;
         setItems((cur) => cur?.filter((x) => savedKey(x) !== savedKey(item)) ?? cur);
-        toast.error('Le favori n’a pas pu être remis.');
+        toast.error(t('Le favori n’a pas pu être remis.'));
       }
     };
-    toast((t) => (
+    toast((tt) => (
       <span className="flex items-center gap-3">
-        <span>Retiré de tes favoris</span>
-        <button type="button" onClick={() => { toast.dismiss(t.id); undo(); }}
+        <span>{t('Retiré de tes favoris')}</span>
+        <button type="button" onClick={() => { toast.dismiss(tt.id); undo(); }}
           className="-my-1 min-h-9 rounded-lg px-2 font-semibold text-brand-line underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
-          Annuler
+          {t('Annuler')}
         </button>
       </span>
     ), { id: `favori-${savedKey(item)}`, duration: 5000 });

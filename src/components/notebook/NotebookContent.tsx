@@ -4,6 +4,7 @@
 // Enregistrement automatique, 1 s après un geste, et aussitôt si la leçon se ferme avant (autre leçon, autre page).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Eraser, Highlighter, Loader2, Pen, Redo2, StickyNote, Trash2, Undo2 } from 'lucide-react';
+import { t } from '@/i18n';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
 import { NotebookPaper, NOTEBOOK_THEME, paperTextStyle, type NotebookTheme } from './NotebookPaper';
@@ -55,7 +56,7 @@ const EmptyLessonBody: React.FC<{ onReady?: () => void }> = ({ onReady }) => {
     const id = requestAnimationFrame(() => { onReady?.(); });
     return () => cancelAnimationFrame(id);
   }, [onReady]);
-  return <p className="py-12 text-center text-[13.5px] text-ink-faint">Cette leçon n’a pas encore de contenu à afficher.</p>;
+  return <p className="py-12 text-center text-[13.5px] text-ink-faint">{t('Cette leçon n’a pas encore de contenu à afficher.')}</p>;
 };
 
 // Leçon structurée (sections JSON) : prévient quand elle est affichée.
@@ -229,7 +230,7 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     setHistory((h) => ({ ...h, list: h.list.map((l, i) => (i === h.at ? next : l)) }));
   };
   const clearAll = () => {
-    if (annotations.length && window.confirm('Effacer toutes tes annotations de cette leçon ?')) commit([]);
+    if (annotations.length && window.confirm(t('Effacer toutes tes annotations de cette leçon ?'))) commit([]);
   };
 
   const erasing = annotating && tool === 'eraser';
@@ -239,44 +240,44 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   return (
     <div className="flex flex-col">
       {annotating && (
-        <div role="toolbar" aria-label="Outils d’annotation"
+        <div role="toolbar" aria-label={t('Outils d’annotation')}
           className="sticky top-0 z-30 flex flex-wrap items-center gap-x-1 gap-y-1.5 border-b border-line bg-white/95 px-3 py-2 backdrop-blur">
           {TOOLS.map(({ key, label, icon: Icon }) => {
             const on = tool === key;
             return (
-              <button key={key} type="button" aria-pressed={on} onClick={() => setTool(on ? null : key)} title={label}
+              <button key={key} type="button" aria-pressed={on} onClick={() => setTool(on ? null : key)} title={t(label)}
                 className={`${toolBtn} ${on ? 'bg-ink text-white' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
-                <Icon className="h-4 w-4" /> <span className="hidden lg:inline">{label}</span>
+                <Icon className="h-4 w-4" /> <span className="hidden lg:inline">{t(label)}</span>
               </button>
             );
           })}
           <span className="mx-1.5 h-5 w-px bg-line" aria-hidden />
-          <span className="flex items-center gap-1" role="radiogroup" aria-label="Couleur">
+          <span className="flex items-center gap-1" role="radiogroup" aria-label={t('Couleur')}>
             {COLORS.map((c) => (
-              <button key={c.value} type="button" role="radio" aria-checked={color === c.value} aria-label={`Couleur ${c.name}`} title={c.name}
+              <button key={c.value} type="button" role="radio" aria-checked={color === c.value} aria-label={t('Couleur {name}', { name: t(c.name) })} title={t(c.name)}
                 onClick={() => setColor(c.value)}
                 className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-105 ${color === c.value ? 'border-ink' : 'border-white ring-1 ring-line'}`}
                 style={{ backgroundColor: c.value }} />
             ))}
           </span>
           <span className="mx-1.5 h-5 w-px bg-line" aria-hidden />
-          <button type="button" onClick={undo} disabled={history.at <= 0} title="Annuler" aria-label="Annuler"
+          <button type="button" onClick={undo} disabled={history.at <= 0} title={t('Annuler')} aria-label={t('Annuler')}
             className={`${toolBtn} text-ink-soft hover:bg-[#f2f1ee] disabled:opacity-40`}><Undo2 className="h-4 w-4" /></button>
-          <button type="button" onClick={redo} disabled={history.at >= history.list.length - 1} title="Refaire" aria-label="Refaire"
+          <button type="button" onClick={redo} disabled={history.at >= history.list.length - 1} title={t('Refaire')} aria-label={t('Refaire')}
             className={`${toolBtn} text-ink-soft hover:bg-[#f2f1ee] disabled:opacity-40`}><Redo2 className="h-4 w-4" /></button>
-          <button type="button" onClick={clearAll} disabled={!annotations.length} title="Tout effacer"
-            className={`${toolBtn} text-[#a23b34] hover:bg-[#fbecea] disabled:opacity-40`}><Trash2 className="h-4 w-4" /> <span className="hidden lg:inline">Tout effacer</span></button>
-          <span className="ml-auto inline-flex items-center gap-1 pl-2 text-[12px] text-ink-faint" aria-live="polite">
-            {saveState === 'saving' ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Enregistrement…</>
-              : saveState === 'saved' ? <><Check className="h-3.5 w-3.5 text-brand" /> Enregistré</>
-                : saveState === 'error' ? <span className="text-[#a23b34]">Pas enregistré</span> : null}
+          <button type="button" onClick={clearAll} disabled={!annotations.length} title={t('Tout effacer')}
+            className={`${toolBtn} text-[#a23b34] hover:bg-[#fbecea] disabled:opacity-40`}><Trash2 className="h-4 w-4" /> <span className="hidden lg:inline">{t('Tout effacer')}</span></button>
+          <span className="ms-auto inline-flex items-center gap-1 ps-2 text-[12px] text-ink-faint" aria-live="polite">
+            {saveState === 'saving' ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('Enregistrement…')}</>
+              : saveState === 'saved' ? <><Check className="h-3.5 w-3.5 text-brand" /> {t('Enregistré')}</>
+                : saveState === 'error' ? <span className="text-[#a23b34]">{t('Pas enregistré')}</span> : null}
           </span>
         </div>
       )}
 
       <NotebookPaper theme={notebookTheme}>
         <div className={`relative z-10 ${className}`}>
-          <div className="py-6 pr-4 sm:py-8 sm:pr-8" style={paperTextStyle(notebookTheme)}>
+          <div className="py-6 pe-4 sm:py-8 sm:pe-8" style={paperTextStyle(notebookTheme)}>
             {hasStructure ? (
               <StructuredLessonContent structure={structure} onReady={onReady} />
             ) : content ? (
@@ -328,15 +329,15 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
           {/* Note posée sur un écran plus large : ramenée dans la feuille plutôt que coupée. */}
           {shown.filter((a) => a.type === 'note').map((a) => (
             <div key={a.id} onClick={() => erase(a.id)}
-              className={`absolute max-w-[260px] rounded-r-lg border-l-4 bg-[#fffbea] shadow-[0_4px_14px_rgba(20,18,16,.10)] ${erasing ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#a23b34]' : ''}`}
-              style={{ left: `max(0px, min(${a.position.x}px, 100% - 200px))`, top: a.position.y, minWidth: 180, borderLeftColor: a.color, pointerEvents: annotating ? 'auto' : 'none' }}>
+              className={`absolute max-w-[260px] rounded-e-lg border-s-4 bg-[#fffbea] shadow-[0_4px_14px_rgba(20,18,16,.10)] ${erasing ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#a23b34]' : ''}`}
+              style={{ left: `max(0px, min(${a.position.x}px, 100% - 200px))`, top: a.position.y, minWidth: 180, borderInlineStartColor: a.color, pointerEvents: annotating ? 'auto' : 'none' }}>
               {annotating && !erasing ? (
                 <textarea value={a.content || ''} autoFocus={a.id === fresh} rows={3}
                   onChange={(e) => editNote(a.id, e.target.value)}
-                  placeholder="Écris ta note…"
+                  placeholder={t('Écris ta note…')}
                   className="block w-full resize-y border-none bg-transparent p-2.5 text-[13px] leading-snug text-ink outline-none placeholder:text-ink-faint" />
               ) : (
-                <p className="whitespace-pre-wrap p-2.5 text-[13px] leading-snug text-ink">{a.content || <span className="text-ink-faint">Note vide</span>}</p>
+                <p className="whitespace-pre-wrap p-2.5 text-[13px] leading-snug text-ink">{a.content || <span className="text-ink-faint">{t('Note vide')}</span>}</p>
               )}
             </div>
           ))}

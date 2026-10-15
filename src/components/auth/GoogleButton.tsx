@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { loadGoogleIdentity, onGoogleCredential } from '@/lib/googleAuth';
+import { t, getLang } from '@/i18n';
 
 interface GoogleButtonProps {
   /** Jeton d'identité renvoyé par Google, à envoyer au serveur. */
@@ -40,7 +41,7 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({ onCredential, busy =
           drawnWidth = width;
           gsi.renderButton(targetRef.current, {
             type: 'standard', theme: 'outline', size: 'large', shape: 'rectangular',
-            text: 'continue_with', logo_alignment: 'left', locale: 'fr', width,
+            text: 'continue_with', logo_alignment: 'left', locale: getLang(), width,
           });
         };
         draw();
@@ -63,12 +64,12 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({ onCredential, busy =
   if (state === 'error') {
     return (
       <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-[12.5px] leading-snug text-ink-faint">
-        Le bouton Google n’a pas pu se charger (bloqueur de contenu ou connexion).{' '}
+        {t('Le bouton Google n’a pas pu se charger (bloqueur de contenu ou connexion).')}{' '}
         <button type="button" onClick={() => { setState('loading'); setAttempt((n) => n + 1); }}
           className="font-semibold text-brand-hover hover:text-brand">
-          Réessayer
+          {t('Réessayer')}
         </button>
-        {' '}ou utilise ton e-mail ci-dessous.
+        {' '}{t('ou utilise ton e-mail ci-dessous.')}
       </p>
     );
   }
@@ -79,12 +80,12 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({ onCredential, busy =
       <div ref={targetRef} className="flex min-h-[44px] items-center justify-center" />
       {state === 'loading' && (
         <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg border border-line bg-white text-[13px] text-ink-faint">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Chargement de Google…
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Chargement de Google…')}
         </div>
       )}
       {busy && (
         <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg bg-white/85 text-[13px] font-medium text-ink-soft">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Connexion avec Google…
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Connexion avec Google…')}
         </div>
       )}
     </div>

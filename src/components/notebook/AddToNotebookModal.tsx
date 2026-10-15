@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, BookMarked, Check, Loader2, Plus, X } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { addLessonToNotebook, addChapterToNotebook } from '@/lib/api/notebookApi';
+import { t } from '@/i18n';
 import { apiError } from './notebookModel';
 import toast from 'react-hot-toast';
 
@@ -83,12 +84,12 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
       let section: { id: string | number } | undefined = nb.sections.find((s) => same(s.chapter?.id, chapter.id));
       if (!section) section = await addChapterToNotebook(String(nb.id), String(chapter.id));
       await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
-      toast.success(`Leçon ajoutée à « ${chapter.name} »`);
+      toast.success(t('Leçon ajoutée à « {name} »', { name: chapter.name }));
       setDone({ notebookId: nb.id, sectionId: section!.id, chapter: chapter.name });
       onChanged?.();
       await load();
     } catch {
-      toast.error('La leçon n’a pas pu être ajoutée.');
+      toast.error(t('La leçon n’a pas pu être ajoutée.'));
     } finally {
       setBusy(null);
     }
@@ -109,11 +110,11 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
         await addLessonToNotebook(String(nb.id), String(section!.id), lessonId);
         setDone({ notebookId: nb.id, sectionId: section!.id, chapter: chapter.name });
       }
-      toast.success('Cahier créé, leçon ajoutée');
+      toast.success(t('Cahier créé, leçon ajoutée'));
       onChanged?.();
       await load();
     } catch (e) {
-      toast.error(apiError(e, 'Le cahier n’a pas pu être créé.'));
+      toast.error(apiError(e, t('Le cahier n’a pas pu être créé.')));
     } finally {
       setBusy(null);
     }
@@ -133,22 +134,22 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
           return (
             <li key={ch.id}>
               <button type="button" disabled={added || busy !== null} onClick={() => addTo(nb, ch)}
-                className={`w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
+                className={`w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-2.5 text-start transition-colors ${
                   added ? 'bg-brand-soft' : 'hover:bg-[#f7f6f3]'}`}>
                 <span className="min-w-0">
-                  <span className="block text-[11px] font-semibold uppercase tracking-[.06em] text-ink-faint">Chapitre</span>
+                  <span className="block text-[11px] font-semibold uppercase tracking-[.06em] text-ink-faint">{t('Chapitre')}</span>
                   <span className={`block truncate text-[14px] font-medium ${added ? 'text-brand-hover' : 'text-ink'}`}>{ch.name}</span>
-                  {!section && !added && <span className="block text-[12px] text-ink-faint">Sera ajouté à ce cahier</span>}
+                  {!section && !added && <span className="block text-[12px] text-ink-faint">{t('Sera ajouté à ce cahier')}</span>}
                 </span>
                 {busy === key ? <Loader2 className="w-4 h-4 animate-spin text-brand" />
-                  : added ? <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-hover shrink-0"><Check className="w-4 h-4" /> Ajoutée</span>
-                  : <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-[12.5px] font-semibold text-white shrink-0"><Plus className="w-3.5 h-3.5" /> Ajouter</span>}
+                  : added ? <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-hover shrink-0"><Check className="w-4 h-4" /> {t('Ajoutée')}</span>
+                  : <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-[12.5px] font-semibold text-white shrink-0"><Plus className="w-3.5 h-3.5" /> {t('Ajouter')}</span>}
               </button>
             </li>
           );
         })}
         {!lessonChapters.length && (
-          <li className="px-2.5 py-2 text-[13px] text-ink-faint">Cette leçon n’est rattachée à aucun chapitre.</li>
+          <li className="px-2.5 py-2 text-[13px] text-ink-faint">{t('Cette leçon n’est rattachée à aucun chapitre.')}</li>
         )}
       </ul>
     </div>
@@ -163,12 +164,12 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
           <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
             <div className="min-w-0">
               <h2 id="nb-modal-title" className="fd-display flex items-center gap-2 text-[21px] leading-tight text-ink">
-                <BookMarked className="w-5 h-5 shrink-0 text-brand" /> Ajouter à mon cahier
+                <BookMarked className="w-5 h-5 shrink-0 text-brand" /> {t('Ajouter à mon cahier')}
               </h2>
               {lessonTitle && <p className="mt-0.5 truncate text-[13px] text-ink-faint">{lessonTitle}</p>}
             </div>
-            <button type="button" onClick={onClose} aria-label="Fermer"
-              className="-mr-2 -mt-1.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:text-ink hover:bg-[#f2f1ee]"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={onClose} aria-label={t('Fermer')}
+              className="-me-2 -mt-1.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:text-ink hover:bg-[#f2f1ee]"><X className="w-5 h-5" /></button>
           </div>
 
           <div className="px-5 pb-5 flex flex-col gap-3">
@@ -180,19 +181,20 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
 
                 {matching.length === 0 && lessonSubject && lessonLevels.length > 0 && (
                   <div className="rounded-xl border border-dashed border-brand-line bg-brand-soft/40 px-4 py-4">
-                    <p className="text-[14px] font-semibold text-ink">Pas encore de cahier {lessonSubject.name} — {lessonLevels[0].name}</p>
+                    <p className="text-[14px] font-semibold text-ink">{t('Pas encore de cahier {subject} — {level}', { subject: lessonSubject.name, level: lessonLevels[0].name })}</p>
                     <p className="mt-1 text-[13px] text-ink-soft">
-                      Crée-le : ses chapitres suivent le programme, et cette leçon ira directement dans
-                      {lessonChapters[0] ? <> « {lessonChapters[0].name} »</> : ' son chapitre'}.
+                      {lessonChapters[0]
+                        ? t('Crée-le : ses chapitres suivent le programme, et cette leçon ira directement dans « {chapter} ».', { chapter: lessonChapters[0].name })
+                        : t('Crée-le : ses chapitres suivent le programme, et cette leçon ira directement dans son chapitre.')}
                     </p>
                     <label className="mt-3 block">
-                      <span className="block text-[12px] font-semibold text-ink-soft">Nom du cahier</span>
+                      <span className="block text-[12px] font-semibold text-ink-soft">{t('Nom du cahier')}</span>
                       <input value={newTitle} maxLength={200} onChange={(e) => setNewTitle(e.target.value)}
                         className="mt-1 w-full rounded-xl border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" />
                     </label>
                     <button type="button" onClick={createAndAdd} disabled={busy !== null || !newTitle.trim()} className="fd-btn-primary mt-3 w-full justify-center">
                       {busy === 'create' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Créer le cahier et ajouter la leçon
+                      {t('Créer le cahier et ajouter la leçon')}
                     </button>
                   </div>
                 )}
@@ -200,7 +202,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
                 {others.length > 0 && (
                   <details className="group">
                     <summary className="cursor-pointer select-none text-[12.5px] font-medium text-ink-faint hover:text-ink">
-                      Autres cahiers de {lessonSubject?.name || 'cette matière'} ({others.length})
+                      {lessonSubject?.name ? t('Autres cahiers de {name} ({n})', { name: lessonSubject.name, n: others.length }) : t('Autres cahiers de cette matière ({n})', { n: others.length })}
                     </summary>
                     <div className="mt-2 flex flex-col gap-2">{others.map((nb) => <NotebookBlock key={nb.id} nb={nb} />)}</div>
                   </details>
@@ -209,7 +211,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
                 {done && (
                   <Link to={`/notebooks?nb=${done.notebookId}&chapitre=${done.sectionId}`} onClick={onClose}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-[13.5px] font-semibold text-ink-soft hover:border-ink hover:text-ink">
-                    Ouvrir mon cahier <ArrowRight className="w-4 h-4" />
+                    {t('Ouvrir mon cahier')} <ArrowRight className="w-4 h-4" />
                   </Link>
                 )}
               </>

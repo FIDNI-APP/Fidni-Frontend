@@ -4,6 +4,7 @@ import type { DashboardOverview as Overview, OverviewContent, RecommendedItem } 
 import type { WeeklyProgress } from '@/lib/api';
 import { KIND_LABEL, type UpcomingTest } from '@/lib/api/devoirsApi';
 import type { NextTestState } from '@/components/devoirs/useNextTest';
+import { t } from '@/i18n';
 
 /* ───────────────────────── L'action principale ───────────────────────── */
 
@@ -32,21 +33,29 @@ const WEEKDAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi',
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 /** « Préparer mon DS de mercredi », « … de demain », « … du 24 octobre ». */
-export function prepareLabel(t: UpcomingTest): string {
-  const what = t.kind === 'ds' ? 'DS' : KIND_LABEL[t.kind].toLowerCase();
-  const d = new Date(`${t.date}T12:00:00`);
-  const when = t.days_left <= 0 ? 'd’aujourd’hui' : t.days_left === 1 ? 'de demain'
-    : t.days_left <= 6 ? `de ${WEEKDAYS[d.getDay()]}` : `du ${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  return `Préparer mon ${what} ${when}`;
+export function prepareLabel(test: UpcomingTest): string {
+  const d = new Date(`${test.date}T12:00:00`);
+  const when = test.days_left <= 0 ? t('d’aujourd’hui') : test.days_left === 1 ? t('de demain')
+    : test.days_left <= 6 ? t('de {jour}', { jour: t(WEEKDAYS[d.getDay()]) }) : t('du {n} {mois}', { n: d.getDate(), mois: t(MONTHS[d.getMonth()]) });
+  if (test.kind === 'ds') return t('Préparer mon DS {when}', { when });
+  if (KIND_LABEL[test.kind].toLowerCase() === 'contrôle') return t('Préparer mon contrôle {when}', { when });
+  return t('Préparer mon examen blanc {when}', { when });
 }
 
 /** « aujourd’hui », « hier », « il y a 4 jours ». */
 export function ago(iso?: string): string {
   if (!iso) return '';
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (days <= 0) return 'aujourd’hui';
-  if (days === 1) return 'hier';
-  return `il y a ${days} jours`;
+  if (days <= 0) return t('aujourd’hui');
+  if (days === 1) return t('hier');
+  return t('il y a {n} jours', { n: days });
+}
+
+/** Raison d'un contenu proposé (texte français venu du serveur), traduite à l'affichage. */
+export function reasonLabel(reason: string): string {
+  const suite = 'Suite de ton travail · ';
+  if (reason.startsWith(suite)) return t('Suite de ton travail · {chapitre}', { chapitre: reason.slice(suite.length) });
+  return t(reason);
 }
 
 /* ───────────────────────── Tes premiers pas ───────────────────────── */

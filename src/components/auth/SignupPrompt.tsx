@@ -5,6 +5,7 @@ import { Check, Sparkles, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { TABBAR_OFFSET } from '@/components/layout/nav';
+import { t } from '@/i18n';
 
 /**
  * Ouvre la fenêtre de connexion / inscription. `source` = la porte d'entrée (vote, favori, solution,
@@ -30,16 +31,16 @@ export const SignupStrip: React.FC<{ className?: string; source?: string }> = ({
   return (
     <div className={`rounded-2xl border border-brand-line bg-brand-soft/50 px-5 py-4 flex flex-col md:flex-row md:items-center gap-4 ${className}`}>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Sparkles className="h-4 w-4 text-brand" /> Travaille avec un compte, c’est gratuit</p>
+        <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Sparkles className="h-4 w-4 text-brand" /> {t('Travaille avec un compte, c’est gratuit')}</p>
         <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
           {BENEFITS.map((b) => (
-            <li key={b} className="flex items-center gap-1.5 text-[13px] text-ink-soft"><Check className="h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} /> {b}</li>
+            <li key={b} className="flex items-center gap-1.5 text-[13px] text-ink-soft"><Check className="h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} /> {t(b)}</li>
           ))}
         </ul>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary">Créer mon compte</button>
-        <button type="button" onClick={() => openSignup('login')} className="px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">Se connecter</button>
+        <button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary">{t('Créer mon compte')}</button>
+        <button type="button" onClick={() => openSignup('login')} className="px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">{t('Se connecter')}</button>
       </div>
     </div>
   );
@@ -47,7 +48,7 @@ export const SignupStrip: React.FC<{ className?: string; source?: string }> = ({
 
 /** Carte d'invitation (colonne latérale, liste, fin de page). */
 export const SignupCard: React.FC<{ title?: string; text?: string; benefits?: boolean; className?: string; tour?: string; source?: string }> = ({
-  title = 'Garde une trace de ton travail', text, benefits = true, className = '', tour, source = 'carte',
+  title = t('Garde une trace de ton travail'), text, benefits = true, className = '', tour, source = 'carte',
 }) => {
   const { isAuthenticated } = useAuth();
   const openSignup = useOpenSignup(source);
@@ -62,16 +63,16 @@ export const SignupCard: React.FC<{ title?: string; text?: string; benefits?: bo
         <ul className="mt-3 flex flex-col gap-1.5">
           {BENEFITS.map((b) => (
             <li key={b} className="flex items-start gap-2 text-[13px] text-ink-soft">
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} /> {b}
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} /> {t(b)}
             </li>
           ))}
         </ul>
       )}
       <button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary mt-4 w-full justify-center">
-        Créer mon compte gratuit
+        {t('Créer mon compte gratuit')}
       </button>
       <button type="button" onClick={() => openSignup('login')} className="mt-2 w-full text-center text-[12.5px] font-medium text-ink-faint hover:text-ink">
-        J’ai déjà un compte
+        {t('J’ai déjà un compte')}
       </button>
     </div>
   );
@@ -112,15 +113,15 @@ export const SignupBanner: React.FC<{ contentId?: string | number }> = ({ conten
     // Au-dessus de la barre d'onglets du téléphone (sa hauteur, 0 sur ordinateur : MobileTabBar).
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur shadow-[0_-8px_24px_rgba(20,18,16,.06)] print:hidden"
       style={{ bottom: TABBAR_OFFSET }}>
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 pr-12 sm:pr-4">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 pe-12 sm:pe-4">
         <p className="min-w-0 flex-1 text-[13.5px] text-ink-soft">
-          <b className="text-ink">Tu révises sur Fidni ?</b> Crée ton compte gratuit pour garder ta progression, tes révisions et tes cahiers.
+          <b className="text-ink">{t('Tu révises sur Fidni ?')}</b> {t('Crée ton compte gratuit pour garder ta progression, tes révisions et tes cahiers.')}
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary">Créer mon compte</button>
-          <button type="button" onClick={() => openSignup('login')} className="hidden sm:inline-flex px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">Se connecter</button>
+          <button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary">{t('Créer mon compte')}</button>
+          <button type="button" onClick={() => openSignup('login')} className="hidden sm:inline-flex px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">{t('Se connecter')}</button>
         </div>
-        <button type="button" onClick={dismiss} aria-label="Fermer" className="absolute right-2 top-2 sm:static inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
+        <button type="button" onClick={dismiss} aria-label={t('Fermer')} className="absolute end-2 top-2 sm:static inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
           <X className="h-4 w-4" />
         </button>
       </div>

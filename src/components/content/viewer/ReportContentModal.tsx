@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, Flag, Loader2, X } from 'lucide-react';
 import { reportContent, type ReportReason } from '@/lib/api/reportApi';
 import { reportTargets, targetLabel } from '@/lib/reportTargets';
+import { t } from '@/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -21,15 +22,15 @@ const MAX = 1000;
 
 function reasonsFor(type: Props['contentType']): { value: ReportReason; label: string; hint: string }[] {
   const list: { value: ReportReason; label: string; hint: string }[] = [
-    { value: 'statement', label: type === 'lesson' ? 'Erreur dans le cours' : 'Erreur dans l’énoncé',
-      hint: type === 'lesson' ? 'Une définition, un théorème ou un exemple faux' : 'Une donnée fausse, une question impossible' },
+    { value: 'statement', label: type === 'lesson' ? t('Erreur dans le cours') : t('Erreur dans l’énoncé'),
+      hint: type === 'lesson' ? t('Une définition, un théorème ou un exemple faux') : t('Une donnée fausse, une question impossible') },
   ];
-  if (type !== 'lesson') list.push({ value: 'solution', label: 'Erreur dans la solution', hint: 'Un calcul ou un résultat faux' });
-  if (type === 'exam') list.push({ value: 'scale', label: 'Barème incorrect', hint: 'Les points ne tombent pas juste' });
+  if (type !== 'lesson') list.push({ value: 'solution', label: t('Erreur dans la solution'), hint: t('Un calcul ou un résultat faux') });
+  if (type === 'exam') list.push({ value: 'scale', label: t('Barème incorrect'), hint: t('Les points ne tombent pas juste') });
   list.push(
-    { value: 'typo', label: 'Faute de frappe', hint: 'Orthographe, mot manquant' },
-    { value: 'display', label: 'Affichage', hint: 'Formule ou figure mal affichée' },
-    { value: 'other', label: 'Autre', hint: 'Dis-nous en quelques mots' },
+    { value: 'typo', label: t('Faute de frappe'), hint: t('Orthographe, mot manquant') },
+    { value: 'display', label: t('Affichage'), hint: t('Formule ou figure mal affichée') },
+    { value: 'other', label: t('Autre'), hint: t('Dis-nous en quelques mots') },
   );
   return list;
 }
@@ -88,8 +89,8 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       setError(status === 429
-        ? 'Tu as envoyé beaucoup de signalements d’un coup. Réessaie un peu plus tard.'
-        : 'Le signalement n’a pas pu être envoyé. Vérifie ta connexion et réessaie.');
+        ? t('Tu as envoyé beaucoup de signalements d’un coup. Réessaie un peu plus tard.')
+        : t('Le signalement n’a pas pu être envoyé. Vérifie ta connexion et réessaie.'));
     } finally {
       setSending(false);
     }
@@ -103,12 +104,12 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
         <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4 border-b border-line">
           <div className="min-w-0">
             <h2 id="report-title" className="fd-display text-[20px] text-ink flex items-center gap-2">
-              <Flag className="w-[18px] h-[18px] text-ink-soft" /> Signaler une erreur
+              <Flag className="w-[18px] h-[18px] text-ink-soft" /> {t('Signaler une erreur')}
             </h2>
             <p className="mt-0.5 text-[13px] text-ink-faint truncate">{contentTitle}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fermer"
-            className="p-1.5 -mr-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f7f6f3] transition-colors">
+          <button type="button" onClick={onClose} aria-label={t('Fermer')}
+            className="p-1.5 -me-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f7f6f3] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -118,16 +119,16 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-soft flex items-center justify-center">
               <CheckCircle2 className="w-6 h-6 text-brand-hover" />
             </div>
-            <p className="fd-display text-[19px] text-ink">Merci pour ton signalement</p>
+            <p className="fd-display text-[19px] text-ink">{t('Merci pour ton signalement')}</p>
             <p className="mt-1.5 text-sm text-ink-soft max-w-sm mx-auto">
-              On vérifie et on corrige au plus vite. Grâce à toi, ce contenu sera juste pour tout le monde.
+              {t('On vérifie et on corrige au plus vite. Grâce à toi, ce contenu sera juste pour tout le monde.')}
             </p>
-            <button type="button" onClick={onClose} className="fd-btn-primary inline-flex mt-6">Fermer</button>
+            <button type="button" onClick={onClose} className="fd-btn-primary inline-flex mt-6">{t('Fermer')}</button>
           </div>
         ) : (
           <form onSubmit={submit} className="px-6 py-5 space-y-5">
             <fieldset>
-              <legend className="text-sm font-semibold text-ink mb-2.5">Quel est le problème ?</legend>
+              <legend className="text-sm font-semibold text-ink mb-2.5">{t('Quel est le problème ?')}</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {reasons.map((r) => {
                   const active = reason === r.value;
@@ -150,11 +151,11 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
             {groups.length > 0 && (
               <div>
                 <label htmlFor="report-where" className="text-sm font-semibold text-ink">
-                  {contentType === 'lesson' ? 'Partie concernée' : 'Question concernée'} <span className="font-normal text-ink-faint">(facultatif)</span>
+                  {contentType === 'lesson' ? t('Partie concernée') : t('Question concernée')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span>
                 </label>
                 <select id="report-where" value={path} onChange={(e) => setPath(e.target.value)}
                   className="mt-1.5 w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30">
-                  <option value="">Tout le contenu / je ne sais pas</option>
+                  <option value="">{t('Tout le contenu / je ne sais pas')}</option>
                   {groups.map((g, gi) => g.title ? (
                     <optgroup key={gi} label={g.title}>
                       {g.items.map((it) => <option key={it.path} value={it.path}>{it.label}</option>)}
@@ -166,22 +167,22 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
 
             <div>
               <label htmlFor="report-text" className="text-sm font-semibold text-ink">
-                Précise si tu veux <span className="font-normal text-ink-faint">(facultatif)</span>
+                {t('Précise si tu veux')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span>
               </label>
               <textarea id="report-text" value={description} maxLength={MAX} rows={3}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder={reason ? PLACEHOLDER[reason] : 'Ce qui ne va pas, et ce qu’il faudrait selon toi.'}
+                placeholder={reason ? t(PLACEHOLDER[reason]) : t('Ce qui ne va pas, et ce qu’il faudrait selon toi.')}
                 className="mt-1.5 w-full resize-y rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
-              <p className="mt-1 text-right text-[11.5px] text-ink-faint fd-nums">{description.length} / {MAX}</p>
+              <p className="mt-1 text-end text-[11.5px] text-ink-faint fd-nums">{description.length} / {MAX}</p>
             </div>
 
             {error && <p role="alert" className="rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-3 py-2.5 text-[13px] text-[#9c3b2e]">{error}</p>}
 
             <div className="flex items-center justify-end gap-2 pt-1">
-              <button type="button" onClick={onClose} className="fd-btn-ghost">Annuler</button>
+              <button type="button" onClick={onClose} className="fd-btn-ghost">{t('Annuler')}</button>
               <button type="submit" disabled={!reason || sending} className="fd-btn-primary inline-flex disabled:opacity-50 disabled:cursor-not-allowed">
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flag className="w-4 h-4" />}
-                Envoyer
+                {t('Envoyer')}
               </button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 /**
  * Bouton partagé, aligné sur le système « encre & papier » (mêmes rendus que .fd-btn-primary
@@ -57,7 +58,7 @@ export const Button: React.FC<ButtonProps> = ({
     {loading ? (
       <>
         <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" aria-hidden="true" />
-        <span>Chargement…</span>
+        <span>{t('Chargement…')}</span>
       </>
     ) : (
       children

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Brain, ChevronRight, Play, RotateCcw } from 'lucide-react';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { t } from '@/i18n';
 import { RING, estMinutes, frDate, pct, previousPct, quizSize, type QuizEnCours, type SkillAssessment } from './types';
 
 /** Petit anneau du dernier score (hors .fd-card : la règle CSS des cartes forcerait le vert). */
@@ -18,19 +19,22 @@ export const Delta: React.FC<{ a: SkillAssessment; long?: boolean; className?: s
   if (before === null) return null;
   const d = pct(a) - before;
   const tone = d > 0 ? 'bg-brand-soft text-brand-hover' : 'bg-[#f2f1ee] text-ink-soft';
-  const text = d === 0 ? (long ? 'Même score que la dernière fois' : '=')
-    : `${d > 0 ? '+' : '−'}${Math.abs(d)} pt${Math.abs(d) > 1 ? 's' : ''}${long ? ' depuis la dernière fois' : ''}`;
+  const vars = { signe: d > 0 ? '+' : '−', n: Math.abs(d) };
+  const text = d === 0 ? (long ? t('Même score que la dernière fois') : '=')
+    : Math.abs(d) > 1
+      ? (long ? t('{signe}{n} pts depuis la dernière fois', vars) : t('{signe}{n} pts', vars))
+      : (long ? t('{signe}{n} pt depuis la dernière fois', vars) : t('{signe}{n} pt', vars));
   return (
     <span className={`fd-nums inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${tone} ${className}`}
-      title={`Avant : ${before} %`}>
-      {text}<span className="sr-only"> (avant : {before} %)</span>
+      title={t('Avant : {n} %', { n: before })}>
+      {text}<span className="sr-only"> {t('(avant : {n} %)', { n: before })}</span>
     </span>
   );
 };
 
 /** Étiquette « Nouveau » : quiz sorti il y a moins de 14 jours, pas encore passé. */
 export const NewBadge: React.FC = () => (
-  <span className="inline-flex items-center rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[.06em] text-white">Nouveau</span>
+  <span className="inline-flex items-center rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[.06em] text-white">{t('Nouveau')}</span>
 );
 
 export const QuizRow: React.FC<{
@@ -57,30 +61,31 @@ export const QuizRow: React.FC<{
         <span className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug text-ink">{name}{isNew && <NewBadge />}</span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-faint">
           {enCours ? (
-            <span className="fd-nums font-medium text-gold-strong">Commencé · {enCours.repondues}/{enCours.total} corrigées</span>
+            <span className="fd-nums font-medium text-gold-strong">{t('Commencé · {a}/{n} corrigées', { a: enCours.repondues, n: enCours.total })}</span>
           ) : taken ? (
             <>
-              <span>Fait le {frDate(taken.completed_at)}</span>
+              <span>{t('Fait le {date}', { date: frDate(taken.completed_at) })}</span>
               <Delta a={taken} />
-              {view && <span className="font-medium text-ink-soft">· Voir mon résultat</span>}
+              {view && <span className="font-medium text-ink-soft">· {t('Voir mon résultat')}</span>}
             </>
-          ) : <span className="fd-nums">{quizSize(ready)} questions · {estMinutes(ready)} min</span>}
+          ) : <span className="fd-nums">{t('{n} questions · {m} min', { n: quizSize(ready), m: estMinutes(ready) })}</span>}
         </span>
       </span>
       {view && <ChevronRight className="hidden h-4 w-4 shrink-0 text-ink-faint sm:block" aria-hidden />}
     </>
   );
-  const label = enCours ? 'Reprendre' : taken ? 'Refaire' : 'Passer';
+  const label = enCours ? t('Reprendre') : taken ? t('Refaire') : t('Passer', { _sens: 'quiz' });
+  const labelFull = enCours ? t('Reprendre le quiz « {name} »', { name }) : taken ? t('Refaire le quiz « {name} »', { name }) : t('Passer le quiz « {name} »', { name });
   return (
     <li className="flex min-h-16 items-center gap-2 px-2 py-2 sm:px-3">
       {view ? (
-        <button type="button" onClick={view} aria-label={`Voir mon dernier résultat au quiz « ${name} »`}
-          className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 text-left transition-colors hover:bg-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <button type="button" onClick={view} aria-label={t('Voir mon dernier résultat au quiz « {name} »', { name })}
+          className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 text-start transition-colors hover:bg-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
           {body}
         </button>
       ) : <div className="flex min-w-0 flex-1 items-center gap-3 px-2 py-1">{body}</div>}
       <button type="button" onClick={onStart} className={`${enCours ? 'fd-btn-primary' : 'fd-btn-ghost'} min-h-10 shrink-0 text-[13px]`}
-        aria-label={`${label} le quiz « ${name} »`}>
+        aria-label={labelFull}>
         {enCours ? <Play className="hidden h-4 w-4 sm:block" aria-hidden /> : taken ? <RotateCcw className="hidden h-4 w-4 sm:block" aria-hidden />
           : <Play className="hidden h-4 w-4 sm:block" aria-hidden />}
         {label}

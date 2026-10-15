@@ -15,18 +15,19 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle, ArrowRight, ArrowUpRight, CalendarX, CheckCircle2, ClipboardCheck, Clock, Flag, Loader2, RotateCcw, Timer, WifiOff,
 } from 'lucide-react';
+import { t } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { Page, PageHeader, EmptyState, CardsSkeleton, SplitBar } from '@/components/space/Page';
 import { api } from '@/lib/api/apiClient';
-import { devoirsApi, plural, testTitle, type MockExam, type UpcomingTest } from '@/lib/api/devoirsApi';
+import { devoirsApi, type MockExam, type UpcomingTest } from '@/lib/api/devoirsApi';
 import { ExerciseRenderer, type AssessChanges } from '@/components/content/viewer/ExerciseRenderer';
 import { assessQuestions, type AssessSource } from '@/lib/api/contentItemApi';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import type { AssessmentStatus } from '@/types/content';
-import { DifficultyDot } from '@/components/devoirs/ui';
+import { DifficultyDot, exercisesCount, minutesLabel, testName } from '@/components/devoirs/ui';
 
 type Data = MockExam & { test: UpcomingTest };
 type Progress = Record<string, { status: AssessmentStatus }>;
@@ -39,10 +40,6 @@ const clock = (s: number) => {
   const mm = String(m).padStart(2, '0');
   const ss = String(sec).padStart(2, '0');
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-};
-const minutesLabel = (s: number) => {
-  const m = Math.max(1, Math.round(s / 60));
-  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
 };
 
 export default function MockExamPage() {
@@ -67,11 +64,11 @@ export default function MockExamPage() {
   const progressRef = useRef(progress);
   progressRef.current = progress;
   const { setCrumbs } = useBreadcrumb();
-  const crumbTitle = data ? testTitle(data.test) : null;
+  const crumbTitle = data ? testName(data.test) : null;
   useEffect(() => {
     // Même mot que le menu (« Mon suivi › Réviser »), qui reste surligné.
-    setCrumbs([{ label: 'Réviser', to: '/reviser' },
-      { label: crumbTitle ?? 'Préparation du DS', to: `/revisions/ds/${id}` }, { label: 'DS blanc' }]);
+    setCrumbs([{ label: t('Réviser'), to: '/reviser' },
+      { label: crumbTitle ?? t('Préparation du DS'), to: `/revisions/ds/${id}` }, { label: t('DS blanc') }]);
   }, [crumbTitle, id, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
 
@@ -123,7 +120,7 @@ export default function MockExamPage() {
 
   const act = async (action: 'start' | 'finish') => {
     if (!data || busy) return;
-    if (action === 'finish' && !window.confirm('Terminer le DS blanc ? Tu verras ensuite les solutions pour te corriger.')) return;
+    if (action === 'finish' && !window.confirm(t('Terminer le DS blanc ? Tu verras ensuite les solutions pour te corriger.'))) return;
     setBusy(true);
     setActError(false);
     try {
@@ -159,21 +156,21 @@ export default function MockExamPage() {
 
   const planPath = `/revisions/ds/${id}`;
   // DS supprimé : on revient à Réviser plutôt qu'à sa préparation, introuvable elle aussi.
-  const BACK = error === 'missing' ? { to: '/reviser', label: 'Réviser' } : { to: planPath, label: 'Préparation du DS' };
+  const BACK = error === 'missing' ? { to: '/reviser', label: t('Réviser') } : { to: planPath, label: t('Préparation du DS') };
 
   if (error) {
     return (
       <Page width="narrow">
-        <PageHeader back={BACK} eyebrow="DS blanc" icon={Timer} title={error === 'missing' ? 'DS introuvable' : 'DS blanc'} />
+        <PageHeader back={BACK} eyebrow={t('DS blanc')} icon={Timer} title={error === 'missing' ? t('DS introuvable') : t('DS blanc')} />
         {error === 'missing' ? (
-          <EmptyState icon={CalendarX} tone="ink" title="Ce DS n’existe plus"
-            text="Il a peut-être été supprimé. Retrouve tes DS et tes révisions sur la page Réviser."
-            action={<Link to="/reviser" className="fd-btn-primary min-h-10">Aller à Réviser <ArrowRight className="h-4 w-4" /></Link>} />
+          <EmptyState icon={CalendarX} tone="ink" title={t('Ce DS n’existe plus')}
+            text={t('Il a peut-être été supprimé. Retrouve tes DS et tes révisions sur la page Réviser.')}
+            action={<Link to="/reviser" className="fd-btn-primary min-h-10">{t('Aller à Réviser')} <ArrowRight className="h-4 w-4" /></Link>} />
         ) : (
-          <EmptyState icon={WifiOff} tone="gold" title="Le DS blanc n’a pas pu être chargé"
-            text="Vérifie ta connexion, puis réessaie. Si tu l’avais commencé, ton chronomètre n’est pas perdu."
-            action={<button type="button" className="fd-btn-primary min-h-10" onClick={() => { setError(null); load(); }}><RotateCcw className="h-4 w-4" /> Réessayer</button>}
-            secondary={<Link to={planPath} className="fd-btn-ghost min-h-10">Ma préparation</Link>} />
+          <EmptyState icon={WifiOff} tone="gold" title={t('Le DS blanc n’a pas pu être chargé')}
+            text={t('Vérifie ta connexion, puis réessaie. Si tu l’avais commencé, ton chronomètre n’est pas perdu.')}
+            action={<button type="button" className="fd-btn-primary min-h-10" onClick={() => { setError(null); load(); }}><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>}
+            secondary={<Link to={planPath} className="fd-btn-ghost min-h-10">{t('Ma préparation')}</Link>} />
         )}
       </Page>
     );
@@ -181,8 +178,8 @@ export default function MockExamPage() {
   if (!data) {
     return (
       <Page width="narrow">
-        <PageHeader back={BACK} eyebrow="DS blanc" icon={Timer}
-          title={<><span className="sr-only">Chargement du DS blanc…</span><span aria-hidden className="inline-block h-[0.9em] w-60 max-w-full animate-pulse rounded-lg bg-[#efece6] align-middle" /></>} />
+        <PageHeader back={BACK} eyebrow={t('DS blanc')} icon={Timer}
+          title={<><span className="sr-only">{t('Chargement du DS blanc…')}</span><span aria-hidden className="inline-block h-[0.9em] w-60 max-w-full animate-pulse rounded-lg bg-[#efece6] align-middle" /></>} />
         <div className="flex flex-col gap-4" aria-busy>
           <div className="h-56 animate-pulse rounded-3xl border border-line bg-white" />
           <CardsSkeleton n={2} />
@@ -191,7 +188,7 @@ export default function MockExamPage() {
     );
   }
 
-  const title = testTitle(data.test);
+  const title = testName(data.test);
   const corrected = data.exercises.reduce((n, e) => n + assessablePaths(e.structure).filter((p) => progress[e.id]?.[p]).length, 0);
   const succeeded = data.exercises.reduce((n, e) => n + assessablePaths(e.structure).filter((p) => progress[e.id]?.[p]?.status === 'success').length, 0);
   const toCorrect = data.exercises.reduce((n, e) => n + assessablePaths(e.structure).length, 0);
@@ -201,7 +198,7 @@ export default function MockExamPage() {
 
   const actAlert = actError && (
     <div role="alert" className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-      <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ça n’a pas marché : vérifie ta connexion et réessaie.</p>
+      <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ça n’a pas marché : vérifie ta connexion et réessaie.')}</p>
       <button type="button" onClick={() => setActError(false)} className="fd-btn-ghost min-h-9">OK</button>
     </div>
   );
@@ -210,13 +207,13 @@ export default function MockExamPage() {
   if (phase === 'intro') {
     return (
       <Page width="narrow">
-        <PageHeader back={BACK} eyebrow={`DS blanc · ${title}`} icon={Timer}
-          title={<>{plural(data.exercises.length, 'exercice', 'exercices')} · <span className="fd-nums">{data.minutes} min</span></>}
-          subtitle="Un sujet tiré des chapitres de ton DS, le plus fragile d’abord. Comme en classe : pas de solution avant la fin." />
+        <PageHeader back={BACK} eyebrow={t('DS blanc · {title}', { title })} icon={Timer}
+          title={<>{exercisesCount(data.exercises.length)} · <span className="fd-nums">{t('{n} min', { n: data.minutes })}</span></>}
+          subtitle={t('Un sujet tiré des chapitres de ton DS, le plus fragile d’abord. Comme en classe : pas de solution avant la fin.')} />
         {actAlert}
         <section aria-labelledby="sujet-titre" className="overflow-hidden rounded-3xl border border-line bg-white">
           <div className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
-            <h2 id="sujet-titre" className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">Au programme</h2>
+            <h2 id="sujet-titre" className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Au programme')}</h2>
             {data.exercises.length ? (
               <ol className="mt-2 divide-y divide-line">
                 {data.exercises.map((e, i) => (
@@ -227,20 +224,20 @@ export default function MockExamPage() {
                       <p className="mt-0.5"><DifficultyDot level={e.difficulty} /></p>
                     </div>
                     <span className="fd-nums inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-ink-soft">
-                      <Clock className="h-3.5 w-3.5 text-ink-faint" aria-hidden />{e.minutes} min
+                      <Clock className="h-3.5 w-3.5 text-ink-faint" aria-hidden />{t('{n} min', { n: e.minutes })}
                     </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="py-4 text-[13.5px] text-ink-faint">Pas encore assez d’exercices dans les chapitres de ce DS pour composer un sujet.</p>
+              <p className="py-4 text-[13.5px] text-ink-faint">{t('Pas encore assez d’exercices dans les chapitres de ce DS pour composer un sujet.')}</p>
             )}
           </div>
-          <ul className="grid gap-px border-t border-line bg-line sm:grid-cols-3" aria-label="Comment ça se passe">
+          <ul className="grid gap-px border-t border-line bg-line sm:grid-cols-3" aria-label={t('Comment ça se passe')}>
             {([
-              [Clock, `${data.minutes} minutes au calme`, 'Le chronomètre tourne même si tu quittes la page.'],
-              [Flag, 'Comme en classe', 'Brouillon, calculatrice si elle est permise.'],
-              [CheckCircle2, 'Puis tu te corriges', 'Question par question : ta préparation se met à jour.'],
+              [Clock, t('{n} minutes au calme', { n: data.minutes }), t('Le chronomètre tourne même si tu quittes la page.')],
+              [Flag, t('Comme en classe'), t('Brouillon, calculatrice si elle est permise.')],
+              [CheckCircle2, t('Puis tu te corriges'), t('Question par question : ta préparation se met à jour.')],
             ] as const).map(([Icon, head, text]) => (
               <li key={head} className="flex gap-3 bg-[#fcfbf9] px-5 py-3.5">
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
@@ -249,10 +246,10 @@ export default function MockExamPage() {
             ))}
           </ul>
           <div className="flex flex-col gap-3 border-t border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p className="text-[13px] text-ink-faint">Prêt ? Le chronomètre démarre dès que tu commences.</p>
+            <p className="text-[13px] text-ink-faint">{t('Prêt ? Le chronomètre démarre dès que tu commences.')}</p>
             <button type="button" onClick={() => act('start')} disabled={busy || !data.exercises.length}
               className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />} Commencer le DS blanc
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />} {t('Commencer le DS blanc')}
             </button>
           </div>
         </section>
@@ -265,20 +262,20 @@ export default function MockExamPage() {
       {phase === 'running' ? (
         /* ───────────── 2. Pendant : énoncés seuls, chronomètre collé en haut ───────────── */
         <>
-          <PageHeader eyebrow="DS blanc en cours" icon={Timer} title={title}
-            subtitle="Pas de solution avant la fin. Quand tu as fini, clique sur «&nbsp;Terminer&nbsp;» pour te corriger." />
+          <PageHeader eyebrow={t('DS blanc en cours')} icon={Timer} title={title}
+            subtitle={t('Pas de solution avant la fin. Quand tu as fini, clique sur «\u00a0Terminer\u00a0» pour te corriger.')} />
           <div className="sticky top-[68px] z-20 mb-5 overflow-hidden rounded-2xl border border-line bg-white/95 shadow-[0_6px_16px_rgba(20,18,16,.06)] backdrop-blur">
-            <div className="flex items-center gap-3 py-2 pl-2 pr-2 sm:pl-2.5">
+            <div className="flex items-center gap-3 py-2 ps-2 pe-2 sm:ps-2.5">
               <span className={`fd-nums inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[18px] font-bold ${timerTone}`}
-                style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }} role="timer" aria-live="off" aria-label={over ? 'Temps dépassé' : 'Temps restant'}>
+                style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }} role="timer" aria-live="off" aria-label={over ? t('Temps dépassé') : t('Temps restant')}>
                 <Timer className="h-4 w-4" aria-hidden />{over ? `+${clock(remaining)}` : clock(remaining)}
               </span>
               <span className="min-w-0 text-[12.5px] leading-tight text-ink-faint">
-                {over ? <b className="font-semibold text-[#a23b34]">Temps dépassé</b> : 'restantes'}
-                <span className="hidden sm:inline"> · prévu : {data.minutes} min</span>
+                {over ? <b className="font-semibold text-[#a23b34]">{t('Temps dépassé')}</b> : t('restantes')}
+                <span className="hidden sm:inline"> · {t('prévu : {n} min', { n: data.minutes })}</span>
               </span>
-              <button type="button" onClick={() => act('finish')} disabled={busy} className="fd-btn-primary ml-auto min-h-10">
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Terminer
+              <button type="button" onClick={() => act('finish')} disabled={busy} className="fd-btn-primary ms-auto min-h-10">
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} {t('Terminer')}
               </button>
             </div>
             <div className="h-1 bg-[#f2f1ee]" aria-hidden>
@@ -288,31 +285,31 @@ export default function MockExamPage() {
           {actAlert}
           {over && (
             <p role="status" className="mb-5 flex items-center gap-2 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3 text-[13.5px] text-[#a23b34]">
-              <AlertTriangle className="h-4 w-4 shrink-0" /> Le temps prévu est écoulé. Termine quand tu es prêt : ton temps réel sera noté.
+              <AlertTriangle className="h-4 w-4 shrink-0" /> {t('Le temps prévu est écoulé. Termine quand tu es prêt : ton temps réel sera noté.')}
             </p>
           )}
         </>
       ) : (
         /* ───────────── 3. Après : le temps mis, puis la correction ───────────── */
         <>
-          <PageHeader back={BACK} eyebrow={`DS blanc · ${title}`} icon={ClipboardCheck}
-            title={data.seconds !== null ? `Terminé en ${minutesLabel(data.seconds)}` : 'DS blanc terminé'}
+          <PageHeader back={BACK} eyebrow={t('DS blanc · {title}', { title })} icon={ClipboardCheck}
+            title={data.seconds !== null ? t('Terminé en {time}', { time: minutesLabel(data.seconds) }) : t('DS blanc terminé')}
             subtitle={data.seconds !== null && data.seconds > total
-              ? `${minutesLabel(data.seconds - total)} de plus que prévu (${data.minutes} min) : entraîne-toi à aller plus vite.`
-              : `Prévu : ${data.minutes} min${data.seconds !== null ? ' : dans les temps.' : '.'}`} />
+              ? t('{time} de plus que prévu ({n} min) : entraîne-toi à aller plus vite.', { time: minutesLabel(data.seconds - total), n: data.minutes })
+              : data.seconds !== null ? t('Prévu : {n} min : dans les temps.', { n: data.minutes }) : t('Prévu : {n} min.', { n: data.minutes })} />
           {actAlert}
           <section aria-labelledby="correction-titre" className="mb-5 rounded-2xl border border-line bg-white p-5 sm:p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 id="correction-titre" className="text-[15px] font-semibold text-ink">Ta correction</h2>
-              <span className="fd-nums text-[13px] font-semibold text-ink-soft">{corrected} / {toCorrect} question{toCorrect > 1 ? 's' : ''}</span>
+              <h2 id="correction-titre" className="text-[15px] font-semibold text-ink">{t('Ta correction')}</h2>
+              <span className="fd-nums text-[13px] font-semibold text-ink-soft">{toCorrect > 1 ? t('{done} / {total} questions', { done: corrected, total: toCorrect }) : t('{done} / {total} question', { done: corrected, total: toCorrect })}</span>
             </div>
             <SplitBar className="mt-2.5 h-2" success={succeeded} review={corrected - succeeded} total={toCorrect} />
             <p className="mt-2.5 text-[13px] leading-relaxed text-ink-faint">
               {corrected < toCorrect
-                ? <>Ouvre la solution de chaque question (l’œil), puis dis <b className="font-semibold text-ink-soft">Réussi</b> ou <b className="font-semibold text-ink-soft">À revoir</b> : ta préparation et Ma progression se mettent à jour.</>
-                : <><b className="fd-nums font-semibold text-brand-hover">{succeeded}</b> réussie{succeeded > 1 ? 's' : ''}
-                  {corrected - succeeded > 0 && <> · <b className="fd-nums font-semibold text-gold-strong">{corrected - succeeded}</b> à revoir : refais-les dans 2 ou 3 jours</>}.
-                  {' '}Correction terminée !</>}
+                ? <>{t('Ouvre la solution de chaque question (l’œil), puis dis')} <b className="font-semibold text-ink-soft">{t('Réussi')}</b> {t('ou')} <b className="font-semibold text-ink-soft">{t('À revoir')}</b> {t(': ta préparation et Ma progression se mettent à jour.')}</>
+                : <><b className="fd-nums font-semibold text-brand-hover">{succeeded}</b> {succeeded > 1 ? t('réussies') : t('réussie')}
+                  {corrected - succeeded > 0 && <> · <b className="fd-nums font-semibold text-gold-strong">{corrected - succeeded}</b> {t('à revoir : refais-les dans 2 ou 3 jours')}</>}.
+                  {' '}{t('Correction terminée !')}</>}
             </p>
           </section>
         </>
@@ -325,15 +322,15 @@ export default function MockExamPage() {
           return (
             <section key={e.id} aria-labelledby={`exercice-${e.id}`} className="rounded-2xl border border-line bg-white">
               <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line px-5 py-3.5 sm:px-6">
-                <h2 id={`exercice-${e.id}`} className="fd-display text-[19px] text-ink">Exercice {i + 1}</h2>
+                <h2 id={`exercice-${e.id}`} className="fd-display text-[19px] text-ink">{t('Exercice {n}', { n: i + 1 })}</h2>
                 {e.chapter && <span className="text-[12.5px] text-ink-faint">{e.chapter}</span>}
-                <span className="ml-auto inline-flex items-center gap-2">
+                <span className="ms-auto inline-flex items-center gap-2">
                   {phase === 'review' && leaves.length > 0 && (
                     <span className={`fd-nums rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${done === leaves.length ? 'bg-brand-soft text-brand-hover' : 'bg-[#f2f1ee] text-ink-faint'}`}>
-                      {done === leaves.length ? 'Corrigé' : `${done}/${leaves.length} corrigée${leaves.length > 1 ? 's' : ''}`}
+                      {done === leaves.length ? t('Corrigé') : leaves.length > 1 ? t('{done}/{total} corrigées', { done, total: leaves.length }) : t('{done}/{total} corrigée', { done, total: leaves.length })}
                     </span>
                   )}
-                  <span className="fd-nums inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-soft"><Clock className="h-3.5 w-3.5 text-ink-faint" aria-hidden />{e.minutes} min</span>
+                  <span className="fd-nums inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-soft"><Clock className="h-3.5 w-3.5 text-ink-faint" aria-hidden />{t('{n} min', { n: e.minutes })}</span>
                 </span>
               </header>
               <div className="px-5 py-4 sm:px-6">
@@ -353,7 +350,7 @@ export default function MockExamPage() {
                 <div className="border-t border-line px-5 py-2 sm:px-6">
                   <Link to={`/exercises/${e.id}`} state={{ from: location.pathname + location.search }}
                     className="inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
-                    Ouvrir l’exercice <span className="hidden font-normal text-ink-faint sm:inline">(commentaires, solutions des élèves)</span> <ArrowUpRight className="h-3.5 w-3.5" />
+                    {t('Ouvrir l’exercice')} <span className="hidden font-normal text-ink-faint sm:inline">{t('(commentaires, solutions des élèves)')}</span> <ArrowUpRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               )}
@@ -362,11 +359,11 @@ export default function MockExamPage() {
         })}
         {phase === 'running' && (
           <button type="button" onClick={() => act('finish')} disabled={busy} className="fd-btn-primary min-h-11 self-center">
-            <CheckCircle2 className="h-4 w-4" /> J’ai terminé
+            <CheckCircle2 className="h-4 w-4" /> {t('J’ai terminé')}
           </button>
         )}
         {phase === 'review' && (
-          <Link to={planPath} className="fd-btn-primary min-h-11 self-center">Retour à ma préparation <ArrowRight className="h-4 w-4" /></Link>
+          <Link to={planPath} className="fd-btn-primary min-h-11 self-center">{t('Retour à ma préparation')} <ArrowRight className="h-4 w-4" /></Link>
         )}
       </div>
     </Page>

@@ -11,6 +11,7 @@ import { duration } from '@/pages/progression/format';
 import { trackAction } from '@/lib/usage';
 import { COULEUR, remplir } from './chart';
 import { DayBars } from './DayBars';
+import { t } from '@/i18n';
 
 const ICONE = { exercise: FileText, exam: ClipboardList, lesson: BookOpen } as const;
 const TYPE = { exercise: 'Exercice', exam: 'Examen', lesson: 'Leçon' } as const;
@@ -20,7 +21,7 @@ export const Barre: React.FC<{ label: React.ReactNode; sub?: React.ReactNode; se
   label, sub, secondes, max, onClick, icon, anime = false, delai = 0,
 }) => (
   <li>
-    <button type="button" onClick={onClick} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-[#faf9f7] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+    <button type="button" onClick={onClick} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-start hover:bg-[#faf9f7] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
       {icon}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-3">
@@ -51,14 +52,14 @@ export const MonTemps: React.FC<{ data: Tableau }> = ({ data }) => {
   };
 
   if (!total) {
-    return <p className="rounded-2xl border border-line bg-white px-5 py-6 text-[13.5px] text-ink-faint">Pas de temps de travail enregistré sur cette période.</p>;
+    return <p className="rounded-2xl border border-line bg-white px-5 py-6 text-[13.5px] text-ink-faint">{t('Pas de temps de travail enregistré sur cette période.')}</p>;
   }
 
   return (
     <div className="rounded-2xl border border-line bg-white p-4 sm:p-5">
-      <nav aria-label="Niveau de détail" className="mb-3 flex flex-wrap items-center gap-1 text-[13px]">
+      <nav aria-label={t('Niveau de détail')} className="mb-3 flex flex-wrap items-center gap-1 text-[13px]">
         <button type="button" onClick={() => go(undefined)} className={`rounded-md px-1 font-semibold ${chapitre ? 'text-brand-hover hover:underline' : 'text-ink'}`}>
-          Tout · {duration(total)}
+          {t('Tout · {duree}', { duree: duration(total) })}
         </button>
         {chapitre && <>
           <ChevronRight className="h-3.5 w-3.5 text-ink-faint" aria-hidden />
@@ -74,10 +75,12 @@ export const MonTemps: React.FC<{ data: Tableau }> = ({ data }) => {
 
       {!chapitre ? (
         <ul className="flex flex-col">
-          {data.temps.map((t) => (
-            <Barre key={t.id ?? 'autres'} label={t.nom} secondes={t.secondes} max={data.temps[0].secondes}
-              sub={`${t.contenus.length} contenu${t.contenus.length > 1 ? 's' : ''} · ${Math.round((t.secondes / total) * 100)} % de ton temps`}
-              onClick={() => go(t.id)} />
+          {data.temps.map((tc) => (
+            <Barre key={tc.id ?? 'autres'} label={tc.nom} secondes={tc.secondes} max={data.temps[0].secondes}
+              sub={tc.contenus.length > 1
+                ? t('{n} contenus · {pct} % de ton temps', { n: tc.contenus.length, pct: Math.round((tc.secondes / total) * 100) })
+                : t('{n} contenu · {pct} % de ton temps', { n: tc.contenus.length, pct: Math.round((tc.secondes / total) * 100) })}
+              onClick={() => go(tc.id)} />
           ))}
         </ul>
       ) : !contenu ? (
@@ -87,7 +90,7 @@ export const MonTemps: React.FC<{ data: Tableau }> = ({ data }) => {
             return (
               <Barre key={c.id} label={c.titre} secondes={c.secondes} max={chapitre.contenus[0].secondes}
                 icon={<Icon className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />}
-                sub={`${TYPE[c.type] ?? 'Contenu'}${c.partage > 1 ? ` · temps partagé entre ${c.partage} chapitres` : ''}`}
+                sub={`${t(TYPE[c.type] ?? 'Contenu')}${c.partage > 1 ? ` · ${t('temps partagé entre {n} chapitres', { n: c.partage })}` : ''}`}
                 onClick={() => go(chapitre.id, c.id)} />
             );
           })}
@@ -97,11 +100,11 @@ export const MonTemps: React.FC<{ data: Tableau }> = ({ data }) => {
           <DayBars rows={remplir(contenu.jours.map((j) => ({ date: j.date, minutes: Math.round(j.secondes / 60) })),
             data.periode.debut, data.periode.fin, data.periode.pas, ['minutes'])}
             series={[{ key: 'minutes', label: 'Minutes', color: COULEUR.temps }]} pas={data.periode.pas}
-            describe={(r) => (Number(r.minutes) ? `${duration(Number(r.minutes) * 60)}` : 'Pas de travail')}
-            headline={<>{duration(contenu.jours.reduce((s, j) => s + j.secondes, 0))} <span className="text-[14px] font-semibold text-ink-faint">sur ce contenu</span></>}
+            describe={(r) => (Number(r.minutes) ? `${duration(Number(r.minutes) * 60)}` : t('Pas de travail'))}
+            headline={<>{duration(contenu.jours.reduce((s, j) => s + j.secondes, 0))} <span className="text-[14px] font-semibold text-ink-faint">{t('sur ce contenu')}</span></>}
             tick={(v) => `${v}`} height={150} />
           <Link to={contenu.url} className="fd-btn-ghost mt-4 min-h-10">
-            Ouvrir {TYPE[contenu.type]?.toLowerCase() === 'leçon' ? 'la leçon' : TYPE[contenu.type] === 'Examen' ? 'l’examen' : 'l’exercice'} <ArrowUpRight className="h-4 w-4" />
+            {contenu.type === 'lesson' ? t('Ouvrir la leçon') : contenu.type === 'exam' ? t('Ouvrir l’examen') : t('Ouvrir l’exercice')} <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
       )}

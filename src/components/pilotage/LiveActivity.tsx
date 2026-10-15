@@ -113,7 +113,7 @@ export const LiveActivity: React.FC<{ events: LiveEvent[] | null; status: LiveSt
                   className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:grid-cols-[88px_minmax(0,130px)_120px_minmax(0,1fr)] sm:gap-x-4 sm:px-5 ${
                     isNew ? 'bg-brand-soft' : 'bg-transparent transition-colors duration-[1600ms] ease-out'}`}>
                   <time dateTime={e.at} title={exactTime(e.at)}
-                    className="fd-nums order-3 whitespace-nowrap text-right text-[12px] text-ink-faint sm:order-1 sm:text-left">
+                    className="fd-nums order-3 whitespace-nowrap text-end text-[12px] text-ink-faint sm:order-1 sm:text-start">
                     {agoShort(e.at, now)}
                   </time>
                   <span className="order-2 min-w-0 truncate text-[13px]">

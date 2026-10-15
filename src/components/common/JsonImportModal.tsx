@@ -7,6 +7,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileJson, Copy, AlertCircle, CheckCircle, FileText, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
+import { t } from '@/i18n';
 
 interface JsonImportModalProps {
   isOpen: boolean;
@@ -205,7 +206,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       setError(null);
     };
     reader.onerror = () => {
-      setError('Erreur lors de la lecture du fichier');
+      setError(t('Erreur lors de la lecture du fichier'));
     };
     reader.readAsText(file);
   };
@@ -226,7 +227,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       });
       setJsonInput(JSON.stringify(response.data, null, 2));
     } catch (err: any) {
-      const msg = err?.response?.data?.error || 'Erreur lors du parsing PDF';
+      const msg = err?.response?.data?.error || t('Erreur lors du parsing PDF');
       setError(msg);
     } finally {
       setIsParsing(false);
@@ -238,7 +239,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     setSuccess(false);
 
     if (!jsonInput.trim()) {
-      setError('Veuillez entrer ou charger du JSON');
+      setError(t('Veuillez entrer ou charger du JSON'));
       return;
     }
 
@@ -249,18 +250,18 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       parsed = JSON.parse(jsonInput);
 
       if (typeof parsed !== 'object' || parsed === null) {
-        throw new Error('Le JSON doit être un objet');
+        throw new Error(t('Le JSON doit être un objet'));
       }
 
       if (!parsed.title) {
-        throw new Error('Le champ "title" est requis');
+        throw new Error(t('Le champ "title" est requis'));
       }
 
       if (['exercise', 'exam', 'content-exercise'].includes(contentType) && !parsed.blocks) {
-        throw new Error('Le champ "blocks" est requis (liste de questions/contextes)');
+        throw new Error(t('Le champ "blocks" est requis (liste de questions/contextes)'));
       }
       if (contentType === 'lesson' && !parsed.sections) {
-        throw new Error('Le champ "sections" est requis');
+        throw new Error(t('Le champ "sections" est requis'));
       }
 
       // Transformer les données et générer les IDs
@@ -268,9 +269,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
 
     } catch (err: any) {
       if (err instanceof SyntaxError) {
-        setError(`JSON invalide: ${err.message}`);
+        setError(t('JSON invalide: {message}', { message: err.message }));
       } else {
-        setError(err.message || 'Erreur de validation');
+        setError(err.message || t('Erreur de validation'));
       }
       return;
     }
@@ -333,10 +334,10 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              Importer {CONTENT_TYPE_LABELS[contentType]} via JSON
+              {t('Importer {type} via JSON', { type: t(CONTENT_TYPE_LABELS[contentType]) })}
             </h2>
             <p className="text-sm text-slate-500">
-              Les IDs sont générés automatiquement
+              {t('Les IDs sont générés automatiquement')}
             </p>
           </div>
           <button
@@ -372,7 +373,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               className="flex-1 p-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
             >
               <Upload className="w-4 h-4 text-slate-400" />
-              <span className="text-sm text-slate-600">Charger un .json</span>
+              <span className="text-sm text-slate-600">{t('Charger un .json')}</span>
             </button>
             <button
               type="button"
@@ -386,7 +387,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                 <FileText className="w-4 h-4 text-red-400" />
               )}
               <span className="text-sm text-red-600">
-                {isParsing ? 'Parsing PDF...' : 'Importer un PDF'}
+                {isParsing ? t('Parsing PDF...') : t('Importer un PDF')}
               </span>
             </button>
           </div>
@@ -394,7 +395,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           {/* Or divider */}
           <div className="flex items-center gap-4">
             <div className="flex-1 border-t border-slate-200" />
-            <span className="text-xs text-slate-400">ou collez votre JSON</span>
+            <span className="text-xs text-slate-400">{t('ou collez votre JSON')}</span>
             <div className="flex-1 border-t border-slate-200" />
           </div>
 
@@ -408,7 +409,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                   onClick={loadExample}
                   className="text-xs px-2 py-1 bg-indigo-100 hover:bg-indigo-200 rounded text-indigo-700"
                 >
-                  Voir exemple
+                  {t('Voir exemple')}
                 </button>
                 <button
                   type="button"
@@ -416,7 +417,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                   className="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
                 >
                   <Copy className="w-3 h-3" />
-                  Copier
+                  {t('Copier')}
                 </button>
               </div>
             </div>
@@ -443,7 +444,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           {success && (
             <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              <div className="text-sm text-green-700">Import réussi!</div>
+              <div className="text-sm text-green-700">{t('Import réussi!')}</div>
             </div>
           )}
 
@@ -452,8 +453,8 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             <div className="flex items-start gap-2">
               <FileJson className="w-4 h-4 text-blue-500 mt-0.5" />
               <div className="text-xs text-blue-700">
-                <strong>Format simplifié:</strong> Pas besoin de spécifier les IDs.<br/>
-                Pour les exercices structurés, utilisez <code className="bg-blue-100 px-1 rounded">blocks</code> avec <code className="bg-blue-100 px-1 rounded">type</code> ("context" ou "question"), <code className="bg-blue-100 px-1 rounded">label</code>, <code className="bg-blue-100 px-1 rounded">content</code> et <code className="bg-blue-100 px-1 rounded">solution</code>.
+                <strong>{t('Format simplifié:')}</strong> {t('Pas besoin de spécifier les IDs.')}<br/>
+                {t('Pour les exercices structurés, utilisez')} <code className="bg-blue-100 px-1 rounded">blocks</code> {t('avec')} <code className="bg-blue-100 px-1 rounded">type</code> {t('("context" ou "question"),')} <code className="bg-blue-100 px-1 rounded">label</code>, <code className="bg-blue-100 px-1 rounded">content</code> {t('et')} <code className="bg-blue-100 px-1 rounded">solution</code>.
               </div>
             </div>
           </div>
@@ -466,7 +467,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             onClick={handleClose}
             className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
           >
-            Annuler
+            {t('Annuler')}
           </button>
           <button
             type="button"
@@ -475,7 +476,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             <Upload className="w-4 h-4" />
-            Importer
+            {t('Importer')}
           </button>
         </div>
       </div>

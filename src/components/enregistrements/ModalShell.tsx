@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { t } from '@/i18n';
 
 export const ModalShell: React.FC<{
   open: boolean;
@@ -67,12 +68,12 @@ export const ModalShell: React.FC<{
             role="dialog" aria-modal="true" aria-labelledby={labelId}
             className="relative w-full max-w-md rounded-2xl border border-line bg-white p-5 shadow-[0_20px_50px_rgba(20,18,16,.22)] sm:p-6"
           >
-            <button type="button" onClick={onClose} aria-label="Fermer"
-              className="absolute right-2.5 top-2.5 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink">
+            <button type="button" onClick={onClose} aria-label={t('Fermer')}
+              className="absolute end-2.5 top-2.5 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink">
               <X className="h-5 w-5" />
             </button>
-            <h2 id={labelId} className="fd-display pr-10 text-[22px] leading-tight text-ink">{title}</h2>
-            {subtitle && <p className="mt-1 pr-6 text-[13px] leading-relaxed text-ink-faint">{subtitle}</p>}
+            <h2 id={labelId} className="fd-display pe-10 text-[22px] leading-tight text-ink">{title}</h2>
+            {subtitle && <p className="mt-1 pe-6 text-[13px] leading-relaxed text-ink-faint">{subtitle}</p>}
             {children}
           </motion.form>
         </div>

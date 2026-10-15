@@ -16,6 +16,7 @@ import { FolderSkeleton } from '@/components/content/folders/FolderGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHub, type HubInfo } from '@/lib/api/hubApi';
 import { SECTION_OF, hasListParams, type ContentKind } from './sections';
+import { t } from '@/i18n';
 
 // Pages déjà chargées dans l'onglet : un retour (« Précédent ») réaffiche les dossiers tout de suite, à la même
 // hauteur, au lieu d'un chargement qui ramenait en haut de la page.
@@ -25,7 +26,7 @@ const HUB_CACHE_MAX = 20;
 /** Pendant le chargement : la forme de la page (en-tête, dossiers ou cartes), pas une roue au milieu du vide. */
 const Loading: React.FC<{ folders: boolean }> = ({ folders }) => (
   <Page width="wide">
-    <div className="mb-5 animate-pulse sm:mb-7" role="status" aria-label="Chargement de la page">
+    <div className="mb-5 animate-pulse sm:mb-7" role="status" aria-label={t('Chargement de la page')}>
       <div className="h-4 w-40 rounded bg-[#efece6]" />
       <div className="mt-4 h-9 w-2/3 max-w-md rounded-lg bg-[#efece6]" />
       <div className="mt-3 h-3.5 w-48 rounded bg-[#f2f1ee]" />

@@ -22,6 +22,7 @@ import { ProgressSection } from '@/components/profile/ProgressSection';
 import { SettingsSection } from '@/components/profile/SettingsSection';
 import TeacherStudentsPanel from '@/components/profile/TeacherStudentsPanel';
 import { ModerationDeleteButton } from '@/components/profile/ModerationDeleteButton';
+import { t, dateLocale } from '@/i18n';
 
 type TabId = 'overview' | 'progress' | 'students' | 'settings';
 
@@ -91,7 +92,7 @@ const Avatar: React.FC<{ src?: string | null; name: string; className?: string }
 };
 
 const HeroSkeleton: React.FC = () => (
-  <div role="status" aria-label="Chargement du profil">
+  <div role="status" aria-label={t('Chargement du profil')}>
     <div className="animate-pulse overflow-hidden rounded-3xl border border-line bg-white">
       <div className="h-14 border-b border-line bg-[#f4f1ea] sm:h-20" />
       <div className="flex items-end gap-4 px-5 pb-6 sm:px-7">
@@ -146,7 +147,7 @@ export const ProfilePage: React.FC = () => {
   const userType: 'student' | 'teacher' = profile?.profile?.user_type === 'teacher' ? 'teacher' : 'student';
   const tabs = isOwner ? TABS[userType] : [];
   const requested = searchParams.get('tab');
-  const tab: TabId = tabs.find((t) => t.key === requested)?.key ?? 'overview';
+  const tab: TabId = tabs.find((tb) => tb.key === requested)?.key ?? 'overview';
 
   // Anciens onglets : leur page pour le propriétaire ; pour les autres, le profil simplement.
   useEffect(() => {
@@ -195,21 +196,21 @@ export const ProfilePage: React.FC = () => {
   const privateLine = useMemo(() => {
     if (!isOwner || !currentUser) return '';
     const id = identityFromUser(currentUser);
-    const civ = id.gender === 'M' ? 'M. ' : id.gender === 'F' ? 'Mme ' : '';
+    const civ = id.gender === 'M' ? `${t('M.')} ` : id.gender === 'F' ? `${t('Mme')} ` : '';
     const name = `${id.firstName} ${id.lastName}`.trim();
     return [name && `${civ}${name}`, id.school.name].filter(Boolean).join(' · ');
   }, [isOwner, currentUser]);
 
   // Profils de membres : pas à indexer (pages de personnes, peu de contenu propre).
-  const seo = <SEO title={`${username || 'Profil'} – Fidni`} description="Profil d’un membre de Fidni." noindex />;
+  const seo = <SEO title={`${username || t('Profil')} – Fidni`} description={t('Profil d’un membre de Fidni.')} noindex />;
 
   if (state === 'notfound') {
     return (
       <Page width="narrow">
         {seo}
-        <EmptyState icon={UserX} tone="ink" title="Ce profil n’existe pas (ou plus)"
-          text="Le pseudo a peut-être changé, ou le compte a été supprimé."
-          action={<Link to="/" className="fd-btn-primary min-h-10">Retour à l’accueil</Link>} />
+        <EmptyState icon={UserX} tone="ink" title={t('Ce profil n’existe pas (ou plus)')}
+          text={t('Le pseudo a peut-être changé, ou le compte a été supprimé.')}
+          action={<Link to="/" className="fd-btn-primary min-h-10">{t('Retour à l’accueil')}</Link>} />
       </Page>
     );
   }
@@ -218,8 +219,8 @@ export const ProfilePage: React.FC = () => {
     return (
       <Page>
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ce profil n’a pas pu se charger. Vérifie ta connexion.</p>
-          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ce profil n’a pas pu se charger. Vérifie ta connexion.')}</p>
+          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
         </div>
       </Page>
     );
@@ -230,11 +231,11 @@ export const ProfilePage: React.FC = () => {
   const p = shown.profile.profile ?? {};
   const name = shown.profile.username || username;
   const joined = p.joined_at ?? shown.profile.date_joined;
-  const since = joined ? new Date(joined).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : null;
+  const since = joined ? new Date(joined).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }) : null;
   const meta = [
     p.class_level_name && { icon: GraduationCap, text: p.class_level_name },
     p.location && { icon: MapPin, text: p.location },
-    since && { icon: CalendarDays, text: `Membre depuis ${since}` },
+    since && { icon: CalendarDays, text: t('Membre depuis {since}', { since }) },
   ].filter(Boolean) as { icon: typeof MapPin; text: string }[];
 
   const cs = shown.stats?.contribution_stats;
@@ -253,7 +254,7 @@ export const ProfilePage: React.FC = () => {
 
   const panel = (id: TabId, node: React.ReactNode) =>
     id === tab || visited.has(`${username}:${id}`) ? (
-      <div key={id} role="tabpanel" aria-label={tabs.find((t) => t.key === id)?.label} hidden={id !== tab}>{node}</div>
+      <div key={id} role="tabpanel" aria-label={t(tabs.find((tb) => tb.key === id)?.label ?? '')} hidden={id !== tab}>{node}</div>
     ) : null;
 
   return (
@@ -270,7 +271,7 @@ export const ProfilePage: React.FC = () => {
               <Avatar src={p.avatar} name={name}
                 className="-mt-9 h-[72px] w-[72px] text-[28px] sm:-mt-11 sm:h-[88px] sm:w-[88px] sm:text-[34px]" />
               <div className="min-w-0 pb-0.5">
-                <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{userType === 'teacher' ? 'Enseignant' : 'Élève'}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{userType === 'teacher' ? t('Enseignant') : t('Élève')}</p>
                 <h1 className="fd-display truncate text-ink" style={{ fontSize: 'clamp(26px, 3vw, 34px)', lineHeight: 1.12 }}>{name}</h1>
               </div>
             </div>
@@ -278,7 +279,7 @@ export const ProfilePage: React.FC = () => {
               <div className="order-last mt-4 sm:order-none sm:col-start-2 sm:row-start-1 sm:mt-0 sm:self-end">
                 {isOwner ? (
                   <Link to={editUrl} className="fd-btn-ghost min-h-10" data-tour="profil-modifier">
-                    <Pencil className="h-4 w-4" /> Modifier mon profil
+                    <Pencil className="h-4 w-4" /> {t('Modifier mon profil')}
                   </Link>
                 ) : <ModerationDeleteButton username={name} />}
               </div>
@@ -286,7 +287,7 @@ export const ProfilePage: React.FC = () => {
 
             <div className="min-w-0 sm:col-span-2">
               {meta.length > 0 && (
-                <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-ink-soft" aria-label="En bref">
+                <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-ink-soft" aria-label={t('En bref')}>
                   {meta.map(({ icon: Icon, text }) => (
                     <li key={text} className="inline-flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-ink-faint" aria-hidden /> {text}</li>
                   ))}
@@ -298,10 +299,10 @@ export const ProfilePage: React.FC = () => {
               {/* Identité réelle : rappelée au propriétaire seulement, jamais montrée aux visiteurs. */}
               {isOwner && privateLine && (
                 <p className="mt-3 inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-lg bg-[#f2f1ee] px-2.5 py-1.5 text-[12.5px] text-ink-soft"
-                  title="Visible de toi seul : ton pseudo reste ton nom public">
+                  title={t('Visible de toi seul : ton pseudo reste ton nom public')}>
                   <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   <span className="min-w-0">{privateLine}</span>
-                  <span className="text-ink-faint">· visible de toi seul</span>
+                  <span className="text-ink-faint">· {t('visible de toi seul')}</span>
                 </p>
               )}
             </div>
@@ -315,19 +316,19 @@ export const ProfilePage: React.FC = () => {
               <dl className="flex flex-wrap gap-x-7 gap-y-2">
                 {figures.map((f) => (
                   <div key={f.label} className="flex flex-col-reverse">
-                    <dt className="text-[11.5px] text-ink-faint">{f.label}</dt>
-                    <dd className="fd-nums text-[18px] font-bold leading-tight text-ink">{f.value.toLocaleString('fr-FR')}</dd>
+                    <dt className="text-[11.5px] text-ink-faint">{t(f.label)}</dt>
+                    <dd className="fd-nums text-[18px] font-bold leading-tight text-ink">{f.value.toLocaleString(dateLocale())}</dd>
                   </div>
                 ))}
               </dl>
             )}
             {missing.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[12.5px] font-medium text-ink-soft">Complète ton profil :</span>
+                <span className="text-[12.5px] font-medium text-ink-soft">{t('Complète ton profil :')}</span>
                 {missing.map((m) => (
                   <Link key={m.label} to={m.to}
                     className="inline-flex min-h-10 items-center gap-1 rounded-full border border-gold-line bg-gold-soft px-3.5 text-[12.5px] font-semibold text-gold-strong transition-colors hover:border-gold">
-                    <Plus className="h-3.5 w-3.5" aria-hidden /> {m.label}
+                    <Plus className="h-3.5 w-3.5" aria-hidden /> {t(m.label)}
                   </Link>
                 ))}
               </div>
@@ -339,7 +340,7 @@ export const ProfilePage: React.FC = () => {
       {isOwner ? (
         <>
           <div className="mt-8" data-tour="profil-onglets">
-            <Segmented<TabId> label="Ton profil" value={tab} onChange={selectTab} options={tabs} />
+            <Segmented<TabId> label={t('Ton profil')} value={tab} onChange={selectTab} options={tabs.map((o) => ({ ...o, label: t(o.label) }))} />
           </div>
           <div className="mt-8">
             {panel('overview', (
@@ -365,7 +366,7 @@ export const ProfilePage: React.FC = () => {
           </div>
         </>
       ) : (
-        <Section id="publications" title="Publications" count={shown.contributions.length} className="mt-10">
+        <Section id="publications" title={t('Publications')} count={shown.contributions.length} className="mt-10">
           <PublicationsList items={shown.contributions} isOwner={false} />
         </Section>
       )}

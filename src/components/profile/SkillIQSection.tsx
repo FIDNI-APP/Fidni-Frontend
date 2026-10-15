@@ -30,6 +30,7 @@ import { QuizResult } from '@/components/skilliq/QuizResult';
 import { QuizRunner } from '@/components/skilliq/QuizRunner';
 import { useQuizChapters } from '@/components/skilliq/useQuizChapters';
 import { quizDecouvert, quizDejaDecouvert } from '@/components/skilliq/annonce';
+import { t } from '@/i18n';
 import { isFresh, quizKey, safeReturn, takenOn, type ActiveQuiz, type CorrectionItem, type QuizChapter, type QuizEnCours, type QuizQuestion, type SkillAssessment } from '@/components/skilliq/types';
 
 const SUBTITLE = 'Toutes les questions d’un chapitre, chronométrées, corrigées une à une, et ton bilan théorème par théorème.';
@@ -43,13 +44,13 @@ const Shell: React.FC<{ narrow?: boolean; children: React.ReactNode }> = ({ narr
 
 const Header: React.FC<{ subtitle?: string }> = ({ subtitle }) => (
   <div data-tour="skilliq-hero">
-    <PageHeader eyebrow="Mon suivi" title="Quiz par chapitre" subtitle={subtitle} />
+    <PageHeader eyebrow={t('Mon suivi')} title={t('Quiz par chapitre')} subtitle={subtitle} />
   </div>
 );
 
 /** Squelette à la forme de l'état le plus fréquent (une carte centrée, une ligne repliée). */
 const PageSkeleton: React.FC = () => (
-  <div role="status" aria-label="Chargement" className="flex flex-col gap-3">
+  <div role="status" aria-label={t('Chargement')} className="flex flex-col gap-3">
     <div className="flex animate-pulse flex-col items-center rounded-2xl border border-line bg-white px-6 py-10 sm:py-12">
       <div className="h-14 w-14 rounded-2xl bg-[#efece6]" />
       <div className="mt-5 h-4 w-1/2 max-w-xs rounded bg-[#efece6]" />
@@ -63,9 +64,9 @@ const PageSkeleton: React.FC = () => (
 
 /** Questions en cours de chargement : la forme de la carte question. */
 const QuestionSkeleton: React.FC<{ name: string; onQuit: () => void }> = ({ name, onQuit }) => (
-  <div className="mx-auto flex w-full max-w-2xl flex-col gap-5" role="status" aria-label="Préparation du quiz">
-    <button type="button" onClick={onQuit} className="-ml-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pr-2 text-[13px] font-medium text-ink-faint hover:text-ink">
-      <ChevronLeft className="h-4 w-4" aria-hidden /> Quitter
+  <div className="mx-auto flex w-full max-w-2xl flex-col gap-5" role="status" aria-label={t('Préparation du quiz')}>
+    <button type="button" onClick={onQuit} className="-ms-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint hover:text-ink">
+      <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quitter')}
     </button>
     <div>
       <div className="h-3 w-24 rounded bg-[#efece6]" />
@@ -86,28 +87,28 @@ const QuestionSkeleton: React.FC<{ name: string; onQuit: () => void }> = ({ name
 const MissingBanner: React.FC<{ chapter: { id: number; name: string | null; hub_url: string | null }; retour: string | null; onClose: () => void }> = ({
   chapter, retour, onClose,
 }) => (
-  <div role="status" className="relative mb-6 flex flex-col gap-3 rounded-2xl bg-gold-soft p-4 pr-12 ring-1 ring-gold-line sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:pr-14">
+  <div role="status" className="relative mb-6 flex flex-col gap-3 rounded-2xl bg-gold-soft p-4 pe-12 ring-1 ring-gold-line sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:pe-14">
     <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gold-strong ring-1 ring-gold-line sm:flex" aria-hidden>
       <Hourglass className="h-5 w-5" />
     </span>
     <div className="min-w-0 flex-1">
       <p className="text-[14.5px] font-semibold leading-snug text-ink">
-        {chapter.name ? <>Le quiz « {chapter.name} » n’est pas encore prêt.</> : 'Le quiz de ce chapitre n’est pas encore prêt.'}
+        {chapter.name ? <>{t('Le quiz « {name} » n’est pas encore prêt.', { name: chapter.name })}</> : t('Le quiz de ce chapitre n’est pas encore prêt.')}
       </p>
-      <p className="mt-0.5 text-[13px] text-ink-soft">En attendant, entraîne-toi sur ses exercices, les plus faciles d’abord.</p>
+      <p className="mt-0.5 text-[13px] text-ink-soft">{t('En attendant, entraîne-toi sur ses exercices, les plus faciles d’abord.')}</p>
     </div>
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       <Link to={practiceUrl(chapter.hub_url, chapter.id)} className="fd-btn-primary min-h-11 justify-center sm:min-h-10">
-        <Dumbbell className="h-4 w-4" aria-hidden /> S’entraîner sur ce chapitre
+        <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')}
       </Link>
       {retour && (
         <Link to={retour} className="fd-btn-ghost min-h-11 justify-center text-[13px] sm:min-h-10">
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Retour à mon DS
+          <ArrowLeft className="h-4 w-4" aria-hidden /> {t('Retour à mon DS')}
         </Link>
       )}
     </div>
-    <button type="button" onClick={onClose} aria-label="Fermer"
-      className="absolute right-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-white/70 hover:text-ink sm:top-1/2 sm:-translate-y-1/2">
+    <button type="button" onClick={onClose} aria-label={t('Fermer')}
+      className="absolute end-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-white/70 hover:text-ink sm:top-1/2 sm:-translate-y-1/2">
       <X className="h-4 w-4" />
     </button>
   </div>
@@ -234,7 +235,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     setWantedResult(false);
     (async () => {
       const info = mine ? { name: mine.name, subject: mine.subfield } : await findChapter(id).catch(() => null);
-      const quiz = { id, name: info?.name ?? 'Quiz du chapitre', subject: info?.subject ?? null, hub_url: mine?.hub_url ?? null, levelId: lv };
+      const quiz = { id, name: info?.name ?? t('Quiz du chapitre'), subject: info?.subject ?? null, hub_url: mine?.hub_url ?? null, levelId: lv };
       if (showResult && taken) {
         showLast(quiz);
       } else if (ready > 0) {
@@ -258,19 +259,19 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
           <QuestionSkeleton name={active.name} onQuit={close} />
         ) : dernier === 'echec' ? (
           <div className="mx-auto w-full max-w-2xl">
-            <EmptyState tone="gold" icon={Hourglass} title="Ton dernier résultat n’a pas pu se charger"
-              text="Vérifie ta connexion, ou refais le quiz."
-              action={<button type="button" onClick={() => redo(active)} className="fd-btn-primary min-h-11"><RotateCcw className="h-4 w-4" aria-hidden /> Refaire le quiz</button>}
-              secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">Retour aux quiz</button>} />
+            <EmptyState tone="gold" icon={Hourglass} title={t('Ton dernier résultat n’a pas pu se charger')}
+              text={t('Vérifie ta connexion, ou refais le quiz.')}
+              action={<button type="button" onClick={() => redo(active)} className="fd-btn-primary min-h-11"><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
+              secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">{t('Retour aux quiz')}</button>} />
           </div>
         ) : questions === null ? (
           <QuestionSkeleton name={active.name} onQuit={close} />
         ) : questions.length === 0 ? (
           <div className="mx-auto w-full max-w-2xl">
-            <EmptyState tone="gold" icon={Hourglass} title="Ce quiz n’est pas encore prêt"
-              text={`Les questions de « ${active.name} » arrivent bientôt. En attendant, entraîne-toi sur ses exercices.`}
-              action={<Link to={practiceUrl(active.hub_url, active.id)} className="fd-btn-primary min-h-11"><Dumbbell className="h-4 w-4" aria-hidden /> S’entraîner sur ce chapitre</Link>}
-              secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">Retour aux quiz</button>} />
+            <EmptyState tone="gold" icon={Hourglass} title={t('Ce quiz n’est pas encore prêt')}
+              text={t('Les questions de « {name} » arrivent bientôt. En attendant, entraîne-toi sur ses exercices.', { name: active.name })}
+              action={<Link to={practiceUrl(active.hub_url, active.id)} className="fd-btn-primary min-h-11"><Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')}</Link>}
+              secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">{t('Retour aux quiz')}</button>} />
           </div>
         ) : (
           <QuizRunner key={`${active.id}:${active.levelId}:${request.current}`} quiz={active} questions={questions} seconds={seconds}
@@ -298,14 +299,14 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
 
   return (
     <Shell>
-      <Header subtitle={hasHere || browse || levelBar ? SUBTITLE : undefined} />
+      <Header subtitle={hasHere || browse || levelBar ? t(SUBTITLE) : undefined} />
 
       {levelBar && !data.loading && (
-        <div role="tablist" aria-label="Niveau des quiz" className="mb-5 flex flex-wrap items-center gap-2" data-tour="skilliq-choix-niveau">
+        <div role="tablist" aria-label={t('Niveau des quiz')} className="mb-5 flex flex-wrap items-center gap-2" data-tour="skilliq-choix-niveau">
           <button type="button" role="tab" aria-selected={!shown} onClick={() => setView(null)}
             className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-[13px] font-semibold transition-colors ${
               !shown ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
-            Mon niveau{level ? <span className={`font-normal ${!shown ? 'text-white/75' : 'text-ink-faint'}`}>· {level.name}</span> : null}
+            {t('Mon niveau')}{level ? <span className={`font-normal ${!shown ? 'text-white/75' : 'text-ink-faint'}`}>· {level.name}</span> : null}
           </button>
           {otherLevels.map((l) => {
             const on = shown?.id === l.id;
@@ -316,7 +317,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
                   on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
                 {l.name}
                 <span className={`fd-nums text-[11.5px] ${on ? 'text-white/70' : 'text-ink-faint'}`}>{l.count}</span>
-                {hasNew && <span className="h-2 w-2 rounded-full bg-gold" aria-label="nouveau quiz" />}
+                {hasNew && <span className="h-2 w-2 rounded-full bg-gold" aria-label={t('nouveau quiz')} />}
               </button>
             );
           })}
@@ -325,8 +326,8 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
 
       {data.failed && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Une partie de la page n’a pas pu se charger. Vérifie ta connexion.</p>
-          <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Une partie de la page n’a pas pu se charger. Vérifie ta connexion.')}</p>
+          <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
         </div>
       )}
 
@@ -341,13 +342,13 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
             {data.elsewhere > 0 && !levelBar && other}
           </QuizList>
         ) : browse ? (
-          <Section id="tous-les-quiz" title="Choisis un niveau"
+          <Section id="tous-les-quiz" title={t('Choisis un niveau')}
             hint={variant === 'no-level' ? (
               <>
-                <Link to={`/profile/${encodeURIComponent(user.username)}/edit#scolarite`} className="font-semibold text-brand-hover hover:underline">Indique ton niveau</Link>
-                {' '}pour voir directement tes quiz.
+                <Link to={`/profile/${encodeURIComponent(user.username)}/edit#scolarite`} className="font-semibold text-brand-hover hover:underline">{t('Indique ton niveau')}</Link>
+                {' '}{t('pour voir directement tes quiz.')}
               </>
-            ) : 'Les quiz prêts, niveau par niveau.'}>
+            ) : t('Les quiz prêts, niveau par niveau.')}>
             <div data-tour="skilliq-niveaux">{other}</div>
           </Section>
         ) : (
@@ -375,12 +376,12 @@ export const SkillIQSection: React.FC = () => {
     return (
       <Shell>
         {/* Invitation à s'inscrire, rien à indexer. */}
-        <SEO title="Quiz par chapitre – Fidni" description="Des quiz chronométrés et corrigés par chapitre, avec un compte gratuit." noindex />
+        <SEO title={t('Quiz par chapitre – Fidni')} description={t('Des quiz chronométrés et corrigés par chapitre, avec un compte gratuit.')} noindex />
         <Header />
-        <EmptyState tone="brand" icon={Brain} title="Les quiz par chapitre, avec ton compte"
-          text="Des questions chronométrées et corrigées sur un chapitre, pour mesurer ta maîtrise théorème par théorème. Avec un compte gratuit, ton score est gardé dans ta progression."
-          action={<button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary min-h-11">Créer mon compte</button>}
-          secondary={<button type="button" onClick={() => openSignup('login')} className="fd-btn-ghost min-h-11 text-[13px]">J’ai déjà un compte</button>} />
+        <EmptyState tone="brand" icon={Brain} title={t('Les quiz par chapitre, avec ton compte')}
+          text={t('Des questions chronométrées et corrigées sur un chapitre, pour mesurer ta maîtrise théorème par théorème. Avec un compte gratuit, ton score est gardé dans ta progression.')}
+          action={<button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary min-h-11">{t('Créer mon compte')}</button>}
+          secondary={<button type="button" onClick={() => openSignup('login')} className="fd-btn-ghost min-h-11 text-[13px]">{t('J’ai déjà un compte')}</button>} />
       </Shell>
     );
   }

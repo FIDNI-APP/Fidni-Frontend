@@ -8,6 +8,7 @@ import { trackPage } from './lib/usage';
 import { AppShell } from './components/layout/AppShell';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LangProvider, t } from './i18n';
 import { Suspense, lazy, useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthModalProvider, useAuthModal } from '@/components/auth/AuthController';
@@ -76,6 +77,9 @@ const ImportPreview = page(() => import('./pages/ImportPreview'), 'default');
 const Search = page(() => import('./pages/Search'), 'Search');
 const ClassroomsPage = page(() => import('./pages/Classrooms'), 'ClassroomsPage');
 const ClassroomDetailPage = page(() => import('./pages/ClassroomDetail'), 'default');
+const EvaluationPage = page(() => import('./pages/classrooms/EvaluationPage'), 'default');
+const CorrectionCopie = page(() => import('./pages/classrooms/CorrectionCopie'), 'default');
+const MaCopiePage = page(() => import('./pages/MaCopie'), 'default');
 const ConcoursListPage = page(() => import('./pages/concours/ConcoursList'), 'default');
 const ConcoursExamDetailPage = page(() => import('./pages/concours/ConcoursExamDetail'), 'default');
 const ConcoursSimulatePage = page(() => import('./pages/concours/ConcoursSimulate'), 'default');
@@ -118,7 +122,7 @@ const ContentWizard = page(() => import('./pages/content/ContentWizard'), 'Conte
 
 /** Pendant le chargement d'une page : un repère discret, la barre latérale reste en place. */
 const PageLoader = () => (
-  <div className="flex items-center justify-center py-24" role="status" aria-label="Chargement de la page">
+  <div className="flex items-center justify-center py-24" role="status" aria-label={t('Chargement de la page')}>
     <div className="h-6 w-6 rounded-full border-2 border-line border-t-brand animate-spin" />
   </div>
 );
@@ -266,6 +270,8 @@ function App() {
         }} containerStyle={{ bottom: 'calc(16px + var(--fd-tabbar-h, 0px))' }}
           // Calque fixe sur toute la page : jamais imprimé (il recouvrait les feuilles PDF, 11/10/2026).
           containerClassName="print:hidden" />
+        {/* Langue de l'interface (français / arabe, 15/10/2026) : changer de langue redessine tout. */}
+        <LangProvider>
         <LegalRedirector />
         <ConsentBanner />
         <ThemeProvider>
@@ -396,6 +402,16 @@ function App() {
                       <NavbarWrapper>
                         <ClassroomDetailPage />
                       </NavbarWrapper>
+                    } />
+                    {/* Copies des élèves (15/10/2026) : évaluation (prof), correction d'une copie, copie corrigée (élève). */}
+                    <Route path="/classrooms/:id/evaluations/:eid" element={
+                      <NavbarWrapper><EvaluationPage /></NavbarWrapper>
+                    } />
+                    <Route path="/classrooms/:id/evaluations/:eid/copies/:copieId" element={
+                      <NavbarWrapper showFooter={false}><CorrectionCopie /></NavbarWrapper>
+                    } />
+                    <Route path="/mes-copies/:id" element={
+                      <NavbarWrapper><MaCopiePage /></NavbarWrapper>
                     } />
                     {/* Concours */}
                     <Route path="/concours" element={
@@ -652,6 +668,7 @@ function App() {
             </AuthModalProvider>
           </AuthProvider>
         </ThemeProvider>
+        </LangProvider>
       </BrowserRouter>
     </div>
   );

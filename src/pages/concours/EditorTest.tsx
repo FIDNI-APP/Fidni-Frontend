@@ -7,6 +7,7 @@
  */
 import { useState } from 'react';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
+import { t } from '@/i18n';
 
 export default function EditorTestPage() {
   const [content, setContent] = useState('<p>Tape ici...</p>');
@@ -22,7 +23,7 @@ export default function EditorTestPage() {
           <CompactTipTapEditor
             content={content}
             onChange={setContent}
-            placeholder="Test…"
+            placeholder={t('Test…')}
             minHeight="200px"
           />
         </div>

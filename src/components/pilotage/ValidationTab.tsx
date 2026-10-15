@@ -88,7 +88,7 @@ const Carte: React.FC<{ b: Brouillon; onOpen: () => void }> = ({ b, onOpen }) =>
   const leaves = b.type === 'lecon' ? 0 : b.questions;
   return (
     <article className="group flex flex-col rounded-2xl border border-line bg-white transition-shadow hover:border-ink-faint hover:shadow-[0_2px_12px_rgba(20,20,20,.06)]">
-      <button type="button" onClick={onOpen} className="flex flex-1 flex-col p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-2xl">
+      <button type="button" onClick={onOpen} className="flex flex-1 flex-col p-4 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-2xl">
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.07em] text-ink-faint">
             <t.icon className="h-3.5 w-3.5 shrink-0" /> <span className="truncate" title={b.niveaux.join(', ')}>{t.label} · {b.niveaux.map((n) => COURT[n] ?? n).join(', ')}</span>
@@ -402,7 +402,7 @@ const Relecture: React.FC<{
           <section className="fd-card p-4" aria-labelledby="val-commentaires">
             <h3 id="val-commentaires" className="flex items-center gap-1.5 text-[14px] font-semibold text-ink">
               <MessageSquare className="h-4 w-4 text-gold-strong" /> Commentaires de Claude
-              {commentaires.length > 0 && <span className="fd-nums ml-auto text-[12px] font-normal text-ink-faint">{commentaires.length}</span>}
+              {commentaires.length > 0 && <span className="fd-nums ms-auto text-[12px] font-normal text-ink-faint">{commentaires.length}</span>}
             </h3>
             {commentaires.length === 0 ? <p className="mt-2 text-[12.5px] text-ink-faint">Rien de particulier : transcription sans hésitation.</p> : (
               <ol className="mt-2.5 space-y-2.5">

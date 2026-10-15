@@ -79,6 +79,7 @@ const UTIL = {
   'border-t': ['border-top-color', 'filet'], 'border-b': ['border-bottom-color', 'filet'],
   'border-l': ['border-left-color', 'filet'], 'border-r': ['border-right-color', 'filet'],
   'border-x': ['border-left-color', 'filet'], 'border-y': ['border-top-color', 'filet'],
+  'border-s': ['border-inline-start-color', 'filet'], 'border-e': ['border-inline-end-color', 'filet'],
   divide: ['border-color', 'filet'],
   ring: ['--tw-ring-color', 'filet'],
   outline: ['outline-color', 'filet'],

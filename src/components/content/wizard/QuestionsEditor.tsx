@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, Heading, Lightbulb, ListPlus, Plus, Text, Trash2, C
 import { TextBlockEditor } from '@/components/content/editor/TextBlockEditor';
 import type { ExerciseBlock, SubQuestionBlock } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { ContentBlock } from '@/types/content';
+import { t } from '@/i18n';
 
 const newId = () => Math.random().toString(36).slice(2, 9);
 const empty = (): ContentBlock => ({ type: 'text', html: '' });
@@ -28,7 +29,7 @@ const Points: React.FC<{ value?: number; onChange: (v?: number) => void }> = ({ 
     <input type="number" min="0" step="0.25" inputMode="decimal" value={value ?? ''} placeholder="—"
       onChange={(e) => { const v = parseFloat(e.target.value); onChange(Number.isFinite(v) && v > 0 ? v : undefined); }}
       className="h-8 w-14 rounded-lg border border-line bg-white px-2 text-center text-[13px] text-ink focus:border-brand focus:outline-none" />
-    pt
+    {t('pt')}
   </label>
 );
 
@@ -43,22 +44,22 @@ const Extras: React.FC<{
       <div className="flex flex-wrap gap-1.5">
         <button type="button" className={chip(showHint, 'gold')} aria-pressed={showHint}
           onClick={() => { if (showHint) onChange({ hint: undefined }); setShowHint(!showHint); }}>
-          <Lightbulb className="h-3.5 w-3.5" /> {showHint ? 'Indication' : 'Ajouter une indication'}
+          <Lightbulb className="h-3.5 w-3.5" /> {showHint ? t('Indication') : t('Ajouter une indication')}
         </button>
         <button type="button" className={chip(showSol, 'brand')} aria-pressed={showSol}
           onClick={() => { if (showSol) onChange({ solution: undefined }); setShowSol(!showSol); }}>
-          <CheckCircle2 className="h-3.5 w-3.5" /> {showSol ? 'Solution' : 'Ajouter la solution'}
+          <CheckCircle2 className="h-3.5 w-3.5" /> {showSol ? t('Solution') : t('Ajouter la solution')}
         </button>
       </div>
       {showHint && (
         <div className="rounded-xl border border-gold-line bg-gold-soft/40 p-2">
-          <p className="mb-1 px-1 text-[11.5px] text-gold-strong">La méthode en une ou deux phrases, sans le calcul — montrée avant la solution.</p>
-          <TextBlockEditor value={hint} onChange={(h) => onChange({ hint: h })} placeholder="Ex. forme indéterminée : on factorise par le terme dominant." minHeight="40px" />
+          <p className="mb-1 px-1 text-[11.5px] text-gold-strong">{t('La méthode en une ou deux phrases, sans le calcul — montrée avant la solution.')}</p>
+          <TextBlockEditor value={hint} onChange={(h) => onChange({ hint: h })} placeholder={t('Ex. forme indéterminée : on factorise par le terme dominant.')} minHeight="40px" />
         </div>
       )}
       {showSol && (
         <div className="rounded-xl border border-brand-line bg-brand-soft/40 p-2">
-          <TextBlockEditor value={solution} onChange={(s) => onChange({ solution: s })} placeholder="La solution rédigée, comme sur une copie." minHeight="60px" />
+          <TextBlockEditor value={solution} onChange={(s) => onChange({ solution: s })} placeholder={t('La solution rédigée, comme sur une copie.')} minHeight="60px" />
         </div>
       )}
     </div>
@@ -81,7 +82,7 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
   const remove = (i: number) => {
     const b = blocks[i];
     if ((filled(b.content) || b.subQuestions?.length) && b.type !== 'section'
-      && !window.confirm('Supprimer cette question et tout ce qu’elle contient ?')) return;
+      && !window.confirm(t('Supprimer cette question et tout ce qu’elle contient ?'))) return;
     onChange(blocks.filter((_, j) => j !== i));
   };
   const sections = blocks.filter((b) => b.type === 'section').length;
@@ -91,10 +92,10 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
     <div className="space-y-3">
       {blocks.map((b, i) => {
         const tools = (
-          <span className="ml-auto flex shrink-0 items-center">
-            <button type="button" className={iconBtn} onClick={() => move(i, -1)} disabled={i === 0} aria-label="Monter"><ArrowUp className="h-4 w-4" /></button>
-            <button type="button" className={iconBtn} onClick={() => move(i, 1)} disabled={i === blocks.length - 1} aria-label="Descendre"><ArrowDown className="h-4 w-4" /></button>
-            <button type="button" className={`${iconBtn} hover:!text-[#a23b34]`} onClick={() => remove(i)} aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button>
+          <span className="ms-auto flex shrink-0 items-center">
+            <button type="button" className={iconBtn} onClick={() => move(i, -1)} disabled={i === 0} aria-label={t('Monter')}><ArrowUp className="h-4 w-4" /></button>
+            <button type="button" className={iconBtn} onClick={() => move(i, 1)} disabled={i === blocks.length - 1} aria-label={t('Descendre')}><ArrowDown className="h-4 w-4" /></button>
+            <button type="button" className={`${iconBtn} hover:!text-[#a23b34]`} onClick={() => remove(i)} aria-label={t('Supprimer')}><Trash2 className="h-4 w-4" /></button>
           </span>
         );
 
@@ -104,7 +105,7 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
           return (
             <div key={b.id} className="flex flex-wrap items-center gap-2 border-b-2 border-ink/80 pb-2 pt-4">
               <input value={title} onChange={(e) => set(i, { ...b, content: { type: 'text', html: e.target.value } })}
-                aria-label="Titre de la partie" placeholder="Exercice 1"
+                aria-label={t('Titre de la partie')} placeholder="Exercice 1"
                 className="fd-paper min-w-0 flex-1 bg-transparent text-[19px] font-bold text-ink placeholder:text-ink-faint focus:outline-none" />
               <Points value={b.points} onChange={(points) => set(i, { ...b, points })} />
               {tools}
@@ -115,9 +116,9 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
         if (b.type === 'context') {
           return (
             <div key={b.id} className="rounded-2xl border border-line bg-white p-3 sm:p-4">
-              <div className="mb-2 flex items-center gap-2 text-[12.5px] font-semibold text-ink-soft"><Text className="h-4 w-4" /> Texte d’introduction {tools}</div>
+              <div className="mb-2 flex items-center gap-2 text-[12.5px] font-semibold text-ink-soft"><Text className="h-4 w-4" /> {t('Texte d’introduction')} {tools}</div>
               <TextBlockEditor value={b.content} onChange={(content) => set(i, { ...b, content })}
-                placeholder="Ex. On considère la fonction f définie sur ℝ par…" minHeight="50px" />
+                placeholder={t('Ex. On considère la fonction f définie sur ℝ par…')} minHeight="50px" />
             </div>
           );
         }
@@ -129,29 +130,29 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
           <div key={b.id} className="rounded-2xl border border-line bg-white p-3 sm:p-4">
             <div className="mb-2 flex items-center gap-2">
               <span className="fd-paper text-[16px] font-bold text-ink">{q}.</span>
-              <span className="text-[12.5px] font-semibold text-ink-soft">Question {q}</span>
+              <span className="text-[12.5px] font-semibold text-ink-soft">{t('Question {n}', { n: q })}</span>
               {!subs.length && (isExam || b.points) ? <Points value={b.points} onChange={(points) => set(i, { ...b, points })} /> : null}
               {tools}
             </div>
             <TextBlockEditor value={b.content} onChange={(content) => set(i, { ...b, content })}
-              placeholder="L’énoncé de la question (formules entre $…$)." minHeight="50px" />
+              placeholder={t('L’énoncé de la question (formules entre $…$).')} minHeight="50px" />
 
             {!subs.length && (
               <Extras hint={b.hint} solution={b.solution} onChange={(p) => set(i, { ...b, ...p })} />
             )}
 
             {subs.length > 0 && (
-              <div className="mt-3 space-y-3 border-l-2 border-line pl-3 sm:pl-4">
+              <div className="mt-3 space-y-3 border-s-2 border-line ps-3 sm:ps-4">
                 {subs.map((sq, k) => (
                   <div key={sq.id}>
                     <div className="mb-1 flex items-center gap-2">
                       <span className="fd-paper text-[15px] font-bold text-ink-soft">{letter(k)})</span>
                       {isExam || sq.points ? <Points value={sq.points} onChange={(points) => setSubs(subs.map((x, j) => (j === k ? { ...x, points } : x)))} /> : null}
-                      <button type="button" className={`${iconBtn} ml-auto hover:!text-[#a23b34]`} aria-label="Supprimer la sous-question"
+                      <button type="button" className={`${iconBtn} ms-auto hover:!text-[#a23b34]`} aria-label={t('Supprimer la sous-question')}
                         onClick={() => setSubs(subs.filter((_, j) => j !== k))}><Trash2 className="h-4 w-4" /></button>
                     </div>
                     <TextBlockEditor value={sq.content} onChange={(content) => setSubs(subs.map((x, j) => (j === k ? { ...x, content } : x)))}
-                      placeholder={`Sous-question ${letter(k)})`} minHeight="40px" />
+                      placeholder={t('Sous-question {l})', { l: letter(k) })} minHeight="40px" />
                     <Extras hint={sq.hint} solution={sq.solution}
                       onChange={(p) => setSubs(subs.map((x, j) => (j === k ? { ...x, ...p } : x)))} />
                   </div>
@@ -160,7 +161,7 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
             )}
             <button type="button" onClick={() => setSubs([...subs, newSub()])}
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-soft hover:bg-[#f2f1ee] hover:text-ink">
-              <ListPlus className="h-4 w-4" /> {subs.length ? 'Ajouter une sous-question' : 'Découper en sous-questions a), b)…'}
+              <ListPlus className="h-4 w-4" /> {subs.length ? t('Ajouter une sous-question') : t('Découper en sous-questions a), b)…')}
             </button>
           </div>
         );
@@ -169,16 +170,16 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
       {/* Ajouter : la question d'abord (le cas courant), le reste à côté. */}
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <button type="button" onClick={() => onChange([...blocks, newQuestion()])} className="fd-btn-primary min-h-10 px-4 text-[13.5px]">
-          <Plus className="h-4 w-4" /> Question
+          <Plus className="h-4 w-4" /> {t('Question')}
         </button>
         <button type="button" onClick={() => onChange([...blocks, newContext()])}
           className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink-soft hover:border-ink/40 hover:text-ink">
-          <Text className="h-4 w-4" /> Texte d’introduction
+          <Text className="h-4 w-4" /> {t('Texte d’introduction')}
         </button>
         {isExam && (
           <button type="button" onClick={() => onChange([...blocks, newSection(sections + 1)])}
             className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink-soft hover:border-ink/40 hover:text-ink">
-            <Heading className="h-4 w-4" /> Exercice {sections + 1}
+            <Heading className="h-4 w-4" /> {t('Exercice {n}', { n: sections + 1 })}
           </button>
         )}
       </div>

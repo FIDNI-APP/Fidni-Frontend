@@ -13,6 +13,7 @@ import { practiceUrl } from '@/pages/progression/links';
 import { trackAction } from '@/lib/usage';
 import { COULEUR } from './chart';
 import { BarreQuestions } from './Chapitres';
+import { t } from '@/i18n';
 
 const VISIBLES = 4;
 const STATUT = { review: 'à revoir', failed: 'ratée', partial: 'en partie' } as const;
@@ -22,6 +23,17 @@ const entrainer = (p: PointFaible) => {
   if (!p.chapitre) return p.id ? `/exercises?theorems=${p.id}` : '/exercises';
   const base = practiceUrl(p.chapitre.hub_url, p.chapitre.id);
   return p.id ? `${base}${base.includes('?') ? '&' : '?'}theorems=${p.id}` : base;
+};
+
+/** « 3 questions : 1 ratée, 1 en partie, 1 réussie ». */
+const bilan = (p: PointFaible) => {
+  const vars = {
+    questions: p.questions > 1 ? t('{n} questions', { n: p.questions }) : t('{n} question', { n: p.questions }),
+    ratees: p.ratees > 1 ? t('{n} ratées', { n: p.ratees }) : t('{n} ratée', { n: p.ratees }),
+    partielles: t('{n} en partie', { n: p.partielles }),
+    reussies: p.reussies > 1 ? t('{n} réussies', { n: p.reussies }) : t('{n} réussie', { n: p.reussies }),
+  };
+  return p.partielles ? t('{questions} : {ratees}, {partielles}, {reussies}', vars) : t('{questions} : {ratees}, {reussies}', vars);
 };
 
 const Ligne: React.FC<{ p: PointFaible; compact?: boolean; ouvert?: boolean }> = ({ p, compact = false, ouvert }) => {
@@ -34,18 +46,18 @@ const Ligne: React.FC<{ p: PointFaible; compact?: boolean; ouvert?: boolean }> =
           <p className="text-[14px] font-semibold leading-snug text-ink">{p.nom}</p>
           <p className="mt-0.5 text-[12px] text-ink-faint">
             {!compact && p.chapitre && <>{p.chapitre.nom} · </>}
-            <span className="fd-nums">{p.questions} question{p.questions > 1 ? 's' : ''} : {p.ratees} ratée{p.ratees > 1 ? 's' : ''}{p.partielles ? `, ${p.partielles} en partie` : ''}, {p.reussies} réussie{p.reussies > 1 ? 's' : ''}</span>
+            <span className="fd-nums">{bilan(p)}</span>
           </p>
           <BarreQuestions r={p} className="mt-2 max-w-[260px]" />
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="fd-nums text-right">
+          <span className="fd-nums text-end">
             <b className="block text-[18px] leading-none" style={{ color: p.taux < 50 ? '#9a6e1c' : '#33302b' }}>{p.taux} %</b>
-            <span className="text-[11px] text-ink-faint">de réussite</span>
+            <span className="text-[11px] text-ink-faint">{t('de réussite')}</span>
           </span>
           <Link to={entrainer(p)} onClick={() => trackAction('prog-point-faible')}
             className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-soft px-3 text-[13px] font-semibold text-brand-hover hover:bg-[#dcece2]">
-            <Dumbbell className="h-4 w-4" aria-hidden /> S’entraîner
+            <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner')}
           </Link>
         </div>
       </div>
@@ -54,7 +66,7 @@ const Ligne: React.FC<{ p: PointFaible; compact?: boolean; ouvert?: boolean }> =
           <button type="button" onClick={() => { setOpen((v) => !v); if (!open) trackAction('prog-point-faible'); }} aria-expanded={open}
             className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-[12.5px] font-semibold text-gold-strong hover:underline">
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-            {p.a_revoir_total} question{p.a_revoir_total > 1 ? 's' : ''} à refaire
+            {p.a_revoir_total > 1 ? t('{n} questions à refaire', { n: p.a_revoir_total }) : t('{n} question à refaire', { n: p.a_revoir_total })}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
           </button>
           {open && (
@@ -64,13 +76,13 @@ const Ligne: React.FC<{ p: PointFaible; compact?: boolean; ouvert?: boolean }> =
                   <Link to={q.url} className="group flex items-center gap-3 px-3 py-2.5 text-[13px] hover:bg-white">
                     <span className="fd-nums w-10 shrink-0 font-semibold text-ink">{q.question}</span>
                     <span className="min-w-0 flex-1 truncate text-ink-soft group-hover:underline">{q.titre}</span>
-                    <span className="hidden shrink-0 text-[12px] text-ink-faint sm:inline">{STATUT[q.statut]} · {shortDate(q.date)}</span>
+                    <span className="hidden shrink-0 text-[12px] text-ink-faint sm:inline">{t(STATUT[q.statut])} · {shortDate(q.date)}</span>
                     <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden />
                   </Link>
                 </li>
               ))}
               {p.a_revoir_total > p.a_revoir.length && (
-                <li className="px-3 py-2 text-[12px] text-ink-faint">et {p.a_revoir_total - p.a_revoir.length} autre{p.a_revoir_total - p.a_revoir.length > 1 ? 's' : ''}</li>
+                <li className="px-3 py-2 text-[12px] text-ink-faint">{p.a_revoir_total - p.a_revoir.length > 1 ? t('et {n} autres', { n: p.a_revoir_total - p.a_revoir.length }) : t('et {n} autre', { n: p.a_revoir_total - p.a_revoir.length })}</li>
               )}
             </ul>
           )}
@@ -87,7 +99,7 @@ export const PointsFaibles: React.FC<{ points: PointFaible[]; compact?: boolean;
     return (
       <p className="flex items-center gap-2 rounded-2xl border border-line bg-white px-5 py-4 text-[13.5px] text-ink-soft">
         <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: COULEUR.reussies }} aria-hidden />
-        Pas de point faible sur cette période : aucune question ratée qui reste à refaire.
+        {t('Pas de point faible sur cette période : aucune question ratée qui reste à refaire.')}
       </p>
     );
   }
@@ -98,7 +110,7 @@ export const PointsFaibles: React.FC<{ points: PointFaible[]; compact?: boolean;
       {!compact && points.length > VISIBLES && (
         <button type="button" onClick={() => setTous((v) => !v)} aria-expanded={tous}
           className="flex min-h-11 w-full items-center justify-center gap-1.5 border-t border-line text-[13px] font-semibold text-ink-soft hover:text-ink">
-          {tous ? 'Voir moins' : `Voir les ${points.length} points faibles`}
+          {tous ? t('Voir moins') : t('Voir les {n} points faibles', { n: points.length })}
           <ChevronDown className={`h-4 w-4 transition-transform ${tous ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       )}

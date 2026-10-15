@@ -26,6 +26,7 @@ import { usePhone } from '@/components/content/listing/listingUtils';
 import {
   clearedFilters, toggled, withoutChip, type ActiveChip, type FilterSlugs, type FixedFilters, type ListFilters,
 } from './filterState';
+import { t } from '@/i18n';
 
 export type { ActiveChip, FilterSlugs, ListFilters } from './filterState';
 
@@ -73,9 +74,8 @@ const STATUS_OPTIONS: { id: Status; label: string }[] = [
   { id: 'all', label: 'Tous' }, { id: 'todo', label: 'À faire' }, { id: 'review', label: 'À revoir' }, { id: 'success', label: 'Réussis' },
 ];
 const DIFF_LABEL: Record<string, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
-const NOUN: Record<Kind, [string, string]> = {
-  exercise: ['l’exercice', 'exercices'], exam: ['l’examen', 'examens'], lesson: ['la leçon', 'leçons'],
-};
+const SEE_ONE: Record<Kind, string> = { exercise: 'Voir l’exercice', exam: 'Voir l’examen', lesson: 'Voir la leçon' };
+const SEE_MANY: Record<Kind, string> = { exercise: 'Voir les {n} exercices', exam: 'Voir les {n} examens', lesson: 'Voir les {n} leçons' };
 
 const subfieldOf = (o: Option) => (Array.isArray(o.subfield) ? o.subfield[0] : o.subfield) ?? null;
 const isEmpty = (o: Option) => o.content_count === 0;
@@ -226,16 +226,16 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     }
     filters.subfields.forEach((id) => {
       const sf = chapters.map(subfieldOf).find((s) => s && String(s.id) === id);
-      out.push({ key: `subfields:${id}`, label: sf?.name ?? 'Sous-domaine' });
+      out.push({ key: `subfields:${id}`, label: sf?.name ?? t('Sous-domaine') });
     });
-    filters.chapters.filter((id) => !fixedChapters.includes(id)).forEach((id) => out.push({ key: `chapters:${id}`, label: chapterInfo[id]?.name ?? 'Chapitre' }));
+    filters.chapters.filter((id) => !fixedChapters.includes(id)).forEach((id) => out.push({ key: `chapters:${id}`, label: chapterInfo[id]?.name ?? t('Chapitre') }));
     filters.theorems.forEach((id) => out.push({ key: `theorems:${id}`, label: nameOf(theorems, id) }));
-    filters.difficulties.forEach((d) => out.push({ key: `difficulties:${d}`, label: DIFF_LABEL[d] ?? d }));
-    if (isAuthenticated) STATUS_KEYS.forEach((k) => { if (filters[k]) out.push({ key: k, label: STATUS_LABEL[k] }); });
-    if (filters.isNationalExam === true) out.push({ key: 'isNationalExam', label: 'National' });
-    if (filters.isNationalExam === false) out.push({ key: 'isNationalExam', label: 'Autres examens' });
-    if (filters.dateStart) out.push({ key: 'dateStart', label: `Depuis ${filters.dateStart}` });
-    if (filters.dateEnd) out.push({ key: 'dateEnd', label: `Jusqu’à ${filters.dateEnd}` });
+    filters.difficulties.forEach((d) => out.push({ key: `difficulties:${d}`, label: t(DIFF_LABEL[d] ?? d) }));
+    if (isAuthenticated) STATUS_KEYS.forEach((k) => { if (filters[k]) out.push({ key: k, label: t(STATUS_LABEL[k]) }); });
+    if (filters.isNationalExam === true) out.push({ key: 'isNationalExam', label: t('National') });
+    if (filters.isNationalExam === false) out.push({ key: 'isNationalExam', label: t('Autres examens') });
+    if (filters.dateStart) out.push({ key: 'dateStart', label: t('Depuis {d}', { d: filters.dateStart }) });
+    if (filters.dateEnd) out.push({ key: 'dateEnd', label: t('Jusqu’à {d}', { d: filters.dateEnd }) });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, classLevels, subjects, chapters, theorems, chapterInfo, isAuthenticated, singleSubject, fixedLevels.join(','), fixedChapters.join(',')]);
@@ -280,9 +280,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       key={chip.key}
       type="button"
       onClick={() => emit(withoutChip(filters, chip.key))}
-      aria-label={`Retirer ${chip.label}`}
-      title={`Retirer ${chip.label}`}
-      className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#efece6] pl-3.5 pr-2.5 text-[13px] font-medium text-ink-soft whitespace-nowrap transition-colors hover:bg-[#e7e3dc] hover:text-ink sm:min-h-9"
+      aria-label={t('Retirer {label}', { label: chip.label })}
+      title={t('Retirer {label}', { label: chip.label })}
+      className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#efece6] ps-3.5 pe-2.5 text-[13px] font-medium text-ink-soft whitespace-nowrap transition-colors hover:bg-[#e7e3dc] hover:text-ink sm:min-h-9"
     >
       {chip.label}
       <X className="w-3.5 h-3.5" />
@@ -311,7 +311,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     <div className="[&>*:last-child]:mb-0 [&>*:last-child]:border-b-0 [&>*:last-child]:pb-1">
       {/* Dans le dossier d'un chapitre, niveau et chapitre sont ceux du dossier : pas de ligne pour les changer. */}
       {inFolder !== 'chapter' && (
-        <FilterRow title="Niveau">
+        <FilterRow title={t('Niveau')}>
           {visible(classLevels, filters.classLevels).map((o) => (
             <OptionButton key={o.id} option={o} selected={filters.classLevels.includes(String(o.id))} className={pill(filters.classLevels.includes(String(o.id)))}
               onClick={() => toggle('classLevels', String(o.id))} />
@@ -321,7 +321,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
       {/* Matière : seulement s'il y en a plusieurs (sinon choisie d'office). */}
       {inFolder !== 'chapter' && filters.classLevels.length > 0 && subjects.length > 1 && (
-        <FilterRow title="Matière">
+        <FilterRow title={t('Matière')}>
           {visible(subjects, filters.subjects).map((o) => (
             <OptionButton key={o.id} option={o} selected={filters.subjects.includes(String(o.id))} className={pill(filters.subjects.includes(String(o.id)))}
               onClick={() => toggle('subjects', String(o.id))} />
@@ -331,7 +331,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
       {/* Chapitres juste après le niveau, par sous-domaine. */}
       {inFolder !== 'chapter' && filters.classLevels.length > 0 && chapterGroups.length > 0 && (
-        <FilterRow title="Chapitre">
+        <FilterRow title={t('Chapitre')}>
           <div className="flex flex-col gap-2.5 w-full">
             {chapterGroups.map(([group, options]) => (
               <div key={group || '-'}>
@@ -351,7 +351,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       )}
 
       {filters.chapters.length > 0 && visible(theorems, filters.theorems).length > 0 && (
-        <FilterRow title="Théorème">
+        <FilterRow title={t('Théorème')}>
           {visible(theorems, filters.theorems).map((o) => (
             <OptionButton key={o.id} option={o} selected={filters.theorems.includes(String(o.id))} className={pill(filters.theorems.includes(String(o.id)))}
               onClick={() => toggle('theorems', String(o.id))} />
@@ -361,7 +361,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
       {/* Difficulté — exercices et examens ; une difficulté sans résultat ne se choisit pas. */}
       {contentType !== 'lesson' && (
-        <FilterRow title="Difficulté">
+        <FilterRow title={t('Difficulté')}>
           {([
             // Couleurs de la difficulté (mêmes teintes que les cartes : listingUtils DIFFICULTY).
             { id: 'easy', name: 'Facile', selected: 'border-[#2f8a57] bg-[#2f8a57] text-white', unselected: 'border-[#cfe5d7] bg-[#eaf3ed] text-[#15633c] hover:border-[#2f8a57]' },
@@ -381,8 +381,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 className={`min-h-10 sm:min-h-9 px-3.5 py-1.5 rounded-full border text-[13.5px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-40 ${
                   isSelected ? diff.selected : diff.unselected}`}
               >
-                <span className="inline-flex items-center gap-1.5"><DifficultyBars difficulty={diff.id} />{diff.name}</span>
-                {count != null && <span className={`fd-nums ml-1.5 ${isSelected ? 'opacity-70' : 'text-ink-faint'}`}>{count}</span>}
+                <span className="inline-flex items-center gap-1.5"><DifficultyBars difficulty={diff.id} />{t(diff.name)}</span>
+                {count != null && <span className={`fd-nums ms-1.5 ${isSelected ? 'opacity-70' : 'text-ink-faint'}`}>{count}</span>}
               </button>
             );
           })}
@@ -391,35 +391,35 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
       {/* Statut — élève : les onglets de la barre ; un visiteur n'a rien de fait, on l'invite à se connecter. */}
       {contentType !== 'lesson' && !isAuthenticated && (
-        <FilterRow title="Statut">
+        <FilterRow title={t('Statut')}>
           <button type="button" onClick={() => openSignup('login')}
-            className="min-h-10 rounded-full bg-brand-soft px-3.5 py-1.5 text-left text-[13.5px] font-medium text-brand-hover transition-colors hover:bg-brand hover:text-white sm:min-h-9">
-            Connecte-toi pour filtrer ce que tu as fait
+            className="min-h-10 rounded-full bg-brand-soft px-3.5 py-1.5 text-start text-[13.5px] font-medium text-brand-hover transition-colors hover:bg-brand hover:text-white sm:min-h-9">
+            {t('Connecte-toi pour filtrer ce que tu as fait')}
           </button>
         </FilterRow>
       )}
 
       {/* Examens nationaux : filtre par année du Bac (la section décide national / devoirs). */}
       {contentType === 'exam' && nationalSection && inFolder !== 'year' && (
-        <FilterRow title="Année du Bac" last>
+        <FilterRow title={t('Année du Bac')} last>
           <div className="flex items-center gap-3">
             <select
               value={filters.dateStart || ''}
               onChange={(e) => emit({ ...filters, dateStart: e.target.value || null })}
-              aria-label="Depuis l’année"
+              aria-label={t('Depuis l’année')}
               className="h-10 rounded-xl border border-line bg-white px-3 text-[13.5px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
             >
-              <option value="">De…</option>
+              <option value="">{t('De…')}</option>
               {nationalYears.map((year) => <option key={year} value={year}>{year}</option>)}
             </select>
-            <span className="text-[13px] text-ink-faint">à</span>
+            <span className="text-[13px] text-ink-faint">{t('à')}</span>
             <select
               value={filters.dateEnd || ''}
               onChange={(e) => emit({ ...filters, dateEnd: e.target.value || null })}
-              aria-label="Jusqu’à l’année"
+              aria-label={t('Jusqu’à l’année')}
               className="h-10 rounded-xl border border-line bg-white px-3 text-[13.5px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
             >
-              <option value="">À…</option>
+              <option value="">{t('À…')}</option>
               {nationalYears.map((year) => <option key={year} value={year}>{year}</option>)}
             </select>
           </div>
@@ -439,17 +439,16 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   // Pastille de « Filtres » : ce qui se choisit dans le panneau (le statut a ses onglets).
   const panelCount = shownChips.length;
 
-  const [the, many] = NOUN[contentType];
-  const seeLabel = resultLoading || resultCount == null ? 'Voir les résultats'
-    : resultCount === 0 ? 'Aucun résultat'
-      : resultCount === 1 ? `Voir ${the}` : `Voir les ${resultCount} ${many}`;
+    const seeLabel = resultLoading || resultCount == null ? t('Voir les résultats')
+    : resultCount === 0 ? t('Aucun résultat')
+      : resultCount === 1 ? t(SEE_ONE[contentType]) : t(SEE_MANY[contentType], { n: resultCount });
 
   return (
     <div className="mb-5 sm:mb-6">
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         {/* Le statut de l'élève, en onglets (choix unique). */}
         {quickStatus && (
-          <div role="radiogroup" aria-label="Statut" data-tour="liste-statut"
+          <div role="radiogroup" aria-label={t('Statut')} data-tour="liste-statut"
             className="grid grid-cols-4 gap-1 rounded-2xl border border-line bg-white p-1 sm:inline-flex sm:grid-cols-none">
             {STATUS_OPTIONS.map((o) => {
               const on = status === o.id;
@@ -459,7 +458,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                     on ? 'bg-ink text-white' : 'text-ink-faint hover:bg-[#f7f6f3] hover:text-ink'}`}>
                   {o.id === 'review' && <span className={`h-1.5 w-1.5 rounded-full ${on ? 'bg-gold-line' : 'bg-gold'}`} aria-hidden />}
                   {o.id === 'success' && <span className={`h-1.5 w-1.5 rounded-full ${on ? 'bg-brand-line' : 'bg-brand'}`} aria-hidden />}
-                  {o.label}
+                  {t(o.label)}
                 </button>
               );
             })}
@@ -467,7 +466,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
         )}
 
         {/* Tri, filtres, affichage. */}
-        <div className="flex items-center gap-2 sm:ml-auto">
+        <div className="flex items-center gap-2 sm:ms-auto">
           <div data-tour="liste-tri" className="min-w-0 flex-1 sm:flex-none">
             <SortDropdown value={sortBy} onChange={onSortChange} easiest={contentType !== 'lesson'} className="w-full sm:w-auto" />
           </div>
@@ -483,7 +482,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 isPanelOpen && !phone ? 'border-ink bg-[#f7f6f3] text-ink' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}
             >
               <SlidersHorizontal className="h-4 w-4" />
-              <span>Filtres</span>
+              <span>{t('Filtres')}</span>
               {panelCount > 0 && (
                 <span className="fd-nums inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] font-bold text-white">
                   {panelCount}
@@ -503,7 +502,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
           {shownChips.length > 1 && (
             <button type="button" onClick={clearAll}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink sm:min-h-9">
-              <RotateCcw className="h-3.5 w-3.5" /> Tout effacer
+              <RotateCcw className="h-3.5 w-3.5" /> {t('Tout effacer')}
             </button>
           )}
         </div>
@@ -525,12 +524,12 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 {activeFilterCount > 0 ? (
                   <button type="button" onClick={clearAll}
                     className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink">
-                    <RotateCcw className="h-3.5 w-3.5" /> Tout effacer
+                    <RotateCcw className="h-3.5 w-3.5" /> {t('Tout effacer')}
                   </button>
                 ) : <span />}
                 <button type="button" onClick={() => setIsPanelOpen(false)}
                   className="inline-flex min-h-9 items-center rounded-xl px-3 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-[#f2f1ee] hover:text-ink">
-                  Fermer
+                  {t('Fermer')}
                 </button>
               </div>
             </div>
@@ -561,11 +560,11 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
               >
                 <span className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[#e7e3dc]" aria-hidden />
-                <div className="flex items-center justify-between h-12 pl-4 pr-2 border-b border-[#f0ede8]">
+                <div className="flex items-center justify-between h-12 ps-4 pe-2 border-b border-[#f0ede8]">
                   <h2 id="filtres-titre" className="text-[16px] font-semibold text-ink">
-                    Filtres{panelCount > 0 ? <span className="ml-1.5 text-ink-faint font-medium">({panelCount})</span> : null}
+                    {t('Filtres')}{panelCount > 0 ? <span className="ms-1.5 text-ink-faint font-medium">({panelCount})</span> : null}
                   </h2>
-                  <button type="button" onClick={() => setIsPanelOpen(false)} aria-label="Fermer"
+                  <button type="button" onClick={() => setIsPanelOpen(false)} aria-label={t('Fermer')}
                     className="inline-flex w-10 h-10 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
                     <X className="w-5 h-5" />
                   </button>
@@ -575,7 +574,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                   {activeFilterCount > 0 && (
                     <button type="button" onClick={clearAll}
                       className="inline-flex items-center gap-1.5 h-11 px-3 rounded-xl text-[13.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-                      <RotateCcw className="w-3.5 h-3.5" /> Tout effacer
+                      <RotateCcw className="w-3.5 h-3.5" /> {t('Tout effacer')}
                     </button>
                   )}
                   <button type="button" onClick={() => setIsPanelOpen(false)}
@@ -607,7 +606,7 @@ const OptionButton: React.FC<{ option: Option; selected: boolean; className: str
   <button type="button" aria-pressed={selected} onClick={onClick} className={className}>
     {option.name}
     {option.content_count != null && (
-      <span className={`fd-nums ml-1.5 ${selected ? 'opacity-70' : 'text-ink-faint'}`}>{option.content_count}</span>
+      <span className={`fd-nums ms-1.5 ${selected ? 'opacity-70' : 'text-ink-faint'}`}>{option.content_count}</span>
     )}
   </button>
 );

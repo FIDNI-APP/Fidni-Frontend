@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
 import { Page, Section, EmptyState, CardLink, CardsSkeleton } from '@/components/space/Page';
 import { ConcoursHeader } from './ConcoursHeader';
+import { t } from '@/i18n';
 
 type Icon = React.ComponentType<{ className?: string }>;
 
@@ -29,7 +30,7 @@ const SCHOOLS: Record<ConcoursType, { full: string; icon: Icon }> = {
   medecine: { full: 'Concours commun des facultés de médecine', icon: Stethoscope },
 };
 
-const schoolLabel = (id: ConcoursType | null) => CONCOURS_TYPES.find((c) => c.id === id)?.label ?? '';
+const schoolLabel = (id: ConcoursType | null) => t(CONCOURS_TYPES.find((c) => c.id === id)?.label ?? '');
 
 /* ───────────────────────── Carte d'une école ───────────────────────── */
 
@@ -46,8 +47,8 @@ const SchoolHead: React.FC<{ id: ConcoursType; label: string; status: React.Reac
         <span className="hidden md:inline-flex">{status}</span>
       </span>
       <span className="min-w-0 flex-1 md:w-full">
-        <span className="fd-display block text-[20px] leading-tight text-ink">{label}</span>
-        <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{s.full}</span>
+        <span className="fd-display block text-[20px] leading-tight text-ink">{t(label)}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{t(s.full)}</span>
       </span>
       <span className="shrink-0 md:hidden">{status}</span>
     </>
@@ -63,13 +64,13 @@ const SchoolCard: React.FC<{
   onFilter: () => void;
   onSimulate: () => void;
 }> = ({ id, label, count, active, onFilter, onSimulate }) => {
-  const layout = 'flex items-center gap-3 p-4 text-left md:flex-col md:items-start md:gap-4 md:p-5';
+  const layout = 'flex items-center gap-3 p-4 text-start md:flex-col md:items-start md:gap-4 md:p-5';
 
   // Pas (encore) d'annale : une carte calme, sans bouton qui ne mène nulle part.
   if (!count) {
     const status = count === 0 ? (
       <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-semibold text-gold-strong ring-1 ring-gold-line">
-        <Hourglass className="h-3.5 w-3.5" aria-hidden /> Bientôt<span className="sr-only"> : annales en préparation</span>
+        <Hourglass className="h-3.5 w-3.5" aria-hidden /> {t('Bientôt')}<span className="sr-only"> {t(': annales en préparation')}</span>
       </span>
     ) : null;
     return (
@@ -81,23 +82,23 @@ const SchoolCard: React.FC<{
 
   const status = (
     <span className="fd-nums inline-flex items-center rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12px] font-semibold text-ink-soft">
-      {count} annale{count > 1 ? 's' : ''}
+      {count > 1 ? t('{n} annales', { n: count }) : t('{n} annale', { n: count })}
     </span>
   );
   return (
     <li className={`flex flex-col overflow-hidden rounded-2xl border bg-white transition-[border-color,box-shadow] ${
       active ? 'border-ink' : 'border-line hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)]'}`}>
       <button type="button" onClick={onFilter} aria-pressed={active}
-        aria-label={active ? `Retirer le filtre ${label}` : `Voir les annales ${label}`}
+        aria-label={active ? t('Retirer le filtre {label}', { label }) : t('Voir les annales {label}', { label })}
         className={`${layout} flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40`}>
         <SchoolHead id={id} label={label} status={status} />
         <span className={`hidden items-center gap-1 text-[12.5px] font-semibold md:inline-flex ${active ? 'text-ink' : 'text-brand-hover'}`}>
-          {active ? <><Check className="h-3.5 w-3.5" /> Filtre actif</> : <>Voir les annales <ArrowRight className="h-3.5 w-3.5" /></>}
+          {active ? <><Check className="h-3.5 w-3.5" /> {t('Filtre actif')}</> : <>{t('Voir les annales')} <ArrowRight className="h-3.5 w-3.5" /></>}
         </span>
       </button>
       <button type="button" onClick={onSimulate} data-tour="concours-simulation"
         className="flex min-h-11 items-center justify-center gap-2 border-t border-line bg-[#fcfbf9] text-[13px] font-semibold text-ink-soft transition-colors hover:bg-[#f7f6f3] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40">
-        <Shuffle className="h-4 w-4" /> Lancer une simulation
+        <Shuffle className="h-4 w-4" /> {t('Lancer une simulation')}
       </button>
     </li>
   );
@@ -116,10 +117,10 @@ const ExamCard: React.FC<{ exam: ConcoursExamListItem }> = ({ exam: e }) => (
         <span className="mt-3 block text-[14.5px] font-semibold leading-snug text-ink line-clamp-2">{e.title}</span>
         {e.description && <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-faint line-clamp-2">{e.description}</span>}
         <span className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-[12px] text-ink-faint">
-          <span className="inline-flex items-center gap-1"><ListChecks className="h-3.5 w-3.5" aria-hidden /> {e.question_count} questions</span>
-          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" aria-hidden /> {e.duration_minutes} min</span>
-          <span className="ml-auto inline-flex items-center gap-1 font-semibold text-brand-hover group-hover:underline">
-            Réviser <ArrowRight className="h-3.5 w-3.5" />
+          <span className="inline-flex items-center gap-1"><ListChecks className="h-3.5 w-3.5" aria-hidden /> {t('{n} questions', { n: e.question_count })}</span>
+          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" aria-hidden /> {e.duration_minutes} {t('min')}</span>
+          <span className="ms-auto inline-flex items-center gap-1 font-semibold text-brand-hover group-hover:underline">
+            {t('Réviser')} <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </span>
       </span>
@@ -150,7 +151,7 @@ export default function ConcoursListPage() {
       .then((data) => {
         setExams(data);
         // Sans annale, les astuces (s'il y en a) valent une action dans l'état vide.
-        if (data.length === 0) listConcoursTips().then((t) => setHasTips(t.length > 0)).catch(() => undefined);
+        if (data.length === 0) listConcoursTips().then((tips) => setHasTips(tips.length > 0)).catch(() => undefined);
       })
       .catch((e) => { console.error('listConcoursExams failed', e); setFailed(true); });
   }, []);
@@ -188,7 +189,7 @@ export default function ConcoursListPage() {
       {label}
       <select value={value} onChange={(ev) => setFilter({ [key]: ev.target.value || null }, true)}
         className="fd-nums min-h-10 rounded-xl border border-line bg-white px-3 text-[13px] text-ink focus:border-ink-faint focus:outline-none">
-        <option value="">toutes</option>
+        <option value="">{t('toutes')}</option>
         {years.map((y) => <option key={y} value={y}>{y}</option>)}
       </select>
     </label>
@@ -197,37 +198,37 @@ export default function ConcoursListPage() {
   return (
     <Page>
       {/* Rien en ligne : page « arrivent bientôt », pas à indexer. */}
-      <SEO title="Concours - Fidni" description="Préparation aux concours d'entrée de l'ENSA, de l'ENSAM et de médecine." noindex={empty} />
+      <SEO title={t('Concours - Fidni')} description={t("Préparation aux concours d'entrée de l'ENSA, de l'ENSAM et de médecine.")} noindex={empty} />
       <ConcoursHeader />
 
       {failed && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Les annales n’ont pas pu se charger. Vérifie ta connexion.</p>
-          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Les annales n’ont pas pu se charger. Vérifie ta connexion.')}</p>
+          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
         </div>
       )}
 
       <div className="flex flex-col gap-10">
         {/* Aucune annale en ligne : le message d'abord (avec une vraie piste), les écoles ensuite. */}
         {empty && (
-          <EmptyState icon={Hourglass} tone="gold" title="Les annales arrivent bientôt"
-            text="On prépare les sujets de l’ENSA, de l’ENSAM et de médecine, avec leurs corrigés et des simulations chronométrées. En attendant, le Bac national est le meilleur entraînement."
+          <EmptyState icon={Hourglass} tone="gold" title={t('Les annales arrivent bientôt')}
+            text={t('On prépare les sujets de l’ENSA, de l’ENSAM et de médecine, avec leurs corrigés et des simulations chronométrées. En attendant, le Bac national est le meilleur entraînement.')}
             action={(
               <Link to="/exams/nationaux" className="fd-btn-primary min-h-11">
-                <Landmark className="h-4 w-4" /> Réviser le Bac national
+                <Landmark className="h-4 w-4" /> {t('Réviser le Bac national')}
               </Link>
             )}
             secondary={hasTips ? (
               <Link to="/concours/tips" className="fd-btn-ghost min-h-11">
-                <Lightbulb className="h-4 w-4" /> En attendant : les astuces
+                <Lightbulb className="h-4 w-4" /> {t('En attendant : les astuces')}
               </Link>
             ) : undefined} />
         )}
 
-        <Section id="ecoles" title="Les écoles">
+        <Section id="ecoles" title={t('Les écoles')}>
           <ul className="grid gap-3 md:grid-cols-3" data-tour="concours-types">
             {CONCOURS_TYPES.map((c) => (
-              <SchoolCard key={c.id} id={c.id} label={c.label}
+              <SchoolCard key={c.id} id={c.id} label={t(c.label)}
                 count={exams === null ? null : counts[c.id] ?? 0}
                 active={school === c.id}
                 onFilter={() => setFilter({ concours: school === c.id ? null : c.id })}
@@ -239,27 +240,27 @@ export default function ConcoursListPage() {
         {exams === null ? (
           !failed && <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
         ) : total === 0 ? null : (
-          <Section id="annales" title={school ? `Annales ${schoolLabel(school)}` : 'Annales'} count={shown.length}
-            hint="Ouvre un sujet pour le réviser question par question, avec la correction.">
+          <Section id="annales" title={school ? t('Annales {school}', { school: schoolLabel(school) }) : t('Annales')} count={shown.length}
+            hint={t('Ouvre un sujet pour le réviser question par question, avec la correction.')}>
             {(years.length > 1 || filtered) && (
               <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2" data-tour="concours-filtres">
                 {years.length > 1 || yearMin || yearMax ? (
                   <>
-                    {yearSelect('year_min', yearMin, 'Depuis')}
-                    {yearSelect('year_max', yearMax, 'Jusqu’à')}
+                    {yearSelect('year_min', yearMin, t('Depuis'))}
+                    {yearSelect('year_max', yearMax, t('Jusqu’à'))}
                   </>
                 ) : null}
                 {filtered && shown.length > 0 && (
                   <button type="button" onClick={clearAll} className="inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-ink-soft hover:text-ink">
-                    <X className="h-4 w-4" /> Effacer les filtres
+                    <X className="h-4 w-4" /> {t('Effacer les filtres')}
                   </button>
                 )}
               </div>
             )}
             {shown.length === 0 ? (
-              <EmptyState compact icon={SearchX} tone="ink" title="Aucune annale pour ce filtre"
-                text="Élargis les années ou choisis une autre école."
-                action={<button type="button" onClick={clearAll} className="fd-btn-ghost min-h-10">Effacer les filtres</button>} />
+              <EmptyState compact icon={SearchX} tone="ink" title={t('Aucune annale pour ce filtre')}
+                text={t('Élargis les années ou choisis une autre école.')}
+                action={<button type="button" onClick={clearAll} className="fd-btn-ghost min-h-10">{t('Effacer les filtres')}</button>} />
             ) : (
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="concours-annales">
                 {shown.map((e) => <ExamCard key={e.id} exam={e} />)}
@@ -315,7 +316,7 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
       onStarted(r.session_id);
     } catch (e: unknown) {
       const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setErr(typeof detail === 'string' ? detail : 'Impossible de lancer la simulation.');
+      setErr(typeof detail === 'string' ? detail : t('Impossible de lancer la simulation.'));
     } finally { setBusy(false); }
   };
 
@@ -329,28 +330,28 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
             <SchoolIcon className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 id="simulation-titre" className="fd-display text-[20px] leading-tight text-ink">Lancer une simulation</h3>
-            <p className="text-[12.5px] text-ink-faint">{schoolLabel(concoursType)} · chronométrée, corrigés masqués pendant l’épreuve</p>
+            <h3 id="simulation-titre" className="fd-display text-[20px] leading-tight text-ink">{t('Lancer une simulation')}</h3>
+            <p className="text-[12.5px] text-ink-faint">{t('{school} · chronométrée, corrigés masqués pendant l’épreuve', { school: schoolLabel(concoursType) })}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fermer"
+          <button type="button" onClick={onClose} aria-label={t('Fermer')}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div role="radiogroup" aria-label="Type de simulation" className="flex flex-col gap-2">
+        <div role="radiogroup" aria-label={t('Type de simulation')} className="flex flex-col gap-2">
           {MODES.map(({ id, icon: I, label, desc }) => {
             const on = mode === id;
             return (
               <button key={id} type="button" role="radio" aria-checked={on} onClick={() => setMode(id)}
-                className={`flex min-h-14 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                className={`flex min-h-14 items-center gap-3 rounded-xl border px-4 py-3 text-start transition-colors ${
                   on ? 'border-brand bg-brand-soft ring-1 ring-brand-line' : 'border-line bg-white hover:border-[#cfc9bf]'}`}>
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-faint'}`} aria-hidden>
                   <I className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13.5px] font-semibold text-ink">{label}</span>
-                  <span className="mt-0.5 block text-[12px] text-ink-faint">{desc}</span>
+                  <span className="block text-[13.5px] font-semibold text-ink">{t(label)}</span>
+                  <span className="mt-0.5 block text-[12px] text-ink-faint">{t(desc)}</span>
                 </span>
                 {on && <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden />}
               </button>
@@ -361,15 +362,15 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
         {mode === 'random_mix' && (
           <div className="mt-4 rounded-xl bg-[#fcfbf9] px-4 py-3.5 ring-1 ring-line">
             <div className="mb-2 flex items-center justify-between">
-              <label htmlFor="simulation-n" className="text-[12.5px] font-semibold text-ink-soft">Nombre de questions</label>
+              <label htmlFor="simulation-n" className="text-[12.5px] font-semibold text-ink-soft">{t('Nombre de questions')}</label>
               <span className="fd-nums text-[14px] font-bold text-ink">{nQuestions}</span>
             </div>
             <input id="simulation-n" type="range" min={5} max={200} step={5} value={nQuestions}
               onChange={(e) => setNQuestions(Number(e.target.value))} className="w-full accent-[#1a7a4a]" />
             <div className="mt-1 flex items-center justify-between text-[11px] text-ink-faint">
-              <span>5 q</span>
-              <span>~{Math.round(nQuestions * 1.5)} min estimées</span>
-              <span>200 q</span>
+              <span>{t('{n} q', { n: 5 })}</span>
+              <span>{t('~{n} min estimées', { n: Math.round(nQuestions * 1.5) })}</span>
+              <span>{t('{n} q', { n: 200 })}</span>
             </div>
           </div>
         )}
@@ -377,10 +378,10 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
         {err && <p role="alert" className="mt-3 text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
 
         <div className="mt-6 flex gap-2">
-          <button type="button" className="fd-btn-ghost min-h-11 flex-1 justify-center" onClick={onClose}>Annuler</button>
+          <button type="button" className="fd-btn-ghost min-h-11 flex-1 justify-center" onClick={onClose}>{t('Annuler')}</button>
           <button type="button" className="fd-btn-primary min-h-11 flex-1 justify-center disabled:opacity-60" onClick={start} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
-            Lancer
+            {t('Lancer')}
           </button>
         </div>
       </div>

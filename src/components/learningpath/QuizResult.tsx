@@ -10,6 +10,7 @@ import {
   QuizResult as QuizResultType 
 } from '@/types/index';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface QuizResultProps {
   result: QuizResultType;
@@ -46,18 +47,18 @@ export const QuizResult: React.FC<QuizResultProps> = ({
   const getScoreMessage = () => {
     if (!isPassed) {
       return scorePercentage >= 50
-        ? 'Presque ! Revois les vidéos du chapitre et retente le quiz.'
-        : 'Revois les vidéos du chapitre, puis retente le quiz.';
+        ? t('Presque ! Revois les vidéos du chapitre et retente le quiz.')
+        : t('Revois les vidéos du chapitre, puis retente le quiz.');
     }
-    if (scorePercentage === 100) return 'Sans faute, bravo !';
-    if (scorePercentage >= 85) return 'Très bien, tu maîtrises ce chapitre.';
-    return 'Quiz réussi, beau travail.';
+    if (scorePercentage === 100) return t('Sans faute, bravo !');
+    if (scorePercentage >= 85) return t('Très bien, tu maîtrises ce chapitre.');
+    return t('Quiz réussi, beau travail.');
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+    return t('{m}m {s}s', { m: mins, s: secs });
   };
 
   return (
@@ -70,7 +71,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mb-6"
           >
-            Retour au parcours
+            {t('Retour au parcours')}
           </Button>
 
           {/* Result Summary Card */}
@@ -90,11 +91,11 @@ export const QuizResult: React.FC<QuizResultProps> = ({
               </div>
               
               <h1 className="text-3xl font-bold text-white mb-2">
-                {isPassed ? 'Quiz réussi !' : 'Pas encore'}
+                {isPassed ? t('Quiz réussi !') : t('Pas encore')}
               </h1>
               
               <p className="text-xl text-white/90 mb-6">
-                {isPassed ? 'Tu as atteint le seuil de réussite.' : 'Pas tout à fait cette fois'}
+                {isPassed ? t('Tu as atteint le seuil de réussite.') : t('Pas tout à fait cette fois')}
               </p>
               
               <div className={cn(
@@ -116,28 +117,28 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                 <div className="text-2xl font-bold text-gray-900">
                   {result.correct_answers}/{result.total_questions}
                 </div>
-                <div className="text-sm text-gray-600">Bonnes réponses</div>
+                <div className="text-sm text-gray-600">{t('Bonnes réponses')}</div>
               </div>
               <div className="p-4 text-center">
                 <div className="text-2xl font-bold text-gray-900">
                   {quiz.passing_score}%
                 </div>
-                <div className="text-sm text-gray-600">Seuil de réussite</div>
+                <div className="text-sm text-gray-600">{t('Seuil de réussite')}</div>
               </div>
               <div className="p-4 text-center">
                 <div className="text-2xl font-bold text-gray-900">
                   {formatTime(result.time_spent_seconds)}
                 </div>
-                <div className="text-sm text-gray-600">Temps</div>
+                <div className="text-sm text-gray-600">{t('Temps')}</div>
               </div>
               <div className="p-4 text-center">
                 <div className={cn(
                   "text-2xl font-bold",
                   isPassed ? "text-green-600" : "text-red-600"
                 )}>
-                  {isPassed ? 'RÉUSSI' : 'À RETENTER'}
+                  {isPassed ? t('RÉUSSI') : t('À RETENTER')}
                 </div>
-                <div className="text-sm text-gray-600">Résultat</div>
+                <div className="text-sm text-gray-600">{t('Résultat')}</div>
               </div>
             </div>
           </div>
@@ -150,8 +151,8 @@ export const QuizResult: React.FC<QuizResultProps> = ({
               onClick={onRetry}
               className="min-w-[200px]"
             >
-              <RotateCcw className="w-5 h-5 mr-2" />
-              Retenter le quiz
+              <RotateCcw className="w-5 h-5 me-2" />
+              {t('Retenter le quiz')}
             </Button>
             {isPassed && (
               <Button
@@ -159,8 +160,8 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                 onClick={onContinue}
                 className="min-w-[200px] bg-indigo-600 hover:bg-indigo-700"
               >
-                Continuer
-                <ChevronRight className="w-5 h-5 ml-2" />
+                {t('Continuer')}
+                <ChevronRight className="w-5 h-5 ms-2" />
               </Button>
             )}
           </div>
@@ -168,7 +169,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
           {/* Review Section */}
           {result.results && (
             <div className="space-y-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Revoir tes réponses</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('Revoir tes réponses')}</h2>
               
               {questions.map((question, index) => {
                 const questionResult = result.results?.find(r => r.question_id === question.id);
@@ -182,7 +183,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                         <XCircle className="w-6 h-6 text-red-600" />
                       )}
                       <h3 className="text-lg font-medium">
-                        Question {index + 1}: {questionResult?.is_correct ? 'Juste' : 'Faux'}
+                        {t('Question {n}: {verdict}', { n: index + 1, verdict: questionResult?.is_correct ? t('Juste') : t('Faux') })}
                       </h3>
                     </div>
                     

@@ -22,6 +22,7 @@ import {
   classroomError,
   type Classroom,
 } from '@/lib/api/classroomApi';
+import { t } from '@/i18n';
 
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
 
@@ -56,28 +57,28 @@ export function ClassroomsPage() {
   const joined = (c: Classroom) => { setShowJoin(false); navigate(`/classrooms/${c.id}`); };
 
   const remove = async (c: Classroom) => {
-    if (!window.confirm(`Supprimer la classe « ${c.name} » ? Ses TD et la liste de ses élèves seront perdus.`)) return;
+    if (!window.confirm(t('Supprimer la classe « {name} » ? Ses TD et la liste de ses élèves seront perdus.', { name: c.name }))) return;
     setBusyId(c.id);
     try { await deleteClassroom(c.id); setError(''); await refresh(); }
-    catch (e) { setError(classroomError(e, 'Impossible de supprimer la classe.')); }
+    catch (e) { setError(classroomError(e, t('Impossible de supprimer la classe.'))); }
     finally { setBusyId(null); }
   };
 
   const leave = async (c: Classroom) => {
-    if (!window.confirm(`Quitter la classe « ${c.name} » ?`)) return;
+    if (!window.confirm(t('Quitter la classe « {name} » ?', { name: c.name }))) return;
     setBusyId(c.id);
     try { await leaveClassroom(c.id); setError(''); await refresh(); }
-    catch (e) { setError(classroomError(e, 'Impossible de quitter la classe.')); }
+    catch (e) { setError(classroomError(e, t('Impossible de quitter la classe.'))); }
     finally { setBusyId(null); }
   };
 
   const header = (actions?: React.ReactNode) => (
     <PageHeader
-      eyebrow="Classes"
-      title="Mes classes"
+      eyebrow={t('Classes')}
+      title={t('Mes classes')}
       subtitle={isTeacher
-        ? 'Crée une classe, donne son code à tes élèves et suis leur travail.'
-        : 'Rejoins la classe de ton prof avec son code : tu y retrouves les TD qu’il te donne.'}
+        ? t('Crée une classe, donne son code à tes élèves et suis leur travail.')
+        : t('Rejoins la classe de ton prof avec son code : tu y retrouves les TD qu’il te donne.')}
       actions={actions}
     />
   );
@@ -85,13 +86,13 @@ export function ClassroomsPage() {
   if (!user) {
     return (
       <Page>
-        <SEO title="Mes classes - Fidni" description="Rejoindre la classe de son prof avec un code." noindex />
+        <SEO title={t('Mes classes - Fidni')} description={t('Rejoindre la classe de son prof avec un code.')} noindex />
         {authLoading ? <CardsSkeleton n={2} /> : (
           <>
             {header()}
-            <EmptyState icon={GraduationCap} title="Connecte-toi pour voir tes classes"
-              text="Ton prof te donne un code de classe : une fois connecté, tu l’entres ici pour rejoindre sa classe."
-              action={<Link to="/login" className="fd-btn-primary min-h-11"><LogIn className="h-4 w-4" /> Me connecter</Link>} />
+            <EmptyState icon={GraduationCap} title={t('Connecte-toi pour voir tes classes')}
+              text={t('Ton prof te donne un code de classe : une fois connecté, tu l’entres ici pour rejoindre sa classe.')}
+              action={<Link to="/login" className="fd-btn-primary min-h-11"><LogIn className="h-4 w-4" /> {t('Me connecter')}</Link>} />
           </>
         )}
       </Page>
@@ -105,28 +106,28 @@ export function ClassroomsPage() {
   const teacherActions = (
     <div className="flex flex-wrap items-center gap-2" data-tour="classes-actions">
       <button type="button" className="fd-btn-primary min-h-10" onClick={() => setShowCreate(true)}>
-        <Plus className="h-4 w-4" /> Créer une classe
+        <Plus className="h-4 w-4" /> {t('Créer une classe')}
       </button>
       <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setShowJoin(true)}>
-        <KeyRound className="h-4 w-4" /> J’ai un code
+        <KeyRound className="h-4 w-4" /> {t('J’ai un code')}
       </button>
     </div>
   );
 
   return (
     <Page>
-      <SEO title="Mes classes - Fidni" description="Mes classes : rejoindre la classe de son prof, ou créer la sienne." />
+      <SEO title={t('Mes classes - Fidni')} description={t('Mes classes : rejoindre la classe de son prof, ou créer la sienne.')} />
       {header(isTeacher && classrooms !== null && (!none || failed) ? teacherActions : undefined)}
 
       {(failed || error) && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
           <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">
-            {error || 'Tes classes n’ont pas pu se charger. Vérifie ta connexion.'}
+            {error || t('Tes classes n’ont pas pu se charger. Vérifie ta connexion.')}
           </p>
           {failed ? (
-            <button type="button" onClick={refresh} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+            <button type="button" onClick={refresh} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
           ) : (
-            <button type="button" onClick={() => setError('')} aria-label="Fermer le message"
+            <button type="button" onClick={() => setError('')} aria-label={t('Fermer le message')}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#a23b34] hover:bg-white/60">
               <X className="h-4 w-4" />
             </button>
@@ -138,26 +139,26 @@ export function ClassroomsPage() {
         <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
       ) : none && !failed ? (
         isTeacher ? (
-          <EmptyState icon={GraduationCap} title="Crée ta première classe"
-            text="Une classe regroupe tes élèves : tu leur donnes des TD et tu suis leur travail. Ils la rejoignent avec un code que tu leur envoies."
+          <EmptyState icon={GraduationCap} title={t('Crée ta première classe')}
+            text={t('Une classe regroupe tes élèves : tu leur donnes des TD et tu suis leur travail. Ils la rejoignent avec un code que tu leur envoies.')}
             action={(
               <div className="flex flex-wrap items-center justify-center gap-2" data-tour="classes-actions">
                 <button type="button" className="fd-btn-primary min-h-11" onClick={() => setShowCreate(true)}>
-                  <Plus className="h-4 w-4" /> Créer une classe
+                  <Plus className="h-4 w-4" /> {t('Créer une classe')}
                 </button>
                 <button type="button" className="fd-btn-ghost min-h-11" onClick={() => setShowJoin(true)}>
-                  <KeyRound className="h-4 w-4" /> J’ai un code
+                  <KeyRound className="h-4 w-4" /> {t('J’ai un code')}
                 </button>
               </div>
             )} />
         ) : (
-          <EmptyState icon={KeyRound} title="Ton prof te donne un code de classe"
-            text="Entre-le ici pour rejoindre sa classe : tu y retrouveras les TD qu’il te donne et ton avancement."
+          <EmptyState icon={KeyRound} title={t('Ton prof te donne un code de classe')}
+            text={t('Entre-le ici pour rejoindre sa classe : tu y retrouveras les TD qu’il te donne et ton avancement.')}
             action={(
               <div className="flex w-full max-w-sm flex-col items-center gap-4" data-tour="classes-actions">
                 <JoinForm onJoined={joined} />
                 <Link to="/reviser" className="inline-flex min-h-10 items-center gap-1 text-[13px] font-medium text-ink-faint hover:text-ink">
-                  Pas encore de code ? Révise seul en attendant <ArrowRight className="h-3.5 w-3.5" />
+                  {t('Pas encore de code ? Révise seul en attendant')} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             )} />
@@ -165,15 +166,15 @@ export function ClassroomsPage() {
       ) : isTeacher ? (
         <div className="flex flex-col gap-10">
           {owned.length > 0 && (
-            <Section id="classes-gerees" title="Classes que je gère" count={owned.length}
-              hint="Envoie le code d’une classe à tes élèves : ils l’entrent dans « Mes classes » pour la rejoindre.">
+            <Section id="classes-gerees" title={t('Classes que je gère')} count={owned.length}
+              hint={t('Envoie le code d’une classe à tes élèves : ils l’entrent dans « Mes classes » pour la rejoindre.')}>
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="classes-liste">
                 {owned.map((c) => <OwnedCard key={c.id} classroom={c} busy={busyId === c.id} onDelete={() => remove(c)} />)}
               </ul>
             </Section>
           )}
           {member.length > 0 && (
-            <Section id="classes-suivies" title="Classes que je suis" count={member.length}>
+            <Section id="classes-suivies" title={t('Classes que je suis')} count={member.length}>
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour={owned.length ? undefined : 'classes-liste'}>
                 {member.map((c) => <MemberCard key={c.id} classroom={c} busy={busyId === c.id} onLeave={() => leave(c)} />)}
               </ul>
@@ -184,7 +185,7 @@ export function ClassroomsPage() {
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-tour="classes-liste">
           {member.map((c) => <MemberCard key={c.id} classroom={c} busy={busyId === c.id} onLeave={() => leave(c)} />)}
           <li className="flex flex-col justify-center gap-3 rounded-2xl border border-dashed border-[#d8d4cc] p-4 sm:p-5" data-tour="classes-actions">
-            <p className="text-[13.5px] font-semibold text-ink-soft">Un autre code ?</p>
+            <p className="text-[13.5px] font-semibold text-ink-soft">{t('Un autre code ?')}</p>
             <JoinForm onJoined={joined} compact />
           </li>
         </ul>
@@ -202,8 +203,8 @@ export function ClassroomsPage() {
       )}
 
       {showJoin && (
-        <ModalShell title="Rejoindre une classe" onClose={() => setShowJoin(false)}>
-          <p className="mb-4 text-[13px] leading-relaxed text-ink-faint">Entre le code que t’a donné le prof de la classe.</p>
+        <ModalShell title={t('Rejoindre une classe')} onClose={() => setShowJoin(false)}>
+          <p className="mb-4 text-[13px] leading-relaxed text-ink-faint">{t('Entre le code que t’a donné le prof de la classe.')}</p>
           <JoinForm onJoined={joined} autoFocus />
         </ModalShell>
       )}
@@ -232,7 +233,7 @@ function JoinForm({ onJoined, compact = false, autoFocus = false }: {
       const c = await joinClassroom(code.trim());
       onJoined(c);
     } catch (e) {
-      setErr(classroomError(e, 'Ce code ne correspond à aucune classe. Vérifie-le avec ton prof.'));
+      setErr(classroomError(e, t('Ce code ne correspond à aucune classe. Vérifie-le avec ton prof.')));
     } finally {
       setBusy(false);
     }
@@ -241,7 +242,7 @@ function JoinForm({ onJoined, compact = false, autoFocus = false }: {
   return (
     <form onSubmit={submit} className="w-full" noValidate>
       <div className={`flex gap-2 ${compact ? '' : 'flex-col sm:flex-row'}`}>
-        <label htmlFor={`${id}-code`} className="sr-only">Code de la classe</label>
+        <label htmlFor={`${id}-code`} className="sr-only">{t('Code de la classe')}</label>
         <input
           id={`${id}-code`}
           value={code}
@@ -251,18 +252,18 @@ function JoinForm({ onJoined, compact = false, autoFocus = false }: {
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          placeholder={compact ? 'Le code' : 'Code de la classe'}
+          placeholder={compact ? t('Le code') : t('Code de la classe')}
           aria-invalid={!!err}
           aria-describedby={err ? `${id}-err` : undefined}
           className={`min-h-11 w-full min-w-0 flex-1 rounded-xl border bg-white px-4 font-mono text-[16px] font-bold uppercase tracking-[.14em] text-ink placeholder:font-sans placeholder:text-[14px] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
-            err ? 'border-[#e3b7b1]' : 'border-line focus:border-ink-faint'} ${compact ? '' : 'text-center sm:text-left'}`}
+            err ? 'border-[#e3b7b1]' : 'border-line focus:border-ink-faint'} ${compact ? '' : 'text-center sm:text-start'}`}
         />
         <button type="submit" disabled={busy || !code.trim()} className="fd-btn-primary min-h-11 shrink-0 justify-center disabled:cursor-not-allowed disabled:opacity-60">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-          Rejoindre
+          {t('Rejoindre')}
         </button>
       </div>
-      {err && <p id={`${id}-err`} role="alert" className="mt-2 text-left text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
+      {err && <p id={`${id}-err`} role="alert" className="mt-2 text-start text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
     </form>
   );
 }
@@ -281,12 +282,12 @@ function CopyCode({ code }: { code: string }) {
   };
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">Code</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t('Code')}</span>
       <span className="fd-nums truncate font-mono text-[15px] font-bold tracking-[.12em] text-ink">{code}</span>
-      <button type="button" onClick={copy} aria-label={copied ? 'Code copié' : `Copier le code ${code}`}
+      <button type="button" onClick={copy} aria-label={copied ? t('Code copié') : t('Copier le code {code}', { code })}
         className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-        <span aria-live="polite">{copied ? 'Copié' : 'Copier'}</span>
+        <span aria-live="polite">{copied ? t('Copié') : t('Copier')}</span>
       </button>
     </span>
   );
@@ -306,23 +307,23 @@ function OwnedCard({ classroom: c, busy, onDelete }: { classroom: Classroom; bus
         {c.class_level_name && <span className="mt-0.5 block text-[12.5px] text-ink-faint">{c.class_level_name}</span>}
         <span className="mt-4 flex items-baseline gap-1.5 text-[13px] text-ink-faint">
           <b className="fd-nums text-[26px] font-bold leading-none text-ink">{n}</b>
-          {plural(n, 'élève', 'élèves')}
-          {subjects > 0 && <> · {subjects} {plural(subjects, 'matière', 'matières')}</>}
+          {plural(n, t('élève'), t('élèves'))}
+          {subjects > 0 && <> · {subjects} {plural(subjects, t('matière'), t('matières'))}</>}
         </span>
         {n === 0 ? (
           <span className="mt-2.5 inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-medium text-gold-strong">
-            Envoie le code pour qu’ils te rejoignent
+            {t('Envoie le code pour qu’ils te rejoignent')}
           </span>
         ) : (
           <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover group-hover:underline">
-            Voir la classe <ArrowRight className="h-3.5 w-3.5" />
+            {t('Voir la classe')} <ArrowRight className="h-3.5 w-3.5" />
           </span>
         )}
       </Link>
       <div className="flex items-center gap-2 border-t border-dashed border-line px-4 py-1.5 sm:px-5">
         <CopyCode code={c.join_code} />
-        <button type="button" onClick={onDelete} disabled={busy} aria-label={`Supprimer la classe ${c.name}`} title="Supprimer la classe"
-          className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34]">
+        <button type="button" onClick={onDelete} disabled={busy} aria-label={t('Supprimer la classe {name}', { name: c.name })} title={t('Supprimer la classe')}
+          className="ms-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34]">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
         </button>
       </div>
@@ -334,7 +335,7 @@ function OwnedCard({ classroom: c, busy, onDelete }: { classroom: Classroom; bus
 function MemberCard({ classroom: c, busy, onLeave }: { classroom: Classroom; busy: boolean; onLeave: () => void }) {
   return (
     <li className={`relative ${cardCls}`}>
-      <Link to={`/classrooms/${c.id}`} className={`group flex h-full flex-col rounded-2xl p-4 pr-14 sm:p-5 sm:pr-14 ${linkFocus}`}>
+      <Link to={`/classrooms/${c.id}`} className={`group flex h-full flex-col rounded-2xl p-4 pe-14 sm:p-5 sm:pe-14 ${linkFocus}`}>
         <span className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
             <GraduationCap className="h-5 w-5" />
@@ -345,15 +346,15 @@ function MemberCard({ classroom: c, busy, onLeave }: { classroom: Classroom; bus
           </span>
         </span>
         <span className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-ink-faint">
-          <span>Prof : <b className="font-semibold text-ink-soft">{c.owner.username}</b></span>
-          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden /><span className="fd-nums">{c.student_count}</span> {plural(c.student_count, 'élève', 'élèves')}</span>
+          <span>{t('Prof :')} <b className="font-semibold text-ink-soft">{c.owner.username}</b></span>
+          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden /><span className="fd-nums">{c.student_count}</span> {plural(c.student_count, t('élève'), t('élèves'))}</span>
         </span>
         <span className="mt-auto inline-flex items-center gap-1 pt-4 text-[13px] font-semibold text-brand-hover group-hover:underline">
-          Voir mes TD <ArrowRight className="h-3.5 w-3.5" />
+          {t('Voir mes TD')} <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </Link>
-      <button type="button" onClick={onLeave} disabled={busy} aria-label={`Quitter la classe ${c.name}`} title="Quitter la classe"
-        className="absolute right-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34]">
+      <button type="button" onClick={onLeave} disabled={busy} aria-label={t('Quitter la classe {name}', { name: c.name })} title={t('Quitter la classe')}
+        className="absolute end-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34]">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
       </button>
     </li>
@@ -375,7 +376,7 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
       <div className="fd-card animate-fade-up max-h-[88vh] w-full max-w-[480px] overflow-y-auto p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="fd-display text-[20px] leading-tight text-ink">{title}</h3>
-          <button type="button" onClick={onClose} aria-label="Fermer"
+          <button type="button" onClick={onClose} aria-label={t('Fermer')}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
             <X className="h-5 w-5" />
           </button>
@@ -402,32 +403,32 @@ function CreateClassroomModal({ onClose, onCreated }: { onClose: () => void; onC
       const c = await createClassroom({ name: name.trim(), description: description.trim() });
       onCreated(c);
     } catch (e) {
-      setErr(classroomError(e, 'Erreur lors de la création.'));
+      setErr(classroomError(e, t('Erreur lors de la création.')));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <ModalShell title="Nouvelle classe" onClose={onClose}>
+    <ModalShell title={t('Nouvelle classe')} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-semibold text-ink-soft">Nom de la classe</span>
+          <span className="text-[12.5px] font-semibold text-ink-soft">{t('Nom de la classe')}</span>
           <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus
-            placeholder="Ex. 2ème Bac SM A" className={`${fieldCls} min-h-11`} />
+            placeholder={t('Ex. 2ème Bac SM A')} className={`${fieldCls} min-h-11`} />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-semibold text-ink-soft">Description <span className="font-normal text-ink-faint">(facultatif)</span></span>
+          <span className="text-[12.5px] font-semibold text-ink-soft">{t('Description')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span></span>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-            placeholder="Ex. Groupe de mathématiques, lycée Ibn Sina" className={`${fieldCls} min-h-[76px] resize-y`} />
+            placeholder={t('Ex. Groupe de mathématiques, lycée Ibn Sina')} className={`${fieldCls} min-h-[76px] resize-y`} />
         </label>
-        <p className="text-[12.5px] leading-relaxed text-ink-faint">Un code est créé avec la classe : envoie-le à tes élèves pour qu’ils la rejoignent.</p>
+        <p className="text-[12.5px] leading-relaxed text-ink-faint">{t('Un code est créé avec la classe : envoie-le à tes élèves pour qu’ils la rejoignent.')}</p>
         {err && <p role="alert" className="text-[12.5px] font-medium text-[#a23b34]">{err}</p>}
         <div className="mt-1 flex justify-end gap-2">
-          <button type="button" className="fd-btn-ghost min-h-11" onClick={onClose}>Annuler</button>
+          <button type="button" className="fd-btn-ghost min-h-11" onClick={onClose}>{t('Annuler')}</button>
           <button type="submit" className="fd-btn-primary min-h-11 disabled:opacity-60" disabled={busy || !name.trim()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Créer la classe
+            {t('Créer la classe')}
           </button>
         </div>
       </form>

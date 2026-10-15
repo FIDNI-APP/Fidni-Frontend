@@ -6,14 +6,15 @@
  */
 import React, { useState } from 'react';
 import { niceTicks, parseDay } from '@/pages/progression/format';
+import { t, dateLocale } from '@/i18n';
 
 export interface BarSerie { key: string; label: string; color: string }
 export type BarRow = { date: string; [cle: string]: string | number };
 
 const label = (iso: string, pas: 'jour' | 'semaine', long = false) => {
   const d = parseDay(iso);
-  if (pas === 'semaine') return `semaine du ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
-  return d.toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long' } : { day: 'numeric', month: 'short' });
+  if (pas === 'semaine') return t('semaine du {date}', { date: d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }) });
+  return d.toLocaleDateString(dateLocale(), long ? { weekday: 'long', day: 'numeric', month: 'long' } : { day: 'numeric', month: 'short' });
 };
 
 export const DayBars: React.FC<{
@@ -45,33 +46,33 @@ export const DayBars: React.FC<{
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0" aria-live="polite">
-          <p className="text-[12.5px] text-ink-faint">{shown ? label(shown.date, pas, true) : 'Sur la période'}</p>
+          <p className="text-[12.5px] text-ink-faint">{shown ? label(shown.date, pas, true) : t('Sur la période')}</p>
           <p className="fd-nums mt-0.5 text-[18px] font-bold leading-tight text-ink sm:text-[20px]">{shown ? describe(shown) : headline}</p>
         </div>
         {series.length > 1 && (
-          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-soft" aria-label="Légende">
+          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-soft" aria-label={t('Légende')}>
             {series.map((s) => (
               <li key={s.key} className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} aria-hidden /> {s.label}
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} aria-hidden /> {t(s.label)}
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <div className="relative" style={{ height }}>
+      <div className="relative fd-ltr" style={{ height }}>
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           {scale.map((t) => (
-            <div key={t} className="absolute left-0 right-0 h-0" style={{ bottom: `${(t / top) * 100}%` }}>
-              <span className="fd-nums absolute left-0 top-0 w-9 -translate-y-1/2 pr-1.5 text-right text-[10.5px] leading-none text-ink-faint">{tick(t)}</span>
-              <span className={`absolute left-10 right-0 top-0 border-t ${t === 0 ? 'border-[#e7e3dc]' : 'border-[#f2f1ee]'}`} />
+            <div key={t} className="absolute start-0 end-0 h-0" style={{ bottom: `${(t / top) * 100}%` }}>
+              <span className="fd-nums absolute start-0 top-0 w-9 -translate-y-1/2 pe-1.5 text-end text-[10.5px] leading-none text-ink-faint">{tick(t)}</span>
+              <span className={`absolute start-10 end-0 top-0 border-t ${t === 0 ? 'border-[#e7e3dc]' : 'border-[#f2f1ee]'}`} />
             </div>
           ))}
         </div>
         {empty && emptyText && (
           <p className="absolute inset-x-10 top-1/2 -translate-y-1/2 text-center text-[13px] text-ink-faint">{emptyText}</p>
         )}
-        <div className={`absolute inset-y-0 left-10 right-0 flex items-end ${rows.length > 45 ? 'gap-px' : 'gap-[3px]'}`}
+        <div className={`absolute inset-y-0 start-10 end-0 flex items-end ${rows.length > 45 ? 'gap-px' : 'gap-[3px]'}`}
           onMouseLeave={() => setHover(null)}>
           {rows.map((r, i) => {
             const on = hover === i || selected === r.date;
@@ -96,10 +97,10 @@ export const DayBars: React.FC<{
           })}
         </div>
       </div>
-      <div className="mt-2 flex justify-between pl-10 text-[11px] text-ink-faint">
+      <div className="fd-ltr mt-2 flex justify-between ps-10 text-[11px] text-ink-faint">
         <span>{rows[0] ? label(rows[0].date, 'jour') : ''}</span>
         {mid && <span className="hidden sm:inline">{label(mid.date, 'jour')}</span>}
-        <span>{pas === 'semaine' ? 'cette semaine' : 'aujourd’hui'}</span>
+        <span>{pas === 'semaine' ? t('cette semaine') : t('aujourd’hui')}</span>
       </div>
     </div>
   );

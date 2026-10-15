@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { SEO } from '@/components/layout/SEO';
 import { trackAction } from '@/lib/usage';
+import { t } from '@/i18n';
 
 type Tab = 'all' | 'exercise' | 'lesson' | 'exam';
 type Kind = Exclude<Tab, 'all'>;
@@ -90,14 +91,14 @@ export function Search() {
     if (levelSlug) {
       getHub('exercises', levelSlug)
         .then((hub) => done({
-          title: `Les chapitres du ${hub.level.name}`,
+          title: t('Les chapitres du {level}', { level: hub.level.name }),
           items: hub.chapters.filter((c) => c.count > 0).map((c) => ({ label: c.name, url: c.url, count: c.count })),
         }))
         .catch(() => done(null));
     } else {
       getClassLevels('exercise')
         .then((levels) => done({
-          title: 'Parcourir les exercices par niveau',
+          title: t('Parcourir les exercices par niveau'),
           items: levels.filter((l) => l.content_count !== 0).map((l) => ({
             label: l.name,
             url: hubPath('exercises', (l as { slug?: string }).slug || slugify(l.name)),
@@ -171,10 +172,10 @@ export function Search() {
     { id: 'exam',     label: 'Examens',   count: exams.length,     icon: APlusIcon },
   ];
 
-  const scope = levelId && myLevel ? ` en ${myLevel.name}` : '';
+  const scope = levelId && myLevel ? ` ${t('en {level}', { level: myLevel.name })}` : '';
 
   const suggestionBlock = suggestions && suggestions.items.length > 0 && (
-    <div className="mt-6 text-left">
+    <div className="mt-6 text-start">
       <p className="text-[12.5px] font-semibold text-ink-soft mb-2">{suggestions.title}</p>
       <div className="flex flex-wrap gap-2">
         {suggestions.items.map((s) => (
@@ -206,13 +207,13 @@ export function Search() {
               fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
             }}
           >
-            <SearchIcon className="w-3 h-3" /> RECHERCHE
+            <SearchIcon className="w-3 h-3" /> {t('RECHERCHE')}
           </span>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
-            Recherche
+            {t('Recherche')}
           </h1>
           <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
-            Trouve un exercice, une leçon ou un examen. Pas besoin des accents : « derivee » trouve « dérivée ».
+            {t('Trouve un exercice, une leçon ou un examen. Pas besoin des accents : « derivee » trouve « dérivée ».')}
           </p>
         </div>
 
@@ -222,14 +223,14 @@ export function Search() {
           data-tour="recherche-barre"
           role="search"
           className="fd-card flex items-center mb-4"
-          style={{ padding: 6, paddingLeft: 14, gap: 8 }}
+          style={{ padding: 6, paddingInlineStart: 14, gap: 8 }}
         >
           <SearchIcon className="w-4 h-4 shrink-0" style={{ color: '#6b6862' }} />
           <input
             type="search"
             enterKeyHint="search"
-            aria-label="Rechercher"
-            placeholder="Un exercice, une leçon, un théorème…"
+            aria-label={t('Rechercher')}
+            placeholder={t('Un exercice, une leçon, un théorème…')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus={!submitted}
@@ -244,27 +245,27 @@ export function Search() {
             <button
               type="button"
               onClick={clearSearch}
-              aria-label="Effacer"
+              aria-label={t('Effacer')}
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee]"
             >
               <X className="w-4 h-4" />
             </button>
           )}
           <button type="submit" className="fd-btn-primary shrink-0" style={{ padding: '9px 16px', minHeight: 40 }}>
-            Rechercher
+            {t('Rechercher')}
           </button>
         </form>
 
         {/* Niveau : celui du profil par défaut, ou tous. */}
         {myLevel && (
-          <div role="radiogroup" aria-label="Niveau" className="flex flex-wrap items-center gap-2 mb-5">
+          <div role="radiogroup" aria-label={t('Niveau')} className="flex flex-wrap items-center gap-2 mb-5">
             <button type="button" role="radio" aria-checked={!allLevels} onClick={() => setLevelScope(false)}
               className={`fd-pill ${!allLevels ? 'is-active' : ''}`} style={{ padding: '8px 14px', fontSize: 12.5, minHeight: 38 }}>
               {myLevel.name}
             </button>
             <button type="button" role="radio" aria-checked={allLevels} onClick={() => setLevelScope(true)}
               className={`fd-pill ${allLevels ? 'is-active' : ''}`} style={{ padding: '8px 14px', fontSize: 12.5, minHeight: 38 }}>
-              Tous les niveaux
+              {t('Tous les niveaux')}
             </button>
           </div>
         )}
@@ -274,23 +275,23 @@ export function Search() {
             {/* Tabs as filter pills */}
             {!loading && !error && totalResults > 0 && (
               <div className="flex items-center gap-2 flex-wrap mb-5" data-tour="recherche-onglets">
-                {TABS.map(t => {
-                  const Icon = t.icon;
+                {TABS.map(tab => {
+                  const Icon = tab.icon;
                   return (
                     <button
-                      key={t.id}
+                      key={tab.id}
                       type="button"
-                      onClick={() => setActiveTab(t.id)}
-                      className={`fd-pill ${activeTab === t.id ? 'is-active' : ''}`}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`fd-pill ${activeTab === tab.id ? 'is-active' : ''}`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
                         padding: '8px 14px', fontSize: 12, minHeight: 38,
                       }}
                     >
                       <Icon className="w-3 h-3" />
-                      {t.label}
-                      <span style={{ fontFamily: 'DM Mono', fontSize: 10, opacity: .8, marginLeft: 2 }}>
-                        {t.count}
+                      {t(tab.label)}
+                      <span style={{ fontFamily: 'DM Mono', fontSize: 10, opacity: .8, marginInlineStart: 2 }}>
+                        {tab.count}
                       </span>
                     </button>
                   );
@@ -302,17 +303,17 @@ export function Search() {
             {loading && (
               <div className="flex flex-col items-center justify-center" style={{ padding: '60px 0' }} role="status">
                 <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#1a1a1a' }} />
-                <p style={{ fontSize: 13, color: '#6b6862' }}>Recherche en cours…</p>
+                <p style={{ fontSize: 13, color: '#6b6862' }}>{t('Recherche en cours…')}</p>
               </div>
             )}
 
             {/* Error */}
             {error && !loading && (
               <div role="alert" className="mb-4 flex flex-col gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] p-4 sm:flex-row sm:items-center">
-                <p className="flex-1 text-[14px] font-medium text-[#a23b34]">La recherche n’a pas abouti. Vérifie ta connexion.</p>
+                <p className="flex-1 text-[14px] font-medium text-[#a23b34]">{t('La recherche n’a pas abouti. Vérifie ta connexion.')}</p>
                 <button type="button" onClick={() => setAttempt((n) => n + 1)}
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#e8c4bf] bg-white px-4 text-[13.5px] font-semibold text-ink hover:bg-[#fdf6f5]">
-                  <RotateCcw className="h-4 w-4" /> Réessayer
+                  <RotateCcw className="h-4 w-4" /> {t('Réessayer')}
                 </button>
               </div>
             )}
@@ -326,7 +327,7 @@ export function Search() {
                       <span style={{ fontFamily: 'DM Mono', color: '#1a1a1a', fontWeight: 600 }}>
                         {filteredResults.length}
                       </span>{' '}
-                      résultat{filteredResults.length > 1 ? 's' : ''} pour «&nbsp;
+                      {filteredResults.length > 1 ? t('résultats pour «') : t('résultat pour «')}&nbsp;
                       <span style={{ color: '#000000', fontWeight: 600 }}>{submitted}</span>&nbsp;»{scope}
                     </p>
                   </div>
@@ -350,14 +351,14 @@ export function Search() {
                     <SearchIcon className="w-7 h-7" />
                   </div>
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-                    Aucun résultat pour « {submitted} »{scope}
+                    {t('Aucun résultat pour « {q} »', { q: submitted })}{scope}
                   </h3>
                   <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
-                    Essaie un mot plus court ou plus général (« limites », « suites »), ou parcours les chapitres.
+                    {t('Essaie un mot plus court ou plus général (« limites », « suites »), ou parcours les chapitres.')}
                   </p>
                   {levelId && (
                     <button type="button" onClick={() => setLevelScope(true)} className="fd-btn-primary inline-flex" style={{ marginTop: 16 }}>
-                      Chercher dans tous les niveaux
+                      {t('Chercher dans tous les niveaux')}
                     </button>
                   )}
                   <div className="max-w-2xl mx-auto">{suggestionBlock}</div>
@@ -378,10 +379,10 @@ export function Search() {
                 <SearchIcon className="w-7 h-7" />
               </div>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-                Commence ta recherche
+                {t('Commence ta recherche')}
               </h3>
               <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>
-                Entre un mot-clé pour trouver des exercices, leçons ou examens.
+                {t('Entre un mot-clé pour trouver des exercices, leçons ou examens.')}
               </p>
             </div>
             <div className="max-w-2xl mx-auto">{suggestionBlock}</div>

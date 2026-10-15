@@ -2,6 +2,7 @@
 // (règles partagées front ; les mêmes que apps/users/identity.py).
 import type { SchoolValue } from '@/components/common/SchoolPicker';
 import type { User } from '@/types';
+import { t } from '@/i18n';
 
 export type Gender = 'M' | 'F' | 'N' | '';
 
@@ -43,17 +44,17 @@ export const identityFromUser = (user: User | null | undefined): IdentityValue =
 
 /** Message d'erreur, ou null si tout est valide. */
 export const identityError = (v: IdentityValue): string | null => {
-  for (const [value, label] of [[v.firstName, 'Le prénom'], [v.lastName, 'Le nom']] as const) {
-    const t = value.trim();
-    if (!t) return `${label} est obligatoire.`;
-    if (t.length > 60) return `${label} est trop long.`;
-    if (!NAME_RE.test(t)) return `${label} ne doit contenir que des lettres.`;
+  for (const [value, first] of [[v.firstName, true], [v.lastName, false]] as const) {
+    const s = value.trim();
+    if (!s) return first ? t('Le prénom est obligatoire.') : t('Le nom est obligatoire.');
+    if (s.length > 60) return first ? t('Le prénom est trop long.') : t('Le nom est trop long.');
+    if (!NAME_RE.test(s)) return first ? t('Le prénom ne doit contenir que des lettres.') : t('Le nom ne doit contenir que des lettres.');
   }
-  if (!v.gender) return 'Indique ta civilité, ou choisis « Je préfère ne pas le dire ».';
-  if (!v.birthDate) return 'Indique ta date de naissance.';
+  if (!v.gender) return t('Indique ta civilité, ou choisis « Je préfère ne pas le dire ».');
+  if (!v.birthDate) return t('Indique ta date de naissance.');
   const age = ageFrom(v.birthDate);
-  if (age === null || age < MIN_AGE || age > MAX_AGE) return 'Date de naissance invalide : vérifie l’année.';
-  if (v.school.id === null && v.school.name.trim().length < 3) return 'Indique ton établissement.';
+  if (age === null || age < MIN_AGE || age > MAX_AGE) return t('Date de naissance invalide : vérifie l’année.');
+  if (v.school.id === null && v.school.name.trim().length < 3) return t('Indique ton établissement.');
   return null;
 };
 

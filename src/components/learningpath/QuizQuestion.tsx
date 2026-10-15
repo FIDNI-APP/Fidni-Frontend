@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { QuizQuestion as QuizQuestionType } from '@/types/index';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface QuizQuestionProps {
   question: QuizQuestionType;
@@ -78,16 +79,16 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">
-            Question {questionNumber} of {totalQuestions}
+            {t('Question {n} of {total}', { n: questionNumber, total: totalQuestions })}
           </span>
           <span className={cn(
             "px-2 py-1 rounded text-xs font-medium capitalize",
             getDifficultyColor()
           )}>
-            {question.difficulty}
+            {t(question.difficulty)}
           </span>
           <span className="text-xs text-gray-500">
-            {question.points} point{question.points !== 1 ? 's' : ''}
+            {question.points !== 1 ? t('{n} points', { n: question.points }) : t('{n} point', { n: question.points })}
           </span>
         </div>
       </div>
@@ -101,7 +102,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       {question.question_type === 'multiple_select' && (
         <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
-          Plusieurs réponses possibles
+          {t('Plusieurs réponses possibles')}
         </p>
       )}
 
@@ -125,7 +126,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
               }}
               disabled={showResult}
               className={cn(
-                "w-full text-left p-4 rounded-lg border-2 transition-all",
+                "w-full text-start p-4 rounded-lg border-2 transition-all",
                 showResult && correct && "border-green-500 bg-green-50",
                 showResult && selected && !correct && "border-red-500 bg-red-50",
                 !showResult && (
@@ -179,7 +180,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       {/* Explanation (shown after answer) */}
       {showResult && question.explanation && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Explication</h4>
+          <h4 className="font-medium text-blue-900 mb-2">{t('Explication')}</h4>
           <p className="text-sm text-blue-800">{question.explanation}</p>
         </div>
       )}

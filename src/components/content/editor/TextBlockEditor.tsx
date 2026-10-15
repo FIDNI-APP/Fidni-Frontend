@@ -10,6 +10,7 @@
 import React from 'react';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
 import type { ContentBlock } from '@/types/content';
+import { t } from '@/i18n';
 
 interface TextBlockEditorProps {
   value: ContentBlock | undefined;
@@ -23,7 +24,7 @@ interface TextBlockEditorProps {
 export const TextBlockEditor: React.FC<TextBlockEditorProps> = ({
   value,
   onChange,
-  placeholder = 'Écrivez ici...',
+  placeholder = t('Écrivez ici...'),
   minHeight = '80px',
   className = '',
 }) => {

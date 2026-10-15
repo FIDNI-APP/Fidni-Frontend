@@ -11,6 +11,7 @@ import type { AssessmentStatus } from '@/types/content';
 import { questionNumbering } from '@/lib/reportTargets';
 import { questionAnchor } from './ExerciseRenderer';
 import { useQuestionStats } from './questionStats';
+import { t } from '@/i18n';
 
 const MIN_EVALUATIONS = 3;
 
@@ -57,7 +58,7 @@ export const QuestionChart: React.FC<{
     <div className="rounded-2xl border border-line bg-white p-5" data-tour={tour}>
       {header}
       <div className={header ? 'mt-4 border-t border-line pt-4' : ''}>
-        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Question par question</p>
+        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Question par question')}</p>
         <ol className="mt-3 flex flex-col">
           {rows.map((r, i) => {
             const p = rate(r.path);
@@ -76,24 +77,24 @@ export const QuestionChart: React.FC<{
                   </p>
                 )}
                 {/* La ligne : un clic déplie le détail ; au bout, les boutons rapides (un clic pour s'évaluer). */}
-                <div className={`flex items-center gap-1.5 rounded-lg pr-1 transition-colors ${isOpen ? 'bg-[#f2f1ee]' : 'hover:bg-[#f7f6f3]'}`}>
+                <div className={`flex items-center gap-1.5 rounded-lg pe-1 transition-colors ${isOpen ? 'bg-[#f2f1ee]' : 'hover:bg-[#f7f6f3]'}`}>
                   <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : r.path)}
-                    title={p !== null ? `${p} % des élèves réussissent la question ${r.num}` : `Question ${r.num}`}
-                    className="grid min-w-0 flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.5rem] items-center gap-2 rounded-lg py-1.5 pl-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                    title={p !== null ? t('{p} % des élèves réussissent la question {num}', { p, num: r.num }) : t('Question {num}', { num: r.num })}
+                    className="grid min-w-0 flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.5rem] items-center gap-2 rounded-lg py-1.5 ps-1 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                     <span className="text-[12.5px] font-medium text-ink-soft fd-nums">{r.num}</span>
                     <span className="block h-2 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
                       {p !== null && <span className={`block h-full rounded-full ${p >= 50 ? 'bg-brand' : 'bg-gold'}`} style={{ width: `${Math.max(p, 3)}%` }} />}
                     </span>
-                    <span className="text-right text-[12px] text-ink-faint fd-nums">{p !== null ? `${p} %` : '—'}</span>
+                    <span className="text-end text-[12px] text-ink-faint fd-nums">{p !== null ? `${p} %` : '—'}</span>
                   </button>
                   {onAssess ? (
-                    <span role="group" aria-label={`As-tu réussi la question ${r.num} ?`} className="flex shrink-0 items-center gap-1">
+                    <span role="group" aria-label={t('As-tu réussi la question {num} ?', { num: r.num })} className="flex shrink-0 items-center gap-1">
                       {options.map((st) => {
                         const o = STATUS[st];
                         if (!o) return null;
                         const active = mine === st;
                         return (
-                          <button key={st} type="button" aria-pressed={active} aria-label={`${o.label} (question ${r.num})`} title={o.label}
+                          <button key={st} type="button" aria-pressed={active} aria-label={t('{label} (question {num})', { label: t(o.label), num: r.num })} title={t(o.label)}
                             onClick={() => onAssess(r.path, active && progress[r.path] ? progress[r.path]! : st)}
                             className={`inline-flex h-6 w-6 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:w-8 ${
                               active ? `${o.dot} border-transparent` : `border-line bg-white text-[#b9b3a8] ${o.hover}`}`}>
@@ -103,7 +104,7 @@ export const QuestionChart: React.FC<{
                       })}
                     </span>
                   ) : m ? (
-                    <span className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${m.dot}`} aria-label={`Ton résultat : ${m.label}`}>
+                    <span className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${m.dot}`} aria-label={t('Ton résultat : {label}', { label: t(m.label) })}>
                       <m.icon className="h-2.5 w-2.5" strokeWidth={3} aria-hidden />
                     </span>
                   ) : null}
@@ -113,13 +114,13 @@ export const QuestionChart: React.FC<{
                   <div className="mb-1.5 mt-1 rounded-lg bg-[#faf9f7] px-2.5 py-2.5">
                     <p className="text-[12.5px] leading-snug text-ink-soft">
                       {p !== null
-                        ? <><b className="text-ink fd-nums">{p} %</b> des élèves la réussissent <span className="text-ink-faint fd-nums">({s!.total} évaluations)</span></>
-                        : 'Pas encore assez d’évaluations pour cette question.'}
+                        ? <><b className="text-ink fd-nums">{p} %</b> {t('des élèves la réussissent')} <span className="text-ink-faint fd-nums">{t('({n} évaluations)', { n: s!.total })}</span></>
+                        : t('Pas encore assez d’évaluations pour cette question.')}
                     </p>
-                    {trapPath === r.path && <p className="mt-0.5 text-[12px] text-gold-strong">La plus ratée : prends ton temps.</p>}
+                    {trapPath === r.path && <p className="mt-0.5 text-[12px] text-gold-strong">{t('La plus ratée : prends ton temps.')}</p>}
                     <button type="button" onClick={() => goTo(r.path)}
                       className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-ink-faint hover:text-brand-hover">
-                      <ArrowDown className="h-3.5 w-3.5" aria-hidden /> Aller à la question
+                      <ArrowDown className="h-3.5 w-3.5" aria-hidden /> {t('Aller à la question')}
                     </button>
                   </div>
                 )}

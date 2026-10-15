@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Upload, File, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
+import { t } from '@/i18n';
 
 interface FileUploadProps {
   onUploadComplete: (file: FileUploadResponse) => void;
@@ -42,7 +43,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   const validateFile = (file: File): string | null => {
     const maxBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxBytes) {
-      return `File too large. Max ${maxSizeMB}MB`;
+      return t('File too large. Max {n}MB', { n: maxSizeMB });
     }
     return null;
   };
@@ -76,7 +77,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         setUploadProgress(0);
       }, 500);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed';
+      const message = err instanceof Error ? err.message : t('Upload failed');
       onUploadError?.(message);
       setUploading(false);
       setUploadProgress(0);
@@ -162,10 +163,10 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               <FileIcon className="w-10 h-10 text-slate-400" />
               <div className="text-center">
                 <p className="text-sm font-medium text-slate-700">
-                  Dépose un fichier ici ou clique pour parcourir
+                  {t('Dépose un fichier ici ou clique pour parcourir')}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Max {maxSizeMB}MB
+                  {t('Max {n}MB', { n: maxSizeMB })}
                 </p>
               </div>
             </>

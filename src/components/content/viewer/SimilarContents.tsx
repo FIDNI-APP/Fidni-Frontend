@@ -10,6 +10,7 @@ import { ProgressPill } from '@/components/content/listing/ListingParts';
 import {
   BASE_PATH, DIFFICULTY, TYPE_LABEL, chapterLabel, progressOf, type ListItem, type ListKind,
 } from '@/components/content/listing/listingUtils';
+import { t } from '@/i18n';
 
 type Item = ListItem & { reason?: string };
 
@@ -34,14 +35,14 @@ export const SimilarContents: React.FC<{ contentId: string }> = ({ contentId }) 
 
   return (
     <section aria-labelledby="pour-continuer" data-tour="detail-similaires">
-      <h2 id="pour-continuer" className="fd-display text-[20px] leading-tight text-ink">Pour continuer</h2>
-      <p className="mt-1 text-[13px] text-ink-faint">Des contenus qui travaillent la même chose, à ton niveau.</p>
+      <h2 id="pour-continuer" className="fd-display text-[20px] leading-tight text-ink">{t('Pour continuer')}</h2>
+      <p className="mt-1 text-[13px] text-ink-faint">{t('Des contenus qui travaillent la même chose, à ton niveau.')}</p>
       <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
         {items.slice(0, SHOWN).map((item) => {
           const kind = item.type as ListKind;
           const Icon = ICON[kind] ?? PenLine;
           const diff = 'difficulty' in item && item.difficulty ? DIFFICULTY[item.difficulty]?.label : null;
-          const sub = [TYPE_LABEL[kind] ?? 'Contenu', diff, item.reason || chapterLabel(item)].filter(Boolean).join(' · ');
+          const sub = [TYPE_LABEL[kind] ? t(TYPE_LABEL[kind]) : t('Contenu'), diff ? t(diff) : diff, item.reason || chapterLabel(item)].filter(Boolean).join(' · ');
           return (
             <li key={item.id}>
               <Link to={`${BASE_PATH[kind] ?? '/exercises'}/${item.id}`}
@@ -58,7 +59,7 @@ export const SimilarContents: React.FC<{ contentId: string }> = ({ contentId }) 
                     <span className="truncate text-[12.5px] text-ink-faint">{sub}</span>
                   </span>
                 </span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden />
+                <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-brand rtl:group-hover:-translate-x-0.5" aria-hidden />
               </Link>
             </li>
           );

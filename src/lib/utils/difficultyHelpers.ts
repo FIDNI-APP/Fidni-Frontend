@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 /**
  * Difficulty Helper Functions
  * Consolidated from multiple components (ExamHeader, ExerciseHeader, ExamCard, ContentCard, etc.)
@@ -27,12 +28,12 @@ export const getDifficultyColor = (difficulty: Difficulty): string => {
 export const getDifficultyLabel = (difficulty: Difficulty): string => {
   switch (difficulty) {
     case 'easy':
-      return 'Facile';
+      return t('Facile');
     case 'medium':
-      return 'Moyen';
+      return t('Moyen');
     case 'hard':
-      return 'Difficile';
+      return t('Difficile');
     default:
-      return 'Non spécifié';
+      return t('Non spécifié');
   }
 };

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Check, Loader2, RotateCcw, School, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { CardsSkeleton, EmptyState, Section } from '@/components/space/Page';
 import { deleteTeacherInvitation, getTeacherStudents, sendTeacherInvitation } from '@/lib/api';
+import { t } from '@/i18n';
 
 interface Student {
   id: number;
@@ -41,7 +42,7 @@ const STATUS: Record<Invitation['status'], { label: string; cls: string }> = {
 };
 
 const StatusBadge: React.FC<{ status: Invitation['status'] }> = ({ status }) => (
-  <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${STATUS[status].cls}`}>{STATUS[status].label}</span>
+  <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${STATUS[status].cls}`}>{t(STATUS[status].label)}</span>
 );
 
 /** Une personne : photo, pseudo, niveau, puis l'état et l'action. */
@@ -56,7 +57,7 @@ const PersonRow: React.FC<{
       {level && <span className="block truncate text-[12.5px] text-ink-faint">{level}</span>}
     </span>
     {status && <StatusBadge status={status} />}
-    <button type="button" onClick={action.onClick} disabled={action.busy} aria-label={`${action.label} : ${name}`} title={action.label}
+    <button type="button" onClick={action.onClick} disabled={action.busy} aria-label={t('{label} : {name}', { label: t(action.label), name })} title={t(action.label)}
       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34] disabled:opacity-50">
       {action.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : action.icon === 'cancel' ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
     </button>
@@ -97,11 +98,11 @@ const TeacherStudentsPanel: React.FC = () => {
     setSendSuccess(null);
     try {
       await sendTeacherInvitation(who);
-      setSendSuccess(`Invitation envoyée à « ${who} ».`);
+      setSendSuccess(t('Invitation envoyée à « {who} ».', { who }));
       setIdentifier('');
       load();
     } catch (err) {
-      setSendError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'L’invitation n’a pas pu partir. Réessaie.');
+      setSendError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || t('L’invitation n’a pas pu partir. Réessaie.'));
     } finally {
       setSending(false);
     }
@@ -115,7 +116,7 @@ const TeacherStudentsPanel: React.FC = () => {
       await deleteTeacherInvitation(id);
       await load();
     } catch {
-      setActionError('L’opération a échoué. Réessaie.');
+      setActionError(t('L’opération a échoué. Réessaie.'));
     } finally {
       setBusy(null);
     }
@@ -126,17 +127,17 @@ const TeacherStudentsPanel: React.FC = () => {
 
   return (
     <div className="flex max-w-2xl flex-col gap-10">
-      <Section id="inviter" title="Inviter un élève" hint="Saisis le pseudo de l’élève : il recevra une invitation à te rejoindre.">
+      <Section id="inviter" title={t('Inviter un élève')} hint={t('Saisis le pseudo de l’élève : il recevra une invitation à te rejoindre.')}>
         <form onSubmit={handleSend} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4 sm:flex-row sm:p-5">
           <label className="relative min-w-0 flex-1">
-            <span className="sr-only">Pseudo de l’élève</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
-            <input type="text" value={identifier} autoComplete="off" placeholder="Pseudo de l’élève"
+            <span className="sr-only">{t('Pseudo de l’élève')}</span>
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+            <input type="text" value={identifier} autoComplete="off" placeholder={t('Pseudo de l’élève')}
               onChange={(e) => { setIdentifier(e.target.value); setSendError(null); setSendSuccess(null); }}
-              className="h-11 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-[14px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
+              className="h-11 w-full rounded-xl border border-line bg-white ps-9 pe-3 text-[14px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
           </label>
           <button type="submit" disabled={sending || !identifier.trim()} className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50">
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} Inviter
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} {t('Inviter')}
           </button>
         </form>
         {sendError && (
@@ -151,19 +152,19 @@ const TeacherStudentsPanel: React.FC = () => {
 
       {failed && (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">La liste de tes élèves n’a pas pu se charger. Vérifie ta connexion.</p>
-          <button type="button" onClick={load} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('La liste de tes élèves n’a pas pu se charger. Vérifie ta connexion.')}</p>
+          <button type="button" onClick={load} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
         </div>
       )}
       {actionError && (
         <p role="alert" className="rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3 text-[13.5px] font-medium text-[#a23b34]">{actionError}</p>
       )}
 
-      <Section id="eleves" title="Mes élèves" count={students?.length}>
+      <Section id="eleves" title={t('Mes élèves')} count={students?.length}>
         {students === null ? <CardsSkeleton n={2} /> : students.length === 0 ? (
-          <EmptyState compact icon={Users} tone="ink" title="Pas encore d’élève"
-            text="Invite un élève avec son pseudo : dès qu’il accepte, il apparaît ici. Les élèves qui ont rejoint tes classes avec leur code sont dans « Mes classes »."
-            action={<Link to="/classrooms" className="fd-btn-ghost min-h-10 text-[13px]"><School className="h-4 w-4" /> Voir mes classes</Link>} />
+          <EmptyState compact icon={Users} tone="ink" title={t('Pas encore d’élève')}
+            text={t('Invite un élève avec son pseudo : dès qu’il accepte, il apparaît ici. Les élèves qui ont rejoint tes classes avec leur code sont dans « Mes classes ».')}
+            action={<Link to="/classrooms" className="fd-btn-ghost min-h-10 text-[13px]"><School className="h-4 w-4" /> {t('Voir mes classes')}</Link>} />
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {students.map((s) => {
@@ -172,7 +173,7 @@ const TeacherStudentsPanel: React.FC = () => {
                 <PersonRow key={s.id} name={s.username} avatar={s.avatar} level={s.class_level}
                   action={{
                     label: 'Retirer cet élève', icon: 'remove', busy: !!inv && busy === inv.id,
-                    onClick: () => { if (inv) remove(inv.id, `Retirer « ${s.username} » de tes élèves ?`); },
+                    onClick: () => { if (inv) remove(inv.id, t('Retirer « {name} » de tes élèves ?', { name: s.username })); },
                   }} />
               );
             })}
@@ -181,7 +182,7 @@ const TeacherStudentsPanel: React.FC = () => {
       </Section>
 
       {pending.length > 0 && (
-        <Section id="en-attente" title="Invitations en attente" count={pending.length}>
+        <Section id="en-attente" title={t('Invitations en attente')} count={pending.length}>
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {pending.map((inv) => (
               <PersonRow key={inv.id} name={inv.student_username} avatar={inv.student_avatar} level={inv.student_class_level} status="pending"
@@ -192,14 +193,14 @@ const TeacherStudentsPanel: React.FC = () => {
       )}
 
       {past.length > 0 && (
-        <Section id="historique" title="Historique des invitations">
+        <Section id="historique" title={t('Historique des invitations')}>
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
             {past.map((inv) => (
               <PersonRow key={inv.id} name={inv.student_username} avatar={inv.student_avatar} level={inv.student_class_level} status={inv.status}
                 action={{
                   label: 'Supprimer de l’historique', icon: 'remove', busy: busy === inv.id,
                   // Une invitation acceptée supprimée retire aussi l'élève : on le dit avant.
-                  onClick: () => remove(inv.id, inv.status === 'accepted' ? `Cela retire aussi « ${inv.student_username} » de tes élèves. Continuer ?` : undefined),
+                  onClick: () => remove(inv.id, inv.status === 'accepted' ? t('Cela retire aussi « {name} » de tes élèves. Continuer ?', { name: inv.student_username }) : undefined),
                 }} />
             ))}
           </ul>

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   Users, Copy, Check, RefreshCw, BookOpen, Plus,
   Trash2, Loader2, X, ClipboardList, GraduationCap, Calendar,
-  ChevronRight, FileText, Flag, Sparkles, RotateCcw, SearchX, type LucideIcon,
+  ChevronRight, FileText, Flag, Sparkles, RotateCcw, SearchX, ClipboardCheck, type LucideIcon,
 } from 'lucide-react';
+import { t, dateLocale } from '@/i18n';
 import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, Section, EmptyState, Segmented, CardsSkeleton } from '@/components/space/Page';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,8 +21,9 @@ import { getSubjects } from '@/lib/api/hierarchyApi';
 import { getExercises } from '@/lib/api';
 import { getDifficultyLabel, type Difficulty } from '@/lib/utils/difficultyHelpers';
 import type { SubjectModel, Content as ContentT } from '@/types';
+import { EvaluationsTab } from '@/components/classrooms/copies/EvaluationsTab';
 
-type Tab = 'students' | 'tdlists' | 'subjects';
+type Tab = 'students' | 'tdlists' | 'subjects' | 'evaluations';
 type LoadState = 'loading' | 'ok' | 'error';
 
 /** Sous ce score global, le prof voit le repère « À suivre » (plus de paliers or / argent / bronze). */
@@ -36,14 +38,16 @@ const AXIS_LABELS: { key: keyof SkillAxes; label: string; short: string }[] = [
   { key: 'engagement',   label: 'Engagement',   short: 'ENG' },
 ];
 
-const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
+const plural = (n: number, one: string, many: string) => (n > 1 ? t(many) : t(one));
 
 /** « 12/28 élèves ont fini ». */
 const finishedLabel = (finished: number, total: number) =>
-  `${finished}/${total} ${plural(finished, 'élève a', 'élèves ont')} fini`;
+  (finished > 1
+    ? t('{finished}/{total} élèves ont fini', { finished, total })
+    : t('{finished}/{total} élève a fini', { finished, total }));
 
 const difficultyFr = (d: string | null | undefined) =>
-  (d === 'easy' || d === 'medium' || d === 'hard' ? getDifficultyLabel(d as Difficulty) : null);
+  (d === 'easy' || d === 'medium' || d === 'hard' ? t(getDifficultyLabel(d as Difficulty)) : null);
 
 /** Pictogramme d'onglet affiché à partir de la largeur d'une tablette seulement. */
 const wideOnly = (I: LucideIcon) => {
@@ -52,6 +56,7 @@ const wideOnly = (I: LucideIcon) => {
 };
 const TabIcons = {
   students: wideOnly(Users), tdlists: wideOnly(ClipboardList), subjects: wideOnly(BookOpen), skills: wideOnly(Sparkles),
+  evaluations: wideOnly(ClipboardCheck),
 };
 
 export default function ClassroomDetailPage() {
@@ -61,7 +66,11 @@ export default function ClassroomDetailPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [tabChoice, setTab] = useState<Tab | null>(null);
+  // Onglet dans l'adresse (?onglet=evaluations) : le retour depuis une évaluation ou une copie y ramène.
+  const [params, setParams] = useSearchParams();
+  const tabChoice = (['students', 'tdlists', 'subjects', 'evaluations'] as Tab[]).find((k) => k === params.get('onglet')) ?? null;
+  const setTab = (k: Tab) => setParams(k === (isOwnerRef.current ? 'students' : 'tdlists') ? {} : { onglet: k }, { replace: true });
+  const isOwnerRef = useRef(false);
 
   // tab data
   const [members, setMembers] = useState<ClassroomMember[]>([]);
@@ -95,7 +104,7 @@ export default function ClassroomDetailPage() {
       setCode(c.join_code);
     } catch (e) {
       console.error(e);
-      setError("Impossible de charger la classe.");
+      setError(t("Impossible de charger la classe."));
     } finally {
       setLoading(false);
     }
@@ -104,6 +113,7 @@ export default function ClassroomDetailPage() {
   useEffect(() => { refresh(); }, [refresh]);
 
   const isOwner = !!classroom?.is_owner;
+  isOwnerRef.current = isOwner;
   // Le prof arrive sur ses élèves ; l'élève sur ses TD (il ne voit pas les résultats de ses camarades).
   const tab: Tab = tabChoice ?? (isOwner ? 'students' : 'tdlists');
   const loaded = classroom !== null;
@@ -136,12 +146,12 @@ export default function ClassroomDetailPage() {
   if (!classroom) {
     return (
       <Page width="wide">
-        <PageHeader back={{ to: '/classrooms', label: 'Mes classes' }} title={error ? 'Classe indisponible' : 'Classe introuvable'} />
+        <PageHeader back={{ to: '/classrooms', label: t('Mes classes') }} title={error ? t('Classe indisponible') : t('Classe introuvable')} />
         {/* Classe supprimée, quittée, ou chargement raté (réseau) : on propose les deux issues. */}
-        <EmptyState icon={GraduationCap} tone="ink" title="Cette classe n’est pas accessible"
-          text="Elle a peut-être été supprimée, ou tu n’en fais plus partie. Si ta connexion a coupé, réessaie."
-          action={<Link to="/classrooms" className="fd-btn-primary min-h-10">Mes classes</Link>}
-          secondary={<button type="button" onClick={refresh} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>} />
+        <EmptyState icon={GraduationCap} tone="ink" title={t('Cette classe n’est pas accessible')}
+          text={t('Elle a peut-être été supprimée, ou tu n’en fais plus partie. Si ta connexion a coupé, réessaie.')}
+          action={<Link to="/classrooms" className="fd-btn-primary min-h-10">{t('Mes classes')}</Link>}
+          secondary={<button type="button" onClick={refresh} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>} />
       </Page>
     );
   }
@@ -161,35 +171,37 @@ export default function ClassroomDetailPage() {
   };
 
   const regenerate = async () => {
-    if (!window.confirm("Régénérer le code ? L'ancien ne fonctionnera plus.")) return;
+    if (!window.confirm(t("Régénérer le code ? L'ancien ne fonctionnera plus."))) return;
     setBusy(true);
     try {
       const r = await regenerateJoinCode(classroom.id);
       setCode(r.join_code);
       await refresh();
     } catch (e) {
-      alert(classroomError(e, 'Impossible de régénérer le code.'));
+      alert(classroomError(e, t('Impossible de régénérer le code.')));
     } finally { setBusy(false); }
   };
 
   // Pictogrammes masqués sur téléphone (et pas de compteur côté élève) : les onglets tiennent sur l'écran.
   const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = isOwner
     ? [
-      { key: 'students', label: 'Élèves', icon: TabIcons.students, count: classroom.student_count },
-      { key: 'tdlists', label: 'TD listes', icon: TabIcons.tdlists, count: tdLists.length },
-      { key: 'subjects', label: 'Matières', icon: TabIcons.subjects },
+      { key: 'students', label: t('Élèves'), icon: TabIcons.students, count: classroom.student_count },
+      { key: 'tdlists', label: t('TD listes'), icon: TabIcons.tdlists, count: tdLists.length },
+      { key: 'evaluations', label: t('Évaluations'), icon: TabIcons.evaluations },
+      { key: 'subjects', label: t('Matières'), icon: TabIcons.subjects },
     ]
     : [
-      { key: 'tdlists', label: 'TD listes', icon: TabIcons.tdlists },
-      { key: 'students', label: 'Mes compétences', icon: TabIcons.skills },
-      { key: 'subjects', label: 'Matières', icon: TabIcons.subjects },
+      { key: 'tdlists', label: t('TD listes'), icon: TabIcons.tdlists },
+      { key: 'evaluations', label: t('Mes copies'), icon: TabIcons.evaluations },
+      { key: 'students', label: t('Mes compétences'), icon: TabIcons.skills },
+      { key: 'subjects', label: t('Matières'), icon: TabIcons.subjects },
     ];
 
   const copyButton = (
-    <button type="button" onClick={copyCode} aria-label={copied ? 'Code copié' : 'Copier le code'}
+    <button type="button" onClick={copyCode} aria-label={copied ? t('Code copié') : t('Copier le code')}
       className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-      <span aria-live="polite">{copied ? 'Copié' : 'Copier'}</span>
+      <span aria-live="polite">{copied ? t('Copié') : t('Copier')}</span>
     </button>
   );
 
@@ -198,27 +210,27 @@ export default function ClassroomDetailPage() {
 
   return (
     <Page width="wide">
-      <SEO title={`${classroom.name} - Fidni`} description="Détails de la classe" />
+      <SEO title={`${classroom.name} - Fidni`} description={t('Détails de la classe')} />
 
       <PageHeader
-        back={{ to: '/classrooms', label: 'Mes classes' }}
-        eyebrow={classroom.class_level_name || 'Classe'}
+        back={{ to: '/classrooms', label: t('Mes classes') }}
+        eyebrow={classroom.class_level_name || t('Classe')}
         title={classroom.name}
         subtitle={(
           <>
             <span className="fd-nums">{classroom.student_count}</span> {plural(classroom.student_count, 'élève', 'élèves')}
             {/* « 0 matière » ne dit rien : seulement s'il y en a. */}
             {classroom.subjects.length > 0 && <>{' · '}<span className="fd-nums">{classroom.subjects.length}</span> {plural(classroom.subjects.length, 'matière', 'matières')}</>}
-            {!isOwner && <> · Prof : <b className="font-semibold text-ink-soft">{classroom.owner.username}</b></>}
+            {!isOwner && <> · {t('Prof :')} <b className="font-semibold text-ink-soft">{classroom.owner.username}</b></>}
           </>
         )}
         actions={(
-          <div data-tour="classe-code" className="flex max-w-full items-center gap-1 rounded-2xl border border-line bg-white py-1 pl-4 pr-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">Code</span>
-            <span className="ml-1.5 truncate font-mono text-[18px] font-bold tracking-[.14em] text-ink">{code}</span>
+          <div data-tour="classe-code" className="flex max-w-full items-center gap-1 rounded-2xl border border-line bg-white py-1 ps-4 pe-1">
+            <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t('Code')}</span>
+            <span className="ms-1.5 truncate font-mono text-[18px] font-bold tracking-[.14em] text-ink">{code}</span>
             {copyButton}
             {isOwner && (
-              <button type="button" onClick={regenerate} disabled={busy} aria-label="Régénérer le code" title="Régénérer le code"
+              <button type="button" onClick={regenerate} disabled={busy} aria-label={t('Régénérer le code')} title={t('Régénérer le code')}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink disabled:opacity-50">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
@@ -227,16 +239,16 @@ export default function ClassroomDetailPage() {
         )}
       >
         <div className="mt-6" data-tour="classe-onglets">
-          <Segmented<Tab> label="Vues de la classe" value={tab} onChange={setTab} options={tabs} />
+          <Segmented<Tab> label={t('Vues de la classe')} value={tab} onChange={setTab} options={tabs} />
         </div>
       </PageHeader>
 
       {/* Matière (onglets Élèves et TD) */}
-      {tab !== 'subjects' && classroomSubjectOptions.length > 0 && (
-        <div className="mb-5 flex flex-wrap items-center gap-2" role="group" aria-label="Matière">
-          <span className="mr-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">Matière</span>
+      {tab !== 'subjects' && tab !== 'evaluations' && classroomSubjectOptions.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2" role="group" aria-label={t('Matière')}>
+          <span className="me-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Matière')}</span>
           <button type="button" aria-pressed={activeSubjectId === null} className={chip(activeSubjectId === null)} onClick={() => setActiveSubjectId(null)}>
-            Toutes
+            {t('Toutes')}
           </button>
           {classroomSubjectOptions.map(s => (
             <button key={s.id} type="button" aria-pressed={activeSubjectId === Number(s.id)} className={chip(activeSubjectId === Number(s.id))}
@@ -258,7 +270,7 @@ export default function ClassroomDetailPage() {
           shareAction={(
             <button type="button" onClick={copyCode} className="fd-btn-primary min-h-10">
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              <span aria-live="polite">{copied ? 'Code copié' : <>Copier le code <span className="font-mono tracking-[.08em]">{code}</span></>}</span>
+              <span aria-live="polite">{copied ? t('Code copié') : <>{t('Copier le code')} <span className="font-mono tracking-[.08em]">{code}</span></>}</span>
             </button>
           )}
         />
@@ -274,6 +286,7 @@ export default function ClassroomDetailPage() {
           onChanged={refresh}
         />
       )}
+      {tab === 'evaluations' && <EvaluationsTab classroomId={classroom.id} isOwner={isOwner} />}
       {tab === 'subjects' && (
         <SubjectsTab
           classroom={classroom}
@@ -282,9 +295,9 @@ export default function ClassroomDetailPage() {
           isOwner={isOwner}
           members={members}
           onRemoveMember={async (sid) => {
-            if (!window.confirm('Retirer cet élève de la classe ?')) return;
+            if (!window.confirm(t('Retirer cet élève de la classe ?'))) return;
             try { await removeMember(classroom.id, sid); await refresh(); }
-            catch (e) { alert(classroomError(e, "Impossible de retirer cet élève.")); }
+            catch (e) { alert(classroomError(e, t("Impossible de retirer cet élève."))); }
           }}
         />
       )}
@@ -365,7 +378,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      aria-label="Fermer"
+      aria-label={t('Fermer')}
       className="inline-flex items-center justify-center flex-shrink-0"
       style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}
     >
@@ -394,7 +407,7 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
   if (state === 'error') {
     return (
       <div role="alert" className="rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-        <p className="text-[13.5px] font-medium text-[#a23b34]">Les compétences n’ont pas pu se charger. Réessaie dans un moment.</p>
+        <p className="text-[13.5px] font-medium text-[#a23b34]">{t('Les compétences n’ont pas pu se charger. Réessaie dans un moment.')}</p>
       </div>
     );
   }
@@ -403,14 +416,14 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
   if (!isOwner) {
     const mine = roster.find(c => String(c.student.id) === meId) || null;
     return (
-      <Section id="mes-competences" title="Mes compétences" className="max-w-md"
-        hint="Calculées à partir de ton travail sur Fidni. Tes camarades ne les voient pas.">
+      <Section id="mes-competences" title={t('Mes compétences')} className="max-w-md"
+        hint={t('Calculées à partir de ton travail sur Fidni. Tes camarades ne les voient pas.')}>
         {mine ? (
           <SkillCard card={mine} onClick={() => onOpen(mine)} />
         ) : (
-          <EmptyState compact icon={Sparkles} title="Ta carte apparaît après quelques exercices"
-            text="Précision, régularité, persévérance… elles se calculent à partir de ce que tu fais sur Fidni."
-            action={<Link to="/exercises" className="fd-btn-ghost min-h-10">Faire des exercices</Link>} />
+          <EmptyState compact icon={Sparkles} title={t('Ta carte apparaît après quelques exercices')}
+            text={t('Précision, régularité, persévérance… elles se calculent à partir de ce que tu fais sur Fidni.')}
+            action={<Link to="/exercises" className="fd-btn-ghost min-h-10">{t('Faire des exercices')}</Link>} />
         )}
       </Section>
     );
@@ -418,8 +431,8 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
 
   if (roster.length === 0) {
     return (
-      <EmptyState icon={Users} title="Aucun élève pour l’instant"
-        text="Envoie le code de la classe à tes élèves : ils l’entrent dans « Mes classes » pour la rejoindre."
+      <EmptyState icon={Users} title={t('Aucun élève pour l’instant')}
+        text={t('Envoie le code de la classe à tes élèves : ils l’entrent dans « Mes classes » pour la rejoindre.')}
         action={shareAction} />
     );
   }
@@ -430,9 +443,9 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
     <>
       <p className="mb-3 text-[13px] leading-relaxed text-ink-faint">
         <span className="fd-nums">{roster.length}</span> {plural(roster.length, 'élève', 'élèves')}
-        {toWatch > 0 && <> · <strong className="font-semibold text-gold-strong">{toWatch} à suivre</strong> (score global sous {WATCH_BELOW})</>}
-        {idle > 0 && <> · <span className="fd-nums">{idle}</span> sans activité pour l’instant</>}
-        . Touche une carte pour le détail.
+        {toWatch > 0 && <> · <strong className="font-semibold text-gold-strong">{t('{n} à suivre', { n: toWatch })}</strong> {t('(score global sous {n})', { n: WATCH_BELOW })}</>}
+        {idle > 0 && <> · <span className="fd-nums">{idle}</span> {t('sans activité pour l’instant')}</>}
+        {t('. Touche une carte pour le détail.')}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {roster.map(card => (
@@ -458,7 +471,7 @@ function SkillCard({ card, onClick, watch = false }: {
     <button
       type="button"
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-2xl border border-line bg-white text-left transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+      className="group w-full overflow-hidden rounded-2xl border border-line bg-white text-start transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
       <div className="flex items-center gap-3 px-4 py-3.5">
         <Avatar user={card.student} size={40} />
@@ -466,16 +479,16 @@ function SkillCard({ card, onClick, watch = false }: {
           <div className="truncate text-[14.5px] font-semibold text-ink group-hover:underline">{card.student.username}</div>
           {flagged ? (
             <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-semibold text-gold-strong">
-              <Flag className="h-3 w-3" aria-hidden /> À suivre
+              <Flag className="h-3 w-3" aria-hidden /> {t('À suivre')}
             </span>
           ) : (
-            <div className="mt-0.5 text-[12px] text-ink-faint">{idle ? 'Pas encore d’activité' : 'Score global'}</div>
+            <div className="mt-0.5 text-[12px] text-ink-faint">{idle ? t('Pas encore d’activité') : t('Score global')}</div>
           )}
         </div>
         {!idle && (
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 text-end">
             <span className="fd-nums text-[26px] font-bold leading-none text-ink">{card.overall}</span>
-            <span className="fd-nums ml-0.5 text-[11px] text-ink-faint">/100</span>
+            <span className="fd-nums ms-0.5 text-[11px] text-ink-faint">/100</span>
           </div>
         )}
       </div>
@@ -487,7 +500,7 @@ function SkillCard({ card, onClick, watch = false }: {
             return (
               <div key={a.key} className="min-w-0">
                 <div className="flex items-baseline justify-between gap-2 text-[11.5px]">
-                  <span className="truncate text-ink-faint">{a.label}</span>
+                  <span className="truncate text-ink-faint">{t(a.label)}</span>
                   <span className="fd-nums font-semibold text-ink-soft">{card.axes[a.key]}</span>
                 </div>
                 <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
@@ -525,23 +538,23 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
         if (!alive) return;
         setData(null);
         setError(errorStatus(e) === 403
-          ? 'Tu ne peux voir que tes statistiques.'
-          : 'Impossible de charger les statistiques. Réessaie plus tard.');
+          ? t('Tu ne peux voir que tes statistiques.')
+          : t('Impossible de charger les statistiques. Réessaie plus tard.'));
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [classroomId, student.student.id, subjectId]);
 
   return (
-    <Modal label={isSelf ? 'Mes statistiques' : `Statistiques de ${student.student.username}`} maxWidth={540} onClose={onClose}>
+    <Modal label={isSelf ? t('Mes statistiques') : t('Statistiques de {name}', { name: student.student.username })} maxWidth={540} onClose={onClose}>
       <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Avatar user={student.student} size={40} />
           <div className="min-w-0">
             <h3 className="truncate" style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>
-              {isSelf ? 'Mes compétences' : student.student.username}
+              {isSelf ? t('Mes compétences') : student.student.username}
             </h3>
-            <p style={{ fontSize: 11, color: '#6b6862' }}>Statistiques de compétences</p>
+            <p style={{ fontSize: 11, color: '#6b6862' }}>{t('Statistiques de compétences')}</p>
           </div>
         </div>
         <CloseButton onClick={onClose} />
@@ -555,7 +568,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
             style={{ minHeight: 36 }}
             onClick={() => setSubjectId(null)}
           >
-            Toutes matières
+            {t('Toutes matières')}
           </button>
           {subjectOptions.map(s => (
             <button
@@ -576,8 +589,8 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
         </div>
       ) : error || !data ? (
         <div className="text-center" style={{ padding: '32px 12px' }}>
-          <p style={{ fontSize: 13, color: '#6b6862' }}>{error || 'Aucune statistique pour le moment.'}</p>
-          <button className="fd-btn-ghost mt-4" onClick={onClose}>Fermer</button>
+          <p style={{ fontSize: 13, color: '#6b6862' }}>{error || t('Aucune statistique pour le moment.')}</p>
+          <button className="fd-btn-ghost mt-4" onClick={onClose}>{t('Fermer')}</button>
         </div>
       ) : (
         <>
@@ -589,7 +602,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
             }}
           >
             <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Score global {data.subject ? `· ${data.subject.name}` : ''}
+              {t('Score global')} {data.subject ? `· ${data.subject.name}` : ''}
             </div>
             <div style={{ fontSize: 44, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
               {data.overall}
@@ -608,7 +621,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
                   borderRadius: 10, padding: '8px 12px',
                 }}
               >
-                <span style={{ fontSize: 12, color: '#33302b', fontWeight: 600 }}>{a.label}</span>
+                <span style={{ fontSize: 12, color: '#33302b', fontWeight: 600 }}>{t(a.label)}</span>
                 <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a' }}>
                   {data.axes[a.key]}
                 </span>
@@ -685,7 +698,7 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
             x={tx} y={ty} textAnchor="middle" dominantBaseline="middle"
             fontSize="10" fontWeight="700" fontFamily="DM Sans" fill="#33302b"
           >
-            {label.short}
+            {t(label.short)}
           </text>
         );
       })}
@@ -717,27 +730,27 @@ function TDListsTab({
 
   const newTD = (
     <button type="button" onClick={onCreateClick} className="fd-btn-primary min-h-10">
-      <Plus className="w-4 h-4" /> Nouveau TD
+      <Plus className="w-4 h-4" /> {t('Nouveau TD')}
     </button>
   );
 
   return (
     <>
-      <Section id="td" title="TD listes" count={shown.length}
-        hint={tdLists.length ? (isOwner ? 'Les exercices que tu donnes à ta classe.' : 'Les exercices donnés par ton prof.') : undefined}
+      <Section id="td" title={t('TD listes')} count={shown.length}
+        hint={tdLists.length ? (isOwner ? t('Les exercices que tu donnes à ta classe.') : t('Les exercices donnés par ton prof.')) : undefined}
         action={isOwner && tdLists.length > 0 ? newTD : undefined}>
         {shown.length === 0 ? (
           tdLists.length > 0 && activeSubject ? (
-            <EmptyState compact icon={SearchX} tone="ink" title={`Aucun TD en ${activeSubject.name}`}
-              action={<button type="button" onClick={onClearSubject} className="fd-btn-ghost min-h-10">Toutes les matières</button>} />
+            <EmptyState compact icon={SearchX} tone="ink" title={t('Aucun TD en {name}', { name: activeSubject.name })}
+              action={<button type="button" onClick={onClearSubject} className="fd-btn-ghost min-h-10">{t('Toutes les matières')}</button>} />
           ) : isOwner ? (
-            <EmptyState icon={ClipboardList} title="Pas encore de TD"
-              text="Un TD, c’est une liste d’exercices de Fidni que tu donnes à ta classe, avec une date de rendu. Tu vois ensuite qui l’a fini."
+            <EmptyState icon={ClipboardList} title={t('Pas encore de TD')}
+              text={t('Un TD, c’est une liste d’exercices de Fidni que tu donnes à ta classe, avec une date de rendu. Tu vois ensuite qui l’a fini.')}
               action={newTD} />
           ) : (
-            <EmptyState icon={ClipboardList} tone="ink" title="Pas encore de TD"
-              text="Quand ton prof donnera un TD à la classe, il apparaîtra ici avec ta progression."
-              action={<Link to="/reviser" className="fd-btn-ghost min-h-10">Réviser en attendant</Link>} />
+            <EmptyState icon={ClipboardList} tone="ink" title={t('Pas encore de TD')}
+              text={t('Quand ton prof donnera un TD à la classe, il apparaîtra ici avec ta progression.')}
+              action={<Link to="/reviser" className="fd-btn-ghost min-h-10">{t('Réviser en attendant')}</Link>} />
           )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -788,7 +801,7 @@ function TDListCard({ td, isOwner, onOpen }: { td: TDList; isOwner: boolean; onO
     <button
       type="button"
       onClick={onOpen}
-      className="group w-full rounded-2xl border border-line bg-white p-4 text-left transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:p-5"
+      className="group w-full rounded-2xl border border-line bg-white p-4 text-start transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:p-5"
     >
       <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
@@ -798,17 +811,17 @@ function TDListCard({ td, isOwner, onOpen }: { td: TDList; isOwner: boolean; onO
           <div className="truncate text-[15px] font-semibold leading-snug text-ink group-hover:underline">{td.title}</div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-ink-faint">
             {td.subject_name && <span>{td.subject_name}</span>}
-            <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" aria-hidden />{td.item_count} ex.</span>
-            {due && <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" aria-hidden />à rendre le {due.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>}
+            <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" aria-hidden />{t('{n} ex.', { n: td.item_count })}</span>
+            {due && <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" aria-hidden />{t('à rendre le {date}', { date: due.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' }) })}</span>}
           </div>
         </div>
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5" aria-hidden />
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" aria-hidden />
       </div>
 
       {cls && (
         <div className="mt-3.5">
           <div className="mb-1.5 flex items-center justify-between text-[12px] text-ink-faint">
-            <span>{cls.total === 0 ? 'Aucun élève dans la classe' : finishedLabel(cls.finished, cls.total)}</span>
+            <span>{cls.total === 0 ? t('Aucun élève dans la classe') : finishedLabel(cls.finished, cls.total)}</span>
             {cls.total > 0 && (
               <span className={`fd-nums font-semibold ${pct === 100 ? 'text-brand-hover' : 'text-ink-soft'}`}>{pct} %</span>
             )}
@@ -819,7 +832,7 @@ function TDListCard({ td, isOwner, onOpen }: { td: TDList; isOwner: boolean; onO
       {mine && (
         <div className="mt-3.5">
           <div className="mb-1.5 flex items-center justify-between text-[12px] text-ink-faint">
-            <span>Ma progression</span>
+            <span>{t('Ma progression')}</span>
             <span className={`fd-nums font-semibold ${pct === 100 ? 'text-brand-hover' : 'text-ink-soft'}`}>
               {mine.completed}/{mine.total}
             </span>
@@ -861,23 +874,23 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
   const add = async (id: string | number) => {
     setBusy(true);
     try { await addTDListItem(classroomId, td.id, id); await onChanged(); }
-    catch (e) { alert(classroomError(e, "Impossible d'ajouter cet exercice.")); }
+    catch (e) { alert(classroomError(e, t("Impossible d'ajouter cet exercice."))); }
     finally { setBusy(false); }
   };
 
   const remove = async (itemId: number) => {
-    if (!window.confirm('Retirer cet exercice du TD ?')) return;
+    if (!window.confirm(t('Retirer cet exercice du TD ?'))) return;
     setBusy(true);
     try { await removeTDListItem(classroomId, td.id, itemId); await onChanged(); }
-    catch (e) { alert(classroomError(e, "Impossible de retirer cet exercice.")); }
+    catch (e) { alert(classroomError(e, t("Impossible de retirer cet exercice."))); }
     finally { setBusy(false); }
   };
 
   const destroy = async () => {
-    if (!window.confirm('Supprimer ce TD ?')) return;
+    if (!window.confirm(t('Supprimer ce TD ?'))) return;
     setBusy(true);
     try { await deleteTDList(classroomId, td.id); onClose(); await onChanged(); }
-    catch (e) { alert(classroomError(e, 'Impossible de supprimer ce TD.')); setBusy(false); }
+    catch (e) { alert(classroomError(e, t('Impossible de supprimer ce TD.'))); setBusy(false); }
   };
 
   return (
@@ -891,8 +904,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
           <div className="flex items-center gap-2 mt-2 flex-wrap" style={{ fontSize: 11, color: '#6b6862' }}>
             {[
               td.subject_name,
-              td.due_date ? `à rendre le ${new Date(td.due_date).toLocaleDateString('fr-FR')}` : null,
-              td.created_by_username ? `par ${td.created_by_username}` : null,
+              td.due_date ? t('à rendre le {date}', { date: new Date(td.due_date).toLocaleDateString(dateLocale()) }) : null,
+              td.created_by_username ? t('par {name}', { name: td.created_by_username }) : null,
             ].filter(Boolean).join(' · ')}
           </div>
         </div>
@@ -901,8 +914,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
             <button
               onClick={destroy}
               disabled={busy}
-              aria-label="Supprimer le TD"
-              title="Supprimer le TD"
+              aria-label={t('Supprimer le TD')}
+              title={t('Supprimer le TD')}
               className="inline-flex items-center justify-center"
               style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}
             >
@@ -918,9 +931,9 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
 
       {/* Items */}
       <div className="mb-4 mt-4">
-        <h4 style={sectionTitle}>Exercices ({td.items.length})</h4>
+        <h4 style={sectionTitle}>{t('Exercices ({n})', { n: td.items.length })}</h4>
         {td.items.length === 0 ? (
-          <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>Aucun exercice.</p>
+          <p style={{ fontSize: 12, color: '#6b6862', fontStyle: 'italic' }}>{t('Aucun exercice.')}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {td.items.map((item, i) => {
@@ -959,8 +972,8 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     <button
                       onClick={() => remove(item.id)}
                       disabled={busy}
-                      aria-label="Retirer du TD"
-                      title="Retirer du TD"
+                      aria-label={t('Retirer du TD')}
+                      title={t('Retirer du TD')}
                       className="inline-flex items-center justify-center flex-shrink-0"
                       style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}
                     >
@@ -977,18 +990,18 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
       {/* Add exercises (owner only) */}
       {isOwner && (
         <div>
-          <h4 style={sectionTitle}>Ajouter un exercice</h4>
+          <h4 style={sectionTitle}>{t('Ajouter un exercice')}</h4>
           <input
             type="search"
             value={search}
             onChange={e => doSearch(e.target.value)}
-            placeholder="Rechercher un exercice…"
-            aria-label="Rechercher un exercice à ajouter"
+            placeholder={t('Rechercher un exercice…')}
+            aria-label={t('Rechercher un exercice à ajouter')}
             style={inputStyle}
           />
-          {searching && <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>Recherche…</p>}
+          {searching && <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>{t('Recherche…')}</p>}
           {!searching && search.trim() && results.length === 0 && (
-            <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>Aucun exercice trouvé.</p>
+            <p style={{ fontSize: 11, color: '#6b6862', marginTop: 6 }}>{t('Aucun exercice trouvé.')}</p>
           )}
           {results.length > 0 && (
             <div className="flex flex-col gap-1 mt-3">
@@ -1004,13 +1017,13 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                       background: already ? '#eaf3ed' : '#fff',
                       border: '1px solid ' + (already ? '#cfe6d8' : '#e7e3dc'),
                       borderRadius: 10, padding: '8px 12px', cursor: already ? 'default' : 'pointer',
-                      textAlign: 'left', minHeight: 40,
+                      textAlign: 'start', minHeight: 40,
                       opacity: already ? .7 : 1,
                     }}
                   >
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }} className="truncate">
                       {r.title}
-                      {already && <span style={{ marginLeft: 8, fontSize: 10, color: '#15633c' }}>· déjà ajouté</span>}
+                      {already && <span style={{ marginInlineStart: 8, fontSize: 10, color: '#15633c' }}>{t('· déjà ajouté')}</span>}
                     </div>
                     {meta && <div style={{ fontSize: 10, color: '#6b6862', marginTop: 1 }} className="truncate">{meta}</div>}
                   </button>
@@ -1042,15 +1055,16 @@ function cellKind(c: TDSuiviCell): CellKind {
   return c.at ? 'started' : 'none';
 }
 
-const shortDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
 function cellText(c: TDSuiviCell) {
   const kind = cellKind(c);
-  const parts: string[] = [CELL_STYLE[kind].label];
+  const parts: string[] = [t(CELL_STYLE[kind].label)];
   if (c.review_questions > 0) {
-    parts[0] += ` (${c.review_questions} ${plural(c.review_questions, 'question', 'questions')} à revoir)`;
+    const n = c.review_questions;
+    parts[0] += ` (${n > 1 ? t('{n} questions à revoir', { n }) : t('{n} question à revoir', { n })})`;
   }
-  if (c.at) parts.push(`le ${shortDate(c.at)}`);
+  if (c.at) parts.push(t('le {date}', { date: shortDate(c.at) }));
   return parts.join(' · ');
 }
 
@@ -1102,7 +1116,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
   if (state === 'error' || !suivi) {
     return (
       <div style={box}>
-        <p style={{ fontSize: 12, color: '#6b6862' }}>Le suivi de la classe n'a pas pu être chargé. Réessaie plus tard.</p>
+        <p style={{ fontSize: 12, color: '#6b6862' }}>{t("Le suivi de la classe n'a pas pu être chargé. Réessaie plus tard.")}</p>
       </div>
     );
   }
@@ -1119,7 +1133,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
   return (
     <div style={box}>
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
-        <h4 style={{ ...sectionTitle, marginBottom: 0 }}>Suivi de la classe</h4>
+        <h4 style={{ ...sectionTitle, marginBottom: 0 }}>{t('Suivi de la classe')}</h4>
         {summary.total > 0 && nItems > 0 && (
           <span style={{ fontSize: 13, fontWeight: 700, color: summary.finished === summary.total ? '#15633c' : '#1a1a1a' }}>
             {finishedLabel(summary.finished, summary.total)}
@@ -1128,9 +1142,9 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
       </div>
 
       {students.length === 0 ? (
-        <p style={{ fontSize: 12, color: '#6b6862' }}>Aucun élève n'a encore rejoint la classe : partage-leur le code.</p>
+        <p style={{ fontSize: 12, color: '#6b6862' }}>{t("Aucun élève n'a encore rejoint la classe : partage-leur le code.")}</p>
       ) : nItems === 0 ? (
-        <p style={{ fontSize: 12, color: '#6b6862' }}>Ajoute des exercices pour suivre qui les a faits.</p>
+        <p style={{ fontSize: 12, color: '#6b6862' }}>{t('Ajoute des exercices pour suivre qui les a faits.')}</p>
       ) : (
         <>
           <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch', margin: '0 -4px' }}>
@@ -1140,12 +1154,12 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                   <th
                     scope="col"
                     style={{
-                      position: 'sticky', left: 0, zIndex: 1, background: '#fff',
-                      textAlign: 'left', padding: '4px 8px 6px 4px', fontSize: 10, color: '#6b6862',
+                      position: 'sticky', insetInlineStart: 0, zIndex: 1, background: '#fff',
+                      textAlign: 'start', padding: '4px 8px 6px 4px', fontSize: 10, color: '#6b6862',
                       fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em',
                     }}
                   >
-                    Élève
+                    {t('Élève')}
                   </th>
                   {items.map((it, i) => (
                     <th
@@ -1158,7 +1172,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                     </th>
                   ))}
                   <th scope="col" style={{ padding: '4px 6px 6px 10px', fontSize: 10, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Réussis
+                    {t('Réussis')}
                   </th>
                 </tr>
               </thead>
@@ -1172,8 +1186,8 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       <th
                         scope="row"
                         style={{
-                          position: 'sticky', left: 0, zIndex: 1, background: '#fff',
-                          textAlign: 'left', padding: '2px 8px 2px 4px', fontWeight: 600, color: '#1a1a1a',
+                          position: 'sticky', insetInlineStart: 0, zIndex: 1, background: '#fff',
+                          textAlign: 'start', padding: '2px 8px 2px 4px', fontWeight: 600, color: '#1a1a1a',
                           borderTop: '1px solid #f2f1ee',
                         }}
                       >
@@ -1184,7 +1198,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       {items.map((it, i) => {
                         const c = row[String(it.object_id)] || EMPTY_CELL;
                         const kind = cellKind(c);
-                        const text = `${name} · Ex. ${i + 1} : ${cellText(c)}`;
+                        const text = t('{name} · Ex. {n} : {detail}', { name, n: i + 1, detail: cellText(c) });
                         return (
                           <td key={it.object_id} style={{ padding: 0, textAlign: 'center', borderTop: '1px solid #f2f1ee' }}>
                             <button
@@ -1218,14 +1232,14 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
           {/* Détail de la case touchée (au doigt, pas d'infobulle) */}
           {picked && (
             <p style={{ fontSize: 12, color: '#33302b', marginTop: 8 }}>
-              <strong>{picked.student}</strong> · Ex. {picked.n} « {picked.title} » : {cellText(picked.cell)}
+              <strong>{picked.student}</strong> · {t('Ex. {n}', { n: picked.n })} « {picked.title} » : {cellText(picked.cell)}
             </p>
           )}
 
           <div className="flex items-center gap-x-4 gap-y-1 flex-wrap mt-3" style={{ fontSize: 11, color: '#6b6862' }}>
             {(['success', 'review', 'started', 'none'] as CellKind[]).map(k => (
               <span key={k} className="inline-flex items-center gap-1.5">
-                <Pastille kind={k} size={16} /> {CELL_STYLE[k].label}
+                <Pastille kind={k} size={16} /> {t(CELL_STYLE[k].label)}
               </span>
             ))}
           </div>
@@ -1234,7 +1248,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
 
       {hardest.length > 0 && (
         <div className="mt-4">
-          <h5 style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>Questions les plus ratées</h5>
+          <h5 style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>{t('Questions les plus ratées')}</h5>
           <ul className="flex flex-col gap-1.5">
             {hardest.map(h => {
               const n = items.findIndex(it => it.object_id === h.object_id) + 1;
@@ -1248,7 +1262,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       background: '#faf3e2', borderRadius: 6, padding: '2px 7px',
                     }}
                   >
-                    {n > 0 ? `Ex. ${n} · ` : ''}{h.label}
+                    {n > 0 ? `${t('Ex. {n}', { n })} · ` : ''}{h.label}
                   </span>
                   <span className="flex-1 min-w-0 truncate" style={{ color: '#33302b' }}>{h.title}</span>
                   <span className="flex-shrink-0" style={{ color: '#6b6862' }}>
@@ -1300,40 +1314,40 @@ function CreateTDModal({ classroomId, subjects, onClose, onCreated }: {
       });
       onCreated();
     } catch (e) {
-      setErr(classroomError(e, "Impossible de créer le TD."));
+      setErr(classroomError(e, t("Impossible de créer le TD.")));
     } finally { setBusy(false); }
   };
 
   return (
-    <Modal label="Nouveau TD" maxWidth={480} onClose={onClose}>
+    <Modal label={t('Nouveau TD')} maxWidth={480} onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
-        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>Nouveau TD</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>{t('Nouveau TD')}</h3>
         <CloseButton onClick={onClose} />
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3">
-        <Field label="Titre">
+        <Field label={t('Titre')}>
           <input value={title} onChange={e => setTitle(e.target.value)} required autoFocus
-                 placeholder="Ex. Révisions chapitre 3" style={inputStyle} />
+                 placeholder={t('Ex. Révisions chapitre 3')} style={inputStyle} />
         </Field>
-        <Field label="Description (facultatif)">
+        <Field label={t('Description (facultatif)')}>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
                     style={{ ...inputStyle, resize: 'vertical', minHeight: 70 }} />
         </Field>
-        <Field label="Matière">
+        <Field label={t('Matière')}>
           <select value={subjectId} onChange={e => setSubjectId(e.target.value)} style={inputStyle}>
-            <option value="">Toutes matières</option>
+            <option value="">{t('Toutes matières')}</option>
             {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </Field>
-        <Field label="Échéance (facultatif)">
+        <Field label={t('Échéance (facultatif)')}>
           <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputStyle} />
         </Field>
         {err && <p style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
         <div className="flex justify-end gap-2 mt-2">
-          <button type="button" className="fd-btn-ghost" onClick={onClose}>Annuler</button>
+          <button type="button" className="fd-btn-ghost" onClick={onClose}>{t('Annuler')}</button>
           <button type="submit" className="fd-btn-primary" disabled={busy}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Créer
+            {t('Créer')}
           </button>
         </div>
       </form>
@@ -1356,23 +1370,23 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
   const addS = async () => {
     if (!newSubjectId) return;
     try { await addSubject(classroom.id, { subject_id: Number(newSubjectId) }); setNewSubjectId(''); await onChanged(); }
-    catch (e) { alert(classroomError(e, "Impossible d'ajouter cette matière.")); }
+    catch (e) { alert(classroomError(e, t("Impossible d'ajouter cette matière."))); }
   };
 
   const removeS = async (id: number, name: string) => {
-    if (!window.confirm(`Retirer ${name} de la classe ?`)) return;
+    if (!window.confirm(t('Retirer {name} de la classe ?', { name }))) return;
     try { await removeSubject(classroom.id, id); await onChanged(); }
-    catch (e) { alert(classroomError(e, 'Impossible de retirer cette matière.')); }
+    catch (e) { alert(classroomError(e, t('Impossible de retirer cette matière.'))); }
   };
 
   return (
     // La liste des élèves (et leurs e-mails) est réservée au prof.
     <div className={isOwner ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'max-w-xl'}>
       <div className="fd-card p-5">
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>Matières</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>{t('Matières')}</h3>
         {classroom.subjects.length === 0 ? (
           <p className="text-[13px] text-ink-faint">
-            {isOwner ? 'Pas encore de matière : ajoute celles que tu enseignes à cette classe.' : 'Pas encore de matière dans cette classe.'}
+            {isOwner ? t('Pas encore de matière : ajoute celles que tu enseignes à cette classe.') : t('Pas encore de matière dans cette classe.')}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -1387,7 +1401,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
                 </div>
                 {isOwner && (
                   <button onClick={() => removeS(cs.id, cs.subject_name)}
-                          aria-label={`Retirer ${cs.subject_name}`}
+                          aria-label={t('Retirer {name}', { name: cs.subject_name })}
                           className="inline-flex items-center justify-center flex-shrink-0"
                           style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}>
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1399,13 +1413,13 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
         )}
         {isOwner && availableSubjects.length > 0 && (
           <div className="flex items-center gap-2 mt-3">
-            <select value={newSubjectId} onChange={e => setNewSubjectId(e.target.value)} aria-label="Matière à ajouter"
+            <select value={newSubjectId} onChange={e => setNewSubjectId(e.target.value)} aria-label={t('Matière à ajouter')}
                     style={{ ...inputStyle, padding: '8px 10px', flex: 1, minWidth: 0 }}>
-              <option value="">Ajouter une matière…</option>
+              <option value="">{t('Ajouter une matière…')}</option>
               {availableSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <button onClick={addS} className="fd-btn-primary" disabled={!newSubjectId}>
-              <Plus className="w-3 h-3" /> Ajouter
+              <Plus className="w-3 h-3" /> {t('Ajouter')}
             </button>
           </div>
         )}
@@ -1414,10 +1428,10 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
       {isOwner && (
         <div className="fd-card p-5">
           <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>
-            Élèves ({members.length})
+            {t('Élèves ({n})', { n: members.length })}
           </h3>
           {members.length === 0 ? (
-            <p className="text-[13px] text-ink-faint">Aucun élève pour l’instant : envoie-leur le code de la classe.</p>
+            <p className="text-[13px] text-ink-faint">{t('Aucun élève pour l’instant : envoie-leur le code de la classe.')}</p>
           ) : (
             <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
               {members.map(m => (
@@ -1430,7 +1444,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
                     {m.student.email && <div className="truncate" style={{ fontSize: 10, color: '#6b6862' }}>{m.student.email}</div>}
                   </div>
                   <button onClick={() => onRemoveMember(m.student.id)}
-                          aria-label={`Retirer ${m.student.username}`}
+                          aria-label={t('Retirer {name}', { name: m.student.username })}
                           className="inline-flex items-center justify-center flex-shrink-0"
                           style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer', color: '#a23b34' }}>
                     <Trash2 className="w-3.5 h-3.5" />

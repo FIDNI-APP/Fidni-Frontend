@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Trophy, Clock, ChevronRight, Users, Lock } from 'lucide-react';
 import { getExamActivity, type ExamActivity } from '@/lib/api/concoursApi';
+import { t, dateLocale } from '@/i18n';
 
 type Theme = { from: string; to: string; light: string; text: string };
 
@@ -16,7 +17,7 @@ const scoreColor = (pct: number) =>
   pct >= 75 ? '#1a7a4a' : pct >= 50 ? '#c0892f' : '#a23b34';
 
 const relDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function ConcoursExamActivityTab({
   examId, theme, isAuthenticated,
@@ -48,7 +49,7 @@ export function ConcoursExamActivityTab({
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="w-5 h-5" style={{ color: theme.from }} />
           <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
-            Mes simulations sur cet examen
+            {t('Mes simulations sur cet examen')}
           </h2>
         </div>
 
@@ -59,18 +60,18 @@ export function ConcoursExamActivityTab({
           }}>
             <Lock className="w-7 h-7 mx-auto mb-3" style={{ color: theme.from }} />
             <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>
-              Connecte-toi pour suivre tes simulations
+              {t('Connecte-toi pour suivre tes simulations')}
             </p>
             <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
-              Garde une trace de tes scores et de ta progression sur cet examen.
+              {t('Garde une trace de tes scores et de ta progression sur cet examen.')}
             </p>
             <Link to="/login" className="fd-btn-primary inline-flex" style={{ background: theme.from }}>
-              Se connecter
+              {t('Se connecter')}
             </Link>
           </div>
         ) : !data.mine || data.mine.length === 0 ? (
           <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
-            Tu n'as pas encore lancé de simulation sur cet examen.
+            {t("Tu n'as pas encore lancé de simulation sur cet examen.")}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -90,26 +91,26 @@ export function ConcoursExamActivityTab({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>
-                        {submitted ? 'Terminée' : 'En cours'}
+                        {submitted ? t('Terminée') : t('En cours')}
                       </span>
                       {!submitted && (
                         <span style={{
                           fontSize: 10, fontWeight: 700, color: '#9a6e1c', background: '#faf3e2',
                           padding: '2px 8px', borderRadius: 99, textTransform: 'uppercase',
                         }}>
-                          Reprendre
+                          {t('Reprendre')}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: '#6b6862' }}>
                       <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {s.duration_minutes} min
+                        <Clock className="w-3 h-3" /> {s.duration_minutes} {t('min')}
                       </span>
                       <span>·</span>
                       <span>{relDate(s.started_at)}</span>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ textAlign: 'end', flexShrink: 0 }}>
                     <div style={{
                       fontSize: 18, fontWeight: 800, fontFamily: 'DM Mono',
                       color: submitted ? scoreColor(pct) : '#6b6862',
@@ -135,16 +136,16 @@ export function ConcoursExamActivityTab({
         <div className="flex items-center gap-2 mb-1">
           <Users className="w-5 h-5" style={{ color: theme.from }} />
           <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
-            Dernières sessions de la communauté
+            {t('Dernières sessions de la communauté')}
           </h2>
         </div>
         <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
-          Les 10 dernières simulations terminées sur cet examen (anonymisées).
+          {t('Les 10 dernières simulations terminées sur cet examen (anonymisées).')}
         </p>
 
         {data.community.length === 0 ? (
           <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
-            Personne n'a encore terminé de simulation sur cet examen. Sois le premier !
+            {t("Personne n'a encore terminé de simulation sur cet examen. Sois le premier !")}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -166,13 +167,13 @@ export function ConcoursExamActivityTab({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
-                      Un étudiant
+                      {t('Un étudiant')}
                     </div>
                     <div style={{ fontSize: 11, color: '#6b6862' }}>
                       {relDate(s.submitted_at)}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ textAlign: 'end', flexShrink: 0 }}>
                     <div style={{
                       fontSize: 17, fontWeight: 800, fontFamily: 'DM Mono', color: scoreColor(pct),
                     }}>

@@ -1,3 +1,5 @@
+import { dateLocale } from '@/i18n';
+
 // Tableau de bord « Ma progression » (13/10/2026) : couleurs et petites aides des graphiques.
 // Couleurs validées (outil dataviz, fond clair) : réussies / en partie / ratées se distinguent aussi pour les
 // daltoniens ; contraste < 3:1 pour les deux claires → légende, valeurs au survol et tableau des chapitres.
@@ -60,7 +62,7 @@ export function remplir(sparse: Ligne[], debut: string, fin: string, pas: 'jour'
 }
 
 /** « ↑ 12 % », « ↓ −3 », « = » ; null si la période d'avant est inconnue. */
-export function ecart(now: number, before: number | null, unite: 'pct' | 'abs' = 'pct', fmt = (n: number) => n.toLocaleString('fr-FR')) {
+export function ecart(now: number, before: number | null, unite: 'pct' | 'abs' = 'pct', fmt = (n: number) => n.toLocaleString(dateLocale())) {
   if (before === null) return { texte: null, sens: 0 as const };
   const diff = Math.round((now - before) * 10) / 10;
   if (diff === 0) return { texte: '=', sens: 0 as const };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { t } from '@/i18n';
 
 const LATER_KEY = 'fidni:bandeau-onboarding';
 const LATER_DAYS = 7;
@@ -40,7 +41,7 @@ export const OnboardingBanner: React.FC = () => {
     >
       <span className="inline-flex items-center gap-2" style={{ fontSize: 13, color: '#7a5512', fontWeight: 500 }}>
         <GraduationCap className="w-4 h-4 flex-shrink-0" />
-        Dis-nous ta classe pour voir les exercices de ton programme.
+        {t('Dis-nous ta classe pour voir les exercices de ton programme.')}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <button
@@ -55,7 +56,7 @@ export const OnboardingBanner: React.FC = () => {
           onMouseEnter={(e) => { e.currentTarget.style.background = '#6f4a0f'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = '#8a5d14'; }}
         >
-          Choisir ma classe <ArrowRight className="w-3.5 h-3.5" />
+          {t('Choisir ma classe')} <ArrowRight className="w-3.5 h-3.5" />
         </button>
         <button
           type="button"
@@ -65,7 +66,7 @@ export const OnboardingBanner: React.FC = () => {
             background: 'transparent', color: '#7a5512', fontSize: 13, fontWeight: 500, cursor: 'pointer',
           }}
         >
-          Plus tard
+          {t('Plus tard')}
         </button>
       </span>
     </div>

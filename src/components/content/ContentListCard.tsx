@@ -29,6 +29,7 @@ import {
 } from './listing/listingUtils';
 import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, ProgressPill, QuestionProgressBar, SchoolTag } from './listing/ListingParts';
 import { NewBadge, isNewContent } from './NewBadge';
+import { t } from '@/i18n';
 
 interface ContentListCardProps {
   content: ListItem;
@@ -85,7 +86,7 @@ const ExercisePreview: React.FC<{ structure: PreviewStructure }> = ({ structure 
 const ExamPreview: React.FC<{ structure: PreviewStructure; total?: number }> = ({ structure, total }) => {
   const parts: { id: string; title: string; points?: number; first: string }[] = [];
   for (const b of structure?.blocks ?? []) {
-    if (b?.type === 'section') parts.push({ id: b.id ?? String(parts.length), title: stripTags(b.content?.html) || `Partie ${parts.length + 1}`, points: b.points, first: '' });
+    if (b?.type === 'section') parts.push({ id: b.id ?? String(parts.length), title: stripTags(b.content?.html) || t('Partie {n}', { n: parts.length + 1 }), points: b.points, first: '' });
     else if (parts.length && !parts[parts.length - 1].first && b?.content?.html) parts[parts.length - 1].first = b.content.html;
   }
   if (!parts.length) return <ExercisePreview structure={structure} />;
@@ -96,12 +97,12 @@ const ExamPreview: React.FC<{ structure: PreviewStructure; total?: number }> = (
         <li key={p.id} className="min-w-0">
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-semibold text-ink truncate">{p.title}</span>
-            {Number(p.points) > 0 && <span className="fd-nums text-[12px] text-ink-faint shrink-0">{String(p.points).replace('.', ',')} pts</span>}
+            {Number(p.points) > 0 && <span className="fd-nums text-[12px] text-ink-faint shrink-0">{t('{n} pts', { n: String(p.points).replace('.', ',') })}</span>}
           </div>
           {p.first && <div className="fd-preview-line text-ink-faint" dangerouslySetInnerHTML={html(p.first)} />}
         </li>
       ))}
-      {more > 0 && <li className="text-[12px] text-ink-faint">+ {more} autre{more > 1 ? 's' : ''}</li>}
+      {more > 0 && <li className="text-[12px] text-ink-faint">{more > 1 ? t('+ {n} autres', { n: more }) : t('+ {n} autre', { n: more })}</li>}
     </ol>
   );
 };
@@ -114,11 +115,11 @@ const LessonPreview: React.FC<{ structure: PreviewStructure }> = ({ structure })
     <ol className="flex flex-col gap-1">
       {sections.slice(0, 5).map((s, i) => (
         <li key={s.id} className="flex gap-2 min-w-0">
-          <span className="fd-nums text-ink-faint shrink-0 w-4 text-right">{i + 1}</span>
+          <span className="fd-nums text-ink-faint shrink-0 w-4 text-end">{i + 1}</span>
           <span className="truncate text-ink-soft">{stripTags(s.title)}</span>
         </li>
       ))}
-      {sections.length > 5 && <li className="pl-6 text-[12px] text-ink-faint">+ {sections.length - 5} autre{sections.length - 5 > 1 ? 's' : ''} partie{sections.length - 5 > 1 ? 's' : ''}</li>}
+      {sections.length > 5 && <li className="ps-6 text-[12px] text-ink-faint">{sections.length - 5 > 1 ? t('+ {n} autres parties', { n: sections.length - 5 }) : t('+ {n} autre partie', { n: sections.length - 5 })}</li>}
     </ol>
   );
 };
@@ -180,7 +181,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
     hideLevel ? null : levelLabel(content),
     ...facts(content, contentType),
     // Date de rajout : dans cette ligne (au pied de la carte, elle poussait « Commencer » hors du cadre).
-    ilYa(content.created_at) ? `ajouté ${ilYa(content.created_at)}` : null,
+    ilYa(content.created_at) ? t('ajouté {quand}', { quand: ilYa(content.created_at) }) : null,
   ].filter(Boolean) as string[], [content, contentType, showSubject, hideLevel]);
 
   // « Nouveau » : calculé une fois (lit le stockage du navigateur).
@@ -195,13 +196,13 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap min-w-0 pt-1">
             {exam?.is_national_exam && !hideNational && <NationalTag year={exam.national_year} />}
             {structure?.a_verifier && (
-              <span title="Correction rédigée récemment, en cours de relecture par l’auteur du document"
+              <span title={t('Correction rédigée récemment, en cours de relecture par l’auteur du document')}
                 className="inline-flex items-center px-2 py-0.5 rounded-full bg-gold-soft text-[11.5px] font-semibold text-gold-strong">
-                Correction en vérification
+                {t('Correction en vérification')}
               </span>
             )}
             {chapter && (chapterTo && chapterTo !== location.pathname ? (
-              <Link to={chapterTo} title={`Tous les ${contentType === 'lesson' ? 'cours' : contentType === 'exam' ? 'devoirs' : 'exercices'} de ce chapitre`}
+              <Link to={chapterTo} title={contentType === 'lesson' ? t('Tous les cours de ce chapitre') : contentType === 'exam' ? t('Tous les devoirs de ce chapitre') : t('Tous les exercices de ce chapitre')}
                 className="relative z-10 inline-flex max-w-full items-center px-2 py-0.5 rounded-full bg-[#f2f1ee] text-[11.5px] font-semibold text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']">
                 <span className="truncate">{chapter}</span>
               </Link>
@@ -214,7 +215,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
             {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
             <SchoolTag school={content.school} />
           </div>
-          <div className="relative z-10 flex items-center -mr-2 -mt-0.5 shrink-0">
+          <div className="relative z-10 flex items-center -me-2 -mt-0.5 shrink-0">
             {canManage && (
               <OwnerButtons
                 onEdit={onEdit ? () => onEdit(String(content.id)) : undefined}
@@ -224,7 +225,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
             {contentType !== 'lesson' && (
               <button type="button" onClick={openRevision} data-tour={first ? 'liste-revision' : undefined}
                 className="relative z-10 w-9 h-9 rounded-lg inline-flex items-center justify-center text-ink-faint hover:text-ink hover:bg-[#f2f1ee] transition-colors"
-                aria-label="Ajouter à une liste de révision" title="Ajouter à une liste de révision">
+                aria-label={t('Ajouter à une liste de révision')} title={t('Ajouter à une liste de révision')}>
                 <ListPlus className="w-4 h-4" />
               </button>
             )}
@@ -246,7 +247,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           {content.title}
         </Link>
         {infos.length > 0 && (
-          <p className="mt-1 text-[12.5px] text-ink-faint fd-nums" title={content.created_at ? `Ajouté le ${dateLongue(content.created_at)}` : undefined}>{infos.join(' · ')}</p>
+          <p className="mt-1 text-[12.5px] text-ink-faint fd-nums" title={content.created_at ? t('Ajouté le {date}', { date: dateLongue(content.created_at) }) : undefined}>{infos.join(' · ')}</p>
         )}
         {/* Travail commencé : où il en est. */}
         {started && progress !== 'success' && (
@@ -271,12 +272,12 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           <VoteButtons likes={counts.likes} dislikes={counts.dislikes} onVote={vote} userVote={myVote} size="sm" />
         </div>
         {comments > 0 && (
-          <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title={`${comments} message${comments > 1 ? 's' : ''}`}>
+          <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title={comments > 1 ? t('{n} messages', { n: comments }) : t('{n} message', { n: comments })}>
             <MessageSquare className="w-3.5 h-3.5" /> {comments}
           </span>
         )}
         {(content.view_count ?? 0) > 0 && (
-          <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title="Vues">
+          <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-faint fd-nums" title={t('Vues')}>
             <Eye className="w-3.5 h-3.5" /> {content.view_count}
           </span>
         )}
@@ -284,10 +285,10 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           to={path}
           state={{ from }}
           data-tour={first ? 'liste-ouvrir' : undefined}
-          className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap h-9 px-3.5 rounded-[10px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover transition-colors"
+          className="ms-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap h-9 px-3.5 rounded-[10px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover transition-colors"
         >
-          {contentType === 'lesson' ? 'Lire' : progress === 'success' ? 'Revoir' : progress === 'review' || started ? 'Reprendre' : 'Commencer'}
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+          {contentType === 'lesson' ? t('Lire') : progress === 'success' ? t('Revoir') : progress === 'review' || started ? t('Reprendre') : t('Commencer')}
+          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
         </Link>
       </div>
       {revisionOpen && contentType !== 'lesson' && (

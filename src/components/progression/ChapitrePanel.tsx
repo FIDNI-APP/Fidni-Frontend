@@ -13,6 +13,7 @@ import { SERIES_QUESTIONS, remplir } from './chart';
 import { DayBars } from './DayBars';
 import { NotesChart } from './NotesChart';
 import { PointsFaibles } from './PointsFaibles';
+import { t } from '@/i18n';
 
 const Chiffre: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="rounded-xl border border-line bg-white px-3 py-2.5">
@@ -31,8 +32,8 @@ export const ChapitrePanel: React.FC<{ chapitre: TableauChapitre; data: Tableau;
   }, [onClose]);
 
   const titres = new Map(data.notes.map((n) => [n.id, { titre: n.titre, url: n.url }]));
-  const points = c.note.serie.map((p) => ({ date: p.date, note: p.note, titre: titres.get(p.examen)?.titre ?? 'Examen', url: titres.get(p.examen)?.url }));
-  const temps = data.temps.find((t) => t.id === c.id);
+  const points = c.note.serie.map((p) => ({ date: p.date, note: p.note, titre: titres.get(p.examen)?.titre ?? t('Examen'), url: titres.get(p.examen)?.url }));
+  const temps = data.temps.find((x) => x.id === c.id);
   const q = c.reussies + c.partielles + c.ratees;
   const rows = remplir(c.jours, data.periode.debut, data.periode.fin, data.periode.pas, ['reussies', 'partielles', 'ratees']);
   const note = (n: number | null) => (n === null ? '—' : <>{decimal(n)}<span className="text-[12px] font-semibold text-ink-faint"> /20</span></>);
@@ -41,13 +42,13 @@ export const ChapitrePanel: React.FC<{ chapitre: TableauChapitre; data: Tableau;
   return (
     <div className="fixed inset-0 z-[60] flex justify-end bg-[rgba(20,18,16,.35)] backdrop-blur-[1px]" onClick={onClose}>
       <aside role="dialog" aria-modal="true" aria-labelledby="chapitre-titre" onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full flex-col overflow-y-auto bg-[#faf9f7] shadow-[-12px_0_40px_rgba(20,18,16,.18)] sm:max-w-[560px]">
+        className="flex h-full w-full flex-col overflow-y-auto bg-[#faf9f7] shadow-[-12px_0_40px_rgba(20,18,16,.18)] rtl:shadow-[12px_0_40px_rgba(20,18,16,.18)] sm:max-w-[560px]">
         <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-line bg-white/95 px-5 py-4 backdrop-blur">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">Chapitre</p>
+            <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Chapitre')}</p>
             <h2 id="chapitre-titre" className="fd-display mt-1 text-[22px] leading-tight text-ink">{c.nom}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fermer" autoFocus
+          <button type="button" onClick={onClose} aria-label={t('Fermer')} autoFocus
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
             <X className="h-5 w-5" />
           </button>
@@ -55,31 +56,31 @@ export const ChapitrePanel: React.FC<{ chapitre: TableauChapitre; data: Tableau;
 
         <div className="flex flex-col gap-5 px-5 py-5">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Chiffre label="Note moyenne" value={note(c.note.moyenne)} />
-            <Chiffre label="Minimum" value={note(c.note.min)} />
-            <Chiffre label="Maximum" value={note(c.note.max)} />
-            <Chiffre label="Examens notés" value={c.note.n} />
+            <Chiffre label={t('Note moyenne')} value={note(c.note.moyenne)} />
+            <Chiffre label={t('Minimum')} value={note(c.note.min)} />
+            <Chiffre label={t('Maximum')} value={note(c.note.max)} />
+            <Chiffre label={t('Examens notés')} value={c.note.n} />
           </div>
 
           <section className="rounded-2xl border border-line bg-white p-4">
-            <h3 className="mb-3 text-[14px] font-semibold text-ink">Ma note aux examens</h3>
+            <h3 className="mb-3 text-[14px] font-semibold text-ink">{t('Ma note aux examens')}</h3>
             <NotesChart points={points} debut={data.periode.debut} fin={data.periode.fin} height={160}
-              headline={c.note.moyenne !== null ? <>{decimal(c.note.moyenne)} <span className="text-[14px] font-semibold text-ink-faint">/ 20 en moyenne</span></> : '—'}
-              emptyText={<>Pas encore d’examen corrigé sur ce chapitre.{c.examens_url && <> <Link to={c.examens_url} className="font-semibold text-brand-hover hover:underline">Voir ses DS</Link></>}</>} />
-            <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">Seulement les questions de ce chapitre, d’après ce que tu as coché sur ta copie.</p>
+              headline={c.note.moyenne !== null ? <>{decimal(c.note.moyenne)} <span className="text-[14px] font-semibold text-ink-faint">{t('/ 20 en moyenne')}</span></> : '—'}
+              emptyText={<>{t('Pas encore d’examen corrigé sur ce chapitre.')}{c.examens_url && <> <Link to={c.examens_url} className="font-semibold text-brand-hover hover:underline">{t('Voir ses DS')}</Link></>}</>} />
+            <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">{t('Seulement les questions de ce chapitre, d’après ce que tu as coché sur ta copie.')}</p>
           </section>
 
           <section className="rounded-2xl border border-line bg-white p-4">
-            <h3 className="mb-3 text-[14px] font-semibold text-ink">Mes questions</h3>
+            <h3 className="mb-3 text-[14px] font-semibold text-ink">{t('Mes questions')}</h3>
             <DayBars rows={rows} series={SERIES_QUESTIONS} pas={data.periode.pas} height={140}
-              describe={(r) => [`${r.reussies} réussie${Number(r.reussies) > 1 ? 's' : ''}`, Number(r.partielles) ? `${r.partielles} en partie` : '', `${r.ratees} à revoir`].filter(Boolean).join(' · ')}
-              headline={q ? <>{c.reussies} <span className="text-[14px] font-semibold text-ink-faint">réussie{c.reussies > 1 ? 's' : ''}{c.partielles ? ` · ${c.partielles} en partie` : ''} · {c.ratees} à revoir</span></> : 'Aucune question évaluée'}
-              emptyText="Aucune question évaluée sur la période." />
+              describe={(r) => [Number(r.reussies) > 1 ? t('{n} réussies', { n: r.reussies }) : t('{n} réussie', { n: r.reussies }), Number(r.partielles) ? t('{n} en partie', { n: r.partielles }) : '', t('{n} à revoir', { n: r.ratees })].filter(Boolean).join(' · ')}
+              headline={q ? <>{c.reussies} <span className="text-[14px] font-semibold text-ink-faint">{c.reussies > 1 ? t('réussies') : t('réussie')}{c.partielles ? ` · ${t('{n} en partie', { n: c.partielles })}` : ''} · {t('{n} à revoir', { n: c.ratees })}</span></> : t('Aucune question évaluée')}
+              emptyText={t('Aucune question évaluée sur la période.')} />
           </section>
 
           {data.points_faibles.some((p) => p.chapitre?.id === c.id) && (
             <section>
-              <h3 className="mb-2 text-[14px] font-semibold text-ink">Ce que tu ne maîtrises pas encore</h3>
+              <h3 className="mb-2 text-[14px] font-semibold text-ink">{t('Ce que tu ne maîtrises pas encore')}</h3>
               <PointsFaibles points={data.points_faibles.filter((p) => p.chapitre?.id === c.id)} compact />
             </section>
           )}
@@ -87,7 +88,7 @@ export const ChapitrePanel: React.FC<{ chapitre: TableauChapitre; data: Tableau;
           {temps && (
             <section className="rounded-2xl border border-line bg-white p-4">
               <h3 className="mb-2 flex items-baseline justify-between gap-3 text-[14px] font-semibold text-ink">
-                Mon temps <span className="fd-nums text-[13px] text-ink-soft">{duration(temps.secondes)}</span>
+                {t('Mon temps')} <span className="fd-nums text-[13px] text-ink-soft">{duration(temps.secondes)}</span>
               </h3>
               <ul className="divide-y divide-line">
                 {temps.contenus.map((ct) => (
@@ -101,10 +102,10 @@ export const ChapitrePanel: React.FC<{ chapitre: TableauChapitre; data: Tableau;
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Link to={practiceUrl(c.hub_url, c.id)} className={`${link} bg-brand text-white hover:bg-brand-hover`}><Dumbbell className="h-4 w-4" /> S’entraîner</Link>
-            <Link to={lessonsUrl(c.hub_url, c.id)} className={`${link} border border-line bg-white text-ink-soft hover:text-ink`}><BookOpen className="h-4 w-4" /> Le cours</Link>
-            {c.quiz && <Link to={quizUrl(c.id, '/progression')} className={`${link} border border-line bg-white text-ink-soft hover:text-ink`}><Brain className="h-4 w-4" /> Quiz</Link>}
-            {c.examens_url && <Link to={c.examens_url} className={`${link} border border-line bg-white text-ink-soft hover:text-ink`}><ClipboardList className="h-4 w-4" /> Ses DS</Link>}
+            <Link to={practiceUrl(c.hub_url, c.id)} className={`${link} bg-brand text-white hover:bg-brand-hover`}><Dumbbell className="h-4 w-4" /> {t('S’entraîner')}</Link>
+            <Link to={lessonsUrl(c.hub_url, c.id)} className={`${link} border border-line bg-white text-ink-soft hover:text-ink`}><BookOpen className="h-4 w-4" /> {t('Le cours')}</Link>
+            {c.quiz && <Link to={quizUrl(c.id, '/progression')} className={`${link} border border-line bg-white text-ink-soft hover:text-ink`}><Brain className="h-4 w-4" /> {t('Quiz')}</Link>}
+            {c.examens_url && <Link to={c.examens_url} className={`${link} border border-line bg-white text-ink-soft hover:text-ink`}><ClipboardList className="h-4 w-4" /> {t('Ses DS')}</Link>}
           </div>
         </div>
       </aside>

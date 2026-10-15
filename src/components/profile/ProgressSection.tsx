@@ -11,6 +11,7 @@ import { CardsSkeleton, EmptyState, Segmented, SplitBar } from '@/components/spa
 import { hubPath, profileLevel } from '@/lib/api/hubApi';
 import { duration } from '@/pages/progression/format';
 import type { Content } from '@/types';
+import { t } from '@/i18n';
 
 interface ProgressSectionProps {
   successExercises: Content[];
@@ -51,8 +52,8 @@ function groupBy(items: Rated[], keyOf: (c: Rated) => { key: string; name: strin
 
 const byChapter = (c: Rated) => (c.chapters?.length
   ? c.chapters.map((ch) => ({ key: `c${ch.id}`, name: ch.name }))
-  : [{ key: 'aucun', name: 'Sans chapitre' }]);
-const bySubject = (c: Rated) => [{ key: `s${c.subject?.id ?? 'aucune'}`, name: c.subject?.name || 'Sans matière' }];
+  : [{ key: 'aucun', name: t('Sans chapitre') }]);
+const bySubject = (c: Rated) => [{ key: `s${c.subject?.id ?? 'aucune'}`, name: c.subject?.name || t('Sans matière') }];
 
 /** Pastille d'état : icône + mot (jamais la couleur seule). */
 const StatusTile: React.FC<{ status: Status; small?: boolean }> = ({ status, small }) => (
@@ -64,7 +65,7 @@ const StatusTile: React.FC<{ status: Status; small?: boolean }> = ({ status, sma
 
 const StatusWord: React.FC<{ status: Status }> = ({ status }) => (
   <span className={`font-semibold ${status === 'success' ? 'text-brand-hover' : 'text-gold-strong'}`}>
-    {status === 'success' ? 'Réussi' : 'À revoir'}
+    {status === 'success' ? t('Réussi') : t('À revoir')}
   </span>
 );
 
@@ -83,7 +84,7 @@ const ExerciseCard: React.FC<{ item: Rated }> = ({ item }) => {
         </span>
         {item.status === 'review' && (
           <span className="hidden shrink-0 items-center gap-1 self-center text-[12.5px] font-semibold text-brand-hover group-hover:underline sm:inline-flex">
-            Refaire <ArrowRight className="h-3.5 w-3.5" />
+            {t('Refaire')} <ArrowRight className="h-3.5 w-3.5" />
           </span>
         )}
       </Link>
@@ -100,8 +101,8 @@ const GroupBlock: React.FC<{ group: Group }> = ({ group }) => (
         <span className="mt-1.5 flex items-center gap-3">
           <SplitBar success={group.success} review={group.review} total={group.items.length} className="w-24 shrink-0 sm:w-32" />
           <span className="truncate text-[12.5px] text-ink-faint">
-            <b className="fd-nums font-semibold text-brand-hover">{group.success}</b> réussi{group.success > 1 ? 's' : ''}
-            {group.review > 0 && <> · <b className="fd-nums font-semibold text-gold-strong">{group.review}</b> à revoir</>}
+            <b className="fd-nums font-semibold text-brand-hover">{group.success}</b> {group.success > 1 ? t('réussis') : t('réussi')}
+            {group.review > 0 && <> · <b className="fd-nums font-semibold text-gold-strong">{group.review}</b> {t('à revoir')}</>}
           </span>
         </span>
       </span>
@@ -159,17 +160,17 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
   if (failed && total === 0) {
     return (
       <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-        <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Tes exercices n’ont pas pu se charger. Vérifie ta connexion.</p>
-        {onRetry && <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>}
+        <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Tes exercices n’ont pas pu se charger. Vérifie ta connexion.')}</p>
+        {onRetry && <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>}
       </div>
     );
   }
 
   if (total === 0) {
     return (
-      <EmptyState icon={Target} title="Rien de noté pour l’instant"
-        text="Après un exercice, dis si tu l’as réussi ou s’il est à revoir : il apparaîtra ici, et ceux à revoir t’attendront dans Réviser."
-        action={<Link to={startUrl} className="fd-btn-primary min-h-10"><Dumbbell className="h-4 w-4" /> S’entraîner</Link>} />
+      <EmptyState icon={Target} title={t('Rien de noté pour l’instant')}
+        text={t('Après un exercice, dis si tu l’as réussi ou s’il est à revoir : il apparaîtra ici, et ceux à revoir t’attendront dans Réviser.')}
+        action={<Link to={startUrl} className="fd-btn-primary min-h-10"><Dumbbell className="h-4 w-4" /> {t('S’entraîner')}</Link>} />
     );
   }
 
@@ -188,15 +189,15 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
           <div className="min-w-0 flex-1">
             <p className="text-[14px] text-ink-soft">
-              <b className="fd-nums text-[22px] font-bold text-ink">{total}</b> exercice{total > 1 ? 's' : ''} noté{total > 1 ? 's' : ''} :{' '}
-              <b className="fd-nums font-semibold text-brand-hover">{success.length}</b> réussi{success.length > 1 ? 's' : ''},{' '}
-              <b className="fd-nums font-semibold text-gold-strong">{review.length}</b> à revoir
+              <b className="fd-nums text-[22px] font-bold text-ink">{total}</b> {total > 1 ? t('exercices notés :') : t('exercice noté :')}{' '}
+              <b className="fd-nums font-semibold text-brand-hover">{success.length}</b> {success.length > 1 ? t('réussis,') : t('réussi,')}{' '}
+              <b className="fd-nums font-semibold text-gold-strong">{review.length}</b> {t('à revoir')}
             </p>
             <SplitBar success={success.length} review={review.length} total={total} className="mt-2.5 max-w-md" />
           </div>
           {seconds >= 60 && (
             <p className="inline-flex shrink-0 items-center gap-1.5 text-[13px] text-ink-faint">
-              <Clock className="h-4 w-4" aria-hidden /> <span className="fd-nums font-semibold text-ink-soft">{duration(seconds)}</span> passées dessus
+              <Clock className="h-4 w-4" aria-hidden /> <span className="fd-nums font-semibold text-ink-soft">{duration(seconds)}</span> {t('passées dessus')}
             </p>
           )}
         </div>
@@ -204,7 +205,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           <Link to="/reviser#a-refaire"
             className="flex min-h-11 items-center gap-2 border-t border-line bg-gold-soft/60 px-4 text-[13px] font-semibold text-gold-strong hover:underline sm:px-5">
             <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="min-w-0 flex-1">{review.length} à revoir : {review.length > 1 ? 'les' : 'le'} refaire dans Réviser</span>
+            <span className="min-w-0 flex-1">{review.length > 1 ? t('{n} à revoir : les refaire dans Réviser', { n: review.length }) : t('{n} à revoir : le refaire dans Réviser', { n: review.length })}</span>
             <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
         )}
@@ -213,26 +214,26 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
       {/* Filtre, classement, recherche (seulement quand la liste est assez longue). */}
       {total >= TOOLS_FROM && (
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <Segmented<Filter> label="Afficher" value={filter} onChange={(v) => { setFilter(v); setAll(false); }}
+          <Segmented<Filter> label={t('Afficher')} value={filter} onChange={(v) => { setFilter(v); setAll(false); }}
             options={[
-              { key: 'all', label: 'Tous', count: total },
-              { key: 'success', label: 'Réussis', count: success.length },
-              { key: 'review', label: 'À revoir', count: review.length },
+              { key: 'all', label: t('Tous'), count: total },
+              { key: 'success', label: t('Réussis'), count: success.length },
+              { key: 'review', label: t('À revoir'), count: review.length },
             ]} />
           <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
             {total > SEARCH_FROM && (
               <label className="relative min-w-0 flex-1 sm:max-w-[240px]">
-                <span className="sr-only">Rechercher un exercice</span>
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
-                <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setAll(false); }} placeholder="Rechercher…"
-                  className="h-10 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
+                <span className="sr-only">{t('Rechercher un exercice')}</span>
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+                <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setAll(false); }} placeholder={t('Rechercher…')}
+                  className="h-10 w-full rounded-xl border border-line bg-white ps-9 pe-3 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
               </label>
             )}
             <label className="inline-flex items-center gap-2 text-[13px] text-ink-faint">
-              <span className="shrink-0">Classer</span>
+              <span className="shrink-0">{t('Classer')}</span>
               <select value={order} onChange={(e) => setOrder(e.target.value as Order)}
                 className="h-10 rounded-xl border border-line bg-white px-3 text-[13.5px] font-medium text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30">
-                {orders.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                {orders.map((o) => <option key={o.key} value={o.key}>{t(o.label)}</option>)}
               </select>
             </label>
           </div>
@@ -241,16 +242,16 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
 
       {visible.length === 0 ? (
         q ? (
-          <EmptyState compact icon={Search} tone="ink" title="Aucun exercice ne correspond"
-            text={`Rien ne contient « ${query.trim()} »${filter !== 'all' ? ' dans ce filtre' : ''}.`}
-            action={<button type="button" onClick={() => setQuery('')} className="fd-btn-ghost min-h-10"><X className="h-4 w-4" /> Effacer la recherche</button>} />
+          <EmptyState compact icon={Search} tone="ink" title={t('Aucun exercice ne correspond')}
+            text={filter !== 'all' ? t('Rien ne contient « {q} » dans ce filtre.', { q: query.trim() }) : t('Rien ne contient « {q} ».', { q: query.trim() })}
+            action={<button type="button" onClick={() => setQuery('')} className="fd-btn-ghost min-h-10"><X className="h-4 w-4" /> {t('Effacer la recherche')}</button>} />
         ) : filter === 'review' ? (
-          <EmptyState compact icon={Check} title="Rien à revoir"
-            text="Tous les exercices que tu as notés sont réussis. Bravo !" />
+          <EmptyState compact icon={Check} title={t('Rien à revoir')}
+            text={t('Tous les exercices que tu as notés sont réussis. Bravo !')} />
         ) : (
-          <EmptyState compact icon={RotateCcw} tone="gold" title="Pas encore de réussi"
-            text="Refais un exercice à revoir : quand tu le réussis, marque-le « Réussi »."
-            action={<Link to="/reviser#a-refaire" className="fd-btn-ghost min-h-10">Ouvrir Réviser</Link>} />
+          <EmptyState compact icon={RotateCcw} tone="gold" title={t('Pas encore de réussi')}
+            text={t('Refais un exercice à revoir : quand tu le réussis, marque-le « Réussi ».')}
+            action={<Link to="/reviser#a-refaire" className="fd-btn-ghost min-h-10">{t('Ouvrir Réviser')}</Link>} />
         )
       ) : groups ? (
         <div className="flex flex-col gap-3">
@@ -263,7 +264,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
           </ul>
           {visible.length > SHOWN && (
             <button type="button" onClick={() => setAll((v) => !v)} className="-mt-3 min-h-10 self-start text-[13px] font-semibold text-brand-hover hover:underline">
-              {all ? 'Voir moins' : `Voir les ${visible.length} exercices`}
+              {all ? t('Voir moins') : t('Voir les {n} exercices', { n: visible.length })}
             </button>
           )}
         </>

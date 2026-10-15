@@ -16,6 +16,7 @@ import {
   compressImage, createProposedSolution, deleteProposedSolution, updateProposedSolution, voteProposedSolution,
   type ProposedSolution, type SolutionAttachment,
 } from '@/lib/api/proposedSolutionsApi';
+import { t, dateLocale } from '@/i18n';
 
 // Éditeur chargé à la demande (survol ou clic sur « Proposer ma solution »).
 const loadEditor = () => import('@/components/editor/CompactTipTapEditor');
@@ -25,13 +26,13 @@ const MAX_PHOTOS = 6;
 
 const timeAgo = (iso: string) => {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (minutes < 1) return "à l'instant";
-  if (minutes < 60) return `il y a ${minutes} min`;
+  if (minutes < 1) return t("à l'instant");
+  if (minutes < 60) return t('il y a {n} min', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `il y a ${hours} h`;
+  if (hours < 24) return t('il y a {n} h', { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `il y a ${days} jour${days > 1 ? 's' : ''}`;
-  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+  if (days < 30) return days > 1 ? t('il y a {n} jours', { n: days }) : t('il y a {n} jour', { n: days });
+  return new Intl.DateTimeFormat(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
 };
 
 /** Le corps de l'éditeur est-il vide (paragraphes vides, espaces) ? */
@@ -60,7 +61,7 @@ const Composer: React.FC<{
     if (!files) return;
     const room = MAX_PHOTOS - photos.length - kept.length;
     const picked = Array.from(files).filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf').slice(0, room);
-    if (files.length > picked.length) setError(`${MAX_PHOTOS} photos au maximum.`);
+    if (files.length > picked.length) setError(t('{n} photos au maximum.', { n: MAX_PHOTOS }));
     setPhotos((prev) => [...prev, ...picked.map((file) => ({
       key: `${file.name}-${file.size}-${Math.random()}`, file,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
@@ -70,18 +71,18 @@ const Composer: React.FC<{
   const submit = async () => {
     setError(null);
     if (isBlank(body) && photos.length === 0 && kept.length === 0) {
-      setError('Rédige ta solution ou ajoute au moins une photo de ta copie.');
+      setError(t('Rédige ta solution ou ajoute au moins une photo de ta copie.'));
       return;
     }
     try {
       // 1. Photos : réduites puis envoyées une à une.
       const fileIds: string[] = [];
       for (let i = 0; i < photos.length; i++) {
-        setStatus(`Envoi des photos ${i + 1}/${photos.length}…`);
+        setStatus(t('Envoi des photos {i}/{total}…', { i: i + 1, total: photos.length }));
         const uploaded = await fileAPI.upload(await compressImage(photos[i].file));
         fileIds.push(uploaded.id);
       }
-      setStatus('Publication…');
+      setStatus(t('Publication…'));
       if (editing) {
         // Photos retirées pendant la modification : supprimées pour de bon.
         const removed = editing.attachments.filter((a) => !kept.some((k) => k.id === a.id));
@@ -98,8 +99,8 @@ const Composer: React.FC<{
         ? (data.detail || data.non_field_errors?.[0] || data.body?.[0] || data.file?.[0] || Object.values(data)[0])
         : null;
       setError(err?.response?.status === 429
-        ? 'Tu as publié beaucoup de solutions : réessaie dans un moment.'
-        : (typeof message === 'string' ? message : 'La publication a échoué. Réessaie.'));
+        ? t('Tu as publié beaucoup de solutions : réessaie dans un moment.')
+        : (typeof message === 'string' ? message : t('La publication a échoué. Réessaie.')));
     } finally {
       setStatus(null);
     }
@@ -109,21 +110,21 @@ const Composer: React.FC<{
   return (
     <div className="fd-card p-5 sm:p-6">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-ink">{editing ? 'Modifier ma solution' : 'Ma solution'}</h3>
-        <button onClick={onCancel} className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]" aria-label="Fermer">
+        <h3 className="font-semibold text-ink">{editing ? t('Modifier ma solution') : t('Ma solution')}</h3>
+        <button onClick={onCancel} className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]" aria-label={t('Fermer')}>
           <X className="w-4 h-4" />
         </button>
       </div>
 
       <Suspense fallback={(
         <div aria-busy="true" className="rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink-faint" style={{ minHeight: 150 }}>
-          Rédige ta démarche…
+          {t('Rédige ta démarche…')}
         </div>
       )}>
         <CompactTipTapEditor
           content={body}
           onChange={setBody}
-          placeholder="Rédige ta démarche… Les maths s'écrivent entre $ $, par exemple $f'(x) = 2x$."
+          placeholder={t("Rédige ta démarche… Les maths s'écrivent entre $ $, par exemple $f'(x) = 2x$.")}
           minHeight="150px"
           autoFocus
         />
@@ -132,7 +133,7 @@ const Composer: React.FC<{
       {/* Photos de la copie */}
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-ink-soft">Photos de ta copie <span className="text-ink-faint font-normal">(facultatif)</span></span>
+          <span className="text-sm font-medium text-ink-soft">{t('Photos de ta copie')} <span className="text-ink-faint font-normal">{t('(facultatif)')}</span></span>
           <span className="text-xs text-ink-faint fd-nums">{total}/{MAX_PHOTOS}</span>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -140,8 +141,8 @@ const Composer: React.FC<{
             <div key={a.id} className="relative aspect-square rounded-xl overflow-hidden border border-line bg-[#faf9f7]">
               <img src={a.download_url} alt={a.file_name} className="w-full h-full object-cover" />
               <button onClick={() => setKept((prev) => prev.filter((k) => k.id !== a.id))}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/95 border border-line flex items-center justify-center text-ink-soft hover:text-[#a23b34]"
-                aria-label="Retirer la photo"><X className="w-3.5 h-3.5" /></button>
+                className="absolute top-1 end-1 w-6 h-6 rounded-full bg-white/95 border border-line flex items-center justify-center text-ink-soft hover:text-[#a23b34]"
+                aria-label={t('Retirer la photo')}><X className="w-3.5 h-3.5" /></button>
             </div>
           ))}
           {photos.map((p) => (
@@ -150,15 +151,15 @@ const Composer: React.FC<{
                 ? <img src={p.preview} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-xs text-ink-faint p-2 text-center">{p.file.name}</div>}
               <button onClick={() => setPhotos((prev) => prev.filter((x) => x.key !== p.key))}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/95 border border-line flex items-center justify-center text-ink-soft hover:text-[#a23b34]"
-                aria-label="Retirer la photo"><X className="w-3.5 h-3.5" /></button>
+                className="absolute top-1 end-1 w-6 h-6 rounded-full bg-white/95 border border-line flex items-center justify-center text-ink-soft hover:text-[#a23b34]"
+                aria-label={t('Retirer la photo')}><X className="w-3.5 h-3.5" /></button>
             </div>
           ))}
           {total < MAX_PHOTOS && (
             <button type="button" onClick={() => inputRef.current?.click()}
               className="aspect-square rounded-xl border-2 border-dashed border-[#d8d4cc] hover:border-[#1a7a4a] hover:bg-[#eaf3ed] text-ink-faint hover:text-[#15633c] flex flex-col items-center justify-center gap-1 transition-colors">
               <ImagePlus className="w-5 h-5" />
-              <span className="text-[11px] font-medium">Ajouter</span>
+              <span className="text-[11px] font-medium">{t('Ajouter')}</span>
             </button>
           )}
         </div>
@@ -170,9 +171,9 @@ const Composer: React.FC<{
       {error && <p className="mt-3 text-sm text-[#a23b34]">{error}</p>}
 
       <div className="flex items-center justify-end gap-2 mt-5">
-        <button onClick={onCancel} className="fd-btn-ghost" disabled={!!status}>Annuler</button>
+        <button onClick={onCancel} className="fd-btn-ghost" disabled={!!status}>{t('Annuler')}</button>
         <button onClick={submit} className="fd-btn-primary" disabled={!!status}>
-          {status ? <><Loader2 className="w-4 h-4 animate-spin" /> {status}</> : (editing ? 'Enregistrer' : 'Publier ma solution')}
+          {status ? <><Loader2 className="w-4 h-4 animate-spin" /> {status}</> : (editing ? t('Enregistrer') : t('Publier ma solution'))}
         </button>
       </div>
     </div>
@@ -190,7 +191,7 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
   return (
     <div className="fixed inset-0 overflow-y-auto [align-items:safe_center] z-[200] bg-black/80 flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true">
       <img src={src} alt="" className="max-w-full max-h-full rounded-lg shadow-2xl bg-white" />
-      <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center" aria-label="Fermer">
+      <button className="absolute top-4 end-4 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center" aria-label={t('Fermer')}>
         <X className="w-5 h-5" />
       </button>
     </div>
@@ -212,8 +213,8 @@ const SolutionCard: React.FC<{
 
   const remove = async () => {
     if (!confirm(solution.is_mine
-      ? 'Supprimer ta solution ? Ses photos seront supprimées aussi.'
-      : `Supprimer la solution de ${solution.author.username} ? Ses photos seront supprimées aussi.`)) return;
+      ? t('Supprimer ta solution ? Ses photos seront supprimées aussi.')
+      : t('Supprimer la solution de {nom} ? Ses photos seront supprimées aussi.', { nom: solution.author.username }))) return;
     setDeleting(true);
     try { await deleteProposedSolution(solution.id); onDeleted(); } finally { setDeleting(false); }
   };
@@ -231,9 +232,9 @@ const SolutionCard: React.FC<{
               </span>}
           <span className="min-w-0">
             <span className={`block text-sm font-semibold truncate ${solution.author.is_deleted ? 'text-ink-faint italic' : 'text-ink group-hover:underline'}`}>
-              {solution.author.username}{solution.is_mine && <span className="text-ink-faint font-normal"> (toi)</span>}
+              {solution.author.username}{solution.is_mine && <span className="text-ink-faint font-normal"> {t('(toi)')}</span>}
             </span>
-            <span className="block text-xs text-ink-faint">{timeAgo(solution.created_at)}{edited ? ' · modifiée' : ''}</span>
+            <span className="block text-xs text-ink-faint">{timeAgo(solution.created_at)}{edited ? t(' · modifiée') : ''}</span>
           </span>
         </Link>
       </header>
@@ -279,13 +280,13 @@ const SolutionCard: React.FC<{
           size="sm"
         />
         {canDelete && (
-          <span className="ml-2 flex items-center gap-1">
+          <span className="ms-2 flex items-center gap-1">
             {solution.is_mine && <button onClick={onEdit} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-ink-soft hover:bg-[#f2f1ee]">
-              <Edit3 className="w-3.5 h-3.5" /> Modifier
+              <Edit3 className="w-3.5 h-3.5" /> {t('Modifier')}
             </button>}
             <button onClick={remove} disabled={deleting}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-[#a23b34] hover:bg-[#fbecea] disabled:opacity-50">
-              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Supprimer
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {t('Supprimer')}
             </button>
           </span>
         )}
@@ -319,15 +320,15 @@ export const ProposedSolutions: React.FC<{
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <h2 className="fd-display text-[20px] leading-tight text-ink">Solutions des élèves</h2>
+          <h2 className="fd-display text-[20px] leading-tight text-ink">{t('Solutions des élèves')}</h2>
           <p className="mt-1 max-w-xl text-[13px] text-ink-faint">
-            Compare ta démarche avec celle des autres. Le corrigé officiel reste avec l’énoncé.
+            {t('Compare ta démarche avec celle des autres. Le corrigé officiel reste avec l’énoncé.')}
           </p>
         </div>
         {/* Liste vide : les actions sont dans l'état vide (pas deux fois le même bouton). */}
         {!composing && !editing && !empty && (
           <button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary min-h-10">
-            <PenLine className="w-4 h-4" /> {mine ? 'Proposer une autre solution' : 'Proposer ma solution'}
+            <PenLine className="w-4 h-4" /> {mine ? t('Proposer une autre solution') : t('Proposer ma solution')}
           </button>
         )}
       </div>
@@ -347,10 +348,10 @@ export const ProposedSolutions: React.FC<{
       ) : solutions.length === 0 ? (
         !composing && (
           <EmptyState icon={Lightbulb} tone="ink" compact
-            title="Aucune solution proposée pour l’instant"
-            text="Sois le premier à partager ta méthode : rédige-la avec l’éditeur, ou prends simplement ta copie en photo."
-            action={<button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary min-h-10"><PenLine className="w-4 h-4" /> Rédiger ma solution</button>}
-            secondary={<button onClick={start} className="fd-btn-ghost min-h-10"><Camera className="w-4 h-4" /> Envoyer une photo</button>} />
+            title={t('Aucune solution proposée pour l’instant')}
+            text={t('Sois le premier à partager ta méthode : rédige-la avec l’éditeur, ou prends simplement ta copie en photo.')}
+            action={<button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary min-h-10"><PenLine className="w-4 h-4" /> {t('Rédiger ma solution')}</button>}
+            secondary={<button onClick={start} className="fd-btn-ghost min-h-10"><Camera className="w-4 h-4" /> {t('Envoyer une photo')}</button>} />
         )
       ) : (
         solutions.map((s) => (

@@ -12,13 +12,14 @@ import {
   ArrowRight, CalendarCheck, CalendarPlus, Check, ChevronRight, ClipboardCheck, ListChecks, ListPlus, Loader2,
   Pencil, Plus, RotateCcw, Sparkles, Target, Timer, Trash2,
 } from 'lucide-react';
+import { t, dateLocale } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { Page, PageHeader, Section, EmptyState, SplitBar, CardsSkeleton } from '@/components/space/Page';
-import { Countdown, DateTile, GradeBadge } from '@/components/devoirs/ui';
+import { Countdown, DateTile, GradeBadge, longDateOf, testName } from '@/components/devoirs/ui';
 import { GradeForm } from '@/components/devoirs/GradeForm';
 import { TestFormModal } from '@/components/devoirs/TestFormModal';
 import { CreateListModal } from '@/components/revision/CreateListModal';
-import { devoirsApi, longDate, testTitle, type UpcomingTest } from '@/lib/api/devoirsApi';
+import { devoirsApi, type UpcomingTest } from '@/lib/api/devoirsApi';
 import {
   deleteRevisionList, getRevisionLists, getToRedo, quickAddManyToRevision, type RevisionList, type ToRedoItem,
 } from '@/lib/api/revisionListApi';
@@ -32,7 +33,7 @@ const HASH_TAB: Record<string, ReviserTab> = { 'prochain-ds': 'ds', 'a-refaire':
 const REDO_SHOWN = 6;
 const PAST_SHOWN = 4;
 
-const ago = (days: number | null) => (days === null ? '' : days <= 0 ? 'aujourd’hui' : days === 1 ? 'hier' : `il y a ${days} j`);
+const ago = (days: number | null) => (days === null ? '' : days <= 0 ? t('aujourd’hui') : days === 1 ? t('hier') : t('il y a {n} j', { n: days }));
 
 /* ───────────────────────── 1. Prochain DS ───────────────────────── */
 
@@ -50,19 +51,19 @@ const NextTestHero: React.FC<{
             <Countdown days={test.days_left} />
             {test.mock_done_at && (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-[12px] font-semibold text-brand-hover">
-                <ClipboardCheck className="h-3.5 w-3.5" /> DS blanc fait
+                <ClipboardCheck className="h-3.5 w-3.5" /> {t('DS blanc fait')}
               </span>
             )}
           </div>
-          <h3 className="fd-display mt-2 text-[24px] leading-tight text-ink">{testTitle(test)}</h3>
-          <p className="mt-0.5 text-[13px] text-ink-faint">{longDate(test.date)}</p>
+          <h3 className="fd-display mt-2 text-[24px] leading-tight text-ink">{testName(test)}</h3>
+          <p className="mt-0.5 text-[13px] text-ink-faint">{longDateOf(test.date)}</p>
           {test.chapters.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Chapitres du DS">
+            <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={t('Chapitres du DS')}>
               {test.chapters.map((c) => {
                 const weak = test.weak_chapters?.includes(c.name);
                 return (
                   <li key={c.id} className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${weak ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`}>
-                    {c.name}{weak && <span className="sr-only"> (à renforcer)</span>}
+                    {c.name}{weak && <span className="sr-only"> {t('(à renforcer)')}</span>}
                   </li>
                 );
               })}
@@ -72,40 +73,40 @@ const NextTestHero: React.FC<{
       </div>
       {/* 11/10/2026 : le DS blanc est l'action principale (avant : « Continuer ma préparation », DS blanc en petit).
           13/10/2026 : commencé → « Reprendre » ; fait → un nouveau sujet (le lien rouvrait l'ancien, terminé). */}
-      <div className="flex flex-col gap-2 border-t border-line pt-4 sm:w-[260px] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+      <div className="flex flex-col gap-2 border-t border-line pt-4 sm:w-[260px] sm:border-s sm:border-t-0 sm:ps-6 sm:pt-0">
         {test.mock_done_at ? (
           <button type="button" onClick={() => onNewMock(test)} disabled={busy}
             className="fd-btn-primary min-h-12 w-full justify-center text-[15px] disabled:opacity-60" data-tour="reviser-preparer">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />} Un autre DS blanc
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />} {t('Un autre DS blanc')}
           </button>
         ) : (
           <Link to={`/revisions/ds/${test.id}/blanc`} className="fd-btn-primary min-h-12 w-full justify-center text-[15px]" data-tour="reviser-preparer">
-            <Timer className="h-4 w-4" /> {test.mock_started_at ? 'Reprendre le DS blanc' : 'Lancer le DS blanc'}
+            <Timer className="h-4 w-4" /> {test.mock_started_at ? t('Reprendre le DS blanc') : t('Lancer le DS blanc')}
           </Link>
         )}
         {test.mock_done_at && (
           <Link to={`/revisions/ds/${test.id}/blanc`} className="inline-flex min-h-10 items-center justify-center gap-1 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
-            <ClipboardCheck className="h-4 w-4" /> Ma correction
+            <ClipboardCheck className="h-4 w-4" /> {t('Ma correction')}
           </Link>
         )}
         <Link to={`/revisions/ds/${test.id}`} className="inline-flex min-h-10 items-center justify-center gap-1 text-[13.5px] font-semibold text-ink-soft hover:text-ink">
-          Réviser chapitre par chapitre <ArrowRight className="h-4 w-4" />
+          {t('Réviser chapitre par chapitre')} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     </div>
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] sm:px-6">
       <button type="button" onClick={() => onEdit(test)} className="inline-flex min-h-9 items-center gap-1.5 font-semibold text-ink-soft hover:text-ink">
-        <Pencil className="h-3.5 w-3.5" /> Modifier
+        <Pencil className="h-3.5 w-3.5" /> {t('Modifier')}
       </button>
       {/* Les DS suivants : des liens vers leur préparation (avant : du texte, injoignables). */}
       {others.length > 0 && (
-        <span className="text-ink-faint sm:ml-auto">
-          Puis :{' '}
+        <span className="text-ink-faint sm:ms-auto">
+          {t('Puis :')}{' '}
           {others.map((o, i) => (
             <React.Fragment key={o.id}>
               {i > 0 && ' · '}
               <Link to={`/revisions/ds/${o.id}`} className="font-semibold text-ink-soft underline decoration-line underline-offset-2 hover:text-ink">
-                {testTitle(o)} ({new Date(`${o.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
+                {testName(o)} ({new Date(`${o.date}T12:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })})
               </Link>
             </React.Fragment>
           ))}
@@ -122,13 +123,13 @@ const NoTestCard: React.FC<{ onAdd: () => void; hasPast: boolean }> = ({ onAdd, 
         <CalendarPlus className="h-6 w-6" />
       </span>
       <div className="min-w-0 flex-1">
-        <h3 className="text-[16px] font-semibold text-ink">{hasPast ? 'Un nouveau DS bientôt ?' : 'Un DS bientôt ?'}</h3>
+        <h3 className="text-[16px] font-semibold text-ink">{hasPast ? t('Un nouveau DS bientôt ?') : t('Un DS bientôt ?')}</h3>
         <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-ink-faint">
-          Indique sa date et ses chapitres : Fidni te dit où tu en es, te propose les bons exercices et un DS blanc chronométré.
+          {t('Indique sa date et ses chapitres : Fidni te dit où tu en es, te propose les bons exercices et un DS blanc chronométré.')}
         </p>
       </div>
       <button type="button" onClick={onAdd} className="fd-btn-primary min-h-11 justify-center" data-tour="reviser-annoncer">
-        <Plus className="h-4 w-4" /> Annoncer mon DS
+        <Plus className="h-4 w-4" /> {t('Annoncer mon DS')}
       </button>
     </div>
     <ol className="grid gap-px border-t border-line bg-line sm:grid-cols-3">
@@ -141,7 +142,7 @@ const NoTestCard: React.FC<{ onAdd: () => void; hasPast: boolean }> = ({ onAdd, 
         return (
           <li key={i} className="flex gap-3 bg-[#fcfbf9] px-5 py-3.5">
             <I className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
-            <p className="text-[12.5px] leading-snug text-ink-faint"><b className="font-semibold text-ink-soft">{title as string}</b> — {text as string}</p>
+            <p className="text-[12.5px] leading-snug text-ink-faint"><b className="font-semibold text-ink-soft">{t(title as string)}</b> — {t(text as string)}</p>
           </li>
         );
       })}
@@ -153,35 +154,35 @@ const NoTestCard: React.FC<{ onAdd: () => void; hasPast: boolean }> = ({ onAdd, 
 const PastTests: React.FC<{ tests: UpcomingTest[]; onChange: (t: UpcomingTest) => void }> = ({ tests, onChange }) => {
   const [all, setAll] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
-  const graded = tests.filter((t) => t.grade !== null);
-  const average = graded.length ? graded.reduce((n, t) => n + (t.grade ?? 0), 0) / graded.length : null;
+  const graded = tests.filter((x) => x.grade !== null);
+  const average = graded.length ? graded.reduce((n, x) => n + (x.grade ?? 0), 0) / graded.length : null;
   return (
     <details className="group mt-3 rounded-2xl border border-line bg-white">
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 text-[13.5px] text-ink-soft sm:px-5">
         <ChevronRight className="h-4 w-4 text-ink-faint transition-transform group-open:rotate-90" />
-        <span className="flex-1"><b className="font-semibold text-ink">Mes DS passés</b> · {tests.length}</span>
-        {average !== null && <span className="text-[12.5px]">moyenne <b className="fd-nums text-ink">{average.toFixed(1).replace('.', ',')} / 20</b></span>}
+        <span className="flex-1"><b className="font-semibold text-ink">{t('Mes DS passés')}</b> · {tests.length}</span>
+        {average !== null && <span className="text-[12.5px]">{t('moyenne')} <b className="fd-nums text-ink">{average.toFixed(1).replace('.', ',')} / 20</b></span>}
       </summary>
       <ul className="divide-y divide-line border-t border-line px-4 sm:px-5">
-        {(all ? tests : tests.slice(0, PAST_SHOWN)).map((t) => (
-          <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5">
-            <Link to={`/revisions/ds/${t.id}`} className="min-w-0 flex-1 truncate text-[13.5px] hover:underline">
-              <b className="font-semibold text-ink">{testTitle(t)}</b>{' '}
-              <span className="text-ink-faint">· {new Date(`${t.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+        {(all ? tests : tests.slice(0, PAST_SHOWN)).map((d) => (
+          <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5">
+            <Link to={`/revisions/ds/${d.id}`} className="min-w-0 flex-1 truncate text-[13.5px] hover:underline">
+              <b className="font-semibold text-ink">{testName(d)}</b>{' '}
+              <span className="text-ink-faint">· {new Date(`${d.date}T12:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}</span>
             </Link>
-            {t.grade !== null && editing !== t.id ? (
-              <button type="button" onClick={() => setEditing(t.id)} title="Changer ma note" className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-                <GradeBadge grade={t.grade} />
+            {d.grade !== null && editing !== d.id ? (
+              <button type="button" onClick={() => setEditing(d.id)} title={t('Changer ma note')} className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                <GradeBadge grade={d.grade} />
               </button>
             ) : (
-              <GradeForm test={t} autoFocus={editing === t.id} onSaved={(n) => { onChange(n); setEditing(null); }} />
+              <GradeForm test={d} autoFocus={editing === d.id} onSaved={(n) => { onChange(n); setEditing(null); }} />
             )}
           </li>
         ))}
       </ul>
       {tests.length > PAST_SHOWN && (
         <button type="button" onClick={() => setAll((v) => !v)} className="mx-4 mb-3 min-h-9 text-[12.5px] font-semibold text-brand-hover hover:underline sm:mx-5">
-          {all ? 'Voir moins' : `Voir les ${tests.length} DS passés`}
+          {all ? t('Voir moins') : t('Voir les {n} DS passés', { n: tests.length })}
         </button>
       )}
     </details>
@@ -192,7 +193,8 @@ const PastTests: React.FC<{ tests: UpcomingTest[]; onChange: (t: UpcomingTest) =
 
 const RedoCard: React.FC<{ item: ToRedoItem }> = ({ item }) => {
   const path = `/${item.type === 'exam' ? 'exams' : 'exercises'}/${item.id}`;
-  const why = item.failed ? 'Marqué à revoir' : `${item.weak_questions} question${item.weak_questions > 1 ? 's' : ''} à reprendre`;
+  const why = item.failed ? t('Marqué à revoir')
+    : item.weak_questions > 1 ? t('{n} questions à reprendre', { n: item.weak_questions }) : t('{n} question à reprendre', { n: item.weak_questions });
   return (
     <li>
       <Link to={path} className="group flex h-full items-start gap-3 rounded-2xl border border-line bg-white p-4 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
@@ -207,7 +209,7 @@ const RedoCard: React.FC<{ item: ToRedoItem }> = ({ item }) => {
           {item.chapters[0] && <span className="mt-2 inline-block rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">{item.chapters[0]}</span>}
         </span>
         <span className="hidden shrink-0 items-center gap-1 self-center text-[12.5px] font-semibold text-brand-hover group-hover:underline sm:inline-flex">
-          Refaire <ArrowRight className="h-3.5 w-3.5" />
+          {t('Refaire')} <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </Link>
     </li>
@@ -224,30 +226,30 @@ const ListCard: React.FC<{ list: RevisionList; onDelete: () => void; deleting: b
   return (
     <li className="group relative">
       <Link to={`/profile/revision-lists/${list.id}`}
-        className="flex h-full flex-col rounded-2xl border border-line bg-white p-4 pr-12 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        className="flex h-full flex-col rounded-2xl border border-line bg-white p-4 pe-12 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <span className="flex items-center gap-2">
           <ListChecks className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
           <span className="min-w-0 truncate text-[15px] font-semibold text-ink">{list.name}</span>
-          {done && <Check className="h-4 w-4 shrink-0 text-brand" aria-label="Tout réussi" />}
+          {done && <Check className="h-4 w-4 shrink-0 text-brand" aria-label={t('Tout réussi')} />}
         </span>
         <span className="mt-1 block truncate text-[12.5px] text-ink-faint">
-          {total} exercice{total > 1 ? 's' : ''}{chapters.length ? ` · ${chapters.join(', ')}` : ''}
+          {total > 1 ? t('{n} exercices', { n: total }) : t('{n} exercice', { n: total })}{chapters.length ? ` · ${chapters.join(', ')}` : ''}
         </span>
         {total > 0 ? (
           <span className="mt-auto pt-3">
             <SplitBar success={p.success} review={p.review} total={total} />
             <span className="mt-1.5 block text-[12px] text-ink-faint">
-              {p.success + p.review === 0 ? <><b className="fd-nums text-ink-soft">{p.todo}</b> à faire</> : <>
-                <b className="fd-nums text-brand-hover">{p.success}</b> réussi{p.success > 1 ? 's' : ''}
-                {p.review > 0 && <> · <b className="fd-nums text-gold-strong">{p.review}</b> à revoir</>}
-                {p.todo > 0 && <> · {p.todo} à faire</>}
+              {p.success + p.review === 0 ? <><b className="fd-nums text-ink-soft">{p.todo}</b> {t('à faire')}</> : <>
+                <b className="fd-nums text-brand-hover">{p.success}</b> {p.success > 1 ? t('réussis') : t('réussi')}
+                {p.review > 0 && <> · <b className="fd-nums text-gold-strong">{p.review}</b> {t('à revoir')}</>}
+                {p.todo > 0 && <> · {p.todo} {t('à faire')}</>}
               </>}
             </span>
           </span>
-        ) : <span className="mt-auto pt-3 text-[12px] text-ink-faint">Vide : ajoute des exercices avec le bouton « Liste ».</span>}
+        ) : <span className="mt-auto pt-3 text-[12px] text-ink-faint">{t('Vide : ajoute des exercices avec le bouton « Liste ».')}</span>}
       </Link>
-      <button type="button" onClick={onDelete} disabled={deleting} aria-label={`Supprimer la liste ${list.name}`} title="Supprimer"
-        className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-faint opacity-80 transition hover:bg-[#f2f1ee] hover:text-[#a23b34] focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+      <button type="button" onClick={onDelete} disabled={deleting} aria-label={t('Supprimer la liste {name}', { name: list.name })} title={t('Supprimer')}
+        className="absolute end-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-faint opacity-80 transition hover:bg-[#f2f1ee] hover:text-[#a23b34] focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
         {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
       </button>
     </li>
@@ -305,26 +307,26 @@ export const Reviser: React.FC = () => {
   };
 
   // « Un autre DS blanc » : un nouveau sujet, puis sa page (présentation, « Commencer »).
-  const anotherMock = async (t: UpcomingTest) => {
+  const anotherMock = async (test: UpcomingTest) => {
     setNewMock(true);
     try {
-      await devoirsApi.mockAction(t.id, 'new');
-      navigate(`/revisions/ds/${t.id}/blanc`);
+      await devoirsApi.mockAction(test.id, 'new');
+      navigate(`/revisions/ds/${test.id}/blanc`);
     } catch {
-      window.alert('Le nouveau DS blanc n’a pas pu être préparé. Vérifie ta connexion et réessaie.');
+      window.alert(t('Le nouveau DS blanc n’a pas pu être préparé. Vérifie ta connexion et réessaie.'));
     } finally {
       setNewMock(false);
     }
   };
 
   const removeList = async (list: RevisionList) => {
-    if (!window.confirm(`Supprimer la liste « ${list.name} » ? Les exercices eux-mêmes restent sur Fidni.`)) return;
+    if (!window.confirm(t('Supprimer la liste « {name} » ? Les exercices eux-mêmes restent sur Fidni.', { name: list.name }))) return;
     setDeleting(list.id);
     try {
       await deleteRevisionList(list.id);
       setLists((cur) => cur?.filter((l) => l.id !== list.id) ?? cur);
     } catch {
-      window.alert('La liste n’a pas pu être supprimée.');
+      window.alert(t('La liste n’a pas pu être supprimée.'));
     } finally {
       setDeleting(null);
     }
@@ -338,7 +340,7 @@ export const Reviser: React.FC = () => {
       load();
       if (r.list_id) navigate(`/profile/revision-lists/${r.list_id}`);
     } catch {
-      window.alert('Les exercices n’ont pas pu être rangés.');
+      window.alert(t('Les exercices n’ont pas pu être rangés.'));
     } finally {
       setRanging(false);
     }
@@ -350,16 +352,16 @@ export const Reviser: React.FC = () => {
   return (
     <Page>
       <PageHeader
-        eyebrow="Mon suivi"
-        title="Réviser"
-        subtitle="Ton prochain DS, ce que tu as raté, et les exercices que tu as mis de côté."
+        eyebrow={t('Mon suivi')}
+        title={t('Réviser')}
+        subtitle={t('Ton prochain DS, ce que tu as raté, et les exercices que tu as mis de côté.')}
         actions={(
           <>
             <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setTestModal({ test: null })}>
-              <CalendarPlus className="h-4 w-4" /> Annoncer un DS
+              <CalendarPlus className="h-4 w-4" /> {t('Annoncer un DS')}
             </button>
             <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setNewList(true)} data-tour="revisions-nouvelle">
-              <ListPlus className="h-4 w-4" /> Nouvelle liste
+              <ListPlus className="h-4 w-4" /> {t('Nouvelle liste')}
             </button>
           </>
         )}
@@ -367,13 +369,13 @@ export const Reviser: React.FC = () => {
 
       {failed && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Une partie de la page n’a pas pu se charger. Vérifie ta connexion.</p>
-          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Une partie de la page n’a pas pu se charger. Vérifie ta connexion.')}</p>
+          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
         </div>
       )}
 
       {/* Onglets : une section à la fois, son nombre en badge. */}
-      <div role="tablist" aria-label="Réviser" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
+      <div role="tablist" aria-label={t('Réviser')} className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
         {TABS.map((x) => {
           const n = x.key === 'ds' ? upcoming.length : x.key === 'a-refaire' ? redo?.count : lists?.length;
           const on = tab === x.key;
@@ -382,7 +384,7 @@ export const Reviser: React.FC = () => {
               onClick={() => setTab(x.key)}
               className={`-mb-px inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-[14px] font-semibold transition-colors ${
                 on ? 'border-ink text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>
-              {x.label}
+              {t(x.label)}
               {!!n && <span className={`fd-nums rounded-full px-1.5 text-[11.5px] ${on ? 'bg-ink text-white' : 'bg-[#f2f1ee] text-ink-soft'}`}>{n}</span>}
             </button>
           );
@@ -391,7 +393,7 @@ export const Reviser: React.FC = () => {
 
       <div role="tabpanel" id={`panneau-${tab}`} aria-labelledby={`onglet-${tab}`} className="flex flex-col gap-10">
         {tab === 'ds' && (
-        <Section id="prochain-ds" title={upcoming.length > 1 ? 'Mes prochains DS' : 'Mon prochain DS'}>
+        <Section id="prochain-ds" title={upcoming.length > 1 ? t('Mes prochains DS') : t('Mon prochain DS')}>
           <div data-tour="revisions-ds">
             {tests === null ? <CardsSkeleton n={1} />
               : next ? <NextTestHero test={next} others={upcoming.slice(1)} onEdit={(t) => setTestModal({ test: t })} onNewMock={anotherMock} busy={newMock} />
@@ -405,18 +407,18 @@ export const Reviser: React.FC = () => {
         )}
 
         {tab === 'a-refaire' && (
-        <Section id="a-refaire" title="À refaire" count={redo?.count}
-          hint={redoItems.length ? 'Ce que tu as raté, le plus ancien d’abord : c’est le bon moment pour le refaire.' : undefined}
+        <Section id="a-refaire" title={t('À refaire')} count={redo?.count}
+          hint={redoItems.length ? t('Ce que tu as raté, le plus ancien d’abord : c’est le bon moment pour le refaire.') : undefined}
           action={notInList.length > 1 ? (
             <button type="button" onClick={rangeAll} disabled={ranging} className="inline-flex min-h-10 items-center gap-1.5 font-semibold text-brand-hover hover:underline disabled:opacity-50">
-              {ranging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} En faire une liste
+              {ranging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {t('En faire une liste')}
             </button>
           ) : undefined}>
           <div data-tour="revisions-suggestions">
             {redo === null ? <CardsSkeleton n={2} className="sm:grid-cols-2" />
               : redoItems.length === 0 ? (
-                <EmptyState compact icon={Check} title="Rien à refaire pour l’instant"
-                  text="Quand tu marques un exercice « À revoir » ou que tu rates une question, il t’attend ici quelques jours plus tard." />
+                <EmptyState compact icon={Check} title={t('Rien à refaire pour l’instant')}
+                  text={t('Quand tu marques un exercice « À revoir » ou que tu rates une question, il t’attend ici quelques jours plus tard.')} />
               ) : (
                 <>
                   <ul className="grid gap-3 sm:grid-cols-2">
@@ -424,7 +426,7 @@ export const Reviser: React.FC = () => {
                   </ul>
                   {redoItems.length > REDO_SHOWN && (
                     <button type="button" onClick={() => setAllRedo((v) => !v)} className="mt-3 min-h-10 text-[13px] font-semibold text-brand-hover hover:underline">
-                      {allRedo ? 'Voir moins' : `Voir les ${redoItems.length} exercices`}
+                      {allRedo ? t('Voir moins') : t('Voir les {n} exercices', { n: redoItems.length })}
                     </button>
                   )}
                 </>
@@ -435,20 +437,20 @@ export const Reviser: React.FC = () => {
         )}
 
         {tab === 'listes' && (
-        <Section id="mes-listes" title="Mes listes" count={lists?.length}
-          hint={lists?.length ? 'Ouvre une liste pour refaire ses exercices à la suite, ou imprime-la.' : undefined}>
+        <Section id="mes-listes" title={t('Mes listes')} count={lists?.length}
+          hint={lists?.length ? t('Ouvre une liste pour refaire ses exercices à la suite, ou imprime-la.') : undefined}>
           {lists === null ? <CardsSkeleton n={2} className="sm:grid-cols-2" />
             : lists.length === 0 ? (
-              <EmptyState icon={ListChecks} tone="ink" title="Pas encore de liste"
-                text="Range ensemble les exercices à refaire : bouton « Liste » sur un exercice, ou « En faire une liste » depuis À refaire."
-                action={<button type="button" className="fd-btn-primary min-h-10" onClick={() => setNewList(true)}><Plus className="h-4 w-4" /> Créer une liste</button>} />
+              <EmptyState icon={ListChecks} tone="ink" title={t('Pas encore de liste')}
+                text={t('Range ensemble les exercices à refaire : bouton « Liste » sur un exercice, ou « En faire une liste » depuis À refaire.')}
+                action={<button type="button" className="fd-btn-primary min-h-10" onClick={() => setNewList(true)}><Plus className="h-4 w-4" /> {t('Créer une liste')}</button>} />
             ) : (
               <ul className="grid gap-3 sm:grid-cols-2" data-tour="revisions-liste">
                 {lists.map((l) => <ListCard key={l.id} list={l} deleting={deleting === l.id} onDelete={() => removeList(l)} />)}
                 <li>
                   <button type="button" onClick={() => setNewList(true)}
                     className="flex h-full min-h-[96px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d8d4cc] text-[13.5px] font-semibold text-ink-faint transition-colors hover:border-ink-faint hover:text-ink">
-                    <Plus className="h-4 w-4" /> Nouvelle liste
+                    <Plus className="h-4 w-4" /> {t('Nouvelle liste')}
                   </button>
                 </li>
               </ul>

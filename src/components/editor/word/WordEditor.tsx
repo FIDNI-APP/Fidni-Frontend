@@ -384,7 +384,8 @@ export const WordEditor: React.FC<WordEditorProps> = ({
       let at = pos;
       for (const f of files) {
         const res = await fileAPI.upload(f, 'content');
-        const image = { type: 'image', attrs: { src: res.download_url || res.url, alt: f.name } };
+        // « imageResize » : nom du nœud de tiptap-extension-resize-image (« image » n'existe pas : l'envoi échouait).
+        const image = { type: 'imageResize', attrs: { src: res.download_url || res.url, alt: f.name } };
         if (ed.isDestroyed) return;
         if (at !== undefined) { ed.chain().insertContentAt(at, image).run(); at = ed.state.selection.to; }
         else ed.chain().focus().insertContent(image).run();

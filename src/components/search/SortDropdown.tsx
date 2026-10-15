@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowUpDown, ChevronDown } from 'lucide-react';
 import type { ListSort } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
+import { t } from '@/i18n';
 
 interface SortDropdownProps {
   value: ListSort;
@@ -16,24 +17,24 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({ value, onChange, cla
   const { isAuthenticated } = useAuth();
   return (
     <span className={`relative inline-flex ${className}`}>
-      <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+      <ArrowUpDown className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as ListSort)}
-        aria-label="Trier"
-        title="Trier"
-        className="h-10 w-full min-w-0 cursor-pointer appearance-none truncate rounded-xl border border-line bg-white pl-9 pr-9 text-[13.5px] font-semibold text-ink-soft transition-colors hover:border-[#cfc9bf] hover:text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+        aria-label={t('Trier')}
+        title={t('Trier')}
+        className="h-10 w-full min-w-0 cursor-pointer appearance-none truncate rounded-xl border border-line bg-white ps-9 pe-9 text-[13.5px] font-semibold text-ink-soft transition-colors hover:border-[#cfc9bf] hover:text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
       >
         {/* « Pour toi » : selon ce que l'élève a ouvert, réussi, raté, aimé (backend things/for_you.py).
             Pour un visiteur, rien n'est personnalisé : « Recommandés ». */}
-        <option value="recommended">{isAuthenticated ? 'Pour toi' : 'Recommandés'}</option>
-        {easiest && <option value="easiest">Du plus facile au plus difficile</option>}
-        <option value="most_upvoted">Plus aimés</option>
-        <option value="newest">Plus récents</option>
-        <option value="oldest">Plus anciens</option>
+        <option value="recommended">{isAuthenticated ? t('Pour toi') : t('Recommandés')}</option>
+        {easiest && <option value="easiest">{t('Du plus facile au plus difficile')}</option>}
+        <option value="most_upvoted">{t('Plus aimés')}</option>
+        <option value="newest">{t('Plus récents')}</option>
+        <option value="oldest">{t('Plus anciens')}</option>
         {/* « Plus commentés » retiré : le serveur ne sait pas trier ainsi et renvoyait les plus récents. */}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+      <ChevronDown className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
     </span>
   );
 };

@@ -159,7 +159,7 @@ export const VisitorsTab: React.FC<{
                     <span className="min-w-0 flex-1 truncate text-ink">{pageInfo(r.page).label}</span>
                     <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(r.views)}</b> vues · {fmt(r.visits)} visites</span>
                   </div>
-                  <div className="ml-7"><Bar value={r.views} max={maxPage} /></div>
+                  <div className="ms-7"><Bar value={r.views} max={maxPage} /></div>
                 </li>
               ))}
             </ol>
@@ -185,7 +185,7 @@ export const VisitorsTab: React.FC<{
                       <span className="flex items-baseline gap-2">
                         <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink group-hover:text-brand">{x.title}</span>
                         <span className="hidden shrink-0 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] text-ink-soft sm:inline">{TYPE_LABEL[x.type] ?? x.type}</span>
-                        <span className="fd-nums shrink-0 text-right text-[13px] text-ink-faint"><b className="text-ink">{fmt(x.views)}</b> ({fmt(x.total)})</span>
+                        <span className="fd-nums shrink-0 text-end text-[13px] text-ink-faint"><b className="text-ink">{fmt(x.views)}</b> ({fmt(x.total)})</span>
                       </span>
                       <Bar value={x.views} max={maxContent} />
                     </Link>

@@ -7,6 +7,7 @@ import { NotesChart } from '@/components/progression/NotesChart';
 import { decimal } from '@/pages/progression/format';
 import { Curseur, Ecran, Plateau, useCompte, useTimeline } from './Scene';
 import { CHAPITRES, ilYa, moyenne } from './demo';
+import { t } from '@/i18n';
 
 // Entrée · curseur vers le premier chapitre · clic et détail · pause
 const DUREES = [1800, 1000, 3400, 500] as const;
@@ -27,7 +28,7 @@ const Carte: React.FC<{ c: (typeof CHAPITRES)[number]; i: number }> = ({ c, i })
       </span>
       <span className="mt-2 flex items-center gap-2">
         <BarreQuestions r={{ reussies: c.reussies, partielles: 0, ratees: c.ratees }} className="w-16" />
-        <span className="fd-nums text-[11.5px] text-ink-faint">{c.reussies} réussies · {c.ratees} à revoir</span>
+        <span className="fd-nums text-[11.5px] text-ink-faint">{t('{n} réussies · {m} à revoir', { n: c.reussies, m: c.ratees })}</span>
       </span>
     </li>
   );
@@ -45,16 +46,16 @@ const Detail: React.FC = () => {
   return (
     <>
       <motion.span className="absolute inset-0 bg-[rgba(20,18,16,.22)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} />
-      <motion.div className="absolute inset-y-0 right-0 w-[84%] border-l border-line bg-[#faf9f7] p-3 shadow-[-10px_0_30px_rgba(20,18,16,.16)]"
+      <motion.div className="absolute inset-y-0 end-0 w-[84%] border-s border-line bg-[#faf9f7] p-3 shadow-[-10px_0_30px_rgba(20,18,16,.16)]"
         initial={{ x: '100%' }} animate={{ x: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 30 }}>
-        <p className="text-[10px] font-bold uppercase tracking-[.1em] text-gold-strong">Chapitre</p>
+        <p className="text-[10px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Chapitre')}</p>
         <p className="fd-display text-[17px] leading-tight text-ink">{c.nom}</p>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
-          {chiffre('Moyenne', moyenne(c.notes))}{chiffre('Minimum', Math.min(...c.notes))}{chiffre('Maximum', Math.max(...c.notes))}
+          {chiffre(t('Moyenne'), moyenne(c.notes))}{chiffre(t('Minimum'), Math.min(...c.notes))}{chiffre(t('Maximum'), Math.max(...c.notes))}
         </div>
         <div className="mt-2 rounded-xl border border-line bg-white p-2.5 [&_p]:text-[11px]">
           <NotesChart points={points} debut={ilYa(30)} fin={ilYa(0)} height={78} emptyText=""
-            headline={<span className="text-[14px]">{decimal(moyenne(c.notes))} <span className="text-[12px] font-semibold text-ink-faint">/ 20 en moyenne</span></span>} />
+            headline={<span className="text-[14px]">{decimal(moyenne(c.notes))} <span className="text-[12px] font-semibold text-ink-faint">{t('/ 20 en moyenne')}</span></span>} />
         </div>
       </motion.div>
     </>

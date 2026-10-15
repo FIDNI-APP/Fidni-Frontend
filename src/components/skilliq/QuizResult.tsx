@@ -10,9 +10,10 @@ import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, Chev
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { lessonsUrl, practiceUrl } from '@/pages/progression/links';
 import { Delta } from './QuizRow';
+import { t } from '@/i18n';
 import { MathText } from './MathText';
 import {
-  RING, answered, frDate, hasReport, pct, plural, previousPct,
+  RING, answered, frDate, hasReport, pct, previousPct,
   type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment, type TheoremReport,
 } from './types';
 
@@ -21,7 +22,7 @@ const WEAK_SHOWN = 3;
 /** Bilan par théorème : les points faibles d'abord (or), le reste replié (vert à 100 % : jamais de rouge). */
 const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
   const [all, setAll] = useState(false);
-  const weak = report.theoremes.filter((t) => t.pct < 100);
+  const weak = report.theoremes.filter((th) => th.pct < 100);
   const shown = all ? report.theoremes : weak.slice(0, WEAK_SHOWN);
   const hidden = report.theoremes.length - shown.length;
   return (
@@ -30,33 +31,33 @@ const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
         <div className="flex items-start gap-3 rounded-xl bg-brand-soft px-4 py-3">
           <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-brand-hover" aria-hidden />
           <div>
-            <h2 id="quiz-theorems-title" className="text-[15px] font-semibold text-brand-hover">Chapitre maîtrisé à 100 %</h2>
-            <p className="mt-0.5 text-[13px] text-ink-soft">Tous les théorèmes évalués, toutes les réponses justes.</p>
+            <h2 id="quiz-theorems-title" className="text-[15px] font-semibold text-brand-hover">{t('Chapitre maîtrisé à 100 %')}</h2>
+            <p className="mt-0.5 text-[13px] text-ink-soft">{t('Tous les théorèmes évalués, toutes les réponses justes.')}</p>
           </div>
         </div>
       ) : (
         <h2 id="quiz-theorems-title" className="fd-display text-[18px] leading-tight text-ink">
-          {weak.length ? <>À revoir · <span className="fd-nums">{weak.length}</span> théorème{weak.length > 1 ? 's' : ''} sur {report.theoremes.length}</> : 'Tous les théorèmes évalués sont justes'}
+          {weak.length ? <>{t('À revoir')} · <span className="fd-nums">{weak.length}</span> {weak.length > 1 ? t('théorèmes') : t('théorème')} {t('sur {total}', { total: report.theoremes.length })}</> : t('Tous les théorèmes évalués sont justes')}
         </h2>
       )}
       {shown.length > 0 && (
         <ul className="mt-4 flex flex-col gap-3">
-          {shown.map((t) => {
-            const ok = t.pct === 100;
+          {shown.map((th) => {
+            const ok = th.pct === 100;
             return (
-              <li key={t.id}>
+              <li key={th.id}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-1.5 text-[13.5px] text-ink">
-                    {ok ? <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-label="Maîtrisé" />
-                      : <span className="h-4 w-4 shrink-0 rounded-full border-2 border-gold" aria-label="À revoir" />}
-                    <span className="min-w-0">{t.name}</span>
+                    {ok ? <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-label={t('Maîtrisé')} />
+                      : <span className="h-4 w-4 shrink-0 rounded-full border-2 border-gold" aria-label={t('À revoir')} />}
+                    <span className="min-w-0">{th.name}</span>
                   </span>
                   <span className={`fd-nums shrink-0 text-[13px] font-semibold ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>
-                    {t.justes}/{t.total}
+                    {th.justes}/{th.total}
                   </span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#efece6]" aria-hidden>
-                  <div className="h-full rounded-full" style={{ width: `${Math.max(t.pct, 3)}%`, background: ok ? RING.good : RING.low }} />
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(th.pct, 3)}%`, background: ok ? RING.good : RING.low }} />
                 </div>
               </li>
             );
@@ -66,21 +67,21 @@ const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
       {(hidden > 0 || all) && (
         <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all}
           className="mt-3 inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-ink-soft hover:text-ink">
-          {all ? 'Moins' : `Tout le bilan (${report.theoremes.length})`} <ChevronDown className={`h-4 w-4 transition-transform ${all ? 'rotate-180' : ''}`} aria-hidden />
+          {all ? t('Moins') : t('Tout le bilan ({n})', { n: report.theoremes.length })} <ChevronDown className={`h-4 w-4 transition-transform ${all ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       )}
       {all && report.non_evalues.length > 0 && (
-        <p className="mt-2 text-[12.5px] text-ink-faint">Pas évalués sur ce passage : {report.non_evalues.map((t) => t.name).join(' · ')}.</p>
+        <p className="mt-2 text-[12.5px] text-ink-faint">{t('Pas évalués sur ce passage : {liste}.', { liste: report.non_evalues.map((x) => x.name).join(' · ') })}</p>
       )}
     </section>
   );
 };
 
 const sentence = (score: number, progressed: boolean) => {
-  const base = score >= 80 ? 'Très bien : ce chapitre est solide.'
-    : score >= 50 ? 'Bonne base : quelques exercices ciblés, et c’est acquis.'
-      : 'Reprends ce chapitre, en commençant par les exercices faciles.';
-  return progressed ? `Tu progresses ! ${base}` : base;
+  const base = score >= 80 ? t('Très bien : ce chapitre est solide.')
+    : score >= 50 ? t('Bonne base : quelques exercices ciblés, et c’est acquis.')
+      : t('Reprends ce chapitre, en commençant par les exercices faciles.');
+  return progressed ? t('Tu progresses ! {base}', { base }) : base;
 };
 
 const linkCls = 'inline-flex min-h-10 items-center gap-1.5 font-semibold text-ink-soft transition-colors hover:text-ink';
@@ -95,7 +96,7 @@ const Corrected: React.FC<{ c: Item }> = ({ c }) => {
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold">
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${c.is_correct ? 'bg-brand-soft text-brand-hover' : skipped ? 'bg-[#f2f1ee] text-ink-soft' : 'bg-gold-soft text-[#8a6318]'}`}>
           {c.is_correct ? <Check className="h-3.5 w-3.5" aria-hidden /> : skipped ? null : <X className="h-3.5 w-3.5" aria-hidden />}
-          Question {c.n} · {c.is_correct ? 'juste' : skipped ? 'sans réponse' : 'fausse'}
+          {t('Question {n}', { n: c.n })} · {c.is_correct ? t('juste') : skipped ? t('sans réponse') : t('fausse')}
         </span>
         {c.theoremes && c.theoremes.length > 0 && <span className="font-normal text-ink-faint">{c.theoremes.join(' · ')}</span>}
       </p>
@@ -112,7 +113,7 @@ const Corrected: React.FC<{ c: Item }> = ({ c }) => {
                 {good ? <Check className="h-3.5 w-3.5" /> : mine ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + i)}
               </span>
               <MathText text={opt} className={`fd-latex min-w-0 flex-1 ${good ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
-              {mine && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">ta réponse</span>}
+              {mine && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('ta réponse')}</span>}
             </li>
           );
         })}
@@ -163,54 +164,54 @@ export const QuizResult: React.FC<{
 
   const practice = (
     <Link to={practiceUrl(hub, quiz.id)} className={retour || dernier ? linkCls : 'fd-btn-primary min-h-11 justify-center text-[14px]'}>
-      <Dumbbell className="h-4 w-4" aria-hidden /> S’entraîner sur ce chapitre {!retour && !dernier && <ArrowRight className="h-4 w-4" aria-hidden />}
+      <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')} {!retour && !dernier && <ArrowRight className="h-4 w-4" aria-hidden />}
     </Link>
   );
-  const tabs: [Tab, string, number][] = [['erreurs', 'Erreurs', wrong.length], ['sans', 'Sans réponse', skipped.length], ['toutes', 'Toutes', items.length]];
+  const tabs: [Tab, string, number][] = [['erreurs', t('Erreurs'), wrong.length], ['sans', t('Sans réponse'), skipped.length], ['toutes', t('Toutes'), items.length]];
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
       <button type="button" onClick={onBack}
-        className="-ml-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pr-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-        <ChevronLeft className="h-4 w-4" aria-hidden /> Quiz par chapitre
+        className="-ms-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quiz par chapitre')}
       </button>
 
       <section className="overflow-hidden rounded-3xl border border-line bg-white" aria-labelledby="quiz-result-title">
-        <div className="flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:gap-7 sm:p-7 sm:text-left">
+        <div className="flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:gap-7 sm:p-7 sm:text-start">
           <ProgressRing percentage={score} size={112} strokeWidth={9} trackColor={RING.track} progressColor={score >= 50 ? RING.good : RING.low}>
             <span className="fd-nums text-[28px] font-bold leading-none text-ink">{score}<span className="text-[15px]"> %</span></span>
           </ProgressRing>
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
-              {dernier ? `Ton dernier passage · ${frDate(result.completed_at)}` : `Quiz terminé${subject ? ` · ${subject}` : ''}`}
+              {dernier ? t('Ton dernier passage · {date}', { date: frDate(result.completed_at) }) : `${t('Quiz terminé')}${subject ? ` · ${subject}` : ''}`}
             </p>
             <h1 id="quiz-result-title" className="fd-display mt-1.5 text-[24px] leading-tight text-ink sm:text-[26px]">{quiz.name}</h1>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:justify-start">
               <p className="text-[14px] text-ink-soft">
-                <b className="fd-nums text-ink">{right.length}</b> bonne{right.length > 1 ? 's' : ''} réponse{right.length > 1 ? 's' : ''} sur <span className="fd-nums">{total}</span>
+                <b className="fd-nums text-ink">{right.length}</b> {right.length > 1 ? t('bonnes réponses sur') : t('bonne réponse sur')} <span className="fd-nums">{total}</span>
               </p>
               <Delta a={result} long />
             </div>
             {!dernier && <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">{sentence(score, before !== null && score > before)}</p>}
-            {weighted && <p className="mt-1.5 text-[12px] text-ink-faint">Les questions difficiles comptent un peu plus dans le score.</p>}
+            {weighted && <p className="mt-1.5 text-[12px] text-ink-faint">{t('Les questions difficiles comptent un peu plus dans le score.')}</p>}
           </div>
         </div>
 
         <div className="flex flex-col gap-2 border-t border-line bg-[#fcfbf9] px-5 py-4 sm:flex-row sm:items-center sm:gap-5 sm:px-7">
           {dernier ? (
             <button type="button" onClick={onRedo} className="fd-btn-primary min-h-11 shrink-0 justify-center whitespace-nowrap text-[14px]">
-              <RotateCcw className="h-4 w-4" aria-hidden /> Refaire le quiz
+              <RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}
             </button>
           ) : retour ? (
             <Link to={retour} className="fd-btn-primary min-h-11 justify-center text-[14px]">
-              <ArrowLeft className="h-4 w-4" aria-hidden /> Retour à mon DS
+              <ArrowLeft className="h-4 w-4" aria-hidden /> {t('Retour à mon DS')}
             </Link>
           ) : practice}
           <div className="flex flex-wrap items-center justify-center gap-x-4 text-[13px] sm:justify-start">
             {(retour || dernier) && practice}
-            <Link to={lessonsUrl(hub, quiz.id)} className={linkCls}><BookOpen className="h-4 w-4" aria-hidden /> Le cours</Link>
-            <Link to={`/progression?chapitre=${quiz.id}`} className={linkCls}><LineChart className="h-4 w-4" aria-hidden /> Ma progression</Link>
-            {!dernier && <button type="button" onClick={onRedo} className={linkCls}><RotateCcw className="h-4 w-4" aria-hidden /> Refaire le quiz</button>}
+            <Link to={lessonsUrl(hub, quiz.id)} className={linkCls}><BookOpen className="h-4 w-4" aria-hidden /> {t('Le cours')}</Link>
+            <Link to={`/progression?chapitre=${quiz.id}`} className={linkCls}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>
+            {!dernier && <button type="button" onClick={onRedo} className={linkCls}><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
           </div>
         </div>
       </section>
@@ -220,8 +221,8 @@ export const QuizResult: React.FC<{
       {items.length > 0 ? (
         <section aria-labelledby="quiz-correction-title" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="quiz-correction-title" className="fd-display text-[20px] text-ink">La correction</h2>
-            <div role="tablist" aria-label="Questions à revoir" className="flex flex-wrap gap-1.5">
+            <h2 id="quiz-correction-title" className="fd-display text-[20px] text-ink">{t('La correction')}</h2>
+            <div role="tablist" aria-label={t('Questions à revoir')} className="flex flex-wrap gap-1.5">
               {tabs.map(([id, label, n]) => (n > 0 || id === 'toutes') && (
                 <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
                   className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
@@ -235,13 +236,13 @@ export const QuizResult: React.FC<{
             <ol className="flex flex-col gap-3">{list.map((c) => <Corrected key={c.id} c={c} />)}</ol>
           ) : (
             <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[14px] text-ink-soft">
-              <CheckCircle2 className="mr-1.5 inline h-4 w-4 text-brand" aria-hidden /> Aucune erreur : tout est juste.
+              <CheckCircle2 className="me-1.5 inline h-4 w-4 text-brand" aria-hidden /> {t('Aucune erreur : tout est juste.')}
             </p>
           )}
         </section>
       ) : dernier && (
         <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[13.5px] text-ink-faint">
-          La correction de ce passage n’a pas été gardée (passage d’avant la mise à jour des quiz). {plural(total, 'question')}.
+          {t('La correction de ce passage n’a pas été gardée (passage d’avant la mise à jour des quiz).')} {total > 1 ? t('{n} questions.', { n: total }) : t('{n} question.', { n: total })}
         </p>
       )}
     </div>

@@ -19,6 +19,7 @@ import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom } from './nav';
 import Logo3 from '@/assets/logo3.svg';
+import { t } from '@/i18n';
 
 type IconType = React.ComponentType<{ className?: string }>;
 type LevelBase = '/exercises' | '/lessons' | '/exams';
@@ -139,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => (
   <>
     <aside
-      className="hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0 border-r border-line bg-white print:hidden"
+      className="hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0 border-e border-line bg-white print:hidden"
       style={{ width: collapsed ? 72 : 240, transition: 'width .2s cubic-bezier(.25,.46,.45,.94)' }}
     >
       <SidebarInner collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
@@ -197,8 +198,8 @@ const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Menu"
-        className="absolute left-0 top-0 flex h-full flex-col bg-white shadow-[8px_0_32px_rgba(20,18,16,.12)]"
+        aria-label={t('Menu')}
+        className="absolute start-0 top-0 flex h-full flex-col bg-white shadow-[8px_0_32px_rgba(20,18,16,.12)]"
         style={{
           width: 'min(320px, 86vw)',
           paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -271,22 +272,22 @@ const SidebarInner: React.FC<{
   return (
     <>
       {/* En-tête : logo + réduire / fermer */}
-      <div className={cx('flex h-[60px] flex-shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between pl-5 pr-3')}>
+      <div className={cx('flex h-[60px] flex-shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between ps-5 pe-3')}>
         {!collapsed && (
-          <Link to="/" onClick={onClose} className="flex items-center rounded-lg" aria-label="Fidni, accueil">
+          <Link to="/" onClick={onClose} className="flex items-center rounded-lg" aria-label={t('Fidni, accueil')}>
             <img src={Logo3} alt="Fidni" className="h-8 w-auto object-contain" />
           </Link>
         )}
         {drawer ? (
-          <button type="button" onClick={onClose} aria-label="Fermer le menu" data-drawer-close className={iconBtn}>
+          <button type="button" onClick={onClose} aria-label={t('Fermer le menu')} data-drawer-close className={iconBtn}>
             <X className="h-5 w-5" />
           </button>
         ) : (
           <button
             type="button"
             onClick={onToggleCollapsed}
-            aria-label={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
-            title={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
+            aria-label={collapsed ? t('Déployer le menu') : t('Réduire le menu')}
+            title={collapsed ? t('Déployer le menu') : t('Réduire le menu')}
             className={iconBtn}
           >
             {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
@@ -295,7 +296,7 @@ const SidebarInner: React.FC<{
       </div>
 
       {/* Rubriques */}
-      <nav aria-label="Menu principal" className={cx('flex-1 overflow-y-auto overflow-x-hidden', collapsed ? 'px-3 py-3' : 'px-3 py-4')}>
+      <nav aria-label={t('Menu principal')} className={cx('flex-1 overflow-y-auto overflow-x-hidden', collapsed ? 'px-3 py-3' : 'px-3 py-4')}>
         {groups.map((group, gi) => (
           <NavSection key={gi} group={group} first={gi === 0} collapsed={collapsed} drawer={drawer}>
             {group.items.map((item) => {
@@ -339,7 +340,7 @@ const NavSection: React.FC<{
   return (
     <div data-tour={group.tour} className={cx(!first && (collapsed ? 'mt-3 border-t border-[#f2f1ee] pt-3' : drawer ? 'mt-6' : 'mt-5'))}>
       {group.title && !collapsed && (
-        <p id={id} className="px-3 pb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">{group.title}</p>
+        <p id={id} className="px-3 pb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">{t(group.title)}</p>
       )}
       <ul className="flex flex-col gap-0.5" aria-labelledby={group.title && !collapsed ? id : undefined}>
         {children}
@@ -361,12 +362,12 @@ const NavIcon: React.FC<{ icon: NavItem['icon']; active: boolean }> = ({ icon: I
 const QuizNouveau: React.FC<{ place: 'dessous' | 'droite' | 'point'; active: boolean }> = ({ place, active }) => {
   const { menu } = useQuizNouveau();
   if (!menu) return null;
-  if (place === 'point') return <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label="nouveau" />;
+  if (place === 'point') return <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label={t('nouveau')} />;
   return (
     <span className={cx('shrink-0 rounded-full px-1.5 font-bold uppercase tracking-[.06em]',
-      place === 'dessous' ? 'mt-0.5 py-px text-[9.5px] leading-[14px]' : 'ml-auto mr-1 py-0.5 text-[10px]',
+      place === 'dessous' ? 'mt-0.5 py-px text-[9.5px] leading-[14px]' : 'ms-auto me-1 py-0.5 text-[10px]',
       active ? 'bg-white/15 text-white' : 'bg-gold text-white')}>
-      Nouveau
+      {t('Nouveau')}
     </span>
   );
 };
@@ -385,11 +386,11 @@ const NavRow: React.FC<{
           to={href}
           onClick={onNavigate}
           aria-current={active ? 'page' : undefined}
-          className={cx('flex min-w-0 flex-1 items-center gap-2.5 pl-1.5', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]',
+          className={cx('flex min-w-0 flex-1 items-center gap-2.5 ps-1.5', drawer ? 'min-h-11 text-[15px]' : 'min-h-10 text-[14px]',
             active ? 'font-semibold text-white' : 'font-medium text-ink-soft group-hover:text-ink')}
         >
           <NavIcon icon={Icon} active={active} />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{t(item.label)}</span>
         </Link>
         {toggle}
       </div>
@@ -399,8 +400,8 @@ const NavRow: React.FC<{
     <Link
       to={href}
       onClick={onNavigate}
-      title={collapsed ? item.label : undefined}
-      aria-label={collapsed ? item.label : undefined}
+      title={collapsed ? t(item.label) : undefined}
+      aria-label={collapsed ? t(item.label) : undefined}
       aria-current={active ? 'page' : undefined}
       className={cx(
         'group relative flex items-center rounded-xl transition-colors',
@@ -411,10 +412,10 @@ const NavRow: React.FC<{
       <NavIcon icon={Icon} active={active} />
       {!collapsed && (item.nouveau && !drawer ? (
         <span className="flex min-w-0 flex-col items-start py-1">
-          <span className="max-w-full truncate">{item.label}</span>
+          <span className="max-w-full truncate">{t(item.label)}</span>
           <QuizNouveau place="dessous" active={active} />
         </span>
-      ) : <span className="truncate">{item.label}</span>)}
+      ) : <span className="truncate">{t(item.label)}</span>)}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
     </Link>
   );
@@ -436,7 +437,7 @@ const LevelSection: React.FC<{
       type="button"
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
       aria-expanded={open}
-      aria-label={open ? `Réduire ${item.label}` : `Déployer ${item.label}`}
+      aria-label={open ? t('Réduire {label}', { label: t(item.label) }) : t('Déployer {label}', { label: t(item.label) })}
       className={cx('inline-flex flex-shrink-0 items-center justify-center rounded-xl transition-colors',
         drawer ? 'h-11 w-11' : 'h-10 w-10', active ? 'text-white/70 hover:text-white' : 'text-ink-faint hover:text-ink')}
     >
@@ -466,7 +467,7 @@ const LevelLinks: React.FC<{
   const shown = levels;
 
   return (
-    <ul className="mb-2 ml-[21px] mt-1 flex flex-col gap-0.5 border-l border-line pl-2.5" aria-label="Niveaux">
+    <ul className="mb-2 ms-[21px] mt-1 flex flex-col gap-0.5 border-s border-line ps-2.5" aria-label={t('Niveaux')}>
       {shown.map((l) => {
         // Page du niveau (/exercises/niveau/2eme-bac-sm) : une vraie adresse, que Google indexe.
         const to = l.slug ? `${base}/niveau/${l.slug}` : `${base}?classLevels=${l.id}`;
@@ -477,7 +478,7 @@ const LevelLinks: React.FC<{
             label={l.name} />
         );
       })}
-      <SubLink to={`${base}?niveau=tous`} label="Tous les niveaux" onClick={onNavigate} drawer={drawer} muted
+      <SubLink to={`${base}?niveau=tous`} label={t('Tous les niveaux')} onClick={onNavigate} drawer={drawer} muted
         active={onBase && !levelParam} current={onBase && !levelParam} />
     </ul>
   );
@@ -494,7 +495,7 @@ const SubLink: React.FC<{
       className={cx(
         'flex items-center rounded-lg px-2.5 transition-colors',
         drawer ? 'min-h-10 text-[14px]' : 'min-h-9 text-[13px]',
-        active ? 'bg-[#faf3e2] font-bold text-ink shadow-[inset_3px_0_0_#c0892f]'
+        active ? 'bg-[#faf3e2] font-bold text-ink shadow-[inset_3px_0_0_#c0892f] rtl:shadow-[inset_-3px_0_0_#c0892f]'
           : cx(muted ? 'text-ink-faint' : 'text-ink-soft', 'hover:bg-[#f7f6f3] hover:text-[#15633c]'),
       )}
     >
@@ -524,11 +525,11 @@ const Avatar: React.FC<{ user: User; size?: number }> = ({ user, size = 32 }) =>
 
 /** Sous le pseudo : le niveau de l'élève, ou le rôle. */
 const accountHint = (user: User) => {
-  if (user.is_superuser) return 'Administrateur';
-  if (user.profile?.user_type === 'teacher') return 'Professeur';
+  if (user.is_superuser) return t('Administrateur');
+  if (user.profile?.user_type === 'teacher') return t('Professeur');
   const p = user.profile;
   const level = p?.class_level_name || (p?.class_level && typeof p.class_level === 'object' ? p.class_level.name : null);
-  return level || 'Mon compte';
+  return level || t('Mon compte');
 };
 
 interface AccountEntry { key: string; icon: IconType; label: string; to?: string; onClick?: () => void; danger?: boolean }
@@ -554,7 +555,7 @@ function useAccountEntries(canJoinClass: boolean | undefined, onDone?: () => voi
 }
 
 const entryClass = (danger?: boolean, big?: boolean) => cx(
-  'flex w-full items-center gap-3 rounded-xl px-3 text-left font-medium transition-colors',
+  'flex w-full items-center gap-3 rounded-xl px-3 text-start font-medium transition-colors',
   big ? 'min-h-11 text-[15px]' : 'min-h-10 text-[13.5px]',
   danger ? 'text-[#a23b34] hover:bg-[#fbecea]' : 'text-ink-soft hover:bg-[#f7f6f3] hover:text-ink',
 );
@@ -563,9 +564,9 @@ const EntryRow: React.FC<{ entry: AccountEntry; big?: boolean; onNavigate?: () =
   const Icon = entry.icon;
   const icon = <Icon className={cx('h-[18px] w-[18px] flex-shrink-0', entry.danger ? '' : 'text-ink-faint')} />;
   return entry.to ? (
-    <Link to={entry.to} onClick={onNavigate} role={role} className={entryClass(entry.danger, big)}>{icon}{entry.label}</Link>
+    <Link to={entry.to} onClick={onNavigate} role={role} className={entryClass(entry.danger, big)}>{icon}{t(entry.label)}</Link>
   ) : (
-    <button type="button" onClick={entry.onClick} role={role} className={entryClass(entry.danger, big)}>{icon}{entry.label}</button>
+    <button type="button" onClick={entry.onClick} role={role} className={entryClass(entry.danger, big)}>{icon}{t(entry.label)}</button>
   );
 };
 
@@ -574,7 +575,7 @@ const GuestButtons: React.FC<{ collapsed?: boolean; big?: boolean }> = ({ collap
   const openSignup = useOpenSignup('sidebar');
   if (collapsed) {
     return (
-      <button type="button" onClick={() => openSignup('login')} aria-label="Connexion" title="Connexion" className={cx(iconBtn, 'mx-auto flex h-11 w-11')}>
+      <button type="button" onClick={() => openSignup('login')} aria-label={t('Connexion')} title={t('Connexion')} className={cx(iconBtn, 'mx-auto flex h-11 w-11')}>
         <LogIn className="h-[18px] w-[18px]" />
       </button>
     );
@@ -583,10 +584,10 @@ const GuestButtons: React.FC<{ collapsed?: boolean; big?: boolean }> = ({ collap
   return (
     <div className="flex flex-col gap-2">
       <button type="button" className={cx('fd-btn-primary justify-center', h)} onClick={() => openSignup('signup')}>
-        S’inscrire
+        {t('S’inscrire')}
       </button>
       <button type="button" className={cx('fd-btn-ghost justify-center', h)} onClick={() => openSignup('login')}>
-        Connexion
+        {t('Connexion')}
       </button>
     </div>
   );
@@ -611,12 +612,12 @@ const RailAccount: React.FC<{ collapsed: boolean; canJoinClass?: boolean }> = ({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={`Compte de ${user.username}`}
+        aria-label={t('Compte de {name}', { name: user.username })}
         title={collapsed ? user.username : undefined}
         className={cx(
           'flex items-center rounded-xl transition-colors hover:bg-[#f7f6f3]',
           open && 'bg-[#f7f6f3]',
-          collapsed ? 'mx-auto h-11 w-11 justify-center' : 'w-full gap-3 px-2 py-2 text-left',
+          collapsed ? 'mx-auto h-11 w-11 justify-center' : 'w-full gap-3 px-2 py-2 text-start',
         )}
       >
         <Avatar user={user} size={collapsed ? 30 : 34} />
@@ -662,7 +663,7 @@ const DrawerAccount: React.FC<{ onNavigate?: () => void; canJoinClass?: boolean 
   if (!isAuthenticated || !user) {
     return (
       <div data-tour="nav-compte" className="mt-6 border-t border-line px-1 pt-5">
-        <p className="mb-3 px-2 text-[13px] leading-snug text-ink-faint">Crée ton compte pour garder ta progression et tes révisions.</p>
+        <p className="mb-3 px-2 text-[13px] leading-snug text-ink-faint">{t('Crée ton compte pour garder ta progression et tes révisions.')}</p>
         <GuestButtons big />
       </div>
     );
@@ -671,13 +672,13 @@ const DrawerAccount: React.FC<{ onNavigate?: () => void; canJoinClass?: boolean 
   const rest = entries.filter((e) => e.key !== 'profil');
   return (
     <div data-tour="nav-compte" className="mt-6 border-t border-line pt-4">
-      <p id={id} className="px-3 pb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">Mon compte</p>
+      <p id={id} className="px-3 pb-1.5 text-[12px] font-medium tracking-[.01em] text-ink-faint">{t('Mon compte')}</p>
       <ul className="flex flex-col gap-0.5" aria-labelledby={id}>
         <li>
           <Link to={`/profile/${user.username}`} onClick={onNavigate} className="flex min-h-12 items-center gap-3 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-[#f7f6f3]">
             <Avatar user={user} size={30} />
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-[15px] font-medium text-ink">Mon profil</span>
+              <span className="block truncate text-[15px] font-medium text-ink">{t('Mon profil')}</span>
               <span className="block truncate text-[12px] text-ink-faint">{user.username} · {accountHint(user)}</span>
             </span>
           </Link>

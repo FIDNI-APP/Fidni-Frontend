@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Loader2, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { t } from '@/i18n';
 import { updateUserInfo } from '@/lib/api/userApi';
 import { SchoolPicker } from '@/components/common/SchoolPicker';
 import {
@@ -22,28 +23,28 @@ export const IdentityFields: React.FC<{
   <div className="space-y-4">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <label className="block">
-        <span className="block text-sm font-medium text-ink-soft mb-1.5">Prénom</span>
+        <span className="block text-sm font-medium text-ink-soft mb-1.5">{t('Prénom')}</span>
         <input className={inputClass} value={value.firstName} autoComplete="given-name" maxLength={60}
           onChange={(e) => onChange({ ...value, firstName: e.target.value })} />
       </label>
       <label className="block">
-        <span className="block text-sm font-medium text-ink-soft mb-1.5">Nom</span>
+        <span className="block text-sm font-medium text-ink-soft mb-1.5">{t('Nom')}</span>
         <input className={inputClass} value={value.lastName} autoComplete="family-name" maxLength={60}
           onChange={(e) => onChange({ ...value, lastName: e.target.value })} />
       </label>
     </div>
     <div className="flex flex-wrap items-start gap-4">
     <div>
-      <span className="block text-sm font-medium text-ink-soft mb-1.5">Civilité</span>
+      <span className="block text-sm font-medium text-ink-soft mb-1.5">{t('Civilité')}</span>
       {/* Trois segments égaux sur une ligne (avant : « Je préfère ne pas le dire » passait seul à la ligne au téléphone). */}
-      <div className="grid w-full max-w-md grid-cols-3 gap-1 p-1 rounded-xl bg-[#f2f1ee]" role="radiogroup" aria-label="Civilité">
+      <div className="grid w-full max-w-md grid-cols-3 gap-1 p-1 rounded-xl bg-[#f2f1ee]" role="radiogroup" aria-label={t('Civilité')}>
         {([['M', 'Monsieur'], ['F', 'Madame'], ['N', 'Ne pas préciser']] as const).map(([g, label]) => (
           <button key={g} type="button" role="radio" aria-checked={value.gender === g}
             onClick={() => onChange({ ...value, gender: g })}
-            title={g === 'N' ? 'Je préfère ne pas le dire' : undefined}
+            title={g === 'N' ? t('Je préfère ne pas le dire') : undefined}
             className={`min-h-10 px-2 rounded-lg text-[13px] font-medium leading-tight transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
               value.gender === g ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
@@ -52,13 +53,13 @@ export const IdentityFields: React.FC<{
     </div>
     <div>
       <span className="block text-sm font-medium text-ink-soft mb-1.5">
-        {isTeacher ? 'Établissement où tu enseignes' : 'Ton établissement'}
+        {isTeacher ? t('Établissement où tu enseignes') : t('Ton établissement')}
       </span>
       <SchoolPicker value={value.school} onChange={(school) => onChange({ ...value, school })} />
     </div>
     <p className="flex items-start gap-2 text-xs text-ink-faint leading-relaxed">
       <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-      Visible par toi seul : ton pseudo reste ton nom public sur Fidni.
+      {t('Visible par toi seul : ton pseudo reste ton nom public sur Fidni.')}
     </p>
   </div>
 );
@@ -72,12 +73,12 @@ const BirthDateField: React.FC<{ value: string; onChange: (v: string) => void; i
   const age = value ? ageFrom(value) : null;
   return (
     <label className="block min-w-[190px] flex-1">
-      <span className="block text-sm font-medium text-ink-soft mb-1.5">Date de naissance</span>
+      <span className="block text-sm font-medium text-ink-soft mb-1.5">{t('Date de naissance')}</span>
       <input type="date" className={inputClass} value={value} min={min} max={max} autoComplete="bday"
         onChange={(e) => onChange(e.target.value)} />
       {!isTeacher && age !== null && age < 15 && (
         <span className="block mt-1.5 text-xs text-gold-strong leading-relaxed">
-          Moins de 15 ans : l’accord d’un de tes parents est nécessaire pour utiliser Fidni.
+          {t('Moins de 15 ans : l’accord d’un de tes parents est nécessaire pour utiliser Fidni.')}
         </span>
       )}
     </label>
@@ -109,7 +110,7 @@ export const IdentityGate: React.FC = () => {
     const problem = identityError(current);
     if (problem) { setError(problem); return; }
     if (mustAccept && !accepted) {
-      setError('Accepte les conditions d’utilisation et la politique de confidentialité pour continuer.');
+      setError(t('Accepte les conditions d’utilisation et la politique de confidentialité pour continuer.'));
       return;
     }
     setSaving(true);
@@ -118,7 +119,7 @@ export const IdentityGate: React.FC = () => {
       await updateUserInfo({ ...identityPayload(current), ...(mustAccept ? { accept_terms: true } : {}) });
       await refreshUser();
     } catch (err) {
-      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Enregistrement impossible. Réessaie.');
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || t('Enregistrement impossible. Réessaie.'));
     } finally {
       setSaving(false);
     }
@@ -130,12 +131,12 @@ export const IdentityGate: React.FC = () => {
       <div className="bg-white rounded-2xl border border-line w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-xl">
         <div className="p-6 sm:p-7">
           <h2 id="identity-gate-title" className="text-lg font-semibold text-ink mb-1.5">
-            {identityComplete(user) ? 'Nos conditions ont changé' : 'Complète ton profil'}
+            {identityComplete(user) ? t('Nos conditions ont changé') : t('Complète ton profil')}
           </h2>
           <p className="text-sm text-ink-faint mb-5 leading-relaxed">
             {identityComplete(user)
-              ? 'Nos conditions d’utilisation et notre politique de confidentialité ont été mises à jour. Vérifie tes informations puis accepte-les pour continuer.'
-              : 'Quelques informations manquent à ton profil (dont ta date de naissance). Elles restent privées et servent notamment sur tes feuilles d’exercices en PDF.'}
+              ? t('Nos conditions d’utilisation et notre politique de confidentialité ont été mises à jour. Vérifie tes informations puis accepte-les pour continuer.')
+              : t('Quelques informations manquent à ton profil (dont ta date de naissance). Elles restent privées et servent notamment sur tes feuilles d’exercices en PDF.')}
           </p>
           <IdentityFields value={current} onChange={(v) => { setValue(v); setError(null); }}
             isTeacher={user.profile.user_type === 'teacher'} />
@@ -144,22 +145,22 @@ export const IdentityGate: React.FC = () => {
               <input type="checkbox" checked={accepted} onChange={(e) => { setAccepted(e.target.checked); setError(null); }}
                 className="mt-0.5 h-4 w-4 accent-[#1a7a4a] flex-shrink-0" />
               <span>
-                J’ai lu et j’accepte les{' '}
-                <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">conditions d’utilisation</a>
-                {' '}et la{' '}
-                <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">politique de confidentialité</a>
-                {' '}mises à jour.
+                {t('J’ai lu et j’accepte les')}{' '}
+                <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">{t('conditions d’utilisation')}</a>
+                {' '}{t('et la')}{' '}
+                <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-brand-hover underline">{t('politique de confidentialité')}</a>
+                {' '}{t('mises à jour.')}
               </span>
             </label>
           )}
           {error && <p className="mt-4 text-sm text-[#a23b34]">{error}</p>}
         </div>
         <div className="px-6 sm:px-7 py-4 border-t border-line flex items-center justify-between gap-3">
-          <button type="button" onClick={() => logout()} className="min-h-10 px-1 text-sm text-ink-faint hover:text-ink">Se déconnecter</button>
+          <button type="button" onClick={() => logout()} className="min-h-10 px-1 text-sm text-ink-faint hover:text-ink">{t('Se déconnecter')}</button>
           <button type="button" onClick={save} disabled={saving}
             className="inline-flex min-h-10 items-center gap-2 px-5 bg-brand text-white rounded-lg font-semibold text-sm hover:bg-brand-hover disabled:opacity-50">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Enregistrer
+            {t('Enregistrer')}
           </button>
         </div>
       </div>

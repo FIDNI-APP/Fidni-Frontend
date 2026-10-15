@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, BarChart3, Layers } from 'lucide-react';
 import { getExamStats, type ExamStats, type DistributionEntry } from '@/lib/api/concoursApi';
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
+import { t } from '@/i18n';
 
 type Theme = { from: string; to: string; light: string; text: string };
 type Level = 'subject' | 'subfield' | 'chapter';
@@ -52,12 +53,11 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
         <div className="flex items-center gap-2 mb-1">
           <BarChart3 className="w-5 h-5" style={{ color: theme.from }} />
           <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
-            Répartition des questions
+            {t('Répartition des questions')}
           </h2>
         </div>
         <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 18 }}>
-          Comment les <strong style={{ color: '#1a1a1a' }}>{stats.total_questions}</strong> questions de cet examen
-          se répartissent.
+          {t('Comment les')} <strong style={{ color: '#1a1a1a' }}>{stats.total_questions}</strong> {t('questions de cet examen se répartissent.')}
         </p>
 
         {/* Level sub-tabs */}
@@ -79,7 +79,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                   transition: 'all .15s',
                 }}
               >
-                {LEVEL_LABEL[l]}
+                {t(LEVEL_LABEL[l])}
               </button>
             );
           })}
@@ -87,7 +87,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
 
         {rows.length === 0 ? (
           <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
-            Aucune donnée — les questions ne sont pas encore taguées par {LEVEL_LABEL[level].toLowerCase()}.
+            {t('Aucune donnée — les questions ne sont pas encore taguées par {niveau}.', { niveau: t(LEVEL_LABEL[level]).toLowerCase() })}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
@@ -104,7 +104,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                       {r.name}
                     </span>
                     <span style={{ fontSize: 12, color: '#6b6862', fontFamily: 'DM Mono', fontWeight: 600 }}>
-                      {r.count} Q · {r.pct}%
+                      {r.count} {t('Q')} · {r.pct}%
                     </span>
                   </div>
                   <div style={{ height: 9, borderRadius: 99, background: '#f2f1ee', overflow: 'hidden' }}>
@@ -131,7 +131,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
           <div className="flex items-center gap-2 mb-4">
             <Layers className="w-5 h-5" style={{ color: theme.from }} />
             <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
-              Analyse & tendances
+              {t('Analyse & tendances')}
             </h2>
           </div>
 
@@ -169,7 +169,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
         }}>
           <Layers className="w-8 h-8 mx-auto mb-3" style={{ color: '#cfc9bf' }} />
           <p style={{ fontSize: 14, color: '#6b6862' }}>
-            L'analyse comparative de cet examen sera bientôt disponible.
+            {t("L'analyse comparative de cet examen sera bientôt disponible.")}
           </p>
         </section>
       )}

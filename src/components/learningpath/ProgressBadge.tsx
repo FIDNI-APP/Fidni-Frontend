@@ -1,6 +1,7 @@
 // src/components/learningpath/ProgressBadge.tsx
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface ProgressBadgeProps {
   percentage: number;
@@ -33,7 +34,7 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({
     <div className={cn('w-full', className)}>
       {showLabel && (
         <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium text-gray-700">Progression</span>
+          <span className="text-sm font-medium text-gray-700">{t('Progression')}</span>
           <span className="text-sm font-medium text-gray-900">{percentage}%</span>
         </div>
       )}

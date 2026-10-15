@@ -10,6 +10,7 @@
  * gardé en cache quelque part), on n'insiste pas. En développement (pas de /assets/index-…), rien ne tourne.
  */
 import toast from 'react-hot-toast';
+import { t } from '@/i18n';
 
 const ENTREE = /<script[^>]*\ssrc="(\/assets\/index-[^"]+\.js)"/;
 const VISEE = 'fidni:version-visee';
@@ -34,14 +35,14 @@ const recharger = () => {
 };
 
 const annoncer = () => {
-  toast((t) => (
+  toast((tst) => (
     <span className="flex items-center gap-3">
-      Nouvelle version de FIDNI
-      <button type="button" onClick={() => { toast.dismiss(t.id); recharger(); }}
+      {t('Nouvelle version de FIDNI')}
+      <button type="button" onClick={() => { toast.dismiss(tst.id); recharger(); }}
         className="min-h-8 rounded-lg bg-white/15 px-2.5 font-semibold hover:bg-white/25">
-        Mettre à jour
+        {t('Mettre à jour')}
       </button>
-      <button type="button" onClick={() => toast.dismiss(t.id)} aria-label="Fermer"
+      <button type="button" onClick={() => toast.dismiss(tst.id)} aria-label={t('Fermer')}
         className="min-h-8 px-1 text-[17px] leading-none text-white/60 hover:text-white">
         ×
       </button>

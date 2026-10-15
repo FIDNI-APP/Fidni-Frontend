@@ -26,6 +26,7 @@ import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { t, dateLocale } from '@/i18n';
 
 // Chargé à la demande (au premier survol / toucher du champ, ou à l'ouverture d'une réponse).
 const loadEditor = () => import('@/components/editor/CompactTipTapEditor');
@@ -36,7 +37,7 @@ const preloadEditor = () => { loadEditor().catch(() => {}); };
 const FakeField: React.FC<{ placeholder: string; onActivate?: () => void; minHeight?: string }> = ({ placeholder, onActivate, minHeight = '60px' }) => (
   <button type="button" onClick={onActivate} onFocus={preloadEditor} onPointerEnter={preloadEditor} onPointerDown={preloadEditor}
     disabled={!onActivate} aria-label={placeholder}
-    className="block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-left text-[15px] text-ink-faint transition-colors hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-wait"
+    className="block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-start text-[15px] text-ink-faint transition-colors hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-wait"
     style={{ minHeight }}>
     {placeholder}
   </button>
@@ -71,15 +72,15 @@ const isBlank = (html: string) => !html.replace(/<[^>]*>/g, '').replace(/&nbsp;|
 
 const timeAgo = (iso: string) => {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'à l’instant';
-  if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
+  if (s < 60) return t('à l’instant');
+  if (s < 3600) return t('il y a {n} min', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('il y a {n} h', { n: Math.floor(s / 3600) });
   const d = Math.floor(s / 86400);
-  if (d === 1) return 'hier';
-  if (d < 30) return `il y a ${d} j`;
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (d === 1) return t('hier');
+  if (d < 30) return t('il y a {n} j', { n: d });
+  return new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 };
-const fullDate = (iso: string) => new Date(iso).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+const fullDate = (iso: string) => new Date(iso).toLocaleString(dateLocale(), { dateStyle: 'long', timeStyle: 'short' });
 
 interface Reply { comment: Comment; parent: Comment }
 /** Toutes les réponses d'un fil, à plat, de la plus ancienne à la plus récente. */
@@ -138,7 +139,7 @@ const Composer: React.FC<{
       setFiles([]);
       setShowUpload(false);
     } catch {
-      setError('Ça n’est pas parti : vérifie ta connexion et réessaie (ton texte est gardé).');
+      setError(t('Ça n’est pas parti : vérifie ta connexion et réessaie (ton texte est gardé).'));
     } finally {
       setBusy(false);
     }
@@ -152,7 +153,7 @@ const Composer: React.FC<{
   if (!active) {
     return (
       <div>
-        <FakeField placeholder="Écris un message…" onActivate={() => setActive(true)} />
+        <FakeField placeholder={t('Écris un message…')} onActivate={() => setActive(true)} />
       </div>
     );
   }
@@ -173,16 +174,16 @@ const Composer: React.FC<{
           <>
             {attachments && (
               <button type="button" onClick={() => setShowUpload((v) => !v)} aria-pressed={showUpload}
-                title="Joindre une photo ou un fichier"
+                title={t('Joindre une photo ou un fichier')}
                 className={`inline-flex h-8 items-center gap-1 rounded-md px-2 text-[12.5px] font-semibold transition-colors ${
                   showUpload ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
-                <Paperclip className="h-4 w-4" /><span className="hidden sm:inline">Photo</span>
+                <Paperclip className="h-4 w-4" /><span className="hidden sm:inline">{t('Photo')}</span>
               </button>
             )}
             {onCancel && (
               <button type="button" onClick={onCancel}
                 className="inline-flex h-8 items-center rounded-lg px-2.5 text-[12.5px] font-semibold text-ink-soft hover:bg-[#f2f1ee]">
-                Annuler
+                {t('Annuler')}
               </button>
             )}
             <button type="button" onClick={submit} disabled={blank || busy} title="Ctrl + Entrée"
@@ -197,10 +198,10 @@ const Composer: React.FC<{
       {files.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-2">
           {files.map((f) => (
-            <li key={f.id} className="flex items-center gap-1.5 rounded-lg border border-line bg-[#faf9f7] py-1 pl-2.5 pr-1 text-[12.5px] text-ink-soft">
+            <li key={f.id} className="flex items-center gap-1.5 rounded-lg border border-line bg-[#faf9f7] py-1 ps-2.5 pe-1 text-[12.5px] text-ink-soft">
               {f.file_type === 'image' ? <ImageIcon className="h-3.5 w-3.5" /> : <FileIcon className="h-3.5 w-3.5" />}
               <span className="max-w-[180px] truncate">{f.file_name}</span>
-              <button type="button" onClick={() => removeFile(f.id)} aria-label={`Retirer ${f.file_name}`}
+              <button type="button" onClick={() => removeFile(f.id)} aria-label={t('Retirer {nom}', { nom: f.file_name })}
                 className="rounded p-0.5 text-ink-faint hover:bg-[#f2f1ee] hover:text-ink"><X className="h-3.5 w-3.5" /></button>
             </li>
           ))}
@@ -210,7 +211,7 @@ const Composer: React.FC<{
         <div className="mt-2">
           <FileUpload
             onUploadComplete={(f) => { setFiles((prev) => [...prev, f]); setShowUpload(false); }}
-            onUploadError={() => setError('Le fichier n’a pas pu être envoyé.')}
+            onUploadError={() => setError(t('Le fichier n’a pas pu être envoyé.'))}
             accept="image/*,.pdf,.doc,.docx,.txt,.md"
             maxSizeMB={10}
           />
@@ -290,8 +291,8 @@ export function CommentSection({
   const remove = async (c: Comment) => {
     const replies = flatten(c).length;
     const question = replies
-      ? `Supprimer ce commentaire et ${replies > 1 ? `ses ${replies} réponses` : 'sa réponse'} ?`
-      : 'Supprimer ce commentaire ?';
+      ? (replies > 1 ? t('Supprimer ce commentaire et ses {n} réponses ?', { n: replies }) : t('Supprimer ce commentaire et sa réponse ?'))
+      : t('Supprimer ce commentaire ?');
     if (!window.confirm(question)) return;
     await onDeleteComment(String(c.id)).catch(() => {});
   };
@@ -299,13 +300,13 @@ export function CommentSection({
   const replyForm = (target: Comment) => (
     <div className="pb-3 pt-1">
       <p className="mb-1.5 flex items-center gap-1 text-[12.5px] text-ink-faint">
-        <CornerDownRight className="h-3.5 w-3.5" /> Réponse à <b className="font-semibold text-ink-soft">@{target.author.username}</b>
+        <CornerDownRight className="h-3.5 w-3.5" /> {t('Réponse à')} <b className="font-semibold text-ink-soft">@{target.author.username}</b>
       </p>
       <Composer
         key={`reply-${target.id}`}
         autoFocus
-        placeholder="Ta réponse…"
-        submitLabel="Répondre"
+        placeholder={t('Ta réponse…')}
+        submitLabel={t('Répondre')}
         onCancel={() => setReplyingTo(null)}
         onSubmit={async (html) => {
           await onAddComment(html, String(target.id));
@@ -330,11 +331,11 @@ export function CommentSection({
           <div className="min-w-0 flex-1">
             <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-tight">
               {deleted
-                ? <span className="text-[13.5px] font-semibold italic text-ink-faint">Compte supprimé</span>
+                ? <span className="text-[13.5px] font-semibold italic text-ink-faint">{t('Compte supprimé')}</span>
                 : <Link to={`/profile/${c.author.username}`} className="text-[13.5px] font-semibold text-ink hover:underline">{c.author.username}</Link>}
               {inReplyTo && (
                 <span className="inline-flex items-center gap-0.5 text-[12px] text-ink-faint">
-                  <CornerDownRight className="h-3 w-3" /> à @{inReplyTo.author.username}
+                  <CornerDownRight className="h-3 w-3" /> {t('à @{nom}', { nom: inReplyTo.author.username })}
                 </span>
               )}
               <time dateTime={c.created_at} title={fullDate(c.created_at)} className="text-[12px] text-ink-faint">{timeAgo(c.created_at)}</time>
@@ -345,8 +346,8 @@ export function CommentSection({
                 <Composer
                   autoFocus
                   initial={commentHtml(c.content)}
-                  placeholder="Ton commentaire…"
-                  submitLabel="Enregistrer"
+                  placeholder={t('Ton commentaire…')}
+                  submitLabel={t('Enregistrer')}
                   onCancel={() => setEditing(null)}
                   onSubmit={async (html) => {
                     await onEditComment(id, html);
@@ -376,7 +377,7 @@ export function CommentSection({
                     })}
                   </div>
                 )}
-                <div className="-ml-2 mt-1 flex flex-wrap items-center gap-0.5">
+                <div className="-ms-2 mt-1 flex flex-wrap items-center gap-0.5">
                   <VoteButtons
                     likes={c.like_count}
                     dislikes={c.dislike_count}
@@ -387,17 +388,17 @@ export function CommentSection({
                     showBadge={false}
                   />
                   <button type="button" onClick={() => startReply(c)} aria-expanded={replyingTo === id} className={action}>
-                    <CornerDownRight className="h-3.5 w-3.5" /> Répondre
+                    <CornerDownRight className="h-3.5 w-3.5" /> {t('Répondre')}
                   </button>
                   {mine && (
-                    <button type="button" onClick={() => { setReplyingTo(null); setEditing(id); }} className={action} aria-label="Modifier">
-                      <Pencil className="h-3.5 w-3.5" /><span className="hidden sm:inline">Modifier</span>
+                    <button type="button" onClick={() => { setReplyingTo(null); setEditing(id); }} className={action} aria-label={t('Modifier')}>
+                      <Pencil className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t('Modifier')}</span>
                     </button>
                   )}
                   {canDelete && (
-                    <button type="button" onClick={() => remove(c)} aria-label="Supprimer"
+                    <button type="button" onClick={() => remove(c)} aria-label={t('Supprimer')}
                       className={`${action} hover:!bg-[#fbecea] hover:!text-[#a23b34]`}>
-                      <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">Supprimer</span>
+                      <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t('Supprimer')}</span>
                     </button>
                   )}
                 </div>
@@ -420,12 +421,12 @@ export function CommentSection({
         {card(root, null, false)}
         {open && (
           // Le fil : un trait sous l'avatar du commentaire d'origine, les réponses au même retrait.
-          <div className="ml-[17px] border-l-2 border-[#efece6] pl-4 sm:pl-5">
+          <div className="ms-[17px] border-s-2 border-[#efece6] ps-4 sm:ps-5">
             {replyingTo === rootId && replyForm(root)}
             {folded > 0 && (
               <button type="button" onClick={() => setExpanded((prev) => new Set(prev).add(rootId))}
                 className="my-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] font-semibold text-brand-hover hover:bg-brand-soft">
-                <ChevronDown className="h-3.5 w-3.5" /> Voir les {folded} réponses précédentes
+                <ChevronDown className="h-3.5 w-3.5" /> {t('Voir les {n} réponses précédentes', { n: folded })}
               </button>
             )}
             {shown.map(({ comment, parent }) => (
@@ -445,19 +446,19 @@ export function CommentSection({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h2 className="fd-display flex items-baseline gap-2 text-[20px] leading-tight text-ink">
-            Questions et discussion
+            {t('Questions et discussion')}
             {total > 0 && <span className="font-sans text-[13px] font-semibold text-ink-faint fd-nums">{total}</span>}
           </h2>
-          <p className="mt-1 text-[13px] text-ink-faint">Bloqué ? Demande ici : un camarade ou un prof te répondra.</p>
+          <p className="mt-1 text-[13px] text-ink-faint">{t('Bloqué ? Demande ici : un camarade ou un prof te répondra.')}</p>
         </div>
         {comments.length > 1 && (
           <label className="relative flex items-center gap-2 text-[13px] text-ink-faint">
-            Trier :
+            {t('Trier :')}
             <select value={sort} onChange={(e) => changeSort(e.target.value as Sort)}
-              className="min-h-10 appearance-none rounded-lg border border-line bg-white py-1.5 pl-3 pr-8 text-[13px] font-medium text-ink hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20">
-              {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+              className="min-h-10 appearance-none rounded-lg border border-line bg-white py-1.5 ps-3 pe-8 text-[13px] font-medium text-ink hover:border-[#cfcdc8] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20">
+              {SORTS.map((s) => <option key={s.key} value={s.key}>{t(s.label)}</option>)}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 h-4 w-4 text-ink-faint" />
+            <ChevronDown className="pointer-events-none absolute end-2.5 h-4 w-4 text-ink-faint" />
           </label>
         )}
       </div>
@@ -466,19 +467,19 @@ export function CommentSection({
         <div className={roots.length > 0 ? 'mb-6' : ''}>
           <Composer
             deferred
-            placeholder="Pose une question ou partage une astuce…"
-            submitLabel="Publier"
+            placeholder={t('Pose une question ou partage une astuce…')}
+            submitLabel={t('Publier')}
             attachments
             onSubmit={(html, fileIds) => onAddComment(html, undefined, fileIds)}
-            hint={<>Les maths s’écrivent entre <code className="rounded bg-[#f2f1ee] px-1 font-mono text-[11.5px]">$ $</code>, par exemple <code className="rounded bg-[#f2f1ee] px-1 font-mono text-[11.5px]">$f'(x) = 2x$</code>, ou avec le bouton Formule.</>}
+            hint={<>{t('Les maths s’écrivent entre')} <code className="rounded bg-[#f2f1ee] px-1 font-mono text-[11.5px]">$ $</code>{t(', par exemple')} <code className="rounded bg-[#f2f1ee] px-1 font-mono text-[11.5px]">$f'(x) = 2x$</code>{t(', ou avec le bouton Formule.')}</>}
           />
         </div>
       ) : (
         <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3 ${roots.length > 0 ? 'mb-6' : ''}`}>
-          <p className="text-[13.5px] text-ink-soft">Connecte-toi pour poser une question ou répondre à un camarade.</p>
+          <p className="text-[13.5px] text-ink-soft">{t('Connecte-toi pour poser une question ou répondre à un camarade.')}</p>
           <button type="button" onClick={() => openModal('commentaire')}
             className="inline-flex min-h-10 items-center rounded-xl bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover">
-            Se connecter
+            {t('Se connecter')}
           </button>
         </div>
       )}

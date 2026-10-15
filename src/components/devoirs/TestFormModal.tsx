@@ -4,9 +4,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ArrowRight, Check, Loader2, RotateCcw, Trash2, X } from 'lucide-react';
+import { t } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaxonomyState } from '@/components/revision/RevisionLabelPicker';
-import { devoirsApi, KIND_LABEL, type TestKind, type UpcomingTest } from '@/lib/api/devoirsApi';
+import { devoirsApi, type TestKind, type UpcomingTest } from '@/lib/api/devoirsApi';
+import { kindLabel } from './ui';
 
 const KINDS: TestKind[] = ['ds', 'controle', 'blanc'];
 
@@ -103,20 +105,20 @@ export const TestFormModal: React.FC<{
     } catch (err) {
       const data = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
       const first = data && Object.values(data)[0];
-      setError(Array.isArray(first) ? String(first[0]) : typeof first === 'string' ? first : 'Le DS n’a pas pu être enregistré. Réessaie.');
+      setError(Array.isArray(first) ? String(first[0]) : typeof first === 'string' ? first : t('Le DS n’a pas pu être enregistré. Réessaie.'));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async () => {
-    if (!test || !window.confirm('Supprimer ce DS et sa préparation ? Tes exercices et résultats restent sur Fidni.')) return;
+    if (!test || !window.confirm(t('Supprimer ce DS et sa préparation ? Tes exercices et résultats restent sur Fidni.'))) return;
     setSaving(true);
     try {
       await devoirsApi.remove(test.id);
       onDeleted?.(test.id);
     } catch {
-      setError('Le DS n’a pas pu être supprimé.');
+      setError(t('Le DS n’a pas pu être supprimé.'));
     } finally {
       setSaving(false);
     }
@@ -140,24 +142,24 @@ export const TestFormModal: React.FC<{
             aria-modal="true"
             aria-labelledby="test-form-title"
           >
-            <button type="button" onClick={close} aria-label="Fermer"
-              className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+            <button type="button" onClick={close} aria-label={t('Fermer')}
+              className="absolute end-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
               <X className="h-5 w-5" />
             </button>
-            <h2 id="test-form-title" className="fd-display pr-10 text-[22px] leading-tight text-ink">{editing ? 'Modifier mon DS' : 'Mon prochain DS'}</h2>
-            <p className="mt-1 pr-6 text-[13.5px] text-ink-soft">
-              {editing ? 'La préparation se recalcule avec tes changements.' : 'Dis-nous la date et les chapitres : Fidni te prépare une révision ciblée.'}
+            <h2 id="test-form-title" className="fd-display pe-10 text-[22px] leading-tight text-ink">{editing ? t('Modifier mon DS') : t('Mon prochain DS')}</h2>
+            <p className="mt-1 pe-6 text-[13.5px] text-ink-soft">
+              {editing ? t('La préparation se recalcule avec tes changements.') : t('Dis-nous la date et les chapitres : Fidni te prépare une révision ciblée.')}
             </p>
 
             <div className="mt-5 flex flex-col gap-5">
               <div>
-                <span className={label}>Type</span>
-                <div role="group" aria-label="Type de devoir" className="inline-flex max-w-full gap-1 rounded-2xl border border-line bg-white p-1">
+                <span className={label}>{t('Type')}</span>
+                <div role="group" aria-label={t('Type de devoir')} className="inline-flex max-w-full gap-1 rounded-2xl border border-line bg-white p-1">
                   {KINDS.map((k) => (
                     <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
                       className={`inline-flex min-h-10 items-center rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors sm:min-h-9 ${
                         kind === k ? 'bg-ink text-white' : 'text-ink-faint hover:bg-[#f7f6f3] hover:text-ink'}`}>
-                      {KIND_LABEL[k]}
+                      {kindLabel(k)}
                     </button>
                   ))}
                 </div>
@@ -165,14 +167,14 @@ export const TestFormModal: React.FC<{
 
               {taxonomyFailed && !levels.length && (
                 <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-3 py-2.5">
-                  <p className="flex-1 text-[13px] text-[#a23b34]">Les chapitres n’ont pas pu se charger. Vérifie ta connexion.</p>
-                  <button type="button" onClick={retryTaxonomy} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+                  <p className="flex-1 text-[13px] text-[#a23b34]">{t('Les chapitres n’ont pas pu se charger. Vérifie ta connexion.')}</p>
+                  <button type="button" onClick={retryTaxonomy} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
                 </div>
               )}
 
               {levels.length > 0 && !level && (
                 <div>
-                  <span className={label}>Ton niveau</span>
+                  <span className={label}>{t('Ton niveau')}</span>
                   <div className="flex flex-wrap gap-1.5">
                     {levels.map((l) => (
                       <button key={l.id} type="button" className={chip(l.id === levelId)} aria-pressed={l.id === levelId}
@@ -186,7 +188,7 @@ export const TestFormModal: React.FC<{
 
               {level && subjects.length > 1 && (
                 <div>
-                  <span className={label}>Matière</span>
+                  <span className={label}>{t('Matière')}</span>
                   <div className="flex flex-wrap gap-1.5">
                     {subjects.map((s) => (
                       <button key={s.id} type="button" className={chip(s.id === subjectId)} aria-pressed={s.id === subjectId}
@@ -199,7 +201,7 @@ export const TestFormModal: React.FC<{
               )}
 
               <div>
-                <label htmlFor="test-date" className={label}>Date</label>
+                <label htmlFor="test-date" className={label}>{t('Date')}</label>
                 <div className="flex flex-wrap items-center gap-2">
                   <input id="test-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required
                     className="h-11 rounded-xl border border-line bg-white px-3 text-[14px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 sm:h-10" />
@@ -207,21 +209,21 @@ export const TestFormModal: React.FC<{
                     const value = inDays(q.days);
                     return (
                       <button key={q.days} type="button" className={chip(date === value)} aria-pressed={date === value} onClick={() => setDate(value)}>
-                        {q.label}
+                        {t(q.label)}
                       </button>
                     );
                   })}
                 </div>
                 {date && date < today && (
-                  <p className="mt-1.5 text-[12.5px] text-ink-faint">Ce DS est déjà passé : tu pourras y noter ta note.</p>
+                  <p className="mt-1.5 text-[12.5px] text-ink-faint">{t('Ce DS est déjà passé : tu pourras y noter ta note.')}</p>
                 )}
               </div>
 
               {subject && (
                 <div>
                   <span className={label}>
-                    Chapitres au programme
-                    {chapterIds.length > 0 && <span className="ml-1.5 font-semibold text-brand-hover">· {chapterIds.length} choisi{chapterIds.length > 1 ? 's' : ''}</span>}
+                    {t('Chapitres au programme')}
+                    {chapterIds.length > 0 && <span className="ms-1.5 font-semibold text-brand-hover">· {chapterIds.length > 1 ? t('{n} choisis', { n: chapterIds.length }) : t('{n} choisi', { n: chapterIds.length })}</span>}
                   </span>
                   {/* Téléphone : toute la liste (la fenêtre défile) ; une liste qui défilait dans la fenêtre cachait des choix. */}
                   <div className="-m-1 flex flex-wrap gap-1.5 p-1 sm:max-h-[232px] sm:overflow-y-auto">
@@ -235,12 +237,12 @@ export const TestFormModal: React.FC<{
                     })}
                   </div>
                   {chaptersChanged && mockState && (
-                    <p className="mt-2 text-[12.5px] text-gold-strong">Ton DS blanc {mockState} sera remplacé par un nouveau sujet sur ces chapitres.</p>
+                    <p className="mt-2 text-[12.5px] text-gold-strong">{mockState === 'fait' ? t('Ton DS blanc fait sera remplacé par un nouveau sujet sur ces chapitres.') : t('Ton DS blanc commencé sera remplacé par un nouveau sujet sur ces chapitres.')}</p>
                   )}
                 </div>
               )}
               {level && !subject && subjects.length > 1 && (
-                <p className="text-[13px] text-ink-faint">Choisis la matière pour voir ses chapitres.</p>
+                <p className="text-[13px] text-ink-faint">{t('Choisis la matière pour voir ses chapitres.')}</p>
               )}
             </div>
 
@@ -254,14 +256,14 @@ export const TestFormModal: React.FC<{
               {editing && (
                 <button type="button" onClick={remove} disabled={saving}
                   className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold text-[#a23b34] hover:bg-[#fbecea] disabled:opacity-50">
-                  <Trash2 className="h-4 w-4" /> Supprimer ce DS
+                  <Trash2 className="h-4 w-4" /> {t('Supprimer ce DS')}
                 </button>
               )}
-              <div className="grid grid-cols-[auto_1fr] gap-2.5 sm:ml-auto sm:flex sm:items-center">
-                <button type="button" className="fd-btn-ghost min-h-11 justify-center px-5 sm:min-h-10" onClick={close}>Annuler</button>
+              <div className="grid grid-cols-[auto_1fr] gap-2.5 sm:ms-auto sm:flex sm:items-center">
+                <button type="button" className="fd-btn-ghost min-h-11 justify-center px-5 sm:min-h-10" onClick={close}>{t('Annuler')}</button>
                 <button type="submit" className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10" disabled={!ready || saving}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
-                  {editing ? 'Enregistrer' : 'Préparer mon DS'}
+                  {editing ? t('Enregistrer') : t('Préparer mon DS')}
                 </button>
               </div>
             </div>

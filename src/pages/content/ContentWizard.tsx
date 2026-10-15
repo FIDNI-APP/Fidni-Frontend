@@ -39,6 +39,7 @@ import { documentToPrefill, type ContentPrefill } from '@/pages/documents/publis
 import { loadSerie, nextInSerie, stopSerie } from '@/pages/documents/serie';
 import type { ClassLevelModel, SubjectModel } from '@/types';
 import { canCreateContent } from '@/lib/features';
+import { t } from '@/i18n';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -186,9 +187,9 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
           ? `/pilotage/ia/${brouillonId}/editeur/${ficheCle ? `?fiche=${encodeURIComponent(ficheCle)}` : ''}`
           : `/contents/${id}/`);
         const st = c.json_content || c.structure || {};
-        const t: WizardContentType = c.type === 'exam' ? 'exam' : c.type === 'lesson' ? 'lesson' : 'exercise';
+        const ty: WizardContentType = c.type === 'exam' ? 'exam' : c.type === 'lesson' ? 'lesson' : 'exercise';
         setD({
-          ...starter(t),
+          ...starter(ty),
           title: c.title || '',
           difficulty: c.difficulty || undefined,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -202,12 +203,12 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
           durationMinutes: c.duration_minutes ?? null,
           isNationalExam: !!c.is_national_exam,
           nationalYear: c.national_year ?? null,
-          blocks: Array.isArray(st.blocks) && st.blocks.length ? st.blocks : starter(t).blocks,
-          sections: Array.isArray(st.sections) && st.sections.length ? st.sections : starter(t).sections,
+          blocks: Array.isArray(st.blocks) && st.blocks.length ? st.blocks : starter(ty).blocks,
+          sections: Array.isArray(st.sections) && st.sections.length ? st.sections : starter(ty).sections,
         });
         if (c.school) setMoreOpen(true);
       } catch {
-        setError(brouillonId ? 'Ce brouillon n’a pas pu être chargé.' : 'Ce contenu n’a pas pu être chargé.');
+        setError(brouillonId ? t('Ce brouillon n’a pas pu être chargé.') : t('Ce contenu n’a pas pu être chargé.'));
       } finally {
         setLoading(false);
       }
@@ -240,15 +241,15 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   // ── Validation par étape
   const structure = useMemo(() => buildStructure(d), [d]);
   const step1Missing = [
-    d.title.trim().length < 3 && 'un titre',
-    !d.levelIds.length && 'un niveau',
-    !d.chapterIds.length && 'un chapitre',
-    d.type !== 'lesson' && !d.difficulty && 'la difficulté',
+    d.title.trim().length < 3 && t('un titre'),
+    !d.levelIds.length && t('un niveau'),
+    !d.chapterIds.length && t('un chapitre'),
+    d.type !== 'lesson' && !d.difficulty && t('la difficulté'),
   ].filter(Boolean) as string[];
   const questions = d.blocks.filter((b) => b.type === 'question');
   const step2Missing = d.type === 'lesson'
-    ? (d.sections.some((s) => text(s.content?.html) || (s.subSections || []).some((ss) => text(ss.content?.html))) ? [] : ['le texte d’au moins une partie'])
-    : (questions.some((q) => text(q.content?.html) || (q.subQuestions || []).some((s) => text(s.content?.html))) ? [] : ['l’énoncé d’au moins une question']);
+    ? (d.sections.some((s) => text(s.content?.html) || (s.subSections || []).some((ss) => text(ss.content?.html))) ? [] : [t('le texte d’au moins une partie')])
+    : (questions.some((q) => text(q.content?.html) || (q.subQuestions || []).some((s) => text(s.content?.html))) ? [] : [t('l’énoncé d’au moins une question')]);
   const mathErrors = useMemo(() => checkStructureMath(structure), [structure]);
   // Questions « feuilles » (la question, ou ses sous-questions) : solution et barème sont là.
   type Leaf = { solution?: { html?: string }; points?: number };
@@ -294,7 +295,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
       const data = (e as { response?: { data?: Record<string, unknown> } })?.response?.data;
       const first = data && Object.entries(data)[0];
       setError(first ? `${first[0] === 'detail' ? '' : `${first[0]} : `}${Array.isArray(first[1]) ? first[1][0] : String(first[1])}`
-        : 'L’enregistrement a échoué. Réessaie.');
+        : t('L’enregistrement a échoué. Réessaie.'));
     } finally {
       setSaving(false);
     }
@@ -307,8 +308,8 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <p className="mb-4 text-ink-soft">Connecte-toi pour ajouter un contenu.</p>
-        <Link to="/login" className="fd-btn-primary">Se connecter</Link>
+        <p className="mb-4 text-ink-soft">{t('Connecte-toi pour ajouter un contenu.')}</p>
+        <Link to="/login" className="fd-btn-primary">{t('Se connecter')}</Link>
       </div>
     );
   }
@@ -316,12 +317,11 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   if (!canCreateContent(user)) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <p className="fd-display mb-2 text-[22px] text-ink">Création réservée à l’équipe</p>
+        <p className="fd-display mb-2 text-[22px] text-ink">{t('Création réservée à l’équipe')}</p>
         <p className="mb-5 text-[14.5px] leading-relaxed text-ink-soft">
-          Pour l’instant, seule l’équipe Fidni publie des exercices, des leçons et des devoirs. Tu peux toujours préparer
-          tes fiches TD à partir des exercices du site.
+          {t('Pour l’instant, seule l’équipe Fidni publie des exercices, des leçons et des devoirs. Tu peux toujours préparer tes fiches TD à partir des exercices du site.')}
         </p>
-        <Link to="/exercises" className="fd-btn-primary">Voir les exercices</Link>
+        <Link to="/exercises" className="fd-btn-primary">{t('Voir les exercices')}</Link>
       </div>
     );
   }
@@ -329,8 +329,8 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   const preview = (
     <div className="fd-read rounded-2xl border border-line bg-white px-4 py-5 sm:px-8 sm:py-7" data-tour="creer-apercu">
       <ReadingStyles />
-      <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Aperçu</p>
-      <h2 className="fd-display mt-1 text-[22px] leading-tight text-ink">{d.title || <span className="text-ink-faint">Sans titre</span>}</h2>
+      <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Aperçu')}</p>
+      <h2 className="fd-display mt-1 text-[22px] leading-tight text-ink">{d.title || <span className="text-ink-faint">{t('Sans titre')}</span>}</h2>
       <div className="mt-5">
         {d.type === 'lesson'
           ? <div className="fd-lesson"><LessonReader structure={structure as FlexibleLessonStructure} /></div>
@@ -340,11 +340,11 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   );
 
   const viewSwitch = (
-    <div role="group" aria-label="Façon d’écrire" className="inline-flex rounded-xl bg-[#f2f1ee] p-0.5">
+    <div role="group" aria-label={t('Façon d’écrire')} className="inline-flex rounded-xl bg-[#f2f1ee] p-0.5">
       {([['feuille', 'Sur la feuille', FileText], ['formulaire', 'Formulaire', LayoutList]] as const).map(([v, label, Icon]) => (
         <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
           className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors ${view === v ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
-          <Icon className="h-3.5 w-3.5" /> {label}
+          <Icon className="h-3.5 w-3.5" /> {t(label)}
         </button>
       ))}
     </div>
@@ -354,7 +354,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const groups = Object.entries(
     chapters.filter((c) => !chapterQuery || fold(c.name).includes(fold(chapterQuery)))
-      .reduce<Record<string, ChapterOption[]>>((acc, c) => { (acc[c.subfield?.name || 'Autres'] ||= []).push(c); return acc; }, {}),
+      .reduce<Record<string, ChapterOption[]>>((acc, c) => { (acc[c.subfield?.name || t('Autres')] ||= []).push(c); return acc; }, {}),
   );
   const missingClass = (cond: boolean) => (tried && cond ? 'ring-2 ring-[#e3b7b1]' : '');
 
@@ -365,13 +365,13 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(typeDef.base))}
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13px] text-ink-soft hover:bg-[#f2f1ee] hover:text-ink">
-            <ArrowLeft className="h-4 w-4" /> Retour
+            <ArrowLeft className="h-4 w-4" /> {t('Retour')}
           </button>
           <h1 className="fd-display text-[24px] leading-tight text-ink">
-            {brouillonId ? 'Modifier le brouillon' : editing ? `Modifier ${d.type === 'lesson' ? 'la leçon' : d.type === 'exam' ? 'le devoir' : 'l’exercice'}` : 'Ajouter un contenu'}
+            {brouillonId ? t('Modifier le brouillon') : editing ? (d.type === 'lesson' ? t('Modifier la leçon') : d.type === 'exam' ? t('Modifier le devoir') : t('Modifier l’exercice')) : t('Ajouter un contenu')}
           </h1>
         </div>
-        <ol className="mt-4 flex flex-wrap gap-2" aria-label="Étapes">
+        <ol className="mt-4 flex flex-wrap gap-2" aria-label={t('Étapes')}>
           {STEPS.map((label, i) => (
             <li key={label}>
               <button type="button" onClick={() => go(i)} aria-current={step === i ? 'step' : undefined}
@@ -380,7 +380,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11.5px] font-bold ${step === i ? 'bg-white text-ink' : i < step ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-faint'}`}>
                   {i < step ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
-                {label}
+                {t(label)}
               </button>
             </li>
           ))}
@@ -388,32 +388,32 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
 
         {restored && !editing && (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-white px-4 py-2.5 text-[13px] text-ink-soft">
-            Ton brouillon a été repris là où tu l’avais laissé.
+            {t('Ton brouillon a été repris là où tu l’avais laissé.')}
             <button type="button" className="font-semibold text-ink underline-offset-2 hover:underline"
               onClick={() => { dropDraft(); setD(starter(contentType)); setRestored(false); setStep(0); }}>
-              Recommencer à zéro
+              {t('Recommencer à zéro')}
             </button>
           </div>
         )}
         {serie && (
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-gold-line bg-gold-soft px-4 py-2.5 text-[13px] text-ink-soft" role="status">
             <span>
-              Série <strong className="text-ink">« {serie.from} »</strong> : exercice <strong className="text-ink">{serie.index + 1} sur {serie.items.length}</strong>
-              {serie.published.length > 0 && <> · {serie.published.length} publié{serie.published.length > 1 ? 's' : ''}</>}
-              {serie.carry && <> · niveau et chapitre repris de l’exercice précédent : vérifie-les</>}
+              {t('Série')} <strong className="text-ink">« {serie.from} »</strong> {t(': exercice')} <strong className="text-ink">{t('{n} sur {total}', { n: serie.index + 1, total: serie.items.length })}</strong>
+              {serie.published.length > 0 && <> · {serie.published.length > 1 ? t('{n} publiés', { n: serie.published.length }) : t('{n} publié', { n: serie.published.length })}</>}
+              {serie.carry && <> · {t('niveau et chapitre repris de l’exercice précédent : vérifie-les')}</>}
             </span>
-            <span className="ml-auto flex gap-3">
+            <span className="ms-auto flex gap-3">
               <button type="button" className="font-semibold text-ink underline-offset-2 hover:underline"
-                onClick={() => { dropDraft(); nextInSerie(navigate, null); }}>Passer cet exercice</button>
+                onClick={() => { dropDraft(); nextInSerie(navigate, null); }}>{t('Passer cet exercice')}</button>
               <button type="button" className="font-semibold text-ink underline-offset-2 hover:underline"
-                onClick={() => { dropDraft(); stopSerie(navigate); }}>Arrêter la série</button>
+                onClick={() => { dropDraft(); stopSerie(navigate); }}>{t('Arrêter la série')}</button>
             </span>
           </div>
         )}
         {importedFrom && !editing && !serie && (
           <div className="mt-4 rounded-xl border border-brand-line bg-brand-soft px-4 py-2.5 text-[13px] text-ink-soft">
-            Repris de ton document <strong className="text-ink">« {importedFrom} »</strong>, déjà découpé
-            {d.type === 'lesson' ? ' en parties' : ' en questions'}. Choisis le niveau et le chapitre, puis vérifie le découpage à l’étape « Écrire ».
+            {t('Repris de ton document')} <strong className="text-ink">« {importedFrom} »</strong>{t(', déjà découpé')}
+            {' '}{d.type === 'lesson' ? t('en parties') : t('en questions')}. {t('Choisis le niveau et le chapitre, puis vérifie le découpage à l’étape « Écrire ».')}
           </div>
         )}
         {error && <p role="alert" className="mt-4 rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-4 py-3 text-[13px] text-[#9c3b2e]">{error}</p>}
@@ -423,22 +423,22 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
           <div className="mt-6 max-w-[760px] space-y-6">
             {!editing && (
               <section aria-labelledby="w-type">
-                <h2 id="w-type" className="mb-2 text-[14px] font-semibold text-ink">Que veux-tu ajouter ?</h2>
+                <h2 id="w-type" className="mb-2 text-[14px] font-semibold text-ink">{t('Que veux-tu ajouter ?')}</h2>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {TYPES.map((t) => (
-                    <button key={t.key} type="button" aria-pressed={d.type === t.key}
+                  {TYPES.map((ty) => (
+                    <button key={ty.key} type="button" aria-pressed={d.type === ty.key}
                       onClick={() => {
-                        if (t.key === d.type) return;
+                        if (ty.key === d.type) return;
                         // Contenu repris d'un document : redécoupé pour le nouveau type plutôt que perdu.
-                        const re = importedFrom && prefill ? documentToPrefill(prefill.source.html, t.key, d.title, prefill.source.duree) : null;
+                        const re = importedFrom && prefill ? documentToPrefill(prefill.source.html, ty.key, d.title, prefill.source.duree) : null;
                         setD((p) => ({
-                          ...starter(t.key), title: p.title, levelIds: p.levelIds, chapterIds: p.chapterIds, school: p.school,
-                          ...(re ? { blocks: re.blocks?.length ? re.blocks : starter(t.key).blocks, sections: re.sections?.length ? re.sections : starter(t.key).sections, durationMinutes: re.durationMinutes ?? starter(t.key).durationMinutes } : {}),
+                          ...starter(ty.key), title: p.title, levelIds: p.levelIds, chapterIds: p.chapterIds, school: p.school,
+                          ...(re ? { blocks: re.blocks?.length ? re.blocks : starter(ty.key).blocks, sections: re.sections?.length ? re.sections : starter(ty.key).sections, durationMinutes: re.durationMinutes ?? starter(ty.key).durationMinutes } : {}),
                         }));
                       }}
-                      className={`rounded-2xl border p-3.5 text-left transition-colors ${d.type === t.key ? 'border-ink bg-white ring-1 ring-ink' : 'border-line bg-white hover:border-ink/40'}`}>
-                      <span className="block text-[14.5px] font-semibold text-ink">{t.label}</span>
-                      <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{t.hint}</span>
+                      className={`rounded-2xl border p-3.5 text-start transition-colors ${d.type === ty.key ? 'border-ink bg-white ring-1 ring-ink' : 'border-line bg-white hover:border-ink/40'}`}>
+                      <span className="block text-[14.5px] font-semibold text-ink">{t(ty.label)}</span>
+                      <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{t(ty.hint)}</span>
                     </button>
                   ))}
                 </div>
@@ -446,16 +446,16 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
             )}
 
             <section>
-              <label htmlFor="w-title" className="mb-1.5 block text-[14px] font-semibold text-ink">Titre</label>
+              <label htmlFor="w-title" className="mb-1.5 block text-[14px] font-semibold text-ink">{t('Titre')}</label>
               <input id="w-title" data-tour="creer-titre" value={d.title} onChange={(e) => patch({ title: e.target.value })} maxLength={200}
-                placeholder={d.type === 'lesson' ? 'Ex. Dérivation — cours' : d.type === 'exam' ? 'Ex. Devoir surveillé n° 1 — limites et continuité' : 'Ex. Suite homographique et limite'}
+                placeholder={d.type === 'lesson' ? t('Ex. Dérivation — cours') : d.type === 'exam' ? t('Ex. Devoir surveillé n° 1 — limites et continuité') : t('Ex. Suite homographique et limite')}
                 className={`h-12 w-full rounded-xl border border-line bg-white px-4 text-[16px] text-ink focus:border-brand focus:outline-none ${missingClass(d.title.trim().length < 3)}`} />
-              <p className="mt-1 text-[12px] text-ink-faint">Dis de quoi il s’agit, plutôt que « Exercice 3 ».</p>
+              <p className="mt-1 text-[12px] text-ink-faint">{t('Dis de quoi il s’agit, plutôt que « Exercice 3 ».')}</p>
             </section>
 
             <section data-tour="creer-classement" className="space-y-5">
               <div>
-                <h2 className="mb-2 flex items-center gap-1.5 text-[14px] font-semibold text-ink"><GraduationCap className="h-4 w-4" /> Niveau</h2>
+                <h2 className="mb-2 flex items-center gap-1.5 text-[14px] font-semibold text-ink"><GraduationCap className="h-4 w-4" /> {t('Niveau')}</h2>
                 <div className={`flex flex-wrap gap-2 rounded-xl ${missingClass(!d.levelIds.length)}`}>
                   {levels.map((l) => {
                     const on = d.levelIds.includes(Number(l.id));
@@ -463,7 +463,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                       <button key={l.id} type="button" aria-pressed={on}
                         onClick={() => patch({ levelIds: on ? d.levelIds.filter((x) => x !== Number(l.id)) : [...d.levelIds, Number(l.id)] })}
                         className={`min-h-10 rounded-full border px-3.5 text-[13.5px] font-medium transition-colors ${on ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'}`}>
-                        {on && <Check className="-ml-0.5 mr-1 inline h-3.5 w-3.5" />}{l.name}
+                        {on && <Check className="-ms-0.5 me-1 inline h-3.5 w-3.5" />}{l.name}
                       </button>
                     );
                   })}
@@ -472,7 +472,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
 
               {subjects.length > 1 && (
                 <div>
-                  <label htmlFor="w-subject" className="mb-1.5 block text-[14px] font-semibold text-ink">Matière</label>
+                  <label htmlFor="w-subject" className="mb-1.5 block text-[14px] font-semibold text-ink">{t('Matière')}</label>
                   <select id="w-subject" value={subjectId ?? ''} onChange={(e) => patch({ subjectId: Number(e.target.value) || null, chapterIds: [] })}
                     className="h-11 rounded-xl border border-line bg-white px-3 text-[14px] text-ink focus:border-brand focus:outline-none">
                     {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -481,9 +481,9 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
               )}
 
               <div>
-                <h2 className="mb-2 text-[14px] font-semibold text-ink">Chapitre</h2>
+                <h2 className="mb-2 text-[14px] font-semibold text-ink">{t('Chapitre')}</h2>
                 {!d.levelIds.length ? (
-                  <p className="rounded-xl border border-dashed border-line px-4 py-3 text-[13px] text-ink-faint">Choisis d’abord un niveau.</p>
+                  <p className="rounded-xl border border-dashed border-line px-4 py-3 text-[13px] text-ink-faint">{t('Choisis d’abord un niveau.')}</p>
                 ) : (
                   <div className={`rounded-2xl border border-line bg-white ${missingClass(!d.chapterIds.length)}`}>
                     {chosenChapters.length > 0 && (
@@ -491,18 +491,18 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                         {chosenChapters.map((c) => (
                           <button key={c.id} type="button" onClick={() => patch({ chapterIds: d.chapterIds.filter((x) => x !== c.id) })}
                             className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-[12.5px] font-medium text-brand-hover hover:bg-brand-line">
-                            {c.name} <X className="h-3 w-3" aria-label="Retirer" />
+                            {c.name} <X className="h-3 w-3" aria-label={t('Retirer')} />
                           </button>
                         ))}
                       </div>
                     )}
                     <div className="relative border-b border-line">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
-                      <input value={chapterQuery} onChange={(e) => setChapterQuery(e.target.value)} placeholder="Chercher un chapitre…"
-                        aria-label="Chercher un chapitre" className="h-11 w-full rounded-t-2xl bg-transparent pl-9 pr-3 text-[14px] focus:outline-none" />
+                      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+                      <input value={chapterQuery} onChange={(e) => setChapterQuery(e.target.value)} placeholder={t('Chercher un chapitre…')}
+                        aria-label={t('Chercher un chapitre')} className="h-11 w-full rounded-t-2xl bg-transparent ps-9 pe-3 text-[14px] focus:outline-none" />
                     </div>
                     <div className="max-h-64 overflow-y-auto p-2">
-                      {groups.length === 0 && <p className="px-2 py-3 text-[13px] text-ink-faint">Aucun chapitre trouvé.</p>}
+                      {groups.length === 0 && <p className="px-2 py-3 text-[13px] text-ink-faint">{t('Aucun chapitre trouvé.')}</p>}
                       {groups.map(([group, list]) => (
                         <div key={group} className="mb-1">
                           {groups.length > 1 && <p className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{group}</p>}
@@ -511,7 +511,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                             return (
                               <button key={c.id} type="button" aria-pressed={on}
                                 onClick={() => patch({ chapterIds: on ? d.chapterIds.filter((x) => x !== c.id) : [...d.chapterIds, c.id] })}
-                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] ${on ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-paper hover:text-ink'}`}>
+                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-[13.5px] ${on ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-paper hover:text-ink'}`}>
                                 <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? 'border-brand bg-brand' : 'border-[#cfcdc8] bg-white'}`}>
                                   {on && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                                 </span>
@@ -528,23 +528,23 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
 
               {d.type !== 'lesson' && (
                 <div>
-                  <h2 className="mb-2 text-[14px] font-semibold text-ink">Difficulté</h2>
+                  <h2 className="mb-2 text-[14px] font-semibold text-ink">{t('Difficulté')}</h2>
                   <div className={`flex flex-wrap gap-2 rounded-xl ${missingClass(!d.difficulty)}`}>
                     {DIFFICULTIES.map((x) => (
                       <button key={x.key} type="button" aria-pressed={d.difficulty === x.key} onClick={() => patch({ difficulty: x.key })}
                         className={`min-h-10 rounded-full border px-4 text-[13.5px] font-medium ${d.difficulty === x.key ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'}`}>
-                        {x.label}
+                        {t(x.label)}
                       </button>
                     ))}
                   </div>
-                  <p className="mt-1 text-[12px] text-ink-faint">Pour un élève du niveau qui découvre le chapitre.</p>
+                  <p className="mt-1 text-[12px] text-ink-faint">{t('Pour un élève du niveau qui découvre le chapitre.')}</p>
                 </div>
               )}
 
               {d.type === 'exam' && (
                 <div className="flex flex-wrap items-end gap-5">
                   <div>
-                    <h2 className="mb-2 text-[14px] font-semibold text-ink">Durée</h2>
+                    <h2 className="mb-2 text-[14px] font-semibold text-ink">{t('Durée')}</h2>
                     <div className="flex flex-wrap gap-2">
                       {DURATIONS.map((m) => (
                         <button key={m} type="button" aria-pressed={d.durationMinutes === m} onClick={() => patch({ durationMinutes: m })}
@@ -557,11 +557,11 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                   <label className="inline-flex min-h-10 items-center gap-2 text-[13.5px] text-ink-soft">
                     <input type="checkbox" checked={d.isNationalExam} onChange={(e) => patch({ isNationalExam: e.target.checked, nationalYear: e.target.checked ? d.nationalYear ?? new Date().getFullYear() : null })}
                       className="h-4 w-4 accent-[#1a7a4a]" />
-                    Examen national
+                    {t('Examen national')}
                     {d.isNationalExam && (
-                      <input type="number" min={1990} max={2100} value={d.nationalYear ?? ''} aria-label="Année de la session"
+                      <input type="number" min={1990} max={2100} value={d.nationalYear ?? ''} aria-label={t('Année de la session')}
                         onChange={(e) => patch({ nationalYear: Number(e.target.value) || null })}
-                        className="ml-1 h-9 w-24 rounded-lg border border-line bg-white px-2 text-[13.5px] focus:border-brand focus:outline-none" />
+                        className="ms-1 h-9 w-24 rounded-lg border border-line bg-white px-2 text-[13.5px] focus:border-brand focus:outline-none" />
                     )}
                   </label>
                 </div>
@@ -571,25 +571,25 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
             {/* Plus d'options : établissement d'origine, théorèmes */}
             <section className="rounded-2xl border border-line bg-white">
               <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-expanded={moreOpen}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-[14px] font-semibold text-ink">
-                <span>Plus d’options <span className="font-normal text-ink-faint">— établissement d’origine, théorèmes</span></span>
+                className="flex w-full items-center justify-between px-4 py-3 text-start text-[14px] font-semibold text-ink">
+                <span>{t('Plus d’options')} <span className="font-normal text-ink-faint">{t('— établissement d’origine, théorèmes')}</span></span>
                 <ChevronDown className={`h-4 w-4 text-ink-faint transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
               </button>
               {moreOpen && (
                 <div className="space-y-5 border-t border-line px-4 py-4">
                   <div>
-                    <label className="mb-1.5 block text-[13.5px] font-semibold text-ink">Établissement d’origine <span className="font-normal text-ink-faint">(facultatif)</span></label>
+                    <label className="mb-1.5 block text-[13.5px] font-semibold text-ink">{t('Établissement d’origine')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span></label>
                     <SchoolPicker value={d.school} onChange={(school) => patch({ school })} />
                     <p className="mt-1 text-[12px] text-ink-faint">
                       {d.school.name && d.school.id === null
-                        ? 'Choisis l’établissement dans la liste pour qu’il soit enregistré.'
-                        : 'Le lycée où ce sujet a été donné ; il s’affiche sur la page du contenu.'}
+                        ? t('Choisis l’établissement dans la liste pour qu’il soit enregistré.')
+                        : t('Le lycée où ce sujet a été donné ; il s’affiche sur la page du contenu.')}
                     </p>
                   </div>
                   <div>
-                    <p className="mb-1.5 text-[13.5px] font-semibold text-ink">Théorèmes utilisés <span className="font-normal text-ink-faint">(facultatif)</span></p>
-                    {!d.chapterIds.length ? <p className="text-[12.5px] text-ink-faint">Choisis d’abord un chapitre.</p>
-                      : !theorems.length ? <p className="text-[12.5px] text-ink-faint">Aucun théorème répertorié pour ce chapitre.</p>
+                    <p className="mb-1.5 text-[13.5px] font-semibold text-ink">{t('Théorèmes utilisés')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span></p>
+                    {!d.chapterIds.length ? <p className="text-[12.5px] text-ink-faint">{t('Choisis d’abord un chapitre.')}</p>
+                      : !theorems.length ? <p className="text-[12.5px] text-ink-faint">{t('Aucun théorème répertorié pour ce chapitre.')}</p>
                         : (
                           <div className="flex flex-wrap gap-1.5">
                             {theorems.map((t) => {
@@ -618,10 +618,10 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
             <div className="min-w-0" data-tour="creer-blocs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 {viewSwitch}
-                <p className="text-[13px] text-ink-faint">Équation : <kbd className="rounded bg-[#f2f1ee] px-1 font-sans">Alt</kbd>+<kbd className="rounded bg-[#f2f1ee] px-1 font-sans">=</kbd> (ou <code className="rounded bg-[#f2f1ee] px-1">$…$</code>), puis tape ta formule.</p>
+                <p className="text-[13px] text-ink-faint">{t('Équation :')} <kbd className="rounded bg-[#f2f1ee] px-1 font-sans">Alt</kbd>+<kbd className="rounded bg-[#f2f1ee] px-1 font-sans">=</kbd> ({t('ou')} <code className="rounded bg-[#f2f1ee] px-1">$…$</code>){t(', puis tape ta formule.')}</p>
                 <button type="button" onClick={() => setShowJson(true)} data-tour="creer-importer"
                   className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-                  <FileJson className="h-3.5 w-3.5" /> Importer un fichier
+                  <FileJson className="h-3.5 w-3.5" /> {t('Importer un fichier')}
                 </button>
               </div>
               {/* Une seule barre d'outils, celle du champ où est le curseur, collée en haut pendant le défilement. */}
@@ -629,10 +629,10 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
               {d.type === 'lesson'
                 ? <LessonSectionsEditor sections={d.sections} onChange={(sections) => patch({ sections })} />
                 : <QuestionsEditor blocks={d.blocks} onChange={(blocks) => patch({ blocks })} isExam={d.type === 'exam'} />}
-              {tried && step2Missing.length > 0 && <p className="mt-3 text-[13px] text-[#9c3b2e]">Écris {step2Missing.join(' et ')}.</p>}
+              {tried && step2Missing.length > 0 && <p className="mt-3 text-[13px] text-[#9c3b2e]">{t('Écris {list}.', { list: step2Missing.join(t(' et ')) })}</p>}
               <button type="button" onClick={() => setShowPreview(!showPreview)}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-medium text-ink-soft hover:bg-[#f2f1ee] lg:hidden">
-                <Eye className="h-4 w-4" /> {showPreview ? 'Masquer l’aperçu' : 'Voir l’aperçu'}
+                <Eye className="h-4 w-4" /> {showPreview ? t('Masquer l’aperçu') : t('Voir l’aperçu')}
               </button>
               {showPreview && <div className="mt-3 lg:hidden">{preview}</div>}
             </div>
@@ -651,48 +651,48 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                   <span className="mx-1 hidden h-6 w-px bg-line sm:block" />
                   {d.type === 'lesson' ? (
                     <button type="button" onClick={() => patch({ sections: [...d.sections, newLessonSection()] })} className="fd-btn-primary min-h-9 px-3 text-[13px]">
-                      <Plus className="h-4 w-4" /> Partie
+                      <Plus className="h-4 w-4" /> {t('Partie')}
                     </button>
                   ) : (
                     <>
                       <button type="button" onClick={() => patch({ blocks: [...d.blocks, newQuestion()] })} className="fd-btn-primary min-h-9 px-3 text-[13px]">
-                        <Plus className="h-4 w-4" /> Question
+                        <Plus className="h-4 w-4" /> {t('Question')}
                       </button>
                       <button type="button" onClick={() => patch({ blocks: [...d.blocks, { id: Math.random().toString(36).slice(2, 9), type: 'context', content: { type: 'text', html: '' }, subQuestions: [] }] })}
                         className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink-soft hover:border-ink/40 hover:text-ink">
-                        <Text className="h-4 w-4" /> Texte
+                        <Text className="h-4 w-4" /> {t('Texte')}
                       </button>
                       {d.type === 'exam' && (
                         <button type="button" onClick={() => patch({ blocks: [...d.blocks, newSection(d.blocks.filter((b) => b.type === 'section').length + 1)] })}
                           className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink-soft hover:border-ink/40 hover:text-ink">
-                          <Heading className="h-4 w-4" /> Exercice {d.blocks.filter((b) => b.type === 'section').length + 1}
+                          <Heading className="h-4 w-4" /> {t('Exercice {n}', { n: d.blocks.filter((b) => b.type === 'section').length + 1 })}
                         </button>
                       )}
-                      <label className="ml-1 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-soft">
+                      <label className="ms-1 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-soft">
                         <input type="checkbox" className="accent-[#1a7a4a]" checked={sheetSolutions} onChange={(e) => setSheetSolutions(e.target.checked)} />
-                        Corrigé sur la feuille
+                        {t('Corrigé sur la feuille')}
                       </label>
                     </>
                   )}
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-soft" title="Texte, interlignes et marges se resserrent comme à l’impression (jamais sous 9 pt)">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-soft" title={t('Texte, interlignes et marges se resserrent comme à l’impression (jamais sous 9 pt)')}>
                     <input type="checkbox" className="accent-[#1a7a4a]" checked={sheetOnePage} onChange={(e) => setSheetOnePage(e.target.checked)} />
-                    Tenir sur 1 page
+                    {t('Tenir sur 1 page')}
                   </label>
                   {sheetInfo && (
                     <span className={`text-[12.5px] font-semibold ${sheetOnePage && sheetInfo.pages > 1 ? 'text-gold-strong' : 'text-brand-hover'}`}>
-                      <FileText className="mr-1 inline h-3.5 w-3.5" />
-                      {sheetInfo.pages} page{sheetInfo.pages > 1 ? 's' : ''}
-                      {sheetOnePage && sheetInfo.density > 0 ? ' · resserrée' : ''}
+                      <FileText className="me-1 inline h-3.5 w-3.5" />
+                      {sheetInfo.pages > 1 ? t('{n} pages', { n: sheetInfo.pages }) : t('{n} page', { n: sheetInfo.pages })}
+                      {sheetOnePage && sheetInfo.density > 0 ? ` · ${t('resserrée')}` : ''}
                     </span>
                   )}
                   <button type="button" onClick={() => setShowJson(true)} data-tour="creer-importer"
-                    className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-                    <FileJson className="h-3.5 w-3.5" /> Importer un fichier
+                    className="ms-auto inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12.5px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+                    <FileJson className="h-3.5 w-3.5" /> {t('Importer un fichier')}
                   </button>
                 </div>
                 <SharedToolbarSlot />
               </div>
-              {tried && step2Missing.length > 0 && <p className="mb-3 text-[13px] text-[#9c3b2e]">Écris {step2Missing.join(' et ')}.</p>}
+              {tried && step2Missing.length > 0 && <p className="mb-3 text-[13px] text-[#9c3b2e]">{t('Écris {list}.', { list: step2Missing.join(t(' et ')) })}</p>}
               <SheetEditor
                 type={d.type} title={d.title} kindLabel={d.type === 'exam' ? 'Examen' : d.type === 'lesson' ? 'Leçon' : 'Exercice'}
                 levels={levels.filter((l) => d.levelIds.includes(Number(l.id))).map((l) => l.name)}
@@ -712,40 +712,40 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
           <div className="mt-6 grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
             <aside className="space-y-4 lg:sticky lg:top-20">
               <section className="fd-card p-4">
-                <h2 className="text-[14px] font-semibold text-ink">Récapitulatif</h2>
+                <h2 className="text-[14px] font-semibold text-ink">{t('Récapitulatif')}</h2>
                 <dl className="mt-2 space-y-1.5 text-[13px]">
-                  <Row label="Type" value={typeDef.label} />
-                  <Row label="Niveau" value={chosenLevels.map((l) => l.name).join(', ')} />
-                  <Row label="Chapitre" value={chosenChapters.map((c) => c.name).join(', ')} />
-                  {d.type !== 'lesson' && <Row label="Difficulté" value={DIFFICULTIES.find((x) => x.key === d.difficulty)?.label ?? '—'} />}
-                  {d.type === 'exam' && d.durationMinutes ? <Row label="Durée" value={fmtDuration(d.durationMinutes)} /> : null}
-                  {d.type === 'exam' && totalPoints > 0 && <Row label="Barème" value={`${String(totalPoints).replace('.', ',')} points`} />}
-                  {d.school.id && <Row label="Établissement" value={`${d.school.name}${d.school.city ? `, ${d.school.city}` : ''}`} />}
+                  <Row label={t('Type')} value={t(typeDef.label)} />
+                  <Row label={t('Niveau')} value={chosenLevels.map((l) => l.name).join(', ')} />
+                  <Row label={t('Chapitre')} value={chosenChapters.map((c) => c.name).join(', ')} />
+                  {d.type !== 'lesson' && <Row label={t('Difficulté')} value={d.difficulty ? t(DIFFICULTIES.find((x) => x.key === d.difficulty)!.label) : '—'} />}
+                  {d.type === 'exam' && d.durationMinutes ? <Row label={t('Durée')} value={fmtDuration(d.durationMinutes)} /> : null}
+                  {d.type === 'exam' && totalPoints > 0 && <Row label={t('Barème')} value={t('{n} points', { n: String(totalPoints).replace('.', ',') })} />}
+                  {d.school.id && <Row label={t('Établissement')} value={`${d.school.name}${d.school.city ? `, ${d.school.city}` : ''}`} />}
                 </dl>
-                <button type="button" onClick={() => go(0)} className="mt-3 text-[12.5px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Modifier ces informations</button>
+                <button type="button" onClick={() => go(0)} className="mt-3 text-[12.5px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">{t('Modifier ces informations')}</button>
               </section>
               <section className="fd-card p-4">
-                <h2 className="text-[14px] font-semibold text-ink">À vérifier</h2>
+                <h2 className="text-[14px] font-semibold text-ink">{t('À vérifier')}</h2>
                 <ul className="mt-2 space-y-2 text-[13px]">
                   {mathErrors.length > 0 ? mathErrors.slice(0, 6).map((m, i) => (
-                    <li key={i} className="flex gap-2 text-[#9c3b2e]"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> Formule à corriger — {m.where}</li>
-                  )) : <li className="flex gap-2 text-brand-hover"><Check className="mt-0.5 h-4 w-4 shrink-0" /> Toutes les formules s’affichent.</li>}
+                    <li key={i} className="flex gap-2 text-[#9c3b2e]"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {t('Formule à corriger — {where}', { where: m.where })}</li>
+                  )) : <li className="flex gap-2 text-brand-hover"><Check className="mt-0.5 h-4 w-4 shrink-0" /> {t('Toutes les formules s’affichent.')}</li>}
                   {d.type !== 'lesson' && (withoutSolution > 0
-                    ? <li className="flex gap-2 text-gold-strong"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {withoutSolution} question{withoutSolution > 1 ? 's' : ''} sans solution (possible, mais les élèves s’en servent beaucoup).</li>
-                    : <li className="flex gap-2 text-brand-hover"><Check className="mt-0.5 h-4 w-4 shrink-0" /> Chaque question a sa solution.</li>)}
+                    ? <li className="flex gap-2 text-gold-strong"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {withoutSolution > 1 ? t('{n} questions sans solution (possible, mais les élèves s’en servent beaucoup).', { n: withoutSolution }) : t('{n} question sans solution (possible, mais les élèves s’en servent beaucoup).', { n: withoutSolution })}</li>
+                    : <li className="flex gap-2 text-brand-hover"><Check className="mt-0.5 h-4 w-4 shrink-0" /> {t('Chaque question a sa solution.')}</li>)}
                   {d.type === 'exam' && totalPoints > 0 && Math.abs(totalPoints - 20) > 1e-9 && (
-                    <li className="flex gap-2 text-gold-strong"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> Barème total : {String(totalPoints).replace('.', ',')} points (et non 20).</li>
+                    <li className="flex gap-2 text-gold-strong"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {t('Barème total : {n} points (et non 20).', { n: String(totalPoints).replace('.', ',') })}</li>
                   )}
                 </ul>
               </section>
               <button type="button" onClick={publish} disabled={saving || mathErrors.length > 0 || step1Missing.length > 0 || step2Missing.length > 0}
                 data-tour="creer-enregistrer" className="fd-btn-primary min-h-12 w-full justify-center text-[15px] disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                {brouillonId ? 'Enregistrer le brouillon' : editing ? 'Enregistrer les modifications'
-                  : serie && serie.index + 1 < serie.items.length ? `Publier et passer au suivant (${serie.index + 2}/${serie.items.length})` : 'Publier'}
+                {brouillonId ? t('Enregistrer le brouillon') : editing ? t('Enregistrer les modifications')
+                  : serie && serie.index + 1 < serie.items.length ? t('Publier et passer au suivant ({a}/{b})', { a: serie.index + 2, b: serie.items.length }) : t('Publier')}
               </button>
               {(step1Missing.length > 0 || step2Missing.length > 0) && (
-                <p className="text-[12.5px] text-[#9c3b2e]">Il manque {[...step1Missing, ...step2Missing].join(', ')}.</p>
+                <p className="text-[12.5px] text-[#9c3b2e]">{t('Il manque {list}.', { list: [...step1Missing, ...step2Missing].join(t(', ')) })}</p>
               )}
             </aside>
             <div className="min-w-0">{preview}</div>
@@ -758,12 +758,12 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
         <div className="sticky bottom-[calc(var(--fd-tabbar-h,0px)+12px)] z-30 mx-auto mt-8 max-w-[1180px] px-4 md:px-8">
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(20,18,16,.06)] backdrop-blur">
             <span className="min-w-0 truncate text-[12.5px] text-[#9c3b2e]">
-              {tried && (step === 0 ? step1Missing : step2Missing).length > 0 ? `Il manque ${(step === 0 ? step1Missing : step2Missing).join(', ')}.` : ''}
+              {tried && (step === 0 ? step1Missing : step2Missing).length > 0 ? t('Il manque {list}.', { list: (step === 0 ? step1Missing : step2Missing).join(t(', ')) }) : ''}
             </span>
             <span className="flex shrink-0 gap-2">
-              {step > 0 && <button type="button" onClick={() => go(step - 1)} className="min-h-11 rounded-xl border border-line bg-white px-4 text-[14px] font-medium text-ink-soft hover:text-ink">Précédent</button>}
+              {step > 0 && <button type="button" onClick={() => go(step - 1)} className="min-h-11 rounded-xl border border-line bg-white px-4 text-[14px] font-medium text-ink-soft hover:text-ink">{t('Précédent')}</button>}
               <button type="button" onClick={() => go(step + 1)} className="fd-btn-primary min-h-11 px-5 text-[14px]">
-                {step === 0 ? 'Écrire' : 'Vérifier'} <ArrowRight className="h-4 w-4" />
+                {step === 0 ? t('Écrire') : t('Vérifier')} <ArrowRight className="h-4 w-4" />
               </button>
             </span>
           </div>

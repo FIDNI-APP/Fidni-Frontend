@@ -25,6 +25,7 @@ import {
   PenLine, Pencil, Printer, RotateCcw, Trash2, WifiOff,
 } from 'lucide-react';
 import { Content } from '@/types';
+import { t, dateLocale } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { Page, PageHeader, EmptyState, Segmented, SplitBar } from '@/components/space/Page';
@@ -43,8 +44,7 @@ type View = 'revision' | 'feuille';
 type Progress = Record<string, { status: AssessmentStatus; assessed_at?: string }>;
 type Done = Exclude<ItemStatus, null>;
 
-const BACK = { to: '/reviser#mes-listes', label: 'Réviser' };
-
+// Les libellés sont des clés de traduction : t(ui.label) à l'affichage.
 const STATUS_UI: Record<'success' | 'review' | 'todo', { label: string; pill: string; dot: string }> = {
   success: { label: 'Réussi', pill: 'bg-brand-soft text-brand-hover', dot: 'border-brand bg-brand text-white' },
   review: { label: 'À revoir', pill: 'bg-gold-soft text-gold-strong', dot: 'border-gold bg-gold-soft text-gold-strong' },
@@ -53,14 +53,14 @@ const STATUS_UI: Record<'success' | 'review' | 'todo', { label: string; pill: st
 const statusKey = (s: ItemStatus | undefined) => (s === 'success' || s === 'review' ? s : 'todo');
 
 const contentPath = (c: Content) => `/${c.type === 'exam' ? 'exams' : 'exercises'}/${c.id}`;
-const kindLabel = (c: Content) => (c.type === 'exam' ? 'Examen' : 'Exercice');
+const kindLabel = (c: Content) => (c.type === 'exam' ? t('Examen') : t('Exercice'));
 
 const formatDate = (dateString: string) =>
-  new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateString));
+  new Intl.DateTimeFormat(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateString));
 
 function StatusPill({ status }: { status: ItemStatus | undefined }) {
   const ui = STATUS_UI[statusKey(status)];
-  return <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${ui.pill}`}>{ui.label}</span>;
+  return <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${ui.pill}`}>{t(ui.label)}</span>;
 }
 
 function Meta({ content }: { content: Content }) {
@@ -79,7 +79,7 @@ function Meta({ content }: { content: Content }) {
 /** Retirer un exercice de la liste : discret, rouge sobre au survol. */
 function RemoveButton({ onClick, className = '' }: { onClick: () => void; className?: string }) {
   return (
-    <button type="button" onClick={onClick} aria-label="Retirer de la liste" title="Retirer de la liste"
+    <button type="button" onClick={onClick} aria-label={t('Retirer de la liste')} title={t('Retirer de la liste')}
       className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#fbecea] hover:text-[#a23b34] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${className}`}>
       <Trash2 className="h-4 w-4" />
     </button>
@@ -90,6 +90,7 @@ export const RevisionListDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const BACK = { to: '/reviser#mes-listes', label: t('Réviser') };
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [params, setParams] = useSearchParams();
   const view: View = params.get('vue') === 'feuille' ? 'feuille' : 'revision';
@@ -117,7 +118,7 @@ export const RevisionListDetail: React.FC = () => {
   const crumbTitle = list?.name ?? null;
   useEffect(() => {
     // Même mot que le menu (« Mon suivi › Réviser »), qui reste surligné.
-    setCrumbs([{ label: 'Réviser', to: '/reviser' }, { label: crumbTitle ?? 'Liste de révision' }]);
+    setCrumbs([{ label: t('Réviser'), to: '/reviser' }, { label: crumbTitle ?? t('Liste de révision') }]);
   }, [crumbTitle, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
 
@@ -269,7 +270,7 @@ export const RevisionListDetail: React.FC = () => {
 
   const handleRemoveItem = async (itemId: number) => {
     if (!id || !list) return;
-    if (!confirm('Retirer cet exercice de la liste ? Il reste sur Fidni, avec ta progression.')) return;
+    if (!confirm(t('Retirer cet exercice de la liste ? Il reste sur Fidni, avec ta progression.'))) return;
     try {
       await removeItemFromRevisionList(parseInt(id), itemId);
       await load(true);
@@ -296,8 +297,8 @@ export const RevisionListDetail: React.FC = () => {
   if (authLoading || (loading && !loadError)) {
     return (
       <Page width="narrow">
-        <PageHeader back={BACK} eyebrow="Liste de révision" icon={ListChecks}
-          title={<><span className="sr-only">Chargement de la liste…</span><span aria-hidden className="inline-block h-[0.9em] w-64 max-w-full animate-pulse rounded-lg bg-[#efece6] align-middle" /></>} />
+        <PageHeader back={BACK} eyebrow={t('Liste de révision')} icon={ListChecks}
+          title={<><span className="sr-only">{t('Chargement de la liste…')}</span><span aria-hidden className="inline-block h-[0.9em] w-64 max-w-full animate-pulse rounded-lg bg-[#efece6] align-middle" /></>} />
         <div className="flex flex-col gap-4" aria-busy>
           <div className="flex gap-2">{[0, 1, 2, 3].map((i) => <span key={i} className="h-10 w-10 animate-pulse rounded-full bg-[#efece6]" />)}</div>
           <div className="h-72 animate-pulse rounded-2xl border border-line bg-white" />
@@ -310,17 +311,17 @@ export const RevisionListDetail: React.FC = () => {
     const failed = loadError === 'failed';
     return (
       <Page width="narrow">
-        <PageHeader back={BACK} eyebrow="Liste de révision" icon={ListChecks} title={failed ? 'Liste de révision' : 'Liste introuvable'} />
+        <PageHeader back={BACK} eyebrow={t('Liste de révision')} icon={ListChecks} title={failed ? t('Liste de révision') : t('Liste introuvable')} />
         <div role="alert">
           {failed ? (
-            <EmptyState icon={WifiOff} tone="gold" title="La liste n’a pas pu être chargée"
-              text="Vérifie ta connexion, puis réessaie."
-              action={<button type="button" onClick={() => load()} className="fd-btn-primary min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>}
-              secondary={<Link to={BACK.to} className="fd-btn-ghost min-h-10">Mes listes</Link>} />
+            <EmptyState icon={WifiOff} tone="gold" title={t('La liste n’a pas pu être chargée')}
+              text={t('Vérifie ta connexion, puis réessaie.')}
+              action={<button type="button" onClick={() => load()} className="fd-btn-primary min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>}
+              secondary={<Link to={BACK.to} className="fd-btn-ghost min-h-10">{t('Mes listes')}</Link>} />
           ) : (
-            <EmptyState icon={ListX} tone="ink" title="Cette liste n’existe plus"
-              text="Elle a peut-être été supprimée. Retrouve tes autres listes sur la page Réviser."
-              action={<Link to={BACK.to} className="fd-btn-primary min-h-10">Mes listes <ArrowRight className="h-4 w-4" /></Link>} />
+            <EmptyState icon={ListX} tone="ink" title={t('Cette liste n’existe plus')}
+              text={t('Elle a peut-être été supprimée. Retrouve tes autres listes sur la page Réviser.')}
+              action={<Link to={BACK.to} className="fd-btn-primary min-h-10">{t('Mes listes')} <ArrowRight className="h-4 w-4" /></Link>} />
           )}
         </div>
       </Page>
@@ -338,39 +339,39 @@ export const RevisionListDetail: React.FC = () => {
       <div className="revision-print-hide">
         {isEditing ? (
           <>
-            <PageHeader back={BACK} eyebrow="Liste de révision" icon={ListChecks} title="Modifier la liste" />
+            <PageHeader back={BACK} eyebrow={t('Liste de révision')} icon={ListChecks} title={t('Modifier la liste')} />
             <form onSubmit={handleUpdateList} className="mb-8 rounded-2xl border border-line bg-white p-5 sm:p-6">
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-ink-soft">Nom</span>
+                <span className="mb-1.5 block text-sm font-medium text-ink-soft">{t('Nom')}</span>
                 <input type="text" value={editName} maxLength={100} onChange={(e) => setEditName(e.target.value)} autoFocus
                   className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] font-semibold text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                  placeholder="Nom de la liste" />
+                  placeholder={t('Nom de la liste')} />
               </label>
               <label className="mt-4 block">
                 <span className="mb-1.5 block text-sm font-medium text-ink-soft">
-                  Description <span className="font-normal text-ink-faint">(facultatif)</span>
+                  {t('Description')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span>
                 </span>
                 <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2}
                   className="w-full resize-none rounded-xl border border-line bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                  placeholder="Pour le devoir du 12 novembre…" />
+                  placeholder={t('Pour le devoir du 12 novembre…')} />
               </label>
               <div className="mt-5 flex flex-wrap justify-end gap-2">
                 <button type="button" className="fd-btn-ghost min-h-10" onClick={() => { setIsEditing(false); setEditName(list.name); setEditDescription(list.description); }}>
-                  Annuler
+                  {t('Annuler')}
                 </button>
                 <button type="submit" className="fd-btn-primary min-h-10 disabled:cursor-not-allowed disabled:opacity-50" disabled={!editName.trim()}>
-                  <Check className="h-4 w-4" /> Enregistrer
+                  <Check className="h-4 w-4" /> {t('Enregistrer')}
                 </button>
               </div>
             </form>
           </>
         ) : (
-          <PageHeader back={BACK} eyebrow="Liste de révision" icon={ListChecks} title={list.name}
+          <PageHeader back={BACK} eyebrow={t('Liste de révision')} icon={ListChecks} title={list.name}
             subtitle={list.description || undefined}
             actions={(
               <>
-                <button type="button" onClick={() => setIsEditing(true)} className="fd-btn-ghost min-h-10" title="Renommer la liste" data-tour="revision-modifier">
-                  <Pencil className="h-4 w-4" /> Modifier
+                <button type="button" onClick={() => setIsEditing(true)} className="fd-btn-ghost min-h-10" title={t('Renommer la liste')} data-tour="revision-modifier">
+                  <Pencil className="h-4 w-4" /> {t('Modifier')}
                 </button>
                 <button type="button" onClick={() => navigate(pdfPath)} disabled={!items.length} data-tour="revision-pdf"
                   className={`${view === 'feuille' ? 'fd-btn-primary' : 'fd-btn-ghost'} min-h-10 disabled:cursor-not-allowed disabled:opacity-50`}>
@@ -386,9 +387,9 @@ export const RevisionListDetail: React.FC = () => {
                   <span><b className="fd-nums font-semibold text-ink-soft">{items.length}</b> {kindWord(items)}</span>
                   {statistics && (
                     <>
-                      <span><b className="fd-nums font-semibold text-brand-hover">{counts.success}</b> réussi{counts.success > 1 ? 's' : ''}</span>
-                      {counts.review > 0 && <span><b className="fd-nums font-semibold text-gold-strong">{counts.review}</b> à revoir</span>}
-                      {counts.todo > 0 && <span><b className="fd-nums font-semibold text-ink-soft">{counts.todo}</b> à faire</span>}
+                      <span><b className="fd-nums font-semibold text-brand-hover">{counts.success}</b> {counts.success > 1 ? t('réussis') : t('réussi')}</span>
+                      {counts.review > 0 && <span><b className="fd-nums font-semibold text-gold-strong">{counts.review}</b> {t('à revoir')}</span>}
+                      {counts.todo > 0 && <span><b className="fd-nums font-semibold text-ink-soft">{counts.todo}</b> {t('à faire')}</span>}
                     </>
                   )}
                 </p>
@@ -401,15 +402,15 @@ export const RevisionListDetail: React.FC = () => {
         {items.length > 0 && (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div data-tour="revision-mode" className="inline-flex max-w-full">
-              <Segmented<View> value={view} onChange={setView} label="Affichage de la liste"
-                options={[{ key: 'revision', label: 'Mode révision', icon: PenLine }, { key: 'feuille', label: 'Feuille à imprimer', icon: Printer }]} />
+              <Segmented<View> value={view} onChange={setView} label={t('Affichage de la liste')}
+                options={[{ key: 'revision', label: t('Mode révision'), icon: PenLine }, { key: 'feuille', label: t('Feuille à imprimer'), icon: Printer }]} />
             </div>
             {view === 'feuille' && (
               <button type="button" onClick={() => setShowAllSolutions((v) => !v)} data-tour="revision-solutions" aria-pressed={showAllSolutions}
                 className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3.5 text-[13px] font-semibold transition-colors ${
                   showAllSolutions ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-soft hover:border-ink-faint hover:text-ink'}`}>
                 {showAllSolutions ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                {showAllSolutions ? 'Solutions affichées' : 'Solutions masquées'}
+                {showAllSolutions ? t('Solutions affichées') : t('Solutions masquées')}
               </button>
             )}
           </div>
@@ -417,14 +418,14 @@ export const RevisionListDetail: React.FC = () => {
       </div>
 
       {items.length === 0 ? (
-        <EmptyState icon={ListX} tone="ink" title="Cette liste est vide"
-          text="Sur un exercice qui te résiste, touche le bouton «&nbsp;Liste&nbsp;» (sur sa carte ou sa page) pour l’ajouter ici. Tu pourras ensuite le refaire à la suite des autres, ou imprimer la liste."
-          action={<Link to={exercisesHome(user)} className="fd-btn-primary min-h-10"><BookOpen className="h-4 w-4" /> Trouver des exercices</Link>}
-          secondary={<Link to="/exams" className="fd-btn-ghost min-h-10">Devoirs (DS)</Link>} />
+        <EmptyState icon={ListX} tone="ink" title={t('Cette liste est vide')}
+          text={t('Sur un exercice qui te résiste, touche le bouton «\u00a0Liste\u00a0» (sur sa carte ou sa page) pour l’ajouter ici. Tu pourras ensuite le refaire à la suite des autres, ou imprimer la liste.')}
+          action={<Link to={exercisesHome(user)} className="fd-btn-primary min-h-10"><BookOpen className="h-4 w-4" /> {t('Trouver des exercices')}</Link>}
+          secondary={<Link to="/exams" className="fd-btn-ghost min-h-10">{t('Devoirs (DS)')}</Link>} />
       ) : view === 'revision' ? (
         /* ───────────── Mode révision : un exercice à la fois ───────────── */
         <div className="revision-print-hide">
-          <nav aria-label="Exercices de la liste" className="mb-4">
+          <nav aria-label={t('Exercices de la liste')} className="mb-4">
             <ol className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5 scrollbar-hide sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0.5">
               {items.map((it, i) => {
                 const s = statuses[String(it.object_id)];
@@ -433,7 +434,7 @@ export const RevisionListDetail: React.FC = () => {
                 return (
                   <li key={it.id} className="shrink-0">
                     <button type="button" onClick={() => goTo(i)} aria-current={on ? 'step' : undefined}
-                      aria-label={`${kindLabel(it.content_object)} ${i + 1} : ${ui.label.toLowerCase()}`} title={it.content_object.title}
+                      aria-label={t('{kind} {n} : {status}', { kind: kindLabel(it.content_object), n: i + 1, status: t(ui.label).toLowerCase() })} title={it.content_object.title}
                       className={`fd-nums inline-flex h-10 w-10 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-[box-shadow,border-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${ui.dot} ${
                         on ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper' : ''}`}>
                       {s === 'success' ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
@@ -446,7 +447,7 @@ export const RevisionListDetail: React.FC = () => {
 
           {item ? (
             <article ref={cardRef} aria-labelledby="exercice-titre" className="scroll-mt-24 rounded-2xl border border-line bg-white">
-              <header className="flex items-start gap-2 border-b border-line py-3.5 pl-4 pr-2 sm:py-4 sm:pl-6 sm:pr-3">
+              <header className="flex items-start gap-2 border-b border-line py-3.5 ps-4 pe-2 sm:py-4 sm:ps-6 sm:pe-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="fd-nums text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
@@ -476,12 +477,12 @@ export const RevisionListDetail: React.FC = () => {
                     onHintOpen={(path) => helpOpened(item.content_object, path, 'indice')}
                   />
                 ) : (
-                  <p className="text-sm italic text-ink-faint">L’énoncé n’est pas disponible ici : ouvre l’exercice.</p>
+                  <p className="text-sm italic text-ink-faint">{t('L’énoncé n’est pas disponible ici : ouvre l’exercice.')}</p>
                 )}
                 <Link to={contentPath(item.content_object)} state={openState}
                   className="mt-3 inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
-                  Ouvrir l’{item.content_object.type === 'exam' ? 'examen' : 'exercice'}
-                  <span className="hidden font-normal text-ink-faint sm:inline">(commentaires, solutions des élèves)</span>
+                  {item.content_object.type === 'exam' ? t('Ouvrir l’examen') : t('Ouvrir l’exercice')}
+                  <span className="hidden font-normal text-ink-faint sm:inline">{t('(commentaires, solutions des élèves)')}</span>
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -489,7 +490,7 @@ export const RevisionListDetail: React.FC = () => {
               {/* Où en es-tu ? puis la suite */}
               <footer className="flex flex-col gap-3 rounded-b-2xl border-t border-line bg-[#fcfbf9] px-4 py-3.5 sm:flex-row sm:items-center sm:px-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <span className="text-[13px] font-semibold text-ink">Tu l’as réussi ?</span>
+                  <span className="text-[13px] font-semibold text-ink">{t('Tu l’as réussi ?')}</span>
                   <div className="grid grid-cols-2 gap-2 sm:flex">
                     {([['success', 'Tout réussi', CheckCheck], ['review', 'À revoir', RotateCcw]] as const).map(([v, label, Icon]) => {
                       const on = statuses[String(item.object_id)] === v;
@@ -498,22 +499,22 @@ export const RevisionListDetail: React.FC = () => {
                           className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
                             on ? (v === 'success' ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gold bg-gold-soft text-gold-strong')
                               : 'border-line bg-white text-ink-soft hover:border-ink-faint hover:text-ink'}`}>
-                          <Icon className="h-4 w-4" /> {label}
+                          <Icon className="h-4 w-4" /> {t(label)}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-                <div className="flex gap-2 sm:ml-auto">
+                <div className="flex gap-2 sm:ms-auto">
                   {(current ?? 0) > 0 && (
-                    <button type="button" onClick={() => goTo((current ?? 1) - 1)} aria-label="Exercice précédent" title="Exercice précédent"
+                    <button type="button" onClick={() => goTo((current ?? 1) - 1)} aria-label={t('Exercice précédent')} title={t('Exercice précédent')}
                       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-white text-ink-soft hover:border-ink-faint hover:text-ink">
                       <ArrowLeft className="h-4 w-4" />
                     </button>
                   )}
                   <button type="button" onClick={() => goTo(isLast ? null : (current ?? 0) + 1)}
                     className="fd-btn-primary min-h-10 flex-1 justify-center sm:flex-none">
-                    {isLast ? 'Terminer' : 'Exercice suivant'} <ArrowRight className="h-4 w-4" />
+                    {isLast ? t('Terminer') : t('Exercice suivant')} <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               </footer>
@@ -526,25 +527,25 @@ export const RevisionListDetail: React.FC = () => {
                 {counts.success === items.length ? <CheckCheck className="h-6 w-6" /> : <ListChecks className="h-6 w-6" />}
               </span>
               <h2 id="bilan-titre" className="fd-display mt-4 text-[22px] leading-tight text-ink">
-                {counts.success === items.length ? 'Toute la liste est réussie !' : 'Tu as parcouru la liste.'}
+                {counts.success === items.length ? t('Toute la liste est réussie !') : t('Tu as parcouru la liste.')}
               </h2>
               <SplitBar className="mx-auto mt-4 max-w-xs" success={counts.success} review={counts.review} total={items.length} />
               <p className="fd-nums mt-2 text-[13.5px] text-ink-soft">
-                {counts.success} réussi{counts.success > 1 ? 's' : ''} · {counts.review} à revoir · {counts.todo} pas encore fait{counts.todo > 1 ? 's' : ''}
+                {counts.success} {counts.success > 1 ? t('réussis') : t('réussi')} · {counts.review} {t('à revoir')} · {counts.todo} {counts.todo > 1 ? t('pas encore faits') : t('pas encore fait')}
               </p>
               {counts.review > 0 && (
-                <p className="mx-auto mt-1 max-w-md text-[13px] text-ink-faint">Refais ceux «&nbsp;à revoir&nbsp;» dans 2 ou 3 jours : c’est là qu’ils rentrent pour de bon.</p>
+                <p className="mx-auto mt-1 max-w-md text-[13px] text-ink-faint">{t('Refais ceux «\u00a0à revoir\u00a0» dans 2 ou 3 jours : c’est là qu’ils rentrent pour de bon.')}</p>
               )}
               <div className="mt-6 flex flex-wrap justify-center gap-2">
                 {firstNotDone >= 0 && (
                   <button type="button" onClick={() => goTo(firstReview >= 0 ? firstReview : firstNotDone)} className="fd-btn-primary min-h-10">
-                    <RotateCcw className="h-4 w-4" /> {firstReview >= 0 ? 'Reprendre les «\u00a0à revoir\u00a0»' : 'Reprendre'}
+                    <RotateCcw className="h-4 w-4" /> {firstReview >= 0 ? t('Reprendre les «\u00a0à revoir\u00a0»') : t('Reprendre')}
                   </button>
                 )}
-                <button type="button" onClick={() => goTo(0)} className="fd-btn-ghost min-h-10">Revoir depuis le début</button>
+                <button type="button" onClick={() => goTo(0)} className="fd-btn-ghost min-h-10">{t('Revoir depuis le début')}</button>
               </div>
               <Link to={BACK.to} className="mt-3 inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
-                Mes listes <ArrowRight className="h-3.5 w-3.5" />
+                {t('Mes listes')} <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </section>
           )}
@@ -556,7 +557,7 @@ export const RevisionListDetail: React.FC = () => {
             <h1 className="mb-1 text-center text-[22px] font-bold text-ink">{list.name}</h1>
             {list.description && <p className="mb-1 text-center text-[12px] text-ink-faint">{list.description}</p>}
             <p className="mb-4 text-center text-[11px] text-ink-faint">
-              {items.length} exercice{items.length !== 1 ? 's' : ''} · {formatDate(list.created_at)}
+              {items.length !== 1 ? t('{n} exercices', { n: items.length }) : t('{n} exercice', { n: items.length })} · {formatDate(list.created_at)}
             </p>
             <hr className="mb-6 border-0 border-t border-line" />
           </div>
@@ -568,7 +569,7 @@ export const RevisionListDetail: React.FC = () => {
               const isExam = content.type === 'exam';
               return (
                 <article key={it.id} className="revision-exercise-card overflow-hidden rounded-2xl border border-line bg-white">
-                  <header className="flex items-start gap-2 pb-3 pl-4 pr-2 pt-4 sm:pl-6 sm:pr-3 sm:pt-5">
+                  <header className="flex items-start gap-2 pb-3 ps-4 pe-2 pt-4 sm:ps-6 sm:pe-3 sm:pt-5">
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <span className="fd-nums text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{kindLabel(content)} {index + 1}</span>
@@ -578,7 +579,7 @@ export const RevisionListDetail: React.FC = () => {
                       <Meta content={content} />
                       <Link to={contentPath(content)} state={openState}
                         className="revision-print-hide mt-1 inline-flex min-h-9 items-center gap-1 text-[12.5px] font-semibold text-brand-hover hover:underline">
-                        Ouvrir l’{isExam ? 'examen' : 'exercice'} <ArrowUpRight className="h-3.5 w-3.5" />
+                        {isExam ? t('Ouvrir l’examen') : t('Ouvrir l’exercice')} <ArrowUpRight className="h-3.5 w-3.5" />
                       </Link>
                     </div>
                     <RemoveButton className="revision-print-hide" onClick={() => handleRemoveItem(it.id)} />
@@ -589,7 +590,7 @@ export const RevisionListDetail: React.FC = () => {
                       <ExerciseRenderer structure={content.structure as unknown as FlexibleExerciseStructure} interactive={false}
                         showAllSolutions={showAllSolutions} compact={false} />
                     ) : (
-                      <p className="text-sm italic text-ink-faint">Aucun contenu disponible</p>
+                      <p className="text-sm italic text-ink-faint">{t('Aucun contenu disponible')}</p>
                     )}
                   </div>
                 </article>
@@ -637,9 +638,9 @@ export const RevisionListDetail: React.FC = () => {
 function kindWord(items: { content_object: Content }[]) {
   const exams = items.filter((i) => i.content_object.type === 'exam').length;
   const many = items.length > 1;
-  if (exams === 0) return many ? 'exercices' : 'exercice';
-  if (exams === items.length) return many ? 'examens' : 'examen';
-  return 'contenus';
+  if (exams === 0) return many ? t('exercices') : t('exercice');
+  if (exams === items.length) return many ? t('examens') : t('examen');
+  return t('contenus');
 }
 
 export default RevisionListDetail;

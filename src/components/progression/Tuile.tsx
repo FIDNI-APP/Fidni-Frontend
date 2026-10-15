@@ -6,6 +6,7 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Sparkline, type SparklineProps } from '@/components/pilotage/Sparkline';
+import { t } from '@/i18n';
 
 export const Ecart: React.FC<{ texte: string | null; sens: -1 | 0 | 1; jours: number | null }> = ({ texte, sens, jours }) => {
   if (texte === null) return null;
@@ -13,7 +14,7 @@ export const Ecart: React.FC<{ texte: string | null; sens: -1 | 0 | 1; jours: nu
   return (
     <span className="fd-nums flex flex-wrap items-baseline gap-x-1 text-[12px] leading-snug">
       <span className={`font-semibold ${tone}`}>{texte}</span>
-      <span className="text-ink-faint">{jours ? `vs ${jours} j d’avant` : 'vs avant'}</span>
+      <span className="text-ink-faint">{jours ? t('vs {n} j d’avant', { n: jours }) : t('vs avant')}</span>
     </span>
   );
 };
@@ -34,7 +35,7 @@ export const Tuile: React.FC<{
   tour?: string;
 }> = ({ icon: Icon, label, value, unit, ecart: e, jours = null, sub, spark, footer, accent, selected, onClick, tour }) => (
   <button type="button" onClick={onClick} aria-pressed={selected} data-tour={tour}
-    className={`group relative flex h-full w-full min-w-0 flex-col rounded-2xl border bg-white p-4 text-left transition-[border-color,box-shadow] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+    className={`group relative flex h-full w-full min-w-0 flex-col rounded-2xl border bg-white p-4 text-start transition-[border-color,box-shadow] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
       selected ? 'border-ink shadow-[0_0_0_1px_#1a1a1a]' : 'border-line hover:border-[#d8d4cc] hover:shadow-card-hover'}`}>
     <span className="flex items-start gap-1.5 text-[12.5px] font-medium leading-tight text-ink-soft">
       <Icon className="mt-px h-3.5 w-3.5 shrink-0" style={{ color: accent }} aria-hidden />

@@ -2,6 +2,7 @@
 // Elles servent à filtrer la page Révisions ; la taxonomie est chargée une seule fois.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Tag } from 'lucide-react';
+import { t } from '@/i18n';
 import { api } from '@/lib/api/apiClient';
 
 export interface TaxChapter { id: number; name: string }
@@ -67,10 +68,10 @@ export const RevisionLabelPicker: React.FC<{ value: RevisionLabels; onChange: (v
   return (
     <div className="rounded-xl border border-line bg-paper px-3.5 py-3">
       <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-soft">
-        <Tag className="h-3.5 w-3.5" /> Étiquettes <span className="font-normal text-ink-faint">(facultatif, pour filtrer tes listes)</span>
+        <Tag className="h-3.5 w-3.5" /> {t('Étiquettes')} <span className="font-normal text-ink-faint">{t('(facultatif, pour filtrer tes listes)')}</span>
       </p>
 
-      <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Niveau">
+      <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label={t('Niveau')}>
         {levels.map((l) => (
           <button key={l.id} type="button" className={chip(l.id === value.levelId)}
             onClick={() => onChange(l.id === value.levelId ? EMPTY_LABELS : { levelId: l.id, subjectId: null, chapterIds: [] })}>
@@ -80,7 +81,7 @@ export const RevisionLabelPicker: React.FC<{ value: RevisionLabels; onChange: (v
       </div>
 
       {level && subjects.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Matière">
+        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t('Matière')}>
           {subjects.map((s) => (
             <button key={s.id} type="button" className={chip(s.id === value.subjectId)}
               onClick={() => onChange({ ...value, subjectId: s.id === value.subjectId ? null : s.id, chapterIds: [] })}>
@@ -92,8 +93,8 @@ export const RevisionLabelPicker: React.FC<{ value: RevisionLabels; onChange: (v
 
       {level && chapters.length > 0 && (
         <div className="mt-2.5">
-          <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-[.06em] text-ink-faint">Chapitres</p>
-          <div className="flex max-h-[150px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+          <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-[.06em] text-ink-faint">{t('Chapitres')}</p>
+          <div className="flex max-h-[150px] flex-wrap gap-1.5 overflow-y-auto pe-1">
             {chapters.map((c) => {
               const on = value.chapterIds.includes(c.id);
               return (

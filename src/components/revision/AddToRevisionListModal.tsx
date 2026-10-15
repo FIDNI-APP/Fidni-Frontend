@@ -12,6 +12,7 @@ import {
 } from '@/lib/api';
 import { AlertCircle, Check, ListChecks, Loader2, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { t } from '@/i18n';
 import { RevisionLabelPicker, EMPTY_LABELS, labelsToPayload, type RevisionLabels } from './RevisionLabelPicker';
 
 interface AddToRevisionListModalProps {
@@ -110,7 +111,7 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
       await addItemToRevisionList(newList.id, { content_type: contentType, object_id: contentId });
       await loadRevisionLists();
     } catch (error) {
-      setCreateError((error as { response?: { data?: { name?: string[] } } })?.response?.data?.name?.[0] || 'La liste n’a pas pu être créée.');
+      setCreateError((error as { response?: { data?: { name?: string[] } } })?.response?.data?.name?.[0] || t('La liste n’a pas pu être créée.'));
     } finally {
       setCreating(false);
     }
@@ -131,7 +132,7 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
     }
   };
 
-  const word = contentType === 'exam' ? 'l’examen' : 'l’exercice';
+  const isExam = contentType === 'exam';
 
   return createPortal(
     <AnimatePresence>
@@ -157,13 +158,13 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
             {/* En-tête */}
             <div className="flex shrink-0 items-start gap-3 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
               <div className="min-w-0 flex-1">
-                <h2 id="add-to-list-title" className="fd-display text-[22px] leading-tight text-ink">Ajouter à une liste</h2>
+                <h2 id="add-to-list-title" className="fd-display text-[22px] leading-tight text-ink">{t('Ajouter à une liste')}</h2>
                 <p className="mt-1 line-clamp-2 text-[13px] text-ink-soft">
-                  {contentTitle ? <>«&nbsp;{contentTitle}&nbsp;»</> : `Range ${word} dans une liste de révision.`}
+                  {contentTitle ? <>«&nbsp;{contentTitle}&nbsp;»</> : (isExam ? t('Range l’examen dans une liste de révision.') : t('Range l’exercice dans une liste de révision.'))}
                 </p>
               </div>
-              <button type="button" onClick={handleClose} aria-label="Fermer"
-                className="-mr-2 -mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+              <button type="button" onClick={handleClose} aria-label={t('Fermer')}
+                className="-me-2 -mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -171,19 +172,19 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
             {/* Les listes */}
             <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-5 py-4 sm:px-6">
               {loading ? (
-                <div className="grid gap-2" role="status" aria-label="Chargement">
+                <div className="grid gap-2" role="status" aria-label={t('Chargement')}>
                   {[0, 1].map((i) => <div key={i} className="h-[60px] animate-pulse rounded-xl border border-line bg-[#faf9f7]" />)}
                 </div>
               ) : loadFailed ? (
                 <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-                  <p className="flex-1 text-[13px] font-medium text-[#a23b34]">Tes listes n’ont pas pu être chargées.</p>
-                  <button type="button" onClick={loadRevisionLists} className="fd-btn-ghost min-h-9">Réessayer</button>
+                  <p className="flex-1 text-[13px] font-medium text-[#a23b34]">{t('Tes listes n’ont pas pu être chargées.')}</p>
+                  <button type="button" onClick={loadRevisionLists} className="fd-btn-ghost min-h-9">{t('Réessayer')}</button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
                   {lists.length > 0 && (
                     <div>
-                      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">Tes listes</h3>
+                      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Tes listes')}</h3>
                       <ul className="grid gap-2">
                         {lists.map((list) => {
                           const isAdded = addedToLists.has(list.id);
@@ -192,26 +193,26 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                           return (
                             <li key={list.id}>
                               <button type="button" onClick={() => handleAddToList(list.id)} disabled={isAdded || processingListId !== null}
-                                aria-label={isAdded ? `${list.name} : déjà dans cette liste` : `Ajouter à ${list.name}`}
-                                className={`flex min-h-[60px] w-full items-center gap-3 rounded-xl border px-4 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                                aria-label={isAdded ? t('{name} : déjà dans cette liste', { name: list.name }) : t('Ajouter à {name}', { name: list.name })}
+                                className={`flex min-h-[60px] w-full items-center gap-3 rounded-xl border px-4 py-2.5 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                                   isAdded ? 'cursor-default border-brand-line bg-brand-soft'
                                     : 'border-line bg-white hover:border-[#cfc9bf] hover:bg-[#fcfbf9] disabled:cursor-wait'}`}>
                                 <ListChecks className={`h-4 w-4 shrink-0 ${isAdded ? 'text-brand-hover' : 'text-ink-faint'}`} aria-hidden />
                                 <span className="min-w-0 flex-1">
                                   <span className={`block truncate text-[14.5px] font-semibold ${isAdded ? 'text-brand-hover' : 'text-ink'}`}>{list.name}</span>
                                   <span className="block truncate text-[12px] text-ink-faint">
-                                    {count} exercice{count > 1 ? 's' : ''}{list.description ? ` · ${list.description}` : ''}
+                                    {count > 1 ? t('{n} exercices', { n: count }) : t('{n} exercice', { n: count })}{list.description ? ` · ${list.description}` : ''}
                                   </span>
                                 </span>
                                 {isProcessing ? (
                                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand" aria-hidden />
                                 ) : isAdded ? (
                                   <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-brand-hover">
-                                    <Check className="h-4 w-4" strokeWidth={3} aria-hidden /> Ajouté
+                                    <Check className="h-4 w-4" strokeWidth={3} aria-hidden /> {t('Ajouté')}
                                   </span>
                                 ) : (
                                   <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#f2f1ee] px-2.5 py-1 text-[12.5px] font-semibold text-ink-soft">
-                                    <Plus className="h-3.5 w-3.5" aria-hidden /> Ajouter
+                                    <Plus className="h-3.5 w-3.5" aria-hidden /> {t('Ajouter')}
                                   </span>
                                 )}
                               </button>
@@ -221,7 +222,7 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                       </ul>
                       {addError && (
                         <p role="alert" className="mt-2 flex items-center gap-2 text-[12.5px] text-[#a23b34]">
-                          <AlertCircle className="h-4 w-4 shrink-0" /> L’exercice n’a pas pu être ajouté. Réessaie.
+                          <AlertCircle className="h-4 w-4 shrink-0" /> {t('L’exercice n’a pas pu être ajouté. Réessaie.')}
                         </p>
                       )}
                     </div>
@@ -232,29 +233,29 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                     <div>
                       {lists.length === 0 && (
                         <p className="mb-3 text-[13.5px] leading-relaxed text-ink-faint">
-                          Tu n’as pas encore de liste. Crée la première : {word} y sera rangé directement.
+                          {isExam ? t('Tu n’as pas encore de liste. Crée la première : l’examen y sera rangé directement.') : t('Tu n’as pas encore de liste. Crée la première : l’exercice y sera rangé directement.')}
                         </p>
                       )}
                       <button type="button" onClick={() => { setNewLabels(contentLabels ?? EMPTY_LABELS); setShowCreateForm(true); }}
                         className={lists.length === 0 ? 'fd-btn-primary min-h-11 w-full justify-center'
                           : 'flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d4cc] text-[13.5px] font-semibold text-ink-soft transition-colors hover:border-brand hover:bg-brand-soft/40 hover:text-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40'}>
-                        <Plus className="h-4 w-4" /> {lists.length === 0 ? 'Créer ma première liste' : 'Nouvelle liste'}
+                        <Plus className="h-4 w-4" /> {lists.length === 0 ? t('Créer ma première liste') : t('Nouvelle liste')}
                       </button>
                     </div>
                   ) : (
                     <form onSubmit={handleCreateList} className="rounded-xl border border-line bg-[#fcfbf9] p-4">
-                      <h3 className="text-[14px] font-semibold text-ink">Nouvelle liste</h3>
+                      <h3 className="text-[14px] font-semibold text-ink">{t('Nouvelle liste')}</h3>
                       <label className="mt-3 block">
-                        <span className="mb-1.5 block text-sm font-medium text-ink-soft">Nom</span>
+                        <span className="mb-1.5 block text-sm font-medium text-ink-soft">{t('Nom')}</span>
                         <input type="text" value={newListName} maxLength={100} onChange={(e) => setNewListName(e.target.value)}
-                          className={field} placeholder="Ex. : Limites — DS 1" required autoFocus />
+                          className={field} placeholder={t('Ex. : Limites — DS 1')} required autoFocus />
                       </label>
                       <label className="mt-3 block">
                         <span className="mb-1.5 block text-sm font-medium text-ink-soft">
-                          Description <span className="font-normal text-ink-faint">(facultatif)</span>
+                          {t('Description')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span>
                         </span>
                         <textarea value={newListDescription} onChange={(e) => setNewListDescription(e.target.value)} rows={2}
-                          className={`${field} resize-none`} placeholder="Pour le devoir du 12 novembre…" />
+                          className={`${field} resize-none`} placeholder={t('Pour le devoir du 12 novembre…')} />
                       </label>
                       <div className="mt-3"><RevisionLabelPicker value={newLabels} onChange={setNewLabels} /></div>
                       {createError && (
@@ -263,10 +264,10 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                         </p>
                       )}
                       <div className="mt-4 flex items-center gap-2">
-                        <button type="button" className="fd-btn-ghost min-h-10 flex-1 justify-center" onClick={resetForm}>Annuler</button>
+                        <button type="button" className="fd-btn-ghost min-h-10 flex-1 justify-center" onClick={resetForm}>{t('Annuler')}</button>
                         <button type="submit" disabled={creating || !newListName.trim()}
                           className="fd-btn-primary min-h-10 flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-50">
-                          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Créer et ajouter
+                          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t('Créer et ajouter')}
                         </button>
                       </div>
                     </form>
@@ -278,10 +279,10 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
             {/* Pied */}
             <div className="flex shrink-0 items-center gap-3 border-t border-line px-5 py-3 sm:px-6">
               <Link to="/reviser#mes-listes" onClick={handleClose} className="inline-flex min-h-10 items-center text-[13px] font-semibold text-brand-hover hover:underline">
-                Mes listes
+                {t('Mes listes')}
               </Link>
-              <button type="button" className="fd-btn-ghost ml-auto min-h-10 justify-center px-5" onClick={handleClose}>
-                Fermer
+              <button type="button" className="fd-btn-ghost ms-auto min-h-10 justify-center px-5" onClick={handleClose}>
+                {t('Fermer')}
               </button>
             </div>
           </motion.div>

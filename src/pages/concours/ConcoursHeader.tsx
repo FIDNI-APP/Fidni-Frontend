@@ -6,6 +6,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, History, Lightbulb, type LucideIcon } from 'lucide-react';
 import { PageHeader, Segmented } from '@/components/space/Page';
+import { t } from '@/i18n';
 
 type TabPath = '/concours' | '/concours/sessions' | '/concours/tips';
 
@@ -24,12 +25,12 @@ const TABS: { key: TabPath; label: string; icon: React.ComponentType<{ className
 export function ConcoursHeader() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const value = TABS.find((t) => t.key !== '/concours' && pathname.startsWith(t.key))?.key ?? '/concours';
+  const value = TABS.find((tab) => tab.key !== '/concours' && pathname.startsWith(tab.key))?.key ?? '/concours';
 
   return (
-    <PageHeader title="Concours" subtitle="Prépare l’ENSA, l’ENSAM et la médecine.">
+    <PageHeader title={t('Concours')} subtitle={t('Prépare l’ENSA, l’ENSAM et la médecine.')}>
       <div className="mt-5" data-tour="concours-onglets">
-        <Segmented label="Rubriques des concours" value={value} onChange={(v) => navigate(v)} options={TABS} />
+        <Segmented label={t('Rubriques des concours')} value={value} onChange={(v) => navigate(v)} options={TABS.map((o) => ({ ...o, label: t(o.label) }))} />
       </div>
     </PageHeader>
   );

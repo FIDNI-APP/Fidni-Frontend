@@ -23,6 +23,7 @@ import { NextTestReminder } from '@/components/devoirs/NextTestReminder';
 import { nextTestVisible, useAnnounceLater, useNextTest } from '@/components/devoirs/useNextTest';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAction } from '@/lib/usage';
+import { t } from '@/i18n';
 import { NextAction } from './NextAction';
 import { FirstSteps } from './FirstSteps';
 import { OuJenSuis } from './OuJenSuis';
@@ -43,7 +44,7 @@ const HALF = 'min-w-0 flex-1 basis-[380px]';
 
 function HeroSkeleton() {
   return (
-    <div className="animate-pulse rounded-3xl border border-line bg-white p-5 sm:p-7" role="status" aria-label="Chargement">
+    <div className="animate-pulse rounded-3xl border border-line bg-white p-5 sm:p-7" role="status" aria-label={t('Chargement')}>
       <div className="h-3 w-28 rounded bg-[#f2f1ee]" />
       <div className="mt-3 h-6 w-2/3 rounded bg-[#efece6]" />
       <div className="mt-3 h-3 w-1/3 rounded bg-[#f2f1ee]" />
@@ -94,8 +95,8 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   }, [isTeacher]);
 
   const now = new Date();
-  const hello = now.getHours() >= 18 || now.getHours() < 6 ? 'Bonsoir' : 'Bonjour';
-  const today = `${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+  const hello = now.getHours() >= 18 || now.getHours() < 6 ? t('Bonsoir') : t('Bonjour');
+  const today = t('{jour} {n} {mois}', { jour: t(DAYS[now.getDay()]), n: now.getDate(), mois: t(MONTHS[now.getMonth()]) });
 
   const steps = data ? firstSteps(data, ds) : [];
   // Nouvel élève : ses premiers pas plutôt qu'une ligne de zéros.
@@ -116,8 +117,8 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   const exercisesHub = data?.level_hub_url ?? '/exercises';
 
   const subtitle = !data ? undefined
-    : newcomer ? 'Bienvenue sur Fidni ! Trois petits pas pour bien démarrer.'
-      : isTeacher && !hasWeekData(data) ? 'Bienvenue dans ton espace.'
+    : newcomer ? t('Bienvenue sur Fidni ! Trois petits pas pour bien démarrer.')
+      : isTeacher && !hasWeekData(data) ? t('Bienvenue dans ton espace.')
         : undefined;
 
   return (
@@ -131,9 +132,9 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
         <QuizAnnonce />
         {failed ? (
           <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-            <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ton accueil n’a pas pu se charger. Vérifie ta connexion.</p>
+            <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ton accueil n’a pas pu se charger. Vérifie ta connexion.')}</p>
             <button type="button" onClick={() => { setFailed(false); setAttempt((n) => n + 1); }} className="fd-btn-ghost min-h-10">
-              <RotateCcw className="h-4 w-4" /> Réessayer
+              <RotateCcw className="h-4 w-4" /> {t('Réessayer')}
             </button>
           </div>
         ) : !heroReady || !data || !choice ? (
@@ -164,7 +165,7 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
       {announce !== 'never' && (
         <Suspense fallback={null}>
           <TestFormModal open={announce === 'open'} onClose={() => setAnnounce('closed')}
-            onSaved={(t) => { setAnnounce('closed'); ds.reload(); navigate(`/revisions/ds/${t.id}`); }} />
+            onSaved={(saved) => { setAnnounce('closed'); ds.reload(); navigate(`/revisions/ds/${saved.id}`); }} />
         </Suspense>
       )}
     </>

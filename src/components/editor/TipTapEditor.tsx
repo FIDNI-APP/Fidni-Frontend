@@ -534,7 +534,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             reader.onload = (e) => {
               if (e.target?.result) {
                 editor.chain().focus().insertContentAt(pos, {
-                  type: 'image',
+                  type: 'imageResize', // nœud de tiptap-extension-resize-image (pas « image » : erreur « Unknown node type »)
                   attrs: { src: e.target.result, alt: file.name },
                 }).run();
               }
@@ -548,7 +548,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             reader.onload = (e) => {
               if (e.target?.result) {
                 editor.chain().focus().insertContent({
-                  type: 'image',
+                  type: 'imageResize', // nœud de tiptap-extension-resize-image (pas « image » : erreur « Unknown node type »)
                   attrs: { src: e.target.result, alt: file.name },
                 }).run();
               }
@@ -693,7 +693,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         onClose={() => setShowImageModal(false)}
         onInsert={(url, caption) => {
           editor.chain().focus().insertContent({
-            type: 'image',
+            type: 'imageResize', // nœud de tiptap-extension-resize-image (pas « image » : erreur « Unknown node type »)
             attrs: { src: url, alt: caption },
           }).run();
         }}

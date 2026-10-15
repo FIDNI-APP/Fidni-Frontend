@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { TOURS, resolveText, stepKey, type Tour, type TourContext, type TourStep } from '@/lib/tours';
 import { canCreateContent } from '@/lib/features';
+import { t } from '@/i18n';
 
 const SEEN_KEY = 'fidni.visites-vues';
 
@@ -181,8 +182,8 @@ export const TourHelpButton: React.FC<{ className?: string; style?: React.CSSPro
       type="button"
       onClick={start}
       data-tour="aide"
-      aria-label={news ? 'Guide de cette page (nouveautés)' : 'Guide de cette page'}
-      title={news ? 'Nouveautés sur cette page : voir le guide' : 'Guide de cette page'}
+      aria-label={news ? t('Guide de cette page (nouveautés)') : t('Guide de cette page')}
+      title={news ? t('Nouveautés sur cette page : voir le guide') : t('Guide de cette page')}
       className={className}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -191,7 +192,7 @@ export const TourHelpButton: React.FC<{ className?: string; style?: React.CSSPro
       }}
     >
       <HelpCircle className="w-[18px] h-[18px]" />
-      {news && <span aria-hidden className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-gold ring-2 ring-white" />}
+      {news && <span aria-hidden className="absolute end-1.5 top-1.5 h-2 w-2 rounded-full bg-gold ring-2 ring-white" />}
     </button>
   );
 };
@@ -327,10 +328,10 @@ const TourOverlay: React.FC<{ active: ActiveTour; context: TourContext; onClose:
         <div className="flex items-start justify-between gap-3">
           <span className="text-[10.5px] font-semibold uppercase tracking-widest text-gold-strong fd-nums"
             style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
-            {visibleSteps.length > 1 ? `${position + 1} / ${visibleSteps.length}` : 'Guide'}
+            {visibleSteps.length > 1 ? `${position + 1} / ${visibleSteps.length}` : t('Guide')}
           </span>
-          <button type="button" onClick={() => onClose(false)} aria-label="Fermer le guide"
-            className="-mt-2 -mr-2.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
+          <button type="button" onClick={() => onClose(false)} aria-label={t('Fermer le guide')}
+            className="-mt-2 -me-2.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -338,25 +339,25 @@ const TourOverlay: React.FC<{ active: ActiveTour; context: TourContext; onClose:
         <p className="mt-1 text-[13.5px] text-ink-soft leading-relaxed">{resolveText(step.body, context)}</p>
         {/* Version courte : le reste est sur « ? » (sauf si l'étape en parle déjà). */}
         {short && isLast && stepKey(step) !== 'aide' && (
-          <p className="mt-2 text-[12.5px] text-ink-faint">Le guide complet de la page : bouton ? en haut.</p>
+          <p className="mt-2 text-[12.5px] text-ink-faint">{t('Le guide complet de la page : bouton ? en haut.')}</p>
         )}
 
         <div className="mt-3.5 flex items-center gap-2">
           {!isLast && (
             <button type="button" onClick={() => onClose(false)} className="min-h-[36px] text-[12.5px] font-medium text-ink-faint hover:text-ink">
-              Passer
+              {t('Passer')}
             </button>
           )}
           <span className="flex-1" />
           {!isFirst && (
             <button type="button" onClick={() => go(-1)}
               className="min-h-[36px] px-3 py-1.5 rounded-lg border border-line text-[13px] font-medium text-ink-soft hover:border-ink">
-              Précédent
+              {t('Précédent')}
             </button>
           )}
           <button ref={primaryRef} type="button" onClick={() => (isLast ? onClose(true) : go(1))}
             className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover">
-            {isLast ? 'C’est compris' : 'Suivant'}
+            {isLast ? t('C’est compris') : t('Suivant')}
           </button>
         </div>
       </div>

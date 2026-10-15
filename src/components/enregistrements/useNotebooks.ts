@@ -1,5 +1,6 @@
 // Cahiers de l'élève : liste, création (matière déduite du niveau), renommage, suppression.
 import { useCallback, useEffect, useState } from 'react';
+import { t } from '@/i18n';
 import { api } from '@/lib/api/apiClient';
 import { getSubjects } from '@/lib/api/hierarchyApi';
 import { normalizeNotebookPayload } from '@/lib/api/notebookApi';
@@ -40,7 +41,7 @@ export function useNotebooks(enabled: boolean) {
     let subject = subjectId;
     if (!subject) {
       const subjects = await subjectsFor(levelId).catch(() => []);
-      if (!subjects.length) throw new Error('Aucune matière n’est proposée pour ce niveau.');
+      if (!subjects.length) throw new Error(t('Aucune matière n’est proposée pour ce niveau.'));
       subject = subjects[0].id;
     }
     try {
@@ -51,21 +52,21 @@ export function useNotebooks(enabled: boolean) {
       setList((cur) => [...(cur ?? []), nb]);
       return nb;
     } catch (e) {
-      throw new Error(apiError(e, 'Le cahier n’a pas pu être créé.'));
+      throw new Error(apiError(e, t('Le cahier n’a pas pu être créé.')));
     }
   };
 
   /** Renomme ; le nom doit rester unique parmi les cahiers de l'élève (contrainte en base). */
   const rename = async (id: Id, title: string) => {
     const clean = title.trim();
-    if (!clean) throw new Error('Donne un nom à ton cahier.');
+    if (!clean) throw new Error(t('Donne un nom à ton cahier.'));
     if ((list ?? []).some((n) => !sameId(n.id, id) && n.title.trim().toLowerCase() === clean.toLowerCase())) {
-      throw new Error('Tu as déjà un cahier qui porte ce nom.');
+      throw new Error(t('Tu as déjà un cahier qui porte ce nom.'));
     }
     try {
       await api.patch(`/notebooks/${id}/`, { title: clean });
     } catch (e) {
-      throw new Error(apiError(e, 'Le cahier n’a pas pu être renommé.'));
+      throw new Error(apiError(e, t('Le cahier n’a pas pu être renommé.')));
     }
     setList((cur) => cur?.map((n) => (sameId(n.id, id) ? { ...n, title: clean } : n)) ?? cur);
   };

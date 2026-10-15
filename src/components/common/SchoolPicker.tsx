@@ -4,6 +4,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { Check, Loader2, School as SchoolIcon, PenLine } from 'lucide-react';
 import { searchSchools, type SchoolOption } from '@/lib/api/userApi';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
+import { t } from '@/i18n';
 
 export interface SchoolValue {
   /** Identifiant dans la liste officielle ; null = saisie libre. */
@@ -74,7 +75,7 @@ export const SchoolPicker: React.FC<SchoolPickerProps> = ({ value, onChange, inp
   return (
     <div>
       <div ref={boxRef} className="relative">
-        <SchoolIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none" />
+        <SchoolIcon className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none" />
         <input
           type="text"
           role="combobox"
@@ -84,7 +85,7 @@ export const SchoolPicker: React.FC<SchoolPickerProps> = ({ value, onChange, inp
           autoComplete="off"
           autoFocus={autoFocus}
           value={query}
-          placeholder="Ex. : Lycée Moulay Youssef, Rabat"
+          placeholder={t('Ex. : Lycée Moulay Youssef, Rabat')}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -92,11 +93,11 @@ export const SchoolPicker: React.FC<SchoolPickerProps> = ({ value, onChange, inp
             onChange({ id: null, name: e.target.value });
           }}
           onKeyDown={onKeyDown}
-          className={inputClassName || 'w-full pl-9 pr-9 py-2.5 bg-white border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand'}
-          style={{ paddingLeft: 36, paddingRight: 36 }}
+          className={inputClassName || 'w-full ps-9 pe-9 py-2.5 bg-white border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand'}
+          style={{ paddingInlineStart: 36, paddingInlineEnd: 36 }}
         />
-        {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-ink-faint" />}
-        {!loading && value.id !== null && <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand" />}
+        {loading && <Loader2 className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-ink-faint" />}
+        {!loading && value.id !== null && <Check className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand" />}
       </div>
 
       {/* Rendue au-dessus de la page : la liste n'est plus coupée dans une fenêtre qui défile. */}
@@ -121,7 +122,7 @@ export const SchoolPicker: React.FC<SchoolPickerProps> = ({ value, onChange, inp
               onMouseEnter={() => setActive(results.length)}
               className={`px-3 py-2 cursor-pointer flex items-center gap-2 border-t border-line text-sm text-ink-soft ${active === results.length ? 'bg-[#f2f1ee]' : ''}`}>
               <PenLine className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Utiliser « {typed} »{results.length ? '' : ' (introuvable dans la liste)'}</span>
+              <span className="truncate">{t('Utiliser « {typed} »', { typed })}{results.length ? '' : ` ${t('(introuvable dans la liste)')}`}</span>
             </li>
           )}
         </ul>
@@ -129,10 +130,10 @@ export const SchoolPicker: React.FC<SchoolPickerProps> = ({ value, onChange, inp
 
       <p className="text-xs text-ink-faint mt-1.5">
         {value.id !== null
-          ? `Établissement de la liste officielle${value.city ? ` · ${value.city}` : ''}`
+          ? `${t('Établissement de la liste officielle')}${value.city ? ` · ${value.city}` : ''}`
           : typed.length >= 3
-            ? 'Pas dans la liste ? Ce nom sera utilisé tel quel.'
-            : 'Tape au moins 2 lettres : nom du lycée, du collège ou de la ville.'}
+            ? t('Pas dans la liste ? Ce nom sera utilisé tel quel.')
+            : t('Tape au moins 2 lettres : nom du lycée, du collège ou de la ville.')}
       </p>
     </div>
   );

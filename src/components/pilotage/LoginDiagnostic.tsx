@@ -65,7 +65,7 @@ export const LoginDiagnostic: React.FC = () => {
   return (
     <section className="fd-card mb-4 overflow-hidden">
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-[#faf9f7]">
+        className="flex w-full items-center gap-3 px-5 py-3.5 text-start hover:bg-[#faf9f7]">
         <KeyRound className="h-4 w-4 shrink-0 text-ink-soft" />
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-semibold text-ink">Un membre n’arrive pas à se connecter ?</span>
@@ -79,9 +79,9 @@ export const LoginDiagnostic: React.FC = () => {
           <form onSubmit={run} className="flex flex-wrap gap-2">
             <label className="relative min-w-[220px] flex-1">
               <span className="sr-only">E-mail ou pseudo</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
               <input value={q} onChange={(ev) => setQ(ev.target.value)} placeholder="eleve@exemple.fr ou pseudo" autoFocus
-                className="w-full rounded-xl border border-line bg-white py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
+                className="w-full rounded-xl border border-line bg-white py-2.5 ps-9 pe-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </label>
             <button type="submit" className="fd-btn-primary" disabled={loading || q.trim().length < 3}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Diagnostiquer
@@ -111,7 +111,7 @@ export const LoginDiagnostic: React.FC = () => {
                       <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3.5 py-2.5 text-[12.5px] text-ink-soft">
                         <span className="min-w-0 flex-1">
                           <b className="text-[13.5px] text-ink">{a.username}</b> · {a.email || 'sans e-mail'}
-                          {a.used_for_login && <span className="ml-2 rounded-full bg-[#f2f1ee] px-1.5 text-[10.5px] text-ink-soft">utilisé à la connexion</span>}
+                          {a.used_for_login && <span className="ms-2 rounded-full bg-[#f2f1ee] px-1.5 text-[10.5px] text-ink-soft">utilisé à la connexion</span>}
                         </span>
                         <Flag ok={a.is_active} yes="Actif" no="Inactif" />
                         <Flag ok={a.email_verified} yes="E-mail confirmé" no="E-mail non confirmé" />

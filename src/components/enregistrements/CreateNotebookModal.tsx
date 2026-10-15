@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookMarked, Loader2 } from 'lucide-react';
+import { t } from '@/i18n';
 import { getClassLevels } from '@/lib/api/hierarchyApi';
 import { ModalShell, FormError, fieldCls } from './ModalShell';
 import { subjectsFor, type SubjectChoice } from './useNotebooks';
@@ -14,7 +15,7 @@ interface Level { id: Id; name: string }
 /** Nom proposé, « Mathématiques - 2ème Bac SM », numéroté s'il est déjà pris. */
 function proposedTitle(subject: string, level: string, taken: string[]) {
   const base = `${subject} - ${level}`;
-  const used = new Set(taken.map((t) => t.trim().toLowerCase()));
+  const used = new Set(taken.map((x) => x.trim().toLowerCase()));
   if (!used.has(base.toLowerCase())) return base;
   let i = 2;
   while (used.has(`${base} (${i})`.toLowerCase())) i += 1;
@@ -89,18 +90,18 @@ export const CreateNotebookModal: React.FC<{
 
   return (
     <ModalShell open={open} onClose={onClose} labelId="nouveau-cahier-titre" onSubmit={submit}
-      title="Nouveau cahier"
-      subtitle="Il se remplit avec les leçons que tu y ranges, chacune dans son chapitre.">
+      title={t('Nouveau cahier')}
+      subtitle={t('Il se remplit avec les leçons que tu y ranges, chacune dans son chapitre.')}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-soft">Niveau</span>
+          <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-soft">{t('Niveau')}</span>
           <select value={levelId} onChange={(e) => setLevelId(e.target.value)} className={fieldCls} disabled={!levels}>
-            <option value="">{levels ? 'Choisis ton niveau' : 'Chargement…'}</option>
+            <option value="">{levels ? t('Choisis ton niveau') : t('Chargement…')}</option>
             {(levels ?? []).map((l) => <option key={l.id} value={String(l.id)}>{l.name}</option>)}
           </select>
         </label>
         <div>
-          <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-soft" id="cahier-matiere">Matière</span>
+          <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-soft" id="cahier-matiere">{t('Matière')}</span>
           {subjects && subjects.length > 1 ? (
             <select aria-labelledby="cahier-matiere" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={fieldCls}>
               {subjects.map((s) => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
@@ -108,26 +109,26 @@ export const CreateNotebookModal: React.FC<{
           ) : (
             <p
               className="flex min-h-11 items-center rounded-xl border border-line bg-[#fcfbf9] px-3.5 text-[14px] text-ink-soft">
-              {!levelId ? <span className="text-ink-faint">Selon ton niveau</span>
+              {!levelId ? <span className="text-ink-faint">{t('Selon ton niveau')}</span>
                 : subjects === null ? <Loader2 className="h-4 w-4 animate-spin text-ink-faint" />
-                  : subject ? subject.name : <span className="text-ink-faint">Aucune matière pour ce niveau</span>}
+                  : subject ? subject.name : <span className="text-ink-faint">{t('Aucune matière pour ce niveau')}</span>}
             </p>
           )}
         </div>
       </div>
 
       <label className="mt-4 block">
-        <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-soft">Nom du cahier</span>
+        <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-soft">{t('Nom du cahier')}</span>
         <input value={title} maxLength={200} onChange={(e) => { setTouched(true); setTitle(e.target.value); }}
-          placeholder="Ex. : Maths - 2ème Bac SM" className={fieldCls} />
+          placeholder={t('Ex. : Maths - 2ème Bac SM')} className={fieldCls} />
       </label>
 
       {twin && (
         <p className="mt-4 flex flex-wrap items-center gap-x-2 rounded-xl bg-gold-soft px-3.5 py-2 text-[13px] text-ink-soft ring-1 ring-gold-line">
-          <span className="min-w-0">Tu as déjà « <b className="font-semibold text-ink">{twin.title}</b> » pour ce niveau.</span>
+          <span className="min-w-0">{t('Tu as déjà')} « <b className="font-semibold text-ink">{twin.title}</b> » {t('pour ce niveau.')}</span>
           <Link to={`/notebooks?nb=${twin.id}`} onClick={onClose}
             className="inline-flex min-h-10 items-center gap-1 font-semibold text-brand-hover hover:underline">
-            Ouvrir <ArrowRight className="h-3.5 w-3.5" />
+            {t('Ouvrir')} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </p>
       )}
@@ -135,11 +136,11 @@ export const CreateNotebookModal: React.FC<{
       {error && <FormError>{error}</FormError>}
 
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button type="button" onClick={onClose} className="fd-btn-ghost min-h-11 justify-center sm:min-h-10">Annuler</button>
+        <button type="button" onClick={onClose} className="fd-btn-ghost min-h-11 justify-center sm:min-h-10">{t('Annuler')}</button>
         <button type="submit" disabled={!ready}
           className="fd-btn-primary min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookMarked className="h-4 w-4" />}
-          Créer mon cahier
+          {t('Créer mon cahier')}
         </button>
       </div>
     </ModalShell>

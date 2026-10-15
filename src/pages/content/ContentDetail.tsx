@@ -59,6 +59,7 @@ import { SimilarContents } from '@/components/content/viewer/SimilarContents';
 import { contentHub, DETAIL_MAX_WIDTH } from '@/components/content/viewer/pageHelpers';
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
+import { t } from '@/i18n';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -397,13 +398,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         return { ...prev, structure } as unknown as ContentItem;
       });
     } catch {
-      alert('La mise à jour a échoué. Réessaie.');
+      alert(t('La mise à jour a échoué. Réessaie.'));
     }
   };
 
   const handleDelete = async () => {
     if (!id || !content) return;
-    if (!confirm(config.deleteConfirm)) return;
+    if (!confirm(t(config.deleteConfirm))) return;
 
     try {
       await config.api.delete(id);
@@ -685,11 +686,11 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     if (national) {
       // Bac national en dossiers par année (10/10/2026) : Bac national › Bac 2024.
       const year = (content as ContentExam).national_year;
-      crumbs.push({ label: 'Bac national', to: '/exams/nationaux' });
-      crumbs.push(year ? { label: `Bac ${year}`, to: `/exams/nationaux/${year}` }
-        : { label: 'Année non précisée', to: '/exams/nationaux/aucune' });
+      crumbs.push({ label: t('Bac national'), to: '/exams/nationaux' });
+      crumbs.push(year ? { label: t('Bac {year}', { year }), to: `/exams/nationaux/${year}` }
+        : { label: t('Année non précisée'), to: '/exams/nationaux/aucune' });
     } else {
-      const sectionLabel = contentType === 'exercise' ? 'Exercices' : contentType === 'exam' ? 'Devoirs (DS)' : 'Leçons';
+      const sectionLabel = contentType === 'exercise' ? t('Exercices') : contentType === 'exam' ? t('Devoirs (DS)') : t('Leçons');
       // Élève qui a indiqué sa classe : la rubrique le renverrait dans le dossier de son niveau (élément suivant du
       // fil) ; « ?niveau=tous » montre les dossiers de tous les niveaux.
       const sectionTo = studentLevel ? `${config.basePath}?niveau=tous` : config.basePath;
@@ -716,15 +717,15 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       <div className="min-h-screen bg-paper px-4 pt-12 sm:pt-16">
         <div className="mx-auto max-w-md rounded-2xl border border-line bg-white p-8 text-center" role="alert">
           <p className="fd-display text-[20px] text-ink">
-            {error === 'error' ? 'Ce contenu n’a pas pu être chargé.' : 'Ce contenu n’existe pas ou a été retiré.'}
+            {error === 'error' ? t('Ce contenu n’a pas pu être chargé.') : t('Ce contenu n’existe pas ou a été retiré.')}
           </p>
-          {error === 'error' && <p className="mt-1.5 text-[13.5px] text-ink-faint">Vérifie ta connexion et réessaie.</p>}
+          {error === 'error' && <p className="mt-1.5 text-[13.5px] text-ink-faint">{t('Vérifie ta connexion et réessaie.')}</p>}
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             {error === 'error' && (
-              <button type="button" className="fd-btn-primary inline-flex min-h-10" onClick={() => setReloadKey((k) => k + 1)}>Réessayer</button>
+              <button type="button" className="fd-btn-primary inline-flex min-h-10" onClick={() => setReloadKey((k) => k + 1)}>{t('Réessayer')}</button>
             )}
             <Link to={config.basePath} className={`${error === 'error' ? 'fd-btn-ghost' : 'fd-btn-primary'} inline-flex min-h-10`}>
-              {config.backLabel}
+              {t(config.backLabel)}
             </Link>
           </div>
         </div>
@@ -761,10 +762,10 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       {isAuthenticated && !examRunning && <FinishPanel key={`${content.id}-bas`} {...finishProps('bottom')} onCollect={openCollect} />}
       {/* Visiteur : ce qu'un compte apporterait, au moment où l'élève finit (l'examen le dit dans « Ta copie »). */}
       {!isAuthenticated && contentType !== 'exam' && (
-        <SignupCard title={isLesson ? 'Garde tes leçons' : 'Suis ta progression'} tour="detail-inscription" benefits={false}
+        <SignupCard title={isLesson ? t('Garde tes leçons') : t('Suis ta progression')} tour="detail-inscription" benefits={false}
           text={isLesson
-            ? 'Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.'
-            : 'Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.'} />
+            ? t('Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.')
+            : t('Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.')} />
       )}
       {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. */}
       {!examRunning && id && <SimilarContents contentId={id} />}
@@ -808,9 +809,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           onReport={openReport}
           onSetVerified={isModerator(user) ? handleSetVerified : undefined}
           activeTab={activeTab}
-          onTabChange={(t) => {
-            if (t === 'proposals') trackAction('onglet-solutions');
-            setActiveTab(t);
+          onTabChange={(tab) => {
+            if (tab === 'proposals') trackAction('onglet-solutions');
+            setActiveTab(tab);
           }}
           basePath={config.basePath}
           solutionCount={proposedSolutions?.length ?? 0}
@@ -929,7 +930,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
 /** Forme de la page pendant le chargement (en-tête, feuille, trois questions). */
 const DetailSkeleton: React.FC<{ maxWidth: number }> = ({ maxWidth }) => (
-  <div className="min-h-screen bg-paper" aria-busy="true" aria-label="Chargement">
+  <div className="min-h-screen bg-paper" aria-busy="true" aria-label={t('Chargement')}>
     <div className="mx-auto w-full animate-pulse px-4 pt-3 sm:pt-6 md:px-8" style={{ maxWidth }}>
       <div className="flex items-center justify-between">
         <div className="h-4 w-28 rounded bg-[#efece6]" />

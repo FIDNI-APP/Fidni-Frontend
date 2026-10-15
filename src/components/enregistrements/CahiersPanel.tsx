@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowRight, BookMarked, FolderTree, Loader2, Plus, Printer } from 'lucide-react';
+import { t } from '@/i18n';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { CardsSkeleton, EmptyState, Section } from '@/components/space/Page';
 import type { profileLevel } from '@/lib/api/hubApi';
@@ -28,8 +29,8 @@ const HowTo: React.FC = () => (
       <li key={i} className="flex gap-3 bg-[#fcfbf9] px-4 py-3.5">
         <span className="fd-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11.5px] font-bold text-ink-soft ring-1 ring-line">{i + 1}</span>
         <p className="text-[12.5px] leading-snug text-ink-faint">
-          <span className="flex items-center gap-1.5 font-semibold text-ink-soft"><Icon className="h-3.5 w-3.5" /> {title}</span>
-          {text}
+          <span className="flex items-center gap-1.5 font-semibold text-ink-soft"><Icon className="h-3.5 w-3.5" /> {t(title)}</span>
+          {t(text)}
         </p>
       </li>
     ))}
@@ -53,7 +54,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
     setQuick(true);
     try {
       const nb = await create({ levelId: level.id });
-      toast.success('Cahier créé');
+      toast.success(t('Cahier créé'));
       open(nb);
     } catch (e) {
       toast.error((e as Error).message);
@@ -65,20 +66,21 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
 
   const del = async (nb: NbNotebook) => {
     const n = summarize(nb).lessons;
-    const what = n === 1 ? ' La leçon qui y est rangée reste sur Fidni.'
-      : n > 1 ? ` Les ${n} leçons qui y sont rangées restent sur Fidni.` : '';
-    if (!window.confirm(`Supprimer le cahier « ${nb.title} » ?${what}`)) return;
+    const question = n === 1 ? t('Supprimer le cahier « {title} » ? La leçon qui y est rangée reste sur Fidni.', { title: nb.title })
+      : n > 1 ? t('Supprimer le cahier « {title} » ? Les {n} leçons qui y sont rangées restent sur Fidni.', { title: nb.title, n })
+        : t('Supprimer le cahier « {title} » ?', { title: nb.title });
+    if (!window.confirm(question)) return;
     try {
       await remove(nb.id);
-      toast.success('Cahier supprimé');
+      toast.success(t('Cahier supprimé'));
     } catch {
-      toast.error('Le cahier n’a pas pu être supprimé.');
+      toast.error(t('Le cahier n’a pas pu être supprimé.'));
     }
   };
 
   const lessonsLink = (
     <Link to={lessonsHome(level)} className="fd-btn-ghost min-h-10">
-      <LessonIcon className="h-4 w-4" /> {level ? 'Voir les leçons de mon niveau' : 'Voir les leçons'}
+      <LessonIcon className="h-4 w-4" /> {level ? t('Voir les leçons de mon niveau') : t('Voir les leçons')}
     </Link>
   );
 
@@ -88,22 +90,22 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
         <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
       ) : list.length === 0 ? (
         <div className="flex flex-col gap-4">
-          <EmptyState icon={BookMarked} title="Ton premier cahier de cours"
-            text="Range-y les leçons que tu veux relire : elles se classent toutes seules par chapitre."
+          <EmptyState icon={BookMarked} title={t('Ton premier cahier de cours')}
+            text={t('Range-y les leçons que tu veux relire : elles se classent toutes seules par chapitre.')}
             action={(
               <button type="button" onClick={createFirst} disabled={quick} className="fd-btn-primary min-h-10" data-tour="cahiers-nouveau">
-                {quick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Créer mon cahier
+                {quick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t('Créer mon cahier')}
               </button>
             )}
             secondary={lessonsLink} />
           <HowTo />
         </div>
       ) : (
-        <Section id="mes-cahiers" title="Mes cahiers"
+        <Section id="mes-cahiers" title={t('Mes cahiers')}
           action={(
             // Téléphone seulement : sur grand écran, la case « Nouveau cahier » de l'étagère suffit.
             <button type="button" onClick={() => setCreating(true)} className="fd-btn-ghost min-h-10 sm:hidden" data-tour="cahiers-nouveau">
-              <Plus className="h-4 w-4" /> Nouveau cahier
+              <Plus className="h-4 w-4" /> {t('Nouveau cahier')}
             </button>
           )}>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-tour="cahiers-liste">
@@ -115,17 +117,17 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
               <button type="button" onClick={() => setCreating(true)} data-tour="cahiers-nouveau"
                 className="flex h-full min-h-[120px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d8d4cc] text-[13.5px] font-semibold text-ink-faint transition-colors hover:border-ink-faint hover:text-ink sm:min-h-[212px]">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft"><Plus className="h-5 w-5" /></span>
-                Nouveau cahier
+                {t('Nouveau cahier')}
               </button>
             </li>
           </ul>
           <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-faint">
             <span className="inline-flex items-center gap-1.5">
               <BookMarked className="h-4 w-4 shrink-0 text-gold-strong" />
-              {anyEmpty ? 'Pour remplir un cahier : ouvre une leçon' : 'Pour ajouter une leçon : ouvre-la'}, puis « Ajouter à mon cahier ».
+              {anyEmpty ? t('Pour remplir un cahier : ouvre une leçon, puis « Ajouter à mon cahier ».') : t('Pour ajouter une leçon : ouvre-la, puis « Ajouter à mon cahier ».')}
             </span>
             <Link to={lessonsHome(level)} className="inline-flex min-h-10 items-center gap-1 font-semibold text-brand-hover hover:underline">
-              {level ? 'Leçons de mon niveau' : 'Voir les leçons'} <ArrowRight className="h-3.5 w-3.5" />
+              {level ? t('Leçons de mon niveau') : t('Voir les leçons')} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </p>
         </Section>
@@ -133,9 +135,9 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
 
       <CreateNotebookModal open={creating} onClose={() => setCreating(false)} defaultLevelId={level?.id ?? null}
         takenTitles={titles} existing={list ?? []} create={create}
-        onCreated={(nb) => { setCreating(false); toast.success('Cahier créé'); open(nb); }} />
+        onCreated={(nb) => { setCreating(false); toast.success(t('Cahier créé')); open(nb); }} />
       <RenameNotebookModal notebook={renaming} onClose={() => setRenaming(null)}
-        rename={async (title) => { if (renaming) { await rename(renaming.id, title); toast.success('Cahier renommé'); } }} />
+        rename={async (title) => { if (renaming) { await rename(renaming.id, title); toast.success(t('Cahier renommé')); } }} />
     </>
   );
 };

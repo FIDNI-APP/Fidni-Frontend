@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Check, ChevronUp, ClipboardList, GripVertical, Loader2, Plus, Printer, X } from 'lucide-react';
+import { t } from '@/i18n';
 import { addItemToRevisionList, createRevisionList, getRevisionLists, type RevisionList } from '@/lib/api/revisionListApi';
 
 export interface FicheItem { id: number; title: string; type: 'exercise' | 'exam' }
@@ -78,10 +79,10 @@ export const FicheSlot: React.FC<{ fiche: FicheTD; item: FicheItem; children: Re
       onDragStart={canDrag ? (e) => { e.dataTransfer.setData(DRAG, JSON.stringify(item)); e.dataTransfer.effectAllowed = 'copy'; } : undefined}>
       <div className={`rounded-2xl transition-shadow ${inFiche ? 'ring-2 ring-brand/60' : canDrag ? 'cursor-grab hover:ring-2 hover:ring-ink/15' : ''}`}>{children}</div>
       <button type="button" onClick={() => (inFiche ? fiche.remove(item.id) : fiche.add(item))}
-        aria-pressed={inFiche} aria-label={inFiche ? `Retirer « ${item.title} » de la fiche` : `Ajouter « ${item.title} » à la fiche`}
-        className={`absolute -top-4 right-3 z-10 inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-[13px] font-semibold shadow-sm transition-colors md:-top-3.5 md:right-4 md:h-8 md:px-3 md:text-[12.5px] ${
+        aria-pressed={inFiche} aria-label={inFiche ? t('Retirer « {title} » de la fiche', { title: item.title }) : t('Ajouter « {title} » à la fiche', { title: item.title })}
+        className={`absolute -top-4 end-3 z-10 inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-[13px] font-semibold shadow-sm transition-colors md:-top-3.5 md:end-4 md:h-8 md:px-3 md:text-[12.5px] ${
           inFiche ? 'bg-brand text-white [@media(hover:hover)]:hover:bg-brand-hover' : 'border border-line bg-white text-ink [@media(hover:hover)]:hover:border-ink'}`}>
-        {inFiche ? <><Check className="h-3.5 w-3.5" /> Dans la fiche</> : <><Plus className="h-3.5 w-3.5" /> Fiche</>}
+        {inFiche ? <><Check className="h-3.5 w-3.5" /> {t('Dans la fiche')}</> : <><Plus className="h-3.5 w-3.5" /> {t('Fiche')}</>}
       </button>
     </div>
   );
@@ -159,7 +160,7 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
   if (!fiche.open) return null;
   const close = () => { setCreated(null); setExpanded(false); fiche.setOpen(false); };
   const n = fiche.items.length;
-  const defaultName = `Fiche TD${context.label ? ` — ${context.label}` : ''}`;
+  const defaultName = context.label ? t('Fiche TD — {label}', { label: context.label }) : t('Fiche TD');
   const name = fiche.name || defaultName;
 
   const drop = (e: React.DragEvent) => {
@@ -188,7 +189,7 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
       fiche.restart();
     } catch (e) {
       const status = (e as { response?: { status?: number } })?.response?.status;
-      setError(status === 400 ? 'Tu as déjà une liste avec ce nom : change le nom de la fiche.' : 'La fiche n’a pas pu être créée. Réessaie.');
+      setError(status === 400 ? t('Tu as déjà une liste avec ce nom : change le nom de la fiche.') : t('La fiche n’a pas pu être créée. Réessaie.'));
     } finally {
       setBusy(false);
     }
@@ -199,23 +200,23 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
     return (
       <>
         <div aria-hidden className="h-24" />
-        <div ref={panelRef} role="region" aria-label="Fiche TD en cours"
+        <div ref={panelRef} role="region" aria-label={t('Fiche TD en cours')}
           className="fixed inset-x-3 bottom-[calc(var(--fd-tabbar-h,0px)+10px)] z-[45] flex items-center gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-[0_10px_32px_rgba(20,18,16,.20)] print:hidden">
           <button type="button" onClick={() => setExpanded(true)} aria-expanded={false}
-            className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-left active:bg-paper">
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-start active:bg-paper">
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-white">
               <ClipboardList className="h-[18px] w-[18px]" aria-hidden />
-              {n > 0 && <span className="fd-nums absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-white ring-2 ring-white">{n}</span>}
+              {n > 0 && <span className="fd-nums absolute -end-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-white ring-2 ring-white">{n}</span>}
             </span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block text-[14px] font-semibold text-ink">{created && !n ? 'Fiche créée' : 'Fiche TD'}</span>
+              <span className="block text-[14px] font-semibold text-ink">{created && !n ? t('Fiche créée') : t('Fiche TD')}</span>
               <span className="block truncate text-[12px] text-ink-soft">
-                {n ? `${n} ${n > 1 ? 'exercices' : 'exercice'} · touche pour voir et créer` : created ? 'Elle est dans Réviser · touche pour l’imprimer' : 'Touche « + Fiche » sur un exercice'}
+                {n ? (n > 1 ? t('{n} exercices · touche pour voir et créer', { n }) : t('{n} exercice · touche pour voir et créer', { n })) : created ? t('Elle est dans Réviser · touche pour l’imprimer') : t('Touche « + Fiche » sur un exercice')}
               </span>
             </span>
             <ChevronUp className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
           </button>
-          <button type="button" onClick={close} aria-label="Fermer la fiche (elle est gardée)"
+          <button type="button" onClick={close} aria-label={t('Fermer la fiche (elle est gardée)')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-faint active:bg-paper"><X className="h-4 w-4" /></button>
         </div>
       </>
@@ -227,37 +228,37 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
     <>
     {sheet && <div aria-hidden className="h-24" />}
     {sheet && <div aria-hidden className="fixed inset-0 z-[44] bg-[rgba(20,18,16,.32)] print:hidden" onClick={() => setExpanded(false)} />}
-    <div ref={panelRef} role={sheet ? 'dialog' : 'region'} aria-label="Fiche TD en cours" aria-modal={sheet || undefined}
+    <div ref={panelRef} role={sheet ? 'dialog' : 'region'} aria-label={t('Fiche TD en cours')} aria-modal={sheet || undefined}
       className={sheet
         ? 'fixed inset-x-0 bottom-[var(--fd-tabbar-h,0px)] z-[45] flex max-h-[min(78dvh,600px)] flex-col overflow-hidden rounded-t-2xl border-t border-line bg-white shadow-[0_-12px_40px_rgba(20,18,16,.18)] print:hidden'
-        : 'fixed bottom-5 right-5 z-[45] flex max-h-[min(70vh,640px)] w-[340px] flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-[0_12px_40px_rgba(20,18,16,.18)] print:hidden'}>
+        : 'fixed bottom-5 end-5 z-[45] flex max-h-[min(70vh,640px)] w-[340px] flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-[0_12px_40px_rgba(20,18,16,.18)] print:hidden'}>
       {sheet && <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[#dcd8d0]" />}
       <div className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">
         <ClipboardList className="h-4 w-4 text-brand" aria-hidden />
-        <p className="flex-1 text-[14px] font-semibold text-ink">Fiche TD{n ? <span className="fd-nums ml-1.5 font-normal text-ink-faint">· {n}</span> : null}</p>
+        <p className="flex-1 text-[14px] font-semibold text-ink">{t('Fiche TD')}{n ? <span className="fd-nums ms-1.5 font-normal text-ink-faint">· {n}</span> : null}</p>
         {sheet && (
           <button type="button" onClick={() => setExpanded(false)} className="inline-flex h-9 items-center rounded-lg px-2.5 text-[13px] font-medium text-ink-soft active:bg-paper">
-            Ajouter des exercices
+            {t('Ajouter des exercices')}
           </button>
         )}
-        <button type="button" onClick={close} aria-label="Fermer la fiche (elle est gardée)"
+        <button type="button" onClick={close} aria-label={t('Fermer la fiche (elle est gardée)')}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink"><X className="h-4 w-4" /></button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {created && (
           <div className="m-3 rounded-xl border border-brand-line bg-brand-soft px-3.5 py-3">
-            <p className="flex items-center gap-1.5 text-[13.5px] font-semibold text-brand-hover"><Check className="h-4 w-4" /> Fiche créée</p>
-            <p className="mt-0.5 text-[12.5px] text-ink-soft">« {created.name} » ({created.count} {created.count > 1 ? 'contenus' : 'contenu'}) est dans Réviser.</p>
+            <p className="flex items-center gap-1.5 text-[13.5px] font-semibold text-brand-hover"><Check className="h-4 w-4" /> {t('Fiche créée')}</p>
+            <p className="mt-0.5 text-[12.5px] text-ink-soft">{created.count > 1 ? t('« {name} » ({n} contenus) est dans Réviser.', { name: created.name, n: created.count }) : t('« {name} » ({n} contenu) est dans Réviser.', { name: created.name, n: created.count })}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Link to={`/revision-lists/${created.id}/pdf`} className="fd-btn-primary min-h-9 px-3 text-[12.5px]"><Printer className="h-3.5 w-3.5" /> Imprimer</Link>
-              <Link to={`/revision-lists/${created.id}`} className="inline-flex min-h-9 items-center rounded-xl border border-line bg-white px-3 text-[12.5px] font-medium text-ink hover:border-ink">Ouvrir</Link>
+              <Link to={`/revision-lists/${created.id}/pdf`} className="fd-btn-primary min-h-9 px-3 text-[12.5px]"><Printer className="h-3.5 w-3.5" /> {t('Imprimer')}</Link>
+              <Link to={`/revision-lists/${created.id}`} className="inline-flex min-h-9 items-center rounded-xl border border-line bg-white px-3 text-[12.5px] font-medium text-ink hover:border-ink">{t('Ouvrir')}</Link>
             </div>
           </div>
         )}
 
         <div className="px-3 pb-3 pt-3">
-          <label htmlFor="fiche-nom" className="sr-only">Nom de la fiche</label>
+          <label htmlFor="fiche-nom" className="sr-only">{t('Nom de la fiche')}</label>
           <input id="fiche-nom" value={fiche.name} placeholder={defaultName} onChange={(e) => fiche.setName(e.target.value)} maxLength={200}
             className="h-10 w-full rounded-xl border border-line px-3 text-[13.5px] font-medium text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none" />
 
@@ -267,8 +268,8 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
             {fiche.items.length === 0 && (
               <li className="px-2 py-5 text-center text-[12.5px] leading-snug text-ink-faint">
                 {canDrag
-                  ? <>Glisse des exercices ici,<br />ou clique sur <b className="text-ink-soft">+ Fiche</b> sur une carte.</>
-                  : <>Touche <b className="text-ink-soft">+ Fiche</b> sur un exercice<br />pour l’ajouter ici.</>}
+                  ? <>{t('Glisse des exercices ici,')}<br />{t('ou clique sur')} <b className="text-ink-soft">{t('+ Fiche')}</b> {t('sur une carte.')}</>
+                  : <>{t('Touche')} <b className="text-ink-soft">{t('+ Fiche')}</b> {t('sur un exercice')}<br />{t('pour l’ajouter ici.')}</>}
               </li>
             )}
             {fiche.items.map((it, i) => (
@@ -280,41 +281,41 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
                 <span className="min-w-0 flex-1 truncate text-ink" title={it.title}>{it.title}</span>
                 {!canDrag && (
                   <>
-                    <button type="button" onClick={() => fiche.move(i, i - 1)} disabled={i === 0} aria-label={`Monter « ${it.title} »`}
+                    <button type="button" onClick={() => fiche.move(i, i - 1)} disabled={i === 0} aria-label={t('Monter « {title} »', { title: it.title })}
                       className="flex h-9 w-8 items-center justify-center rounded-md text-ink-soft active:bg-white disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
-                    <button type="button" onClick={() => fiche.move(i, i + 1)} disabled={i === fiche.items.length - 1} aria-label={`Descendre « ${it.title} »`}
+                    <button type="button" onClick={() => fiche.move(i, i + 1)} disabled={i === fiche.items.length - 1} aria-label={t('Descendre « {title} »', { title: it.title })}
                       className="flex h-9 w-8 items-center justify-center rounded-md text-ink-soft active:bg-white disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
                   </>
                 )}
-                <button type="button" onClick={() => fiche.remove(it.id)} aria-label={`Retirer « ${it.title} »`}
+                <button type="button" onClick={() => fiche.remove(it.id)} aria-label={t('Retirer « {title} »', { title: it.title })}
                   className={canDrag
                     ? 'rounded p-0.5 text-ink-faint opacity-60 hover:text-[#a23b34] group-hover:opacity-100'
                     : 'flex h-9 w-8 items-center justify-center rounded-md text-ink-faint active:bg-white active:text-[#a23b34]'}><X className="h-4 w-4 md:h-3.5 md:w-3.5" /></button>
               </li>
             ))}
           </ol>
-          {context.label && <p className="mt-1.5 text-[11.5px] text-ink-faint">Rangée dans Réviser avec le chapitre « {context.label} ».</p>}
+          {context.label && <p className="mt-1.5 text-[11.5px] text-ink-faint">{t('Rangée dans Réviser avec le chapitre « {label} ».', { label: context.label })}</p>}
           {error && <p className="mt-2 text-[12.5px] text-[#9c3b2e]">{error}</p>}
           <button type="button" onClick={create} disabled={busy || !fiche.items.length}
             className="fd-btn-primary mt-2.5 min-h-11 w-full justify-center text-[14px] disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Créer la fiche{fiche.items.length ? ` (${fiche.items.length})` : ''}
+            {t('Créer la fiche')}{fiche.items.length ? ` (${fiche.items.length})` : ''}
           </button>
         </div>
 
         {related && related.length > 0 && (
           <div className="border-t border-line px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{context.chapterIds.length ? 'Tes listes sur ce chapitre' : 'Tes listes'}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{context.chapterIds.length ? t('Tes listes sur ce chapitre') : t('Tes listes')}</p>
             <ul className="mt-1.5 space-y-1">
               {related.slice(0, 6).map((l) => (
                 <li key={l.id} className="flex items-center gap-2 text-[13px]">
                   <Link to={`/revision-lists/${l.id}`} className="min-w-0 flex-1 truncate text-ink hover:underline">{l.name}</Link>
                   <span className="fd-nums shrink-0 text-[11.5px] text-ink-faint">{l.item_count}</span>
-                  <Link to={`/revision-lists/${l.id}/pdf`} aria-label={`Imprimer « ${l.name} »`} className="rounded p-1 text-ink-faint hover:text-ink"><Printer className="h-3.5 w-3.5" /></Link>
+                  <Link to={`/revision-lists/${l.id}/pdf`} aria-label={t('Imprimer « {name} »', { name: l.name })} className="rounded p-1 text-ink-faint hover:text-ink"><Printer className="h-3.5 w-3.5" /></Link>
                 </li>
               ))}
             </ul>
-            <Link to="/reviser#mes-listes" className="mt-2 inline-block text-[12.5px] font-medium text-brand-hover hover:underline">Toutes mes listes</Link>
+            <Link to="/reviser#mes-listes" className="mt-2 inline-block text-[12.5px] font-medium text-brand-hover hover:underline">{t('Toutes mes listes')}</Link>
           </div>
         )}
       </div>
@@ -336,17 +337,17 @@ export const FicheButton: React.FC<{ fiche: FicheTD }> = ({ fiche }) => {
     <>
     <div aria-hidden className="h-16 md:hidden" />
     <button type="button" onClick={() => fiche.setOpen(true)} data-tour="liste-fiche"
-      aria-label={n ? `Ma fiche TD : ${n} ${n > 1 ? 'contenus' : 'contenu'}` : 'Créer une fiche TD'}
-      className="fixed bottom-[calc(var(--fd-tabbar-h,0px)+12px)] right-3 z-[45] inline-flex min-h-12 items-center gap-2 rounded-full bg-brand pl-2 pr-4 text-white shadow-[0_10px_28px_rgba(26,122,74,.38)] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 active:scale-[.97] print:hidden md:bottom-6 md:right-6 md:gap-2.5 md:pl-4 md:pr-5 [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:bg-brand-hover">
+      aria-label={n ? (n > 1 ? t('Ma fiche TD : {n} contenus', { n }) : t('Ma fiche TD : {n} contenu', { n })) : t('Créer une fiche TD')}
+      className="fixed bottom-[calc(var(--fd-tabbar-h,0px)+12px)] end-3 z-[45] inline-flex min-h-12 items-center gap-2 rounded-full bg-brand ps-2 pe-4 text-white shadow-[0_10px_28px_rgba(26,122,74,.38)] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 active:scale-[.97] print:hidden md:bottom-6 md:end-6 md:gap-2.5 md:ps-4 md:pe-5 [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:bg-brand-hover">
       <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
         <ClipboardList className="h-[18px] w-[18px]" aria-hidden />
         {n > 0 && (
-          <span className="fd-nums absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-white ring-2 ring-brand">{n}</span>
+          <span className="fd-nums absolute -end-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-white ring-2 ring-brand">{n}</span>
         )}
       </span>
-      <span className="text-left leading-tight">
-        <span className="block text-[14px] font-semibold"><span className="md:hidden">Fiche TD</span><span className="hidden md:inline">{n ? 'Ma fiche TD' : 'Créer une fiche TD'}</span></span>
-        <span className="hidden text-[11.5px] text-white/80 md:block">{n ? `${n} ${n > 1 ? 'exercices' : 'exercice'} · à imprimer` : 'Regroupe des exercices à imprimer'}</span>
+      <span className="text-start leading-tight">
+        <span className="block text-[14px] font-semibold"><span className="md:hidden">{t('Fiche TD')}</span><span className="hidden md:inline">{n ? t('Ma fiche TD') : t('Créer une fiche TD')}</span></span>
+        <span className="hidden text-[11.5px] text-white/80 md:block">{n ? (n > 1 ? t('{n} exercices · à imprimer', { n }) : t('{n} exercice · à imprimer', { n })) : t('Regroupe des exercices à imprimer')}</span>
       </span>
     </button>
     </>

@@ -6,6 +6,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Check, ListPlus, Loader2, X } from 'lucide-react';
+import { t } from '@/i18n';
 import { quickAddToRevision } from '@/lib/api/revisionListApi';
 
 const KEY = 'fidni:suggestion-revision';
@@ -68,33 +69,33 @@ export const RevisionNudge: React.FC<{
   };
 
   return (
-    <div ref={ref} role="status" className="relative md:fixed md:bottom-4 md:right-4 md:z-40 md:w-[360px] rounded-2xl border border-line bg-white p-4 shadow-sm md:shadow-[0_16px_40px_rgba(20,18,16,.16)]">
-      <button type="button" onClick={close} aria-label="Fermer" className="absolute top-2.5 right-2.5 p-1.5 [@media(pointer:coarse)]:p-2.5 [@media(pointer:coarse)]:top-1 [@media(pointer:coarse)]:right-1 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
+    <div ref={ref} role="status" className="relative md:fixed md:bottom-4 md:end-4 md:z-40 md:w-[360px] rounded-2xl border border-line bg-white p-4 shadow-sm md:shadow-[0_16px_40px_rgba(20,18,16,.16)]">
+      <button type="button" onClick={close} aria-label={t('Fermer')} className="absolute top-2.5 end-2.5 p-1.5 [@media(pointer:coarse)]:p-2.5 [@media(pointer:coarse)]:top-1 [@media(pointer:coarse)]:end-1 rounded-lg text-ink-faint hover:text-ink hover:bg-[#f2f1ee]">
         <X className="w-4 h-4" />
       </button>
       {state === 'done' ? (
         <>
-          <p className="flex items-center gap-2 pr-6 text-[14px] font-semibold text-ink">
+          <p className="flex items-center gap-2 pe-6 text-[14px] font-semibold text-ink">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white"><Check className="w-3.5 h-3.5" strokeWidth={3} /></span>
-            Ajouté à « {listName} »
+            {t('Ajouté à « {name} »', { name: listName })}
           </p>
-          <p className="mt-1.5 text-[13px] text-ink-soft">Tu le retrouveras dans tes révisions, avec les autres exercices à reprendre.</p>
+          <p className="mt-1.5 text-[13px] text-ink-soft">{t('Tu le retrouveras dans tes révisions, avec les autres exercices à reprendre.')}</p>
           <Link to="/reviser#mes-listes" onClick={() => setOpen(false)} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
-            Voir mes révisions <ArrowRight className="w-3.5 h-3.5" />
+            {t('Voir mes révisions')} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </>
       ) : (
         <>
-          <p className="pr-6 text-[14px] font-semibold text-ink">{kind === 'exam' ? 'Ce sujet' : 'Cet exercice'} te résiste ?</p>
+          <p className="pe-6 text-[14px] font-semibold text-ink">{kind === 'exam' ? t('Ce sujet te résiste ?') : t('Cet exercice te résiste ?')}</p>
           <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
-            Range-le dans ta liste « À revoir » pour le reprendre avant ton prochain devoir.
+            {t('Range-le dans ta liste « À revoir » pour le reprendre avant ton prochain devoir.')}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" onClick={add} disabled={state === 'busy'} className="fd-btn-primary">
               {state === 'busy' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListPlus className="w-4 h-4" />}
-              Ajouter à « À revoir »
+              {t('Ajouter à « À revoir »')}
             </button>
-            <button type="button" onClick={close} className="min-h-9 px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">Plus tard</button>
+            <button type="button" onClick={close} className="min-h-9 px-3 py-2 text-[13px] font-medium text-ink-faint hover:text-ink">{t('Plus tard')}</button>
           </div>
         </>
       )}

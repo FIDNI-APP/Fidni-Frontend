@@ -9,6 +9,7 @@ import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { NotificationBell } from './NotificationBell';
 import { useMobileTabBarVisible } from './nav';
 import { trackAction } from '@/lib/usage';
+import { t, useLang } from '@/i18n';
 import Logo3 from '@/assets/logo3.svg';
 
 interface TopBarProps {
@@ -35,6 +36,7 @@ const SECTION_LABELS: Record<string, string> = {
   notebooks: 'Mes enregistrements',
   'skill-iq': 'Quiz par chapitre',
   settings: 'Paramètres',
+  'mes-copies': 'Ma copie',
   search: 'Recherche',
   login: 'Connexion',
   signup: 'Inscription',
@@ -105,14 +107,14 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
 
   return (
     <header className="sticky top-0 z-30 h-[60px] border-b border-line bg-white/90 backdrop-blur-lg print:hidden">
-      <div className="flex h-full items-center gap-1 pl-2 pr-2 sm:gap-2 sm:pl-4 sm:pr-3 md:px-6">
+      <div className="flex h-full items-center gap-1 ps-2 pe-2 sm:gap-2 sm:ps-4 sm:pe-3 md:px-6">
         {/* Téléphone : le menu est dans la barre du bas ; ce bouton ne revient que si elle est cachée. */}
         {!tabBarVisible && (
           <button
             type="button"
             className={`md:hidden ${BAR_ICON_BTN}`}
             onClick={onOpenMobile}
-            aria-label="Ouvrir le menu"
+            aria-label={t('Ouvrir le menu')}
             aria-haspopup="dialog"
             data-tour="menu-mobile"
           >
@@ -121,41 +123,41 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
         )}
 
         {/* Fil d'Ariane / titre de la page */}
-        <nav aria-label="Fil d'Ariane" className="flex min-w-0 flex-1 items-center">
+        <nav aria-label={t("Fil d'Ariane")} className="flex min-w-0 flex-1 items-center">
           {/* Téléphone */}
           <div className="flex min-w-0 items-center md:hidden">
             {isHome ? (
-              <Link to="/" aria-label="Fidni, accueil" className="flex items-center rounded-lg px-2">
+              <Link to="/" aria-label={t('Fidni, accueil')} className="flex items-center rounded-lg px-2">
                 <img src={Logo3} alt="Fidni" className="h-7 w-auto object-contain" />
               </Link>
             ) : current && back ? (
               <>
-                <Link to={back.to} aria-label={`Retour : ${back.label}`} className={BAR_ICON_BTN}>
+                <Link to={back.to} aria-label={t('Retour : {label}', { label: t(back.label) })} className={BAR_ICON_BTN}>
                   <ChevronLeft className="h-5 w-5" />
                 </Link>
                 <span className="flex min-w-0 flex-col leading-tight">
-                  <Link to={back.to} tabIndex={-1} className="truncate text-[12px] font-medium text-ink-faint">{back.label}</Link>
-                  <span aria-current="page" className="truncate text-[15px] font-semibold text-ink">{current.label}</span>
+                  <Link to={back.to} tabIndex={-1} className="truncate text-[12px] font-medium text-ink-faint">{t(back.label)}</Link>
+                  <span aria-current="page" className="truncate text-[15px] font-semibold text-ink">{t(current.label)}</span>
                 </span>
               </>
             ) : back ? (
-              <Link to={back.to} className="flex h-10 min-w-0 items-center rounded-xl pr-2 text-ink transition-colors hover:bg-[#f2f1ee]">
+              <Link to={back.to} className="flex h-10 min-w-0 items-center rounded-xl pe-2 text-ink transition-colors hover:bg-[#f2f1ee]">
                 <span className="inline-flex h-10 w-9 flex-shrink-0 items-center justify-center text-ink-soft"><ChevronLeft className="h-5 w-5" /></span>
-                <span className="truncate text-[15px] font-semibold">{back.label}</span>
+                <span className="truncate text-[15px] font-semibold">{t(back.label)}</span>
               </Link>
             ) : current ? (
-              <span aria-current="page" className="truncate px-2 text-[16px] font-semibold text-ink">{current.label}</span>
+              <span aria-current="page" className="truncate px-2 text-[16px] font-semibold text-ink">{t(current.label)}</span>
             ) : null}
           </div>
 
           {/* Ordinateur : le fil complet */}
           <ol className="hidden min-w-0 items-center gap-1.5 md:flex">
             {isHome ? (
-              <li aria-current="page" className="truncate text-[15px] font-semibold text-ink">Accueil</li>
+              <li aria-current="page" className="truncate text-[15px] font-semibold text-ink">{t('Accueil')}</li>
             ) : (
               <>
                 <li className="flex-shrink-0">
-                  <Link to="/" className="text-[13px] font-medium text-ink-faint hover:text-ink hover:underline">Accueil</Link>
+                  <Link to="/" className="text-[13px] font-medium text-ink-faint hover:text-ink hover:underline">{t('Accueil')}</Link>
                 </li>
                 {trail.map((c, i) => {
                   const isLast = i === trail.length - 1;
@@ -163,11 +165,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
                     <li key={`${c.label}-${i}`} className={`flex min-w-0 items-center gap-1.5 ${isLast ? '' : 'flex-shrink'}`}>
                       <ChevronRight aria-hidden className="h-3.5 w-3.5 flex-shrink-0 text-[#c9c5bd]" />
                       {isLast && !c.to ? (
-                        <span aria-current="page" className="truncate text-[15px] font-semibold text-ink">{c.label}</span>
+                        <span aria-current="page" className="truncate text-[15px] font-semibold text-ink">{t(c.label)}</span>
                       ) : c.to ? (
-                        <Link to={c.to} className="truncate text-[13px] font-medium text-ink-faint hover:text-ink hover:underline">{c.label}</Link>
+                        <Link to={c.to} className="truncate text-[13px] font-medium text-ink-faint hover:text-ink hover:underline">{t(c.label)}</Link>
                       ) : (
-                        <span className="truncate text-[13px] font-medium text-ink-faint">{c.label}</span>
+                        <span className="truncate text-[13px] font-medium text-ink-faint">{t(c.label)}</span>
                       )}
                     </li>
                   );
@@ -184,7 +186,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
             onClick={() => openSignup('login')}
             className="inline-flex h-10 flex-shrink-0 items-center rounded-xl border border-line bg-white px-3.5 text-[13.5px] font-semibold text-ink transition-colors hover:border-ink"
           >
-            Connexion
+            {t('Connexion')}
           </button>
         )}
 
@@ -199,8 +201,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
           <input
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Rechercher un exercice, une leçon…"
-            aria-label="Rechercher"
+            placeholder={t('Rechercher un exercice, une leçon…')}
+            aria-label={t('Rechercher')}
             className="min-w-0 flex-1 border-none bg-transparent text-[13.5px] text-ink outline-none placeholder:text-ink-faint focus-visible:outline-none"
           />
         </form>
@@ -211,10 +213,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
           className={`lg:hidden ${BAR_ICON_BTN}`}
           data-tour="recherche"
           onClick={() => navigate('/search')}
-          aria-label="Rechercher"
+          aria-label={t('Rechercher')}
         >
           <SearchIcon className="h-5 w-5" />
         </button>
+
+        {/* Langue de l'interface : français / arabe (15/10/2026). */}
+        <LangToggle />
 
         {/* Mode sombre / clair (15/10/2026) ; « comme l'appareil » reste dans Paramètres. */}
         <ThemeToggle />
@@ -232,13 +237,26 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   );
 };
 
+/** « ع » / « FR » : passe l'interface en arabe ou en français (les contenus restent en français). */
+const LangToggle: React.FC = () => {
+  const { lang, setLang } = useLang();
+  const ar = lang === 'ar';
+  return (
+    <button type="button" className={`${BAR_ICON_BTN} text-[14px] font-semibold`} lang={ar ? 'fr' : 'ar'}
+      onClick={() => { trackAction(ar ? 'langue-fr' : 'langue-ar'); setLang(ar ? 'fr' : 'ar'); }}
+      aria-label={ar ? 'Afficher le site en français' : 'عرض الموقع بالعربية'} title={ar ? 'Français' : 'العربية'}>
+      {ar ? 'FR' : 'ع'}
+    </button>
+  );
+};
+
 /** Lune / soleil : bascule entre clair et sombre (le choix est gardé ; Paramètres propose aussi « comme l'appareil »). */
 const ThemeToggle: React.FC = () => {
   const { effectiveTheme, setTheme } = useTheme();
   const dark = effectiveTheme === 'dark';
   return (
     <button type="button" className={BAR_ICON_BTN} onClick={() => { trackAction('mode-sombre'); setTheme(dark ? 'light' : 'dark'); }}
-      aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'} title={dark ? 'Mode clair' : 'Mode sombre'}>
+      aria-label={dark ? t('Passer en mode clair') : t('Passer en mode sombre')} title={dark ? t('Mode clair') : t('Mode sombre')}>
       {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>
   );

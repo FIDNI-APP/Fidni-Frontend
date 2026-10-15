@@ -5,7 +5,7 @@
 /* ── "Ink & paper" foundation — monochrome, flat, bordered, no gradients ── */
 body {
   margin: 0;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'DM Sans', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #faf9f7;
   color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
@@ -390,6 +390,28 @@ html {
 .dark [class*="tiptap"] img, .dark .fd-read img, .dark .fd-sol img, .dark .fd-card-preview img {
   background: #fff; border-radius: 6px;
 }
+
+/* Interface en arabe (15/10/2026) : <html dir="rtl"> (src/i18n). Les classes de mise en page sont logiques (ms-, pe-,
+   start-, text-start…) et basculent seules. Les contenus restent des documents français, de gauche à droite : feuille
+   d'exercice ou de devoir (.fd-read), leçon, énoncés et formules partout ailleurs (cartes, quiz), éditeur. */
+[dir="rtl"] .fd-read, [dir="rtl"] .fd-lesson, [dir="rtl"] .fd-paper, [dir="rtl"] .fd-latex,
+[dir="rtl"] .tiptap-full-renderer, [dir="rtl"] .ProseMirror, [dir="rtl"] .katex, [dir="rtl"] .fd-ltr,
+[dir="rtl"] .fd-card-preview {
+  direction: ltr; unicode-bidi: isolate;
+}
+/* Flèches et chevrons : ils pointent dans le sens de lecture (« suivant » vers la gauche). */
+[dir="rtl"] :is(.lucide-chevron-right, .lucide-chevron-left, .lucide-chevrons-right, .lucide-chevrons-left,
+  .lucide-arrow-right, .lucide-arrow-left, .lucide-move-right, .lucide-move-left, .lucide-undo-2, .lucide-redo-2,
+  .lucide-log-out, .lucide-log-in, .lucide-corner-down-right, .lucide-arrow-up-right, .lucide-external-link,
+  .lucide-panel-left, .lucide-panel-left-close, .lucide-panel-left-open) { scale: -1 1; }
+[dir="rtl"] :is(.fd-read, .fd-lesson, .fd-ltr) :is(.lucide-chevron-right, .lucide-chevron-left, .lucide-arrow-right,
+  .lucide-arrow-left) { scale: none; }
+/* space-x / divide-x (marges entre enfants, écrites à gauche) : inversées. */
+[dir="rtl"] [class*="space-x-"] > :not([hidden]) ~ :not([hidden]) { --tw-space-x-reverse: 1; }
+[dir="rtl"] [class*="divide-x"] > :not([hidden]) ~ :not([hidden]) { --tw-divide-x-reverse: 1; }
+/* L'arabe a besoin d'un peu plus d'interligne ; pas d'espacement de lettres (il coupe les liaisons). */
+[dir="rtl"] body { line-height: 1.6; }
+[dir="rtl"] [class*="tracking-"]:not(.fd-ltr *) { letter-spacing: 0; }
 
 :root, .fd-clair {
   /* Surfaces */

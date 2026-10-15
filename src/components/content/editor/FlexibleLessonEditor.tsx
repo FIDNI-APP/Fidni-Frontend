@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Save, Eye, ArrowLeft, Trash2, BookOpen, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { TextBlockEditor } from './TextBlockEditor';
 import type { ContentBlock } from '@/types/content';
+import { t } from '@/i18n';
 
 // =====================
 // TYPES
@@ -68,7 +69,7 @@ const AddSectionRow: React.FC<AddSectionRowProps> = ({ onAdd }) => (
       className="flex items-center gap-1 px-2 py-0.5 text-xs text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors opacity-0 group-hover/add:opacity-100"
     >
       <Plus className="w-3.5 h-3.5" />
-      Section
+      {t('Section')}
     </button>
     <div className="flex-1 h-px bg-slate-100 group-hover/add:bg-slate-200 transition-colors" />
   </div>
@@ -85,20 +86,20 @@ interface SubSectionRowProps {
 }
 
 const SubSectionRow: React.FC<SubSectionRowProps> = ({ ss, onChange, onDelete }) => (
-  <div className="group/ss pl-6 border-l-2 border-indigo-100 py-2">
+  <div className="group/ss ps-6 border-s-2 border-indigo-100 py-2">
     <div className="flex items-start gap-3">
       <div className="flex-1 min-w-0">
         <input
           type="text"
           value={ss.title}
           onChange={(e) => onChange({ ...ss, title: e.target.value })}
-          placeholder="Titre de la sous-section..."
+          placeholder={t('Titre de la sous-section...')}
           className="w-full text-sm font-semibold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-300 focus:outline-none mb-1.5 py-0.5"
         />
         <TextBlockEditor
           value={ss.content}
           onChange={(content) => onChange({ ...ss, content })}
-          placeholder="Contenu..."
+          placeholder={t('Contenu...')}
           minHeight="40px"
           showToolbar={false}
         />
@@ -162,7 +163,7 @@ const SectionRow: React.FC<SectionRowProps> = ({
             type="text"
             value={section.title}
             onChange={(e) => onChange({ ...section, title: e.target.value })}
-            placeholder="Titre de la section..."
+            placeholder={t('Titre de la section...')}
             className="flex-1 text-base font-semibold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-300 focus:outline-none py-0.5"
           />
         </div>
@@ -170,7 +171,7 @@ const SectionRow: React.FC<SectionRowProps> = ({
         <TextBlockEditor
           value={section.content}
           onChange={(content) => onChange({ ...section, content })}
-          placeholder="Contenu de la section..."
+          placeholder={t('Contenu de la section...')}
           minHeight="60px"
         />
 
@@ -187,10 +188,10 @@ const SectionRow: React.FC<SectionRowProps> = ({
           <button
             type="button"
             onClick={addSubSection}
-            className="mt-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors pl-6"
+            className="mt-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors ps-6"
           >
             <Plus className="w-3 h-3" />
-            Sous-section
+            {t('Sous-section')}
           </button>
         </div>
       </div>
@@ -302,7 +303,7 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
   };
 
   const handleSave = async () => {
-    if (!title.trim()) { alert('Veuillez entrer un titre'); return; }
+    if (!title.trim()) { alert(t('Veuillez entrer un titre')); return; }
     setIsSaving(true);
     try { await onSave({ title, structure }); }
     finally { setIsSaving(false); }
@@ -318,8 +319,8 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Leçon</p>
-            <p className="text-sm text-slate-600">{structure.sections.length} section{structure.sections.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">{t('Leçon')}</p>
+            <p className="text-sm text-slate-600">{structure.sections.length !== 1 ? t('{n} sections', { n: structure.sections.length }) : t('{n} section', { n: structure.sections.length })}</p>
           </div>
         </div>
 
@@ -329,12 +330,12 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
               showPreview ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
             }`}>
             <Eye className="w-4 h-4" />
-            Aperçu
+            {t('Aperçu')}
           </button>
           <button type="button" onClick={handleSave} data-tour="creer-enregistrer" disabled={isSaving || isLoading || !title.trim()}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm transition-colors">
             <Save className="w-4 h-4" />
-            {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+            {isSaving ? t('Enregistrement...') : t('Enregistrer')}
           </button>
         </div>
       </div>
@@ -349,17 +350,17 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Titre de la leçon..."
+            placeholder={t('Titre de la leçon...')}
             className="w-full text-3xl font-bold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-6"
           />
 
           {/* Sections */}
           {structure.sections.length === 0 ? (
             <div className="py-16 text-center" data-tour="creer-blocs">
-              <p className="text-slate-400 text-sm mb-4">Commencez à construire votre leçon</p>
+              <p className="text-slate-400 text-sm mb-4">{t('Commencez à construire votre leçon')}</p>
               <button type="button" onClick={() => addSection()}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors mx-auto">
-                <Plus className="w-4 h-4" /> Première section
+                <Plus className="w-4 h-4" /> {t('Première section')}
               </button>
             </div>
           ) : (

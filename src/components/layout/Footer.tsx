@@ -4,6 +4,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ADS_ENABLED, openConsentBanner } from '@/lib/ads';
+import { t } from '@/i18n';
 
 const SECTIONS = [
   { to: '/exercises', label: 'Exercices' },
@@ -39,17 +40,17 @@ export const Footer: React.FC = () => (
         <div className="col-span-2 md:col-span-1">
           <Link to="/" className="fd-display text-[22px] leading-none text-ink">Fidni</Link>
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-ink-faint">
-            Exercices, leçons et devoirs de maths corrigés pas à pas, du Tronc commun au Bac. Programme marocain.
+            {t('Exercices, leçons et devoirs de maths corrigés pas à pas, du Tronc commun au Bac. Programme marocain.')}
           </p>
         </div>
 
-        <Column title="Travailler">
+        <Column title={t('Travailler')}>
           {SECTIONS.map((s) => (
-            <li key={s.to}><Link to={s.to} className={colLink}>{s.label}</Link></li>
+            <li key={s.to}><Link to={s.to} className={colLink}>{t(s.label)}</Link></li>
           ))}
         </Column>
 
-        <Column title="Exercices par niveau">
+        <Column title={t('Exercices par niveau')}>
           {LEVELS.map((l) => (
             <li key={l.slug}><Link to={`/exercises/niveau/${l.slug}`} className={colLink}>{l.name}</Link></li>
           ))}
@@ -58,17 +59,17 @@ export const Footer: React.FC = () => (
 
       {/* Informations légales + copyright, sur une ligne (qui passe à la ligne sur téléphone) */}
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-0 border-t border-[#f2f1ee] pt-4 md:mt-8">
-        <nav aria-label="Informations légales" className="contents">
-          <Link to="/a-propos" className={legalLink}>À propos</Link>
-          <Link to="/contact" className={legalLink}>Contact</Link>
-          <Link to="/mentions-legales" className={legalLink}>Mentions légales</Link>
-          <Link to="/terms-of-service" className={legalLink}>Conditions d’utilisation</Link>
-          <Link to="/privacy-policy" className={legalLink}>Confidentialité</Link>
+        <nav aria-label={t('Informations légales')} className="contents">
+          <Link to="/a-propos" className={legalLink}>{t('À propos')}</Link>
+          <Link to="/contact" className={legalLink}>{t('Contact')}</Link>
+          <Link to="/mentions-legales" className={legalLink}>{t('Mentions légales')}</Link>
+          <Link to="/terms-of-service" className={legalLink}>{t('Conditions d’utilisation')}</Link>
+          <Link to="/privacy-policy" className={legalLink}>{t('Confidentialité')}</Link>
           {ADS_ENABLED && (
-            <button type="button" onClick={openConsentBanner} className={legalLink}>Gérer les cookies</button>
+            <button type="button" onClick={openConsentBanner} className={legalLink}>{t('Gérer les cookies')}</button>
           )}
         </nav>
-        <p className="fd-nums inline-flex min-h-9 items-center text-[12.5px] text-ink-faint md:ml-auto md:min-h-0">
+        <p className="fd-nums inline-flex min-h-9 items-center text-[12.5px] text-ink-faint md:ms-auto md:min-h-0">
           &copy; {new Date().getFullYear()} Fidni
         </p>
       </div>

@@ -8,6 +8,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Bookmark, BookMarked, RotateCcw } from 'lucide-react';
+import { t } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { CardsSkeleton, Page, PageHeader, Segmented } from '@/components/space/Page';
 import { exercisesHome } from '@/components/layout/nav';
@@ -22,7 +23,7 @@ type Tab = 'favoris' | 'cahiers';
 const ErrorBanner: React.FC<{ text: string; onRetry: () => void }> = ({ text, onRetry }) => (
   <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
     <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{text}</p>
-    <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+    <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
   </div>
 );
 
@@ -54,7 +55,7 @@ export const MesEnregistrements: React.FC = () => {
     return map;
   }, [notebooks.list]);
 
-  const header = <PageHeader eyebrow="Mon suivi" title="Mes enregistrements" subtitle="Ce que tu as mis de côté pour y revenir." />;
+  const header = <PageHeader eyebrow={t('Mon suivi')} title={t('Mes enregistrements')} subtitle={t('Ce que tu as mis de côté pour y revenir.')} />;
 
   // Session en cours de vérification : la page en squelette plutôt qu'une page blanche.
   if (!isAuthenticated) {
@@ -65,9 +66,9 @@ export const MesEnregistrements: React.FC = () => {
   const savedDown = saved.failed && !saved.items?.length;
   const notebooksDown = notebooks.failed && !notebooks.list?.length;
 
-  const setTab = (t: Tab) => {
+  const setTab = (k: Tab) => {
     const next = new URLSearchParams(params);
-    next.set('onglet', t);
+    next.set('onglet', k);
     setParams(next, { replace: true });
   };
 
@@ -76,16 +77,16 @@ export const MesEnregistrements: React.FC = () => {
       {header}
 
       <div className="mb-8" data-tour="enregistrements-onglets">
-        <Segmented<Tab> label="Favoris ou cahiers" value={tab} onChange={setTab} options={[
-          { key: 'favoris', label: 'Favoris', count: savedDown ? undefined : saved.items?.length, icon: Bookmark },
-          { key: 'cahiers', label: 'Cahiers', count: notebooksDown ? undefined : notebooks.list?.length, icon: BookMarked },
+        <Segmented<Tab> label={t('Favoris ou cahiers')} value={tab} onChange={setTab} options={[
+          { key: 'favoris', label: t('Favoris'), count: savedDown ? undefined : saved.items?.length, icon: Bookmark },
+          { key: 'cahiers', label: t('Cahiers'), count: notebooksDown ? undefined : notebooks.list?.length, icon: BookMarked },
         ]} />
       </div>
 
-      <div role="tabpanel" aria-label="Favoris" hidden={tab !== 'favoris'}>
+      <div role="tabpanel" aria-label={t('Favoris')} hidden={tab !== 'favoris'}>
         {saved.failed && (
           <ErrorBanner onRetry={saved.reload}
-            text={saved.items?.length ? 'Une partie de tes favoris n’a pas pu se charger. Vérifie ta connexion.' : 'Tes favoris n’ont pas pu se charger. Vérifie ta connexion.'} />
+            text={saved.items?.length ? t('Une partie de tes favoris n’a pas pu se charger. Vérifie ta connexion.') : t('Tes favoris n’ont pas pu se charger. Vérifie ta connexion.')} />
         )}
         {!savedDown && (
           <FavorisPanel state={saved} inNotebooks={inNotebooks} onNotebookChanged={notebooks.reload}
@@ -93,8 +94,8 @@ export const MesEnregistrements: React.FC = () => {
         )}
       </div>
 
-      <div role="tabpanel" aria-label="Cahiers" hidden={tab !== 'cahiers'}>
-        {notebooks.failed && <ErrorBanner onRetry={notebooks.reload} text="Tes cahiers n’ont pas pu se charger. Vérifie ta connexion." />}
+      <div role="tabpanel" aria-label={t('Cahiers')} hidden={tab !== 'cahiers'}>
+        {notebooks.failed && <ErrorBanner onRetry={notebooks.reload} text={t('Tes cahiers n’ont pas pu se charger. Vérifie ta connexion.')} />}
         {!notebooksDown && <CahiersPanel state={notebooks} level={level} />}
       </div>
     </Page>

@@ -9,6 +9,7 @@ import { ArrowRight, Mail } from 'lucide-react';
 import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, CardsSkeleton } from '@/components/space/Page';
 import { getInfoPage, type InfoPageData, type InfoPageLink } from '@/lib/api/pagesApi';
+import { t } from '@/i18n';
 
 const LinkItem: React.FC<{ link: InfoPageLink }> = ({ link }) => {
   const cls = 'inline-flex min-h-10 items-center gap-1.5 text-[14px] font-semibold text-brand-hover hover:text-brand';
@@ -35,7 +36,7 @@ export const InfoPage: React.FC<{ slug: 'a-propos' | 'contact' }> = ({ slug }) =
       {!data && !failed && <CardsSkeleton n={3} />}
       {failed && (
         <p className="py-10 text-[14.5px] text-ink-faint">
-          La page n’a pas pu s’afficher. Tu peux nous écrire à{' '}
+          {t('La page n’a pas pu s’afficher. Tu peux nous écrire à')}{' '}
           <a href="mailto:contact@fidni.fr" className="font-semibold text-brand-hover underline">contact@fidni.fr</a>.
         </p>
       )}

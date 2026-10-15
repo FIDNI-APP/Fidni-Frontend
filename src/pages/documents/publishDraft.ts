@@ -9,6 +9,7 @@
  *    devient son barème. Devoir : chaque titre (« Exercice 2 », « Problème ») ouvre une partie.
  *  - Leçon : chaque titre ouvre une partie, les sous-titres des sous-parties.
  */
+import { t } from '@/i18n';
 import type { ExerciseBlock, SubQuestionBlock } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { SectionBlock } from '@/components/content/editor/FlexibleLessonEditor';
 import type { WizardContentType } from '@/lib/api/contentWriteApi';
@@ -284,15 +285,15 @@ export function serieToPrefills(html: string, serieTitle: string, keep?: number[
 export function describePrefill(p: ContentPrefill): string {
   if (p.type === 'lesson') {
     const n = p.sections?.length ?? 0;
-    return `${n} partie${n > 1 ? 's' : ''}`;
+    return n > 1 ? t('{n} parties', { n }) : t('{n} partie', { n });
   }
   const blocks = p.blocks ?? [];
   const q = blocks.filter((b) => b.type === 'question');
   const subs = q.reduce((s, b) => s + (b.subQuestions?.length ?? 0), 0);
   const parts = blocks.filter((b) => b.type === 'section').length;
   return [
-    parts && `${parts} partie${parts > 1 ? 's' : ''}`,
-    `${q.length} question${q.length > 1 ? 's' : ''}`,
-    subs && `${subs} sous-question${subs > 1 ? 's' : ''}`,
-  ].filter(Boolean).join(', ');
+    parts && (parts > 1 ? t('{n} parties', { n: parts }) : t('{n} partie', { n: parts })),
+    q.length > 1 ? t('{n} questions', { n: q.length }) : t('{n} question', { n: q.length }),
+    subs && (subs > 1 ? t('{n} sous-questions', { n: subs }) : t('{n} sous-question', { n: subs })),
+  ].filter(Boolean).join(t(', '));
 }

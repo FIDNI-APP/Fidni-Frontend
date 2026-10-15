@@ -3,6 +3,7 @@
 // bg-gradient-*, que index.css rend noire).
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { t } from '@/i18n';
 
 const FADE = 'linear-gradient(to bottom, #000 65%, transparent)';
 
@@ -27,6 +28,7 @@ export const ClampedPreview: React.FC<{ maxHeight?: number; children: React.Reac
     <div>
       <div
         ref={ref}
+        className="fd-ltr"
         style={clamped ? { maxHeight, overflow: 'hidden', WebkitMaskImage: FADE, maskImage: FADE } : undefined}
       >
         {children}
@@ -41,7 +43,7 @@ export const ClampedPreview: React.FC<{ maxHeight?: number; children: React.Reac
           className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-xl px-1 text-[13.5px] font-semibold text-brand-hover hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           aria-expanded={open}
         >
-          {open ? 'Réduire' : 'Lire la suite'}
+          {open ? t('Réduire') : t('Lire la suite')}
           <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
       )}

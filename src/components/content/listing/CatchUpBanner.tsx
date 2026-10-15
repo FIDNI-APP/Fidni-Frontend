@@ -15,6 +15,7 @@ import { Check, ChevronDown, ClipboardCheck, Eye, RotateCcw, X } from 'lucide-re
 import { api } from '@/lib/api/apiClient';
 import { assessQuestions } from '@/lib/api/contentItemApi';
 import { trackAction } from '@/lib/usage';
+import { t } from '@/i18n';
 
 type Kind = 'exercise' | 'exam';
 type Result = 'success' | 'review';
@@ -30,11 +31,10 @@ interface PendingItem {
 }
 
 const PATH: Record<Kind, string> = { exercise: '/exercises', exam: '/exams' };
-const NOUN: Record<Kind, [string, string]> = { exercise: ['exercice', 'exercices'], exam: ['examen', 'examens'] };
 
 const ago = (iso: string) => {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  return days <= 0 ? 'ouvert aujourd’hui' : days === 1 ? 'ouvert hier' : `ouvert il y a ${days} j`;
+  return days <= 0 ? t('ouvert aujourd’hui') : days === 1 ? t('ouvert hier') : t('ouvert il y a {n} j', { n: days });
 };
 
 /** Ne plus demander ces contenus (« Pas encore fait », ou bandeau fermé). */
@@ -110,19 +110,20 @@ export const CatchUpBanner: React.FC<{
     }
   };
 
-  const [one, many] = NOUN[kind];
   const btn = 'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:min-h-9';
   const DONE: Record<Answer, { cls: string; icon: React.ReactNode; label: string }> = {
-    success: { cls: 'bg-brand-soft text-brand-hover', icon: <Check className="h-3.5 w-3.5" />, label: 'Réussi' },
-    review: { cls: 'bg-gold-soft text-gold-strong', icon: <RotateCcw className="h-3.5 w-3.5" />, label: 'À revoir' },
-    not_done: { cls: 'bg-[#f2f1ee] text-ink-soft', icon: <Eye className="h-3.5 w-3.5" />, label: 'Pas encore fait' },
+    success: { cls: 'bg-brand-soft text-brand-hover', icon: <Check className="h-3.5 w-3.5" />, label: t('Réussi') },
+    review: { cls: 'bg-gold-soft text-gold-strong', icon: <RotateCcw className="h-3.5 w-3.5" />, label: t('À revoir') },
+    not_done: { cls: 'bg-[#f2f1ee] text-ink-soft', icon: <Eye className="h-3.5 w-3.5" />, label: t('Pas encore fait') },
   };
 
   const from = location.pathname + location.search;
-  const title = allDone ? 'C’est à jour, merci !' : `${count} ${count > 1 ? many : one} à évaluer`;
+  const title = allDone ? t('C’est à jour, merci !')
+    : kind === 'exam' ? (count > 1 ? t('{n} examens à évaluer', { n: count }) : t('{n} examen à évaluer', { n: count }))
+    : (count > 1 ? t('{n} exercices à évaluer', { n: count }) : t('{n} exercice à évaluer', { n: count }));
 
   return (
-    <section aria-label={`${many} à évaluer`} className="mb-5 overflow-hidden rounded-2xl border border-gold-line bg-[#fdfaf3]">
+    <section aria-label={kind === 'exam' ? t('examens à évaluer') : t('exercices à évaluer')} className="mb-5 overflow-hidden rounded-2xl border border-gold-line bg-[#fdfaf3]">
       {/* Une ligne : combien, pourquoi, « Évaluer ». */}
       <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-soft text-gold-strong ring-1 ring-gold-line" aria-hidden>
@@ -132,18 +133,18 @@ export const CatchUpBanner: React.FC<{
           <b className="block font-semibold text-ink sm:inline">{title}</b>
           {!allDone && (
             <span className="hidden sm:inline">
-              {' '}· tu {count > 1 ? 'les as ouverts' : 'l’as ouvert'} sans dire si tu {count > 1 ? 'les as réussis' : 'l’as réussi'}.
+              {' '}{count > 1 ? t('· tu les as ouverts sans dire si tu les as réussis.') : t('· tu l’as ouvert sans dire si tu l’as réussi.')}
             </span>
           )}
         </p>
         {!allDone && (
           <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
             className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl border border-gold-line bg-white px-3 text-[13px] font-semibold text-ink transition-colors hover:border-gold sm:min-h-9">
-            {open ? 'Replier' : 'Évaluer'} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+            {open ? t('Replier') : t('Évaluer')} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
         )}
-        <button type="button" onClick={close} aria-label="Fermer" title="Fermer : ne plus me les demander ici"
-          className="-mr-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-white hover:text-ink sm:h-9 sm:w-9">
+        <button type="button" onClick={close} aria-label={t('Fermer')} title={t('Fermer : ne plus me les demander ici')}
+          className="-me-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-white hover:text-ink sm:h-9 sm:w-9">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -151,7 +152,7 @@ export const CatchUpBanner: React.FC<{
       {open && (
         <div className="border-t border-gold-line/70 bg-white">
           <p className="px-4 pt-3 text-[12.5px] text-ink-faint">
-            Un clic par ligne suffit{count > items.length ? ` (voici les ${items.length} plus récents)` : ''}.
+            {count > items.length ? t('Un clic par ligne suffit (voici les {n} plus récents).', { n: items.length }) : t('Un clic par ligne suffit.')}
           </p>
           <ul className="divide-y divide-[#f0ede8]">
             {items.map((item) => {
@@ -163,32 +164,32 @@ export const CatchUpBanner: React.FC<{
                       {item.title}
                     </Link>
                     <p className="mt-0.5 truncate text-[12px] text-ink-faint">
-                      {[item.chapter, ago(item.seen_at), item.assessed ? `${item.assessed} question${item.assessed > 1 ? 's' : ''} évaluée${item.assessed > 1 ? 's' : ''}` : null]
+                      {[item.chapter, ago(item.seen_at), item.assessed ? (item.assessed > 1 ? t('{n} questions évaluées', { n: item.assessed }) : t('{n} question évaluée', { n: item.assessed })) : null]
                         .filter(Boolean).join(' · ')}
                     </p>
-                    {failed === item.id && <p className="mt-1 text-[12px] text-[#a23b34]">Ça n’a pas marché, réessaie.</p>}
+                    {failed === item.id && <p className="mt-1 text-[12px] text-[#a23b34]">{t('Ça n’a pas marché, réessaie.')}</p>}
                   </div>
                   {done ? (
                     <div className="shrink-0">
                       <span role="status" className={`${btn} ${DONE[done].cls}`}>{DONE[done].icon} {DONE[done].label}</span>
                       {done === 'not_done' && (
-                        <p className="mt-1 max-w-[240px] text-[11.5px] leading-snug text-ink-faint">On te le redemandera quand tu y auras retravaillé.</p>
+                        <p className="mt-1 max-w-[240px] text-[11.5px] leading-snug text-ink-faint">{t('On te le redemandera quand tu y auras retravaillé.')}</p>
                       )}
                     </div>
                   ) : (
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                       <button type="button" onClick={() => answer(item, 'success')}
                         className={`${btn} flex-1 bg-brand-soft text-brand-hover hover:bg-brand hover:text-white sm:flex-none`}>
-                        <Check className="h-3.5 w-3.5" /> Réussi
+                        <Check className="h-3.5 w-3.5" /> {t('Réussi')}
                       </button>
                       <button type="button" onClick={() => answer(item, 'review')}
                         className={`${btn} flex-1 bg-gold-soft text-gold-strong hover:bg-gold hover:text-white sm:flex-none`}>
-                        <RotateCcw className="h-3.5 w-3.5" /> À revoir
+                        <RotateCcw className="h-3.5 w-3.5" /> {t('À revoir')}
                       </button>
                       {/* Il l'a seulement regardé : il ne peut pas dire s'il l'a réussi. */}
-                      <button type="button" onClick={() => answer(item, 'not_done')} title="Juste regardé, pas encore fait"
+                      <button type="button" onClick={() => answer(item, 'not_done')} title={t('Juste regardé, pas encore fait')}
                         className={`${btn} w-full font-medium text-ink-faint hover:bg-[#f7f6f3] hover:text-ink sm:w-auto`}>
-                        <Eye className="h-3.5 w-3.5" /> Pas encore fait
+                        <Eye className="h-3.5 w-3.5" /> {t('Pas encore fait')}
                       </button>
                     </div>
                   )}

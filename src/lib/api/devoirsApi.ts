@@ -4,6 +4,7 @@
  */
 import { api } from './apiClient';
 import type { Etat } from '@/pages/progression/types';
+import { t, dateLocale } from '@/i18n';
 
 export type TestKind = 'ds' | 'controle' | 'blanc';
 export interface NamedRef { id: number; name: string }
@@ -119,22 +120,22 @@ export interface TestPlan {
 export const KIND_LABEL: Record<TestKind, string> = { ds: 'DS', controle: 'Contrôle', blanc: 'Examen blanc' };
 
 /** « DS de mathématiques » */
-export const testTitle = (t: Pick<UpcomingTest, 'kind' | 'subject'>) =>
-  t.subject ? `${KIND_LABEL[t.kind]} de ${t.subject.name.toLowerCase()}` : KIND_LABEL[t.kind];
+export const testTitle = (test: Pick<UpcomingTest, 'kind' | 'subject'>) =>
+  test.subject ? t('{kind} de {subject}', { kind: t(KIND_LABEL[test.kind]), subject: test.subject.name.toLowerCase() }) : t(KIND_LABEL[test.kind]);
 
 /** « aujourd’hui », « demain », « dans 3 jours », « il y a 2 jours » */
 export const whenLabel = (days: number) => {
-  if (days === 0) return 'aujourd’hui';
-  if (days === 1) return 'demain';
-  if (days === -1) return 'hier';
-  return days > 0 ? `dans ${days} jours` : `il y a ${-days} jours`;
+  if (days === 0) return t('aujourd’hui');
+  if (days === 1) return t('demain');
+  if (days === -1) return t('hier');
+  return days > 0 ? t('dans {n} jours', { n: days }) : t('il y a {n} jours', { n: -days });
 };
 
 export const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
 
 /** « Dimanche 11 octobre » (majuscule au jour seulement). */
 export const longDate = (iso: string) => {
-  const s = new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const s = new Date(`${iso}T12:00:00`).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 

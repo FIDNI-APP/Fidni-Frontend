@@ -16,6 +16,7 @@ import { IdentityFields } from '@/components/profile/IdentityForm';
 import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
 import { TABBAR_OFFSET } from '@/components/layout/nav';
 import { CardsSkeleton, Page, PageHeader } from '@/components/space/Page';
+import { t } from '@/i18n';
 
 interface Grade {
   subject: string;
@@ -53,8 +54,8 @@ const FormSection: React.FC<{
           }`}
         >
           {visibility === 'public'
-            ? <><Eye className="h-3 w-3" aria-hidden /> Visible sur ton profil</>
-            : <><Lock className="h-3 w-3" aria-hidden /> Visible de toi seul</>}
+            ? <><Eye className="h-3 w-3" aria-hidden /> {t('Visible sur ton profil')}</>
+            : <><Lock className="h-3 w-3" aria-hidden /> {t('Visible de toi seul')}</>}
         </span>
       </div>
       <div className="min-w-0">{children}</div>
@@ -124,7 +125,7 @@ export function EditProfile() {
         setClassLevels((levels as Named[]).map((l) => ({ id: String(l.id), name: l.name })));
         setSubjects((subs as Named[]).map((s) => ({ id: String(s.id), name: s.name })));
       })
-      .catch(() => setError({ section: 'scolarite', message: 'Impossible de charger les niveaux et les matières.' }))
+      .catch(() => setError({ section: 'scolarite', message: t('Impossible de charger les niveaux et les matières.') }))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -148,8 +149,8 @@ export function EditProfile() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!AVATAR_TYPES.includes(file.type)) return fail('photo', 'Format non pris en charge : JPEG, PNG, GIF ou WebP.');
-    if (file.size > AVATAR_MAX) return fail('photo', 'Image trop lourde : 5 Mo maximum.');
+    if (!AVATAR_TYPES.includes(file.type)) return fail('photo', t('Format non pris en charge : JPEG, PNG, GIF ou WebP.'));
+    if (file.size > AVATAR_MAX) return fail('photo', t('Image trop lourde : 5 Mo maximum.'));
     setError(null);
     setAvatarFile(file);
     setAvatarRemoved(false);
@@ -178,7 +179,7 @@ export function EditProfile() {
     const problem = identityError(identity);
     if (problem) return fail('identite', problem);
     const badGrade = grades.find(g => ![g.min_grade, g.max_grade].every(n => Number.isFinite(n) && n >= 0 && n <= 20));
-    if (badGrade) return fail('objectifs', 'Les notes vont de 0 à 20.');
+    if (badGrade) return fail('objectifs', t('Les notes vont de 0 à 20.'));
 
     setIsSaving(true);
     setError(null);
@@ -200,7 +201,7 @@ export function EditProfile() {
       setSaved(true);
       setTimeout(() => navigate(profileUrl), 900);
     } catch (err) {
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Impossible d’enregistrer le profil. Réessaie dans un instant.';
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || t('Impossible d’enregistrer le profil. Réessaie dans un instant.');
       setError({ section: 'bas', message });
     } finally {
       setIsSaving(false);
@@ -210,7 +211,7 @@ export function EditProfile() {
   if (isLoading || !user) {
     return (
       <Page width="narrow">
-        <PageHeader back={{ to: profileUrl, label: 'Mon profil' }} eyebrow="Mon profil" title="Modifier mon profil" />
+        <PageHeader back={{ to: profileUrl, label: t('Mon profil') }} eyebrow={t('Mon profil')} title={t('Modifier mon profil')} />
         <CardsSkeleton n={3} />
       </Page>
     );
@@ -229,40 +230,40 @@ export function EditProfile() {
     <Page width="narrow">
       <form onSubmit={handleSubmit}>
         <PageHeader
-          back={{ to: profileUrl, label: 'Mon profil' }}
-          eyebrow="Mon profil"
-          title="Modifier mon profil"
-          subtitle="Ce que les autres voient, et ce qui reste entre toi et Fidni."
+          back={{ to: profileUrl, label: t('Mon profil') }}
+          eyebrow={t('Mon profil')}
+          title={t('Modifier mon profil')}
+          subtitle={t('Ce que les autres voient, et ce qui reste entre toi et Fidni.')}
           actions={(
             <Link to={`${profileUrl}?tab=settings`} className="fd-btn-ghost min-h-10">
-              <Settings className="h-4 w-4" /> Pseudo, e-mail et mot de passe
+              <Settings className="h-4 w-4" /> {t('Pseudo, e-mail et mot de passe')}
             </Link>
           )}
         />
 
         <div className="flex flex-col gap-4">
           {/* ── Photo et présentation ── */}
-          <FormSection id="photo" title="Photo et présentation" visibility="public"
-            hint="Ce qui accompagne ton pseudo sur ton profil, tes publications et tes commentaires.">
+          <FormSection id="photo" title={t('Photo et présentation')} visibility="public"
+            hint={t('Ce qui accompagne ton pseudo sur ton profil, tes publications et tes commentaires.')}>
             <div className="flex flex-wrap items-center gap-5">
               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-ink text-3xl font-bold text-white ring-1 ring-line">
                 {avatarPreview && !avatarBroken
-                  ? <img src={avatarPreview} alt="Ta photo de profil" onError={() => setAvatarBroken(true)} className="h-full w-full object-cover" />
+                  ? <img src={avatarPreview} alt={t('Ta photo de profil')} onError={() => setAvatarBroken(true)} className="h-full w-full object-cover" />
                   : <span className="flex h-full w-full items-center justify-center" aria-hidden>{initial}</span>}
               </div>
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="fd-btn-ghost min-h-10" onClick={() => fileInput.current?.click()}>
-                    <Camera className="h-4 w-4" /> {avatarPreview ? 'Changer la photo' : 'Ajouter une photo'}
+                    <Camera className="h-4 w-4" /> {avatarPreview ? t('Changer la photo') : t('Ajouter une photo')}
                   </button>
                   {avatarPreview && (
                     <button type="button" onClick={dropAvatar}
                       className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium text-ink-soft hover:bg-[#f2f1ee] hover:text-ink">
-                      <Trash2 className="h-3.5 w-3.5" /> Retirer
+                      <Trash2 className="h-3.5 w-3.5" /> {t('Retirer')}
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-ink-faint">JPEG, PNG, GIF ou WebP, 5 Mo maximum.</p>
+                <p className="text-xs text-ink-faint">{t('JPEG, PNG, GIF ou WebP, 5 Mo maximum.')}</p>
                 <input ref={fileInput} type="file" accept={AVATAR_TYPES.join(',')} onChange={pickAvatar} className="hidden" />
               </div>
             </div>
@@ -274,43 +275,43 @@ export function EditProfile() {
                     {bio.length}/{BIO_MAX}
                   </span>
                 }>
-                  Quelques mots sur toi
+                  {t('Quelques mots sur toi')}
                 </FieldLabel>
                 <textarea id="bio" rows={3} maxLength={BIO_MAX} value={bio} onChange={(e) => setBio(e.target.value)}
                   className={`${inputClass} resize-none leading-relaxed`}
-                  placeholder={isTeacher ? 'Professeur de mathématiques au lycée…' : 'En 2ème Bac SM, je vise une mention…'} />
+                  placeholder={isTeacher ? t('Professeur de mathématiques au lycée…') : t('En 2ème Bac SM, je vise une mention…')} />
               </div>
               <div>
-                <FieldLabel htmlFor="location">Ville</FieldLabel>
+                <FieldLabel htmlFor="location">{t('Ville')}</FieldLabel>
                 <input id="location" value={location} maxLength={80} onChange={(e) => setLocation(e.target.value)}
-                  className={inputClass} placeholder="Casablanca" autoComplete="address-level2" />
+                  className={inputClass} placeholder={t('Casablanca')} autoComplete="address-level2" />
               </div>
             </div>
             {errorFor('photo')}
           </FormSection>
 
           {/* ── Identité ── */}
-          <FormSection id="identite" title="Identité" visibility="private"
-            hint="Sert à tes feuilles d’exercices en PDF et à tes classes. Ton pseudo reste ton seul nom public.">
+          <FormSection id="identite" title={t('Identité')} visibility="private"
+            hint={t('Sert à tes feuilles d’exercices en PDF et à tes classes. Ton pseudo reste ton seul nom public.')}>
             <IdentityFields value={identity} onChange={(v) => { setIdentity(v); setError(null); }} isTeacher={isTeacher} />
             {errorFor('identite')}
           </FormSection>
 
           {/* ── Scolarité ── */}
           {!isTeacher && (
-            <FormSection id="scolarite" title="Scolarité" visibility="public"
-              hint="Ton niveau règle les contenus proposés sur l’accueil et dans les listes.">
+            <FormSection id="scolarite" title={t('Scolarité')} visibility="public"
+              hint={t('Ton niveau règle les contenus proposés sur l’accueil et dans les listes.')}>
               <div className="space-y-5">
                 <div>
-                  <FieldLabel htmlFor="class-level">Niveau</FieldLabel>
+                  <FieldLabel htmlFor="class-level">{t('Niveau')}</FieldLabel>
                   <select id="class-level" value={classLevel} onChange={(e) => setClassLevel(e.target.value)} className={inputClass}>
-                    <option value="">Choisis ton niveau</option>
+                    <option value="">{t('Choisis ton niveau')}</option>
                     {classLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 </div>
                 {subjects.length > 0 && (
                   <div>
-                    <FieldLabel>Matières suivies</FieldLabel>
+                    <FieldLabel>{t('Matières suivies')}</FieldLabel>
                     <div className="flex flex-wrap gap-2">
                       {subjects.map(s => {
                         const on = targetSubjects.includes(s.id);
@@ -334,11 +335,11 @@ export function EditProfile() {
 
           {/* ── Objectifs ── */}
           {!isTeacher && (
-            <FormSection id="objectifs" title="Objectifs de notes" visibility="private"
-              hint="Ta moyenne actuelle et celle que tu vises, sur 20. Elles t’aident à mesurer le chemin parcouru.">
+            <FormSection id="objectifs" title={t('Objectifs de notes')} visibility="private"
+              hint={t('Ta moyenne actuelle et celle que tu vises, sur 20. Elles t’aident à mesurer le chemin parcouru.')}>
               {grades.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line px-4 py-6 text-center">
-                  <p className="text-sm text-ink-soft">Aucun objectif pour l’instant.</p>
+                  <p className="text-sm text-ink-soft">{t('Aucun objectif pour l’instant.')}</p>
                 </div>
               ) : (
                 <ul className="space-y-3">
@@ -348,11 +349,11 @@ export function EditProfile() {
                     return (
                       <li key={i} className="rounded-xl border border-line bg-white p-4">
                         <div className="flex items-center gap-2">
-                          <select aria-label="Matière" value={g.subject} onChange={(e) => setGrade(i, { subject: e.target.value })}
+                          <select aria-label={t('Matière')} value={g.subject} onChange={(e) => setGrade(i, { subject: e.target.value })}
                             className={`${inputClass} flex-1`}>
-                            {choices.map(id => <option key={id} value={id}>{subjectName.get(id) ?? 'Matière'}</option>)}
+                            {choices.map(id => <option key={id} value={id}>{subjectName.get(id) ?? t('Matière')}</option>)}
                           </select>
-                          <button type="button" aria-label="Retirer cet objectif"
+                          <button type="button" aria-label={t('Retirer cet objectif')}
                             onClick={() => setGrades(prev => prev.filter((_, k) => k !== i))}
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
                             <Trash2 className="h-4 w-4" />
@@ -361,13 +362,13 @@ export function EditProfile() {
                         <div className="mt-3 grid grid-cols-2 gap-3">
                           {([['min_grade', 'Moyenne actuelle'], ['max_grade', 'Objectif']] as const).map(([field, label]) => (
                             <label key={field} className="block">
-                              <span className="mb-1 block text-xs font-medium text-ink-faint">{label}</span>
+                              <span className="mb-1 block text-xs font-medium text-ink-faint">{t(label)}</span>
                               <div className="relative">
                                 <input type="number" inputMode="decimal" min={0} max={20} step={0.25}
                                   value={Number.isFinite(g[field]) ? g[field] : ''}
                                   onChange={(e) => setGrade(i, { [field]: e.target.value === '' ? NaN : Number(e.target.value) })}
-                                  className={`${inputClass} fd-nums pr-10`} />
-                                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-faint">/20</span>
+                                  className={`${inputClass} fd-nums pe-10`} />
+                                <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-ink-faint">/20</span>
                               </div>
                             </label>
                           ))}
@@ -375,8 +376,8 @@ export function EditProfile() {
                         {/* Le chemin à parcourir, sur l'échelle 0–20. */}
                         {Number.isFinite(lo) && Number.isFinite(hi) && (
                           <div className="relative mt-4 h-1.5 rounded-full bg-[#f2f1ee]" aria-hidden>
-                            <div className="absolute inset-y-0 left-0 rounded-full bg-ink/20" style={{ width: `${(lo / 20) * 100}%` }} />
-                            <div className="absolute inset-y-0 rounded-full bg-brand" style={{ left: `${(lo / 20) * 100}%`, width: `${((hi - lo) / 20) * 100}%` }} />
+                            <div className="absolute inset-y-0 start-0 rounded-full bg-ink/20" style={{ width: `${(lo / 20) * 100}%` }} />
+                            <div className="absolute inset-y-0 rounded-full bg-brand" style={{ insetInlineStart: `${(lo / 20) * 100}%`, width: `${((hi - lo) / 20) * 100}%` }} />
                           </div>
                         )}
                       </li>
@@ -387,7 +388,7 @@ export function EditProfile() {
               {freeChoices.length > 0 && (
                 <button type="button" className="fd-btn-ghost mt-3 min-h-10"
                   onClick={() => setGrades(prev => [...prev, { subject: freeChoices[0], min_grade: 10, max_grade: 14 }])}>
-                  <Plus className="h-4 w-4" /> Ajouter un objectif
+                  <Plus className="h-4 w-4" /> {t('Ajouter un objectif')}
                 </button>
               )}
               {errorFor('objectifs')}
@@ -402,14 +403,14 @@ export function EditProfile() {
           style={{ bottom: TABBAR_OFFSET }}>
           <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-8">
             <p className="hidden items-center gap-1.5 text-xs text-ink-faint sm:flex">
-              <User className="h-3.5 w-3.5" /> Connecté en tant que <span className="font-semibold text-ink-soft">{user.username}</span>
+              <User className="h-3.5 w-3.5" /> {t('Connecté en tant que')} <span className="font-semibold text-ink-soft">{user.username}</span>
             </p>
-            <div className="ml-auto flex items-center gap-2">
-              <button type="button" className="fd-btn-ghost min-h-10" onClick={() => navigate(profileUrl)}>Annuler</button>
+            <div className="ms-auto flex items-center gap-2">
+              <button type="button" className="fd-btn-ghost min-h-10" onClick={() => navigate(profileUrl)}>{t('Annuler')}</button>
               <button type="submit" className="fd-btn-primary min-h-10 min-w-[150px] justify-center" disabled={isSaving || saved}>
-                {saved ? <><Check className="h-4 w-4" /> Enregistré</>
-                  : isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Enregistrement…</>
-                  : 'Enregistrer'}
+                {saved ? <><Check className="h-4 w-4" /> {t('Enregistré')}</>
+                  : isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('Enregistrement…')}</>
+                  : t('Enregistrer')}
               </button>
             </div>
           </div>

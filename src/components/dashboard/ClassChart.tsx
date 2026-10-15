@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { WeeklyProgress } from '@/lib/api';
 import { Section, SectionLink } from '@/components/space/Page';
+import { t } from '@/i18n';
 
 // Les attributs de présentation SVG ne lisent pas les variables CSS : mêmes valeurs que :root (index.css).
 const C_BRAND = '#1a7a4a', C_NEUTRAL = '#b8b4ac', C_INK = '#1a1a1a', C_FAINT = '#6b6862';
@@ -28,7 +29,7 @@ function Chart({ data, compare, labels }: { data: number[]; compare: number[]; l
   return (
     <div ref={box}>
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full" onMouseLeave={() => setHov(null)}
-        role="img" aria-label={`Ton score moyen par semaine : ${data.map((v, i) => `${labels[i]} ${v} %`).join(', ')}`}>
+        role="img" aria-label={t('Ton score moyen par semaine : {liste}', { liste: data.map((v, i) => `${labels[i]} ${v} %`).join(', ') })}>
         {[0, 50, 100].map((v) => (
           <line key={v} x1={P} x2={W - P} y1={toY(v)} y2={toY(v)} stroke="#ece9e3" strokeWidth="1" strokeDasharray="3,5" />
         ))}
@@ -41,8 +42,8 @@ function Chart({ data, compare, labels }: { data: number[]; compare: number[]; l
             {hov === i && (
               <>
                 <rect x={Math.min(Math.max(toX(i) - 42, 0), W - 84)} y={Math.max(toY(v) - 48, 0)} width={84} height={38} rx={8} fill={C_INK} opacity=".95" />
-                <text x={Math.min(Math.max(toX(i), 42), W - 42)} y={Math.max(toY(v) - 48, 0) + 16} textAnchor="middle" fontSize="11" fill="#fff">Toi : {v} %</text>
-                <text x={Math.min(Math.max(toX(i), 42), W - 42)} y={Math.max(toY(v) - 48, 0) + 30} textAnchor="middle" fontSize="10" fill={C_NEUTRAL}>Classe : {compare[i] ?? 0} %</text>
+                <text x={Math.min(Math.max(toX(i), 42), W - 42)} y={Math.max(toY(v) - 48, 0) + 16} textAnchor="middle" fontSize="11" fill="#fff">{t('Toi : {v} %', { v })}</text>
+                <text x={Math.min(Math.max(toX(i), 42), W - 42)} y={Math.max(toY(v) - 48, 0) + 30} textAnchor="middle" fontSize="10" fill={C_NEUTRAL}>{t('Classe : {v} %', { v: compare[i] ?? 0 })}</text>
               </>
             )}
             <text x={toX(i)} y={H - 4} textAnchor="middle" fontSize="11" fill={C_FAINT}>{labels[i]}</text>
@@ -54,13 +55,13 @@ function Chart({ data, compare, labels }: { data: number[]; compare: number[]; l
 }
 
 export const ClassChart: React.FC<{ progress: WeeklyProgress }> = ({ progress }) => (
-  <Section id="toi-et-ta-classe" title="Toi et ta classe"
-    hint={<>Score moyen par semaine{progress.classroom && <> · <b className="font-semibold text-ink-soft">{progress.classroom.name}</b></>}</>}
-    action={<SectionLink to="/progression">Ma progression</SectionLink>}>
+  <Section id="toi-et-ta-classe" title={t('Toi et ta classe')}
+    hint={<>{t('Score moyen par semaine')}{progress.classroom && <> · <b className="font-semibold text-ink-soft">{progress.classroom.name}</b></>}</>}
+    action={<SectionLink to="/progression">{t('Ma progression')}</SectionLink>}>
     <div className="rounded-2xl border border-line bg-white px-3 pb-2 pt-3 sm:px-5">
       <div className="mb-1 flex items-center justify-end gap-4 text-[12px] text-ink-faint">
-        <span className="inline-flex items-center gap-1.5"><span className="h-[3px] w-4 rounded bg-brand" aria-hidden /> Toi</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-[2px] w-4 rounded bg-[#b8b4ac]" aria-hidden /> Classe</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-[3px] w-4 rounded bg-brand" aria-hidden /> {t('Toi')}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-[2px] w-4 rounded bg-[#b8b4ac]" aria-hidden /> {t('Classe')}</span>
       </div>
       <Chart data={progress.you} compare={progress.average} labels={progress.labels} />
     </div>

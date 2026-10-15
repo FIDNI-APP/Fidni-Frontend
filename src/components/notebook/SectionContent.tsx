@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowRight, ExternalLink, Loader2, MoreHorizontal, PenLine, Trash2 } from 'lucide-react';
+import { t } from '@/i18n';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { useLessonOutline } from '@/components/lesson/useLessonOutline';
 import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/LessonOutline';
@@ -74,7 +75,7 @@ const SectionContent: React.FC<{
     getLessonAnnotations(String(notebookId), String(section.id), String(entry.id))
       .then((a) => { if (!cancelled) setAnnotations(a as Annotation[]); })
       // Échec : on ne fait pas comme s'il n'y en avait aucune (le prochain enregistrement les effacerait).
-      .catch(() => { if (!cancelled && !phoneRef.current) toast.error('Tes annotations n’ont pas pu se charger.'); });
+      .catch(() => { if (!cancelled && !phoneRef.current) toast.error(t('Tes annotations n’ont pas pu se charger.')); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.id, notebookId, section.id]);
@@ -84,7 +85,7 @@ const SectionContent: React.FC<{
     try {
       await saveLessonAnnotations(String(notebookId), String(section.id), String(entry.id), list);
     } catch (e) {
-      toast.error('Tes annotations n’ont pas pu être enregistrées.');
+      toast.error(t('Tes annotations n’ont pas pu être enregistrées.'));
       throw e;
     }
   }, [notebookId, section.id, entry]);
@@ -95,22 +96,22 @@ const SectionContent: React.FC<{
 
   const remove = async () => {
     setMenu(false);
-    if (!entry || !window.confirm(`Retirer « ${entry.lesson.title} » de ton cahier ? La leçon reste sur Fidni.`)) return;
+    if (!entry || !window.confirm(t('Retirer « {title} » de ton cahier ? La leçon reste sur Fidni.', { title: entry.lesson.title }))) return;
     setRemoving(true);
     try {
       await removeFromNotebook(String(notebookId), String(section.id), String(entry.id));
-      toast.success('Leçon retirée du cahier');
+      toast.success(t('Leçon retirée du cahier'));
       setIndex(0);
       onRemoved();
     } catch {
-      toast.error('La leçon n’a pas pu être retirée.');
+      toast.error(t('La leçon n’a pas pu être retirée.'));
     } finally {
       setRemoving(false);
     }
   };
 
   if (!entry) return null;
-  const item = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-[13.5px] font-medium transition-colors';
+  const item = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-start text-[13.5px] font-medium transition-colors';
   // Téléphone, une seule leçon : son titre répéterait le chapitre ; le sommaire prend sa place, à côté du « ⋯ ».
   const merged = phone && entries.length === 1 && outline.items.length >= 2;
 
@@ -121,11 +122,11 @@ const SectionContent: React.FC<{
         <button type="button" onClick={() => setAnnotating((v) => !v)} aria-pressed={annotating} data-tour="cahier-annoter"
           className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-semibold transition-colors ${
             annotating ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:border-ink hover:text-ink'}`}>
-          <PenLine className="h-4 w-4" /> {annotating ? 'Terminer' : 'Annoter'}
+          <PenLine className="h-4 w-4" /> {annotating ? t('Terminer') : t('Annoter')}
         </button>
       )}
       <button ref={menuBtn} type="button" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu}
-        aria-label="Actions de la leçon"
+        aria-label={t('Actions de la leçon')}
         className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink">
         {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
       </button>
@@ -133,10 +134,10 @@ const SectionContent: React.FC<{
         className="w-64 rounded-xl border border-line bg-white p-1.5 shadow-[0_12px_32px_rgba(20,18,16,.14)]">
         <Link role="menuitem" to={`/lessons/${entry.lesson.id}`} onClick={() => setMenu(false)}
           className={`${item} text-ink-soft hover:bg-[#f7f6f3] hover:text-ink`}>
-          <ExternalLink className="h-4 w-4 text-ink-faint" /> Ouvrir la page de la leçon
+          <ExternalLink className="h-4 w-4 text-ink-faint" /> {t('Ouvrir la page de la leçon')}
         </Link>
         <button type="button" role="menuitem" onClick={remove} className={`${item} text-[#a23b34] hover:bg-[#fbecea]`}>
-          <Trash2 className="h-4 w-4" /> Retirer du cahier
+          <Trash2 className="h-4 w-4" /> {t('Retirer du cahier')}
         </button>
       </FloatingPanel>
     </>
@@ -145,7 +146,7 @@ const SectionContent: React.FC<{
   return (
     <div className="flex h-full min-h-0 flex-col">
       {merged ? (
-        <div className="flex shrink-0 items-start gap-1.5 border-b border-line bg-white py-1.5 pl-3 pr-1.5">
+        <div className="flex shrink-0 items-start gap-1.5 border-b border-line bg-white py-1.5 ps-3 pe-1.5">
           <h2 className="sr-only">{entry.lesson.title}</h2>
           <LessonOutlineBar outline={outline} storageKey={`lecon-${entry.lesson.id}`} className="min-w-0 flex-1" />
           {tools}
@@ -153,9 +154,9 @@ const SectionContent: React.FC<{
       ) : (
         <>
           {/* Leçons du chapitre */}
-          <div className="flex shrink-0 items-center gap-2 border-b border-line bg-white py-1.5 pl-3 pr-1.5 sm:pl-4">
+          <div className="flex shrink-0 items-center gap-2 border-b border-line bg-white py-1.5 ps-3 pe-1.5 sm:ps-4">
             {entries.length > 1 ? (
-              <div role="tablist" aria-label="Leçons du chapitre" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-0.5 scrollbar-hide">
+              <div role="tablist" aria-label={t('Leçons du chapitre')} className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-0.5 scrollbar-hide">
                 {entries.map((e, i) => {
                   const on = e.id === entry.id;
                   return (
@@ -180,14 +181,14 @@ const SectionContent: React.FC<{
 
       <div className="flex min-h-0 flex-1">
         {outline.items.length >= 2 && (
-          <aside className="hidden w-[230px] shrink-0 overflow-y-auto border-r border-line bg-[#fcfbf9] px-4 py-5 2xl:block">
-            <LessonOutlinePanel outline={outline} storageKey={`lecon-${entry.lesson.id}`} title="Dans cette leçon" />
+          <aside className="hidden w-[230px] shrink-0 overflow-y-auto border-e border-line bg-[#fcfbf9] px-4 py-5 2xl:block">
+            <LessonOutlinePanel outline={outline} storageKey={`lecon-${entry.lesson.id}`} title={t('Dans cette leçon')} />
           </aside>
         )}
 
         <div ref={setScrollEl} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {!ready && (
-            <div className="absolute inset-0 z-30 flex flex-col gap-3 bg-white p-6 pl-16" role="status" aria-label="Chargement de la leçon">
+            <div className="absolute inset-0 z-30 flex flex-col gap-3 bg-white p-6 ps-16" role="status" aria-label={t('Chargement de la leçon')}>
               {['w-3/4 h-6', 'w-1/2', 'w-5/6', 'w-full h-20 mt-3', 'w-2/3', 'w-3/4', 'w-full h-28 mt-3'].map((c, i) => (
                 <div key={i} className={`h-4 animate-pulse rounded bg-[#efece6] ${c}`} />
               ))}
@@ -211,7 +212,7 @@ const SectionContent: React.FC<{
             <div className="flex justify-end border-t border-line bg-[#fcfbf9] px-4 py-3">
               <button type="button" onClick={() => setIndex(index + 1)}
                 className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-lg px-2 text-[13.5px] font-semibold text-brand-hover hover:underline">
-                <span className="shrink-0">Leçon suivante :</span>
+                <span className="shrink-0">{t('Leçon suivante :')}</span>
                 <span className="truncate font-medium text-ink-soft">{next.lesson.title}</span>
                 <ArrowRight className="h-4 w-4 shrink-0" />
               </button>

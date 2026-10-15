@@ -10,6 +10,7 @@
 import React from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { reportClientError } from '@/lib/clientErrors';
+import { t } from '@/i18n';
 
 type Variant = 'app' | 'page' | 'block';
 
@@ -50,12 +51,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
         <section role="alert" className="fd-card border-[#f0d4cf] bg-[#fbf1ef] p-4 text-[13px] text-[#9c3b2e]">
           <p className="flex items-center gap-2 font-semibold">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            {label ? `« ${label} » n’a pas pu s’afficher.` : 'Ce bloc n’a pas pu s’afficher.'}
+            {label ? t('« {label} » n’a pas pu s’afficher.', { label }) : t('Ce bloc n’a pas pu s’afficher.')}
           </p>
           <p className="mt-1 break-words text-[12px] text-[#9c3b2e]/80">{detail}</p>
           <button type="button" onClick={this.reset}
             className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#e6c3bc] bg-white px-2.5 py-1 text-[12.5px] font-medium text-[#9c3b2e] hover:border-[#9c3b2e]">
-            <RotateCcw className="h-3.5 w-3.5" /> Réessayer
+            <RotateCcw className="h-3.5 w-3.5" /> {t('Réessayer')}
           </button>
         </section>
       );
@@ -67,18 +68,18 @@ export class ErrorBoundary extends React.Component<Props, State> {
       <div role="alert" className={app ? 'flex min-h-screen items-center justify-center bg-[#faf9f7] px-4' : 'mx-auto max-w-xl px-4 py-16'}>
         <div className="w-full max-w-xl rounded-2xl border border-line bg-white p-6 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-8 w-8 text-gold-strong" />
-          <h1 className="fd-display mt-3 text-[22px] text-ink">Cette page a rencontré un problème</h1>
+          <h1 className="fd-display mt-3 text-[22px] text-ink">{t('Cette page a rencontré un problème')}</h1>
           <p className="mt-2 text-[14px] text-ink-soft">
-            L’erreur nous a été signalée. Recharge la page ; si elle revient, reviens à l’accueil.
+            {t('L’erreur nous a été signalée. Recharge la page ; si elle revient, reviens à l’accueil.')}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <button type="button" onClick={() => window.location.reload()} className="fd-btn-primary">
-              <RotateCcw className="h-4 w-4" /> Recharger la page
+              <RotateCcw className="h-4 w-4" /> {t('Recharger la page')}
             </button>
-            <a href="/" className="fd-btn-ghost">Retour à l’accueil</a>
+            <a href="/" className="fd-btn-ghost">{t('Retour à l’accueil')}</a>
           </div>
-          <details className="mt-5 text-left text-[12px] text-ink-faint">
-            <summary className="cursor-pointer">Détail technique</summary>
+          <details className="mt-5 text-start text-[12px] text-ink-faint">
+            <summary className="cursor-pointer">{t('Détail technique')}</summary>
             <p className="mt-1 break-words">{detail}</p>
           </details>
         </div>

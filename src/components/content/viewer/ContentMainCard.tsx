@@ -29,6 +29,7 @@ import { FoldedSolution } from './FoldedSolution';
 import { trackAction } from '@/lib/usage';
 import { questionNumbering } from '@/lib/reportTargets';
 import { QuestionChart } from './QuestionChart';
+import { t } from '@/i18n';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -123,7 +124,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
   const votes = (
     <div data-tour="vote" className="flex items-center gap-2.5">
       <span className="hidden text-[13px] text-ink-faint sm:inline">
-        {isLesson ? 'Cette leçon t’a aidé ?' : contentType === 'exam' ? 'Ce sujet t’a aidé ?' : 'Cet exercice t’a aidé ?'}
+        {isLesson ? t('Cette leçon t’a aidé ?') : contentType === 'exam' ? t('Ce sujet t’a aidé ?') : t('Cet exercice t’a aidé ?')}
       </span>
       <VoteButtons likes={likeCount} dislikes={dislikeCount} initialVotes={voteCount} onVote={onVote} userVote={userVote} size="md" />
     </div>
@@ -134,7 +135,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
       {onReport && (
         <button type="button" onClick={() => onReport()} data-tour="signaler"
           className="inline-flex min-h-10 items-center gap-1.5 text-[12.5px] text-ink-faint transition-colors hover:text-ink">
-          <Flag className="h-3.5 w-3.5" aria-hidden /> Une erreur ? Signale-la
+          <Flag className="h-3.5 w-3.5" aria-hidden /> {t('Une erreur ? Signale-la')}
         </button>
       )}
     </div>
@@ -174,7 +175,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
         <ReadingStyles />
         {/* Ordinateur : sommaire collant à gauche. */}
         {withOutline && (
-          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] overflow-y-auto pb-4 pr-1 lg:block print:!hidden" data-tour="lecon-sommaire"
+          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] overflow-y-auto pb-4 pe-1 lg:block print:!hidden" data-tour="lecon-sommaire"
             onClickCapture={trackOutline}>
             <LessonOutlinePanel outline={outline} storageKey={`lecon-${content.id}`} syncHash />
           </aside>
@@ -226,16 +227,16 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
               {showAllSolutions ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
               {/* Téléphone : libellé court, pour laisser la place au chrono. */}
               {showAllSolutions
-                ? <><span className="sm:hidden">Masquer</span><span className="hidden sm:inline">{questionsWithSolutions > 1 ? 'Masquer les solutions' : 'Masquer la solution'}</span></>
+                ? <><span className="sm:hidden">{t('Masquer')}</span><span className="hidden sm:inline">{questionsWithSolutions > 1 ? t('Masquer les solutions') : t('Masquer la solution')}</span></>
                 : questionsWithSolutions > 1
-                  ? <><span className="sm:hidden">Solutions</span><span className="hidden sm:inline">Toutes les solutions</span></>
-                  : 'Voir la solution'}
+                  ? <><span className="sm:hidden">{t('Solutions')}</span><span className="hidden sm:inline">{t('Toutes les solutions')}</span></>
+                  : t('Voir la solution')}
               {!showAllSolutions && questionsWithSolutions > 1 && (
                 <span className="rounded-full bg-[#f2f1ee] px-1.5 text-[11.5px] text-ink-faint fd-nums">{questionsWithSolutions}</span>
               )}
             </button>
           ) : (
-            <span className="px-2 text-[13px] text-ink-faint">Pas encore de solution détaillée</span>
+            <span className="px-2 text-[13px] text-ink-faint">{t('Pas encore de solution détaillée')}</span>
           )}
           <Chrono timer={timer} isRunning={isTimerRunning} start={startTimer} stop={stopTimer} reset={resetTimer}
             save={isAuthenticated ? saveSession : undefined} saving={saving} format={formatCurrentTime}
@@ -269,12 +270,12 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
               className={`inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold transition-colors ${
                 wholeSolutionShown ? 'bg-[#f2f1ee] text-ink-soft' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
               {wholeSolutionShown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-              {wholeSolutionShown ? 'Masquer la solution' : 'Voir la solution'}
+              {wholeSolutionShown ? t('Masquer la solution') : t('Voir la solution')}
             </button>
             {!wholeSolutionShown && <FoldedSolution html={wholeSolution?.html} />}
             {wholeSolutionShown && wholeSolution?.html && (
               <div className="fd-read relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
-                <span className="absolute inset-y-0 left-0 w-[3px] bg-brand" aria-hidden />
+                <span className="absolute inset-y-0 start-0 w-[3px] bg-brand" aria-hidden />
                 <div className="fd-sol px-4 py-3.5 sm:px-5"><TipTapRenderer content={wholeSolution.html} /></div>
               </div>
             )}

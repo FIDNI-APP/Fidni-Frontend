@@ -21,6 +21,7 @@ import { TextBlockEditor } from './TextBlockEditor';
 import { api } from '@/lib/api/apiClient';
 import type { ContentBlock } from '@/types/content';
 import type { Difficulty } from '@/types';
+import { t } from '@/i18n';
 
 // =====================
 // TYPES
@@ -157,12 +158,12 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
         style={{ padding: '7px 11px', background: 'transparent', border: 'none', cursor: 'pointer' }}
       >
         <SlidersHorizontal className="w-3.5 h-3.5" style={{ color: '#6b6862' }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#33302b' }}>Métadonnées pédagogiques</span>
-        <span style={{ fontSize: 11, color: '#9a958c' }}>théorèmes · difficulté · temps</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#33302b' }}>{t('Métadonnées pédagogiques')}</span>
+        <span style={{ fontSize: 11, color: '#9a958c' }}>{t('théorèmes · difficulté · temps')}</span>
         {count > 0 && (
           <span style={{ fontSize: 10.5, fontWeight: 700, color: '#15633c', background: '#eaf3ed', padding: '1px 7px', borderRadius: 99 }}>{count}</span>
         )}
-        <ChevronDown className="w-4 h-4" style={{ color: '#9a958c', marginLeft: 'auto', transition: 'transform .18s', transform: open ? 'rotate(180deg)' : 'none' }} />
+        <ChevronDown className="w-4 h-4" style={{ color: '#9a958c', marginInlineStart: 'auto', transition: 'transform .18s', transform: open ? 'rotate(180deg)' : 'none' }} />
       </button>
 
       {open && (
@@ -170,10 +171,10 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
           {/* Théorèmes — autocomplete sur la liste de la base (nom ou chapitre) */}
           <div>
             <div className="flex flex-wrap gap-1.5 items-center">
-              {theorems.map(t => (
-                <span key={t} className="inline-flex items-center gap-1" style={chipStyle}>
-                  {t}
-                  <button type="button" onClick={() => removeTheorem(t)} aria-label={`Retirer ${t}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#6b6862' }}>
+              {theorems.map(th => (
+                <span key={th} className="inline-flex items-center gap-1" style={chipStyle}>
+                  {th}
+                  <button type="button" onClick={() => removeTheorem(th)} aria-label={t('Retirer {name}', { name: th })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#6b6862' }}>
                     <XIcon className="w-3 h-3" />
                   </button>
                 </span>
@@ -185,7 +186,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
                   onFocus={() => setFocused(true)}
                   onBlur={() => setTimeout(() => setFocused(false), 150)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (suggestions[0]) addTheorem(suggestions[0].name); } }}
-                  placeholder="+ théorème (nom ou chapitre)"
+                  placeholder={t('+ théorème (nom ou chapitre)')}
                   style={{ fontSize: 12, border: '1px solid #e7e3dc', borderRadius: 8, padding: '4px 9px', outline: 'none', minWidth: 210 }}
                 />
                 {focused && (suggestions.length > 0 || q) && (
@@ -197,7 +198,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
                         key={v.name}
                         type="button"
                         onMouseDown={(e) => { e.preventDefault(); addTheorem(v.name); }}
-                        className="w-full flex items-center justify-between gap-3 text-left"
+                        className="w-full flex items-center justify-between gap-3 text-start"
                         style={{ padding: '6px 9px', borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#33302b' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = '#f7f6f3'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -208,7 +209,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
                     ))}
                     {q && suggestions.length === 0 && (
                       <p style={{ padding: '6px 9px', fontSize: 12, color: '#6b6862', margin: 0 }}>
-                        Aucun théorème ne correspond. Une question de pur calcul n’en a pas besoin.
+                        {t('Aucun théorème ne correspond. Une question de pur calcul n’en a pas besoin.')}
                       </p>
                     )}
                   </FloatingPanel>
@@ -216,7 +217,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
               </div>
             </div>
             <p style={{ fontSize: 10.5, color: '#9a958c', marginTop: 4 }}>
-              Seulement ceux que la solution utilise vraiment. Jamais montrés aux élèves : ils rangent la question dans son chapitre et choisissent les exercices proposés.
+              {t('Seulement ceux que la solution utilise vraiment. Jamais montrés aux élèves : ils rangent la question dans son chapitre et choisissent les exercices proposés.')}
             </p>
           </div>
 
@@ -237,13 +238,13 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
                       color: active ? '#15633c' : '#6b6862',
                     }}
                   >
-                    {d.label}
+                    {t(d.label)}
                   </button>
                 );
               })}
             </div>
             <label className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, color: '#6b6862' }}>
-              Temps cible
+              {t('Temps cible')}
               <input
                 type="number" min="0"
                 value={meta?.expected_seconds ? Math.round(meta.expected_seconds / 60) : ''}
@@ -251,10 +252,10 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
                   const min = parseInt(e.target.value);
                   onChange({ ...meta, expected_seconds: min > 0 ? min * 60 : undefined });
                 }}
-                placeholder="min"
+                placeholder={t('min')}
                 style={{ width: 52, fontSize: 12, textAlign: 'center', border: '1px solid #e7e3dc', borderRadius: 8, padding: '3px 6px', outline: 'none' }}
               />
-              min
+              {t('min')}
             </label>
           </div>
         </div>
@@ -292,7 +293,7 @@ const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
         className="flex items-center gap-1 px-2 py-0.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors opacity-0 group-hover/add:opacity-100"
       >
         <Plus className="w-3.5 h-3.5" />
-        Ajouter
+        {t('Ajouter')}
       </button>
       <div className="flex-1 h-px bg-slate-100 group-hover/add:bg-slate-200 transition-colors" />
 
@@ -304,7 +305,7 @@ const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
             className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <FileText className="w-4 h-4 text-slate-500" />
-            Contexte
+            {t('Contexte')}
           </button>
           <button
             type="button"
@@ -312,7 +313,7 @@ const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
             className="flex items-center gap-2 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
           >
             <MessageSquare className="w-4 h-4 text-blue-500" />
-            Question
+            {t('Question')}
           </button>
           <button
             type="button"
@@ -320,7 +321,7 @@ const AddBlockRow: React.FC<AddBlockRowProps> = ({ onAdd }) => {
             className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <Heading className="w-4 h-4 text-slate-500" />
-            Partie
+            {t('Partie')}
           </button>
       </FloatingPanel>
     </div>
@@ -345,7 +346,7 @@ interface SubQuestionRowProps {
 const SubQuestionRow: React.FC<SubQuestionRowProps> = ({
   sq, questionIndex, sqIndex, onChange, onDelete, showSolution, onToggleSolution, solutionVisible,
 }) => (
-  <div className="group/sq pl-6 border-l-2 border-blue-100">
+  <div className="group/sq ps-6 border-s-2 border-blue-100">
     <div className="flex items-start gap-3 py-2">
       <span className="text-sm font-mono font-medium text-blue-400 shrink-0 pt-0.5 w-12">
         {questionIndex}.{sqIndex + 1}.
@@ -354,16 +355,16 @@ const SubQuestionRow: React.FC<SubQuestionRowProps> = ({
         <TextBlockEditor
           value={sq.content}
           onChange={(content) => onChange({ ...sq, content })}
-          placeholder="Sous-question..."
+          placeholder={t('Sous-question...')}
           minHeight="40px"
           showToolbar={false}
         />
         {(showSolution || solutionVisible) && (
-          <div className="mt-2 pl-3 border-l-2 border-emerald-200">
+          <div className="mt-2 ps-3 border-s-2 border-emerald-200">
             <TextBlockEditor
               value={sq.solution}
               onChange={(solution) => onChange({ ...sq, solution })}
-              placeholder="Solution..."
+              placeholder={t('Solution...')}
               minHeight="32px"
               showToolbar={false}
             />
@@ -378,7 +379,7 @@ const SubQuestionRow: React.FC<SubQuestionRowProps> = ({
           step="0.25"
           value={sq.points ?? ''}
           onChange={(e) => onChange({ ...sq, points: parseFloat(e.target.value) || undefined })}
-          placeholder="pts"
+          placeholder={t('pts')}
           className="w-12 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none"
         />
         {showSolution && (
@@ -386,7 +387,7 @@ const SubQuestionRow: React.FC<SubQuestionRowProps> = ({
             type="button"
             onClick={onToggleSolution}
             className="p-1 text-slate-300 hover:text-emerald-500 opacity-0 group-hover/sq:opacity-100 transition-opacity"
-            title="Afficher/masquer solution"
+            title={t('Afficher/masquer solution')}
           >
             {solutionVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </button>
@@ -461,7 +462,7 @@ const BlockRow: React.FC<BlockRowProps> = ({
           {isSection ? (
             <>
               <span className="text-xs font-semibold px-1.5 py-0.5 rounded text-slate-600 bg-slate-100 shrink-0">
-                Partie
+                {t('Partie')}
               </span>
               <input
                 type="text"
@@ -479,14 +480,14 @@ const BlockRow: React.FC<BlockRowProps> = ({
                 step="0.25"
                 value={block.points ?? ''}
                 onChange={(e) => onChange({ ...block, points: parseFloat(e.target.value) || undefined })}
-                placeholder="pts"
-                title="Barème de la partie (affichage)"
+                placeholder={t('pts')}
+                title={t('Barème de la partie (affichage)')}
                 className="w-16 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none"
               />
             </>
           ) : isContext ? (
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded text-slate-500 bg-slate-100">
-              Contexte
+              {t('Contexte')}
             </span>
           ) : (
             <>
@@ -499,8 +500,8 @@ const BlockRow: React.FC<BlockRowProps> = ({
                 step="0.25"
                 value={block.points ?? ''}
                 onChange={(e) => onChange({ ...block, points: parseFloat(e.target.value) || undefined })}
-                placeholder="pts"
-                className="w-14 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none ml-auto"
+                placeholder={t('pts')}
+                className="w-14 px-1.5 py-0.5 text-xs text-center border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none ms-auto"
               />
             </>
           )}
@@ -511,19 +512,19 @@ const BlockRow: React.FC<BlockRowProps> = ({
           <TextBlockEditor
             value={block.content}
             onChange={(content) => onChange({ ...block, content })}
-            placeholder={isContext ? 'Contexte, données, introduction...' : 'Énoncé de la question...'}
+            placeholder={isContext ? t('Contexte, données, introduction...') : t('Énoncé de la question...')}
             minHeight={isContext ? '80px' : '60px'}
           />
         )}
 
         {/* Solution (question level) — only when no sub-questions */}
         {!isContext && !(block.subQuestions?.length) && showSol && (
-          <div className="mt-2 pl-3 border-l-2 border-emerald-200">
-            <span className="text-xs font-medium text-emerald-600 mb-1 block">Solution</span>
+          <div className="mt-2 ps-3 border-s-2 border-emerald-200">
+            <span className="text-xs font-medium text-emerald-600 mb-1 block">{t('Solution')}</span>
             <TextBlockEditor
               value={block.solution}
               onChange={(solution) => onChange({ ...block, solution })}
-              placeholder="Solution..."
+              placeholder={t('Solution...')}
               minHeight="48px"
               showToolbar={false}
             />
@@ -554,10 +555,10 @@ const BlockRow: React.FC<BlockRowProps> = ({
             <button
               type="button"
               onClick={addSubQuestion}
-              className="mt-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 transition-colors pl-6"
+              className="mt-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 transition-colors ps-6"
             >
               <Plus className="w-3 h-3" />
-              Sous-question
+              {t('Sous-question')}
             </button>
           </div>
         )}
@@ -580,7 +581,7 @@ const BlockRow: React.FC<BlockRowProps> = ({
         {!isContext && (
           <button type="button" onClick={() => setPerBlockSolution((v) => !v)}
             className={`p-1 transition-colors ${perBlockSolution ? 'text-emerald-500' : 'text-slate-400 hover:text-emerald-500'}`}
-            title="Solution">
+            title={t('Solution')}>
             <Eye className="w-3.5 h-3.5" />
           </button>
         )}
@@ -696,7 +697,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
   };
 
   const handleSave = async () => {
-    if (!title.trim()) { alert('Veuillez entrer un titre'); return; }
+    if (!title.trim()) { alert(t('Veuillez entrer un titre')); return; }
     setIsSaving(true);
     try {
       await onSave({
@@ -719,10 +720,10 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
           </button>
           <div>
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
-              {isExam ? 'Examen' : 'Exercice'}
+              {isExam ? t('Examen') : t('Exercice')}
             </p>
             <p className="text-sm text-slate-600">
-              {questionCount} question{questionCount !== 1 ? 's' : ''} · {totalPoints} pts
+              {questionCount !== 1 ? t('{n} questions', { n: questionCount }) : t('{n} question', { n: questionCount })} · {t('{n} pts', { n: totalPoints })}
             </p>
           </div>
         </div>
@@ -733,19 +734,19 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
               showSolutions ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
             }`}>
             {showSolutions ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            Solutions
+            {t('Solutions')}
           </button>
           <button type="button" onClick={onTogglePreview} data-tour="creer-apercu"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
               showPreview ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
             }`}>
             <Eye className="w-4 h-4" />
-            Aperçu
+            {t('Aperçu')}
           </button>
           <button type="button" onClick={handleSave} data-tour="creer-enregistrer" disabled={isSaving || isLoading}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors">
             <Save className="w-4 h-4" />
-            {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+            {isSaving ? t('Enregistrement...') : t('Enregistrer')}
           </button>
         </div>
       </div>
@@ -760,7 +761,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={`Titre de l'${isExam ? 'examen' : 'exercice'}...`}
+            placeholder={isExam ? t("Titre de l'examen...") : t("Titre de l'exercice...")}
             className="w-full text-3xl font-bold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-2"
           />
 
@@ -774,7 +775,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
                   className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                     difficulty === opt.value ? opt.active : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                   }`}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               ))}
             </div>
@@ -782,17 +783,17 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
             {isExam && (
               <>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500">Durée</span>
+                  <span className="text-xs text-slate-500">{t('Durée')}</span>
                   <input type="number" min="1" value={durationMinutes}
                     onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 60)}
                     className="w-16 px-2 py-0.5 text-sm border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 focus:outline-none" />
-                  <span className="text-xs text-slate-400">min</span>
+                  <span className="text-xs text-slate-400">{t('min')}</span>
                 </div>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={isNationalExam}
                     onChange={(e) => setIsNationalExam(e.target.checked)}
                     className="rounded text-blue-600" />
-                  <span className="text-xs text-slate-600">Examen national</span>
+                  <span className="text-xs text-slate-600">{t('Examen national')}</span>
                 </label>
                 {isNationalExam && (
                   <input type="number" min="1990" max={new Date().getFullYear()} value={nationalYear}
@@ -807,15 +808,15 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
           <div className="pt-4 space-y-0" data-tour="creer-blocs">
             {structure.blocks.length === 0 ? (
               <div className="py-16 text-center">
-                <p className="text-slate-400 text-sm mb-4">Commencez à construire votre {isExam ? 'examen' : 'exercice'}</p>
+                <p className="text-slate-400 text-sm mb-4">{isExam ? t('Commencez à construire votre examen') : t('Commencez à construire votre exercice')}</p>
                 <div className="flex justify-center gap-2">
                   <button type="button" onClick={() => addBlock('context')}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-                    <FileText className="w-4 h-4" /> Contexte
+                    <FileText className="w-4 h-4" /> {t('Contexte')}
                   </button>
                   <button type="button" onClick={() => addBlock('question')}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors">
-                    <MessageSquare className="w-4 h-4" /> Question
+                    <MessageSquare className="w-4 h-4" /> {t('Question')}
                   </button>
                 </div>
               </div>

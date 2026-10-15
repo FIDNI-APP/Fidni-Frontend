@@ -1,7 +1,28 @@
 // Éléments visuels des DS (« Mon prochain DS », 08/10/2026) : page de calendrier, compte à rebours,
 // jauge « Prêt à … % ».
 import React from 'react';
-import { whenLabel } from '@/lib/api/devoirsApi';
+import { t } from '@/i18n';
+import { KIND_LABEL, longDate, testTitle, whenLabel, type TestKind } from '@/lib/api/devoirsApi';
+
+/* ── Textes des DS : ceux de lib/api/devoirsApi.ts (déjà traduits à l'appel), sous les noms de ce fichier ── */
+
+export const kindLabel = (k: TestKind) => t(KIND_LABEL[k]);
+export const testName = testTitle;
+export const whenText = whenLabel;
+export const longDateOf = longDate;
+
+/** « 3 exercices », « 1 exercice ». */
+export const exercisesCount = (n: number) => (n > 1 ? t('{n} exercices', { n }) : t('{n} exercice', { n }));
+
+/** « 45 min », « 1 h 05 » (durée en secondes, arrondie à la minute). */
+export const minutesLabel = (s: number) => {
+  const m = Math.max(1, Math.round(s / 60));
+  return m >= 60 ? t('{h} h {m}', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') }) : t('{n} min', { n: m });
+};
+
+/** « 90 min », « 1 h 05 », « 2 h » (durée en minutes). */
+export const durationLabel = (m: number) => (m < 60 ? t('{n} min', { n: m })
+  : m % 60 ? t('{h} h {m}', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') }) : t('{h} h', { h: m / 60 }));
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -14,12 +35,12 @@ export function DateTile({ date, size = 'md', urgent = false }: { date: string; 
   return (
     <div aria-hidden className={`${dims} flex shrink-0 flex-col self-start overflow-hidden rounded-xl border border-line bg-white text-center shadow-[0_1px_0_rgba(20,18,16,.05)]`}>
       <span className={`py-[3px] text-[10px] font-bold uppercase tracking-[.08em] text-white ${urgent ? 'bg-[#a23b34]' : 'bg-ink'}`}>
-        {DAYS[d.getDay()]}
+        {t(DAYS[d.getDay()])}
       </span>
       <span className={`fd-nums pt-1 font-bold leading-none text-ink ${num}`} style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
         {d.getDate()}
       </span>
-      <span className="pb-1.5 pt-0.5 text-[10.5px] font-semibold uppercase tracking-[.04em] text-ink-faint">{MONTHS[d.getMonth()]}</span>
+      <span className="pb-1.5 pt-0.5 text-[10.5px] font-semibold uppercase tracking-[.04em] text-ink-faint">{t(MONTHS[d.getMonth()])}</span>
     </div>
   );
 }
@@ -32,7 +53,7 @@ export function Countdown({ days, className = '' }: { days: number; className?: 
       : days <= 6 ? 'bg-gold-soft text-gold-strong'
         : 'bg-[#f2f1ee] text-ink-soft';
   // Un DS passé : « Hier », « Il y a 5 jours » (plus parlant que « Passé »).
-  const label = whenLabel(days);
+  const label = whenText(days);
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${tone} ${className}`}>
       {label.charAt(0).toUpperCase() + label.slice(1)}
@@ -47,16 +68,16 @@ export function Readiness({ value, compact = false }: { value: number | null | u
   if (value === null || value === undefined) {
     return (
       <p className={`${compact ? 'text-[12px]' : 'text-[13px]'} text-ink-faint`}>
-        Pas encore de mesure : quelques exercices suffisent.
+        {t('Pas encore de mesure : quelques exercices suffisent.')}
       </p>
     );
   }
   return (
     <div className="min-w-0">
       <p className={`${compact ? 'text-[12px]' : 'text-[13px]'} text-ink-soft`}>
-        Prêt à <b className="fd-nums font-bold text-ink">{value} %</b>
+        {t('Prêt à')} <b className="fd-nums font-bold text-ink">{value} %</b>
       </p>
-      <div className={`mt-1.5 overflow-hidden rounded-full bg-[#f2f1ee] ${compact ? 'h-1.5' : 'h-2'}`} role="img" aria-label={`Prêt à ${value} %`}>
+      <div className={`mt-1.5 overflow-hidden rounded-full bg-[#f2f1ee] ${compact ? 'h-1.5' : 'h-2'}`} role="img" aria-label={t('Prêt à {pct} %', { pct: value })}>
         <div className={`h-full rounded-full ${readinessTone(value)}`} style={{ width: `${Math.max(value, 3)}%` }} />
       </div>
     </div>
@@ -70,7 +91,7 @@ export function ReadinessRing({ value, size = 92 }: { value: number | null; size
   const pct = value ?? 0;
   const color = value === null ? '#e7e3dc' : pct >= 80 ? '#1a7a4a' : pct >= 60 ? '#5fa47f' : '#c0892f';
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={value === null ? 'Pas encore de mesure' : `Prêt à ${pct} %`} className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={value === null ? t('Pas encore de mesure') : t('Prêt à {pct} %', { pct })} className="shrink-0">
       <circle cx="50" cy="50" r={r} fill="none" stroke="#f2f1ee" strokeWidth="9" />
       {value !== null && (
         <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
@@ -96,7 +117,7 @@ export function GradeBadge({ grade }: { grade: number }) {
 
 export function DifficultyDot({ level }: { level: 'easy' | 'medium' | 'hard' | null }) {
   if (!level) return null;
-  const label = level === 'easy' ? 'Facile' : level === 'medium' ? 'Moyen' : 'Difficile';
+  const label = level === 'easy' ? t('Facile') : level === 'medium' ? t('Moyen') : t('Difficile');
   const dots = level === 'easy' ? 1 : level === 'medium' ? 2 : 3;
   return (
     <span className="inline-flex items-center gap-1 text-[12px] text-ink-faint" title={label}>

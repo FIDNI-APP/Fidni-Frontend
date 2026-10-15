@@ -543,7 +543,8 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
       let at = pos;
       for (const file of files) {
         const res = await fileAPI.upload(file, 'content');
-        const image = { type: 'image', attrs: { src: res.download_url || res.url, alt: file.name } };
+        // « imageResize » : nom du nœud de tiptap-extension-resize-image (« image » n'existe pas : l'envoi échouait).
+        const image = { type: 'imageResize', attrs: { src: res.download_url || res.url, alt: file.name } };
         if (ed.isDestroyed) return;
         if (at !== undefined) {
           ed.chain().insertContentAt(at, image).run();

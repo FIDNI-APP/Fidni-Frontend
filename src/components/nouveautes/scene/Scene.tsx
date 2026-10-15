@@ -99,11 +99,11 @@ export const Curseur: React.FC<{ racine: React.RefObject<HTMLElement | null>; ci
   }, [racine, cible, dx, dy]);
   if (reduit || !pos) return null;
   return (
-    <motion.div className="pointer-events-none absolute left-0 top-0 z-20" aria-hidden
+    <motion.div className="pointer-events-none absolute start-0 top-0 z-20" aria-hidden
       initial={{ x: pos.x, y: pos.y, opacity: 0 }} animate={{ x: pos.x, y: pos.y, opacity: cible ? 1 : 0 }}
       transition={{ x: { duration: 0.8, ease: EASE }, y: { duration: 0.8, ease: EASE }, opacity: { duration: 0.25 } }}>
       {appui && (
-        <motion.span className="absolute -left-4 -top-4 block h-8 w-8 rounded-full bg-brand/30"
+        <motion.span className="absolute -start-4 -top-4 block h-8 w-8 rounded-full bg-brand/30"
           initial={{ scale: 0.2, opacity: 0.9 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} />
       )}
       <motion.svg width="20" height="22" viewBox="0 0 20 22" className="drop-shadow-[0_2px_3px_rgba(20,18,16,.35)]"

@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { trackDiagnosticFeedback } from '@/lib/usage';
+import { t } from '@/i18n';
 
 const key = (sujet: string, cle: string) => `fidni.avis.${sujet}.${cle}.${new Date().toISOString().slice(0, 10)}`;
 
@@ -21,15 +22,15 @@ export function Avis({ sujet, cle, className = '' }: { sujet: string; cle: strin
     setDone(true);
   };
   if (done) {
-    return <p className={`inline-flex items-center gap-1.5 text-[12px] text-ink-faint ${className}`}><Check className="h-3.5 w-3.5" /> Merci, ton avis nous aide à mieux t’orienter.</p>;
+    return <p className={`inline-flex items-center gap-1.5 text-[12px] text-ink-faint ${className}`}><Check className="h-3.5 w-3.5" /> {t('Merci, ton avis nous aide à mieux t’orienter.')}</p>;
   }
   return (
     <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-faint ${className}`}>
-      <span>Ce diagnostic te semble juste ?</span>
+      <span>{t('Ce diagnostic te semble juste ?')}</span>
       <button type="button" onClick={() => answer(true)}
-        className="min-h-8 rounded-full border border-line bg-white px-3 font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink">Oui</button>
+        className="min-h-8 rounded-full border border-line bg-white px-3 font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink">{t('Oui')}</button>
       <button type="button" onClick={() => answer(false)}
-        className="min-h-8 rounded-full border border-line bg-white px-3 font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink">Pas vraiment</button>
+        className="min-h-8 rounded-full border border-line bg-white px-3 font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink">{t('Pas vraiment')}</button>
     </div>
   );
 }

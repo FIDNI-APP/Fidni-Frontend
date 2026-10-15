@@ -6,6 +6,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, ChevronRight, RotateCcw } from 'lucide-react';
 import { trackAction } from '@/lib/usage';
+import { t } from '@/i18n';
 import { actionUrl } from '@/pages/progression/links';
 import { EtatPill } from '@/pages/progression/Objectif';
 import type { ApercuData } from '@/pages/progression/types';
@@ -22,33 +23,33 @@ export const OuJenSuis: React.FC<{
   if (!data) {
     return failed ? (
       <div role="alert" className={`flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 ${className}`}>
-        <p className="flex-1 text-[13.5px] text-ink-soft">Ta progression n’a pas pu se charger.</p>
-        {onRetry && <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>}
+        <p className="flex-1 text-[13.5px] text-ink-soft">{t('Ta progression n’a pas pu se charger.')}</p>
+        {onRetry && <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>}
       </div>
-    ) : <div className={`h-[178px] animate-pulse rounded-2xl border border-line bg-white sm:h-[150px] ${className}`} role="status" aria-label="Chargement" />;
+    ) : <div className={`h-[178px] animate-pulse rounded-2xl border border-line bg-white sm:h-[150px] ${className}`} role="status" aria-label={t('Chargement')} />;
   }
   const a = data.apercu;
   const o = data.objectif;
   const evo = a.evolution;
-  const delta = evo.mesurable && evo.delta !== null ? `${evo.delta > 0 ? '+' : evo.delta < 0 ? '−' : ''}${Math.abs(evo.delta)} pts` : '—';
+  const delta = evo.mesurable && evo.delta !== null ? t('{signe}{n} pts', { signe: evo.delta > 0 ? '+' : evo.delta < 0 ? '−' : '', n: Math.abs(evo.delta) }) : '—';
   const to = o && !sameAsHero ? actionUrl(o.action, o.chapitre) : '/progression';
 
   return (
     <section data-tour="home-stats" aria-labelledby={`oujensuis-${variant}`} className={`overflow-hidden rounded-2xl border border-line bg-white ${className}`}>
       <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5">
-        <h2 id={`oujensuis-${variant}`} className="text-[12px] font-bold uppercase tracking-[.1em] text-gold-strong">Où j’en suis</h2>
+        <h2 id={`oujensuis-${variant}`} className="text-[12px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Où j’en suis')}</h2>
         {variant === 'home' && (
           <Link to="/progression" onClick={() => trackAction('accueil-progression')}
             className="inline-flex min-h-9 items-center gap-0.5 text-[13px] font-semibold text-ink-soft hover:text-ink">
-            Ma progression <ChevronRight className="h-4 w-4" />
+            {t('Ma progression')} <ChevronRight className="h-4 w-4" />
           </Link>
         )}
       </div>
       <dl className="grid grid-cols-3 gap-2 px-4 pb-3 pt-2 sm:px-5">
-        <Stat value={a.maitrise !== null ? `${a.maitrise} %` : '—'} label="maîtrise" scope={a.chapitres.evalues ? `sur ${a.chapitres.evalues} ch.` : 'à évaluer'} />
-        <Stat value={delta} label="en 30 jours" scope={evo.mesurable ? `${evo.chapitres_compares} ch. comparés` : 'pas assez de recul'}
+        <Stat value={a.maitrise !== null ? `${a.maitrise} %` : '—'} label={t('maîtrise')} scope={a.chapitres.evalues ? t('sur {n} ch.', { n: a.chapitres.evalues }) : t('à évaluer')} />
+        <Stat value={delta} label={t('en 30 jours')} scope={evo.mesurable ? t('{n} ch. comparés', { n: evo.chapitres_compares }) : t('pas assez de recul')}
           tone={evo.mesurable && evo.delta ? (evo.delta > 0 ? 'up' : 'down') : undefined} />
-        <Stat value={`${a.chapitres.evalues}/${a.chapitres.total}`} label="chapitres" scope="évalués" />
+        <Stat value={`${a.chapitres.evalues}/${a.chapitres.total}`} label={t('chapitres')} scope={t('évalués')} />
       </dl>
       {o && (
         <div className="flex flex-col gap-3 border-t border-line bg-[#fcfbf9] px-4 py-3.5 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
@@ -57,15 +58,15 @@ export const OuJenSuis: React.FC<{
               {o.chapitre && <EtatPill etat={o.chapitre.etat} enProgres={o.chapitre.en_progres} size="sm" />}
               {o.ds && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-[#8a6318]">
-                  <CalendarClock className="h-3 w-3" aria-hidden /> DS {o.ds.quand}
+                  <CalendarClock className="h-3 w-3" aria-hidden /> {t('DS {quand}', { quand: o.ds.quand })}
                 </span>
               )}
-              <span className="min-w-0">{o.titre}</span>
+              <span className="min-w-0" dir="auto">{o.titre}</span>
             </p>
           </div>
           <Link to={to} onClick={() => trackAction('accueil-objectif')}
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-ink/80 bg-white px-4 text-[14px] font-semibold text-ink transition-colors hover:bg-ink hover:text-white">
-            {sameAsHero ? 'Voir mon objectif' : 'S’y mettre'} <ArrowRight className="h-4 w-4" />
+            {sameAsHero ? t('Voir mon objectif') : t('S’y mettre')} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       )}

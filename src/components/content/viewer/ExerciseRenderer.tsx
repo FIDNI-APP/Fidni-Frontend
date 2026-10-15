@@ -32,6 +32,7 @@ import { trackAction } from '@/lib/usage';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import { useRegisterPrompt } from './pageHelpers';
 import { FoldedSolution } from './FoldedSolution';
+import { t } from '@/i18n';
 
 // =====================
 // TYPES
@@ -91,9 +92,9 @@ const ReportQuestionButton: React.FC<{ onClick: () => void; group: 'q' | 'sq' }>
   <button
     type="button"
     onClick={onClick}
-    title="Signaler une erreur sur cette question"
-    aria-label="Signaler une erreur sur cette question"
-    className={`shrink-0 -mr-1 p-1 rounded-md text-ink-faint hover:text-[#a23b34] hover:bg-[#fbecea] transition-opacity opacity-0 focus-visible:opacity-100 [@media(hover:none)]:opacity-50 [@media(pointer:coarse)]:hidden ${
+    title={t('Signaler une erreur sur cette question')}
+    aria-label={t('Signaler une erreur sur cette question')}
+    className={`shrink-0 -me-1 p-1 rounded-md text-ink-faint hover:text-[#a23b34] hover:bg-[#fbecea] transition-opacity opacity-0 focus-visible:opacity-100 [@media(hover:none)]:opacity-50 [@media(pointer:coarse)]:hidden ${
       group === 'q' ? 'group-hover/q:opacity-100' : 'group-hover/sq:opacity-100'}`}
   >
     <Flag className="w-3.5 h-3.5" />
@@ -141,7 +142,7 @@ const RenderContent: React.FC<{ content?: ContentBlock; className?: string }> = 
   );
 };
 
-const formatPoints = (n: number) => `${String(n).replace('.', ',')} pt${Number(n) > 1 ? 's' : ''}`;
+const formatPoints = (n: number) => (Number(n) > 1 ? t('{n} pts', { n: String(n).replace('.', ',') }) : t('{n} pt', { n: String(n).replace('.', ',') }));
 
 /** « Partie » d'un examen (Exercice 1, Problème…) : titre, barème, et la numérotation repart à 1. */
 const SectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ block, first }) => (
@@ -179,24 +180,24 @@ const QuickAssess: React.FC<{ current?: AssessmentStatus; onAssess: (status: Ass
   // Anciens choix « Échoué » (et « En partie » là où il n'est plus proposé) : affichés comme « À revoir ».
   const shown = current && !options.includes(current) && (current === 'failed' || current === 'partial') ? 'review' : current;
   return (
-    <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval"
+    <div role="group" aria-label={t('As-tu réussi cette question ?')} data-tour="auto-eval"
       className="inline-flex items-center rounded-full bg-[#f5f4f1] p-0.5">
       {options.map((value) => {
         const o = QUICK_OPTION[value];
         if (!o) return null;
         const active = shown === value;
-        const title = o.hint ? `${o.label} (${o.hint})` : o.label;
+        const title = o.hint ? t('{label} ({hint})', { label: t(o.label), hint: t(o.hint) }) : t(o.label);
         return (
           <button
             key={value}
             type="button"
             aria-pressed={active}
-            title={active ? `${title} : cliquer pour effacer` : title}
+            title={active ? t('{titre} : cliquer pour effacer', { titre: title }) : title}
             onClick={(e) => { e.stopPropagation(); onAssess(active && current ? current : value); }}
             className={`inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${COARSE_CHIP} ${
               active ? `${o.on} font-semibold` : 'text-ink-faint hover:text-ink'}`}
           >
-            {o.icon}{o.label}
+            {o.icon}{t(o.label)}
           </button>
         );
       })}
@@ -215,11 +216,11 @@ const AllSuccessChip: React.FC<{ paths: string[]; progress?: ProgressData; onAss
         if (!all) trackAction('tout-reussi');
         onAssessMany(Object.fromEntries(paths.map((p) => [p, all ? null : 'success'])), 'tout');
       }}
-      title={all ? 'Cliquer pour effacer' : 'Marquer toutes les sous-questions comme réussies'}
-      className={`shrink-0 inline-flex items-center gap-1 h-6 px-2 -ml-2 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap ${COARSE_CHIP} [@media(pointer:coarse)]:ml-0 ${
+      title={all ? t('Cliquer pour effacer') : t('Marquer toutes les sous-questions comme réussies')}
+      className={`shrink-0 inline-flex items-center gap-1 h-6 px-2 -ms-2 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap ${COARSE_CHIP} [@media(pointer:coarse)]:ms-0 ${
         all ? 'bg-brand-soft text-brand-hover' : 'text-ink-faint hover:text-brand-hover hover:bg-brand-soft'}`}
     >
-      <CheckCheck className="w-3.5 h-3.5" /> Tout réussi
+      <CheckCheck className="w-3.5 h-3.5" /> {t('Tout réussi')}
     </button>
   );
 };
@@ -243,7 +244,7 @@ const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentSt
   if (noted) {
     return (
       <p role="status" className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-brand-hover">
-        <Check className="w-3.5 h-3.5" /> Noté
+        <Check className="w-3.5 h-3.5" /> {t('Noté')}
       </p>
     );
   }
@@ -256,13 +257,13 @@ const FoundPrompt: React.FC<{ assessed: boolean; onAnswer: (status: AssessmentSt
   };
   const btn = 'inline-flex items-center gap-1 h-7 px-3 rounded-full text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:text-[13px]';
   return (
-    <div role="group" aria-label="Tu avais trouvé ?" data-tour="trouve" className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-      <span className="text-[13px] font-medium text-ink-soft">Tu avais trouvé ?</span>
+    <div role="group" aria-label={t('Tu avais trouvé ?')} data-tour="trouve" className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <span className="text-[13px] font-medium text-ink-soft">{t('Tu avais trouvé ?')}</span>
       <button type="button" onClick={answer('success')} className={`${btn} bg-brand-soft text-brand-hover hover:bg-brand hover:text-white`}>
-        <Check className="w-3.5 h-3.5" /> Oui
+        <Check className="w-3.5 h-3.5" /> {t('Oui')}
       </button>
       <button type="button" onClick={answer('review')} className={`${btn} bg-gold-soft text-gold-strong hover:bg-gold hover:text-white`}>
-        <RotateCcw className="w-3.5 h-3.5" /> Non, à revoir
+        <RotateCcw className="w-3.5 h-3.5" /> {t('Non, à revoir')}
       </button>
     </div>
   );
@@ -291,13 +292,13 @@ const SolutionToggle: React.FC<SolutionToggleProps> = ({ isOpen, onToggle, hasSo
       }}
       className={`inline-flex items-center justify-center gap-1.5 w-7 h-7 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:w-auto [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:px-3 [@media(pointer:coarse)]:text-[13px] [@media(pointer:coarse)]:font-semibold [@media(pointer:coarse)]:bg-brand-soft ${
         isOpen ? 'bg-brand-soft text-brand-hover' : 'text-brand-hover/80 hover:text-brand-hover hover:bg-brand-soft [@media(pointer:coarse)]:text-brand-hover'}`}
-      title={isOpen ? 'Masquer la solution' : 'Voir la solution'}
-      aria-label={isOpen ? 'Masquer la solution' : 'Voir la solution'}
+      title={isOpen ? t('Masquer la solution') : t('Voir la solution')}
+      aria-label={isOpen ? t('Masquer la solution') : t('Voir la solution')}
       aria-expanded={isOpen}
       data-tour="solution"
     >
       {isOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-      <span className="hidden [@media(pointer:coarse)]:inline" aria-hidden>{isOpen ? 'Masquer' : 'Solution'}</span>
+      <span className="hidden [@media(pointer:coarse)]:inline" aria-hidden>{isOpen ? t('Masquer') : t('Solution')}</span>
     </button>
   );
 };
@@ -330,21 +331,21 @@ const InlineSolution: React.FC<{ solution?: ContentBlock; hint?: ContentBlock; i
   if (!isVisible || !solution || !solution.html) return null;
 
   return (
-    <div className="mt-2 pl-3 sm:pl-4 border-l-2 border-brand bg-brand-soft py-2 pr-2 sm:pr-3 rounded-r min-w-0">
+    <div className="mt-2 ps-3 sm:ps-4 border-s-2 border-brand bg-brand-soft py-2 pe-2 sm:pe-3 rounded-e min-w-0">
       {/* Rendu compact (listes, DS blanc) : un seul bouton, l'indication (la méthode) en tête de la solution. */}
       {hint?.html && (
         <div className="mb-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-gold-strong mb-1">Indication</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-gold-strong mb-1">{t('Indication')}</div>
           <RenderContent content={hint} className="prose-sm" />
         </div>
       )}
-      <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover mb-1">Solution</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover mb-1">{t('Solution')}</div>
       <RenderContent content={solution} className="prose-sm" />
       {/* Au toucher, le drapeau de la question est ici (il n'est plus à côté de l'énoncé). */}
       {onReport && (
         <button type="button" onClick={(e) => { e.stopPropagation(); onReport(); }}
-          className="hidden [@media(pointer:coarse)]:inline-flex mt-1.5 -ml-1 h-9 items-center gap-1.5 rounded-lg px-2 text-[12.5px] font-medium text-ink-faint hover:text-[#a23b34]">
-          <Flag className="w-3.5 h-3.5" /> Une erreur dans cette solution ?
+          className="hidden [@media(pointer:coarse)]:inline-flex mt-1.5 -ms-1 h-9 items-center gap-1.5 rounded-lg px-2 text-[12.5px] font-medium text-ink-faint hover:text-[#a23b34]">
+          <Flag className="w-3.5 h-3.5" /> {t('Une erreur dans cette solution ?')}
         </button>
       )}
     </div>
@@ -357,11 +358,11 @@ const QuestionActions: React.FC<{
   assess?: { current?: AssessmentStatus; onAssess: (s: AssessmentStatus) => void; options?: AssessmentStatus[] };
   className?: string;
 }> = ({ points, showSolution, onToggleSolution, hasSolution, assess, className = '' }) => (
-  <div className={`flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-1 -ml-1.5 [@media(pointer:coarse)]:gap-y-1.5 [@media(pointer:coarse)]:ml-0 ${className}`}>
+  <div className={`flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-1 -ms-1.5 [@media(pointer:coarse)]:gap-y-1.5 [@media(pointer:coarse)]:ms-0 ${className}`}>
     <SolutionToggle isOpen={showSolution} onToggle={onToggleSolution} hasSolution={hasSolution} />
     {hasSolution && assess && <span className="w-px h-4 bg-line mx-1" aria-hidden />}
     {assess && <QuickAssess current={assess.current} onAssess={assess.onAssess} options={assess.options} />}
-    {points ? <span className="ml-1 text-xs text-ink-faint fd-nums">{formatPoints(points)}</span> : null}
+    {points ? <span className="ms-1 text-xs text-ink-faint fd-nums">{formatPoints(points)}</span> : null}
   </div>
 );
 
@@ -384,7 +385,7 @@ const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: Assessment
 }) => {
   const shown = shownStatus(current, options);
   return (
-    <div role="group" aria-label="As-tu réussi cette question ?" data-tour="auto-eval"
+    <div role="group" aria-label={t('As-tu réussi cette question ?')} data-tour="auto-eval"
       className={fill ? 'flex w-full gap-1.5 sm:inline-flex sm:w-auto' : 'inline-flex flex-wrap items-center gap-1.5'}>
       {options.map((value) => {
         const o = READ_OPTION[value];
@@ -393,13 +394,13 @@ const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: Assessment
         const Icon = o.icon;
         return (
           <button key={value} type="button" aria-pressed={active}
-            title={active ? `${o.label} : clique pour effacer` : o.label}
+            title={active ? t('{label} : clique pour effacer', { label: t(o.label) }) : t(o.label)}
             onClick={(e) => { e.stopPropagation(); onPick(active && current ? current : value); }}
             className={`inline-flex h-10 items-center gap-1.5 rounded-full border text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-8 sm:px-3 [@media(pointer:coarse)]:h-10 ${
               fill ? 'min-w-0 flex-1 justify-center px-1.5 sm:flex-none' : 'px-3.5 [@media(pointer:coarse)]:px-3.5'} ${
               active ? o.on : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`}>
             <Icon className={`h-3.5 w-3.5 shrink-0 ${fill && options.length > 2 ? 'hidden sm:block' : ''}`} aria-hidden />
-            <span className="whitespace-nowrap">{o.label}</span>
+            <span className="whitespace-nowrap">{t(o.label)}</span>
           </button>
         );
       })}
@@ -414,9 +415,9 @@ const ReadingResult: React.FC<{ current: AssessmentStatus; options: AssessmentSt
   const Icon = o.icon;
   return (
     <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} data-tour="auto-eval"
-      title={`Ton résultat : ${o.label}. Ouvre la solution pour le changer.`}
+      title={t('Ton résultat : {label}. Ouvre la solution pour le changer.', { label: t(o.label) })}
       className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold sm:h-8 sm:px-2.5 [@media(pointer:coarse)]:h-10 ${o.on}`}>
-      <Icon className="h-3.5 w-3.5" aria-hidden /> {o.label}
+      <Icon className="h-3.5 w-3.5" aria-hidden /> {t(o.label)}
     </button>
   );
 };
@@ -428,7 +429,7 @@ const ReadingFound: React.FC<{
   useRegisterPrompt(!current);
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2" data-tour={current ? undefined : 'trouve'}>
-      <span className="text-[13px] font-medium text-ink-soft">Tu avais trouvé ?</span>
+      <span className="text-[13px] font-medium text-ink-soft">{t('Tu avais trouvé ?')}</span>
       <ReadingAssess current={current} options={options} fill onPick={(s) => {
         // Première réponse après avoir ouvert la solution soi-même : c'est « Tu avais trouvé ? ».
         if (openedHere && !current) {
@@ -443,12 +444,12 @@ const ReadingFound: React.FC<{
 /** Bouton « Voir la solution » en toutes lettres (le seul geste principal d'une question). */
 const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
   <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} data-tour="solution"
-    className={`inline-flex h-10 items-center gap-1.5 rounded-full pl-3 pr-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
+    className={`inline-flex h-10 items-center gap-1.5 rounded-full ps-3 pe-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
       isOpen ? 'bg-[#f2f1ee] text-ink-soft hover:bg-line' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
     {isOpen ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
     {isOpen
-      ? <><span className="sm:hidden">Masquer</span><span className="hidden sm:inline">Masquer la solution</span></>
-      : <><span className="sm:hidden">Solution</span><span className="hidden sm:inline">Voir la solution</span></>}
+      ? <><span className="sm:hidden">{t('Masquer')}</span><span className="hidden sm:inline">{t('Masquer la solution')}</span></>
+      : <><span className="sm:hidden">{t('Solution')}</span><span className="hidden sm:inline">{t('Voir la solution')}</span></>}
     <ChevronDown className={`h-3.5 w-3.5 opacity-70 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
   </button>
 );
@@ -462,17 +463,17 @@ const ReadingHintToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = (
     className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[13.5px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
       isOpen ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-gold-line hover:text-gold-strong'}`}>
     <Lightbulb className="h-4 w-4" aria-hidden />
-    Indication
+    {t('Indication')}
   </button>
 );
 
 /** Indication ouverte : encadré léger, filet doré (la solution, elle, a le filet vert). */
 const ReadingHint: React.FC<{ hint: ContentBlock }> = ({ hint }) => (
   <div className="relative mt-3 overflow-hidden rounded-xl border border-gold-line bg-gold-soft/50">
-    <span className="absolute inset-y-0 left-0 w-[3px] bg-gold" aria-hidden />
+    <span className="absolute inset-y-0 start-0 w-[3px] bg-gold" aria-hidden />
     <div className="fd-sol min-w-0 px-4 py-3 sm:px-5">
       <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
-        <Lightbulb className="h-3.5 w-3.5" aria-hidden /> Indication
+        <Lightbulb className="h-3.5 w-3.5" aria-hidden /> {t('Indication')}
       </p>
       <RenderContent content={hint} />
     </div>
@@ -484,9 +485,9 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
   if (!solution?.html) return null;
   return (
     <div className="relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
-      <span className="absolute inset-y-0 left-0 w-[3px] bg-brand" aria-hidden />
+      <span className="absolute inset-y-0 start-0 w-[3px] bg-brand" aria-hidden />
       <div className="fd-sol min-w-0 px-4 pb-3.5 pt-3 sm:px-5 sm:pb-4">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-[.1em] text-brand-hover">Solution</p>
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-[.1em] text-brand-hover">{t('Solution')}</p>
         <RenderContent content={solution} />
       </div>
       {(footer || onReport) && (
@@ -495,8 +496,8 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
           {/* Au toucher, le drapeau de la question est ici (pas à côté de l'énoncé). */}
           {onReport && (
             <button type="button" onClick={(e) => { e.stopPropagation(); onReport(); }}
-              className="ml-auto hidden h-10 items-center gap-1.5 rounded-lg px-1 text-[12.5px] font-medium text-ink-faint hover:text-[#a23b34] [@media(pointer:coarse)]:inline-flex">
-              <Flag className="h-3.5 w-3.5" aria-hidden /> Une erreur ?
+              className="ms-auto hidden h-10 items-center gap-1.5 rounded-lg px-1 text-[12.5px] font-medium text-ink-faint hover:text-[#a23b34] [@media(pointer:coarse)]:inline-flex">
+              <Flag className="h-3.5 w-3.5" aria-hidden /> {t('Une erreur ?')}
             </button>
           )}
         </div>
@@ -528,7 +529,7 @@ const ReadingQuestionBody: React.FC<{
   const current = progress?.[path]?.status;
   const assess = (s: AssessmentStatus, source: AssessSource) => onAssess?.(path, s, source);
   const report = onReport ? () => onReport(path) : undefined;
-  const pts = points ? <span className="ml-auto pl-2 text-[12.5px] text-ink-faint fd-nums">{formatPoints(points)}</span> : null;
+  const pts = points ? <span className="ms-auto ps-2 text-[12.5px] text-ink-faint fd-nums">{formatPoints(points)}</span> : null;
   if (!hasSolution && !hasHint && !(canAssess && !locked) && !pts) return null;
   return (
     <>
@@ -590,7 +591,7 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   const { shown: showSolution, toggle, openedHere } = useSolutionState(path, globalShowSolutions, locked, onSolutionOpen);
 
   return (
-    <div id={questionAnchor(path)} className="group/sq ml-1 sm:ml-5 mt-1 flex items-start gap-1.5 sm:gap-2 scroll-mt-24">
+    <div id={questionAnchor(path)} className="group/sq ms-1 sm:ms-5 mt-1 flex items-start gap-1.5 sm:gap-2 scroll-mt-24">
       <span className="font-mono fd-nums font-semibold text-ink-faint shrink-0">
         {questionIndex}.{sqIndex + 1}.
       </span>
@@ -673,7 +674,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       {/* Points + actions — only when no sub-questions */}
       {!hasSubQuestions && (
         <QuestionActions
-          className="ml-5 sm:ml-6"
+          className="ms-5 sm:ms-6"
           points={block.points}
           showSolution={showSolution}
           onToggleSolution={toggle}
@@ -694,7 +695,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       {hasSubQuestions && (
         <div>
           {canAssess && onAssessMany && subPaths.length > 1 && (
-            <div className="ml-1 sm:ml-5 mt-1.5 mb-1">
+            <div className="ms-1 sm:ms-5 mt-1.5 mb-1">
               <AllSuccessChip paths={subPaths} progress={progress} onAssessMany={onAssessMany} />
             </div>
           )}
@@ -806,7 +807,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   if (!structure || !structure.blocks || structure.blocks.length === 0) {
     return (
       <div className="text-center text-ink-faint py-8">
-        Aucun contenu pour le moment.
+        {t('Aucun contenu pour le moment.')}
       </div>
     );
   }
@@ -817,7 +818,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   const Heading = reading ? ReadingSectionHeading : SectionHeading;
 
   return (
-    <div className={isCompact ? 'content-compact-view bg-white rounded-xl border border-line' : reading ? 'fd-read' : ''}>
+    <div className={isCompact ? 'content-compact-view fd-ltr bg-white rounded-xl border border-line' : reading ? 'fd-read' : 'fd-ltr'}>
       {isCompact && <CompactStyles />}
       <div className={isCompact ? 'p-4' : ''}>
         {(() => {

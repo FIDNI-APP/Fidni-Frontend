@@ -6,6 +6,7 @@ import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api'
 import { hubPath, slugify } from '@/lib/api/hubApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
+import { t, dateLocale } from '@/i18n';
 
 export type ListItem = ExerciseListItem | ExamListItem | LessonListItem;
 
@@ -88,17 +89,15 @@ function flatten(html: string): string {
     .trim();
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
-
 function durationLabel(min: number): string {
   const h = Math.floor(min / 60), m = min % 60;
-  return h ? `${h} h${m ? ` ${String(m).padStart(2, '0')}` : ''}` : `${m} min`;
+  return h ? (m ? t('{h} h {m}', { h, m: String(m).padStart(2, '0') }) : t('{h} h', { h })) : t('{m} min', { m });
 }
 
 /** Durée attendue « ≈ 25 min » (somme des meta.expected_seconds des questions, calculée par le serveur). */
 export const expectedLabel = (item: ListItem): string | null => {
   const min = (item as { expected_minutes?: number | null }).expected_minutes;
-  return min && min > 0 ? `≈ ${durationLabel(min)}` : null;
+  return min && min > 0 ? t('≈ {d}', { d: durationLabel(min) }) : null;
 };
 
 /** Repères chiffrés, tous tirés du contenu lui-même (rien d'estimé au hasard). */
@@ -107,12 +106,12 @@ export function facts(item: ListItem, kind: ListKind): string[] {
   const out: string[] = [];
   if (kind === 'lesson') {
     const n = Array.isArray(s?.sections) ? s.sections.length : 0;
-    if (n) out.push(plural(n, 'partie'));
+    if (n) out.push(n > 1 ? t('{n} parties', { n }) : t('{n} partie', { n }));
     const words = Array.isArray(s?.sections)
       ? flatten(s.sections.map((x) => [x?.content?.html ?? '', ...(x?.subSections ?? []).map((y) => y?.content?.html ?? '')].join(' ')).join(' '))
         .split(' ').filter(Boolean).length
       : 0;
-    if (words) out.push(`${Math.max(1, Math.round(words / 150))} min de lecture`);
+    if (words) out.push(t('{n} min de lecture', { n: Math.max(1, Math.round(words / 150)) }));
     return out;
   }
   if (kind === 'exam') {
@@ -120,15 +119,15 @@ export function facts(item: ListItem, kind: ListKind): string[] {
     // En mode Cartes la structure est tronquée : le nombre de parties vient du serveur quand il le donne.
     const parts = exam.section_count
       ?? (Array.isArray(s?.blocks) ? s.blocks.filter((b) => b?.type === 'section').length : 0);
-    if (parts) out.push(plural(parts, 'exercice'));
-    if (exam.total_points) out.push(`${exam.total_points} points`);
+    if (parts) out.push(parts > 1 ? t('{n} exercices', { n: parts }) : t('{n} exercice', { n: parts }));
+    if (exam.total_points) out.push(t('{n} points', { n: exam.total_points }));
     const duration = exam.duration_minutes ? durationLabel(exam.duration_minutes) : expectedLabel(item);
     if (duration) out.push(duration);
-    if (!parts && exam.item_count) out.push(plural(exam.item_count, 'question'));
+    if (!parts && exam.item_count) out.push(exam.item_count > 1 ? t('{n} questions', { n: exam.item_count }) : t('{n} question', { n: exam.item_count }));
     return out;
   }
   const n = (item as ExerciseListItem).item_count;
-  if (n) out.push(plural(n, 'question'));
+  if (n) out.push(n > 1 ? t('{n} questions', { n }) : t('{n} question', { n }));
   const expected = expectedLabel(item);
   if (expected) out.push(expected);
   return out;
@@ -144,17 +143,17 @@ export function questionProgress(item: ListItem): UserProgress | null {
 export function feltTooltip(felt: Felt): string {
   const parts: string[] = [];
   if (felt.success_pct != null && felt.n > 0) {
-    parts.push(felt.n === 1 ? `${felt.success_pct} % de réussite (1 élève)` : `${felt.success_pct} % des ${felt.n} élèves l’ont réussi`);
+    parts.push(felt.n === 1 ? t('{pct} % de réussite (1 élève)', { pct: felt.success_pct }) : t('{pct} % des {n} élèves l’ont réussi', { pct: felt.success_pct, n: felt.n }));
   }
   const { easier = 0, as_said = 0, harder = 0 } = felt.votes ?? {};
   const total = easier + as_said + harder;
   if (total > 0) {
     // Sans réussite mesurée, les avis sont toute l'explication : on les détaille.
     parts.push(felt.success_pct == null
-      ? `${total} avis : ${harder} « plus dur », ${as_said} « comme annoncé », ${easier} « plus facile »`
-      : `${total} avis`);
+      ? t('{total} avis : {harder} « plus dur », {as_said} « comme annoncé », {easier} « plus facile »', { total, harder, as_said, easier })
+      : t('{total} avis', { total }));
   }
-  return parts.join(' · ') || 'Ressenti des élèves';
+  return parts.join(' · ') || t('Ressenti des élèves');
 }
 
 /** Téléphone (sous 640 px, le « sm » de Tailwind) : suit les changements de taille. */
@@ -204,17 +203,17 @@ export function useBookmark(item: ListItem, kind: ListKind) {
 /** Date de rajout d'un contenu en clair : « aujourd'hui », « hier », « il y a 3 jours », « il y a 2 mois »… */
 export function ilYa(iso?: string | null): string | null {
   if (!iso) return null;
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return null;
-  const jours = Math.floor((Date.now() - t) / 86400000);
-  if (jours <= 0) return 'aujourd’hui';
-  if (jours === 1) return 'hier';
-  if (jours < 14) return `il y a ${jours} jours`;
-  if (jours < 60) return `il y a ${Math.round(jours / 7)} semaines`;
-  if (jours < 365) return `il y a ${Math.round(jours / 30)} mois`;
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return null;
+  const jours = Math.floor((Date.now() - ts) / 86400000);
+  if (jours <= 0) return t('aujourd’hui');
+  if (jours === 1) return t('hier');
+  if (jours < 14) return t('il y a {n} jours', { n: jours });
+  if (jours < 60) return t('il y a {n} semaines', { n: Math.round(jours / 7) });
+  if (jours < 365) return t('il y a {n} mois', { n: Math.round(jours / 30) });
   const ans = Math.floor(jours / 365);
-  return `il y a ${ans} an${ans > 1 ? 's' : ''}`;
+  return ans > 1 ? t('il y a {n} ans', { n: ans }) : t('il y a {n} an', { n: ans });
 }
 
 /** Date complète (infobulle de « il y a … »). */
-export const dateLongue = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+export const dateLongue = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) : '');

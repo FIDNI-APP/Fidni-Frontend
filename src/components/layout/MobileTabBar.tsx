@@ -20,6 +20,7 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { trackAction } from '@/lib/usage';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { TABBAR_VAR, sectionHome, useMobileTabBarVisible } from './nav';
+import { t } from '@/i18n';
 
 // 56 px d'onglets + 1 px de bordure, plus la zone du geste d'accueil (iPhone).
 const TABBAR_HEIGHT = 'calc(57px + env(safe-area-inset-bottom, 0px))';
@@ -89,7 +90,7 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
   const pill = (on: boolean) => `inline-flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? 'bg-brand-soft text-brand-hover' : ''}`;
   return (
     <nav
-      aria-label="Navigation principale"
+      aria-label={t('Navigation principale')}
       data-tour="barre-mobile"
       className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur print:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
@@ -104,7 +105,7 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
               className={`${cell} ${active ? 'font-semibold text-ink' : 'font-medium text-ink-faint hover:text-ink-soft'}`}
             >
               <span aria-hidden className={pill(active)}><Icon className="h-5 w-5" /></span>
-              <span className="max-w-full truncate px-0.5">{label}</span>
+              <span className="max-w-full truncate px-0.5">{t(label)}</span>
             </Link>
           </li>
         ))}
@@ -112,7 +113,7 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
           <button
             type="button"
             onClick={() => { trackAction('barre-mobile'); onOpenMenu(); }}
-            aria-label="Ouvrir le menu"
+            aria-label={t('Ouvrir le menu')}
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
             data-tour="menu-mobile"
@@ -121,9 +122,9 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
             <span aria-hidden className={`relative ${pill(menuOpen)}`}>
               <Menu className="h-5 w-5" />
               {/* « Nouveau » dans le menu (quiz par chapitre, skilliq/annonce.ts) : on l'ouvre pour le voir. */}
-              {quizNouveau && <span className="absolute right-2 top-0.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" />}
+              {quizNouveau && <span className="absolute end-2 top-0.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" />}
             </span>
-            <span>Menu</span>
+            <span>{t('Menu')}</span>
           </button>
         </li>
       </ul>

@@ -22,6 +22,7 @@ import { FileUpload } from '@/components/common/FileUpload';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
 import { TaxonomyPicker, MultiChapterPicker } from './TaxonomyPicker';
 import StatsAdmin from './ConcoursStatsAdmin';
+import { t } from '@/i18n';
 
 export default function ConcoursAdminPage() {
   const navigate = useNavigate();
@@ -32,8 +33,8 @@ export default function ConcoursAdminPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
-          <p style={{ color: '#6b6862' }}>Accès réservé aux administrateurs.</p>
-          <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">Retour</Link>
+          <p style={{ color: '#6b6862' }}>{t('Accès réservé aux administrateurs.')}</p>
+          <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">{t('Retour')}</Link>
         </div>
       </div>
     );
@@ -41,19 +42,19 @@ export default function ConcoursAdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
-      <SEO title="Admin Concours - Fidni" description="" />
+      <SEO title={t('Admin Concours - Fidni')} description="" />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         <button onClick={() => navigate('/concours')} className="fd-btn-ghost mb-3"
                 style={{ padding: '5px 10px', fontSize: 12 }}>
-          <ArrowLeft className="w-3 h-3" /> Concours
+          <ArrowLeft className="w-3 h-3" /> {t('Concours')}
         </button>
 
         <div className="mb-5">
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
-            Administration des concours
+            {t('Administration des concours')}
           </h1>
           <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
-            Gère les annales, les questions, et les astuces.
+            {t('Gère les annales, les questions, et les astuces.')}
           </p>
         </div>
 
@@ -62,17 +63,17 @@ export default function ConcoursAdminPage() {
           <button onClick={() => setTab('exams')}
                   className={`fd-pill ${tab === 'exams' ? 'is-active' : ''}`}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <ListChecks className="w-3 h-3" /> Examens
+            <ListChecks className="w-3 h-3" /> {t('Examens')}
           </button>
           <button onClick={() => setTab('tips')}
                   className={`fd-pill ${tab === 'tips' ? 'is-active' : ''}`}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Lightbulb className="w-3 h-3" /> Astuces
+            <Lightbulb className="w-3 h-3" /> {t('Astuces')}
           </button>
           <button onClick={() => setTab('stats')}
                   className={`fd-pill ${tab === 'stats' ? 'is-active' : ''}`}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <BarChart3 className="w-3 h-3" /> Statistiques
+            <BarChart3 className="w-3 h-3" /> {t('Statistiques')}
           </button>
         </div>
 
@@ -97,7 +98,7 @@ function ExamsAdmin() {
   useEffect(() => { refresh(); }, []);
 
   const onDelete = async (e: ConcoursExamListItem) => {
-    if (!window.confirm(`Supprimer "${e.title}" ? Tous les résultats associés seront détachés.`)) return;
+    if (!window.confirm(t('Supprimer "{titre}" ? Tous les résultats associés seront détachés.', { titre: e.title }))) return;
     await deleteConcoursExam(e.id);
     await refresh();
   };
@@ -106,10 +107,10 @@ function ExamsAdmin() {
     <>
       <div className="flex items-center justify-between mb-3">
         <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-          Examens <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {exams.length}</span>
+          {t('Examens')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {exams.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditingMeta('new')}>
-          <Plus className="w-4 h-4" /> Nouvel examen
+          <Plus className="w-4 h-4" /> {t('Nouvel examen')}
         </button>
       </div>
 
@@ -119,7 +120,7 @@ function ExamsAdmin() {
         </div>
       ) : exams.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 40 }}>
-          <p style={{ color: '#6b6862' }}>Aucun examen.</p>
+          <p style={{ color: '#6b6862' }}>{t('Aucun examen.')}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -139,16 +140,16 @@ function ExamsAdmin() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: '#6b6862' }}>
-                  <span>{e.question_count} questions</span>
+                  <span>{t('{n} questions', { n: e.question_count })}</span>
                   <span>·</span>
-                  <span>{e.duration_minutes} min</span>
+                  <span>{e.duration_minutes} {t('min')}</span>
                 </div>
               </div>
               <button className="fd-btn-ghost" onClick={() => navigate(`/concours/admin/exams/${e.id}/questions`)}>
-                <ListChecks className="w-3.5 h-3.5" /> Questions
+                <ListChecks className="w-3.5 h-3.5" /> {t('Questions')}
               </button>
               <button className="fd-btn-ghost" onClick={() => setEditingMeta(e)}>
-                <Edit className="w-3.5 h-3.5" /> Modifier
+                <Edit className="w-3.5 h-3.5" /> {t('Modifier')}
               </button>
               <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(e)}>
                 <Trash2 className="w-3.5 h-3.5" />
@@ -190,35 +191,35 @@ function ExamMetaModal({ exam, onClose, onSaved }: {
       else      await createConcoursExam(payload);
       onSaved();
     } catch (e: any) {
-      setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data) || 'Erreur');
+      setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data) || t('Erreur'));
     } finally { setBusy(false); }
   };
 
   return (
-    <Modal onClose={onClose} title={exam ? 'Modifier l\'examen' : 'Nouvel examen'}>
-      <Field label="Concours">
+    <Modal onClose={onClose} title={exam ? t("Modifier l'examen") : t('Nouvel examen')}>
+      <Field label={t('Concours')}>
         <select value={concoursType} onChange={(e) => setConcoursType(e.target.value as ConcoursType)} style={inputStyle}>
-          {CONCOURS_TYPES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          {CONCOURS_TYPES.map(c => <option key={c.id} value={c.id}>{t(c.label)}</option>)}
         </select>
       </Field>
-      <Field label="Année">
+      <Field label={t('Année')}>
         <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} style={inputStyle} />
       </Field>
-      <Field label="Titre (optionnel)">
+      <Field label={t('Titre (optionnel)')}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`${CONCOURS_TYPES.find(c => c.id === concoursType)?.label} ${year}`} style={inputStyle} />
       </Field>
-      <Field label="Description">
+      <Field label={t('Description')}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical', minHeight: 70 }} />
       </Field>
-      <Field label="Durée (minutes)">
+      <Field label={t('Durée (minutes)')}>
         <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} style={inputStyle} />
       </Field>
       {err && <p style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
       <div className="flex justify-end gap-2 mt-4">
-        <button className="fd-btn-ghost" onClick={onClose}>Annuler</button>
+        <button className="fd-btn-ghost" onClick={onClose}>{t('Annuler')}</button>
         <button className="fd-btn-primary" onClick={save} disabled={busy}>
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          Enregistrer
+          {t('Enregistrer')}
         </button>
       </div>
     </Modal>
@@ -238,9 +239,9 @@ function TipsAdmin() {
   };
   useEffect(() => { refresh(); }, []);
 
-  const onDelete = async (t: ConcoursTip) => {
-    if (!window.confirm(`Supprimer "${t.title}" ?`)) return;
-    await deleteConcoursTip(t.id);
+  const onDelete = async (tp: ConcoursTip) => {
+    if (!window.confirm(t('Supprimer "{titre}" ?', { titre: tp.title }))) return;
+    await deleteConcoursTip(tp.id);
     await refresh();
   };
 
@@ -248,10 +249,10 @@ function TipsAdmin() {
     <>
       <div className="flex items-center justify-between mb-3">
         <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-          Astuces <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {tips.length}</span>
+          {t('Astuces')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {tips.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditing('new')}>
-          <Plus className="w-4 h-4" /> Nouvelle astuce
+          <Plus className="w-4 h-4" /> {t('Nouvelle astuce')}
         </button>
       </div>
 
@@ -261,12 +262,12 @@ function TipsAdmin() {
         </div>
       ) : tips.length === 0 ? (
         <div className="fd-card text-center" style={{ padding: 40 }}>
-          <p style={{ color: '#6b6862' }}>Aucune astuce.</p>
+          <p style={{ color: '#6b6862' }}>{t('Aucune astuce.')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {tips.map(t => (
-            <div key={t.id} className="fd-card flex items-start gap-3" style={{ padding: '14px 16px' }}>
+          {tips.map(tp => (
+            <div key={tp.id} className="fd-card flex items-start gap-3" style={{ padding: '14px 16px' }}>
               <div
                 className="inline-flex items-center justify-center flex-shrink-0"
                 style={{
@@ -277,17 +278,17 @@ function TipsAdmin() {
                 <Lightbulb className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{t.title}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{tp.title}</div>
                 <div className="flex items-center gap-2 flex-wrap mt-1">
-                  {t.subject_name && <span style={{ fontSize: 10, color: '#000000', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subject_name}</span>}
-                  {t.subfield_name && <span style={{ fontSize: 10, color: '#6b6862', background: '#f7f6f3', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t.subfield_name}</span>}
-                  {(t.video_url || t.video_file) && <span style={{ fontSize: 10, color: '#9a6e1c', background: '#faf3e2', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>VIDÉO</span>}
+                  {tp.subject_name && <span style={{ fontSize: 10, color: '#000000', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{tp.subject_name}</span>}
+                  {tp.subfield_name && <span style={{ fontSize: 10, color: '#6b6862', background: '#f7f6f3', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{tp.subfield_name}</span>}
+                  {(tp.video_url || tp.video_file) && <span style={{ fontSize: 10, color: '#9a6e1c', background: '#faf3e2', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t('VIDÉO')}</span>}
                 </div>
               </div>
-              <button className="fd-btn-ghost" onClick={() => setEditing(t)}>
+              <button className="fd-btn-ghost" onClick={() => setEditing(tp)}>
                 <Edit className="w-3.5 h-3.5" />
               </button>
-              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(t)}>
+              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(tp)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -328,7 +329,7 @@ function TipModal({ tip, onClose, onSaved }: {
   };
 
   const save = async () => {
-    if (!title.trim()) { setErr('Titre requis.'); return; }
+    if (!title.trim()) { setErr(t('Titre requis.')); return; }
     try {
       setBusy(true); setErr('');
       const payload: any = {
@@ -343,25 +344,25 @@ function TipModal({ tip, onClose, onSaved }: {
       else     await createConcoursTip(payload);
       onSaved();
     } catch (e: any) {
-      setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data) || 'Erreur');
+      setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data) || t('Erreur'));
     } finally { setBusy(false); }
   };
 
   return (
-    <Modal onClose={onClose} title={tip ? 'Modifier l\'astuce' : 'Nouvelle astuce'} wide>
-      <Field label="Titre">
+    <Modal onClose={onClose} title={tip ? t("Modifier l'astuce") : t('Nouvelle astuce')} wide>
+      <Field label={t('Titre')}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} required style={inputStyle} />
       </Field>
-      <Field label="Description">
+      <Field label={t('Description')}>
         <CompactTipTapEditor
           content={description}
           onChange={setDescription}
-          placeholder="Décris l'astuce…"
+          placeholder={t("Décris l'astuce…")}
           minHeight="120px"
         />
       </Field>
 
-      <Field label="Concours (un ou plusieurs)">
+      <Field label={t('Concours (un ou plusieurs)')}>
         <div className="flex items-center gap-2 flex-wrap">
           {CONCOURS_TYPES.map(c => (
             <button
@@ -370,7 +371,7 @@ function TipModal({ tip, onClose, onSaved }: {
               onClick={() => toggleConcours(c.id)}
               className={`fd-pill ${concoursTypes.includes(c.id) ? 'is-active' : ''}`}
             >
-              {c.label}
+              {t(c.label)}
             </button>
           ))}
         </div>
@@ -388,7 +389,7 @@ function TipModal({ tip, onClose, onSaved }: {
         layout="grid"
       />
 
-      <Field label="Chapitres (multi-sélection)">
+      <Field label={t('Chapitres (multi-sélection)')}>
         <MultiChapterPicker
           subjectId={subjectId}
           subfieldId={subfieldId}
@@ -397,7 +398,7 @@ function TipModal({ tip, onClose, onSaved }: {
         />
       </Field>
 
-      <Field label="URL vidéo (YouTube, Vimeo, ...)">
+      <Field label={t('URL vidéo (YouTube, Vimeo, ...)')}>
         <input
           value={videoUrl}
           onChange={(e) => setVideoUrl(e.target.value)}
@@ -406,7 +407,7 @@ function TipModal({ tip, onClose, onSaved }: {
         />
       </Field>
 
-      <Field label="OU vidéo uploadée">
+      <Field label={t('OU vidéo uploadée')}>
         {videoFileId ? (
           <div className="flex items-center gap-2" style={{ background: '#faf9f7', border: '1px solid #e7e3dc', padding: 10, borderRadius: 10 }}>
             <Upload className="w-4 h-4" style={{ color: '#000000' }} />
@@ -435,10 +436,10 @@ function TipModal({ tip, onClose, onSaved }: {
       {err && <p style={{ fontSize: 12, color: '#a23b34' }}>{err}</p>}
 
       <div className="flex justify-end gap-2 mt-4">
-        <button className="fd-btn-ghost" onClick={onClose}>Annuler</button>
+        <button className="fd-btn-ghost" onClick={onClose}>{t('Annuler')}</button>
         <button className="fd-btn-primary" onClick={save} disabled={busy}>
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          Enregistrer
+          {t('Enregistrer')}
         </button>
       </div>
     </Modal>

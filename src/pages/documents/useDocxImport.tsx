@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { t } from '@/i18n';
 import { documentsAPI } from '@/lib/api/documentsApi';
 
 const DOCX = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -12,18 +13,18 @@ export function useDocxImport(beforeLeave?: () => Promise<void>) {
   const navigate = useNavigate();
   const onFile = async (f?: File) => {
     if (!f) return;
-    if (!/\.docx$/i.test(f.name)) { toast.error('Choisis un fichier Word .docx (un .doc doit d’abord être enregistré en .docx).'); return; }
-    if (f.size > 15 * 1024 * 1024) { toast.error('Fichier trop lourd (15 Mo au plus).'); return; }
+    if (!/\.docx$/i.test(f.name)) { toast.error(t('Choisis un fichier Word .docx (un .doc doit d’abord être enregistré en .docx).')); return; }
+    if (f.size > 15 * 1024 * 1024) { toast.error(t('Fichier trop lourd (15 Mo au plus).')); return; }
     setBusy(true);
-    const t = toast.loading(`Import de « ${f.name} »…`);
+    const tid = toast.loading(t('Import de « {name} »…', { name: f.name }));
     try {
       await beforeLeave?.();
       const d = await documentsAPI.importDocx(f);
-      toast.success('Document importé', { id: t });
+      toast.success(t('Document importé'), { id: tid });
       navigate(`/documents/${d.id}`, { state: { avertissements: d.avertissements ?? [] } });
     } catch (e) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      toast.error(msg || 'L’import a échoué.', { id: t });
+      toast.error(msg || t('L’import a échoué.'), { id: tid });
     } finally {
       setBusy(false);
     }

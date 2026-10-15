@@ -6,15 +6,16 @@ import { ChevronRight, RotateCcw } from 'lucide-react';
 import type { ToRedoItem } from '@/lib/api/revisionListApi';
 import { Section, SectionLink } from '@/components/space/Page';
 import { REDO_SHOWN } from './home';
+import { t } from '@/i18n';
 
-const ago = (days: number | null) => (days === null ? '' : days <= 0 ? 'aujourd’hui' : days === 1 ? 'hier' : `il y a ${days} j`);
+const ago = (days: number | null) => (days === null ? '' : days <= 0 ? t('aujourd’hui') : days === 1 ? t('hier') : t('il y a {n} j', { n: days }));
 
 export const RedoBlock: React.FC<{ items: ToRedoItem[]; count: number; className?: string }> = ({ items, count, className = '' }) => (
-  <Section id="a-refaire" title="À refaire" count={count} className={className}
-    action={<SectionLink to="/reviser#a-refaire">Tout voir</SectionLink>}>
+  <Section id="a-refaire" title={t('À refaire')} count={count} className={className}
+    action={<SectionLink to="/reviser#a-refaire">{t('Tout voir')}</SectionLink>}>
     <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
       {items.slice(0, REDO_SHOWN).map((x) => {
-        const why = x.failed ? 'Marqué à revoir' : `${x.weak_questions} question${x.weak_questions > 1 ? 's' : ''} à reprendre`;
+        const why = x.failed ? t('Marqué à revoir') : x.weak_questions > 1 ? t('{n} questions à reprendre', { n: x.weak_questions }) : t('{n} question à reprendre', { n: x.weak_questions });
         return (
           <li key={`${x.type}-${x.id}`}>
             <Link to={`/${x.type === 'exam' ? 'exams' : 'exercises'}/${x.id}`}
@@ -29,7 +30,7 @@ export const RedoBlock: React.FC<{ items: ToRedoItem[]; count: number; className
                   {x.chapters[0] && <> · {x.chapters[0]}</>}
                 </span>
               </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5" aria-hidden />
+              <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" aria-hidden />
             </Link>
           </li>
         );

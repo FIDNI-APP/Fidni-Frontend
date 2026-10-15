@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { t } from '@/i18n';
 
 export interface FolderItem {
   key: string | number;
@@ -44,16 +45,16 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
   const p = item.progress;
   const done = p ? Math.min(p.done, item.count) : 0;
   const success = p ? Math.min(p.success, done) : 0;
-  const aussi = item.aussi?.length ? `Aussi : ${item.aussi.join(', ')}` : null;
+  const aussi = item.aussi?.length ? t('Aussi : {list}', { list: item.aussi.join(', ') }) : null;
 
   if (empty) {
     return (
-      <div aria-disabled="true" title={`${item.name} : ${item.emptyLabel ?? 'vide pour l’instant'}`}
+      <div aria-disabled="true" title={t('{name} : {label}', { name: item.name, label: item.emptyLabel ? t(item.emptyLabel) : t('vide pour l’instant') })}
         className="relative h-[150px] cursor-default select-none sm:h-[168px]">
-        <span aria-hidden className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] border border-b-0 border-dashed border-[#d9d4cb] bg-[#f4f2ee]" />
-        <span className="absolute inset-x-0 bottom-0 top-[18px] flex flex-col justify-end rounded-[14px] rounded-tl-none border border-dashed border-[#d9d4cb] bg-[#f7f6f3] p-3.5 sm:p-4">
+        <span aria-hidden className="absolute start-0 top-0 h-6 w-[42%] rounded-t-[10px] border border-b-0 border-dashed border-[#d9d4cb] bg-[#f4f2ee]" />
+        <span className="absolute inset-x-0 bottom-0 top-[18px] flex flex-col justify-end rounded-[14px] rounded-ss-none border border-dashed border-[#d9d4cb] bg-[#f7f6f3] p-3.5 sm:p-4">
           <span className="text-[13.5px] font-semibold leading-snug text-ink-faint line-clamp-3 sm:text-[14.5px]">{item.name}</span>
-          <span className="mt-1 text-[12px] text-[#a19c93]">{item.emptyLabel ?? 'Vide pour l’instant'}</span>
+          <span className="mt-1 text-[12px] text-[#a19c93]">{item.emptyLabel ? t(item.emptyLabel) : t('Vide pour l’instant')}</span>
           {aussi && <span className="mt-0.5 truncate text-[11px] text-[#a19c93]">{aussi}</span>}
         </span>
       </div>
@@ -62,29 +63,33 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
 
   return (
     <Link to={item.to} onClick={item.onOpen}
-      aria-label={`${item.name} : ${item.countLabel}${p && done > 0 ? `, ${success} réussi${success > 1 ? 's' : ''}, ${done - success} à revoir` : ''}`}
+      aria-label={p && done > 0
+        ? (success > 1
+          ? t('{name} : {count}, {s} réussis, {r} à revoir', { name: item.name, count: item.countLabel, s: success, r: done - success })
+          : t('{name} : {count}, {s} réussi, {r} à revoir', { name: item.name, count: item.countLabel, s: success, r: done - success }))
+        : t('{name} : {count}', { name: item.name, count: item.countLabel })}
       className="fd-fixe group relative block h-[150px] rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper sm:h-[168px]">
       {/* Dos du dossier et son onglet */}
-      <span aria-hidden className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#d9a94c]" />
-      <span aria-hidden className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-tl-none bg-[#d9a94c]" />
+      <span aria-hidden className="absolute start-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#d9a94c]" />
+      <span aria-hidden className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-ss-none bg-[#d9a94c]" />
       {/* Feuilles qui dépassent */}
-      <span aria-hidden className="absolute left-[9%] right-[12%] top-[26px] h-[58%] -rotate-[2.5deg] rounded-md bg-white shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform duration-300 ease-out group-hover:-translate-y-3 group-hover:-rotate-[4deg] motion-reduce:transform-none">
-        <span className="absolute left-3 right-6 top-3 h-[3px] rounded bg-[#ece7dd]" />
-        <span className="absolute left-3 right-10 top-[18px] h-[3px] rounded bg-[#ece7dd]" />
+      <span aria-hidden className="absolute start-[9%] end-[12%] top-[26px] h-[58%] -rotate-[2.5deg] rounded-md bg-white shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform duration-300 ease-out group-hover:-translate-y-3 group-hover:-rotate-[4deg] motion-reduce:transform-none">
+        <span className="absolute start-3 end-6 top-3 h-[3px] rounded bg-[#ece7dd]" />
+        <span className="absolute start-3 end-10 top-[18px] h-[3px] rounded bg-[#ece7dd]" />
       </span>
-      <span aria-hidden className="absolute left-[14%] right-[7%] top-[22px] h-[58%] rotate-[1.5deg] rounded-md bg-[#fdfcfa] shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform delay-75 duration-300 ease-out group-hover:-translate-y-2 group-hover:rotate-[3deg] motion-reduce:transform-none" />
+      <span aria-hidden className="absolute start-[14%] end-[7%] top-[22px] h-[58%] rotate-[1.5deg] rounded-md bg-[#fdfcfa] shadow-[0_1px_3px_rgba(60,40,0,.12)] transition-transform delay-75 duration-300 ease-out group-hover:-translate-y-2 group-hover:rotate-[3deg] motion-reduce:transform-none" />
       {/* Face avant : nom, nombre de contenus, avancement */}
       <span className="absolute inset-x-0 bottom-0 flex min-h-[60%] origin-bottom flex-col justify-end rounded-[14px] p-3.5 shadow-[0_10px_22px_-12px_rgba(120,80,10,.55)] transition-transform duration-300 ease-out [transform:perspective(800px)_rotateX(0deg)] group-hover:[transform:perspective(800px)_rotateX(-16deg)] motion-reduce:transform-none sm:p-4"
         style={{ background: 'linear-gradient(180deg, #f7dc9e 0%, #eec574 100%)' }}>
         <span aria-hidden className="absolute inset-x-0 top-0 h-px rounded-t-[14px] bg-white/60" />
         {item.badge && (
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-white/85 px-2 py-0.5 text-[10.5px] font-semibold text-[#7a5a14] shadow-sm">{item.badge}</span>
+          <span className="absolute end-2.5 top-2.5 rounded-full bg-white/85 px-2 py-0.5 text-[10.5px] font-semibold text-[#7a5a14] shadow-sm">{item.badge}</span>
         )}
         <span className="shrink-0 text-[14px] font-semibold leading-snug text-[#3a2a07] line-clamp-2 sm:text-[15px]">{item.name}</span>
         <span className="fd-nums mt-0.5 truncate text-[12px] text-[#6f5419]">
           {item.countLabel}
           {item.sub && <> · {item.sub}</>}
-          {p && done > 0 && <> · {done} {(item.doneWord ?? ['fait', 'faits'])[done > 1 ? 1 : 0]}</>}
+          {p && done > 0 && <> · {done} {t((item.doneWord ?? ['fait', 'faits'])[done > 1 ? 1 : 0])}</>}
         </span>
         {aussi && <span className="truncate text-[11px] text-[#7a5f22]">{aussi}</span>}
         {/* Avancement : réussis (vert) et à revoir (brun doré) */}
@@ -127,11 +132,11 @@ export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string }> = ({
 
 /** Dossiers fantômes pendant le chargement. */
 export const FolderSkeleton: React.FC<{ n?: number }> = ({ n = 8 }) => (
-  <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4" role="status" aria-label="Chargement des dossiers">
+  <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4" role="status" aria-label={t('Chargement des dossiers')}>
     {Array.from({ length: n }, (_, i) => (
       <li key={i} className="relative h-[150px] animate-pulse sm:h-[168px]">
-        <span className="absolute left-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#efece6]" />
-        <span className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-tl-none bg-[#efece6]" />
+        <span className="absolute start-0 top-0 h-6 w-[42%] rounded-t-[10px] bg-[#efece6]" />
+        <span className="absolute inset-x-0 bottom-0 top-[18px] rounded-[14px] rounded-ss-none bg-[#efece6]" />
         <span className="absolute inset-x-0 bottom-0 top-[40%] rounded-[14px] bg-[#f4f2ee]" />
       </li>
     ))}

@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IdentityFields } from '@/components/profile/IdentityForm';
 import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
 import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles } from 'lucide-react';
+import { t } from '@/i18n';
 
 interface Option { id: string; name: string }
 
@@ -182,7 +183,7 @@ const OnboardingProfile: React.FC = () => {
       navigate('/');
     } catch (err) {
       const data = (err as { response?: { data?: { error?: string } } }).response?.data;
-      setError(data?.error || 'Une erreur est survenue. Réessaie.');
+      setError(data?.error || t('Une erreur est survenue. Réessaie.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -193,24 +194,24 @@ const OnboardingProfile: React.FC = () => {
   const renderClassStep = () => (
     <div className="space-y-6">
       <StepHeading
-        title={isTeacher ? 'Tes classes' : 'Ta classe'}
+        title={isTeacher ? t('Tes classes') : t('Ta classe')}
         subtitle={isTeacher
-          ? 'Les niveaux où tu enseignes (un ou plusieurs).'
-          : 'On te montre les exercices, leçons et devoirs de ton programme.'}
+          ? t('Les niveaux où tu enseignes (un ou plusieurs).')
+          : t('On te montre les exercices, leçons et devoirs de ton programme.')}
       />
 
       {classLevels === null ? (
         <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-brand" /></div>
       ) : levelsError ? (
         <div className="text-center py-6">
-          <p className="text-[#a23b34] text-sm mb-4">Impossible de charger les classes.</p>
+          <p className="text-[#a23b34] text-sm mb-4">{t('Impossible de charger les classes.')}</p>
           <button type="button" onClick={() => { setClassLevels(null); setLevelsNonce((n) => n + 1); }}
             className="inline-flex items-center gap-2 min-h-[40px] px-4 rounded-lg border border-line text-ink-soft hover:border-ink text-sm font-medium transition-colors">
-            Réessayer
+            {t('Réessayer')}
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" role={isTeacher ? 'group' : 'radiogroup'} aria-label={isTeacher ? 'Tes classes' : 'Ta classe'}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" role={isTeacher ? 'group' : 'radiogroup'} aria-label={isTeacher ? t('Tes classes') : t('Ta classe')}>
           {classLevels.map((level) => {
             const selected = isTeacher ? teachingLevels.includes(level.id) : classLevel === level.id;
             return (
@@ -220,7 +221,7 @@ const OnboardingProfile: React.FC = () => {
                 role={isTeacher ? 'checkbox' : 'radio'}
                 aria-checked={selected}
                 onClick={() => (isTeacher ? toggleTeachingLevel(level.id) : pickLevel(level.id))}
-                className={`relative flex items-center justify-between gap-3 min-h-[52px] px-4 rounded-xl border font-semibold text-[15px] text-left transition-colors ${
+                className={`relative flex items-center justify-between gap-3 min-h-[52px] px-4 rounded-xl border font-semibold text-[15px] text-start transition-colors ${
                   selected ? 'border-brand bg-brand-soft text-ink' : 'border-line hover:border-ink text-ink-soft bg-white'
                 }`}
               >
@@ -237,7 +238,7 @@ const OnboardingProfile: React.FC = () => {
       {/* Plusieurs matières pour ce niveau : on demande lesquelles (une seule : cochée d'office, rien à montrer). */}
       {subjects.length > 1 && (
         <div>
-          <p className="text-sm font-medium text-ink-soft mb-2.5">Tes matières</p>
+          <p className="text-sm font-medium text-ink-soft mb-2.5">{t('Tes matières')}</p>
           <div className="flex flex-wrap gap-2">
             {subjects.map((s) => {
               const on = chosenSubjects.includes(s.id);
@@ -256,14 +257,14 @@ const OnboardingProfile: React.FC = () => {
 
       <p className="text-center text-[13px] text-ink-faint">
         {isTeacher ? (
-          <>Tu es élève ?{' '}
+          <>{t('Tu es élève ?')}{' '}
             <button type="button" onClick={() => switchRole('student')} className="font-semibold text-brand-hover underline underline-offset-2 min-h-[32px]">
-              Choisis ta classe
+              {t('Choisis ta classe')}
             </button>
           </>
         ) : (
           <button type="button" onClick={() => switchRole('teacher')} className="font-semibold text-brand-hover underline underline-offset-2 min-h-[32px]">
-            Je suis prof
+            {t('Je suis prof')}
           </button>
         )}
       </p>
@@ -272,12 +273,12 @@ const OnboardingProfile: React.FC = () => {
 
   const renderIdentityStep = () => (
     <div className="space-y-6">
-      <StepHeading title="Qui es-tu ?"
-        subtitle="Ton nom et ton établissement apparaissent sur tes feuilles d'exercices. Ils restent privés." />
+      <StepHeading title={t('Qui es-tu ?')}
+        subtitle={t("Ton nom et ton établissement apparaissent sur tes feuilles d'exercices. Ils restent privés.")} />
       <IdentityFields value={identity} onChange={(v) => { identityTouched.current = true; setIdentity(v); setError(null); }} isTeacher={isTeacher} />
       {isTeacher && (
         <p className="text-[13px] text-ink-faint leading-relaxed">
-          Ensuite, tu auras un <strong className="text-ink">code prof</strong> à donner à tes élèves pour qu’ils te rejoignent.
+          {t('Ensuite, tu auras un')} <strong className="text-ink">{t('code prof')}</strong> {t('à donner à tes élèves pour qu’ils te rejoignent.')}
         </p>
       )}
     </div>
@@ -302,7 +303,7 @@ const OnboardingProfile: React.FC = () => {
             className="mt-5 p-4 bg-[#fdeceb] border border-[#f3c9c5] rounded-xl flex items-center gap-3">
             <span className="w-7 h-7 bg-[#f8d7d3] rounded-full flex items-center justify-center flex-shrink-0 text-[#a23b34] text-sm font-semibold">!</span>
             <p className="text-[#a23b34] text-sm flex-1">{error}</p>
-            <button type="button" onClick={() => setError(null)} aria-label="Fermer" className="w-8 h-8 text-[#c2564f] hover:text-[#a23b34] text-lg leading-none">×</button>
+            <button type="button" onClick={() => setError(null)} aria-label={t('Fermer')} className="w-8 h-8 text-[#c2564f] hover:text-[#a23b34] text-lg leading-none">×</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -325,28 +326,28 @@ const OnboardingProfile: React.FC = () => {
             <button type="button" onClick={handleBack}
               className="inline-flex items-center gap-2 min-h-[42px] px-4 rounded-lg font-medium text-sm text-ink-soft hover:bg-[#f2f1ee] transition-colors">
               <ArrowLeft className="w-4 h-4" />
-              Retour
+              {t('Retour')}
             </button>
           ) : <span />}
 
           {!isLastStep ? (
             <button type="button" onClick={handleNext} disabled={!canProceed()}
               className={`inline-flex items-center gap-2 min-h-[42px] px-6 rounded-lg font-semibold text-sm transition-colors ${canProceed() ? 'bg-brand text-white hover:bg-brand-hover' : 'bg-[#f2f1ee] text-ink-faint cursor-not-allowed'}`}>
-              Continuer
+              {t('Continuer')}
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             // Bouton actif même incomplet : il explique ce qui manque au lieu de rester grisé.
             <button type="button" onClick={handleSubmit} disabled={isSubmitting}
               className="inline-flex items-center gap-2 min-h-[42px] px-6 bg-brand text-white rounded-lg font-semibold text-sm hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" />Un instant…</> : <><Sparkles className="w-4 h-4" />C’est parti</>}
+              {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" />{t('Un instant…')}</> : <><Sparkles className="w-4 h-4" />{t('C’est parti')}</>}
             </button>
           )}
         </div>
       </div>
 
       <p className="text-center text-xs text-ink-faint mt-5 max-w-sm mx-auto leading-relaxed">
-        Tu pourras tout modifier plus tard depuis ton profil (photo, objectifs de notes…).
+        {t('Tu pourras tout modifier plus tard depuis ton profil (photo, objectifs de notes…).')}
       </p>
     </div>
   );
@@ -358,8 +359,8 @@ const OnboardingProfile: React.FC = () => {
 const Stepper: React.FC<{ current: number }> = ({ current }) => (
   <div>
     <div className="flex items-center justify-between mb-2">
-      <span className="text-sm font-medium text-ink fd-nums">Étape {current + 1} sur {STEPS.length}</span>
-      <span className="text-sm text-ink-faint">{STEPS[current].title}</span>
+      <span className="text-sm font-medium text-ink fd-nums">{t('Étape {i} sur {n}', { i: current + 1, n: STEPS.length })}</span>
+      <span className="text-sm text-ink-faint">{t(STEPS[current].title)}</span>
     </div>
     <div className="h-1.5 bg-[#f2f1ee] rounded-full overflow-hidden" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={current + 1}>
       <motion.div className="h-full bg-brand rounded-full"

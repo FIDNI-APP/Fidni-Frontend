@@ -23,6 +23,7 @@ import { SplitBar } from '@/components/space/Page';
 import { getRecommendations, sendRessenti, type FeltVote, type RecommendedItem } from '@/lib/api/contentItemApi';
 import { useFoundPromptOpen } from './pageHelpers';
 import { trackAction } from '@/lib/usage';
+import { t } from '@/i18n';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 type Status = 'success' | 'review' | null;
@@ -87,8 +88,8 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
 
   const total = progress?.total ?? 0;
   const assessed = progress?.assessed ?? 0;
-  const title = success ? (isLesson ? 'Leçon lue' : 'Réussi, c’est noté')
-    : review ? 'À revoir dans 2-3 jours' : QUESTION[contentType];
+  const title = success ? (isLesson ? t('Leçon lue') : t('Réussi, c’est noté'))
+    : review ? t('À revoir dans 2-3 jours') : t(QUESTION[contentType]);
   const tone = success ? 'text-brand-hover' : review ? 'text-gold-strong' : 'text-ink';
   const statusIcon = success ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
     : review ? <RotateCcw className="h-4 w-4 shrink-0" aria-hidden /> : null;
@@ -99,7 +100,7 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
   // Sans statusChosen : un statut différent de celui de l'arrivée.
   const [initialStatus] = useState(completionStatus);
   const chosen = statusChosen ?? completionStatus !== initialStatus;
-  const declared = content.difficulty ? DECLARED[content.difficulty] : null;
+  const declared = content.difficulty && DECLARED[content.difficulty] ? t(DECLARED[content.difficulty]) : null;
   const [given, setGiven] = useState<FeltVote | null>(() => readGiven(content.id));
   // L'avis a pu être donné depuis l'autre bloc (haut / bas) : relu quand les suites arrivent ici.
   useEffect(() => { if (followUps) setGiven((g) => g ?? readGiven(content.id)); }, [followUps, content.id]);
@@ -150,16 +151,16 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
   const buttons = (
     <div className={`grid gap-2 sm:flex sm:shrink-0 ${isLesson ? 'grid-cols-1' : 'grid-cols-2'} ${top && !isLesson ? 'min-w-0 flex-1 sm:flex-none' : ''}`}>
       <button type="button" onClick={() => toggle('success')} aria-pressed={success}
-        title={success ? 'Clique pour annuler' : undefined}
+        title={success ? t('Clique pour annuler') : undefined}
         className={`${btn} ${success ? 'border-brand bg-brand text-white hover:bg-brand-hover' : 'border-brand-line bg-white text-brand-hover hover:bg-brand-soft'}`}>
         {success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <CheckCheck className="h-4 w-4 shrink-0" />}
-        {isLesson ? (success ? 'Lue' : 'Marquer comme lue') : 'Tout réussi'}
+        {isLesson ? (success ? t('Lue') : t('Marquer comme lue')) : t('Tout réussi')}
       </button>
       {!isLesson && (
         <button type="button" onClick={() => toggle('review')} aria-pressed={review}
-          title={review ? 'Clique pour annuler' : undefined}
+          title={review ? t('Clique pour annuler') : undefined}
           className={`${btn} ${review ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
-          <RotateCcw className="h-4 w-4 shrink-0" /> À revoir
+          <RotateCcw className="h-4 w-4 shrink-0" /> {t('À revoir')}
         </button>
       )}
     </div>
@@ -169,31 +170,31 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
   const after = (
     <>
       {askFelt && (
-        <div role="group" aria-label="La difficulté annoncée était-elle juste ?" className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
-          <span className="mr-1 text-[13.5px] font-medium text-ink-soft">C’était :</span>
-          <button type="button" className={feltChip} onClick={() => giveFelt('easier')}>Plus facile</button>
-          <button type="button" className={feltChip} onClick={() => giveFelt('as_said')}>Comme annoncé ({declared})</button>
-          <button type="button" className={feltChip} onClick={() => giveFelt('harder')}>Plus dur</button>
+        <div role="group" aria-label={t('La difficulté annoncée était-elle juste ?')} className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+          <span className="me-1 text-[13.5px] font-medium text-ink-soft">{t('C’était :')}</span>
+          <button type="button" className={feltChip} onClick={() => giveFelt('easier')}>{t('Plus facile')}</button>
+          <button type="button" className={feltChip} onClick={() => giveFelt('as_said')}>{t('Comme annoncé ({niveau})', { niveau: declared })}</button>
+          <button type="button" className={feltChip} onClick={() => giveFelt('harder')}>{t('Plus dur')}</button>
         </div>
       )}
       {followUps && thanks && given && (
         <p role="status" className="mt-3 flex items-center gap-1.5 border-t border-line pt-3 text-[13px] font-medium text-brand-hover">
-          <Check className="h-3.5 w-3.5" /> Merci, ton avis aide à mieux annoncer la difficulté.
+          <Check className="h-3.5 w-3.5" /> {t('Merci, ton avis aide à mieux annoncer la difficulté.')}
         </p>
       )}
       {next.length > 0 && (
         <div className="mt-3 flex flex-col gap-0.5 border-t border-line pt-2 sm:flex-row sm:flex-wrap sm:gap-x-6">
           {next.map((item) => {
-            const label = item.type === 'lesson' ? 'Revoir le cours' : item.type === 'exam' ? 'Sujet suivant' : 'Exercice suivant';
+            const label = item.type === 'lesson' ? t('Revoir le cours') : item.type === 'exam' ? t('Sujet suivant') : t('Exercice suivant');
             return (
               <Link key={item.id} to={`${PATH[item.type] ?? '/exercises'}/${item.id}`}
                 state={{ from: location.pathname + location.search }}
                 onClick={() => trackAction('suivant-apres-resultat')}
                 className="group inline-flex min-h-10 min-w-0 items-center gap-1.5 text-[14px] font-semibold text-brand-hover hover:text-brand">
                 {item.type === 'lesson' ? <BookOpen className="h-4 w-4 shrink-0" /> : null}
-                <span className="shrink-0">{label} :</span>
+                <span className="shrink-0">{t('{label} :', { label })}</span>
                 <span className="min-w-0 truncate font-medium text-ink-soft group-hover:text-ink">{item.title}</span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" aria-hidden />
               </Link>
             );
           })}
@@ -208,7 +209,7 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
       <section id="ou-en-es-tu" className="scroll-mt-24 rounded-2xl border border-line bg-white px-3 py-2.5 sm:px-5 sm:py-3.5" data-tour="detail-terminer" aria-labelledby="ou-titre">
         <div className="flex items-center gap-2.5 sm:justify-between sm:gap-6">
           <div className="hidden min-w-0 flex-1 sm:block">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">Où en es-tu ?</p>
+            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Où en es-tu ?')}</p>
             <h2 id="ou-titre" className={`mt-0.5 flex items-center gap-1.5 text-[15px] font-semibold leading-snug ${tone}`}>
               {statusIcon}{title}
             </h2>
@@ -216,9 +217,9 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
               <div className="mt-2 flex max-w-md items-center gap-3" data-tour="detail-progression">
                 <SplitBar success={successCount} review={reviewCount} total={total} className="w-28 shrink-0 lg:w-36" />
                 <p className="min-w-0 truncate text-[12.5px] text-ink-faint fd-nums">
-                  {assessed === 0 ? `${total} questions à évaluer` : `${assessed} / ${total} évaluée${assessed > 1 ? 's' : ''}`}
-                  {successCount > 0 && <> · <span className="text-brand-hover">{successCount} réussie{successCount > 1 ? 's' : ''}</span></>}
-                  {reviewCount > 0 && <> · <span className="text-gold-strong">{reviewCount} à revoir</span></>}
+                  {assessed === 0 ? t('{total} questions à évaluer', { total }) : assessed > 1 ? t('{assessed} / {total} évaluées', { assessed, total }) : t('{assessed} / {total} évaluée', { assessed, total })}
+                  {successCount > 0 && <> · <span className="text-brand-hover">{successCount > 1 ? t('{n} réussies', { n: successCount }) : t('{n} réussie', { n: successCount })}</span></>}
+                  {reviewCount > 0 && <> · <span className="text-gold-strong">{t('{n} à revoir', { n: reviewCount })}</span></>}
                 </p>
               </div>
             )}
@@ -228,9 +229,9 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
             <p className={`flex min-w-0 flex-1 items-center gap-1.5 text-[13.5px] font-semibold leading-snug sm:hidden ${tone}`}>{statusIcon}{title}</p>
           )}
           {!isLesson && total >= 2 && (
-            <p className="shrink-0 text-center leading-tight sm:hidden max-[379px]:hidden" title="Questions évaluées">
+            <p className="shrink-0 text-center leading-tight sm:hidden max-[379px]:hidden" title={t('Questions évaluées')}>
               <span className="block text-[13px] font-semibold text-ink-soft fd-nums">{assessed}/{total}</span>
-              <span className="block text-[10.5px] text-ink-faint">évaluées</span>
+              <span className="block text-[10.5px] text-ink-faint">{t('évaluées')}</span>
             </p>
           )}
           {buttons}
@@ -256,9 +257,9 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
       {onCollect && (
         <div className="mt-3 border-t border-line pt-1.5">
           <button type="button" onClick={onCollect} data-tour={isLesson ? 'detail-cahier' : 'detail-liste'}
-            className="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink">
+            className="-ms-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink">
             {isLesson ? <BookMarked className="h-4 w-4 text-ink-faint" aria-hidden /> : <ListPlus className="h-4 w-4 text-ink-faint" aria-hidden />}
-            {isLesson ? 'Ajouter à mon cahier de cours' : 'Ranger dans une liste de révision'}
+            {isLesson ? t('Ajouter à mon cahier de cours') : t('Ranger dans une liste de révision')}
           </button>
         </div>
       )}

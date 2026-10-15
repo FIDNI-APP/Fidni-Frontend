@@ -11,6 +11,7 @@ import { trackAction } from '@/lib/usage';
 import { actionUrl } from './links';
 import { ETAT, ProgresIcon } from './etat';
 import { Avis } from './Avis';
+import { t } from '@/i18n';
 import type { ActionKind, Objectif as ObjectifData } from './types';
 
 const LABEL: Record<ActionKind, string> = {
@@ -23,8 +24,8 @@ export function EtatPill({ etat, enProgres = false, size = 'md' }: { etat: keyof
   const Icon = e.icon;
   return (
     <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border font-semibold ${e.pill} ${size === 'sm' ? 'px-2 py-0.5 text-[11.5px]' : 'px-2.5 py-1 text-[12.5px]'}`}>
-      <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} aria-hidden /> {e.label}
-      {enProgres && <span className="ml-0.5 inline-flex items-center gap-0.5 font-medium"><ProgresIcon className="h-3 w-3" aria-hidden /> en progrès</span>}
+      <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} aria-hidden /> {t(e.label)}
+      {enProgres && <span className="ms-0.5 inline-flex items-center gap-0.5 font-medium"><ProgresIcon className="h-3 w-3" aria-hidden /> {t('en progrès')}</span>}
     </span>
   );
 }
@@ -45,7 +46,7 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
       const r = await quickAddManyToRevision(exercices.map((x) => x.id), ch ? `Objectif : ${ch.name}` : 'Mon objectif');
       if (r.list_id) navigate(`/profile/revision-lists/${r.list_id}`);
     } catch {
-      toast.error('La fiche n’a pas pu être créée.');
+      toast.error(t('La fiche n’a pas pu être créée.'));
     } finally {
       setSaving(false);
     }
@@ -56,21 +57,21 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
       className={`flex flex-col self-start rounded-2xl border border-line bg-white p-5 shadow-[0_1px_0_rgba(20,18,16,.03)] sm:p-6 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
         <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
-          <Compass className="h-3.5 w-3.5" aria-hidden /> Ton objectif
+          <Compass className="h-3.5 w-3.5" aria-hidden /> {t('Ton objectif')}
         </p>
         {data.ds && (
           <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-[#8a6318]">
-            <CalendarClock className="h-3 w-3" aria-hidden /> DS {data.ds.quand}
+            <CalendarClock className="h-3 w-3" aria-hidden /> {t('DS {quand}', { quand: data.ds.quand })}
           </span>
         )}
       </div>
-      <h2 id="objectif-titre" className="fd-display mt-2.5 text-[24px] leading-tight text-ink sm:text-[27px]">{data.titre}</h2>
-      <p className="mt-1 text-[14px] text-ink-faint">{data.phrase}</p>
+      <h2 id="objectif-titre" className="fd-display mt-2.5 text-[24px] leading-tight text-ink sm:text-[27px]"><bdi>{data.titre}</bdi></h2>
+      <p className="mt-1 text-[14px] text-ink-faint"><bdi>{data.phrase}</bdi></p>
 
       <div className="mt-4">
         <Link to={exercices.length && data.action.kind === 'entrainer' ? exercices[0].url : primary}
           onClick={() => trackAction('prog-objectif')} className="fd-btn-primary min-h-11 px-5">
-          {LABEL[data.action.kind]} <ArrowRight className="h-4 w-4" />
+          {t(LABEL[data.action.kind])} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -79,7 +80,7 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
           {/* Téléphone et tablette : la liste se déplie (l'objectif et « Ma progression » restent à l'écran). */}
           <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more}
             className="flex min-h-10 w-full items-center justify-between rounded-xl border border-line px-3.5 text-[13.5px] font-semibold text-ink-soft lg:hidden">
-            {`${exercices.length} exercice${exercices.length > 1 ? 's' : ''}`}
+            {exercices.length > 1 ? t('{n} exercices', { n: exercices.length }) : t('{n} exercice', { n: exercices.length })}
             <ChevronDown className={`h-4 w-4 transition-transform ${more ? 'rotate-180' : ''}`} />
           </button>
           <div className={`${more ? 'mt-2 block' : 'hidden'} lg:block`}>
@@ -91,7 +92,7 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
                     <span className="fd-nums w-4 shrink-0 text-[12px] text-ink-faint">{i + 1}</span>
                     <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink">{x.title}</span>
                     <span className="hidden shrink-0 sm:inline-flex"><DifficultyChip difficulty={x.difficulty} plain /></span>
-                    <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-ink-faint"><Clock className="h-3 w-3" aria-hidden />{x.minutes} min</span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-ink-faint"><Clock className="h-3 w-3" aria-hidden />{t('{m} min', { m: x.minutes })}</span>
                     <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
                   </Link>
                 </li>
@@ -100,7 +101,7 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
             {exercices.length > 1 && (
               <button type="button" onClick={fiche} disabled={saving}
                 className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-ink-soft hover:bg-paper hover:text-ink disabled:opacity-60">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />} En faire une fiche
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />} {t('En faire une fiche')}
               </button>
             )}
           </div>
@@ -110,7 +111,7 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
       <div className="pt-3">
         <button type="button" onClick={() => setWhy((v) => !v)} aria-expanded={why}
           className="inline-flex min-h-9 items-center gap-1 text-[13px] font-medium text-ink-faint hover:text-ink">
-          Pourquoi ? <ChevronDown className={`h-4 w-4 transition-transform ${why ? 'rotate-180' : ''}`} />
+          {t('Pourquoi ?')} <ChevronDown className={`h-4 w-4 transition-transform ${why ? 'rotate-180' : ''}`} />
         </button>
         {why && (
           <ul className="mt-1.5 space-y-1.5 rounded-xl bg-paper px-4 py-3 text-[13.5px] leading-relaxed text-ink-soft">

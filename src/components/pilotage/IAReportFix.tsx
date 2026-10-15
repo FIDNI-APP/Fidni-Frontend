@@ -79,7 +79,7 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
         <Sparkles className="h-4 w-4 text-ink-soft" />
         <span className="text-[13px] font-semibold text-ink">Correction proposée par l’IA</span>
         {job && <StatusPill status={job.status} />}
-        <button type="button" onClick={() => onDone()} aria-label="Fermer" className="ml-auto text-ink-faint hover:text-ink"><X className="h-4 w-4" /></button>
+        <button type="button" onClick={() => onDone()} aria-label="Fermer" className="ms-auto text-ink-faint hover:text-ink"><X className="h-4 w-4" /></button>
       </div>
 
       {error && <p role="alert" className="mb-2 text-[12.5px] text-[#9c3b2e] whitespace-pre-line">{error}</p>}

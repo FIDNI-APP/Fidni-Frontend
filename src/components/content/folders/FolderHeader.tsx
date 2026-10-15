@@ -9,6 +9,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, FolderOpen } from 'lucide-react';
+import { t } from '@/i18n';
 
 export interface Crumb { label: string; to: string }
 
@@ -46,7 +47,7 @@ export const FolderHeader: React.FC<{
   return (
     <header className="mb-5 sm:mb-7">
       {crumbs && crumbs.length > 0 && (
-        <nav aria-label="Fil d’Ariane" className="-ml-1 mb-1.5 flex flex-wrap items-center text-[13px] text-ink-faint">
+        <nav aria-label={t('Fil d’Ariane')} className="-ms-1 mb-1.5 flex flex-wrap items-center text-[13px] text-ink-faint">
           {crumbs.map((c, i) => (
             <React.Fragment key={`${c.to}-${i}`}>
               {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#b3aea5]" aria-hidden />}
@@ -68,7 +69,7 @@ export const FolderHeader: React.FC<{
                 {parts.smallFirst && <span className={`${small} first-letter:uppercase`}>{parts.small}<span className="sr-only">{parts.sep}</span></span>}
                 <span className={big} style={bigStyle}>
                   {parts.big}
-                  {count ? <span className="fd-nums ml-2.5 font-sans text-[15px] font-medium tracking-normal text-ink-faint">{count}</span> : null}
+                  {count ? <span className="fd-nums ms-2.5 font-sans text-[15px] font-medium tracking-normal text-ink-faint">{count}</span> : null}
                 </span>
                 {!parts.smallFirst && <span className={`${small} first-letter:uppercase`}><span className="sr-only">{parts.sep}</span>{parts.small}</span>}
               </span>

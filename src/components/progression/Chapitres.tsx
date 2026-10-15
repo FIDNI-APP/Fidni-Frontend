@@ -9,12 +9,13 @@ import { ArrowDown, ChevronDown, ChevronRight } from 'lucide-react';
 import type { TableauChapitre } from '@/lib/api/tableauApi';
 import { decimal, duration } from '@/pages/progression/format';
 import { COULEUR } from './chart';
+import { t } from '@/i18n';
 
 type Tri = 'programme' | 'note' | 'questions' | 'temps';
 
 /** Minimum → maximum sur 0–20, la moyenne marquée d'un point. */
 export const Fourchette: React.FC<{ min: number | null; max: number | null; moyenne: number | null; className?: string }> = ({ min, max, moyenne, className = '' }) => (
-  <span className={`relative block h-2 rounded-full bg-[#f2f1ee] ${className}`} aria-hidden>
+  <span className={`fd-ltr relative block h-2 rounded-full bg-[#f2f1ee] ${className}`} aria-hidden>
     {min !== null && max !== null && (
       <span className="absolute inset-y-0 rounded-full" style={{ left: `${(min / 20) * 100}%`, width: `${Math.max(2, ((max - min) / 20) * 100)}%`, background: '#cfe6d8' }} />
     )}
@@ -26,7 +27,7 @@ export const Fourchette: React.FC<{ min: number | null; max: number | null; moye
 
 /** Petite courbe des notes d'un chapitre (0–20). */
 export const MiniCourbe: React.FC<{ notes: number[] }> = ({ notes }) => {
-  if (notes.length < 2) return <span className="text-[12px] text-ink-faint">{notes.length === 1 ? '1 examen' : '—'}</span>;
+  if (notes.length < 2) return <span className="text-[12px] text-ink-faint">{notes.length === 1 ? t('1 examen') : '—'}</span>;
   const x = (i: number) => (i / (notes.length - 1)) * 70 + 3;
   const y = (n: number) => 22 - (n / 20) * 20;
   return (
@@ -83,23 +84,23 @@ export const Chapitres: React.FC<{ chapitres: TableauChapitre[]; onOpen: (id: nu
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-white">
       {/* Ordinateur : tableau triable */}
-      <table className="hidden w-full text-left text-[13px] md:table">
+      <table className="hidden w-full text-start text-[13px] md:table">
         <thead className="border-b border-line bg-[#fcfbf9] text-[12px] text-ink-faint">
           <tr>
-            <Entete k="programme" className="pl-5">Chapitre</Entete>
-            <Entete k="note">Note moy.</Entete>
-            <th scope="col" className="px-3 py-2.5 font-medium">Min – max</th>
-            <th scope="col" className="px-3 py-2.5 font-medium">Évolution</th>
-            <Entete k="questions">Questions</Entete>
-            <Entete k="temps" className="pr-5 text-right">Temps</Entete>
+            <Entete k="programme" className="ps-5">{t('Chapitre')}</Entete>
+            <Entete k="note">{t('Note moy.')}</Entete>
+            <th scope="col" className="px-3 py-2.5 font-medium">{t('Min – max')}</th>
+            <th scope="col" className="px-3 py-2.5 font-medium">{t('Évolution')}</th>
+            <Entete k="questions">{t('Questions')}</Entete>
+            <Entete k="temps" className="pe-5 text-end">{t('Temps')}</Entete>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
           {shown.map((c) => (
             <tr key={c.id} className={`group cursor-pointer transition-colors hover:bg-[#faf9f7] ${c.actif ? '' : 'text-ink-faint'}`} onClick={() => onOpen(c.id)}>
-              <td className="py-3 pl-5 pr-3">
+              <td className="py-3 ps-5 pe-3">
                 <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(c.id); }}
-                  className="text-left font-semibold text-ink group-hover:underline focus:outline-none focus-visible:underline">{c.nom}</button>
+                  className="text-start font-semibold text-ink group-hover:underline focus:outline-none focus-visible:underline">{c.nom}</button>
               </td>
               <td className="fd-nums px-3 py-3">
                 {c.note.moyenne !== null ? <><b className="text-[15px] text-ink">{noteTexte(c.note.moyenne)}</b><span className="text-ink-faint"> /20</span></> : <span className="text-ink-faint">—</span>}
@@ -110,16 +111,16 @@ export const Chapitres: React.FC<{ chapitres: TableauChapitre[]; onOpen: (id: nu
                     <Fourchette min={c.note.min} max={c.note.max} moyenne={c.note.moyenne} className="w-20" />
                     <span className="fd-nums text-[12px] text-ink-faint">{noteTexte(c.note.min)} – {noteTexte(c.note.max)}</span>
                   </span>
-                ) : <span className="text-[12px] text-ink-faint">pas d’examen</span>}
+                ) : <span className="text-[12px] text-ink-faint">{t('pas d’examen')}</span>}
               </td>
               <td className="px-3 py-3"><MiniCourbe notes={c.note.serie.map((p) => p.note)} /></td>
               <td className="px-3 py-3">
                 <span className="flex flex-col gap-1">
-                  <span className="fd-nums text-[12px] text-ink-soft">{c.reussies} réussie{c.reussies > 1 ? 's' : ''} · {c.ratees} à revoir{c.partielles ? ` · ${c.partielles} en partie` : ''}</span>
+                  <span className="fd-nums text-[12px] text-ink-soft">{c.reussies > 1 ? t('{n} réussies', { n: c.reussies }) : t('{n} réussie', { n: c.reussies })} · {t('{n} à revoir', { n: c.ratees })}{c.partielles ? ` · ${t('{n} en partie', { n: c.partielles })}` : ''}</span>
                   <BarreQuestions r={c} className="w-24" />
                 </span>
               </td>
-              <td className="fd-nums px-3 py-3 pr-5 text-right text-ink-soft">{c.secondes ? duration(c.secondes) : '—'}</td>
+              <td className="fd-nums px-3 py-3 pe-5 text-end text-ink-soft">{c.secondes ? duration(c.secondes) : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -129,7 +130,7 @@ export const Chapitres: React.FC<{ chapitres: TableauChapitre[]; onOpen: (id: nu
       <ul className="divide-y divide-line md:hidden">
         {shown.map((c) => (
           <li key={c.id}>
-            <button type="button" onClick={() => onOpen(c.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-[#faf9f7]">
+            <button type="button" onClick={() => onOpen(c.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-start active:bg-[#faf9f7]">
               <span className="min-w-0 flex-1">
                 <span className={`block truncate text-[14px] font-semibold ${c.actif ? 'text-ink' : 'text-ink-faint'}`}>{c.nom}</span>
                 <span className="mt-1.5 flex items-center gap-2">
@@ -137,10 +138,10 @@ export const Chapitres: React.FC<{ chapitres: TableauChapitre[]; onOpen: (id: nu
                     {c.note.moyenne !== null ? <><b className="text-ink">{noteTexte(c.note.moyenne)}</b><span className="text-ink-faint">/20</span></> : <span className="text-ink-faint">—</span>}
                   </span>
                   {c.note.n ? <Fourchette min={c.note.min} max={c.note.max} moyenne={c.note.moyenne} className="flex-1" />
-                    : <span className="flex-1 text-[12px] text-ink-faint">pas d’examen</span>}
+                    : <span className="flex-1 text-[12px] text-ink-faint">{t('pas d’examen')}</span>}
                 </span>
                 <span className="fd-nums mt-1.5 block text-[12px] text-ink-faint">
-                  {c.reussies} réussie{c.reussies > 1 ? 's' : ''} · {c.ratees} à revoir{c.secondes ? ` · ${duration(c.secondes)}` : ''}
+                  {c.reussies > 1 ? t('{n} réussies', { n: c.reussies }) : t('{n} réussie', { n: c.reussies })} · {t('{n} à revoir', { n: c.ratees })}{c.secondes ? ` · ${duration(c.secondes)}` : ''}
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
@@ -150,12 +151,12 @@ export const Chapitres: React.FC<{ chapitres: TableauChapitre[]; onOpen: (id: nu
       </ul>
 
       {!actifs.length && !tous && (
-        <p className="px-5 py-4 text-[13px] text-ink-faint">Aucun chapitre travaillé sur cette période.</p>
+        <p className="px-5 py-4 text-[13px] text-ink-faint">{t('Aucun chapitre travaillé sur cette période.')}</p>
       )}
       {autres.length > 0 && (
         <button type="button" onClick={() => setTous((v) => !v)} aria-expanded={tous}
           className="flex min-h-11 w-full items-center justify-center gap-1.5 border-t border-line text-[13px] font-semibold text-ink-soft hover:text-ink">
-          {tous ? 'Masquer les chapitres sans activité' : `Les ${autres.length} autres chapitres du programme`}
+          {tous ? t('Masquer les chapitres sans activité') : t('Les {n} autres chapitres du programme', { n: autres.length })}
           <ChevronDown className={`h-4 w-4 transition-transform ${tous ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       )}

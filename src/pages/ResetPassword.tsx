@@ -3,11 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, CheckCircle2, XCircle, ArrowRight, Lock, KeyRound } from 'lucide-react';
 import { confirmPasswordReset } from '@/lib/api/authApi';
 import { SEO } from '@/components/layout/SEO';
+import { t } from '@/i18n';
 
 type State = 'form' | 'success' | 'invalid';
 
 const inputClass =
-  'w-full pl-10 pr-3 py-2 border border-line rounded-lg bg-white text-ink ' +
+  'w-full ps-10 pe-3 py-2 border border-line rounded-lg bg-white text-ink ' +
   'placeholder-[#9a958c] focus:outline-none focus:border-brand transition-colors';
 
 /**
@@ -28,7 +29,7 @@ export const ResetPassword: React.FC = () => {
     e.preventDefault();
     setError('');
     if (password !== confirm) {
-      setError('Les deux mots de passe ne correspondent pas.');
+      setError(t('Les deux mots de passe ne correspondent pas.'));
       return;
     }
     setSubmitting(true);
@@ -38,8 +39,8 @@ export const ResetPassword: React.FC = () => {
     } catch (err: any) {
       const data = err?.response?.data;
       if (data?.code === 'token_invalid') setState('invalid');
-      else if (err?.response?.status === 429) setError('Trop de tentatives. Patiente quelques minutes.');
-      else setError(data?.error || 'Impossible de changer le mot de passe. Réessaie.');
+      else if (err?.response?.status === 429) setError(t('Trop de tentatives. Patiente quelques minutes.'));
+      else setError(data?.error || t('Impossible de changer le mot de passe. Réessaie.'));
     } finally {
       setSubmitting(false);
     }
@@ -54,15 +55,15 @@ export const ResetPassword: React.FC = () => {
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-soft flex items-center justify-center">
               <KeyRound className="w-6 h-6 text-brand-hover" />
             </div>
-            <h1 className="fd-display text-ink text-center" style={{ fontSize: 23, fontWeight: 600 }}>Nouveau mot de passe</h1>
+            <h1 className="fd-display text-ink text-center" style={{ fontSize: 23, fontWeight: 600 }}>{t('Nouveau mot de passe')}</h1>
             <p className="text-ink-faint text-sm mt-2 mb-6 text-center">
-              Choisis-en un que tu n’utilises pas ailleurs.
+              {t('Choisis-en un que tu n’utilises pas ailleurs.')}
             </p>
             <form onSubmit={submit} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="newPassword" className="block text-sm font-medium text-ink-soft">Nouveau mot de passe</label>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-ink-soft">{t('Nouveau mot de passe')}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-ink-faint" />
                   </div>
                   <input type="password" id="newPassword" value={password} onChange={(e) => setPassword(e.target.value)}
@@ -70,13 +71,13 @@ export const ResetPassword: React.FC = () => {
                     className={inputClass} aria-describedby="newPasswordHint" />
                 </div>
                 <p id="newPasswordHint" className="text-xs text-ink-faint">
-                  8 caractères minimum, pas uniquement des chiffres, et pas un mot de passe trop courant.
+                  {t('8 caractères minimum, pas uniquement des chiffres, et pas un mot de passe trop courant.')}
                 </p>
               </div>
               <div className="space-y-2">
-                <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-ink-soft">Confirme-le</label>
+                <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-ink-soft">{t('Confirme-le')}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-ink-faint" />
                   </div>
                   <input type="password" id="confirmNewPassword" value={confirm} onChange={(e) => setConfirm(e.target.value)}
@@ -87,7 +88,7 @@ export const ResetPassword: React.FC = () => {
                 <p role="alert" className="text-sm p-3 rounded-lg bg-[#fdeceb] border border-[#f3c9c5] text-[#a23b34]">{error}</p>
               )}
               <button type="submit" disabled={submitting} className="fd-btn-primary w-full justify-center">
-                {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</> : 'Changer mon mot de passe'}
+                {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('Enregistrement…')}</> : t('Changer mon mot de passe')}
               </button>
             </form>
           </>
@@ -98,10 +99,10 @@ export const ResetPassword: React.FC = () => {
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-soft flex items-center justify-center">
               <CheckCircle2 className="w-6 h-6 text-brand-hover" />
             </div>
-            <h1 className="fd-display text-ink" style={{ fontSize: 23, fontWeight: 600 }}>Mot de passe changé</h1>
-            <p className="text-ink-faint text-sm mt-2 mb-6">Tu peux maintenant te connecter avec ton nouveau mot de passe.</p>
+            <h1 className="fd-display text-ink" style={{ fontSize: 23, fontWeight: 600 }}>{t('Mot de passe changé')}</h1>
+            <p className="text-ink-faint text-sm mt-2 mb-6">{t('Tu peux maintenant te connecter avec ton nouveau mot de passe.')}</p>
             <Link to="/login" className="fd-btn-primary inline-flex">
-              Se connecter <ArrowRight className="w-4 h-4" />
+              {t('Se connecter')} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         )}
@@ -111,13 +112,12 @@ export const ResetPassword: React.FC = () => {
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#fdeceb] flex items-center justify-center">
               <XCircle className="w-6 h-6 text-[#c2564f]" />
             </div>
-            <h1 className="fd-display text-ink" style={{ fontSize: 23, fontWeight: 600 }}>Lien plus valable</h1>
+            <h1 className="fd-display text-ink" style={{ fontSize: 23, fontWeight: 600 }}>{t('Lien plus valable')}</h1>
             <p className="text-ink-faint text-sm mt-2 mb-6">
-              Ce lien a expiré (2 heures), a déjà servi, ou est incomplet. Refais une demande depuis
-              « Mot de passe oublié ? » sur l’écran de connexion.
+              {t('Ce lien a expiré (2 heures), a déjà servi, ou est incomplet. Refais une demande depuis « Mot de passe oublié ? » sur l’écran de connexion.')}
             </p>
             <Link to="/login" className="fd-btn-ghost inline-flex">
-              Aller à la connexion <ArrowRight className="w-3.5 h-3.5" />
+              {t('Aller à la connexion')} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         )}

@@ -8,6 +8,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, BookmarkCheck, ChevronDown, Clock, ListTree } from 'lucide-react';
 import type { OutlineItem } from './useLessonOutline';
+import { t } from '@/i18n';
 
 interface OutlineState {
   items: OutlineItem[];
@@ -79,8 +80,8 @@ function useOutlineBehaviour({ outline, storageKey, syncHash }: Props) {
 const ProgressLine: React.FC<{ progress: number; minutes: number }> = ({ progress, minutes }) => (
   <div>
     <div className="flex items-center justify-between text-[11.5px] text-ink-faint">
-      <span className="fd-nums">{Math.round(progress * 100)} % lu</span>
-      {minutes > 0 && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden /> {minutes} min</span>}
+      <span className="fd-nums">{t('{n} % lu', { n: Math.round(progress * 100) })}</span>
+      {minutes > 0 && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden /> {t('{m} min', { m: minutes })}</span>}
     </div>
     <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
       <div className="h-full rounded-full bg-brand transition-[width] duration-200" style={{ width: `${progress * 100}%` }} />
@@ -89,7 +90,7 @@ const ProgressLine: React.FC<{ progress: number; minutes: number }> = ({ progres
 );
 
 const ItemList: React.FC<{ items: OutlineItem[]; activeId: string | null; onPick: (id: string) => void }> = ({ items, activeId, onPick }) => (
-  <ol className="relative space-y-0.5 border-l border-line">
+  <ol className="relative space-y-0.5 border-s border-line">
     {items.map((it) => {
       const active = it.id === activeId;
       return (
@@ -98,8 +99,8 @@ const ItemList: React.FC<{ items: OutlineItem[]; activeId: string | null; onPick
             href={`#${it.id}`}
             onClick={(e) => { e.preventDefault(); onPick(it.id); }}
             aria-current={active ? 'location' : undefined}
-            className={`-ml-px flex gap-2 border-l-2 py-1.5 pr-2 leading-snug transition-colors ${
-              it.level === 1 ? 'pl-3 text-[13px] font-medium' : 'pl-6 text-[12.5px]'
+            className={`-ms-px flex gap-2 border-s-2 py-1.5 pe-2 leading-snug transition-colors ${
+              it.level === 1 ? 'ps-3 text-[13px] font-medium' : 'ps-6 text-[12.5px]'
             } ${active ? 'border-brand text-brand' : 'border-transparent text-ink-soft hover:border-ink-faint hover:text-ink'}`}
           >
             <span className="fd-nums shrink-0 text-ink-faint">{it.num}.</span>
@@ -113,11 +114,11 @@ const ItemList: React.FC<{ items: OutlineItem[]; activeId: string | null; onPick
 
 /** Panneau latéral collant (ordinateur). */
 export const LessonOutlinePanel: React.FC<Props & { title?: string }> = (props) => {
-  const { outline, className = '', title = 'Sommaire' } = props;
+  const { outline, className = '', title = t('Sommaire') } = props;
   const { resumeItem, dismissResume } = useOutlineBehaviour(props);
   if (outline.items.length < 2) return null;
   return (
-    <nav aria-label="Sommaire de la leçon" className={`text-sm ${className}`}>
+    <nav aria-label={t('Sommaire de la leçon')} className={`text-sm ${className}`}>
       <p className="mb-3 flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">
         <ListTree className="h-3.5 w-3.5" aria-hidden /> {title}
       </p>
@@ -126,10 +127,10 @@ export const LessonOutlinePanel: React.FC<Props & { title?: string }> = (props) 
         <button
           type="button"
           onClick={() => { outline.scrollTo(resumeItem.id); dismissResume(); }}
-          className="mt-3 flex w-full items-start gap-2 rounded-xl border border-gold-line bg-gold-soft px-3 py-2 text-left text-[12.5px] text-gold-strong hover:border-gold"
+          className="mt-3 flex w-full items-start gap-2 rounded-xl border border-gold-line bg-gold-soft px-3 py-2 text-start text-[12.5px] text-gold-strong hover:border-gold"
         >
           <BookmarkCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span><span className="font-semibold">Reprendre</span> à {resumeItem.num}. {resumeItem.title}</span>
+          <span><span className="font-semibold">{t('Reprendre')}</span> {t('à {num}. {titre}', { num: resumeItem.num, titre: resumeItem.title })}</span>
         </button>
       )}
       <div className="mt-4">
@@ -137,7 +138,7 @@ export const LessonOutlinePanel: React.FC<Props & { title?: string }> = (props) 
       </div>
       <button type="button" onClick={outline.scrollToTop}
         className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-faint hover:text-ink">
-        <ArrowUp className="h-3.5 w-3.5" aria-hidden /> Revenir au début
+        <ArrowUp className="h-3.5 w-3.5" aria-hidden /> {t('Revenir au début')}
       </button>
     </nav>
   );
@@ -154,7 +155,7 @@ export const LessonOutlineBar: React.FC<Props & { tourId?: string }> = (props) =
   return (
     <div data-tour={props.tourId} className={`rounded-xl border border-line bg-white/95 shadow-[0_2px_10px_rgba(20,18,16,.06)] backdrop-blur ${className}`}>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-        className="flex min-h-[44px] w-full items-center gap-2 px-3 text-left">
+        className="flex min-h-[44px] w-full items-center gap-2 px-3 text-start">
         <ListTree className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
           <span className="fd-nums text-ink-faint">{current.num}.</span> {current.title}
@@ -169,9 +170,9 @@ export const LessonOutlineBar: React.FC<Props & { tourId?: string }> = (props) =
         <div className="max-h-[60vh] overflow-y-auto px-3 pb-3 pt-2">
           {resumeItem && (
             <button type="button" onClick={() => pick(resumeItem.id)}
-              className="mb-2 flex w-full items-start gap-2 rounded-lg bg-gold-soft px-3 py-2 text-left text-[12.5px] text-gold-strong">
+              className="mb-2 flex w-full items-start gap-2 rounded-lg bg-gold-soft px-3 py-2 text-start text-[12.5px] text-gold-strong">
               <BookmarkCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span><span className="font-semibold">Reprendre</span> à {resumeItem.num}. {resumeItem.title}</span>
+              <span><span className="font-semibold">{t('Reprendre')}</span> {t('à {num}. {titre}', { num: resumeItem.num, titre: resumeItem.title })}</span>
             </button>
           )}
           <ItemList items={outline.items} activeId={outline.activeId} onPick={pick} />

@@ -78,7 +78,7 @@ const ReplyModal: React.FC<{
         <textarea value={text} onChange={(e) => { edited.current = true; setText(e.target.value); }} disabled={!notify}
           rows={5} maxLength={2000} aria-label="Réponse à l’élève"
           className="mt-2 w-full resize-y rounded-xl border border-line bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-[#f7f6f3] disabled:text-ink-faint" />
-        <p className="mt-1 text-right text-[11px] text-ink-faint fd-nums">{text.length} / 2000</p>
+        <p className="mt-1 text-end text-[11px] text-ink-faint fd-nums">{text.length} / 2000</p>
         <div className="mt-3 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="fd-btn-ghost min-h-10">Annuler</button>
           <button type="submit" disabled={sending || (notify && !text.trim())} className="fd-btn-primary min-h-10 disabled:opacity-50">
@@ -159,7 +159,7 @@ export const ReportsPanel: React.FC<{ onOpenCountChange?: (open: number) => void
           {TABS.map((t) => (
             <button key={t.value} role="tab" aria-selected={tab === t.value} type="button" onClick={() => setTab(t.value)}
               className={`rounded-[10px] px-3 py-1.5 text-[12.5px] font-medium transition-colors ${tab === t.value ? 'bg-white text-ink shadow-sm' : 'text-ink-faint hover:text-ink'}`}>
-              {t.label}{counts ? <span className="fd-nums ml-1 text-ink-faint">{counts[t.value]}</span> : null}
+              {t.label}{counts ? <span className="fd-nums ms-1 text-ink-faint">{counts[t.value]}</span> : null}
             </button>
           ))}
         </div>
@@ -193,7 +193,7 @@ export const ReportsPanel: React.FC<{ onOpenCountChange?: (open: number) => void
                   {r.handled_at && <> · {r.status === 'resolved' ? 'corrigé' : 'classé'} {ago(r.handled_at)}{r.handled_by ? ` par ${r.handled_by}` : ''}</>}
                 </p>
                 {r.response_sent_at && (
-                  <p className="mt-1.5 rounded-xl border-l-2 border-brand bg-[#f7f6f3] px-3 py-1.5 text-[12.5px] text-ink-soft whitespace-pre-line">
+                  <p className="mt-1.5 rounded-xl border-s-2 border-brand bg-[#f7f6f3] px-3 py-1.5 text-[12.5px] text-ink-soft whitespace-pre-line">
                     <span className="font-semibold text-ink">Réponse envoyée {ago(r.response_sent_at)} :</span> {r.response}
                   </p>
                 )}

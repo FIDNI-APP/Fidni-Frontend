@@ -6,6 +6,7 @@ import { Content, VoteValue } from '@/types';
 import type { ExerciseListItem, ExamListItem, LessonListItem } from '@/types/content';
 import { VoteButtons } from '@/components/interactions/VoteButtons';
 import { NewBadge, isNewContent } from './NewBadge';
+import { t } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import {
@@ -95,7 +96,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
   };
 
   const contentType = getContentType();
-  const typeLabel = contentType === 'lesson' ? 'Leçon' : contentType === 'exam' ? 'Examen' : 'Exercice';
+  const typeLabel = contentType === 'lesson' ? t('Leçon') : contentType === 'exam' ? t('Examen') : t('Exercice');
 
   const subjectName = content.subject
     ? (typeof content.subject === 'string' ? content.subject : content.subject.name)
@@ -268,7 +269,7 @@ export const HomeContentCard: React.FC<HomeContentCardProps> = ({
             style={{ padding: '6px 14px', fontSize: 12, borderRadius: 9 }}
             onClick={(e) => { e.stopPropagation(); navigate(getNavigationPath()); }}
           >
-            Commencer <ArrowRight className="w-3 h-3" />
+            {t('Commencer')} <ArrowRight className="w-3 h-3" />
           </button>
         </div>
 

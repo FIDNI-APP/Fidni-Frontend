@@ -14,7 +14,8 @@ import { isAxiosError } from 'axios';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
 import { MathText } from './MathText';
-import { plural, type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
+import { t } from '@/i18n';
+import { type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
 
 const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line bg-[#faf9f7] px-1.5 font-sans text-[11px] font-semibold text-ink-faint">
@@ -29,12 +30,12 @@ const letter = (i: number) => String.fromCharCode(65 + i);
 const Timer: React.FC<{ left: number; paused: boolean }> = ({ left, paused }) => {
   const low = left <= 60 && !paused;
   return (
-    <span role="timer" aria-label={`Temps restant : ${clock(left)}${paused ? ', en pause' : ''}`}
+    <span role="timer" aria-label={paused ? t('Temps restant : {temps}, en pause', { temps: clock(left) }) : t('Temps restant : {temps}', { temps: clock(left) })}
       className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 ${
         low ? 'border-gold-line bg-gold-soft text-[#8a6318]' : paused ? 'border-line bg-[#f7f6f3] text-ink-faint' : 'border-line bg-white text-ink'}`}>
       {low ? <AlertTriangle className="h-4 w-4" aria-hidden /> : paused ? <Pause className="h-4 w-4" aria-hidden /> : <Clock className="h-4 w-4" aria-hidden />}
       <span className="fd-nums text-[15px] font-bold tracking-wide">{clock(left)}</span>
-      {paused && <span className="hidden text-[11.5px] font-medium sm:inline">en pause</span>}
+      {paused && <span className="hidden text-[11.5px] font-medium sm:inline">{t('en pause')}</span>}
     </span>
   );
 };
@@ -44,7 +45,7 @@ const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion }> = ({ c, q }) =>
   <div role="status" className={`mt-5 rounded-2xl border p-4 ${c.is_correct ? 'border-brand/30 bg-brand-soft/50' : 'border-gold-line bg-gold-soft/60'}`}>
     <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${c.is_correct ? 'text-brand-hover' : 'text-[#8a6318]'}`}>
       {c.is_correct ? <Check className="h-4 w-4" aria-hidden /> : <X className="h-4 w-4" aria-hidden />}
-      {c.is_correct ? 'Bonne réponse' : <>Pas tout à fait : la bonne réponse est {letter(c.correct_answer)}</>}
+      {c.is_correct ? t('Bonne réponse') : <>{t('Pas tout à fait : la bonne réponse est {lettre}', { lettre: letter(c.correct_answer) })}</>}
     </p>
     {!c.is_correct && (
       <p className="mt-1 text-[13.5px] font-semibold text-ink"><MathText text={q.options[c.correct_answer] ?? ''} className="fd-latex" /></p>
@@ -52,7 +53,7 @@ const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion }> = ({ c, q }) =>
     {c.explanation && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft"><MathText text={c.explanation} className="fd-latex" /></p>}
     {c.theoremes && c.theoremes.length > 0 && (
       <p className="mt-2.5 flex flex-wrap gap-1.5">
-        {c.theoremes.map((t) => <span key={t} className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft ring-1 ring-line">{t}</span>)}
+        {c.theoremes.map((th) => <span key={th} className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft ring-1 ring-line">{th}</span>)}
       </p>
     )}
   </div>
@@ -71,7 +72,7 @@ const Grid: React.FC<{
         : answers[x.id] !== undefined ? 'bg-brand-soft text-brand-hover border-brand/40' : 'bg-white text-ink-soft border-line';
       return (
         <button key={x.id} type="button" onClick={() => onGo(i)} aria-current={on ? 'step' : undefined}
-          aria-label={`Question ${i + 1}${c ? (c.is_correct ? ', juste' : ', fausse') : ', pas encore corrigée'}`}
+          aria-label={c ? (c.is_correct ? t('Question {n}, juste', { n: i + 1 }) : t('Question {n}, fausse', { n: i + 1 })) : t('Question {n}, pas encore corrigée', { n: i + 1 })}
           className={`fd-nums flex h-9 items-center justify-center rounded-lg border text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${tone} ${on ? 'ring-2 ring-ink/30 ring-offset-1' : ''}`}>
           {i + 1}
         </button>
@@ -225,47 +226,47 @@ export const QuizRunner: React.FC<{
   const primary = !correction ? (
     <button type="button" onClick={validate} disabled={answer === undefined || checking || timeUp}
       className="fd-btn-primary min-h-12 flex-1 justify-center px-6 text-[15px] disabled:opacity-50 sm:flex-none">
-      {checking ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Correction…</> : <><Check className="h-4 w-4" aria-hidden /> Valider</>}
+      {checking ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Correction…')}</> : <><Check className="h-4 w-4" aria-hidden /> {t('Valider')}</>}
     </button>
   ) : isLast && complete ? (
     <button type="button" onClick={() => submit()} disabled={submitting} className="fd-btn-primary min-h-12 flex-1 justify-center px-6 text-[15px] sm:flex-none">
-      {submitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Envoi…</> : 'Voir mon bilan'}
+      {submitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Envoi…')}</> : t('Voir mon bilan')}
     </button>
   ) : (
     <button type="button" onClick={advance} className="fd-btn-primary min-h-12 flex-1 justify-center px-6 text-[15px] sm:flex-none">
-      {isLast ? `Question ${missing[0] + 1}` : 'Suivante'} <ArrowRight className="h-4 w-4" aria-hidden />
+      {isLast ? t('Question {n}', { n: missing[0] + 1 }) : t('Suivante')} <ArrowRight className="h-4 w-4" aria-hidden />
     </button>
   );
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div ref={topRef} className="flex scroll-mt-24 items-center justify-between gap-3">
-        <button type="button" onClick={onQuit} title="Tu pourras reprendre là où tu t’es arrêté"
-          className="-ml-1 inline-flex min-h-10 items-center gap-1 rounded-lg px-1 pr-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-          <ChevronLeft className="h-4 w-4" aria-hidden /> Quitter
+        <button type="button" onClick={onQuit} title={t('Tu pourras reprendre là où tu t’es arrêté')}
+          className="-ms-1 inline-flex min-h-10 items-center gap-1 rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+          <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quitter')}
         </button>
         <Timer left={left} paused={!!correction && !timeUp} />
       </div>
 
       <header className="min-w-0">
-        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">Quiz{quiz.subject ? ` · ${quiz.subject}` : ''}</p>
+        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Quiz')}{quiz.subject ? ` · ${quiz.subject}` : ''}</p>
         <h1 className="fd-display mt-1 text-[22px] leading-tight text-ink sm:text-[26px]">{quiz.name}</h1>
       </header>
 
       {/* Avancement : une barre fine, « Question 7/30 », et la grille pour aller à une question. */}
       <div>
         <div className="flex items-center justify-between gap-3 text-[13px]">
-          <span className="fd-nums font-semibold text-ink" aria-live="polite">Question {index + 1}<span className="font-normal text-ink-faint">/{total}</span></span>
+          <span className="fd-nums font-semibold text-ink" aria-live="polite">{t('Question {n}', { n: index + 1 })}<span className="font-normal text-ink-faint">/{total}</span></span>
           <span className="flex items-center gap-3">
-            {done > 0 && <span className="fd-nums text-ink-soft"><b className="text-ink">{good}</b> bonne{good > 1 ? 's' : ''} réponse{good > 1 ? 's' : ''}</span>}
+            {done > 0 && <span className="fd-nums text-ink-soft"><b className="text-ink">{good}</b> {good > 1 ? t('bonnes réponses') : t('bonne réponse')}</span>}
             <button type="button" onClick={() => setGrid((v) => !v)} aria-expanded={grid}
               className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 font-medium text-ink-soft hover:bg-paper hover:text-ink">
-              <LayoutGrid className="h-4 w-4" aria-hidden /> Grille <ChevronDown className={`h-3.5 w-3.5 transition-transform ${grid ? 'rotate-180' : ''}`} aria-hidden />
+              <LayoutGrid className="h-4 w-4" aria-hidden /> {t('Grille')} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${grid ? 'rotate-180' : ''}`} aria-hidden />
             </button>
           </span>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#efece6]" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}
-          aria-label={`${done} questions corrigées sur ${total}`}>
+          aria-label={t('{done} questions corrigées sur {total}', { done, total })}>
           <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${(done / total) * 100}%` }} />
         </div>
         {grid && <div className="mt-2"><Grid questions={questions} index={index} checked={checked} answers={answers} onGo={go} /></div>}
@@ -273,7 +274,7 @@ export const QuizRunner: React.FC<{
 
       {timeUp && (
         <div role="alert" className="rounded-2xl border border-gold-line bg-gold-soft p-4 text-[13.5px] text-ink">
-          <b className="font-semibold">Temps écoulé.</b> Ton quiz est envoyé tel quel : les questions sans réponse comptent comme fausses.
+          <b className="font-semibold">{t('Temps écoulé.')}</b> {t('Ton quiz est envoyé tel quel : les questions sans réponse comptent comme fausses.')}
         </div>
       )}
 
@@ -294,7 +295,7 @@ export const QuizRunner: React.FC<{
               : selected && !correction ? 'bg-brand text-white' : 'border border-[#d8d4cc] bg-white text-ink-soft';
             return (
               <button key={i} type="button" role="radio" aria-checked={selected} onClick={() => choose(i)} aria-disabled={!!correction}
-                className={`flex min-h-[60px] w-full items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-[border-color,background-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${box} ${correction ? 'cursor-default' : ''}`}>
+                className={`flex min-h-[60px] w-full items-center gap-3.5 rounded-2xl border px-4 py-3 text-start transition-[border-color,background-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${box} ${correction ? 'cursor-default' : ''}`}>
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[14px] font-bold ${dot}`} aria-hidden>
                   {right ? <Check className="h-4 w-4" /> : wrong ? <X className="h-4 w-4" /> : letter(i)}
                 </span>
@@ -307,7 +308,7 @@ export const QuizRunner: React.FC<{
         {correction && <Feedback c={correction} q={q} />}
         {checkError && (
           <p role="alert" className="mt-4 rounded-xl border border-gold-line bg-gold-soft px-4 py-3 text-[13.5px] text-[#7a560f]">
-            La correction n’a pas pu se charger : vérifie ta connexion, puis appuie à nouveau sur « Valider ».
+            {t('La correction n’a pas pu se charger : vérifie ta connexion, puis appuie à nouveau sur « Valider ».')}
           </p>
         )}
       </section>
@@ -315,37 +316,37 @@ export const QuizRunner: React.FC<{
       {error && (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-gold-line bg-gold-soft px-4 py-3">
           <p className="flex-1 text-[13.5px] text-[#7a560f]">
-            {error === 'expire' ? 'Ce quiz a expiré (commencé il y a plus d’un jour) : recommence-le.' : 'Ton quiz n’a pas pu être envoyé : vérifie ta connexion.'}
+            {error === 'expire' ? t('Ce quiz a expiré (commencé il y a plus d’un jour) : recommence-le.') : t('Ton quiz n’a pas pu être envoyé : vérifie ta connexion.')}
           </p>
           {error === 'expire'
-            ? <button type="button" onClick={onRestart} className="fd-btn-ghost min-h-9 text-[13px]"><RotateCcw className="h-4 w-4" aria-hidden /> Recommencer</button>
-            : <button type="button" onClick={() => submit(true)} className="fd-btn-ghost min-h-9 text-[13px]">Réessayer</button>}
+            ? <button type="button" onClick={onRestart} className="fd-btn-ghost min-h-9 text-[13px]"><RotateCcw className="h-4 w-4" aria-hidden /> {t('Recommencer')}</button>
+            : <button type="button" onClick={() => submit(true)} className="fd-btn-ghost min-h-9 text-[13px]">{t('Réessayer')}</button>}
         </div>
       )}
 
       {/* Boutons : en bas de l'écran sur téléphone (toujours à portée du pouce), sous la question sur ordinateur. */}
       <div className="sticky bottom-0 z-10 -mx-4 border-t border-line bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <div className="flex items-center gap-2 sm:justify-between">
-          <button type="button" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Question précédente"
+          <button type="button" onClick={() => go(index - 1)} disabled={index === 0} aria-label={t('Question précédente')}
             className="fd-btn-ghost min-h-12 px-3 text-[13px] disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronLeft className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">Précédente</span>
+            <ChevronLeft className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">{t('Précédente')}</span>
           </button>
           <div className="flex flex-1 items-center justify-end gap-2">
             {!correction && (
               <button type="button" onClick={() => go(isLast ? (missing.find((i) => i !== index) ?? index) : index + 1)}
                 disabled={isLast && missing.length <= 1} className="fd-btn-ghost min-h-12 text-[13px] disabled:opacity-40">
-                Passer
+                {t('Passer')}
               </button>
             )}
             {primary}
           </div>
         </div>
         {isLast && !complete && correction && (
-          <p className="mt-1.5 text-right text-[12.5px] text-ink-faint">{plural(missing.length, 'question')} pas encore corrigée{missing.length > 1 ? 's' : ''}.</p>
+          <p className="mt-1.5 text-end text-[12.5px] text-ink-faint">{missing.length > 1 ? t('{n} questions pas encore corrigées.', { n: missing.length }) : t('{n} question pas encore corrigée.', { n: missing.length })}</p>
         )}
       </div>
       <p className="hidden items-center justify-center gap-1.5 text-[12px] text-ink-faint sm:flex">
-        <Kbd>1</Kbd>à<Kbd>{Math.min(q.options.length, 9)}</Kbd> pour répondre · <Kbd>Entrée</Kbd> pour valider puis continuer · <Kbd>←</Kbd><Kbd>→</Kbd> pour changer de question
+        <Kbd>1</Kbd>{t('à')}<Kbd>{Math.min(q.options.length, 9)}</Kbd> {t('pour répondre')} · <Kbd>{t('Entrée')}</Kbd> {t('pour valider puis continuer')} · <Kbd>←</Kbd><Kbd>→</Kbd> {t('pour changer de question')}
       </p>
     </div>
   );

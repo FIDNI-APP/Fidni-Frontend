@@ -14,7 +14,8 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { EmptyState } from '@/components/space/Page';
 import NotebookSections from '@/components/notebook/NotebookSections';
 import SectionContent from '@/components/notebook/SectionContent';
-import { plural, sameId, splitSections, summarize, type NbNotebook } from '@/components/notebook/notebookModel';
+import { sameId, splitSections, summarize, type NbNotebook } from '@/components/notebook/notebookModel';
+import { t } from '@/i18n';
 
 const BACK = '/enregistrements?onglet=cahiers';
 
@@ -62,7 +63,7 @@ const StudentNotebook: React.FC = () => {
   // Fil d'Ariane : Mes enregistrements › <cahier>.
   useEffect(() => {
     if (!nbId) return;
-    setCrumbs([{ label: 'Mes enregistrements', to: BACK }, { label: notebook?.title ?? 'Cahier' }], '/enregistrements');
+    setCrumbs([{ label: t('Mes enregistrements'), to: BACK }, { label: notebook?.title ?? t('Cahier') }], '/enregistrements');
   }, [nbId, notebook?.title, setCrumbs]);
   useEffect(() => () => setCrumbs(null), [setCrumbs]);
 
@@ -82,10 +83,10 @@ const StudentNotebook: React.FC = () => {
     <div ref={paneRef} className="flex flex-col overflow-hidden border-t border-line bg-paper" style={{ height: paneHeight }}>
       {/* En-tête du cahier (ordinateur ; sur téléphone, la barre du haut montre déjà « ‹ Mes enregistrements » et le titre) */}
       {notebook && <h1 className="sr-only md:hidden">{notebook.title}</h1>}
-      <header className="hidden shrink-0 items-center gap-3 border-b border-line bg-white py-2 pl-3 pr-4 md:flex">
-        <Link to={BACK} aria-label="Retour à mes cahiers"
-          className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1 rounded-xl px-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink sm:justify-start sm:pr-3">
-          <ChevronLeft className="h-5 w-5" /> <span className="hidden sm:inline">Mes cahiers</span>
+      <header className="hidden shrink-0 items-center gap-3 border-b border-line bg-white py-2 ps-3 pe-4 md:flex">
+        <Link to={BACK} aria-label={t('Retour à mes cahiers')}
+          className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1 rounded-xl px-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink sm:justify-start sm:pe-3">
+          <ChevronLeft className="h-5 w-5" /> <span className="hidden sm:inline">{t('Mes cahiers')}</span>
         </Link>
         <span className="hidden h-7 w-px bg-line sm:block" aria-hidden />
         <div className="min-w-0 flex-1">
@@ -94,7 +95,7 @@ const StudentNotebook: React.FC = () => {
               <h1 className="fd-display truncate text-[18px] leading-tight text-ink sm:text-[21px]">{notebook.title}</h1>
               <p className="truncate text-[12px] text-ink-faint">
                 {notebook.subject?.name} · {notebook.class_level?.name}
-                {stats && <> · <span className="fd-nums">{stats.lessons === 0 ? 'vide' : plural(stats.lessons, 'leçon')}</span></>}
+                {stats && <> · <span className="fd-nums">{stats.lessons === 0 ? t('vide') : stats.lessons > 1 ? t('{n} leçons', { n: stats.lessons }) : t('{n} leçon', { n: stats.lessons })}</span></>}
               </p>
             </>
           ) : status === 'loading' ? (
@@ -102,22 +103,22 @@ const StudentNotebook: React.FC = () => {
               <div className="h-5 w-48 max-w-full rounded bg-[#efece6]" />
               <div className="mt-1.5 h-3 w-32 rounded bg-[#f2f1ee]" />
             </div>
-          ) : <h1 className="fd-display text-[18px] text-ink">Cahier</h1>}
+          ) : <h1 className="fd-display text-[18px] text-ink">{t('Cahier')}</h1>}
         </div>
         {notebook && (
-          <Link to={`/notebooks/${notebook.id}/pdf`} data-tour="cahier-imprimer" aria-label="Imprimer le cahier" title="Imprimer le cahier"
+          <Link to={`/notebooks/${notebook.id}/pdf`} data-tour="cahier-imprimer" aria-label={t('Imprimer le cahier')} title={t('Imprimer le cahier')}
             className="fd-btn-ghost min-h-10 min-w-10 shrink-0 justify-center px-2.5 sm:px-3.5">
-            <Printer className="h-4 w-4" /> <span className="hidden sm:inline">Imprimer</span>
+            <Printer className="h-4 w-4" /> <span className="hidden sm:inline">{t('Imprimer')}</span>
           </Link>
         )}
       </header>
 
       {status === 'loading' ? (
-        <div className="flex min-h-0 flex-1" role="status" aria-label="Chargement du cahier">
-          <div className="hidden w-[264px] shrink-0 flex-col gap-2 border-r border-line bg-white p-4 md:flex">
+        <div className="flex min-h-0 flex-1" role="status" aria-label={t('Chargement du cahier')}>
+          <div className="hidden w-[264px] shrink-0 flex-col gap-2 border-e border-line bg-white p-4 md:flex">
             {[70, 55, 80, 45].map((w, i) => <div key={i} className="h-8 animate-pulse rounded-xl bg-[#f2f1ee]" style={{ width: `${w}%` }} />)}
           </div>
-          <div className="flex flex-1 flex-col gap-3 bg-white p-6 pl-16">
+          <div className="flex flex-1 flex-col gap-3 bg-white p-6 ps-16">
             {['w-3/4 h-6', 'w-1/2', 'w-5/6', 'w-full h-24 mt-3', 'w-2/3'].map((c, i) => (
               <div key={i} className={`h-4 animate-pulse rounded bg-[#efece6] ${c}`} />
             ))}
@@ -127,13 +128,13 @@ const StudentNotebook: React.FC = () => {
         <div className="flex flex-1 items-start justify-center overflow-y-auto p-4 sm:p-8">
           <div className="w-full max-w-lg">
             {status === 'missing' ? (
-              <EmptyState icon={BookMarked} tone="ink" title="Ce cahier n’existe plus"
-                text="Il a peut-être été supprimé. Tes autres cahiers t’attendent dans Mes enregistrements."
-                action={<Link to={BACK} className="fd-btn-primary min-h-10">Voir mes cahiers</Link>} />
+              <EmptyState icon={BookMarked} tone="ink" title={t('Ce cahier n’existe plus')}
+                text={t('Il a peut-être été supprimé. Tes autres cahiers t’attendent dans Mes enregistrements.')}
+                action={<Link to={BACK} className="fd-btn-primary min-h-10">{t('Voir mes cahiers')}</Link>} />
             ) : (
               <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-                <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">Ton cahier n’a pas pu se charger. Vérifie ta connexion.</p>
-                <button type="button" onClick={() => load()} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> Réessayer</button>
+                <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ton cahier n’a pas pu se charger. Vérifie ta connexion.')}</p>
+                <button type="button" onClick={() => load()} className="fd-btn-ghost min-h-10"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
               </div>
             )}
           </div>
@@ -150,15 +151,15 @@ const StudentNotebook: React.FC = () => {
             ) : (
               <div className="flex-1 overflow-y-auto bg-paper p-4 sm:p-8">
                 <div className="mx-auto max-w-lg">
-                  <EmptyState icon={BookMarked} title="Ton cahier est encore vide"
-                    text="Ouvre une leçon et touche « Ajouter à mon cahier » : elle vient se ranger ici, dans son chapitre."
+                  <EmptyState icon={BookMarked} title={t('Ton cahier est encore vide')}
+                    text={t('Ouvre une leçon et touche « Ajouter à mon cahier » : elle vient se ranger ici, dans son chapitre.')}
                     action={(
                       <Link to={levelSlug ? hubPath('lessons', levelSlug) : '/lessons'} className="fd-btn-primary min-h-10">
-                        Voir les leçons de {notebook.class_level?.name || 'mon niveau'}
+                        {t('Voir les leçons de {level}', { level: notebook.class_level?.name || t('mon niveau') })}
                       </Link>
                     )} />
                   <p className="mt-4 text-center text-[12.5px] text-ink-faint">
-                    Ou touche un chapitre <span className="md:hidden">ci-dessus</span><span className="hidden md:inline">à gauche</span> pour trouver ses leçons.
+                    {t('Ou touche un chapitre')} <span className="md:hidden">{t('ci-dessus')}</span><span className="hidden md:inline">{t('à gauche')}</span> {t('pour trouver ses leçons.')}
                   </p>
                 </div>
               </div>

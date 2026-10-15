@@ -1,5 +1,6 @@
 // Quiz par chapitre (/skill-iq) : types et petites règles partagées (backend apps/skilliq).
 import type { ChapterStatus } from '@/pages/progression/types';
+import { dateLocale } from '@/i18n';
 
 /** Résultat d'un quiz (GET /skill-assessments/my/, POST /skill-assessments/submit/<id>/). */
 export interface SkillAssessment {
@@ -134,7 +135,7 @@ export const estMinutes = (ready: number) => quizSize(ready);
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 
-export const frDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+export const frDate = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
 /** Couleurs du score : vert à partir de 50 %, or en dessous (jamais rouge : ce n'est pas une faute). */
 export const RING = { good: '#1a7a4a', low: '#c0892f', track: '#efece6' } as const;

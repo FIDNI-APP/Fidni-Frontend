@@ -14,6 +14,7 @@ import { LearningPath } from '@/types/index';
 import { ProgressBadge } from './ProgressBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface LearningPathCardProps {
   learningPath: LearningPath;
@@ -52,15 +53,15 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
   const difficulty = (() => {
     if (learningPath.estimated_hours < 10) return {
       color: 'text-emerald-600 bg-emerald-50',
-      label: 'Débutant'
+      label: t('Débutant')
     };
     if (learningPath.estimated_hours < 30) return {
       color: 'text-amber-600 bg-amber-50',
-      label: 'Intermédiaire'
+      label: t('Intermédiaire')
     };
     return {
       color: 'text-rose-600 bg-rose-50',
-      label: 'Avancé'
+      label: t('Avancé')
     };
   })();
 
@@ -76,7 +77,7 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
     >
       {/* Progress indicator */}
       {isStarted && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gray-100 z-10">
+        <div className="absolute top-0 start-0 end-0 h-1 bg-gray-100 z-10">
           <div 
             className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
             style={{ width: `${progress}%` }}
@@ -88,15 +89,15 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
       <div className="relative h-36 bg-gradient-to-br from-blue-600 to-indigo-700 p-4 flex flex-col">
         <div className="flex justify-between items-start z-10">
           <span className="inline-flex items-center px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white text-xs font-medium">
-            <BookOpen className="w-3 h-3 mr-1.5" />
+            <BookOpen className="w-3 h-3 me-1.5" />
             {learningPath.subject.name}
           </span>
           
           <div className="flex items-center gap-1.5">
             {isCompleted && (
               <span className="inline-flex items-center px-2.5 py-1 bg-emerald-500 rounded-full text-white text-xs font-medium">
-                <CheckCircle className="w-3 h-3 mr-1.5" />
-                Terminé
+                <CheckCircle className="w-3 h-3 me-1.5" />
+                {t('Terminé')}
               </span>
             )}
             {isAdmin && onEdit && (
@@ -104,8 +105,8 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onEdit(learningPath.id); }}
                 className="p-1.5 rounded-full bg-white/15 text-white hover:bg-white/30 transition-colors"
-                title="Modifier le parcours"
-                aria-label={`Modifier le parcours ${learningPath.title}`}
+                title={t('Modifier le parcours')}
+                aria-label={t('Modifier le parcours {title}', { title: learningPath.title })}
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -115,13 +116,13 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (window.confirm(`Supprimer le parcours « ${learningPath.title} » ? Cette action est définitive.`)) {
+                  if (window.confirm(t('Supprimer le parcours « {title} » ? Cette action est définitive.', { title: learningPath.title }))) {
                     onDelete(learningPath.id);
                   }
                 }}
                 className="p-1.5 rounded-full bg-white/15 text-white hover:bg-red-500/80 transition-colors"
-                title="Supprimer le parcours"
-                aria-label={`Supprimer le parcours ${learningPath.title}`}
+                title={t('Supprimer le parcours')}
+                aria-label={t('Supprimer le parcours {title}', { title: learningPath.title })}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -137,19 +138,19 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
       {/* Content */}
       <div className="p-4 flex flex-col flex-grow">
         <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-          {learningPath.description || 'Un parcours guidé, chapitre par chapitre.'}
+          {learningPath.description || t('Un parcours guidé, chapitre par chapitre.')}
         </p>
 
         {/* Metadata */}
         <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
           <div className="flex items-center text-gray-500">
-            <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-            <span>{learningPath.estimated_hours}h</span>
+            <Clock className="w-3.5 h-3.5 me-1.5 text-gray-400" />
+            <span>{t('{n}h', { n: learningPath.estimated_hours })}</span>
           </div>
           
           <div className="flex items-center text-gray-500">
-            <BookOpen className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-            <span>{learningPath.total_chapters || learningPath.path_chapters.length} chapters</span>
+            <BookOpen className="w-3.5 h-3.5 me-1.5 text-gray-400" />
+            <span>{t('{n} chapters', { n: learningPath.total_chapters || learningPath.path_chapters.length })}</span>
           </div>
         </div>
 
@@ -159,7 +160,7 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
             "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
             difficulty.color
           )}>
-            <TrendingUp className="w-3 h-3 mr-1" />
+            <TrendingUp className="w-3 h-3 me-1" />
             {difficulty.label}
           </span>
           
@@ -200,21 +201,21 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
         >
           {isCompleted ? (
             <>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Revoir
+              <CheckCircle className="w-4 h-4 me-2" />
+              {t('Revoir')}
             </>
           ) : isStarted ? (
             <>
-              <Play className="w-4 h-4 mr-2" />
-              Continuer
+              <Play className="w-4 h-4 me-2" />
+              {t('Continuer')}
             </>
           ) : (
             <>
-              <Play className="w-4 h-4 mr-2" />
-              Commencer
+              <Play className="w-4 h-4 me-2" />
+              {t('Commencer')}
             </>
           )}
-          <ChevronRight className="w-4 h-4 ml-1 opacity-70" />
+          <ChevronRight className="w-4 h-4 ms-1 opacity-70" />
         </Button>
       </div>
     </div>

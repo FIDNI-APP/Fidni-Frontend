@@ -1,6 +1,7 @@
 // Textes des rubriques Exercices / Leçons / Devoirs / Bac national, partagés par la liste (ContentList) et
 // les dossiers (ContentFolders). Mêmes titres que les pages pré-remplies par le serveur (backend config/seo.py).
 import type { HubSection } from '@/lib/api/hubApi';
+import { t, dateLocale } from '@/i18n';
 
 export type ContentKind = 'exercise' | 'exam' | 'lesson';
 
@@ -47,7 +48,7 @@ export const SECTION_TEXT: Record<ContentKind, {
   },
 };
 
-export const plural = (n: number, [one, many]: [string, string]) => `${n.toLocaleString('fr-FR')} ${n > 1 ? many : one}`;
+export const plural = (n: number, [one, many]: [string, string]) => `${n.toLocaleString(dateLocale())} ${t(n > 1 ? many : one)}`;
 
 /** Paramètres que la liste lit (ContentList : getInitialFilters, tri, dossier « Sans chapitre »). Les autres
  *  (fbclid, utm_*, gclid… ajoutés par les réseaux sociaux et la publicité) n'empêchent pas les dossiers. */

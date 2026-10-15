@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, AlertCircle, CheckCircle, ChevronRight, Trophy, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 import { QuizQuestion } from '@/components/learningpath/QuizQuestion';
 import { QuizResult } from '@/components/learningpath/QuizResult';
 import { Progress } from '@/components/ui/progress';
@@ -194,12 +195,12 @@ export const ChapterQuiz: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-gray-600">Quiz introuvable</p>
+          <p className="text-gray-600">{t('Quiz introuvable')}</p>
           <Button 
             onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mt-4"
           >
-            Retour au parcours
+            {t('Retour au parcours')}
           </Button>
         </div>
       </div>
@@ -231,8 +232,8 @@ export const ChapterQuiz: React.FC = () => {
             onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mb-6"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour au parcours
+            <ArrowLeft className="w-4 h-4 me-2" />
+            {t('Retour au parcours')}
           </Button>
           
           <div className="max-w-2xl mx-auto">
@@ -246,32 +247,32 @@ export const ChapterQuiz: React.FC = () => {
                 <p className="text-gray-600 mb-6">{quiz.description}</p>
               )}
               
-              <div className="grid grid-cols-2 gap-4 mb-8 text-left max-w-sm mx-auto">
+              <div className="grid grid-cols-2 gap-4 mb-8 text-start max-w-sm mx-auto">
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">
                     {quiz.time_limit_minutes 
-                      ? `${quiz.time_limit_minutes} minutes`
-                      : 'Sans limite de temps'
+                      ? t('{n} minutes', { n: quiz.time_limit_minutes })
+                      : t('Sans limite de temps')
                     }
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    {quiz.questions.length} questions
+                    {t('{n} questions', { n: quiz.questions.length })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    Réussite : {quiz.passing_score} %
+                    {t('Réussite : {n} %', { n: quiz.passing_score })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    {currentChapter?.user_progress?.quiz_attempts || 0} tentative(s)
+                    {t('{n} tentative(s)', { n: currentChapter?.user_progress?.quiz_attempts || 0 })}
                   </span>
                 </div>
               </div>
@@ -279,7 +280,7 @@ export const ChapterQuiz: React.FC = () => {
               {currentChapter?.user_progress?.quiz_score && (
                 <div className="mb-6 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-700">
-                    Ton meilleur score : <strong>{currentChapter.user_progress.quiz_score}%</strong>
+                    {t('Ton meilleur score :')} <strong>{currentChapter.user_progress.quiz_score}%</strong>
                   </p>
                 </div>
               )}
@@ -289,7 +290,7 @@ export const ChapterQuiz: React.FC = () => {
                 onClick={startQuiz}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                Commencer le quiz
+                {t('Commencer le quiz')}
               </Button>
             </div>
           </div>
@@ -340,12 +341,12 @@ export const ChapterQuiz: React.FC = () => {
               onClick={handlePreviousQuestion}
               disabled={currentQuestionIndex === 0}
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Précédent
+              <ArrowLeft className="w-4 h-4 me-2" />
+              {t('Précédent')}
             </Button>
 
             <span className="text-sm text-gray-600">
-              Question {currentQuestionIndex + 1} of {questions.length}
+              {t('Question {n} of {total}', { n: currentQuestionIndex + 1, total: questions.length })}
             </span>
 
             {currentQuestionIndex === questions.length - 1 ? (
@@ -354,22 +355,22 @@ export const ChapterQuiz: React.FC = () => {
                 className="bg-green-600 hover:bg-green-700"
                 disabled={Object.keys(answers).length < questions.length}
               >
-                Valider le quiz
-                <CheckCircle className="w-4 h-4 ml-2" />
+                {t('Valider le quiz')}
+                <CheckCircle className="w-4 h-4 ms-2" />
               </Button>
             ) : (
               <Button
                 onClick={handleNextQuestion}
               >
-                Suivant
-                <ChevronRight className="w-4 h-4 ml-2" />
+                {t('Suivant')}
+                <ChevronRight className="w-4 h-4 ms-2" />
               </Button>
             )}
           </div>
 
           {/* Question Navigation Grid */}
           <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Questions</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">{t('Questions')}</h3>
             <div className="grid grid-cols-10 gap-2">
               {questions.map((q, index) => (
                 <button

@@ -1,6 +1,7 @@
 // src/pages/learningpaths/ChapterVideo.tsx
 import React, { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
+import { t } from '@/i18n';
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -181,11 +182,11 @@ export const ChapterVideo: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto">
           <Button onClick={() => navigate(`/learning-path/${pathId}`)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour au parcours
+            <ArrowLeft className="w-4 h-4 me-2" />
+            {t('Retour au parcours')}
           </Button>
           <div className="mt-4 text-center text-gray-600">
-            Vidéo introuvable
+            {t('Vidéo introuvable')}
           </div>
         </div>
       </div>
@@ -203,8 +204,8 @@ export const ChapterVideo: React.FC = () => {
               size="sm"
               onClick={() => navigate(`/learning-path/${pathId}`)}
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour au parcours
+              <ArrowLeft className="w-4 h-4 me-2" />
+              {t('Retour au parcours')}
             </Button>
             
             <div className="h-6 w-px bg-gray-300" />
@@ -214,7 +215,7 @@ export const ChapterVideo: React.FC = () => {
                 {learningPath.title}
               </h1>
               <p className="text-sm text-gray-600">
-                Chapter {currentChapter.order}: {currentChapter.title}
+                {t('Chapter {n}: {title}', { n: currentChapter.order, title: currentChapter.title })}
               </p>
             </div>
           </div>
@@ -226,16 +227,16 @@ export const ChapterVideo: React.FC = () => {
               onClick={navigateToPreviousVideo}
               disabled={!currentChapter || currentChapter.videos[0].id === currentVideo.id}
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Précédent
+              <ChevronLeft className="w-4 h-4 me-1" />
+              {t('Précédent')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={navigateToNextVideo}
             >
-              Suivant
-              <ChevronRight className="w-4 h-4 ml-1" />
+              {t('Suivant')}
+              <ChevronRight className="w-4 h-4 ms-1" />
             </Button>
           </div>
         </div>
@@ -246,7 +247,7 @@ export const ChapterVideo: React.FC = () => {
         {/* Video Content */}
         <div className={cn(
           "flex-1 p-6 transition-all duration-300",
-          sidebarCollapsed ? "mr-0" : "mr-80"
+          sidebarCollapsed ? "me-0" : "me-80"
         )}>
           <div className="max-w-5xl mx-auto">
             {/* Video Title */}
@@ -263,7 +264,7 @@ export const ChapterVideo: React.FC = () => {
                     <span>•</span>
                     <span className="flex items-center gap-1 text-green-600">
                       <CheckCircle className="w-4 h-4" />
-                      Terminé
+                      {t('Terminé')}
                     </span>
                   </>
                 )}
@@ -287,13 +288,13 @@ export const ChapterVideo: React.FC = () => {
             <Tabs defaultValue="resources" className="w-full">
               {/* L'onglet « Transcription » n'affichait qu'un « bientôt disponible » : retiré. */}
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="resources">Ressources</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
+                <TabsTrigger value="resources">{t('Ressources')}</TabsTrigger>
+                <TabsTrigger value="notes">{t('Notes')}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="resources" className="mt-6">
                 <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-lg font-semibold mb-4">Ressources</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t('Ressources')}</h3>
                   {currentVideo.resources.length > 0 ? (
                     <div className="space-y-3">
                       {currentVideo.resources.map(resource => (
@@ -329,7 +330,7 @@ export const ChapterVideo: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-600">Aucune ressource pour cette vidéo.</p>
+                    <p className="text-gray-600">{t('Aucune ressource pour cette vidéo.')}</p>
                   )}
                 </div>
               </TabsContent>
@@ -337,10 +338,10 @@ export const ChapterVideo: React.FC = () => {
               
               <TabsContent value="notes" className="mt-6">
                 <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-lg font-semibold mb-4">Tes notes</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t('Tes notes')}</h3>
                   <textarea
                     className="w-full h-64 p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Prends des notes pendant la vidéo…"
+                    placeholder={t('Prends des notes pendant la vidéo…')}
                     defaultValue={currentVideo.user_progress?.notes || ''}
                     onBlur={async (e) => {
                       if (isAuthenticated) {
@@ -360,13 +361,13 @@ export const ChapterVideo: React.FC = () => {
 
         {/* Sidebar */}
         <div className={cn(
-          "fixed right-0 top-[57px] bottom-0 transition-all duration-300",
+          "fixed end-0 top-[57px] bottom-0 transition-all duration-300",
           sidebarCollapsed ? "w-0" : "w-80"
         )}>
           {/* Collapse Toggle */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full bg-white border border-gray-200 rounded-l-lg p-2 hover:bg-gray-50"
+            className="absolute start-0 top-1/2 -translate-y-1/2 -translate-x-full rtl:translate-x-full bg-white border border-gray-200 rounded-s-lg p-2 hover:bg-gray-50"
           >
             {sidebarCollapsed ? (
               <ChevronLeft className="w-4 h-4" />
