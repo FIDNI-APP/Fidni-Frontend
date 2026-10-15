@@ -4,13 +4,14 @@
  * une page calme (accueil, listes, Réviser, Ma progression, un profil — jamais pendant un quiz, un DS blanc, un
  * éditeur ou la lecture d'un contenu), quand aucune autre fenêtre ni visite guidée n'est à l'écran, avant la visite
  * automatique de la page (qui attend qu'elle se ferme). Marquée vue dès l'ouverture : une seule fois par compte.
- * `?nouveautes=1` (ou son id) la rouvre à la demande, sans rien marquer.
+ * `?nouveautes=1` (ou son id) la rouvre à la demande, sans rien marquer. Plusieurs à voir : une par 12 h.
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { marquerNouveauteVue } from '@/lib/api/nouveautesApi';
-import { trackAction } from '@/lib/usage';
+import { trackNouveaute } from '@/lib/usage';
 import { marquerVisiteVue, somethingOpen } from '@/components/tour/TourProvider';
 import { DERNIERE, NOUVEAUTES, type Nouveaute } from './registre';
 import type { Fin } from './NouveautesModal';
@@ -35,11 +36,22 @@ const marquerIci = (userId: string, id: string) => {
   try { localStorage.setItem(ici(userId), JSON.stringify([...new Set([...vuesIci(userId), id])])); } catch { /* stockage indisponible */ }
 };
 
+// Plusieurs nouveautés à voir : une seule fenêtre par 12 h (la suivante à une autre visite).
+const ECART = 12 * 3600 * 1000;
+const derniere = (userId: string) => `fidni:nouveautes-derniere:${userId}`;
+const ouverteRecemment = (userId: string) => {
+  try { return Date.now() - Number(localStorage.getItem(derniere(userId)) || 0) < ECART; } catch { return false; }
+};
+const noterOuverture = (userId: string) => {
+  try { localStorage.setItem(derniere(userId), String(Date.now())); } catch { /* stockage indisponible */ }
+};
+
 const TICK = 500;
 const STABLE = 1000; // avant le lancement automatique des visites (1,2 s au plus tôt) : la visite attendra
 
 export const Nouveautes: React.FC = () => {
   const { user } = useAuth();
+  const { effectiveTheme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -54,6 +66,7 @@ export const Nouveautes: React.FC = () => {
       const n = NOUVEAUTES[demande] ?? NOUVEAUTES[DERNIERE];
       return n ? { n, apercu: true } : null;
     }
+    if (ouverteRecemment(String(user.id))) return null;
     const deja = [...vuesIci(String(user.id)), ...montrees];
     const id = (user.nouveautes ?? []).find((x) => NOUVEAUTES[x] && !deja.includes(x));
     return id ? { n: NOUVEAUTES[id], apercu: false } : null;
@@ -75,8 +88,9 @@ export const Nouveautes: React.FC = () => {
       window.clearInterval(id);
       if (!candidate.apercu && user) {
         marquerIci(String(user.id), candidate.n.id);
+        noterOuverture(String(user.id));
         marquerNouveauteVue(candidate.n.id).catch(() => { /* revue au plus une fois ailleurs, sans gravité */ });
-        trackAction('nouveautes-vue');
+        trackNouveaute(candidate.n.id, 'vue');
         setMontrees((m) => [...m, candidate.n.id]);
       }
       setOuverte({ ...candidate, finie: false });
@@ -87,26 +101,31 @@ export const Nouveautes: React.FC = () => {
   const onFinie = useCallback(() => {
     setOuverte((o) => (o ? { ...o, finie: true } : o));
     if (ouverte?.n.visite) marquerVisiteVue(ouverte.n.visite);
-    if (ouverte && !ouverte.apercu) trackAction('nouveautes-finie');
+    if (ouverte && !ouverte.apercu) trackNouveaute(ouverte.n.id, 'finie');
   }, [ouverte]);
 
   const fermer = (fin: Fin) => {
     if (!ouverte) return;
-    if (!ouverte.apercu && fin === 'cta') trackAction('nouveautes-cta');
-    else if (!ouverte.apercu && !ouverte.finie) trackAction('nouveautes-passee');
+    if (!ouverte.apercu && fin === 'cta') trackNouveaute(ouverte.n.id, 'cta');
+    else if (!ouverte.apercu && !ouverte.finie) trackNouveaute(ouverte.n.id, 'passee');
     setOuverte(null);
     if (demande) {
       const next = new URLSearchParams(params);
       next.delete('nouveautes');
       setParams(next, { replace: true });
     }
-    if (fin === 'cta' && location.pathname !== ouverte.n.cta.to) navigate(ouverte.n.cta.to);
+    const cta = ouverte.n.cta;
+    if (fin !== 'cta') return;
+    if ('theme' in cta) { if (effectiveTheme !== cta.theme) setTheme(cta.theme); }
+    else if (location.pathname !== cta.to) navigate(cta.to);
   };
 
   if (!ouverte) return null;
+  const cta = ouverte.n.cta;
+  const ctaLabel = 'theme' in cta && effectiveTheme === cta.theme ? cta.dejaLabel : cta.label;
   return (
     <Suspense fallback={null}>
-      <NouveautesModal nouveaute={ouverte.n} onFinie={onFinie} onClose={fermer} />
+      <NouveautesModal nouveaute={ouverte.n} ctaLabel={ctaLabel} onFinie={onFinie} onClose={fermer} />
     </Suspense>
   );
 };

@@ -12,8 +12,14 @@ import SceneApercu from './scene/SceneApercu';
 import SceneFaibles from './scene/SceneFaibles';
 import SceneChapitres from './scene/SceneChapitres';
 import SceneTemps from './scene/SceneTemps';
+import SceneSombreBascule from './scene/SceneSombreBascule';
+import SceneSombreContenu from './scene/SceneSombreContenu';
+import SceneSombreReglage from './scene/SceneSombreReglage';
 
-const SCENES: Record<SceneId, React.FC> = { apercu: SceneApercu, faibles: SceneFaibles, chapitres: SceneChapitres, temps: SceneTemps };
+const SCENES: Record<SceneId, React.FC> = {
+  apercu: SceneApercu, faibles: SceneFaibles, chapitres: SceneChapitres, temps: SceneTemps,
+  'sombre-bascule': SceneSombreBascule, 'sombre-contenu': SceneSombreContenu, 'sombre-reglage': SceneSombreReglage,
+};
 
 export type Fin = 'cta' | 'fermee';
 
@@ -23,7 +29,9 @@ const glisse = {
   sort: (sens: number) => ({ x: sens * -48, opacity: 0 }),
 };
 
-const NouveautesModal: React.FC<{ nouveaute: Nouveaute; onFinie: () => void; onClose: (fin: Fin) => void }> = ({ nouveaute, onFinie, onClose }) => {
+const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFinie: () => void; onClose: (fin: Fin) => void }> = ({
+  nouveaute, ctaLabel, onFinie, onClose,
+}) => {
   const n = nouveaute.etapes.length;
   const [[etape, sens], setEtape] = useState<[number, number]>([0, 1]);
   const boite = useRef<HTMLDivElement>(null);
@@ -139,7 +147,7 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; onFinie: () => void; onC
             {derniere ? 'Plus tard' : 'Passer'}
           </button>
           <button ref={principal} type="button" onClick={() => (derniere ? onClose('cta') : aller(etape + 1))} className="fd-btn-primary min-h-11">
-            {derniere ? nouveaute.cta.label : 'Suivant'} <ArrowRight className="h-4 w-4" aria-hidden />
+            {derniere ? ctaLabel : 'Suivant'} <ArrowRight className="h-4 w-4" aria-hidden />
           </button>
         </div>
       </motion.div>

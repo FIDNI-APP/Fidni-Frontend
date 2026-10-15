@@ -309,7 +309,7 @@ html {
    ────────────────────────────────────────────────────────────── */
 /* Mode sombre (15/10/2026) : canaux RVB des couleurs nommées (tailwind.config.js), clair puis sombre. Les couleurs
    écrites en dur dans les composants sont traitées par src/styles/mode-sombre.css (scripts/generer-mode-sombre.mjs). */
-:root {
+:root, .fd-clair { /* .fd-clair : îlot clair dans une page sombre (fenêtre « Nouveautés », avec .fd-fixe) */
   --c-paper: 250 249 247;
   --c-surface: 255 255 255;
   --c-line: 231 227 220;
@@ -391,7 +391,7 @@ html {
   background: #fff; border-radius: 6px;
 }
 
-:root {
+:root, .fd-clair {
   /* Surfaces */
   --paper:      #faf9f7; /* app background — warm paper */
   --bg:         #faf9f7; /* alias of --paper (back-compat) */

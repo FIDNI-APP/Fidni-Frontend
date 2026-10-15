@@ -65,11 +65,11 @@ export const Ecran: React.FC<{ children: React.ReactNode; vers?: string | null; 
     setY(-Math.max(0, (el.getBoundingClientRect().top - b.top) / k - marge));
   }, [vers, marge]);
   return (
-    <div className={`absolute inset-x-3 bottom-0 top-3 overflow-hidden rounded-t-2xl border border-b-0 border-line bg-[#faf9f7] shadow-[0_10px_30px_rgba(20,18,16,.10)] sm:inset-x-6 sm:top-5 ${className}`}>
+    <div className={`absolute inset-x-3 bottom-0 top-3 overflow-hidden rounded-t-2xl border border-b-0 border-line bg-paper shadow-[0_10px_30px_rgba(20,18,16,.10)] sm:inset-x-6 sm:top-5 ${className}`}>
       <motion.div ref={contenu} animate={{ y }} transition={{ duration: 0.7, ease: EASE }} className="p-3 sm:p-4">
         {children}
       </motion.div>
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-10" style={{ background: 'linear-gradient(to top, #faf9f7, rgba(250,249,247,0))' }} aria-hidden />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-10" style={{ background: 'linear-gradient(to top, rgb(var(--c-paper)), rgb(var(--c-paper) / 0))' }} aria-hidden />
       {dessus /* panneau posé sur la capture (détail d'un chapitre) */}
     </div>
   );
@@ -92,7 +92,8 @@ export const Curseur: React.FC<{ racine: React.RefObject<HTMLElement | null>; ci
     const r = root.getBoundingClientRect();
     const k = root.offsetWidth ? r.width / root.offsetWidth : 1; // px CSS (ouverture de la fenêtre, zoom)
     const el = cible ? root.querySelector(cible) : null;
-    if (!el) { setPos({ x: root.offsetWidth * 0.82, y: root.offsetHeight * 0.92 }); return; }
+    // Sans cible : il part d'en bas à droite, puis s'efface là où il a cliqué.
+    if (!el) { setPos((p) => p ?? { x: root.offsetWidth * 0.82, y: root.offsetHeight * 0.92 }); return; }
     const b = el.getBoundingClientRect();
     setPos({ x: (b.left - r.left + b.width / 2) / k + dx, y: (b.top - r.top + b.height / 2) / k + dy });
   }, [racine, cible, dx, dy]);
@@ -110,6 +111,39 @@ export const Curseur: React.FC<{ racine: React.RefObject<HTMLElement | null>; ci
         <path d="M2 1.5 L2 17.5 L6.4 13.6 L9.3 20 L12.1 18.8 L9.3 12.6 L15.2 12.4 Z" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" strokeLinejoin="round" />
       </motion.svg>
     </motion.div>
+  );
+};
+
+/** Centre d'un élément de la scène, en px CSS (même correction d'échelle que le curseur) : origine d'une bascule. */
+export function useCentre(racine: React.RefObject<HTMLElement | null>, selecteur: string) {
+  const [c, setC] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const root = racine.current;
+    const el = root?.querySelector(selecteur);
+    if (!root || !el) return;
+    const r = root.getBoundingClientRect();
+    const k = root.offsetWidth ? r.width / root.offsetWidth : 1;
+    const b = el.getBoundingClientRect();
+    setC({ x: (b.left - r.left + b.width / 2) / k, y: (b.top - r.top + b.height / 2) / k });
+  }, [racine, selecteur]);
+  return c;
+}
+
+/**
+ * Mode sombre (15/10/2026) : la même capture en clair et en sombre, l'une sur l'autre. Le calque sombre (`.dark` :
+ * variables et règles du mode sombre sur ce sous-arbre seulement) recouvre le clair (`.fd-fixe.fd-clair` : reste clair
+ * même si la page est en sombre). `coupe` = sa forme visible (clip-path animé) : un cercle qui s'ouvre, un rideau…
+ */
+export const DeuxModes: React.FC<{ rendu: (sombre: boolean) => React.ReactNode; coupe: string; duree?: number }> = ({ rendu, coupe, duree = 0.9 }) => {
+  const reduit = useReducedMotion();
+  return (
+    <>
+      <div className="fd-fixe fd-clair absolute inset-0 text-ink">{rendu(false)}</div>
+      <motion.div className="dark absolute inset-0 text-ink" initial={{ clipPath: coupe }} animate={{ clipPath: coupe }}
+        transition={{ duration: reduit ? 0 : duree, ease: [0.65, 0, 0.35, 1] }}>
+        {rendu(true)}
+      </motion.div>
+    </>
   );
 };
 

@@ -183,6 +183,13 @@ export function trackAuthOpen(source: string) {
 
 /** « Ce diagnostic te semble juste ? » (Ma progression, 13/10/2026) : sujet = état d'un chapitre (« a_consolider ») ou
  *  type d'objectif (« objectif-verifier ») ; compté au Pilotage (Usage › Avis sur les diagnostics). */
+/** Fenêtre « Nouveautés » (15/10/2026) : le geste en général (action) et pour cette fenêtre (« nouveautes:<id>:<geste> »,
+ * Pilotage › Usage). */
+export function trackNouveaute(id: string, geste: 'vue' | 'finie' | 'cta' | 'passee') {
+  trackAction(`nouveautes-${geste}`);
+  if (/^[a-z0-9-]{1,40}$/.test(id)) send('filtre', `nouveautes:${id}:${geste}`);
+}
+
 export function trackDiagnosticFeedback(sujet: string, juste: boolean) {
   if (/^[a-z_-]{1,30}$/.test(sujet)) send('filtre', `prog:avis:${sujet}:${juste ? 'oui' : 'non'}`);
 }

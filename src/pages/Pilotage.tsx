@@ -39,6 +39,7 @@ import type { Funnel } from '@/components/pilotage/FunnelCard';
 import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
 import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
 import { AvisDiagnosticsCard, type AvisDiagnostic } from '@/components/pilotage/AvisDiagnosticsCard';
+import { NouveautesCard, type NouveauteStat } from '@/components/pilotage/NouveautesCard';
 import { KpiTile } from '@/components/pilotage/KpiTile';
 import { DayChart } from '@/components/pilotage/DayChart';
 import { MembersCard } from '@/components/pilotage/MembersCard';
@@ -72,6 +73,7 @@ interface Overview {
   funnel?: Funnel;
   auth_doors?: AuthDoor[];
   avis_diagnostics?: AvisDiagnostic[];
+  nouveautes?: NouveauteStat[];
 }
 interface FilterValue { filter: string; type: 'exercise' | 'exam' | 'lesson'; value: string; label: string; count: number; visits: number; anon: number }
 interface UserRow {
@@ -165,6 +167,10 @@ function normalizeOverview(raw: unknown, requestedDays: number): Overview {
     avis_diagnostics: Array.isArray(raw.avis_diagnostics)
       ? list(raw.avis_diagnostics, (a) => ({ sujet: str(a.sujet, 'autre'), oui: num(a.oui), non: num(a.non), total: num(a.total),
         accord: a.accord === null || a.accord === undefined ? null : num(a.accord) }))
+      : undefined,
+    nouveautes: Array.isArray(raw.nouveautes)
+      ? list(raw.nouveautes, (n) => ({ id: str(n.id, '?'), depuis: str(n.depuis, ''), comptes: num(n.comptes), vue: num(n.vue),
+        finie: num(n.finie), cta: num(n.cta), passee: num(n.passee) }))
       : undefined,
   };
 }
@@ -558,6 +564,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
 
       {data.auth_doors && <ErrorBoundary variant="block" label="Portes d’inscription" resetKey={data.generated_at}><AuthDoorsCard doors={data.auth_doors} days={data.days} /></ErrorBoundary>}
       {data.avis_diagnostics && <ErrorBoundary variant="block" label="Avis sur les diagnostics" resetKey={data.generated_at}><AvisDiagnosticsCard avis={data.avis_diagnostics} days={data.days} /></ErrorBoundary>}
+      {data.nouveautes && <ErrorBoundary variant="block" label="Fenêtres Nouveautés" resetKey={data.generated_at}><NouveautesCard nouveautes={data.nouveautes} days={data.days} /></ErrorBoundary>}
 
       </div>
     </div>
