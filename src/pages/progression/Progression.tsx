@@ -213,7 +213,7 @@ function Tuiles({ data, vue, onVue }: { data: Tableau; vue: Vue; onVue: (v: Vue)
         spark={data.notes.length > 1 ? { values: data.notes.map((n) => n.note), dates: data.notes.map((n) => n.date), color: COULEUR.note, label: 'Notes aux examens', format: (v) => `${decimal(v)} / 20` } : undefined}
         footer={data.notes.length <= 1 ? <span className="text-[12px] text-ink-faint">{data.notes.length ? '' : 'Corrige un DS pour avoir une note'}</span> : undefined} />
       <Tuile icon={Clock} label="Temps de travail" accent={COULEUR.temps} selected={vue === 'temps'} onClick={() => onVue('temps')}
-        value={duration(k.secondes.total)} ecart={ecart(k.secondes.total, k.secondes.avant)} jours={avantJours}
+        value={duration(k.secondes.total)} ecart={ecart(k.secondes.total, k.secondes.avant, 'pct', duration)} jours={avantJours}
         sub={data.periode.nb_jours > 1 ? `${duration(Math.round(k.secondes.total / data.periode.nb_jours))} par jour en moyenne` : undefined}
         spark={{ values: data.jours.map((j) => Math.round(j.secondes / 60)), dates, color: COULEUR.temps, label: 'Minutes par jour', format: (v) => `${v} min` }} />
       <Tuile icon={CalendarDays} label="Jours actifs" accent="#4f9f72" selected={vue === 'jours'} onClick={() => onVue('jours')}
