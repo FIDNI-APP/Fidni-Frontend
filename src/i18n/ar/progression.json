@@ -383,5 +383,7 @@
   "À retravailler": "للمراجعة من جديد",
   "Apprécié des élèves": "يفضّله التلاميذ",
   "Autres": "أخرى",
-  "Aperçu#onglet": "نظرة عامة"
+  "Aperçu#onglet": "نظرة عامة",
+  "Progression de {nom} — vue administrateur, en lecture seule.": "تقدّم {nom} — عرض المسؤول، للقراءة فقط.",
+  "Retour au Pilotage": "العودة إلى لوحة القيادة"
 }

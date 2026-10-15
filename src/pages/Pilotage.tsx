@@ -799,6 +799,11 @@ const MemberDetail: React.FC<{ row: UserRow }> = ({ row }) => {
         <Link to={`/profile/${row.username}`} className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
           Ouvrir le profil <ChevronRight className="h-3.5 w-3.5" />
         </Link>
+        <br />
+        {/* Sa page « Ma progression », telle qu'il la voit, en lecture seule (?eleve=, réservé aux administrateurs). */}
+        <Link to={`/progression?eleve=${row.id}`} className="mt-1 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+          Voir sa progression <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
       <div className="min-w-0">
         <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Journal d’activité</h3>

@@ -18,16 +18,16 @@ export const Pastilles: React.FC<{ r: { reussies: number; partielles: number; ra
   </span>
 );
 
-export const DayPanel: React.FC<{ date: string; onClose: () => void }> = ({ date, onClose }) => {
+export const DayPanel: React.FC<{ date: string; onClose: () => void; eleve?: number | null }> = ({ date, onClose, eleve }) => {
   const [rows, setRows] = useState<JourContenu[] | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let alive = true;
     setRows(null);
     setFailed(false);
-    getTableauJour(date).then((r) => { if (alive) setRows(r.contenus); }).catch(() => { if (alive) setFailed(true); });
+    getTableauJour(date, eleve).then((r) => { if (alive) setRows(r.contenus); }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, [date]);
+  }, [date, eleve]);
 
   return (
     <section aria-label={t('Ce que tu as fait le {date}', { date: longDate(date) })} className="mt-5 rounded-xl border border-line bg-[#fcfbf9] p-3.5 sm:p-4">

@@ -5,8 +5,9 @@ import { getTableau, type Periode, type Tableau } from '@/lib/api/tableauApi';
 
 const cache = new Map<string, Tableau>();
 
-export function useTableau(userKey: string | null, jours: Periode) {
-  const key = userKey ? `${userKey}:${jours}` : null;
+// `eleve` : vue administrateur d'un membre (Pilotage › Membres) ; dans la clé du cache, pour ne jamais mélanger.
+export function useTableau(userKey: string | null, jours: Periode, eleve?: number | null) {
+  const key = userKey ? `${userKey}:${eleve ?? 'moi'}:${jours}` : null;
   const [data, setData] = useState<Tableau | null>(() => (key ? cache.get(key) ?? null : null));
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -16,11 +17,11 @@ export function useTableau(userKey: string | null, jours: Periode) {
     let alive = true;
     setData(cache.get(key) ?? null);
     setFailed(false);
-    getTableau(jours)
+    getTableau(jours, eleve)
       .then((t) => { cache.set(key, t); if (alive) setData(t); })
       .catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, [key, jours, attempt]);
+  }, [key, jours, eleve, attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   return { data, failed, reload };

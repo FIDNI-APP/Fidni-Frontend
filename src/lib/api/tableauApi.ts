@@ -61,14 +61,17 @@ export interface Tableau {
   chapitres: TableauChapitre[];
   temps: TempsChapitre[];
   points_faibles: PointFaible[];
+  /** Vue administrateur seulement (?eleve=) : le membre dont c'est la progression. */
+  eleve?: { id: number; username: string; nom: string };
 }
 
 export interface JourContenu extends Questions {
   id: number; titre: string; type: 'exercise' | 'exam' | 'lesson'; url: string; chapitre: string | null; secondes: number;
 }
 
-export const getTableau = async (jours: Periode): Promise<Tableau> =>
-  (await api.get('/stats/tableau/', { params: { jours } })).data;
+// `eleve` : vue administrateur de la progression d'un membre (Pilotage › Membres ; refusé par le serveur sinon).
+export const getTableau = async (jours: Periode, eleve?: number | null): Promise<Tableau> =>
+  (await api.get('/stats/tableau/', { params: { jours, ...(eleve ? { eleve } : {}) } })).data;
 
-export const getTableauJour = async (date: string): Promise<{ date: string; contenus: JourContenu[] }> =>
-  (await api.get('/stats/tableau/jour/', { params: { date } })).data;
+export const getTableauJour = async (date: string, eleve?: number | null): Promise<{ date: string; contenus: JourContenu[] }> =>
+  (await api.get('/stats/tableau/jour/', { params: { date, ...(eleve ? { eleve } : {}) } })).data;

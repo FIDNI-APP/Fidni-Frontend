@@ -66,10 +66,12 @@ const AIDE: Record<Vue, string> = {
 export function ProgressionPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [jours, setJours] = useState<Periode>(lirePeriode);
-  const { data, failed, reload } = useTableau(isAuthenticated && user ? String(user.id) : null, jours);
+  const [params, setParams] = useSearchParams();
+  // « ?eleve=<id> » : un administrateur regarde la progression d'un membre (Pilotage › Membres), en lecture seule.
+  const eleve = user?.is_superuser ? Number(params.get('eleve')) || null : null;
+  const { data, failed, reload } = useTableau(isAuthenticated && user ? String(user.id) : null, jours, eleve);
   const [vue, setVue] = useState<Vue>('questions');
   const [jour, setJour] = useState<string | null>(null);
-  const [params, setParams] = useSearchParams();
   const [ouvert, setOuvert] = useState<number | null>(() => Number(params.get('chapitre')) || null);
   const onglet: Onglet = (ONGLETS.some((o) => o.key === params.get('onglet')) ? params.get('onglet') : 'apercu') as Onglet;
   const changerOnglet = (k: Onglet) => {
@@ -108,6 +110,14 @@ export function ProgressionPage() {
       <PageHeader eyebrow={data?.level ? t('Mon suivi · {niveau}', { niveau: data.level.name }) : t('Mon suivi')} icon={TrendingUp} title={t('Ma progression')}
         actions={<div data-tour="prog-periode"><Segmented label={t('Période')} value={String(jours)} onChange={changerPeriode} options={PERIODES.map((x) => ({ key: x.key, label: t(x.label) }))} /></div>} />
 
+      {eleve && data?.eleve && (
+        <p role="status" className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-gold-line bg-gold-soft px-4 py-3 text-[13.5px] text-ink">
+          <Users className="h-4 w-4 text-gold-strong" aria-hidden />
+          <span className="flex-1">{t('Progression de {nom} — vue administrateur, en lecture seule.', {
+            nom: data.eleve.nom ? `${data.eleve.nom} (@${data.eleve.username})` : `@${data.eleve.username}` })}</span>
+          <Link to="/pilotage?onglet=membres" className="font-semibold text-brand-hover hover:underline">{t('Retour au Pilotage')}</Link>
+        </p>
+      )}
       {failed && !data && (
         <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
           <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ta progression n’a pas pu se charger. Vérifie ta connexion.')}</p>
@@ -126,7 +136,7 @@ export function ProgressionPage() {
           action={<Link to={exercisesHome(user)} className="fd-btn-primary min-h-10">{t('Commencer un exercice')}</Link>} />
       ) : (
         <div className="flex flex-col gap-6">
-          {!data.level && (
+          {!data.level && !eleve && (
             <p className="flex flex-wrap items-center gap-2 rounded-xl border border-gold-line bg-gold-soft px-4 py-3 text-[13px] text-ink-soft">
               <GraduationCap className="h-4 w-4 text-gold-strong" aria-hidden /> {t('Indique ta classe pour voir tous les chapitres de ton programme.')}
               <Link to={levelLink} className="font-semibold text-brand-hover hover:underline">{t('Indiquer ma classe')}</Link>
@@ -162,7 +172,7 @@ export function ProgressionPage() {
                 <Tuiles data={data} vue={vue} onVue={choisir} />
                 <section aria-label={t('Graphique')} data-tour="prog-graphique" className="rounded-2xl border border-line bg-white p-4 sm:p-6">
                   <Graphique data={data} vue={vue} jour={jour} onJour={ouvrirJour} />
-                  {jour && (vue === 'questions' || vue === 'temps' || vue === 'jours') && <DayPanel date={jour} onClose={() => setJour(null)} />}
+                  {jour && (vue === 'questions' || vue === 'temps' || vue === 'jours') && <DayPanel date={jour} onClose={() => setJour(null)} eleve={eleve} />}
                   <p className="mt-4 text-[12px] leading-relaxed text-ink-faint">{t(AIDE[vue])}</p>
                 </section>
               </div>
