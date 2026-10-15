@@ -38,6 +38,7 @@ export default function CorrectionCopie() {
   const [modifie, setModifie] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [scan, setScan] = useState(true);
 
   const appliquer = useCallback((d: CopieDetail) => {
     setC(d);
@@ -162,9 +163,14 @@ export default function CorrectionCopie() {
         </p>
       ))}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mb-3 flex justify-end">
+        <button type="button" onClick={() => setScan((v) => !v)} className="fd-btn-ghost min-h-9 text-[12.5px]">
+          {scan ? t('Masquer le scan') : t('Afficher le scan')}
+        </button>
+      </div>
+      <div className={`grid gap-5 ${scan ? 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]' : ''}`}>
         {/* Scan */}
-        <div className="flex flex-col gap-3 lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto lg:pe-1">
+        {scan && <div className="flex flex-col gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto lg:pe-1">
           {c.pages.map((p) => (
             <figure key={p.id} id={`page-${p.numero}`} className="fd-fixe overflow-hidden rounded-xl border border-line bg-white">
               <img src={urlApi(p.url)} alt={t('Page {n} de la copie', { n: p.numero })} className="w-full" loading="lazy" />
@@ -172,11 +178,11 @@ export default function CorrectionCopie() {
             </figure>
           ))}
           {!c.pages.length && <p className="rounded-xl border border-line bg-white p-6 text-center text-[13px] text-ink-faint">{t('Scan supprimé (conservation limitée) ou pas encore déposé.')}</p>}
-        </div>
+        </div>}
 
         {/* Notes */}
-        <div className="flex flex-col gap-3 lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto lg:pe-1">
-          <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-[0_4px_14px_rgba(20,18,16,.05)]">
+        <div className="flex flex-col gap-4">
+          <div className="sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-[0_4px_14px_rgba(20,18,16,.05)]">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Total')}</p>
               <p dir="ltr" className="fd-nums text-[20px] font-bold text-ink">
@@ -227,9 +233,11 @@ export default function CorrectionCopie() {
                 <TexteMaths texte={c.commentaire_global} />
               </div>
             )}
-            <textarea id="com-prof" dir="auto" value={comProf} rows={3} maxLength={2000}
+            <textarea id="com-prof" dir="auto" value={comProf} rows={4} maxLength={2000}
               onChange={(e) => { setComProf(e.target.value); setModifie(true); }}
-              className="mt-2 w-full rounded-xl border border-line p-3 text-[13.5px]" />
+              placeholder={t('Formules entre $…$, par exemple $x \\neq 0$')}
+              className="mt-2 w-full rounded-xl border border-line p-3 text-[14px]" />
+            {comProf.includes('$') && <TexteMaths texte={comProf} className="mt-2 rounded-xl bg-[#faf9f7] px-4 py-2.5 text-[14px] text-ink" />}
           </div>
           {!!c.transcription?._pages?.length && (
             <details className="rounded-2xl border border-line bg-white p-4 text-[13px]">
@@ -261,8 +269,9 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
   const q = c.questions.find((x) => x.chemin === chemin)!;
   const ia = c.ia?.[chemin];
   const tr = c.transcription?.[chemin];
-  const [ouvert, setOuvert] = useState(false);
+  const [corrige, setCorrige] = useState(false);
   const [edition, setEdition] = useState(false);
+  const [editCom, setEditCom] = useState(false);
   const [texte, setTexte] = useState(tr?.texte || '');
   useEffect(() => { setTexte(tr?.texte || ''); }, [tr?.texte]);
   const f = c.finales[chemin];
@@ -272,84 +281,105 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
     return out.length <= 9 ? out : null;
   }, [q.max, pas]);
   const pts = saisie?.points ?? '';
+  const com = saisie?.commentaire ?? '';
   return (
-    <section className={`rounded-2xl border bg-white p-4 ${drapeau ? 'border-gold-line' : 'border-line'}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <section className={`rounded-2xl border bg-white p-5 ${drapeau ? 'border-gold-line' : 'border-line'}`}>
+      {/* En-tête : question, barème, proposition de l'IA, note retenue */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[14.5px] font-bold text-ink">{t('Question {q}', { q: q.label })}
-            <span className="ms-1.5 text-[12.5px] font-medium text-ink-faint">/ {fmt(q.max)}</span></h2>
+          <h2 className="text-[16px] font-bold text-ink">{t('Question {q}', { q: q.label })}
+            <span dir="ltr" className="ms-2 text-[13.5px] font-medium text-ink-faint">/ {fmt(q.max)}</span></h2>
           {drapeau && (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-gold-strong">
-              <AlertTriangle className="h-3 w-3" /> {t(RAISONS[drapeau] || drapeau)}
+            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">
+              <AlertTriangle className="h-3.5 w-3.5" /> {t(RAISONS[drapeau] || drapeau)}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {ia && ia.points !== null && (
-            <span className="text-[12px] text-ink-faint" title={t('Confiance de l’IA : {n} %', { n: Math.round(ia.confiance * 100) })}>
-              <Sparkles className="me-0.5 inline h-3.5 w-3.5" />{fmt(ia.points)}
-              <span className="ms-1">({Math.round(ia.confiance * 100)} %)</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12.5px] text-ink-soft"
+              title={t('Confiance de l’IA : {n} %', { n: Math.round(ia.confiance * 100) })}>
+              <Sparkles className="h-3.5 w-3.5" /> {t('IA')} <b dir="ltr" className="fd-nums">{fmt(ia.points)}</b>
+              <span className="text-ink-faint">· {Math.round(ia.confiance * 100)} %</span>
             </span>
           )}
           <input inputMode="decimal" aria-label={t('Points de la question {q}', { q: q.label })} value={pts}
             onChange={(e) => onSaisie({ points: e.target.value })}
-            className={`fd-nums w-16 rounded-lg border px-2 py-1.5 text-end text-[14px] font-semibold ${f?.source === 'prof' ? 'border-brand' : 'border-line'}`} />
+            className={`fd-nums w-20 rounded-xl border-2 px-2 py-2 text-end text-[17px] font-bold ${f?.source === 'prof' ? 'border-brand' : 'border-line'}`} />
         </div>
       </div>
+
+      {/* Énoncé, en rappel */}
+      <div className="fd-card-preview mt-3 text-[13px] text-ink-faint"><TipTapRenderer content={q.enonce_html} /></div>
+
+      {/* Réponse de l'élève, lue par l'IA (toujours visible, formules rendues) */}
+      <div className="mt-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Réponse de l’élève')}
+            {tr?.page ? <a href={`#page-${tr.page}`} className="ms-2 normal-case tracking-normal text-brand-hover hover:underline">{t('page {n}', { n: tr.page })}</a> : null}</p>
+          <button type="button" onClick={() => setEdition((e) => !e)} aria-expanded={edition}
+            className="text-[12px] font-semibold text-brand-hover hover:underline">
+            {edition ? t('Fermer') : t('Corriger la lecture de l’IA')}
+          </button>
+        </div>
+        {texte.trim() ? <TexteMaths texte={texte} className="mt-1.5 text-[15px] leading-relaxed text-ink" />
+          : <p className="mt-1.5 text-[14px] italic text-ink-faint">{t('Rien n’a été rangé sous cette question.')}</p>}
+        {edition && (
+          <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={5}
+            className="fd-ltr mt-2 w-full rounded-xl border border-line bg-white p-3 font-mono text-[13px]" />
+        )}
+        {texte !== (tr?.texte || '') && (
+          <button type="button" className="fd-btn-ghost mt-2 min-h-9" onClick={() => onRenoter(texte)}>
+            <RotateCcw className="h-4 w-4" /> {t('Renoter cette question avec ma transcription')}
+          </button>
+        )}
+      </div>
+
+      {/* Points rapides */}
       {choix && (
-        <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label={t('Points rapides')}>
+        <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label={t('Points rapides')}>
           {choix.map((v) => {
             const actif = Number(pts.replace(',', '.')) === v && pts !== '';
             return (
               <button key={v} type="button" onClick={() => onSaisie({ points: String(v).replace('.', ',') })}
-                className={`fd-nums min-h-8 min-w-9 rounded-lg border px-2 text-[12.5px] font-semibold ${actif ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:border-[#cfc9bf]'}`}>
+                className={`fd-nums min-h-10 min-w-11 rounded-xl border px-2.5 text-[14px] font-semibold ${actif ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:border-[#cfc9bf]'}`}>
                 {fmt(v)}
               </button>
             );
           })}
         </div>
       )}
-      <textarea dir="auto" value={saisie?.commentaire ?? ''} onChange={(e) => onSaisie({ commentaire: e.target.value })} rows={2} maxLength={1000}
-        placeholder={t('Commentaire pour l’élève (facultatif)')} aria-label={t('Commentaire de la question {q}', { q: q.label })}
-        className="mt-2 w-full rounded-xl border border-line p-2.5 text-[13px]" />
-      {/* Aperçu du commentaire avec ses formules, tel que l'élève le verra. */}
-      {(saisie?.commentaire ?? '').includes('$') && (
-        <TexteMaths texte={saisie?.commentaire ?? ''} className="-mt-0.5 mb-1 rounded-xl bg-[#faf9f7] px-3 py-2 text-[13px] text-ink-soft" />
-      )}
-      <button type="button" onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert}
-        className="mt-1 inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-faint hover:text-ink">
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${ouvert ? 'rotate-180' : ''}`} />
-        {t('Réponse lue par l’IA, énoncé et corrigé')}
-      </button>
-      {ouvert && (
-        <div className="mt-2 flex flex-col gap-3 border-t border-line pt-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Réponse de l’élève (transcription)')}
-              {tr?.page ? <a href={`#page-${tr.page}`} className="ms-2 normal-case tracking-normal text-brand-hover hover:underline">{t('page {n}', { n: tr.page })}</a> : null}</p>
-            {tr?.texte ? <TexteMaths texte={texte} className="mt-1 rounded-xl bg-[#faf9f7] px-3 py-2 text-[13.5px] text-ink" />
-              : <p className="mt-1 text-[13px] italic text-ink-faint">{t('Rien n’a été rangé sous cette question.')}</p>}
-            <button type="button" onClick={() => setEdition((e) => !e)} aria-expanded={edition}
-              className="mt-1 text-[12px] font-semibold text-brand-hover hover:underline">
-              {edition ? t('Fermer') : t('Corriger la lecture de l’IA')}
-            </button>
-            {edition && (
-              <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={4}
-                className="fd-ltr mt-1 w-full rounded-xl border border-line p-2.5 font-mono text-[12.5px]" />
-            )}
-            {texte !== (tr?.texte || '') && (
-              <button type="button" className="fd-btn-ghost mt-1 min-h-9" onClick={() => onRenoter(texte)}>
-                <RotateCcw className="h-4 w-4" /> {t('Renoter cette question avec ma transcription')}
-              </button>
-            )}
-          </div>
-          <div className="fd-card-preview text-[13px] text-ink-soft"><TipTapRenderer content={q.enonce_html} /></div>
-          {q.solution_html && (
-            <div className="rounded-xl bg-brand-soft/40 p-3">
-              <p className="text-[11px] font-bold uppercase tracking-[.08em] text-brand-hover">{t('Corrigé')}</p>
-              <div className="text-[13px]"><TipTapRenderer content={q.solution_html} /></div>
-            </div>
-          )}
+
+      {/* Commentaire pour l'élève : rendu (formules), modifiable */}
+      <div className="mt-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Commentaire pour l’élève')}</p>
+          <button type="button" onClick={() => setEditCom((e) => !e)} aria-expanded={editCom}
+            className="text-[12px] font-semibold text-brand-hover hover:underline">
+            {editCom ? t('Fermer') : com ? t('Modifier') : t('Écrire un commentaire')}
+          </button>
         </div>
+        {editCom && (
+          <textarea dir="auto" value={com} onChange={(e) => onSaisie({ commentaire: e.target.value })} rows={3} maxLength={1000} autoFocus
+            placeholder={t('Formules entre $…$, par exemple $x \\neq 0$')} aria-label={t('Commentaire de la question {q}', { q: q.label })}
+            className="mt-1.5 w-full rounded-xl border border-line p-3 text-[14px]" />
+        )}
+        {com.trim()
+          ? <TexteMaths texte={com} className="mt-1.5 rounded-xl border border-gold-line/60 bg-gold-soft/40 px-4 py-2.5 text-[14.5px] leading-relaxed text-ink" />
+          : !editCom && <p className="mt-1 text-[13px] italic text-ink-faint">{t('Pas de commentaire.')}</p>}
+      </div>
+
+      {/* Corrigé */}
+      {q.solution_html && (
+        <>
+          <button type="button" onClick={() => setCorrige((o) => !o)} aria-expanded={corrige}
+            className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-faint hover:text-ink">
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${corrige ? 'rotate-180' : ''}`} /> {t('Corrigé')}
+          </button>
+          {corrige && (
+            <div className="mt-2 rounded-xl bg-brand-soft/40 p-4 text-[14px]"><TipTapRenderer content={q.solution_html} /></div>
+          )}
+        </>
       )}
     </section>
   );

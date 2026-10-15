@@ -189,5 +189,13 @@
   "L’IA a lu la copie mais n’y a trouvé de réponse à aucune question du sujet : vérifie que l’évaluation utilise le bon sujet (onglet « Sujet et barème »), puis relance la correction.": "قرأ الذكاء الاصطناعي الورقة لكنه لم يجد فيها جوابا عن أي سؤال من الموضوع : تأكد أن التقويم يستعمل الموضوع الصحيح (تبويب « الموضوع وسلم التنقيط »)، ثم أعد التصحيح.",
   "Tout ce que l’IA a lu sur la copie": "كل ما قرأه الذكاء الاصطناعي في الورقة",
   "Rien n’a été rangé sous cette question.": "لم يُرتَّب أي شيء تحت هذا السؤال.",
-  "Corriger la lecture de l’IA": "تصحيح قراءة الذكاء الاصطناعي"
+  "Corriger la lecture de l’IA": "تصحيح قراءة الذكاء الاصطناعي",
+  "Masquer le scan": "إخفاء الورقة الممسوحة",
+  "Afficher le scan": "عرض الورقة الممسوحة",
+  "Réponse de l’élève": "جواب التلميذ",
+  "Commentaire pour l’élève": "تعليق للتلميذ",
+  "Écrire un commentaire": "كتابة تعليق",
+  "Pas de commentaire.": "لا يوجد تعليق.",
+  "Formules entre $…$, par exemple $x \\neq 0$": "الصيغ بين $…$، مثلا $x \\neq 0$",
+  "IA": "الذكاء الاصطناعي"
 }
