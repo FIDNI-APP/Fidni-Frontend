@@ -15,11 +15,14 @@ import SceneTemps from './scene/SceneTemps';
 import SceneSombreBascule from './scene/SceneSombreBascule';
 import SceneSombreContenu from './scene/SceneSombreContenu';
 import SceneSombreReglage from './scene/SceneSombreReglage';
+import SceneVideo from './scene/SceneVideo';
 import { t } from '@/i18n';
 
-const SCENES: Record<SceneId, React.FC> = {
+// `onCta` : une scène cliquable (la miniature de la vidéo) fait comme le bouton principal.
+const SCENES: Record<SceneId, React.FC<{ onCta?: () => void }>> = {
   apercu: SceneApercu, faibles: SceneFaibles, chapitres: SceneChapitres, temps: SceneTemps,
   'sombre-bascule': SceneSombreBascule, 'sombre-contenu': SceneSombreContenu, 'sombre-reglage': SceneSombreReglage,
+  video: SceneVideo,
 };
 
 export type Fin = 'cta' | 'fermee';
@@ -106,7 +109,7 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFini
               transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
               className="absolute inset-0 cursor-grab touch-pan-y active:cursor-grabbing"
               drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.16} onDragEnd={balayer}>
-              <Scene />
+              <Scene onCta={() => onClose('cta')} />
             </motion.div>
           </AnimatePresence>
           <button type="button" onClick={() => onClose('fermee')} aria-label={t('Fermer')}
@@ -131,7 +134,7 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFini
         </div>
 
         <div className="flex items-center gap-3 px-5 pb-5 pt-4 sm:px-7 sm:pb-6">
-          <div role="group" aria-label={t('Étapes')} className="flex items-center">
+          <div role="group" aria-label={t('Étapes')} className={`${n > 1 ? 'flex' : 'hidden'} items-center`}>
             {nouveaute.etapes.map((x, i) => (
               <button key={x.titre} type="button" onClick={() => aller(i)} aria-label={t('Étape {i} sur {n} : {titre}', { i: i + 1, n, titre: t(x.titre) })}
                 aria-current={i === etape ? 'step' : undefined}

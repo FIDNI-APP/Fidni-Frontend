@@ -117,6 +117,7 @@ export const Nouveautes: React.FC = () => {
     const cta = ouverte.n.cta;
     if (fin !== 'cta') return;
     if ('theme' in cta) { if (effectiveTheme !== cta.theme) setTheme(cta.theme); }
+    else if ('href' in cta) window.open(cta.href, '_blank', 'noopener,noreferrer'); // dans le clic : pas bloqué
     else if (location.pathname !== cta.to) navigate(cta.to);
   };
 
