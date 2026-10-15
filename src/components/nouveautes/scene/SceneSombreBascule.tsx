@@ -7,6 +7,7 @@ import { Tuile } from '@/components/progression/Tuile';
 import { DayBars, type BarRow } from '@/components/progression/DayBars';
 import { Curseur, DeuxModes, Ecran, Plateau, useCentre, useTimeline } from './Scene';
 import { JOURS } from './demo';
+import { t } from '@/i18n';
 
 // Clair · curseur vers la lune · appui · le sombre s'ouvre · sombre · pause
 const DUREES = [1300, 900, 500, 1300, 2400, 600] as const;
@@ -19,7 +20,7 @@ const aujourdhui = () => new Date().toLocaleDateString('fr-FR', { weekday: 'long
 export const MiniSite: React.FC<{ sombre: boolean }> = ({ sombre }) => (
   <Ecran>
     <div className="-mx-3 -mt-3 mb-3 flex items-center gap-0.5 border-b border-line bg-white/90 py-1.5 pl-3 pr-11 sm:-mx-4 sm:-mt-4 sm:pl-4 sm:pr-12">
-      <span className="text-[13px] font-semibold text-ink">Accueil</span>
+      <span className="text-[13px] font-semibold text-ink">{t('Accueil')}</span>
       <span className="flex-1" />
       <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-ink-soft"><Search className="h-4 w-4" /></span>
       <span data-scene="lune" className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-ink-soft">
@@ -28,7 +29,7 @@ export const MiniSite: React.FC<{ sombre: boolean }> = ({ sombre }) => (
       <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-ink-soft"><Bell className="h-4 w-4" /></span>
     </div>
     <p className="text-[10.5px] font-bold uppercase tracking-[.12em] text-gold-strong">{aujourdhui()} · 2ème Bac SM</p>
-    <p className="fd-display mt-0.5 text-[21px] leading-tight text-ink">Bonsoir, <em>Yasmine</em></p>
+    <p className="fd-display mt-0.5 text-[21px] leading-tight text-ink">{t('Bonsoir,')} <em>Yasmine</em></p>
     <div className="mt-2.5 grid grid-cols-2 gap-2.5">
       <Tuile icon={CheckCircle2} label="Questions réussies" accent={COULEUR.reussies} selected={false} onClick={rien}
         value={44} ecart={{ texte: '↑ 18 %', sens: 1 }} jours={14}
@@ -39,7 +40,7 @@ export const MiniSite: React.FC<{ sombre: boolean }> = ({ sombre }) => (
     </div>
     <section className="mt-2.5 rounded-2xl border border-line bg-white p-3">
       <DayBars rows={JOURS} series={SERIES_QUESTIONS} pas="jour" describe={describe} height={64}
-        headline={<>44 <span className="text-[13px] font-semibold text-ink-faint">réussies sur 14 jours</span></>} />
+        headline={<>44 <span className="text-[13px] font-semibold text-ink-faint">{t('réussies sur 14 jours')}</span></>} />
     </section>
   </Ecran>
 );

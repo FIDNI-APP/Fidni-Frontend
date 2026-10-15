@@ -5,6 +5,7 @@ import React, { useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { SunMoon } from 'lucide-react';
 import { DeuxModes, Ecran, Plateau, useTimeline } from './Scene';
+import { t } from '@/i18n';
 
 // Tout clair · la séparation balaie vers la gauche · elle revient au milieu · pause
 const DUREES = [900, 1700, 2900, 600] as const;
@@ -22,11 +23,11 @@ const FIGURE = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.
 const Exercice: React.FC<{ sombre: boolean }> = ({ sombre }) => (
   <Ecran>
     <span className={`absolute top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint ${sombre ? 'right-2' : 'left-2'}`}>
-      {sombre ? 'Sombre' : 'Clair'}
+      {sombre ? t('Sombre') : t('Clair')}
     </span>
     <article className="mt-5 rounded-2xl border border-line bg-white p-3.5">
       <p className="flex items-center gap-2">
-        <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold text-gold-strong">Moyen</span>
+        <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold text-gold-strong">{t('Moyen')}</span>
         <span className="text-[11.5px] text-ink-faint">Suites numériques</span>
       </p>
       <p className="fd-display mt-1.5 text-[17px] leading-tight text-ink">Exercice 4 · Une suite récurrente</p>
@@ -36,9 +37,9 @@ const Exercice: React.FC<{ sombre: boolean }> = ({ sombre }) => (
         <img src={FIGURE} alt="" className="mx-auto mt-2 h-[84px] w-auto rounded-md" />
       </div>
       <p className="mt-2.5 flex flex-wrap gap-1.5 text-[12px] font-semibold">
-        <span className="rounded-full border border-brand-line bg-brand-soft px-2.5 py-1 text-brand-hover">Réussi</span>
-        <span className="rounded-full border border-line bg-white px-2.5 py-1 text-ink-soft">En partie</span>
-        <span className="rounded-full border border-line bg-white px-2.5 py-1 text-ink-soft">À revoir</span>
+        <span className="rounded-full border border-brand-line bg-brand-soft px-2.5 py-1 text-brand-hover">{t('Réussi')}</span>
+        <span className="rounded-full border border-line bg-white px-2.5 py-1 text-ink-soft">{t('En partie')}</span>
+        <span className="rounded-full border border-line bg-white px-2.5 py-1 text-ink-soft">{t('À revoir')}</span>
       </p>
     </article>
   </Ecran>
