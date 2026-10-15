@@ -363,23 +363,6 @@ html {
   --c-lav-700: 214 209 201;
   --c-lav-800: 236 233 228;
   --c-lav-900: 244 242 238;
-  --paper: rgb(25 24 22);
-  --surface: rgb(36 34 31);
-  --line: rgb(58 55 50);
-  --ink: rgb(236 233 228);
-  --ink-soft: rgb(214 209 201);
-  --ink-muted: rgb(190 184 175);
-  --ink-faint: rgb(156 150 141);
-  --brand: rgb(46 160 102);
-  --brand-hover: rgb(106 199 146);
-  --brand-soft: rgb(30 54 41);
-  --brand-line: rgb(47 86 64);
-  --gold: rgb(212 164 82);
-  --gold-strong: rgb(232 192 122);
-  --gold-soft: rgb(55 45 27);
-  --gold-line: rgb(88 72 43);
-  --bg: rgb(25 24 22);
-  --neutral: #5b5853;
   color-scheme: dark;
 }
 .dark body { background: rgb(var(--c-paper)); color: rgb(var(--c-ink)); }
@@ -450,6 +433,27 @@ html {
   --ok:         #2f8f6a;
   --warn:       #b07a1e;
   --danger:     #c2564f;
+}
+/* Mode sombre des couleurs en clair (var(--paper), var(--ink)… : accueil des visiteurs, styles en ligne). APRÈS le bloc
+   « :root, .fd-clair » ci-dessus : même poids CSS, c'est le dernier qui l'emporte (avant, l'accueil restait clair). */
+.dark {
+  --paper: rgb(25 24 22);
+  --surface: rgb(36 34 31);
+  --line: rgb(58 55 50);
+  --ink: rgb(236 233 228);
+  --ink-soft: rgb(214 209 201);
+  --ink-muted: rgb(190 184 175);
+  --ink-faint: rgb(156 150 141);
+  --brand: rgb(46 160 102);
+  --brand-hover: rgb(106 199 146);
+  --brand-soft: rgb(30 54 41);
+  --brand-line: rgb(47 86 64);
+  --gold: rgb(212 164 82);
+  --gold-strong: rgb(232 192 122);
+  --gold-soft: rgb(55 45 27);
+  --gold-line: rgb(88 72 43);
+  --bg: rgb(25 24 22);
+  --neutral: #5b5853;
 }
 
 /* Reusable muted-text helpers (replace inline #9391b8 / #b0adcd) */
