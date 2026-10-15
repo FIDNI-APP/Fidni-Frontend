@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { getClassLevels, getSubjects } from '@/lib/api';
 import {
-  chaptersFor, saveContent, theoremsFor, type ChapterOption, type TheoremOption, type WizardContentType,
+  chaptersFor, saveContent, saveDraftEdition, theoremsFor, type ChapterOption, type TheoremOption, type WizardContentType,
 } from '@/lib/api/contentWriteApi';
 import type { ExerciseBlock, FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { FlexibleLessonStructure, SectionBlock } from '@/components/content/editor/FlexibleLessonEditor';
@@ -106,8 +106,10 @@ export const ContentWizard: React.FC<{ contentType?: WizardContentType }> = (pro
 };
 
 const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType = 'exercise' }) => {
-  const { id } = useParams<{ id: string }>();
-  const editing = !!id;
+  // brouillonId : un brouillon de Pilotage › À valider, modifié ici avant sa publication (15/10/2026).
+  const { id, brouillonId } = useParams<{ id: string; brouillonId: string }>();
+  const ficheCle = new URLSearchParams(useLocation().search).get('fiche');
+  const editing = !!id || !!brouillonId;
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
 
@@ -175,12 +177,14 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
     theoremsFor(d.levelIds, subjectId, d.chapterIds).then(setTheorems).catch(() => setTheorems([]));
   }, [d.chapterIds.join(','), subjectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Modifier : le contenu existant
+  // ── Modifier : le contenu existant (ou le brouillon, au même format)
   useEffect(() => {
-    if (!id) return;
+    if (!id && !brouillonId) return;
     (async () => {
       try {
-        const { data: c } = await api.get(`/contents/${id}/`);
+        const { data: c } = await api.get(brouillonId
+          ? `/pilotage/ia/${brouillonId}/editeur/${ficheCle ? `?fiche=${encodeURIComponent(ficheCle)}` : ''}`
+          : `/contents/${id}/`);
         const st = c.json_content || c.structure || {};
         const t: WizardContentType = c.type === 'exam' ? 'exam' : c.type === 'lesson' ? 'lesson' : 'exercise';
         setD({
@@ -203,12 +207,12 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
         });
         if (c.school) setMoreOpen(true);
       } catch {
-        setError('Ce contenu n’a pas pu être chargé.');
+        setError(brouillonId ? 'Ce brouillon n’a pas pu être chargé.' : 'Ce contenu n’a pas pu être chargé.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, brouillonId, ficheCle]);
 
   // ── Nouveau contenu : brouillon gardé dans ce navigateur
   useEffect(() => {
@@ -265,14 +269,21 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
     setSaving(true); setError(null);
     const chosen = chapters.filter((c) => d.chapterIds.includes(c.id));
     try {
-      const res = await saveContent({
+      const payload = {
         type: d.type, title: d.title, structure, difficulty: d.difficulty,
         subjectId: subjectId ?? chosen[0]?.subject?.id ?? null,
         levelIds: d.levelIds, chapterIds: d.chapterIds,
         subfieldIds: [...new Set(chosen.map((c) => c.subfield?.id).filter((x): x is number => !!x))],
         theoremIds: d.theoremIds.filter((t) => theorems.some((x) => x.id === t)),
         schoolId: d.school.id, durationMinutes: d.durationMinutes, isNationalExam: d.isNationalExam, nationalYear: d.nationalYear,
-      }, id);
+      };
+      // Brouillon : enregistré dans le brouillon, retour à sa relecture (la publication se fait là-bas).
+      if (brouillonId) {
+        await saveDraftEdition(brouillonId, ficheCle, payload);
+        navigate(`/pilotage?onglet=validation&brouillon=${brouillonId}`);
+        return;
+      }
+      const res = await saveContent(payload, id);
       if (!editing) dropDraft();
       if (serie) {
         nextInSerie(navigate, { id: res.id ?? '', title: d.title }, { levelIds: d.levelIds, subjectId: d.subjectId, chapterIds: d.chapterIds, school: d.school });
@@ -357,7 +368,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
             <ArrowLeft className="h-4 w-4" /> Retour
           </button>
           <h1 className="fd-display text-[24px] leading-tight text-ink">
-            {editing ? `Modifier ${d.type === 'lesson' ? 'la leçon' : d.type === 'exam' ? 'le devoir' : 'l’exercice'}` : 'Ajouter un contenu'}
+            {brouillonId ? 'Modifier le brouillon' : editing ? `Modifier ${d.type === 'lesson' ? 'la leçon' : d.type === 'exam' ? 'le devoir' : 'l’exercice'}` : 'Ajouter un contenu'}
           </h1>
         </div>
         <ol className="mt-4 flex flex-wrap gap-2" aria-label="Étapes">
@@ -730,7 +741,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
               <button type="button" onClick={publish} disabled={saving || mathErrors.length > 0 || step1Missing.length > 0 || step2Missing.length > 0}
                 data-tour="creer-enregistrer" className="fd-btn-primary min-h-12 w-full justify-center text-[15px] disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                {editing ? 'Enregistrer les modifications'
+                {brouillonId ? 'Enregistrer le brouillon' : editing ? 'Enregistrer les modifications'
                   : serie && serie.index + 1 < serie.items.length ? `Publier et passer au suivant (${serie.index + 2}/${serie.items.length})` : 'Publier'}
               </button>
               {(step1Missing.length > 0 || step2Missing.length > 0) && (

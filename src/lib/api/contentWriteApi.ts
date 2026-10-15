@@ -21,7 +21,7 @@ export interface ContentPayload {
   nationalYear?: number | null;
 }
 
-export async function saveContent(p: ContentPayload, id?: string | number): Promise<{ id: number }> {
+function contentBody(p: ContentPayload): Record<string, unknown> {
   const body: Record<string, unknown> = {
     type: p.type,
     title: p.title.trim(),
@@ -39,8 +39,19 @@ export async function saveContent(p: ContentPayload, id?: string | number): Prom
     body.is_national_exam = !!p.isNationalExam;
     body.national_year = p.isNationalExam ? p.nationalYear || null : null;
   }
+  return body;
+}
+
+export async function saveContent(p: ContentPayload, id?: string | number): Promise<{ id: number }> {
+  const body = contentBody(p);
   const res = id ? await api.patch(`/contents/${id}/`, body) : await api.post('/contents/', body);
   return res.data;
+}
+
+/** Brouillon de Pilotage › À valider modifié dans l'éditeur : enregistré dans le brouillon, rien n'est publié. */
+export async function saveDraftEdition(jobId: string | number, fiche: string | null, p: ContentPayload): Promise<{ id: number }> {
+  const q = fiche ? `?fiche=${encodeURIComponent(fiche)}` : '';
+  return (await api.post(`/pilotage/ia/${jobId}/editeur/${q}`, contentBody(p))).data;
 }
 
 export interface ChapterOption {

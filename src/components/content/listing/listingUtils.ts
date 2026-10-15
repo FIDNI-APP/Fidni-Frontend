@@ -200,3 +200,21 @@ export function useBookmark(item: ListItem, kind: ListKind) {
   };
   return { saved, busy, toggle };
 }
+
+/** Date de rajout d'un contenu en clair : « aujourd'hui », « hier », « il y a 3 jours », « il y a 2 mois »… */
+export function ilYa(iso?: string | null): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const jours = Math.floor((Date.now() - t) / 86400000);
+  if (jours <= 0) return 'aujourd’hui';
+  if (jours === 1) return 'hier';
+  if (jours < 14) return `il y a ${jours} jours`;
+  if (jours < 60) return `il y a ${Math.round(jours / 7)} semaines`;
+  if (jours < 365) return `il y a ${Math.round(jours / 30)} mois`;
+  const ans = Math.floor(jours / 365);
+  return `il y a ${ans} an${ans > 1 ? 's' : ''}`;
+}
+
+/** Date complète (infobulle de « il y a … »). */
+export const dateLongue = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '');

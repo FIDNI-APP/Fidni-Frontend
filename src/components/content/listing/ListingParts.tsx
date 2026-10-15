@@ -2,7 +2,7 @@
 // Mêmes mots partout pour l'état de l'élève : « Réussi », « À revoir », « Pas encore fait » (« À faire » dans
 // les cartes de liste, comme le filtre).
 import React, { useState } from 'react';
-import { Bookmark, Check, Loader2, Pencil, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
+import { Bookmark, Check, Loader2, Pencil, RotateCcw, School, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import type { Felt, UserProgress } from '@/types/content';
 import { DIFFICULTY, feltTooltip, type Progress } from './listingUtils';
 import { DifficultyBars } from '@/components/common/DifficultyBars';
@@ -103,6 +103,16 @@ export const QuestionProgressBar: React.FC<{ progress: UserProgress }> = ({ prog
     </div>
   );
 };
+
+/** Établissement d'origine : petite étiquette calme (nom, ville en infobulle). */
+export const SchoolTag: React.FC<{ school?: { name: string; city?: string | null } | null }> = ({ school }) => (
+  school ? (
+    <span title={`Donné au ${school.name}${school.city ? ` (${school.city})` : ''}`}
+      className="inline-flex max-w-[14rem] items-center gap-1 rounded-full border border-line bg-white px-2 py-0.5 text-[11.5px] font-medium text-ink-soft">
+      <School className="h-3 w-3 shrink-0 text-ink-faint" aria-hidden /><span className="truncate">{school.name}</span>
+    </span>
+  ) : null
+);
 
 export const NationalTag: React.FC<{ year?: number | null }> = ({ year }) => (
   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11.5px] font-semibold bg-gold-soft text-gold-strong">

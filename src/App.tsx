@@ -512,6 +512,12 @@ function App() {
                         <ContentWizard />
                       </NavbarWrapper>
                     } />
+                    {/* Brouillon de Pilotage › À valider, modifié dans l'éditeur avant publication. */}
+                    <Route path="/pilotage/brouillons/:brouillonId/modifier" element={
+                      <NavbarWrapper showFooter={false}>
+                        <ContentWizard />
+                      </NavbarWrapper>
+                    } />
                     {/* Legacy redirect */}
                     <Route path="/new" element={<Navigate to="/exercises/new" replace />} />
                     <Route path="/edit/:id" element={<RedirectWithParams to="/exercises/:id/edit" />} />

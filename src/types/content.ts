@@ -47,6 +47,8 @@ interface ListExtras {
   expected_minutes?: number | null;
   /** Tri « Pour toi » : pourquoi ce contenu est proposé. */
   recommendation_reason?: string | null;
+  /** Établissement d'origine (étiquette des cartes). */
+  school?: { id: number; name: string; city?: string | null } | null;
 }
 
 // =====================

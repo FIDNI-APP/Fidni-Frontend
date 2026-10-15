@@ -7,7 +7,7 @@
  */
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, Eye, ListPlus, Loader2, MessageSquare, Pause, Play, RotateCcw, Save, Timer } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Clock, Eye, ListPlus, Loader2, MessageSquare, Pause, Play, RotateCcw, Save, Timer } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { ClampedPreview } from '@/components/content/ClampedPreview';
 import { ExerciseRenderer } from '@/components/content/viewer/ExerciseRenderer';
@@ -16,8 +16,8 @@ import type { FlexibleLessonStructure } from '@/components/content/editor/Flexib
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import type { AssessmentStatus } from '@/types/content';
-import { BookmarkButton, DifficultyChip, QuietVotes } from './ListingParts';
-import { chapterLabel, facts, levelLabel, type ListItem, type ListKind } from './listingUtils';
+import { BookmarkButton, DifficultyChip, QuietVotes, SchoolTag } from './ListingParts';
+import { chapterLabel, dateLongue, facts, ilYa, levelLabel, type ListItem, type ListKind } from './listingUtils';
 
 type Completion = 'success' | 'review' | null;
 /** Questions évaluées : le type attendu par le rendu de l'énoncé. */
@@ -85,6 +85,7 @@ export const StatementCard: React.FC<StatementCardProps> = ({
             {national && <span className="font-semibold text-gold-strong">Bac national{year ? ` ${year}` : ''}</span>}
             {'difficulty' in item && <DifficultyChip difficulty={item.difficulty} felt={item.felt} plain />}
             {infos && <span className="fd-nums">{infos}</span>}
+            <SchoolTag school={item.school} />
           </div>
           <BookmarkButton saved={saved} busy={false} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSave(); }} className="-mr-2 shrink-0" />
         </div>
@@ -198,8 +199,13 @@ export const StatementCard: React.FC<StatementCardProps> = ({
             <MessageSquare className="h-3.5 w-3.5" aria-hidden /> {comments}<span className="sr-only"> messages</span>
           </span>
         )}
+        {ilYa(item.created_at) && (
+          <span className="ml-2 hidden items-center gap-1 whitespace-nowrap text-[12.5px] text-ink-faint md:inline-flex" title={`Ajouté le ${dateLongue(item.created_at)}`}>
+            <Clock className="h-3.5 w-3.5" aria-hidden /> {ilYa(item.created_at)}
+          </span>
+        )}
         <Link to={path} state={{ from }} data-tour="liste-ouvrir"
-          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft">
+          className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-[13px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft">
           {lesson ? 'Ouvrir la leçon' : 'Ouvrir la page'} <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </footer>

@@ -97,6 +97,8 @@ export interface Brouillon {
   remplace: { id: number; titre: string; type: string } | null;
   publie: { id: number; titre: string; type: string } | null;
   corrections: number;
+  /** Modifié à la main dans l'éditeur (la correction par l'IA n'est alors plus proposée). */
+  edite?: boolean;
 }
 export interface BrouillonDetail extends IAJobDetail {
   depot?: boolean;

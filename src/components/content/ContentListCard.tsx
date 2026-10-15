@@ -24,10 +24,10 @@ import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api'
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import {
-  BASE_PATH, chapterHref, chapterLabel, facts, levelLabel, progressOf, questionProgress, structureOf, useBookmark,
+  BASE_PATH, chapterHref, chapterLabel, dateLongue, facts, ilYa, levelLabel, progressOf, questionProgress, structureOf, useBookmark,
   type ListItem, type ListKind, type PreviewStructure,
 } from './listing/listingUtils';
-import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, ProgressPill, QuestionProgressBar } from './listing/ListingParts';
+import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, ProgressPill, QuestionProgressBar, SchoolTag } from './listing/ListingParts';
 import { NewBadge, isNewContent } from './NewBadge';
 
 interface ContentListCardProps {
@@ -179,6 +179,8 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
     showSubject && content.subject?.name ? content.subject.name : null,
     hideLevel ? null : levelLabel(content),
     ...facts(content, contentType),
+    // Date de rajout : dans cette ligne (au pied de la carte, elle poussait « Commencer » hors du cadre).
+    ilYa(content.created_at) ? `ajouté ${ilYa(content.created_at)}` : null,
   ].filter(Boolean) as string[], [content, contentType, showSubject, hideLevel]);
 
   // « Nouveau » : calculé une fois (lit le stockage du navigateur).
@@ -210,6 +212,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
             ))}
             <ProgressPill progress={progress} />
             {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
+            <SchoolTag school={content.school} />
           </div>
           <div className="relative z-10 flex items-center -mr-2 -mt-0.5 shrink-0">
             {canManage && (
@@ -243,7 +246,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           {content.title}
         </Link>
         {infos.length > 0 && (
-          <p className="mt-1 text-[12.5px] text-ink-faint fd-nums">{infos.join(' · ')}</p>
+          <p className="mt-1 text-[12.5px] text-ink-faint fd-nums" title={content.created_at ? `Ajouté le ${dateLongue(content.created_at)}` : undefined}>{infos.join(' · ')}</p>
         )}
         {/* Travail commencé : où il en est. */}
         {started && progress !== 'success' && (
@@ -281,7 +284,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           to={path}
           state={{ from }}
           data-tour={first ? 'liste-ouvrir' : undefined}
-          className="ml-auto inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[10px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover transition-colors"
+          className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap h-9 px-3.5 rounded-[10px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover transition-colors"
         >
           {contentType === 'lesson' ? 'Lire' : progress === 'success' ? 'Revoir' : progress === 'review' || started ? 'Reprendre' : 'Commencer'}
           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />

@@ -111,8 +111,13 @@ const Carte: React.FC<{ b: Brouillon; onOpen: () => void }> = ({ b, onOpen }) =>
           {b.figures > 0 && <Stat icon={ImageIcon}>{plural(b.figures, 'figure')}</Stat>}
           <DiffBars value={b.difficulte} />
         </div>
-        {(b.remplace || b.commentaires > 0) && (
+        {(b.remplace || b.commentaires > 0 || b.edite) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
+            {b.edite && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-medium text-ink-soft">
+                <PenLine className="h-3 w-3" /> Modifié à la main
+              </span>
+            )}
             {b.remplace && (
               <span className="inline-flex items-center gap-1 rounded-full bg-[#eef3f8] px-2 py-0.5 text-[11.5px] font-medium text-[#35577a]">
                 <RefreshCw className="h-3 w-3" /> Mise à jour d’un contenu en ligne
@@ -348,10 +353,17 @@ const Relecture: React.FC<{
                 </>
               )}
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <button type="button" disabled={busy || !pret} onClick={() => setModifier((m) => !m)} aria-expanded={modifier}
-                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-medium disabled:opacity-50 ${modifier ? 'border-ink bg-[#f7f6f3] text-ink' : 'border-line bg-white text-ink hover:border-ink'}`}>
-                  <PenLine className="h-3.5 w-3.5" /> Modifier
-                </button>
+                {/* Modifier soi-même dans l'éditeur du site (15/10/2026) ; l'IA reste en option, en dessous. */}
+                {pret && !busy ? (
+                  <Link to={`/pilotage/brouillons/${job.id}/modifier${apercu?.cle ? `?fiche=${encodeURIComponent(apercu.cle)}` : ''}`}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-[13px] font-medium text-ink hover:border-ink">
+                    <PenLine className="h-3.5 w-3.5" /> Modifier
+                  </Link>
+                ) : (
+                  <span className="inline-flex cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-[13px] font-medium text-ink opacity-50">
+                    <PenLine className="h-3.5 w-3.5" /> Modifier
+                  </span>
+                )}
                 <button type="button" disabled={busy}
                   onClick={async () => {
                     if (!window.confirm('Rejeter ce brouillon ? Rien ne sera publié.')) return;
@@ -362,7 +374,14 @@ const Relecture: React.FC<{
                   <X className="h-3.5 w-3.5" /> Rejeter
                 </button>
               </div>
-              {modifier && pret && (
+              {pret && !c?.edite && (
+                <button type="button" onClick={() => setModifier((m) => !m)} aria-expanded={modifier}
+                  className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-medium text-ink-faint hover:text-ink">
+                  <Send className="h-3.5 w-3.5" /> {modifier ? 'Fermer' : 'Ou demander une modification à l’IA'}
+                </button>
+              )}
+              {c?.edite && <p className="mt-2.5 text-[12px] text-ink-faint">Modifié dans l’éditeur : c’est cette version qui sera publiée.</p>}
+              {modifier && pret && !c?.edite && (
                 <div className="mt-3 border-t border-line pt-3">
                   <label htmlFor="val-modif" className="text-[12.5px] font-semibold text-ink">Ce qu’il faut changer</label>
                   <textarea id="val-modif" value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={4} maxLength={4000} autoFocus
