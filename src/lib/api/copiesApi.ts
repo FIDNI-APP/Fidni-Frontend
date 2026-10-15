@@ -86,10 +86,10 @@ export interface CopieDetail extends Note {
   publiee_le: string | null;
   // Professeur seulement :
   transcription?: Record<string, { texte: string; illisible?: boolean; page?: number | null; modifie?: boolean }>
-    & { _hors_question?: string; _injection?: boolean };
+    & { _hors_question?: string; _injection?: boolean; _pages?: string[] };
   ia?: Record<string, { points: number | null; commentaire: string; confiance: number; illisible: boolean }>;
   notes?: Record<string, { points?: number; commentaire?: string }>;
-  drapeaux?: { chemin: string | null; raison: 'injection' | 'illisible' | 'confiance' | 'non_notee' }[];
+  drapeaux?: { chemin: string | null; raison: 'injection' | 'illisible' | 'confiance' | 'non_notee' | 'hors_sujet' }[];
   precedente?: number | null;
   suivante?: number | null;
   validee_le?: string | null;

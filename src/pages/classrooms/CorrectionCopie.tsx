@@ -22,6 +22,7 @@ type Saisie = Record<string, { points: string; commentaire: string }>;
 
 const RAISONS: Record<string, string> = {
   injection: 'La copie contient un texte qui réclame des points : l’IA l’a ignoré, vérifie.',
+  hors_sujet: 'L’IA a lu la copie mais n’y a trouvé de réponse à aucune question du sujet : vérifie que l’évaluation utilise le bon sujet (onglet « Sujet et barème »), puis relance la correction.',
   illisible: 'Passage illisible',
   confiance: 'L’IA hésite',
   non_notee: 'Pas de note proposée',
@@ -154,11 +155,11 @@ export default function CorrectionCopie() {
       {c.statut === 'erreur' && c.error && (
         <p className="mb-4 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-2.5 text-[13.5px] text-[#a23b34]">{c.error}</p>
       )}
-      {drapeaux.some((d) => d.raison === 'injection') && (
-        <p className="mb-4 flex items-start gap-2 rounded-xl border border-gold-line bg-gold-soft px-4 py-2.5 text-[13.5px] text-gold-strong">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {t(RAISONS.injection)}
+      {drapeaux.filter((d) => !d.chemin && RAISONS[d.raison]).map((d) => (
+        <p key={d.raison} className="mb-4 flex items-start gap-2 rounded-xl border border-gold-line bg-gold-soft px-4 py-2.5 text-[13.5px] text-gold-strong">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {t(RAISONS[d.raison])}
         </p>
-      )}
+      ))}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Scan */}
@@ -224,6 +225,17 @@ export default function CorrectionCopie() {
               onChange={(e) => { setComProf(e.target.value); setModifie(true); }}
               className="mt-2 w-full rounded-xl border border-line p-3 text-[13.5px]" />
           </div>
+          {!!c.transcription?._pages?.length && (
+            <details className="rounded-2xl border border-line bg-white p-4 text-[13px]">
+              <summary className="cursor-pointer font-semibold text-ink-soft">{t('Tout ce que l’IA a lu sur la copie')}</summary>
+              {c.transcription._pages.map((texte, i) => (
+                <div key={i} className="mt-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Page {n}', { n: i + 1 })}</p>
+                  <p className="fd-ltr mt-1 whitespace-pre-wrap font-mono text-[12.5px] text-ink-soft">{texte}</p>
+                </div>
+              ))}
+            </details>
+          )}
           {!!c.transcription?._hors_question && (
             <details className="rounded-2xl border border-line bg-white p-4 text-[13px]">
               <summary className="cursor-pointer font-semibold text-ink-soft">{t('Écrit hors des questions')}</summary>
