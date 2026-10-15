@@ -6,8 +6,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, CheckCircle2, ChevronRight, Download, FileUp, Loader2, Merge, Scissors, Send, Sparkles, Trash2, Upload,
+  AlertTriangle, CheckCircle2, ChevronRight, Download, FileUp, Loader2, Merge, Plus, Scissors, Send, Sparkles, Trash2,
+  Upload, UserPlus,
 } from 'lucide-react';
+import { ModalShell, FormError, fieldCls } from '@/components/enregistrements/ModalShell';
 import { t, dateLocale } from '@/i18n';
 import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, Segmented, CardsSkeleton, StatTile } from '@/components/space/Page';
@@ -17,6 +19,7 @@ import type { ExerciseBlock } from '@/components/content/editor/FlexibleExercise
 import {
   confirmerLot, copiesError, corriger, deleteEvaluation, deleteLot, envoyerLot, enTraitement, exporterNotes, fmt,
   getEvaluation, getLot, getRapport, importSujet, listCopies, publier, updateEvaluation, urlApi, addPages,
+  addPagesCopie, creerCopieSansCompte, deleteCopie,
   type EvaluationDetail, type LigneCopie, type Lot, type Rapport, type StatutCopie,
 } from '@/lib/api/copiesApi';
 
@@ -118,7 +121,9 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
   const { id = '' } = useParams<{ id: string }>();
   const [lignes, setLignes] = useState<LigneCopie[] | null>(null);
   const [quota, setQuota] = useState<number | null>(null);
-  const [envois, setEnvois] = useState<Record<number, string>>({});
+  const [envois, setEnvois] = useState<Record<string, string>>({});
+  // Fenêtre « Déposer une copie » (fichiers déjà lâchés sur la page, s'il y en a).
+  const [depot, setDepot] = useState<File[] | null>(null);
   const [message, setMessage] = useState<{ ton: 'vert' | 'rouge'; texte: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [lot, setLot] = useState<Lot | null>(ev.lot);
@@ -134,19 +139,44 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
     return () => clearInterval(timer);
   }, [actives, charger]);
 
-  const deposer = async (eleveId: number, fichiers: FileList | File[]) => {
+  // Un fichier lâché ailleurs que sur une ligne : Chrome l'ouvrirait ; on ouvre plutôt « Déposer une copie ».
+  useEffect(() => {
+    const sur = (e: DragEvent) => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); };
+    const lache = (e: DragEvent) => {
+      if (!e.dataTransfer?.files.length) return;
+      e.preventDefault();
+      setDepot(Array.from(e.dataTransfer.files));
+    };
+    window.addEventListener('dragover', sur);
+    window.addEventListener('drop', lache);
+    return () => { window.removeEventListener('dragover', sur); window.removeEventListener('drop', lache); };
+  }, []);
+
+  /** Envoie des fichiers sur la copie d'un élève (membre) ou sur une copie existante (élève sans compte). */
+  const deposer = async (cible: Cible, fichiers: FileList | File[]) => {
     const liste = Array.from(fichiers);
+    const cle = cleCible(cible);
+    let ok = true;
     for (let i = 0; i < liste.length; i++) {
-      setEnvois((e) => ({ ...e, [eleveId]: liste.length > 1 ? t('Envoi {i}/{n}…', { i: i + 1, n: liste.length }) : t('Envoi…') }));
+      setEnvois((e) => ({ ...e, [cle]: liste.length > 1 ? t('Envoi {i}/{n}…', { i: i + 1, n: liste.length }) : t('Envoi…') }));
       try {
-        await addPages(id, ev.id, eleveId, liste[i]);
+        if (cible.copie) await addPagesCopie(id, ev.id, cible.copie, liste[i]);
+        else await addPages(id, ev.id, cible.eleve as number, liste[i]);
       } catch (e) {
         setMessage({ ton: 'rouge', texte: `${liste[i].name} : ${copiesError(e, t('envoi impossible.'))}` });
+        ok = false;
         break;
       }
     }
-    setEnvois((e) => { const n = { ...e }; delete n[eleveId]; return n; });
+    setEnvois((e) => { const n = { ...e }; delete n[cle]; return n; });
     charger();
+    return ok;
+  };
+
+  const supprimer = async (copieId: number, nom: string) => {
+    if (!window.confirm(t('Supprimer la copie de {nom} (pages et notes) ?', { nom }))) return;
+    try { await deleteCopie(id, ev.id, copieId); charger(); }
+    catch (e) { setMessage({ ton: 'rouge', texte: copiesError(e, t('Suppression impossible.')) }); }
   };
 
   const aCorriger = (lignes || []).filter((l) => l.copie && l.copie.nb_pages > 0
@@ -170,7 +200,9 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
     setBusy(true);
     try {
       const r = await publier(id, ev.id, 'validees');
-      setMessage({ ton: 'vert', texte: t('{n} copies publiées.', { n: r.publiees }) });
+      setMessage({ ton: 'vert', texte: r.sans_compte
+        ? t('{n} copies publiées. Les {k} copies d’élèves sans compte restent visibles de toi seul.', { n: r.publiees, k: r.sans_compte })
+        : t('{n} copies publiées.', { n: r.publiees }) });
       charger();
     } catch (e) {
       setMessage({ ton: 'rouge', texte: copiesError(e, t('Impossible de publier.')) });
@@ -188,7 +220,10 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
       {message && <Bandeau ton={message.ton}>{message.texte}</Bandeau>}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button type="button" className="fd-btn-primary min-h-10" disabled={busy || !aCorriger || !sujetPret} onClick={lancer}>
+        <button type="button" className="fd-btn-primary min-h-10" onClick={() => setDepot([])}>
+          <Plus className="h-4 w-4" /> {t('Déposer une copie')}
+        </button>
+        <button type="button" className="fd-btn-ghost min-h-10" disabled={busy || !aCorriger || !sujetPret} onClick={lancer}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {aCorriger ? t('Corriger avec l’IA ({n})', { n: aCorriger }) : t('Corriger avec l’IA')}
         </button>
@@ -212,22 +247,39 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
             </tr>
           </thead>
           <tbody>
-            {lignes.map((l) => (
-              <LigneEleve key={l.eleve.id} l={l} evId={ev.id} classeId={id} envoi={envois[l.eleve.id]} onDeposer={deposer} />
-            ))}
+            {lignes.map((l) => {
+              const cible = cibleDe(l);
+              return <LigneEleve key={cleCible(cible)} l={l} evId={ev.id} classeId={id} envoi={envois[cleCible(cible)]}
+                onDeposer={(f) => deposer(cible, f)} onSupprimer={supprimer} />;
+            })}
+            {lignes.length === 0 && (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-[13.5px] text-ink-faint">
+                {t('Aucune copie pour l’instant. Clique sur « Déposer une copie » (ou lâche un fichier sur la page) : tu peux taper le nom d’un élève qui n’a pas de compte Fidni.')}
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
       <p className="mt-3 text-[12px] leading-relaxed text-ink-faint">
         {t('Photos (JPEG, PNG) ou PDF, 25 Mo au plus par fichier. Glisse les fichiers sur la ligne de l’élève, ou envoie en une fois le PDF de toutes les copies scannées.')}
       </p>
+      {depot && (
+        <DepotCopie lignes={lignes} fichiers={depot} classeId={id} evId={ev.id} onClose={() => setDepot(null)}
+          onDeposer={deposer} onCree={charger} />
+      )}
     </div>
   );
 }
 
-function LigneEleve({ l, evId, classeId, envoi, onDeposer }: {
-  l: LigneCopie; evId: number; classeId: string; envoi?: string; onDeposer: (eleveId: number, f: FileList | File[]) => void;
+type Cible = { eleve?: number; copie?: number };
+const cibleDe = (l: LigneCopie): Cible => (l.eleve.id ? { eleve: l.eleve.id } : { copie: l.copie?.id });
+const cleCible = (c: Cible) => (c.eleve ? `e${c.eleve}` : `c${c.copie}`);
+
+function LigneEleve({ l, evId, classeId, envoi, onDeposer, onSupprimer }: {
+  l: LigneCopie; evId: number; classeId: string; envoi?: string; onDeposer: (f: FileList | File[]) => void;
+  onSupprimer: (copieId: number, nom: string) => void;
 }) {
+  const peutDeposer = l.membre || !!l.sans_compte;
   const input = useRef<HTMLInputElement>(null);
   const [survol, setSurvol] = useState(false);
   const c = l.copie;
@@ -236,10 +288,12 @@ function LigneEleve({ l, evId, classeId, envoi, onDeposer }: {
   return (
     <tr className={`border-t border-line ${survol ? 'bg-brand-soft/50' : ''}`}
       onDragOver={(e) => { e.preventDefault(); setSurvol(true); }} onDragLeave={() => setSurvol(false)}
-      onDrop={(e) => { e.preventDefault(); setSurvol(false); if (e.dataTransfer.files.length && l.membre) onDeposer(l.eleve.id, e.dataTransfer.files); }}>
+      onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setSurvol(false); if (e.dataTransfer.files.length && peutDeposer) onDeposer(e.dataTransfer.files); }}>
       <td className="px-4 py-2.5">
         <span className="font-semibold text-ink">{l.eleve.username}</span>
-        {!l.membre && <span className="ms-2 text-[11.5px] text-ink-faint">{t('a quitté la classe')}</span>}
+        {l.sans_compte
+          ? <span className="ms-2 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] font-semibold text-ink-faint">{t('sans compte')}</span>
+          : !l.membre && <span className="ms-2 text-[11.5px] text-ink-faint">{t('a quitté la classe')}</span>}
       </td>
       <td className="px-3 py-2.5">
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${STATUT_CLS[statut]}`}>
@@ -258,10 +312,10 @@ function LigneEleve({ l, evId, classeId, envoi, onDeposer }: {
       </td>
       <td className="px-3 py-2 text-end">
         <div className="flex items-center justify-end gap-1">
-          {envoi ? <span className="inline-flex items-center gap-1 text-[12px] text-ink-faint"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {envoi}</span> : l.membre && (
+          {envoi ? <span className="inline-flex items-center gap-1 text-[12px] text-ink-faint"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {envoi}</span> : peutDeposer && (
             <>
               <input ref={input} type="file" multiple hidden accept="image/jpeg,image/png,image/webp,application/pdf"
-                onChange={(e) => { if (e.target.files?.length) onDeposer(l.eleve.id, e.target.files); e.target.value = ''; }} />
+                onChange={(e) => { if (e.target.files?.length) onDeposer(e.target.files); e.target.value = ''; }} />
               <button type="button" onClick={() => input.current?.click()} title={t('Ajouter des pages')}
                 className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-[12.5px] font-semibold text-ink-soft hover:bg-[#f2f1ee]">
                 <Upload className="h-4 w-4" /> <span className="hidden md:inline">{c?.nb_pages ? t('Ajouter') : t('Déposer')}</span>
@@ -274,9 +328,108 @@ function LigneEleve({ l, evId, classeId, envoi, onDeposer }: {
               {statut === 'corrigee' ? t('Vérifier') : t('Ouvrir')} <ChevronRight className="h-4 w-4" />
             </Link>
           )}
+          {c && !envoi && statut !== 'en_cours' && (l.sans_compte || c.nb_pages > 0) && (
+            <button type="button" onClick={() => onSupprimer(c.id, l.eleve.username)} title={t('Supprimer la copie')}
+              aria-label={t('Supprimer la copie')}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:bg-[#fbecea] hover:text-[#a23b34]">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </td>
     </tr>
+  );
+}
+
+/* ───────────────────────────── Déposer une copie (élève de la classe, ou élève sans compte) */
+
+function DepotCopie({ lignes, fichiers, classeId, evId, onClose, onDeposer, onCree }: {
+  lignes: LigneCopie[]; fichiers: File[]; classeId: string; evId: number; onClose: () => void;
+  onDeposer: (cible: Cible, f: File[]) => Promise<boolean>; onCree: () => void;
+}) {
+  const membres = lignes.filter((l) => l.membre && l.eleve.id);
+  const sansCompte = lignes.filter((l) => l.sans_compte && l.copie);
+  const [choix, setChoix] = useState<string>(membres.length ? '' : '__nouveau__');
+  const [nom, setNom] = useState('');
+  const [liste, setListe] = useState<File[]>(fichiers);
+  const [survol, setSurvol] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+
+  const ajouter = (f: FileList | File[]) => setListe((l) => [...l, ...Array.from(f)]);
+  const pret = !busy && liste.length > 0 && (choix === '__nouveau__' ? !!nom.trim() : !!choix);
+
+  const envoyer = async () => {
+    if (!pret) return;
+    setBusy(true);
+    setErr('');
+    try {
+      let cible: Cible;
+      if (choix === '__nouveau__') {
+        const l = await creerCopieSansCompte(classeId, evId, nom.trim());
+        cible = { copie: l.copie?.id };
+        onCree();
+      } else if (choix.startsWith('c')) {
+        cible = { copie: Number(choix.slice(1)) };
+      } else {
+        cible = { eleve: Number(choix.slice(1)) };
+      }
+      if (await onDeposer(cible, liste)) onClose();
+    } catch (e) {
+      setErr(copiesError(e, t('Impossible de créer la copie.')));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <ModalShell open onClose={onClose} labelId="depot-copie-titre" onSubmit={envoyer} title={t('Déposer une copie')}
+      subtitle={t('Photos ou PDF de la copie d’un élève : l’IA la lira quand tu lanceras la correction.')}>
+      <label className="mt-4 block text-[12px] font-semibold text-ink-faint" htmlFor="depot-eleve">{t('Élève')}</label>
+      <select id="depot-eleve" value={choix} onChange={(e) => setChoix(e.target.value)} className={fieldCls}>
+        {membres.length > 0 && <option value="">{t('— Choisir l’élève —')}</option>}
+        {membres.map((l) => <option key={l.eleve.id} value={`e${l.eleve.id}`}>{l.eleve.username}</option>)}
+        {sansCompte.map((l) => <option key={l.copie!.id} value={`c${l.copie!.id}`}>{l.eleve.username} ({t('sans compte')})</option>)}
+        <option value="__nouveau__">{t('Élève sans compte Fidni (taper son nom)')}</option>
+      </select>
+      {choix === '__nouveau__' && (
+        <>
+          <label className="mt-3 block text-[12px] font-semibold text-ink-faint" htmlFor="depot-nom">{t('Nom de l’élève')}</label>
+          <input id="depot-nom" className={fieldCls} value={nom} onChange={(e) => setNom(e.target.value)} maxLength={120}
+            placeholder={t('Ex. Amine Benali')} autoComplete="off" />
+          <p className="mt-1 text-[11.5px] leading-snug text-ink-faint">{t('Sa copie est corrigée, notée et exportée comme les autres ; lui ne la voit pas sur Fidni (il n’a pas de compte).')}</p>
+        </>
+      )}
+      <div role="button" tabIndex={0} onClick={() => input.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.current?.click(); } }}
+        onDragOver={(e) => { e.preventDefault(); setSurvol(true); }} onDragLeave={() => setSurvol(false)}
+        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setSurvol(false); if (e.dataTransfer.files.length) ajouter(e.dataTransfer.files); }}
+        className={`mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-colors ${
+          survol ? 'border-brand bg-brand-soft/60' : 'border-line bg-[#faf9f7] hover:border-[#cfc9bf]'}`}>
+        <Upload className="h-6 w-6 text-ink-faint" />
+        <span className="text-[13.5px] font-semibold text-ink">{t('Glisse les fichiers ici, ou clique pour les choisir')}</span>
+        <span className="text-[12px] text-ink-faint">{t('Photos (JPEG, PNG) ou PDF, 25 Mo au plus par fichier')}</span>
+        <input ref={input} type="file" multiple hidden accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={(e) => { if (e.target.files?.length) ajouter(e.target.files); e.target.value = ''; }} />
+      </div>
+      {liste.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1">
+          {liste.map((f, i) => (
+            <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f6f3] px-3 py-1.5 text-[12.5px]">
+              <span className="min-w-0 truncate text-ink-soft">{f.name}</span>
+              <button type="button" onClick={() => setListe((l) => l.filter((_, j) => j !== i))} aria-label={t('Retirer')}
+                className="shrink-0 text-ink-faint hover:text-[#a23b34]"><Trash2 className="h-3.5 w-3.5" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {err && <FormError>{err}</FormError>}
+      <div className="mt-5 flex justify-end gap-2">
+        <button type="button" className="fd-btn-ghost min-h-10" onClick={onClose}>{t('Annuler')}</button>
+        <button type="submit" className="fd-btn-primary min-h-10" disabled={!pret}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} {t('Déposer')}
+        </button>
+      </div>
+    </ModalShell>
   );
 }
 
@@ -317,7 +470,7 @@ function LotBouton({ evId, classeId, onLot }: { evId: number; classeId: string; 
   );
 }
 
-type Groupe = { pages: number[]; eleve_id: number | null; nom_lu: string };
+type Groupe = { pages: number[]; eleve_id: number | null; nom_lu: string; nom?: string };
 
 function LotPanneau({ classeId, evId, lot, onLot, onFini }: {
   classeId: string; evId: number; lot: Lot; onLot: (l: Lot) => void; onFini: () => void;
@@ -353,7 +506,7 @@ function LotPanneau({ classeId, evId, lot, onLot, onFini }: {
     setBusy(true);
     setErr('');
     try {
-      await confirmerLot(classeId, evId, lot.id, groupes.map((g) => ({ pages: g.pages, eleve_id: g.eleve_id })));
+      await confirmerLot(classeId, evId, lot.id, groupes.map((g) => ({ pages: g.pages, eleve_id: g.eleve_id, nom: g.nom })));
       onFini();
     } catch (e) {
       setErr(copiesError(e, t('Impossible de créer les copies.')));
@@ -371,14 +524,25 @@ function LotPanneau({ classeId, evId, lot, onLot, onFini }: {
           <li key={`${i}-${g.pages[0]}`} className="rounded-xl border border-line p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span dir="ltr" className="fd-nums text-[12px] font-bold text-ink-faint">{i + 1}.</span>
-              <select value={g.eleve_id ?? ''} aria-label={t('Élève de cette copie')}
-                onChange={(e) => setGroupes((gs) => gs.map((x, j) => (j === i ? { ...x, eleve_id: e.target.value ? Number(e.target.value) : null } : x)))}
-                className={`min-h-9 rounded-lg border px-2 text-[13px] ${g.eleve_id ? 'border-line' : 'border-gold-line bg-gold-soft'}`}>
+              <select value={g.eleve_id ?? (g.nom !== undefined ? '__nom__' : '')} aria-label={t('Élève de cette copie')}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setGroupes((gs) => gs.map((x, j) => (j !== i ? x : v === '__nom__'
+                    ? { ...x, eleve_id: null, nom: x.nom ?? x.nom_lu ?? '' }
+                    : { ...x, eleve_id: v ? Number(v) : null, nom: undefined })));
+                }}
+                className={`min-h-9 rounded-lg border px-2 text-[13px] ${g.eleve_id || g.nom ? 'border-line' : 'border-gold-line bg-gold-soft'}`}>
                 <option value="">{t('— Choisir l’élève (ou laisser de côté) —')}</option>
+                <option value="__nom__">{t('Élève sans compte (taper son nom)')}</option>
                 {lot.eleves.map((u) => (
                   <option key={u.id} value={u.id} disabled={pris.has(u.id) && g.eleve_id !== u.id}>{u.username}</option>
                 ))}
               </select>
+              {g.nom !== undefined && (
+                <input value={g.nom} placeholder={t('Nom de l’élève')} aria-label={t('Nom de l’élève')} maxLength={120}
+                  onChange={(e) => setGroupes((gs) => gs.map((x, j) => (j === i ? { ...x, nom: e.target.value } : x)))}
+                  className="min-h-9 w-48 rounded-lg border border-line px-2 text-[13px]" />
+              )}
               {g.nom_lu && <span className="text-[12px] text-ink-faint">{t('Nom lu : « {nom} »', { nom: g.nom_lu })}</span>}
               {i > 0 && (
                 <button type="button" onClick={() => fusionner(i)} className="ms-auto inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[12px] font-semibold text-ink-soft hover:bg-[#f2f1ee]">
@@ -409,7 +573,7 @@ function LotPanneau({ classeId, evId, lot, onLot, onFini }: {
       {err && <p className="mt-3 text-[13px] text-[#a23b34]">{err}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
         <button type="button" className="fd-btn-ghost min-h-10" onClick={async () => { await deleteLot(classeId, evId, lot.id); onFini(); }}>{t('Annuler')}</button>
-        <button type="button" className="fd-btn-primary min-h-10" disabled={busy || !groupes.some((g) => g.eleve_id)} onClick={confirmer}>
+        <button type="button" className="fd-btn-primary min-h-10" disabled={busy || !groupes.some((g) => g.eleve_id || g.nom?.trim())} onClick={confirmer}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} {t('Créer les copies')}
         </button>
       </div>

@@ -168,5 +168,22 @@
   "Passage illisible": "مقطع غير مقروء",
   "L’IA hésite": "الذكاء الاصطناعي متردد",
   "Pas de note proposée": "لا توجد نقطة مقترحة",
-  "Ma copie": "ورقتي"
+  "Ma copie": "ورقتي",
+  "Aucune copie pour l’instant. Clique sur « Déposer une copie » (ou lâche un fichier sur la page) : tu peux taper le nom d’un élève qui n’a pas de compte Fidni.": "لا توجد أي ورقة حاليا. انقر على « إيداع ورقة » (أو أفلت ملفا على الصفحة) : يمكنك كتابة اسم تلميذ ليس لديه حساب في Fidni.",
+  "Déposer une copie": "إيداع ورقة",
+  "Ex. Amine Benali": "مثال : أمين بنعلي",
+  "Glisse les fichiers ici, ou clique pour les choisir": "اسحب الملفات إلى هنا، أو انقر لاختيارها",
+  "Impossible de créer la copie.": "تعذّر إنشاء الورقة.",
+  "Nom de l’élève": "اسم التلميذ",
+  "Photos (JPEG, PNG) ou PDF, 25 Mo au plus par fichier": "صور (JPEG، PNG) أو PDF، 25 ميغابايت على الأكثر لكل ملف",
+  "Photos ou PDF de la copie d’un élève : l’IA la lira quand tu lanceras la correction.": "صور أو ملف PDF لورقة تلميذ : سيقرؤها الذكاء الاصطناعي عندما تبدأ التصحيح.",
+  "Sa copie est corrigée, notée et exportée comme les autres ; lui ne la voit pas sur Fidni (il n’a pas de compte).": "تُصحَّح ورقته وتُنقَّط وتُصدَّر مثل الأوراق الأخرى ؛ لكنه لا يراها في Fidni (ليس لديه حساب).",
+  "Suppression impossible.": "تعذّر الحذف.",
+  "Supprimer la copie de {nom} (pages et notes) ?": "حذف ورقة {nom} (الصفحات والنقط)؟",
+  "Supprimer la copie": "حذف الورقة",
+  "sans compte": "بدون حساب",
+  "{n} copies publiées. Les {k} copies d’élèves sans compte restent visibles de toi seul.": "تم نشر {n} ورقة. تبقى {k} ورقة لتلاميذ بدون حساب مرئية لك وحدك.",
+  "Élève sans compte (taper son nom)": "تلميذ بدون حساب (اكتب اسمه)",
+  "Élève sans compte Fidni (taper son nom)": "تلميذ بدون حساب في Fidni (اكتب اسمه)",
+  "— Choisir l’élève —": "— اختر التلميذ —"
 }

@@ -29,7 +29,8 @@ const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
 export function ClassroomsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const isTeacher = user?.profile?.user_type === 'teacher';
+  // L'administrateur compte comme enseignant (comme côté serveur : tester les classes et les copies).
+  const isTeacher = user?.profile?.user_type === 'teacher' || !!user?.is_superuser;
   const userId = user?.id;
 
   const [classrooms, setClassrooms] = useState<Classroom[] | null>(null);

@@ -61,8 +61,10 @@ export interface CopieResume extends Note {
 }
 
 export interface LigneCopie {
-  eleve: { id: number; username: string };
+  /** id null : élève sans compte Fidni (username = nom tapé par le professeur). */
+  eleve: { id: number | null; username: string };
   membre: boolean;
+  sans_compte?: boolean;
   copie: CopieResume | null;
 }
 
@@ -75,7 +77,7 @@ export interface CopieDetail extends Note {
   etape: string;
   error: string;
   evaluation: EvaluationResume;
-  eleve: { id: number; username: string };
+  eleve: { id: number | null; username: string; sans_compte?: boolean };
   questions: QuestionBareme[];
   finales: Record<string, NoteQuestion>;
   commentaire_prof: string;
@@ -186,6 +188,20 @@ export async function addPages(cid: number | string, eid: number | string, eleve
     headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000,
   })).data;
 }
+/** Copie d'un élève sans compte Fidni (le nom suffit) ; ses pages s'ajoutent ensuite avec addPagesCopie. */
+export async function creerCopieSansCompte(cid: number | string, eid: number | string, nom: string) {
+  return (await api.post<LigneCopie>(`${base(cid)}${eid}/copies/`, { nom })).data;
+}
+export async function addPagesCopie(cid: number | string, eid: number | string, copieId: number, fichier: File) {
+  const fd = new FormData();
+  fd.append('fichier', fichier);
+  return (await api.post<CopieResume>(`${base(cid)}${eid}/copies/${copieId}/pages/`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000,
+  })).data;
+}
+export async function deleteCopie(cid: number | string, eid: number | string, copieId: number) {
+  await api.delete(`${base(cid)}${eid}/copies/${copieId}/`);
+}
 export async function deletePage(cid: number | string, eid: number | string, pid: number) {
   await api.delete(`${base(cid)}${eid}/pages/${pid}/`);
 }
@@ -207,7 +223,7 @@ export async function corriger(cid: number | string, eid: number | string, copie
   return (await api.post<{ lancees: number; quota_restant: number | null }>(`${base(cid)}${eid}/corriger/`, { copies })).data;
 }
 export async function publier(cid: number | string, eid: number | string, copies: number[] | 'validees' = 'validees') {
-  return (await api.post<{ publiees: number }>(`${base(cid)}${eid}/publier/`, { copies })).data;
+  return (await api.post<{ publiees: number; sans_compte?: number }>(`${base(cid)}${eid}/publier/`, { copies })).data;
 }
 export async function getRapport(cid: number | string, eid: number | string) {
   return (await api.get<Rapport>(`${base(cid)}${eid}/rapport/`)).data;
@@ -237,7 +253,7 @@ export async function deleteLot(cid: number | string, eid: number | string, lid:
   await api.delete(`${base(cid)}${eid}/lots/${lid}/`);
 }
 export async function confirmerLot(cid: number | string, eid: number | string, lid: number,
-  groupes: { pages: number[]; eleve_id: number | null }[]) {
+  groupes: { pages: number[]; eleve_id: number | null; nom?: string }[]) {
   return (await api.post<{ copies: number }>(`${base(cid)}${eid}/lots/${lid}/confirmer/`, { groupes })).data;
 }
 export async function searchSujets(q: string) {
