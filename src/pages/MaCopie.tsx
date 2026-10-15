@@ -11,6 +11,7 @@ import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, CardsSkeleton, EmptyState } from '@/components/space/Page';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
 import { copiesError, fmt, maCopie, urlApi, type MaCopie as MaCopieT } from '@/lib/api/copiesApi';
+import TexteMaths from '@/components/classrooms/copies/TexteMaths';
 
 export default function MaCopie() {
   const { id = '' } = useParams<{ id: string }>();
@@ -55,8 +56,8 @@ export default function MaCopie() {
       {(c.commentaire_prof || c.commentaire_global) && (
         <section className="mb-6 rounded-2xl border border-brand-line bg-brand-soft/50 p-4">
           <h2 className="inline-flex items-center gap-1.5 text-[13px] font-bold text-brand-hover"><MessageSquare className="h-4 w-4" /> {t('Le mot de ton professeur')}</h2>
-          {c.commentaire_prof && <p dir="auto" className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed text-ink">{c.commentaire_prof}</p>}
-          {c.commentaire_global && <p dir="auto" className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">{c.commentaire_global}</p>}
+          {c.commentaire_prof && <TexteMaths texte={c.commentaire_prof} className="mt-1.5 text-[14px] leading-relaxed text-ink" />}
+          {c.commentaire_global && <TexteMaths texte={c.commentaire_global} className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft" />}
         </section>
       )}
 
@@ -123,7 +124,7 @@ function QuestionCorrigee({ label, points, max, ratio, commentaire, enonce, solu
       <div className="fd-ltr mt-2 h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]">
         <div className={`h-full rounded-full ${barre}`} style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }} />
       </div>
-      {commentaire && <p dir="auto" className="mt-2.5 text-[13.5px] leading-relaxed text-ink-soft">{commentaire}</p>}
+      {commentaire && <TexteMaths texte={commentaire} className="mt-2.5 text-[13.5px] leading-relaxed text-ink-soft" />}
       <button type="button" onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert}
         className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-hover hover:underline">
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${ouvert ? 'rotate-180' : ''}`} /> {t('Énoncé et corrigé')}

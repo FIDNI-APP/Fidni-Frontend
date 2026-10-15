@@ -17,6 +17,7 @@ import {
   copiesError, enTraitement, fmt, getCopie, recorriger, updateCopie, urlApi, type CopieDetail,
 } from '@/lib/api/copiesApi';
 import { STATUT_CLS, STATUT_LABEL } from './EvaluationPage';
+import TexteMaths from '@/components/classrooms/copies/TexteMaths';
 
 type Saisie = Record<string, { points: string; commentaire: string }>;
 
@@ -220,7 +221,12 @@ export default function CorrectionCopie() {
 
           <div className="rounded-2xl border border-line bg-white p-4">
             <label htmlFor="com-prof" className="text-[13px] font-semibold text-ink">{t('Ton commentaire à l’élève')}</label>
-            {c.commentaire_global && <p className="mt-1 text-[12.5px] leading-relaxed text-ink-faint">{t('Proposé par l’IA :')} {c.commentaire_global}</p>}
+            {c.commentaire_global && (
+              <div className="mt-1 text-[12.5px] leading-relaxed text-ink-faint">
+                <span className="font-semibold">{t('Proposé par l’IA :')}</span>
+                <TexteMaths texte={c.commentaire_global} />
+              </div>
+            )}
             <textarea id="com-prof" dir="auto" value={comProf} rows={3} maxLength={2000}
               onChange={(e) => { setComProf(e.target.value); setModifie(true); }}
               className="mt-2 w-full rounded-xl border border-line p-3 text-[13.5px]" />
@@ -231,7 +237,7 @@ export default function CorrectionCopie() {
               {c.transcription._pages.map((texte, i) => (
                 <div key={i} className="mt-3">
                   <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Page {n}', { n: i + 1 })}</p>
-                  <p className="fd-ltr mt-1 whitespace-pre-wrap font-mono text-[12.5px] text-ink-soft">{texte}</p>
+                  <TexteMaths texte={texte} className="mt-1 text-[13px] text-ink-soft" />
                 </div>
               ))}
             </details>
@@ -239,7 +245,7 @@ export default function CorrectionCopie() {
           {!!c.transcription?._hors_question && (
             <details className="rounded-2xl border border-line bg-white p-4 text-[13px]">
               <summary className="cursor-pointer font-semibold text-ink-soft">{t('Écrit hors des questions')}</summary>
-              <p className="fd-ltr mt-2 whitespace-pre-wrap text-ink-soft">{c.transcription._hors_question}</p>
+              <TexteMaths texte={c.transcription._hors_question} className="mt-2 text-ink-soft" />
             </details>
           )}
         </div>
@@ -256,6 +262,7 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
   const ia = c.ia?.[chemin];
   const tr = c.transcription?.[chemin];
   const [ouvert, setOuvert] = useState(false);
+  const [edition, setEdition] = useState(false);
   const [texte, setTexte] = useState(tr?.texte || '');
   useEffect(() => { setTexte(tr?.texte || ''); }, [tr?.texte]);
   const f = c.finales[chemin];
@@ -305,6 +312,10 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
       <textarea dir="auto" value={saisie?.commentaire ?? ''} onChange={(e) => onSaisie({ commentaire: e.target.value })} rows={2} maxLength={1000}
         placeholder={t('Commentaire pour l’élève (facultatif)')} aria-label={t('Commentaire de la question {q}', { q: q.label })}
         className="mt-2 w-full rounded-xl border border-line p-2.5 text-[13px]" />
+      {/* Aperçu du commentaire avec ses formules, tel que l'élève le verra. */}
+      {(saisie?.commentaire ?? '').includes('$') && (
+        <TexteMaths texte={saisie?.commentaire ?? ''} className="-mt-0.5 mb-1 rounded-xl bg-[#faf9f7] px-3 py-2 text-[13px] text-ink-soft" />
+      )}
       <button type="button" onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert}
         className="mt-1 inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-faint hover:text-ink">
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${ouvert ? 'rotate-180' : ''}`} />
@@ -315,8 +326,16 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Réponse de l’élève (transcription)')}
               {tr?.page ? <a href={`#page-${tr.page}`} className="ms-2 normal-case tracking-normal text-brand-hover hover:underline">{t('page {n}', { n: tr.page })}</a> : null}</p>
-            <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={4}
-              className="fd-ltr mt-1 w-full rounded-xl border border-line p-2.5 font-mono text-[12.5px]" />
+            {tr?.texte ? <TexteMaths texte={texte} className="mt-1 rounded-xl bg-[#faf9f7] px-3 py-2 text-[13.5px] text-ink" />
+              : <p className="mt-1 text-[13px] italic text-ink-faint">{t('Rien n’a été rangé sous cette question.')}</p>}
+            <button type="button" onClick={() => setEdition((e) => !e)} aria-expanded={edition}
+              className="mt-1 text-[12px] font-semibold text-brand-hover hover:underline">
+              {edition ? t('Fermer') : t('Corriger la lecture de l’IA')}
+            </button>
+            {edition && (
+              <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={4}
+                className="fd-ltr mt-1 w-full rounded-xl border border-line p-2.5 font-mono text-[12.5px]" />
+            )}
             {texte !== (tr?.texte || '') && (
               <button type="button" className="fd-btn-ghost mt-1 min-h-9" onClick={() => onRenoter(texte)}>
                 <RotateCcw className="h-4 w-4" /> {t('Renoter cette question avec ma transcription')}

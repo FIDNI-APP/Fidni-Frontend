@@ -187,5 +187,7 @@
   "Élève sans compte Fidni (taper son nom)": "تلميذ بدون حساب في Fidni (اكتب اسمه)",
   "— Choisir l’élève —": "— اختر التلميذ —",
   "L’IA a lu la copie mais n’y a trouvé de réponse à aucune question du sujet : vérifie que l’évaluation utilise le bon sujet (onglet « Sujet et barème »), puis relance la correction.": "قرأ الذكاء الاصطناعي الورقة لكنه لم يجد فيها جوابا عن أي سؤال من الموضوع : تأكد أن التقويم يستعمل الموضوع الصحيح (تبويب « الموضوع وسلم التنقيط »)، ثم أعد التصحيح.",
-  "Tout ce que l’IA a lu sur la copie": "كل ما قرأه الذكاء الاصطناعي في الورقة"
+  "Tout ce que l’IA a lu sur la copie": "كل ما قرأه الذكاء الاصطناعي في الورقة",
+  "Rien n’a été rangé sous cette question.": "لم يُرتَّب أي شيء تحت هذا السؤال.",
+  "Corriger la lecture de l’IA": "تصحيح قراءة الذكاء الاصطناعي"
 }
