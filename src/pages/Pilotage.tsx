@@ -430,7 +430,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
 
   const base = data.features.filter((f) => f.source === 'base')
     .sort((a, b) => (featSort === 'membres' ? (b.users ?? 0) - (a.users ?? 0) : 0) || b.actions - a.actions);
-  const tracked = data.features.filter((f) => f.source === 'navigateur').sort((a, b) => b.actions - a.actions);
+  const tracked = groupGestures(data.features.filter((f) => f.source === 'navigateur'));
   const maxActions = Math.max(1, ...data.features.map((f) => f.actions));
   const maxTracked = Math.max(1, ...tracked.map((f) => f.actions));
   const filters = data.features.filter((f) => f.source === 'filtre');
@@ -505,13 +505,40 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
         <ul className="mt-3 flex flex-col gap-2.5">
           {tracked.map((f) => (
             <li key={`${f.source}:${f.key}`} className={f.actions ? '' : 'opacity-60'}>
-              <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                <SerieLabel label={f.label} onOpen={() => setSerie({ source: 'navigateur', cle: f.key, label: f.label })} />
-                <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites</span>
-              </div>
-              <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
-                <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${f.actions ? Math.max((f.actions / maxTracked) * 100, 2) : 0}%` }} />
-              </div>
+              {f.details ? (
+                // Famille de gestes (16/10/2026) : le total, et le détail en dépliant. Pas de total des visites
+                // (une personne qui fait deux gestes de la famille serait comptée deux fois).
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 text-[13px]">
+                    <span className="inline-flex items-center gap-1 font-medium text-ink">
+                      <ChevronRight className="h-3.5 w-3.5 text-ink-faint transition-transform group-open:rotate-90" aria-hidden />
+                      {f.label} <span className="text-[11.5px] font-normal text-ink-faint">({f.details.length})</span>
+                    </span>
+                    <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(f.actions)}</b> fois</span>
+                  </summary>
+                  <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
+                    <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${f.actions ? Math.max((f.actions / maxTracked) * 100, 2) : 0}%` }} />
+                  </div>
+                  <ul className="mt-2 flex flex-col gap-1.5 border-s-2 border-[#efece6] ps-3">
+                    {f.details.map((d) => (
+                      <li key={d.key} className={`flex items-baseline justify-between gap-3 text-[12.5px] ${d.actions ? '' : 'opacity-60'}`}>
+                        <SerieLabel label={d.label} onOpen={() => setSerie({ source: 'navigateur', cle: d.key, label: d.label })} />
+                        <span className="fd-nums shrink-0 text-ink-faint">{fmt(d.actions)} fois · {fmt(d.visits ?? 0)} visites</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : (
+                <>
+                  <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                    <SerieLabel label={f.label} onOpen={() => setSerie({ source: 'navigateur', cle: f.key, label: f.label })} />
+                    <span className="fd-nums shrink-0 text-ink-faint"><b className="text-ink">{fmt(f.actions)}</b> fois · {fmt(f.visits ?? 0)} visites</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-[#f2f1ee]">
+                    <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${f.actions ? Math.max((f.actions / maxTracked) * 100, 2) : 0}%` }} />
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -578,6 +605,38 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
 };
 
 type Feature = Overview['features'][number];
+
+// Gestes du navigateur regroupés par famille (16/10/2026, à la demande de Natsu : la liste était trop longue).
+// Une famille = une ligne (total des fois) ; son détail se déplie. Un geste hors famille reste seul.
+const FAMILLES: { key: string; label: string; cles: string[] }[] = [
+  { key: 'famille-visites', label: 'Visites guidées', cles: ['visite-auto', 'visite-guidee', 'visite-finie', 'visite-passee'] },
+  { key: 'famille-nouveautes', label: 'Fenêtre « Nouveautés »', cles: ['nouveautes-vue', 'nouveautes-finie', 'nouveautes-cta', 'nouveautes-passee'] },
+  { key: 'famille-epreuve', label: 'Épreuve d’examen', cles: ['epreuve-demarree', 'epreuve-terminee'] },
+  { key: 'famille-langue', label: 'Langue de l’interface', cles: ['langue-ar', 'langue-fr'] },
+  { key: 'famille-progression', label: 'Ma progression', cles: ['prog-onglet', 'prog-periode', 'prog-tuile', 'prog-jour', 'prog-chapitre', 'prog-temps-detail', 'prog-point-faible', 'prog-entrainer'] },
+  { key: 'famille-quiz', label: 'Quiz par chapitre', cles: ['quiz-decouvert', 'quiz-bandeau', 'quiz-repris', 'quiz-refait', 'quiz-dernier-resultat'] },
+  { key: 'famille-connexion', label: 'Connexion', cles: ['auth-ouverte', 'connexion-google'] },
+  { key: 'famille-accueil', label: 'Accueil', cles: ['accueil-reprendre', 'accueil-pour-toi', 'accueil-objectif', 'accueil-progression'] },
+  { key: 'famille-dossiers', label: 'Dossiers des listes', cles: ['dossier-chapitre', 'dossier-niveau', 'dossier-annee'] },
+];
+
+type GestureRow = Feature & { details?: Feature[] };
+
+function groupGestures(list: Feature[]): GestureRow[] {
+  const byKey = new Map(list.map((f) => [f.key, f]));
+  const used = new Set<string>();
+  const rows: GestureRow[] = [];
+  for (const fam of FAMILLES) {
+    const details = fam.cles.map((k) => byKey.get(k)).filter((f): f is Feature => !!f).sort((a, b) => b.actions - a.actions);
+    if (!details.length) continue;
+    details.forEach((d) => used.add(d.key));
+    rows.push({
+      key: fam.key, label: fam.label, source: 'navigateur', users: null, previous: null,
+      actions: details.reduce((n, d) => n + d.actions, 0), details,
+    });
+  }
+  return [...rows, ...list.filter((f) => !used.has(f.key))].sort((a, b) => b.actions - a.actions);
+}
 type ListKind = 'tout' | FilterValue['type'];
 const LIST_KINDS: { key: ListKind; label: string }[] = [
   { key: 'tout', label: 'Toutes les listes' }, { key: 'exercise', label: 'Exercices' }, { key: 'exam', label: 'Examens' }, { key: 'lesson', label: 'Leçons' },
