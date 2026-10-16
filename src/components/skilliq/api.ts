@@ -1,7 +1,7 @@
 // Appels du quiz par chapitre (tous réservés aux connectés, sauf la taxonomie). Un quiz = (chapitre, niveau) depuis
 // le 13/10/2026 : `levelId` absent = le niveau de l'élève.
 import { api } from '@/lib/api/apiClient';
-import { quizKey, type CorrectionItem, type QuizEnCours, type QuizQuestion, type QuizStart, type SkillAssessment } from './types';
+import { quizKey, type Answer, type CorrectionItem, type QuizEnCours, type QuizQuestion, type QuizStart, type SkillAssessment } from './types';
 
 const level = (levelId?: number | null) => (levelId ? { niveau: levelId } : {});
 
@@ -33,8 +33,9 @@ export const getQuiz = async (chapterId: number, levelId?: number | null, nouvea
     verifiees: (data.verifiees ?? []) as CorrectionItem[] };
 };
 
-/** Correction d'une question de son passage dès qu'on y a répondu (réponse verrouillée) ; `temps` : minuteur utilisé. */
-export const checkAnswer = async (questionId: number, answer: number, temps: number) =>
+/** Correction d'une question de son passage dès qu'on y a répondu (réponse verrouillée) ; `temps` : minuteur utilisé.
+ *  Plusieurs bonnes réponses : `answer` = les index cochés (juste seulement si ce sont exactement les bonnes). */
+export const checkAnswer = async (questionId: number, answer: Answer, temps: number) =>
   (await api.post(`/skill-assessments/verifier/${questionId}/`, { answer, temps })).data as CorrectionItem;
 
 /** Quiz commencés, pas encore envoyés (« Reprendre »). */
@@ -45,7 +46,7 @@ export const getLastResult = async (chapterId: number, levelId?: number | null) 
   (await api.get(`/skill-assessments/chapter/${chapterId}/`, { params: level(levelId) })).data as SkillAssessment;
 
 /** Envoi des réponses (-1 : sans réponse, temps écoulé) : résultat, correction et bilan par théorème. */
-export const submitQuiz = async (chapterId: number, levelId: number | null | undefined, answers: Record<number, number>, timeSpent: number) =>
+export const submitQuiz = async (chapterId: number, levelId: number | null | undefined, answers: Record<number, Answer>, timeSpent: number) =>
   (await api.post(`/skill-assessments/submit/${chapterId}/`, { answers, time_spent: timeSpent, ...level(levelId) })).data as SkillAssessment;
 
 export interface TaxonomyLevel {

@@ -49,9 +49,12 @@ export interface CorrectionItem {
   /** Énoncé et réponses figés (dernier résultat ; aussi à la correction de chaque question). */
   question?: string;
   options?: string[];
-  /** Réponse de l'élève ; -1 ou null : sans réponse. */
-  your_answer: number | null;
+  /** Réponse de l'élève : un index, ou les index cochés (plusieurs bonnes réponses) ; -1 ou null : sans réponse. */
+  your_answer: Answer | null;
+  /** Première bonne réponse (compatibilité) ; toutes les bonnes réponses dans `correct_answers`. */
   correct_answer: number;
+  /** Toutes les bonnes réponses (absent dans une correction d'avant le 16/10/2026 : `correct_answer` seule). */
+  correct_answers?: number[];
   is_correct: boolean;
   explanation: string;
   /** Théorèmes évalués par la question. */
@@ -72,11 +75,29 @@ export interface QuizStart {
   verifiees: CorrectionItem[];
 }
 
+/** Réponse à une question : un index (une bonne réponse), ou les index cochés (plusieurs bonnes réponses). */
+export type Answer = number | number[];
+
+/** Index cochés d'une réponse ([] : sans réponse). */
+export const picked = (a: Answer | null | undefined): number[] =>
+  (Array.isArray(a) ? a : a != null && a >= 0 ? [a] : []);
+
+/** Toutes les bonnes réponses d'une correction. */
+export const goodAnswers = (c: Pick<CorrectionItem, 'correct_answer' | 'correct_answers'>) =>
+  (c.correct_answers?.length ? c.correct_answers : [c.correct_answer]);
+
 /** Réponse donnée (pas « sans réponse »). */
-export const answered = (c: Pick<CorrectionItem, 'your_answer'>) => c.your_answer !== null && c.your_answer >= 0;
+export const answered = (c: Pick<CorrectionItem, 'your_answer'>) => picked(c.your_answer).length > 0;
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export interface QuizQuestion { id: number; question: string; options: string[]; difficulty: Difficulty }
+export interface QuizQuestion {
+  id: number; question: string; options: string[]; difficulty: Difficulty;
+  /** Nombre de bonnes réponses (plus d'une : cases à cocher, « Choisis {n} réponses ») ; jamais lesquelles. */
+  nb_bonnes?: number;
+}
+
+/** Nombre de réponses à cocher pour cette question (1 pour une question à une seule bonne réponse). */
+export const toPick = (q: Pick<QuizQuestion, 'nb_bonnes'>) => Math.max(1, q.nb_bonnes ?? 1);
 
 /** Un chapitre vu par la page : programme de l'élève (Ma progression) + quiz prêt + dernier résultat. */
 export interface QuizChapter {

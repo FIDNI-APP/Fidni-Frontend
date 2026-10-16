@@ -385,5 +385,9 @@
   "Autres": "أخرى",
   "Aperçu#onglet": "نظرة عامة",
   "Progression de {nom} — vue administrateur, en lecture seule.": "تقدّم {nom} — عرض المسؤول، للقراءة فقط.",
-  "Retour au Pilotage": "العودة إلى لوحة القيادة"
+  "Retour au Pilotage": "العودة إلى لوحة القيادة",
+  "Pas tout à fait : les bonnes réponses sont {lettres}": "ليس تماما: الأجوبة الصحيحة هي {lettres}",
+  "Choisis {n} réponses": "اختر {n} أجوبة",
+  "oubliée": "فاتتك",
+  "{n} bonnes réponses": "{n} أجوبة صحيحة"
 }

@@ -13,7 +13,7 @@ import { Delta } from './QuizRow';
 import { t } from '@/i18n';
 import { MathText } from './MathText';
 import {
-  RING, answered, frDate, hasReport, pct, previousPct,
+  RING, answered, frDate, goodAnswers, hasReport, pct, picked, previousPct,
   type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment, type TheoremReport,
 } from './types';
 
@@ -88,9 +88,12 @@ const linkCls = 'inline-flex min-h-10 items-center gap-1.5 font-semibold text-in
 
 type Item = CorrectionItem & { n: number; question: string; options: string[] };
 
-/** Une question corrigée : toutes ses réponses (la tienne, la bonne), puis l'explication. */
+/** Une question corrigée : toutes ses réponses (la tienne, la bonne — ou les bonnes), puis l'explication. */
 const Corrected: React.FC<{ c: Item }> = ({ c }) => {
   const skipped = !answered(c);
+  const goods = goodAnswers(c);
+  const mines = picked(c.your_answer);
+  const multi = goods.length > 1;
   return (
     <li className="rounded-2xl border border-line bg-white p-4 sm:p-5">
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold">
@@ -98,13 +101,14 @@ const Corrected: React.FC<{ c: Item }> = ({ c }) => {
           {c.is_correct ? <Check className="h-3.5 w-3.5" aria-hidden /> : skipped ? null : <X className="h-3.5 w-3.5" aria-hidden />}
           {t('Question {n}', { n: c.n })} · {c.is_correct ? t('juste') : skipped ? t('sans réponse') : t('fausse')}
         </span>
+        {multi && <span className="font-normal text-ink-soft">{t('{n} bonnes réponses', { n: goods.length })}</span>}
         {c.theoremes && c.theoremes.length > 0 && <span className="font-normal text-ink-faint">{c.theoremes.join(' · ')}</span>}
       </p>
       <p className="mt-2 text-[14.5px] font-semibold leading-relaxed text-ink"><MathText text={c.question} className="fd-latex" /></p>
       <ul className="mt-2.5 flex flex-col gap-1.5">
         {c.options.map((opt, i) => {
-          const good = i === c.correct_answer;
-          const mine = i === c.your_answer;
+          const good = goods.includes(i);
+          const mine = mines.includes(i);
           return (
             <li key={i} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[14px] ${
               good ? 'border-brand/40 bg-brand-soft/60' : mine ? 'border-gold-line bg-gold-soft/60' : 'border-transparent'}`}>
@@ -113,7 +117,8 @@ const Corrected: React.FC<{ c: Item }> = ({ c }) => {
                 {good ? <Check className="h-3.5 w-3.5" /> : mine ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + i)}
               </span>
               <MathText text={opt} className={`fd-latex min-w-0 flex-1 ${good ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
-              {mine && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('ta réponse')}</span>}
+              {mine ? <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('ta réponse')}</span>
+                : multi && good && !skipped && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('oubliée')}</span>}
             </li>
           );
         })}

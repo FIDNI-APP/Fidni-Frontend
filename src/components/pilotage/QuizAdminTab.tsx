@@ -5,6 +5,8 @@
 // Un quiz = (chapitre, niveau) depuis le 13/10/2026 : l'onglet de niveau choisit le quiz (jamais partagé entre niveaux).
 // Questions importées (rédigées par Claude d'après les résultats des élèves, `a_relire`) : jamais montrées aux
 // élèves avant d'être validées ici, une à une ou toutes celles du chapitre une fois relues.
+// 16/10/2026 : bonnes réponses en cases à cocher (une ou plusieurs, 6 réponses au plus) ; plusieurs = l'élève doit les
+// cocher toutes, et rien d'autre.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Check, CheckCheck, ChevronRight, Eye, EyeOff, Loader2, Plus, Search, Target, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
@@ -20,6 +22,8 @@ interface TheoremRef { id: number; name: string }
 interface ChapterTheorem extends TheoremRef { niveaux: string[] }
 interface Question {
   id: number; question: string; options: string[]; correct_answer: number;
+  /** Toutes les bonnes réponses (16/10/2026) : plusieurs = l'élève coche tout (« Choisis 2 réponses »), tout ou rien. */
+  correct_answers?: number[];
   difficulty: 'easy' | 'medium' | 'hard'; explanation: string; en_ligne: boolean;
   source?: string; a_relire?: boolean; motif?: string; theoremes?: TheoremRef[];
 }
@@ -32,7 +36,9 @@ type Draft = Omit<Question, 'id' | 'en_ligne'> & { id?: number; en_ligne?: boole
 const DIFF: { key: Question['difficulty']; label: string }[] = [
   { key: 'easy', label: 'Facile' }, { key: 'medium', label: 'Moyen' }, { key: 'hard', label: 'Difficile' },
 ];
-const emptyDraft = (): Draft => ({ question: '', options: ['', '', '', ''], correct_answer: 0, difficulty: 'medium', explanation: '', theoremes: [] });
+const emptyDraft = (): Draft => ({ question: '', options: ['', '', '', ''], correct_answer: 0, correct_answers: [0], difficulty: 'medium', explanation: '', theoremes: [] });
+/** Index des bonnes réponses d'une question (une seule : [correct_answer]). */
+const goodsOf = (d: Pick<Draft, 'correct_answer' | 'correct_answers'>) => (d.correct_answers?.length ? d.correct_answers : [d.correct_answer]);
 const errorText = (e: unknown, fallback: string) => {
   const d = (e as { response?: { data?: Record<string, unknown> } })?.response?.data;
   const v = d && Object.values(d)[0];
@@ -72,6 +78,7 @@ const QuestionCard: React.FC<{
 
   if (!editing) {
     const review = !!value.a_relire;
+    const goods = goodsOf(value);
     return (
       <div className={`rounded-2xl border p-4 ${review ? 'border-gold/70 bg-[#fffaf0]' : value.en_ligne ? 'border-line bg-white' : 'border-dashed border-[#d8d4cc] bg-white'}`}>
         <div className="flex items-start gap-3">
@@ -83,8 +90,8 @@ const QuestionCard: React.FC<{
             <p className="text-[14.5px] text-ink"><MathText text={value.question} /></p>
             <ul className="mt-2 grid gap-1 sm:grid-cols-2">
               {value.options.map((o, i) => (
-                <li key={i} className={`flex items-start gap-1.5 rounded-lg px-2 py-1 text-[13.5px] ${i === value.correct_answer ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft'}`}>
-                  {i === value.correct_answer ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <span className="w-3.5 shrink-0" />}
+                <li key={i} className={`flex items-start gap-1.5 rounded-lg px-2 py-1 text-[13.5px] ${goods.includes(i) ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft'}`}>
+                  {goods.includes(i) ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <span className="w-3.5 shrink-0" />}
                   <MathText text={o} />
                 </li>
               ))}
@@ -100,6 +107,11 @@ const QuestionCard: React.FC<{
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <span className="text-[11.5px] text-ink-faint">{DIFF.find((x) => x.key === value.difficulty)?.label}</span>
+            {goods.length > 1 && (
+              <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft" title="L’élève doit cocher toutes les bonnes réponses, et rien d’autre">
+                {goods.length} bonnes réponses
+              </span>
+            )}
             {review && onValidate ? (
               <button type="button" disabled={busy} title="Je l’ai relue : elle peut être montrée aux élèves"
                 onClick={async () => { setBusy(true); try { await onValidate(); } finally { setBusy(false); } }}
@@ -123,6 +135,18 @@ const QuestionCard: React.FC<{
     setBusy(true); setErr(null);
     try { await onSave(d); } catch (e) { setErr(errorText(e, 'L’enregistrement a échoué.')); } finally { setBusy(false); }
   };
+  // Bonnes réponses : cases à cocher (une seule cochée = question à une réponse ; plusieurs = l'élève les coche toutes).
+  const goods = goodsOf(d);
+  const setGoods = (next: number[]) => {
+    const sorted = [...new Set(next)].sort((a, b) => a - b);
+    if (sorted.length) set({ correct_answers: sorted, correct_answer: sorted[0] });
+  };
+  const toggleGood = (i: number) => setGoods(goods.includes(i) ? goods.filter((x) => x !== i) : [...goods, i]);
+  const removeOption = (i: number) => {
+    const rest = goods.filter((x) => x !== i).map((x) => (x > i ? x - 1 : x));
+    const next = rest.length ? rest : [0];
+    set({ options: d.options.filter((_, j) => j !== i), correct_answers: next, correct_answer: next[0] });
+  };
   const chosen = new Set((d.theoremes ?? []).map((t) => t.id));
   const toggleTheorem = (t: ChapterTheorem) => set({
     theoremes: chosen.has(t.id) ? (d.theoremes ?? []).filter((x) => x.id !== t.id) : [...(d.theoremes ?? []), { id: t.id, name: t.name }],
@@ -135,19 +159,20 @@ const QuestionCard: React.FC<{
         className="mt-1 w-full rounded-xl border border-line px-3 py-2 text-[14px] focus:border-brand focus:outline-none" />
       {d.question.includes('$') && <p className="mt-1 rounded-lg bg-paper px-3 py-1.5 text-[14px] text-ink"><MathText text={d.question} /></p>}
 
-      <p className="mt-3 text-[12.5px] font-semibold text-ink">Réponses <span className="font-normal text-ink-faint">— coche la bonne</span></p>
+      <p className="mt-3 text-[12.5px] font-semibold text-ink">Réponses <span className="font-normal text-ink-faint">— coche la bonne, ou les bonnes (6 réponses au plus)</span></p>
       <div className="mt-1 space-y-1.5">
         {d.options.map((o, i) => (
           <div key={i} className="flex items-center gap-2">
-            <input type="radio" name={`bonne-${d.id ?? 'new'}`} checked={d.correct_answer === i} onChange={() => set({ correct_answer: i })}
-              aria-label={`Réponse ${i + 1} est la bonne`} className="h-4 w-4 accent-[#1a7a4a]" />
+            <input type="checkbox" checked={goods.includes(i)} onChange={() => toggleGood(i)}
+              disabled={goods.length === 1 && goods[0] === i} title={goods.length === 1 && goods[0] === i ? 'Il faut au moins une bonne réponse : coche d’abord l’autre' : undefined}
+              aria-label={`Réponse ${i + 1} est juste`} className="h-4 w-4 accent-[#1a7a4a] disabled:opacity-100" />
             <input value={o} onChange={(e) => set({ options: d.options.map((x, j) => (j === i ? e.target.value : x)) })}
               placeholder={`Réponse ${i + 1}`}
-              className={`h-10 min-w-0 flex-1 rounded-lg border px-3 text-[14px] focus:outline-none ${d.correct_answer === i ? 'border-brand bg-brand-soft/40' : 'border-line focus:border-brand'}`} />
+              className={`h-10 min-w-0 flex-1 rounded-lg border px-3 text-[14px] focus:outline-none ${goods.includes(i) ? 'border-brand bg-brand-soft/40' : 'border-line focus:border-brand'}`} />
             {o.includes('$') && <span className="hidden max-w-[40%] truncate text-[13px] sm:inline"><MathText text={o} /></span>}
             {d.options.length > 2 && (
               <button type="button" aria-label="Retirer cette réponse" className="rounded-lg p-1.5 text-ink-faint hover:bg-[#f2f1ee] hover:text-[#a23b34]"
-                onClick={() => set({ options: d.options.filter((_, j) => j !== i), correct_answer: d.correct_answer > i ? d.correct_answer - 1 : d.correct_answer === i ? 0 : d.correct_answer })}>
+                onClick={() => removeOption(i)}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
@@ -156,6 +181,13 @@ const QuestionCard: React.FC<{
         {d.options.length < 6 && (
           <button type="button" onClick={() => set({ options: [...d.options, ''] })}
             className="ms-6 text-[12.5px] font-medium text-ink-soft hover:text-ink">+ une réponse</button>
+        )}
+        {goods.length > 1 && (
+          <p className={`ms-6 text-[12px] ${goods.length >= d.options.length ? 'text-[#9c3b2e]' : 'text-ink-faint'}`}>
+            {goods.length >= d.options.length
+              ? 'Il faut au moins une mauvaise réponse.'
+              : `${goods.length} bonnes réponses : l’élève voit « Choisis ${goods.length} réponses » et doit cocher exactement celles-ci (tout ou rien).`}
+          </p>
         )}
       </div>
 
@@ -217,7 +249,8 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; onBack: () => 
   const theorems = data.chapitre.theoremes ?? [];
 
   const saveQuestion = async (d: Draft) => {
-    const body = { question: d.question, options: d.options, correct_answer: d.correct_answer, difficulty: d.difficulty,
+    const goods = goodsOf(d);
+    const body = { question: d.question, options: d.options, correct_answer: goods[0], correct_answers: goods, difficulty: d.difficulty,
       explanation: d.explanation, theoremes: (d.theoremes ?? []).map((t) => t.id) };
     if (d.id) await api.patch(`/pilotage/quiz/question/${d.id}/`, body);
     else await api.post(`/pilotage/quiz/chapitre/${chapterId}/`, { ...body, ...niveau });

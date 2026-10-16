@@ -8,6 +8,8 @@
 // corrigée, avec les corrections déjà vues et le temps restant (`initial`, `left`). Une barre fine et une grille
 // (numéros des questions) remplacent la rangée de 30 segments ; sur téléphone, les boutons restent en bas de l'écran.
 // Textes en police LaTeX (.fd-latex) ; la difficulté des questions n'est pas montrée (elle ne sert qu'au score).
+// 16/10/2026 : questions à plusieurs bonnes réponses (`nb_bonnes` > 1) : cases à cocher, « Choisis {n} réponses »,
+// « Valider » quand n cases sont cochées ; juste seulement si ce sont exactement les bonnes (tout ou rien).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRight, Check, ChevronDown, ChevronLeft, Clock, LayoutGrid, Loader2, Pause, RotateCcw, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
@@ -15,7 +17,7 @@ import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
 import { MathText } from './MathText';
 import { t } from '@/i18n';
-import { type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
+import { goodAnswers, picked, toPick, type ActiveQuiz, type Answer, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
 
 const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line bg-[#faf9f7] px-1.5 font-sans text-[11px] font-semibold text-ink-faint">
@@ -40,28 +42,38 @@ const Timer: React.FC<{ left: number; paused: boolean }> = ({ left, paused }) =>
   );
 };
 
-/** Correction de la question, juste après « Valider » (or pour une erreur : ce n'est pas une faute). */
-const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion }> = ({ c, q }) => (
-  <div role="status" className={`mt-5 rounded-2xl border p-4 ${c.is_correct ? 'border-brand/30 bg-brand-soft/50' : 'border-gold-line bg-gold-soft/60'}`}>
-    <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${c.is_correct ? 'text-brand-hover' : 'text-[#8a6318]'}`}>
-      {c.is_correct ? <Check className="h-4 w-4" aria-hidden /> : <X className="h-4 w-4" aria-hidden />}
-      {c.is_correct ? t('Bonne réponse') : <>{t('Pas tout à fait : la bonne réponse est {lettre}', { lettre: letter(c.correct_answer) })}</>}
-    </p>
-    {!c.is_correct && (
-      <p className="mt-1 text-[13.5px] font-semibold text-ink"><MathText text={q.options[c.correct_answer] ?? ''} className="fd-latex" /></p>
-    )}
-    {c.explanation && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft"><MathText text={c.explanation} className="fd-latex" /></p>}
-    {c.theoremes && c.theoremes.length > 0 && (
-      <p className="mt-2.5 flex flex-wrap gap-1.5">
-        {c.theoremes.map((th) => <span key={th} className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft ring-1 ring-line">{th}</span>)}
+/** Correction de la question, juste après « Valider » (or pour une erreur : ce n'est pas une faute). Plusieurs
+ *  bonnes réponses : juste seulement si l'élève les a toutes cochées, et rien d'autre ; on les rappelle toutes. */
+const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion }> = ({ c, q }) => {
+  const good = goodAnswers(c);
+  const multi = good.length > 1;
+  return (
+    <div role="status" className={`mt-5 rounded-2xl border p-4 ${c.is_correct ? 'border-brand/30 bg-brand-soft/50' : 'border-gold-line bg-gold-soft/60'}`}>
+      <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${c.is_correct ? 'text-brand-hover' : 'text-[#8a6318]'}`}>
+        {c.is_correct ? <Check className="h-4 w-4" aria-hidden /> : <X className="h-4 w-4" aria-hidden />}
+        {c.is_correct ? (multi ? t('Bonnes réponses') : t('Bonne réponse'))
+          : multi ? t('Pas tout à fait : les bonnes réponses sont {lettres}', { lettres: good.map(letter).join(', ') })
+            : t('Pas tout à fait : la bonne réponse est {lettre}', { lettre: letter(c.correct_answer) })}
       </p>
-    )}
-  </div>
-);
+      {!c.is_correct && good.map((i) => (
+        <p key={i} className="mt-1 flex gap-1.5 text-[13.5px] font-semibold text-ink">
+          {multi && <span className="shrink-0 text-ink-soft">{letter(i)}.</span>}
+          <MathText text={q.options[i] ?? ''} className="fd-latex" />
+        </p>
+      ))}
+      {c.explanation && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft"><MathText text={c.explanation} className="fd-latex" /></p>}
+      {c.theoremes && c.theoremes.length > 0 && (
+        <p className="mt-2.5 flex flex-wrap gap-1.5">
+          {c.theoremes.map((th) => <span key={th} className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft ring-1 ring-line">{th}</span>)}
+        </p>
+      )}
+    </div>
+  );
+};
 
 /** Grille des questions : un numéro par question, sa couleur dit où l'on en est ; un clic y va. */
 const Grid: React.FC<{
-  questions: QuizQuestion[]; index: number; checked: Record<number, CorrectionItem>; answers: Record<number, number>;
+  questions: QuizQuestion[]; index: number; checked: Record<number, CorrectionItem>; answers: Record<number, Answer>;
   onGo: (i: number) => void;
 }> = ({ questions, index, checked, answers, onGo }) => (
   <div className="grid grid-cols-6 gap-1.5 rounded-2xl border border-line bg-white p-3 sm:grid-cols-10">
@@ -69,7 +81,7 @@ const Grid: React.FC<{
       const c = checked[x.id];
       const on = i === index;
       const tone = c ? (c.is_correct ? 'bg-brand text-white border-brand' : 'bg-gold text-white border-gold')
-        : answers[x.id] !== undefined ? 'bg-brand-soft text-brand-hover border-brand/40' : 'bg-white text-ink-soft border-line';
+        : picked(answers[x.id]).length > 0 ?'bg-brand-soft text-brand-hover border-brand/40' : 'bg-white text-ink-soft border-line';
       return (
         <button key={x.id} type="button" onClick={() => onGo(i)} aria-current={on ? 'step' : undefined}
           aria-label={c ? (c.is_correct ? t('Question {n}, juste', { n: i + 1 }) : t('Question {n}, fausse', { n: i + 1 })) : t('Question {n}, pas encore corrigée', { n: i + 1 })}
@@ -97,8 +109,8 @@ export const QuizRunner: React.FC<{
   const known = Object.fromEntries(initial.map((c) => [c.id, c])) as Record<number, CorrectionItem>;
   const firstOpen = Math.max(0, questions.findIndex((x) => !known[x.id]));
   const [index, setIndex] = useState(firstOpen);
-  const [answers, setAnswers] = useState<Record<number, number>>(() =>
-    Object.fromEntries(initial.filter((c) => c.your_answer !== null && c.your_answer >= 0).map((c) => [c.id, c.your_answer as number])));
+  const [answers, setAnswers] = useState<Record<number, Answer>>(() =>
+    Object.fromEntries(initial.filter((c) => picked(c.your_answer).length > 0).map((c) => [c.id, c.your_answer as Answer])));
   const [checked, setChecked] = useState<Record<number, CorrectionItem>>(known);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
@@ -115,6 +127,12 @@ export const QuizRunner: React.FC<{
   const q = questions[index];
   const answer = answers[q.id];
   const correction = checked[q.id];
+  // Plusieurs bonnes réponses (16/10/2026) : cases à cocher, « Valider » quand le bon nombre est coché.
+  const need = toPick(q);
+  const multi = need > 1;
+  const sel = picked(answer);
+  const ready = multi ? sel.length === need : sel.length > 0;
+  const rightSet = correction ? goodAnswers(correction) : [];
   const missing = questions.flatMap((x, i) => (checked[x.id] ? [] : [i]));
   const done = total - missing.length;
   const complete = missing.length === 0;
@@ -123,7 +141,13 @@ export const QuizRunner: React.FC<{
   const paused = !!correction || submitting || timeUp;
 
   const go = (i: number) => { setCheckError(false); setGrid(false); setIndex(Math.max(0, Math.min(total - 1, i))); };
-  const choose = (i: number) => { if (!correction) setAnswers((a) => ({ ...a, [q.id]: i })); };
+  /** Une réponse : la choisir ; plusieurs : cocher / décocher (pas plus que le nombre de bonnes réponses). */
+  const choose = (i: number) => {
+    if (correction) return;
+    if (!multi) { setAnswers((a) => ({ ...a, [q.id]: i })); return; }
+    const next = sel.includes(i) ? sel.filter((x) => x !== i) : sel.length < need ? [...sel, i].sort((a, b) => a - b) : sel;
+    setAnswers((a) => ({ ...a, [q.id]: next }));
+  };
 
   // Temps consommé (ms), cumulé tic après tic : les navigateurs ralentissent les minuteries des onglets en arrière-plan,
   // le décompte reste juste puisqu'il additionne le temps réellement écoulé entre deux tics. Reprise : le temps déjà pris.
@@ -137,7 +161,7 @@ export const QuizRunner: React.FC<{
     setSubmitting(true);
     setError('');
     // Sans réponse : -1, compté faux par le serveur (qui note de toute façon toutes les questions du passage).
-    const all = Object.fromEntries(questions.map((x) => [x.id, answers[x.id] ?? -1]));
+    const all = Object.fromEntries(questions.map((x) => [x.id, picked(answers[x.id]).length ? answers[x.id] : -1]));
     try {
       onDone(await submitQuiz(quiz.id, quiz.levelId, all, Math.round(used.current / 1000)));
     } catch (e) {
@@ -166,11 +190,11 @@ export const QuizRunner: React.FC<{
   }, [seconds]);
 
   const validate = async () => {
-    if (answer === undefined || correction || checking) return;
+    if (!ready || correction || checking) return;
     setChecking(true);
     setCheckError(false);
     try {
-      const c = await checkAnswer(q.id, answer, Math.round(used.current / 1000));
+      const c = await checkAnswer(q.id, multi ? sel : sel[0], Math.round(used.current / 1000));
       setChecked((m) => ({ ...m, [q.id]: c }));
     } catch {
       setCheckError(true);
@@ -181,7 +205,7 @@ export const QuizRunner: React.FC<{
 
   /** Entrée : valider la réponse, puis passer à la suite (à la fin : le bilan, ou la première question restante). */
   const advance = () => {
-    if (!correction) { if (answer !== undefined) validate(); return; }
+    if (!correction) { if (ready) validate(); return; }
     if (!isLast) go(index + 1);
     else if (complete) submit();
     else go(missing[0]);
@@ -193,13 +217,14 @@ export const QuizRunner: React.FC<{
     if (top < 0) topRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [index]);
 
-  // Clavier : 1 à 4 (ou A à D) répondent, Entrée valide puis continue, ← → changent de question.
+  // Clavier : 1 à 6 (ou A à F) répondent (cochent / décochent quand il y a plusieurs bonnes réponses), Entrée valide
+  // puis continue, ← → changent de question.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || submitting) return;
       const el = e.target as HTMLElement | null;
       if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
-      const pick = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : /^[a-d]$/i.test(e.key) ? e.key.toLowerCase().charCodeAt(0) - 97 : -1;
+      const pick = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : /^[a-f]$/i.test(e.key) ? e.key.toLowerCase().charCodeAt(0) - 97 : -1;
       if (pick >= 0) {
         if (pick < q.options.length) { e.preventDefault(); choose(pick); }
         return;
@@ -207,7 +232,7 @@ export const QuizRunner: React.FC<{
       if (e.key === 'Enter') {
         // Sur un bouton (Précédent, Quitter…), Entrée garde son effet normal ; sur une réponse, elle continue.
         const control = el?.closest('button, a, summary');
-        if (control && control.getAttribute('role') !== 'radio') return;
+        if (control && !['radio', 'checkbox'].includes(control.getAttribute('role') ?? '')) return;
         e.preventDefault();
         advance();
       } else if (e.key === 'ArrowRight') {
@@ -224,7 +249,7 @@ export const QuizRunner: React.FC<{
 
   // Action principale de la barre du bas : Valider → Question suivante → Voir mon bilan.
   const primary = !correction ? (
-    <button type="button" onClick={validate} disabled={answer === undefined || checking || timeUp}
+    <button type="button" onClick={validate} disabled={!ready || checking || timeUp}
       className="fd-btn-primary min-h-12 flex-1 justify-center px-6 text-[15px] disabled:opacity-50 sm:flex-none">
       {checking ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Correction…')}</> : <><Check className="h-4 w-4" aria-hidden /> {t('Valider')}</>}
     </button>
@@ -282,11 +307,20 @@ export const QuizRunner: React.FC<{
         <h2 id="quiz-question" className="text-[17px] font-semibold leading-relaxed text-ink sm:text-[18px]">
           <MathText text={q.question} className="fd-latex" />
         </h2>
-        <div role="radiogroup" aria-labelledby="quiz-question" className="mt-5 flex flex-col gap-2.5">
+        {/* Plusieurs bonnes réponses : la consigne (nombre à cocher, jamais lesquelles) et le compte des cases cochées. */}
+        {multi && (
+          <p id="quiz-consigne" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1 text-[13px] font-semibold text-ink-soft">
+            {t('Choisis {n} réponses', { n: need })}
+            {!correction && <span className="fd-nums font-normal text-ink-faint">{sel.length}/{need}</span>}
+          </p>
+        )}
+        <div role={multi ? 'group' : 'radiogroup'} aria-labelledby="quiz-question" aria-describedby={multi ? 'quiz-consigne' : undefined}
+          className={`${multi ? 'mt-4' : 'mt-5'} flex flex-col gap-2.5`}>
           {q.options.map((opt, i) => {
-            const selected = answer === i;
-            const right = correction && i === correction.correct_answer;
-            const wrong = correction && selected && !correction.is_correct;
+            const selected = sel.includes(i);
+            // Correction : toutes les bonnes réponses en vert, les réponses cochées à tort en or.
+            const right = !!correction && rightSet.includes(i);
+            const wrong = !!correction && selected && !right;
             const box = right ? 'border-brand bg-brand-soft'
               : wrong ? 'border-gold bg-gold-soft'
                 : correction ? 'border-line bg-white opacity-55'
@@ -294,12 +328,13 @@ export const QuizRunner: React.FC<{
             const dot = right ? 'bg-brand text-white' : wrong ? 'bg-gold text-white'
               : selected && !correction ? 'bg-brand text-white' : 'border border-[#d8d4cc] bg-white text-ink-soft';
             return (
-              <button key={i} type="button" role="radio" aria-checked={selected} onClick={() => choose(i)} aria-disabled={!!correction}
+              <button key={i} type="button" role={multi ? 'checkbox' : 'radio'} aria-checked={selected} onClick={() => choose(i)} aria-disabled={!!correction}
                 className={`flex min-h-[60px] w-full items-center gap-3.5 rounded-2xl border px-4 py-3 text-start transition-[border-color,background-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${box} ${correction ? 'cursor-default' : ''}`}>
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[14px] font-bold ${dot}`} aria-hidden>
-                  {right ? <Check className="h-4 w-4" /> : wrong ? <X className="h-4 w-4" /> : letter(i)}
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center text-[14px] font-bold ${multi ? 'rounded-lg' : 'rounded-xl'} ${dot}`} aria-hidden>
+                  {right ? <Check className="h-4 w-4" /> : wrong ? <X className="h-4 w-4" /> : multi && selected ? <Check className="h-4 w-4" /> : letter(i)}
                 </span>
                 <MathText text={opt} className={`fd-latex min-w-0 flex-1 text-[15.5px] leading-snug ${selected || right ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
+                {multi && right && !selected && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('oubliée')}</span>}
                 {i < 9 && !correction && <span className="hidden sm:inline-flex" aria-hidden><Kbd>{i + 1}</Kbd></span>}
               </button>
             );
