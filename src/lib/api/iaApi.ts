@@ -73,6 +73,10 @@ export const retryJob = async (id: number) => (await api.post(`/pilotage/ia/${id
 export const publishJob = async (id: number, body: { a_verifier: boolean; doublon_ok: boolean }) =>
   (await api.post(`/pilotage/ia/${id}/publier/`, body)).data as IAJobDetail;
 
+/** « Ignorer le doublon » : le doublon probable n'empêche plus de publier ce brouillon (false : de nouveau signalé). */
+export const ignoreDuplicate = async (id: number, ignorer: boolean) =>
+  (await api.post(`/pilotage/ia/${id}/doublon/`, { ignorer })).data as IAJobDetail;
+
 export const applyJob = async (id: number, a_verifier: boolean) =>
   (await api.post(`/pilotage/ia/${id}/appliquer/`, { a_verifier })).data as IAJobDetail;
 
@@ -93,7 +97,9 @@ export interface Brouillon {
   difficulte: string | null; credit: string; ecole: string; document: string; extrait: string;
   questions: number; parties: number; sections: number; solutions: number; indications: number; figures: number;
   theoremes: string[]; nb_theoremes: number;
+  /** doublons : 0 quand le doublon a été ignoré (doublon_ignore). */
   commentaires: number; erreurs: number; doublons: number; avertissements: number; a_verifier: boolean;
+  doublon_ignore?: boolean;
   remplace: { id: number; titre: string; type: string } | null;
   publie: { id: number; titre: string; type: string } | null;
   corrections: number;

@@ -15,7 +15,7 @@ import type { FlexibleExerciseStructure } from '@/components/content/editor/Flex
 import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
 import { MathText } from '@/components/skilliq/MathText';
 import {
-  apiError, askCorrection, getJob, isRunning, listBrouillons, publishJob, rejectJob,
+  apiError, askCorrection, getJob, ignoreDuplicate, isRunning, listBrouillons, publishJob, rejectJob,
   type Brouillon, type BrouillonDetail, type BrouillonStatut,
 } from '@/lib/api/iaApi';
 import { checkStructureMath } from '@/lib/mathCheck';
@@ -83,11 +83,16 @@ const Stat: React.FC<{ icon: typeof PenLine; children: React.ReactNode; warn?: b
 
 /* ───────────────────────────── Carte ───────────────────────────── */
 
-const Carte: React.FC<{ b: Brouillon; onOpen: () => void }> = ({ b, onOpen }) => {
+/** Publiable sans relecture du contrôle : prêt, sans erreur ni doublon (ignoré ou absent). */
+const publiable = (b: Brouillon) => b.status === 'pret' && !b.erreurs && !b.doublons;
+
+const Carte: React.FC<{
+  b: Brouillon; onOpen: () => void; selected: boolean; onToggle: () => void; onIgnore: () => void; busy: boolean;
+}> = ({ b, onOpen, selected, onToggle, onIgnore, busy }) => {
   const t = TYPE[b.type ?? ''] ?? TYPE.exercice;
   const leaves = b.type === 'lecon' ? 0 : b.questions;
   return (
-    <article className="group flex flex-col rounded-2xl border border-line bg-white transition-shadow hover:border-ink-faint hover:shadow-[0_2px_12px_rgba(20,20,20,.06)]">
+    <article className={`group flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-[0_2px_12px_rgba(20,20,20,.06)] ${selected ? 'border-brand ring-1 ring-brand' : 'border-line hover:border-ink-faint'}`}>
       <button type="button" onClick={onOpen} className="flex flex-1 flex-col p-4 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-2xl">
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.07em] text-ink-faint">
@@ -131,8 +136,26 @@ const Carte: React.FC<{ b: Brouillon; onOpen: () => void }> = ({ b, onOpen }) =>
           </div>
         )}
       </button>
+      {b.status === 'pret' && !b.erreurs && b.doublons > 0 && (
+        <div className="flex items-center justify-between gap-2 border-t border-line bg-gold-soft px-4 py-2 text-[12px]">
+          <span className="text-gold-strong">Ressemble à un contenu existant</span>
+          <button type="button" disabled={busy} onClick={onIgnore}
+            title="Ce n’est pas un doublon : le brouillon redevient publiable"
+            className="shrink-0 rounded-lg border border-line bg-white px-2.5 py-1 font-medium text-ink hover:border-ink disabled:opacity-50">
+            Ignorer le doublon
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-2.5 text-[11.5px] text-ink-faint">
-        <span className="min-w-0 truncate">{[b.credit.replace(/, professeurs? de mathématiques$/, ''), b.ecole].filter(Boolean).join(' · ') || b.document}</span>
+        {publiable(b) ? (
+          <label className="flex min-w-0 cursor-pointer items-center gap-2">
+            <input type="checkbox" checked={selected} onChange={onToggle} disabled={busy} className="h-4 w-4 shrink-0 accent-[#1a7a4a]"
+              aria-label={`Sélectionner « ${b.titre} »`} />
+            <span className="min-w-0 truncate">{[b.credit.replace(/, professeurs? de mathématiques$/, ''), b.ecole].filter(Boolean).join(' · ') || b.document}</span>
+          </label>
+        ) : (
+          <span className="min-w-0 truncate">{[b.credit.replace(/, professeurs? de mathématiques$/, ''), b.ecole].filter(Boolean).join(' · ') || b.document}</span>
+        )}
         {b.publie ? (
           <Link to={contentUrl(b.publie)} className="inline-flex shrink-0 items-center gap-1 font-medium text-brand-hover hover:underline">Voir en ligne <ExternalLink className="h-3 w-3" /></Link>
         ) : (
@@ -164,7 +187,6 @@ const Relecture: React.FC<{
   const [modifier, setModifier] = useState(false);
   const [instruction, setInstruction] = useState('');
   const [aVerifier, setAVerifier] = useState(true);
-  const [doublonOk, setDoublonOk] = useState(false);
   const pos = ids.indexOf(id);
   const prev = pos > 0 ? ids[pos - 1] : null;
   const next = pos >= 0 && pos < ids.length - 1 ? ids[pos + 1] : null;
@@ -184,7 +206,7 @@ const Relecture: React.FC<{
   }, [id]);
 
   useEffect(() => {
-    setJob(null); setModifier(false); setInstruction(''); setDoublonOk(false); setSuivant(null);
+    setJob(null); setModifier(false); setInstruction(''); setSuivant(null);
     load().then((j) => { if (j) setAVerifier(j.carte?.a_verifier ?? true); });
     window.scrollTo({ top: 0 });
   }, [load]);
@@ -197,10 +219,10 @@ const Relecture: React.FC<{
   const apercu = job?.apercus?.[0];
   const math = useMemo(() => (apercu?.structure ? checkStructureMath(apercu.structure) : []), [apercu?.structure]);
 
-  const act = async (fn: () => Promise<unknown>, fallback: string) => {
+  const act = async (fn: () => Promise<unknown>, fallback: string, avance = true) => {
     setBusy(true);
     setError(null);
-    setSuivant(next);
+    if (avance) setSuivant(next);
     try { await fn(); await load(); onChanged(); return true; } catch (e) { setError(apiError(e, fallback)); return false; } finally { setBusy(false); }
   };
 
@@ -214,6 +236,8 @@ const Relecture: React.FC<{
   const controles = job.controles ?? [];
   const erreurs = [...(job.erreurs_figures ?? []), ...controles.flatMap((x) => x.erreurs)];
   const doublons = controles.flatMap((x) => x.doublons);
+  const doublonIgnore = !!c?.doublon_ignore;
+  const doublonBloque = doublons.length > 0 && !doublonIgnore;
   const avert = [...(job.avertissements ?? []), ...controles.flatMap((x) => x.avertissements)];
   const commentaires = [...(job.doutes ?? []), ...(job.problemes ?? []).map((p) => (p.ou ? `${p.ou} : ${p.description}` : p.description))];
   const bloque = erreurs.length > 0 || math.length > 0;
@@ -339,14 +363,24 @@ const Relecture: React.FC<{
                     <input type="checkbox" className="mt-0.5 accent-[#1a7a4a]" checked={aVerifier} onChange={(e) => setAVerifier(e.target.checked)} />
                     <span>Bandeau « correction en cours de vérification » <span className="text-ink-faint">(solutions rédigées par Claude, pas encore relues)</span></span>
                   </label>
-                  {doublons.length > 0 && (
-                    <label className="mt-2 flex gap-2 text-[12.5px] text-ink-soft">
-                      <input type="checkbox" className="mt-0.5 accent-[#1a7a4a]" checked={doublonOk} onChange={(e) => setDoublonOk(e.target.checked)} />
-                      <span>C’est bien un nouveau contenu, pas un doublon</span>
-                    </label>
+                  {doublonBloque && (
+                    <div className="mt-2 rounded-xl bg-gold-soft px-3 py-2 text-[12.5px] text-gold-strong">
+                      <p className="flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Ressemble à un contenu existant (voir plus bas).</p>
+                      <button type="button" disabled={busy} onClick={() => act(() => ignoreDuplicate(job.id, true), 'Impossible d’ignorer ce doublon.', false)}
+                        className="mt-1.5 rounded-lg border border-line bg-white px-2.5 py-1 text-[12px] font-medium text-ink hover:border-ink disabled:opacity-50">
+                        Ignorer le doublon : c’est un nouveau contenu
+                      </button>
+                    </div>
                   )}
-                  <button type="button" disabled={busy || bloque || (doublons.length > 0 && !doublonOk)}
-                    onClick={() => act(() => publishJob(job.id, { a_verifier: aVerifier, doublon_ok: doublonOk }), 'La publication a échoué.')}
+                  {doublons.length > 0 && doublonIgnore && (
+                    <p className="mt-2 text-[12px] text-ink-faint">
+                      Doublon ignoré.{' '}
+                      <button type="button" disabled={busy} onClick={() => act(() => ignoreDuplicate(job.id, false), 'Le changement a échoué.', false)}
+                        className="font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Annuler</button>
+                    </p>
+                  )}
+                  <button type="button" disabled={busy || bloque || doublonBloque}
+                    onClick={() => act(() => publishJob(job.id, { a_verifier: aVerifier, doublon_ok: doublonIgnore }), 'La publication a échoué.')}
                     className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {maj ? 'Valider et mettre à jour' : 'Valider et publier'}
                   </button>
@@ -424,7 +458,7 @@ const Relecture: React.FC<{
               <ul className="mt-2.5 space-y-2">
                 {erreurs.map((e) => <Point key={e} tone="red">{e}</Point>)}
                 {math.map((m, i) => <Point key={`m${i}`} tone="red">{m.where} : formule invalide <code className="break-all text-[11.5px]">{m.tex}</code> — {m.message}</Point>)}
-                {doublons.map((e) => <Point key={e} tone="gold">{e}</Point>)}
+                {doublons.map((e) => <Point key={e} tone={doublonIgnore ? 'gray' : 'gold'}>{doublonIgnore ? `(ignoré) ${e}` : e}</Point>)}
                 {avert.map((a) => <Point key={a} tone="gray">{a}</Point>)}
               </ul>
             </section>
@@ -473,6 +507,11 @@ export const ValidationTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [niveau, setNiveau] = useState<string | null>(null);
   const [type, setType] = useState<string | null>(null);
+  // Publication groupée : brouillons cochés, avancement, échecs (chacun garde son réglage « à vérifier »).
+  const [choisis, setChoisis] = useState<Set<number>>(new Set());
+  const [lot, setLot] = useState<{ fait: number; total: number } | null>(null);
+  const [bilan, setBilan] = useState<{ publies: number; echecs: { titre: string; detail: string }[] } | null>(null);
+  const [ignorant, setIgnorant] = useState<number | null>(null);
 
   const setParam = (key: string, value: string | null) => setParams((p) => {
     const n = new URLSearchParams(p);
@@ -497,7 +536,16 @@ export const ValidationTab: React.FC = () => {
     }
   }, [statut]);
 
-  useEffect(() => { setItems(null); setNiveau(null); setType(null); load(); }, [load]);
+  useEffect(() => { setItems(null); setNiveau(null); setType(null); setChoisis(new Set()); setBilan(null); load(); }, [load]);
+  // Un brouillon qui n'est plus publiable (publié, modifié, rejeté ailleurs) sort de la sélection.
+  useEffect(() => {
+    if (!items) return;
+    setChoisis((s) => {
+      const ok = new Set(items.filter(publiable).map((b) => b.id));
+      const n = new Set([...s].filter((id) => ok.has(id)));
+      return n.size === s.size ? s : n;
+    });
+  }, [items]);
   useEffect(() => {
     if (!items?.some((b) => isRunning(b.status)) || selected) return undefined;
     const t = window.setInterval(load, 5000);
@@ -520,6 +568,41 @@ export const ValidationTab: React.FC = () => {
   }
 
   const prets = (items ?? []).filter((b) => b.status === 'pret' && !b.erreurs).length;
+  const visiblesPubliables = visibles.filter(publiable);
+  const basculer = (ids: number[], on: boolean) => setChoisis((s) => {
+    const n = new Set(s);
+    ids.forEach((id) => (on ? n.add(id) : n.delete(id)));
+    return n;
+  });
+
+  const ignorer = async (b: Brouillon) => {
+    setIgnorant(b.id);
+    setError(null);
+    try { await ignoreDuplicate(b.id, true); await load(); } catch (e) { setError(apiError(e, 'Impossible d’ignorer ce doublon.')); } finally { setIgnorant(null); }
+  };
+
+  const publierSelection = async () => {
+    const liste = (items ?? []).filter((b) => choisis.has(b.id) && publiable(b));
+    if (!liste.length) return;
+    const aVerif = liste.filter((b) => b.a_verifier).length;
+    if (!window.confirm(`Publier ${plural(liste.length, 'contenu')} ?${aVerif ? `\n${aVerif} avec le bandeau « correction en cours de vérification », comme réglé sur chaque brouillon.` : ''}`)) return;
+    setBilan(null);
+    setLot({ fait: 0, total: liste.length });
+    const echecs: { titre: string; detail: string }[] = [];
+    // Un par un : un échec (clé prise entre-temps, contrôle refusé) n'empêche pas les suivants.
+    for (const [i, b] of liste.entries()) {
+      try {
+        await publishJob(b.id, { a_verifier: b.a_verifier, doublon_ok: !!b.doublon_ignore });
+      } catch (e) {
+        echecs.push({ titre: b.titre, detail: apiError(e, 'La publication a échoué.') });
+      }
+      setLot({ fait: i + 1, total: liste.length });
+    }
+    setLot(null);
+    setChoisis(new Set());
+    setBilan({ publies: liste.length - echecs.length, echecs });
+    await load();
+  };
 
   return (
     <div className="space-y-5">
@@ -562,24 +645,79 @@ export const ValidationTab: React.FC = () => {
       ) : (
         <>
           {statut === 'a_valider' && (
-            <p className="text-[12.5px] text-ink-soft">
-              {plural(items.length, 'contenu')} en attente{prets > 0 && prets < items.length ? `, dont ${prets} sans erreur` : prets === items.length ? ', tous sans erreur' : ''}.
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12.5px] text-ink-soft">
+                {plural(items.length, 'contenu')} en attente{prets > 0 && prets < items.length ? `, dont ${prets} sans erreur` : prets === items.length ? ', tous sans erreur' : ''}.
+              </p>
+              {visiblesPubliables.length > 1 && (
+                <button type="button" disabled={!!lot}
+                  onClick={() => {
+                    const ids = visiblesPubliables.map((b) => b.id);
+                    basculer(ids, !ids.every((id) => choisis.has(id)));
+                  }}
+                  className="text-[12.5px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline disabled:opacity-50">
+                  {visiblesPubliables.every((b) => choisis.has(b.id)) ? 'Tout désélectionner' : `Sélectionner les ${visiblesPubliables.length} prêts à publier`}
+                </button>
+              )}
+            </div>
           )}
-          {groupes.map(([doc, liste]) => (
-            <section key={doc} aria-label={doc}>
-              {groupes.length > 1 || liste.length > 1 ? (
-                <h3 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-soft">
-                  <FileText className="h-3.5 w-3.5 text-ink-faint" /> <span className="truncate">{doc}</span>
-                  <span className="fd-nums font-normal text-ink-faint">· {liste.length}</span>
-                </h3>
-              ) : null}
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {liste.map((b) => <Carte key={b.id} b={b} onOpen={() => select(b.id)} />)}
-              </div>
-            </section>
-          ))}
+          {bilan && (
+            <div role="status" className={`rounded-xl border px-4 py-3 text-[13px] ${bilan.echecs.length ? 'border-[#f0d4cf] bg-[#fbf1ef] text-[#9c3b2e]' : 'border-brand-line bg-brand-soft text-brand-hover'}`}>
+              <p className="flex items-center justify-between gap-2 font-medium">
+                <span>{plural(bilan.publies, 'contenu publié', 'contenus publiés')}{bilan.echecs.length ? `, ${plural(bilan.echecs.length, 'échec')}` : ''}.</span>
+                <button type="button" onClick={() => setBilan(null)} aria-label="Fermer" className="rounded p-0.5 hover:bg-white/60"><X className="h-4 w-4" /></button>
+              </p>
+              {bilan.echecs.length > 0 && (
+                <ul className="mt-1.5 space-y-1 text-[12.5px]">
+                  {bilan.echecs.map((e) => <li key={e.titre} className="whitespace-pre-line"><strong>{e.titre}</strong> : {e.detail}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+          {groupes.map(([doc, liste]) => {
+            const aCocher = liste.filter(publiable).map((b) => b.id);
+            const tous = aCocher.length > 0 && aCocher.every((id) => choisis.has(id));
+            return (
+              <section key={doc} aria-label={doc}>
+                {groupes.length > 1 || liste.length > 1 ? (
+                  <h3 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-soft">
+                    <FileText className="h-3.5 w-3.5 text-ink-faint" /> <span className="truncate">{doc}</span>
+                    <span className="fd-nums font-normal text-ink-faint">· {liste.length}</span>
+                    {statut === 'a_valider' && aCocher.length > 1 && (
+                      <button type="button" disabled={!!lot} onClick={() => basculer(aCocher, !tous)}
+                        className="ms-auto shrink-0 font-medium text-ink-faint underline-offset-2 hover:text-ink hover:underline disabled:opacity-50">
+                        {tous ? 'Désélectionner' : `Sélectionner les ${aCocher.length}`}
+                      </button>
+                    )}
+                  </h3>
+                ) : null}
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {liste.map((b) => (
+                    <Carte key={b.id} b={b} onOpen={() => select(b.id)} selected={choisis.has(b.id)} busy={!!lot || ignorant === b.id}
+                      onToggle={() => basculer([b.id], !choisis.has(b.id))} onIgnore={() => ignorer(b)} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
           {visibles.length === 0 && <p className="text-[13px] text-ink-faint">Aucun contenu avec ces filtres.</p>}
+          {(choisis.size > 0 || lot) && (
+            <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-white px-4 py-3 shadow-[0_6px_24px_rgba(20,20,20,.12)]">
+              <span className="text-[13px] text-ink">
+                {lot ? `Publication ${lot.fait} / ${lot.total}…` : `${plural(choisis.size, 'contenu sélectionné', 'contenus sélectionnés')}`}
+              </span>
+              <div className="flex items-center gap-2">
+                {!lot && (
+                  <button type="button" onClick={() => setChoisis(new Set())}
+                    className="rounded-lg px-3 py-1.5 text-[12.5px] font-medium text-ink-soft hover:bg-[#f2f1ee] hover:text-ink">Annuler</button>
+                )}
+                <button type="button" disabled={!!lot} onClick={publierSelection}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">
+                  {lot ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Publier la sélection
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
