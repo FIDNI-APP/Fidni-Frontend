@@ -33,6 +33,10 @@ interface NotebookContentProps {
   annotating?: boolean;
   /** Afficher les annotations (positions en px à la largeur où elles ont été faites). */
   showAnnotations?: boolean;
+  /** Ce qui est écrit sur la feuille, à la place de `content` / `structure` (page de la leçon : LessonReader). */
+  body?: React.ReactNode;
+  /** Barre d'outils collée à cette distance du haut (page de la leçon : sous la barre du site). */
+  toolbarTop?: number;
 }
 
 // Quatre couleurs du site : or, vert, brique, encre.
@@ -78,6 +82,8 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   initialAnnotations,
   annotating = false,
   showAnnotations = true,
+  body,
+  toolbarTop = 0,
 }) => {
   const hasStructure = Boolean((structure as { sections?: unknown[] } | undefined)?.sections?.length);
   const [tool, setTool] = useState<Tool | null>(null);
@@ -240,8 +246,8 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
   return (
     <div className="flex flex-col">
       {annotating && (
-        <div role="toolbar" aria-label={t('Outils d’annotation')}
-          className="sticky top-0 z-30 flex flex-wrap items-center gap-x-1 gap-y-1.5 border-b border-line bg-white/95 px-3 py-2 backdrop-blur">
+        <div role="toolbar" aria-label={t('Outils d’annotation')} style={{ top: toolbarTop }}
+          className="sticky z-30 flex print:hidden flex-wrap items-center gap-x-1 gap-y-1.5 border-b border-line bg-white/95 px-3 py-2 backdrop-blur">
           {TOOLS.map(({ key, label, icon: Icon }) => {
             const on = tool === key;
             return (
@@ -278,13 +284,13 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
       <NotebookPaper theme={notebookTheme}>
         <div className={`relative z-10 ${className}`}>
           <div className="py-6 pe-4 sm:py-8 sm:pe-8" style={paperTextStyle(notebookTheme)}>
-            {hasStructure ? (
+            {body ?? (hasStructure ? (
               <StructuredLessonContent structure={structure} onReady={onReady} />
             ) : content ? (
               <TipTapRenderer content={content} onReady={onReady} />
             ) : (
               <EmptyLessonBody onReady={onReady} />
-            )}
+            ))}
           </div>
         </div>
 

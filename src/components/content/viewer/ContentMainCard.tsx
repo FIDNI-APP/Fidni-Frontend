@@ -22,6 +22,7 @@ import { useLessonOutline } from '@/components/lesson/useLessonOutline';
 import { LessonOutlineBar, LessonOutlinePanel } from '@/components/lesson/LessonOutline';
 import { ExamView } from './ExamView';
 import { LessonReader } from './LessonReader';
+import { LessonSheet } from './LessonSheet';
 import { ReadingStyles } from './ReadingStyles';
 import { SHEET_TEXT_PX } from './pageHelpers';
 import { Chrono } from './Chrono';
@@ -189,12 +190,12 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
                 <LessonOutlineBar outline={outline} storageKey={`lecon-${content.id}`} tourId="lecon-sommaire-barre" />
               </div>
             )}
-            <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl print:rounded-none print:border-0">
-              <div ref={lessonRef} data-tour="lecon-contenu" className="px-5 pb-10 pt-8 sm:px-12 sm:pb-14 sm:pt-12">
+            {/* Feuille de cahier, avec les annotations de l'élève (16/10/2026). */}
+            <LessonSheet lessonId={content.id} isAuthenticated={isAuthenticated} footer={sheetFooter}>
+              <div ref={lessonRef} data-tour="lecon-contenu" className="pb-4 pt-2 sm:pb-6 sm:pt-4">
                 <LessonReader structure={content.structure as FlexibleLessonStructure} />
               </div>
-              {sheetFooter}
-            </article>
+            </LessonSheet>
           </div>
           <AdSlot />
           {/* Impression (Ctrl + P) : la leçon seule. */}

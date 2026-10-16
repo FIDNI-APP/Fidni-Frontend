@@ -16,22 +16,9 @@ import { usePhone } from '@/components/content/listing/listingUtils';
 import NotebookContent, { type Annotation } from './NotebookContent';
 import { NOTEBOOK_THEME } from './NotebookPaper';
 import type { Id, NbSection } from './notebookModel';
+import { useFinePointer } from './useFinePointer';
 
-/** Souris (survol + pointeur précis) : seul cas où l'on propose d'annoter. */
-function useFinePointer(): boolean {
-  const query = '(hover: hover) and (pointer: fine)';
-  const [fine, setFine] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
-  useEffect(() => {
-    const mq = window.matchMedia?.(query);
-    if (!mq) return;
-    const on = () => setFine(mq.matches);
-    mq.addEventListener?.('change', on);
-    return () => mq.removeEventListener?.('change', on);
-  }, []);
-  return fine;
-}
-
-const PhoneTheme = { ...NOTEBOOK_THEME, marginLeft: 2 };
+export const PhoneTheme = { ...NOTEBOOK_THEME, marginLeft: 2 };
 
 const SectionContent: React.FC<{
   notebookId: Id;

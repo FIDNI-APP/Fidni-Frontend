@@ -200,3 +200,10 @@ export const getLessonAnnotations = async (
     throw error;
   }
 };
+// Annotations sur la page d'une leçon (16/10/2026) : rangées à part de celles du cahier (autre largeur de feuille).
+export const getPageAnnotations = async (lessonId: string | number): Promise<any[]> =>
+  (await api.get(`/lessons/${lessonId}/annotations/`)).data.annotations || [];
+
+export const savePageAnnotations = async (lessonId: string | number, annotations: any[]): Promise<void> => {
+  await api.post(`/lessons/${lessonId}/annotations/`, { annotations });
+};

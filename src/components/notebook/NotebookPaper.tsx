@@ -62,7 +62,7 @@ export const NotebookPaper: React.FC<NotebookPaperProps> = ({ theme = NOTEBOOK_T
       <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: TEXTURE }} />
 
       {/* Trous de reliure */}
-      <div className="absolute start-3 top-0 bottom-0 overflow-hidden flex flex-col justify-start pt-6 gap-8 pointer-events-none" aria-hidden>
+      <div className="absolute start-3 top-0 bottom-0 overflow-hidden flex flex-col justify-start pt-6 gap-8 pointer-events-none print:hidden" aria-hidden>
         {Array.from({ length: holeCount }).map((_, i) => (
           <div
             key={i}

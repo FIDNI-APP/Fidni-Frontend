@@ -349,5 +349,7 @@
   "Sommaire": "الفهرس",
   "Sommaire de la leçon": "فهرس الدرس",
   "à {num}. {titre}": "عند {num}. {titre}",
-  "Revenir au début": "العودة إلى البداية"
+  "Revenir au début": "العودة إلى البداية",
+  "{n} annotations sur cette leçon": "{n} تعليقات على هذا الدرس",
+  "1 annotation sur cette leçon": "تعليق واحد على هذا الدرس"
 }
