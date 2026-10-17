@@ -5,7 +5,7 @@
  *    (anneau des actifs + parcours des inscrits, ex-Entonnoir), « Activité en direct », contenus les plus vus.
  *    Le direct vient de /api/pilotage/direct/, relu toutes les 30 s quand la page est visible
  *    (components/pilotage/livePilotage, StatusStrip, KpiTile, Sparkline, RingGauge, MembersCard, LiveActivity, DayChart) ;
- *  - À traiter : signalements d'erreurs, corrections « à vérifier » à valider ;
+ *  - À traiter : signalements d'erreurs, écarts de difficulté ;
  *  - Membres : recherche, filtres rapides, fiche dépliable avec les dernières actions ;
  *  - Usage (06/10/2026) : membres qui se servent de chaque fonctionnalité, pages les plus visitées, filtres et
  *    leurs valeurs les plus choisies (difficulté, chapitre, tri…, 09/10/2026) ;
@@ -21,8 +21,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
-  Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge, Inbox,
-  Loader2, LineChart, PenLine, RefreshCw, Repeat, RotateCcw, Search, ShieldCheck, Sparkles,
+  Activity, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge, Inbox,
+  Loader2, LineChart, PenLine, RefreshCw, Repeat, Search, ShieldCheck, Sparkles,
   UserPlus, Users, type LucideIcon,
 } from 'lucide-react';
 import { SerieModal, type SerieTarget } from '@/components/pilotage/SerieModal';
@@ -60,7 +60,7 @@ interface Overview {
   days: number;
   views_since: string;
   members_total: number;
-  todo: { reports_open: number; a_verifier: ContentRef[]; difficulty_gaps?: DifficultyGap[] };
+  todo: { reports_open: number; difficulty_gaps?: DifficultyGap[] };
   metrics: Record<MetricKey, Metric>;
   series: Day[];
   top_contents: (ContentRef & { views: number; readers: number })[];
@@ -119,7 +119,6 @@ function normalizeOverview(raw: unknown, requestedDays: number): Overview {
     members_total: num(raw.members_total),
     todo: {
       reports_open: num(todo.reports_open),
-      a_verifier: list(todo.a_verifier, contentRef),
       difficulty_gaps: Array.isArray(todo.difficulty_gaps)
         ? list(todo.difficulty_gaps, (g) => ({
           ...contentRef(g), edit_url: str(g.edit_url) || undefined, declared: str(g.declared) || null, felt: str(g.felt) || null,
@@ -262,8 +261,8 @@ const TileLink: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const OverviewTab: React.FC<{
-  data: Overview; live: LiveData | null; liveStatus: LiveStatus; reportsOpen: number; verifyLeft: number; onGo: (tab: TabKey) => void;
-}> = ({ data, live, liveStatus, reportsOpen, verifyLeft, onGo }) => {
+  data: Overview; live: LiveData | null; liveStatus: LiveStatus; reportsOpen: number; onGo: (tab: TabKey) => void;
+}> = ({ data, live, liveStatus, reportsOpen, onGo }) => {
   const [metric, setMetric] = useState<MetricKey>('views');
   const def = METRICS.find((m) => m.key === metric)!;
   const m = data.metrics[metric];
@@ -274,7 +273,7 @@ const OverviewTab: React.FC<{
   const today = live?.today ?? null;
   // Le direct est plus frais que l'aperçu : ses compteurs l'emportent dès qu'il a répondu.
   const reports = live ? live.todo.reports_open : reportsOpen;
-  const verify = live ? live.todo.a_verifier : verifyLeft;
+  const brouillons = live ? live.todo.brouillons : null;
   const gaps = data.todo.difficulty_gaps ? data.todo.difficulty_gaps.length : null;
   const anon = data.anonymes;
   const funnel = data.funnel;
@@ -283,9 +282,7 @@ const OverviewTab: React.FC<{
   const pills: StatusPillDef[] = [
     { key: 'reports', count: reports, one: 'signalement ouvert', many: 'signalements ouverts', icon: Flag, tone: 'red',
       onClick: () => onGo('a-traiter'), title: 'Erreurs signalées par les élèves' },
-    { key: 'verify', count: verify, one: 'contenu à vérifier', many: 'contenus à vérifier', icon: ShieldCheck, tone: 'gold',
-      onClick: () => onGo('a-traiter'), title: 'Corrections affichées avec le bandeau «\u00a0à vérifier\u00a0»' },
-    { key: 'brouillons', count: live ? live.todo.brouillons : null, one: 'contenu à valider', many: 'contenus à valider',
+    { key: 'brouillons', count: brouillons, one: 'contenu à valider', many: 'contenus à valider',
       icon: Inbox, tone: 'gold', onClick: () => onGo('validation'), title: 'Exercices, cours et devoirs préparés par Claude' },
     { key: 'ia-run', count: live ? live.todo.ia_en_cours : null, one: 'travail IA en cours', many: 'travaux IA en cours', icon: Sparkles,
       tone: 'brand', running: true, onClick: () => onGo('ia') },
@@ -340,9 +337,9 @@ const OverviewTab: React.FC<{
           <KpiTile icon={Flag} accent="#a23b34" label="Signalements ouverts" value={reports} tone={reports ? 'alert' : 'neutral'}
             sub={reports ? 'erreurs signalées par les élèves' : 'aucun en attente'}
             footer={<TileLink>À traiter</TileLink>} mode="link" onClick={() => onGo('a-traiter')} />
-          <KpiTile icon={ShieldCheck} accent="#c0892f" label="Contenus à vérifier" value={verify} tone={verify ? 'warn' : 'neutral'}
-            sub={verify ? 'corrections avec le bandeau «\u00a0à vérifier\u00a0»' : 'tout est relu'}
-            footer={<TileLink>À traiter</TileLink>} mode="link" onClick={() => onGo('a-traiter')} />
+          <KpiTile icon={Inbox} accent="#c0892f" label="Contenus à valider" value={brouillons} tone={brouillons ? 'warn' : 'neutral'}
+            sub={brouillons === null ? undefined : brouillons ? 'préparés par Claude, à relire' : 'rien en attente'}
+            footer={<TileLink>À valider</TileLink>} mode="link" onClick={() => onGo('validation')} />
         </div>
       </ErrorBoundary>
 
@@ -774,58 +771,6 @@ const FiltersCard: React.FC<{
   );
 };
 
-/* ───────────────────────────── À traiter ───────────────────────────── */
-
-const VerifyPanel: React.FC<{ items: ContentRef[]; validated: Set<number>; onToggle: (id: number, verifie: boolean) => Promise<void> }> = ({ items, validated, onToggle }) => {
-  const [busy, setBusy] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const run = async (id: number, verifie: boolean) => {
-    setBusy(id);
-    setError(null);
-    try { await onToggle(id, verifie); } catch { setError('La mise à jour a échoué. Réessaie.'); } finally { setBusy(null); }
-  };
-  const left = items.filter((c) => !validated.has(c.id)).length;
-  return (
-    <section className="fd-card p-5" aria-labelledby="pilotage-verifier">
-      <h2 id="pilotage-verifier" className="fd-display flex items-center gap-2 text-[16px] text-ink">
-        <ShieldCheck className="h-4 w-4 text-ink-soft" /> Corrections à vérifier
-        {left > 0 && <span className="fd-nums rounded-full bg-gold-soft px-2 py-0.5 text-[12px] font-semibold text-gold-strong">{left} en attente</span>}
-      </h2>
-      <p className="mt-0.5 text-[12px] text-ink-faint">Solutions rédigées par Fidni, affichées avec le bandeau « à vérifier ». Valide après relecture : le bandeau disparaît du site.</p>
-      {error && <p role="alert" className="mt-3 text-[13px] text-[#9c3b2e]">{error}</p>}
-      {items.length === 0 ? (
-        <p className="mt-4 text-[13px] text-ink-faint">Aucune correction en attente de relecture.</p>
-      ) : (
-        <ul className="mt-3 divide-y divide-[#f2f1ee]">
-          {items.map((c) => {
-            const done = validated.has(c.id);
-            return (
-              <li key={c.id} className={`flex flex-wrap items-center gap-2 py-2.5 ${busy === c.id ? 'opacity-50' : ''}`}>
-                <span className="shrink-0 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] text-ink-soft">{TYPE_LABEL[c.type] ?? c.type}</span>
-                <Link to={c.url} className={`min-w-0 flex-1 truncate text-[13.5px] hover:text-brand ${done ? 'text-ink-faint line-through' : 'font-medium text-ink'}`}>{c.title}</Link>
-                {done ? (
-                  <span className="flex shrink-0 items-center gap-2 text-[12.5px] text-brand">
-                    <Check className="h-3.5 w-3.5" /> Validée
-                    <button type="button" disabled={busy === c.id} onClick={() => run(c.id, false)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2 py-1 text-[12px] font-medium text-ink-soft hover:border-ink">
-                      <RotateCcw className="h-3 w-3" /> Annuler
-                    </button>
-                  </span>
-                ) : (
-                  <button type="button" disabled={busy === c.id} onClick={() => run(c.id, true)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-brand-line bg-brand-soft px-2.5 py-1.5 text-[12.5px] font-medium text-brand-hover hover:bg-[#dcefe3]">
-                    <Check className="h-3.5 w-3.5" /> Valider
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-};
-
 /* ───────────────────────────── Membres ───────────────────────────── */
 
 const FILTERS: { key: string; label: string; hint?: string }[] = [
@@ -985,7 +930,6 @@ export default function Pilotage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [reportsOpen, setReportsOpen] = useState<number | null>(null);
-  const [validated, setValidated] = useState<Set<number>>(new Set());
   // Le direct (/api/pilotage/direct/) : relu toutes les 30 s tant que la page est visible.
   const live = useLivePilotage(!!user?.is_superuser);
   const refreshLive = live.refresh;
@@ -998,7 +942,6 @@ export default function Pilotage() {
       const next = normalizeOverview(r.data, days);
       setData(next);
       setReportsOpen(next.todo.reports_open);
-      setValidated(new Set());
       setError(null);
     } catch {
       setError('Impossible de charger le tableau de bord.');
@@ -1015,16 +958,10 @@ export default function Pilotage() {
     prevTab.current = tab;
   }, [tab, refreshLive]);
 
-  const toggleVerified = async (id: number, verifie: boolean) => {
-    await api.post(`/contents/${id}/verification/`, { verifie });
-    setValidated((prev) => { const n = new Set(prev); if (verifie) n.add(id); else n.delete(id); return n; });
-  };
-
   if (isLoading) return null;
   if (!user?.is_superuser) return <Navigate to="/" replace />;
 
-  const verifyLeft = data ? data.todo.a_verifier.filter((c) => !validated.has(c.id)).length : 0;
-  const todoCount = (reportsOpen ?? 0) + verifyLeft;
+  const todoCount = reportsOpen ?? 0;
   const tabs: { key: TabKey; label: string; badge?: number }[] = [
     { key: 'apercu', label: 'Aperçu' },
     { key: 'a-traiter', label: 'À traiter', badge: todoCount },
@@ -1100,13 +1037,12 @@ export default function Pilotage() {
       ) : tab === 'a-traiter' ? (
         <div>
           <ErrorBoundary variant="block" label="Signalements" resetKey={data.generated_at}><ReportsPanel onOpenCountChange={setReportsOpen} /></ErrorBoundary>
-          <ErrorBoundary variant="block" label="À vérifier" resetKey={data.generated_at}><VerifyPanel items={data.todo.a_verifier} validated={validated} onToggle={toggleVerified} /></ErrorBoundary>
           {data.todo.difficulty_gaps && (
             <ErrorBoundary variant="block" label="Écarts de difficulté" resetKey={data.generated_at}><DifficultyGapsPanel items={data.todo.difficulty_gaps} /></ErrorBoundary>
           )}
         </div>
       ) : (
-        <OverviewTab data={data} live={live.data} liveStatus={live.status} reportsOpen={reportsOpen ?? 0} verifyLeft={verifyLeft}
+        <OverviewTab data={data} live={live.data} liveStatus={live.status} reportsOpen={reportsOpen ?? 0}
           onGo={(t) => setParam('onglet', t)} />
       )}
       </ErrorBoundary>

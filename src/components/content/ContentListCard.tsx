@@ -195,12 +195,6 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap min-w-0 pt-1">
             {exam?.is_national_exam && !hideNational && <NationalTag year={exam.national_year} />}
-            {structure?.a_verifier && (
-              <span title={t('Correction rédigée récemment, en cours de relecture par l’auteur du document')}
-                className="inline-flex items-center px-2 py-0.5 rounded-full bg-gold-soft text-[11.5px] font-semibold text-gold-strong">
-                {t('Correction en vérification')}
-              </span>
-            )}
             {chapter && (chapterTo && chapterTo !== location.pathname ? (
               <Link to={chapterTo} title={contentType === 'lesson' ? t('Tous les cours de ce chapitre') : contentType === 'exam' ? t('Tous les devoirs de ce chapitre') : t('Tous les exercices de ce chapitre')}
                 className="relative z-10 inline-flex max-w-full items-center px-2 py-0.5 rounded-full bg-[#f2f1ee] text-[11.5px] font-semibold text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']">

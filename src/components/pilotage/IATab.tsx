@@ -1,6 +1,6 @@
 // Pilotage › IA : envoyer un document (PDF, Word, photos), l'IA prépare les fiches, l'administrateur relit
 // l'aperçu (rendu du site, solutions ouvertes), demande des corrections, puis publie ou rejette.
-// Même circuit que l'import fait à la main : contrôle automatique, points à vérifier, bandeau « à vérifier ».
+// Même circuit que l'import fait à la main : contrôle automatique, points à vérifier.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -202,7 +202,6 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [instruction, setInstruction] = useState('');
-  const [aVerifier, setAVerifier] = useState(true);
   const [doublonOk, setDoublonOk] = useState(false);
   const [shown, setShown] = useState(0);
 
@@ -218,7 +217,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
     }
   }, [id]);
 
-  useEffect(() => { load().then((j) => { if (j) setAVerifier(!(j.solutions_du_document && j.options.credit === HADDAR)); }); }, [load]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     if (!job || !isRunning(job.status)) return undefined;
     const t = window.setInterval(async () => { const j = await load(); if (j && !isRunning(j.status)) onChanged(); }, 4000);
@@ -367,10 +366,6 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
 
                 <section className="fd-card p-4">
                   <h3 className="text-[13.5px] font-semibold text-ink">Publier</h3>
-                  <label className="mt-2 flex gap-2 text-[12.5px] text-ink-soft">
-                    <input type="checkbox" className="mt-0.5 accent-[#1a7a4a]" checked={aVerifier} onChange={(e) => setAVerifier(e.target.checked)} />
-                    <span>Bandeau « correction en cours de vérification » <span className="text-ink-faint">(à retirer après relecture des solutions)</span></span>
-                  </label>
                   {doublons.length > 0 && (
                     <label className="mt-2 flex gap-2 text-[12.5px] text-ink-soft">
                       <input type="checkbox" className="mt-0.5 accent-[#1a7a4a]" checked={doublonOk} onChange={(e) => setDoublonOk(e.target.checked)} />
@@ -380,7 +375,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
                   {bloque && <p className="mt-2 text-[12px] text-[#9c3b2e]">Corriger d’abord les erreurs en rouge (demande à l’IA).</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" disabled={busy || bloque || (doublons.length > 0 && !doublonOk)}
-                      onClick={() => act(() => publishJob(job.id, { a_verifier: aVerifier, doublon_ok: doublonOk }), 'La publication a échoué.')}
+                      onClick={() => act(() => publishJob(job.id, { doublon_ok: doublonOk }), 'La publication a échoué.')}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
                       <Check className="h-4 w-4" /> Publier {(job.apercus?.length ?? 0) > 1 ? `les ${job.apercus!.length} fiches` : ''}
                     </button>

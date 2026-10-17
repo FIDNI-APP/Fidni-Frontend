@@ -11,7 +11,7 @@ import React, { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookMarked, Bookmark, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
-  School, Share2, ShieldCheck, ShieldQuestion, Trash2,
+  School, Share2, Trash2,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
@@ -40,8 +40,6 @@ interface ContentHeaderProps {
   onPrint?: () => void;
   /** Ouvre « Signaler une erreur ». */
   onReport?: () => void;
-  /** Administrateurs : marquer la correction vérifiée (true) ou la remettre « à vérifier » (false). */
-  onSetVerified?: (verifie: boolean) => void;
   activeTab: ContentTab;
   onTabChange: (tab: ContentTab) => void;
   basePath: string;
@@ -87,7 +85,7 @@ const MenuItem: React.FC<{ icon: React.ElementType; onClick: () => void; childre
 );
 
 export const ContentHeader: React.FC<ContentHeaderProps> = ({
-  content, contentType, isSaved, isSaving, onToggleSave, isAuthor, onDelete, onPrint, onReport, onSetVerified,
+  content, contentType, isSaved, isSaving, onToggleSave, isAuthor, onDelete, onPrint, onReport,
   activeTab, onTabChange, basePath, solutionCount = 0, onCollect, sessionCount = 0,
   onOpenHistory, hideTabs = false,
 }) => {
@@ -134,10 +132,9 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const pick = (fn?: () => void) => () => { setMenuOpen(false); fn?.(); };
 
   // ── Repère : nature · chapitre · niveau (liens vers la page du chapitre et du niveau, même rubrique).
-  const c = content as ContentItem & { structure?: { credit?: string; a_verifier?: boolean }; school?: { name: string; city?: string } | null };
+  const c = content as ContentItem & { structure?: { credit?: string }; school?: { name: string; city?: string } | null };
   const credit = c.structure?.credit;
   const school = c.school;
-  const aVerifier = !!c.structure?.a_verifier && !isLesson;
   const level = (hub.level ?? content.class_levels?.[0]) as { name: string; slug?: string } | undefined;
   const levelSlug = level?.slug;
   const levelUrl = levelSlug ? `${basePath}/niveau/${levelSlug}` : null;
@@ -214,14 +211,6 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
                 </MenuItem>
               )}
               {onReport && <MenuItem icon={Flag} onClick={pick(onReport)}>{t('Signaler une erreur')}</MenuItem>}
-              {onSetVerified && !isLesson && (
-                <>
-                  <div className="my-1 border-t border-line" />
-                  {c.structure?.a_verifier
-                    ? <MenuItem icon={ShieldCheck} tone="brand" onClick={pick(() => onSetVerified(true))}>{t('Marquer la correction comme vérifiée')}</MenuItem>
-                    : <MenuItem icon={ShieldQuestion} onClick={pick(() => onSetVerified(false))}>{t('Remettre « à vérifier »')}</MenuItem>}
-                </>
-              )}
               {isAuthor && (
                 <>
                   <div className="my-1 border-t border-line" />
@@ -274,17 +263,6 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
           </span>
         )}
       </div>
-
-      {/* Correction rédigée par Fidni, pas encore relue par l'auteur du document. */}
-      {aVerifier && (
-        <p className="mt-4 flex max-w-2xl items-start gap-2 rounded-xl border border-gold-line bg-gold-soft px-3 py-2 text-[13px] leading-snug text-gold-strong">
-          <ShieldQuestion className="mt-px h-4 w-4 shrink-0" aria-hidden />
-          <span>
-            <strong className="font-semibold">{t('Correction en cours de vérification.')}</strong>{' '}
-            {t('L’énoncé est celui du document ; la correction est relue par son auteur. Une erreur ? Signale-la.')}
-          </span>
-        </p>
-      )}
 
       {/* Onglets soulignés : l'énoncé d'abord, le reste à côté, sans voler la vedette. */}
       {tabs.length > 0 && !hideTabs && (

@@ -37,7 +37,6 @@ import { ContentHeader } from '@/components/content/viewer/ContentHeader';
 import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
-import { api } from '@/lib/api/apiClient';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
 import { CommentSection } from '@/components/interactions/CommentSection';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
@@ -386,22 +385,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   useEffect(() => { loadProposedSolutions(); }, [loadProposedSolutions]);
 
   // Handle delete
-  // Administrateurs : correction relue → retirer (ou remettre) le bandeau « à vérifier ».
-  const handleSetVerified = async (verifie: boolean) => {
-    if (!content) return;
-    try {
-      await api.post(`/contents/${content.id}/verification/`, { verifie });
-      setContent((prev) => {
-        if (!prev) return prev;
-        const structure: Record<string, unknown> = { ...((prev as { structure?: Record<string, unknown> }).structure || {}) };
-        if (verifie) delete structure.a_verifier; else structure.a_verifier = true;
-        return { ...prev, structure } as unknown as ContentItem;
-      });
-    } catch {
-      alert(t('La mise à jour a échoué. Réessaie.'));
-    }
-  };
-
   const handleDelete = async () => {
     if (!id || !content) return;
     if (!confirm(t(config.deleteConfirm))) return;
@@ -807,7 +790,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           onDelete={handleDelete}
           onPrint={() => navigate(`${config.basePath}/${content.id}/pdf`)}
           onReport={openReport}
-          onSetVerified={isModerator(user) ? handleSetVerified : undefined}
           activeTab={activeTab}
           onTabChange={(tab) => {
             if (tab === 'proposals') trackAction('onglet-solutions');

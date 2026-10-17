@@ -186,7 +186,6 @@ const Relecture: React.FC<{
   const [solutions, setSolutions] = useState(true);
   const [modifier, setModifier] = useState(false);
   const [instruction, setInstruction] = useState('');
-  const [aVerifier, setAVerifier] = useState(true);
   const pos = ids.indexOf(id);
   const prev = pos > 0 ? ids[pos - 1] : null;
   const next = pos >= 0 && pos < ids.length - 1 ? ids[pos + 1] : null;
@@ -207,7 +206,7 @@ const Relecture: React.FC<{
 
   useEffect(() => {
     setJob(null); setModifier(false); setInstruction(''); setSuivant(null);
-    load().then((j) => { if (j) setAVerifier(j.carte?.a_verifier ?? true); });
+    load();
     window.scrollTo({ top: 0 });
   }, [load]);
   useEffect(() => {
@@ -359,10 +358,6 @@ const Relecture: React.FC<{
               </p>
               {pret && (
                 <>
-                  <label className="mt-3 flex gap-2 text-[12.5px] text-ink-soft">
-                    <input type="checkbox" className="mt-0.5 accent-[#1a7a4a]" checked={aVerifier} onChange={(e) => setAVerifier(e.target.checked)} />
-                    <span>Bandeau « correction en cours de vérification » <span className="text-ink-faint">(solutions rédigées par Claude, pas encore relues)</span></span>
-                  </label>
                   {doublonBloque && (
                     <div className="mt-2 rounded-xl bg-gold-soft px-3 py-2 text-[12.5px] text-gold-strong">
                       <p className="flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Ressemble à un contenu existant (voir plus bas).</p>
@@ -380,7 +375,7 @@ const Relecture: React.FC<{
                     </p>
                   )}
                   <button type="button" disabled={busy || bloque || doublonBloque}
-                    onClick={() => act(() => publishJob(job.id, { a_verifier: aVerifier, doublon_ok: doublonIgnore }), 'La publication a échoué.')}
+                    onClick={() => act(() => publishJob(job.id, { doublon_ok: doublonIgnore }), 'La publication a échoué.')}
                     className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {maj ? 'Valider et mettre à jour' : 'Valider et publier'}
                   </button>
@@ -507,7 +502,7 @@ export const ValidationTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [niveau, setNiveau] = useState<string | null>(null);
   const [type, setType] = useState<string | null>(null);
-  // Publication groupée : brouillons cochés, avancement, échecs (chacun garde son réglage « à vérifier »).
+  // Publication groupée : brouillons cochés, avancement, échecs.
   const [choisis, setChoisis] = useState<Set<number>>(new Set());
   const [lot, setLot] = useState<{ fait: number; total: number } | null>(null);
   const [bilan, setBilan] = useState<{ publies: number; echecs: { titre: string; detail: string }[] } | null>(null);
@@ -584,15 +579,14 @@ export const ValidationTab: React.FC = () => {
   const publierSelection = async () => {
     const liste = (items ?? []).filter((b) => choisis.has(b.id) && publiable(b));
     if (!liste.length) return;
-    const aVerif = liste.filter((b) => b.a_verifier).length;
-    if (!window.confirm(`Publier ${plural(liste.length, 'contenu')} ?${aVerif ? `\n${aVerif} avec le bandeau « correction en cours de vérification », comme réglé sur chaque brouillon.` : ''}`)) return;
+    if (!window.confirm(`Publier ${plural(liste.length, 'contenu')} ?`)) return;
     setBilan(null);
     setLot({ fait: 0, total: liste.length });
     const echecs: { titre: string; detail: string }[] = [];
     // Un par un : un échec (clé prise entre-temps, contrôle refusé) n'empêche pas les suivants.
     for (const [i, b] of liste.entries()) {
       try {
-        await publishJob(b.id, { a_verifier: b.a_verifier, doublon_ok: !!b.doublon_ignore });
+        await publishJob(b.id, { doublon_ok: !!b.doublon_ignore });
       } catch (e) {
         echecs.push({ titre: b.titre, detail: apiError(e, 'La publication a échoué.') });
       }

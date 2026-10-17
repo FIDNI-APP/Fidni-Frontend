@@ -21,7 +21,6 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
-  const [aVerifier, setAVerifier] = useState(true);
 
   const refresh = useCallback(async (id?: number) => {
     const j = id ? await getJob(id) : await lastReportJob(reportId);
@@ -71,7 +70,6 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
 
   const modifs = job?.modifications ?? [];
   const mathErrors = modifs.flatMap((m) => checkHtmlMath(m.apres, m.ou || m.bloc));
-  const changesSolution = modifs.some((m) => m.champ === 'solution');
 
   return (
     <div className="mt-3 rounded-2xl border border-line bg-[#faf9f7] p-4">
@@ -115,14 +113,8 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
           <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
             {modifs.length > 0 ? (
               <>
-                {changesSolution && (
-                  <label className="flex w-full items-center gap-2 text-[12.5px] text-ink-soft">
-                    <input type="checkbox" className="accent-[#1a7a4a]" checked={aVerifier} onChange={(e) => setAVerifier(e.target.checked)} />
-                    Remettre le bandeau « correction en cours de vérification »
-                  </label>
-                )}
                 <button type="button" disabled={busy || mathErrors.length > 0 || (job.erreurs ?? []).length > 0}
-                  onClick={() => act(async () => { await applyJob(job.id, aVerifier); onDone(); }, 'L’application a échoué.')}
+                  onClick={() => act(async () => { await applyJob(job.id); onDone(); }, 'L’application a échoué.')}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
                   <Check className="h-3.5 w-3.5" /> Appliquer et classer « Corrigé »
                 </button>

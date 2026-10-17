@@ -20,7 +20,7 @@ export interface PreviewNode {
   subQuestions?: PreviewNode[];
   subSections?: PreviewNode[];
 }
-export interface PreviewStructure { blocks?: PreviewNode[]; sections?: PreviewNode[]; a_verifier?: boolean }
+export interface PreviewStructure { blocks?: PreviewNode[]; sections?: PreviewNode[] }
 export const structureOf = (item: ListItem): PreviewStructure | undefined =>
   (item as { structure?: PreviewStructure }).structure;
 export type ListKind = 'exercise' | 'lesson' | 'exam';
