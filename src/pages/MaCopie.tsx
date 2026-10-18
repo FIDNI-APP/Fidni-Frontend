@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, ChevronDown, FileText, MessageSquare, Target } from 'lucide-react';
+import { ArrowRight, ChevronDown, FileText, MessageSquare, Printer, Target } from 'lucide-react';
 import { t, dateLocale } from '@/i18n';
 import { SEO } from '@/components/layout/SEO';
 import { Page, PageHeader, CardsSkeleton, EmptyState } from '@/components/space/Page';
@@ -43,12 +43,15 @@ export default function MaCopie() {
         subtitle={c.evaluation.date
           ? new Date(`${c.evaluation.date}T12:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) : undefined}
         actions={(
-          <div className="rounded-2xl border border-line bg-white px-5 py-3 text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Ma note')}</p>
-            <p dir="ltr" className={`fd-nums text-[30px] font-bold leading-tight ${couleur}`}>
-              {fmt(c.note)}<span className="text-[15px] text-ink-faint"> / {c.note_sur}</span>
-            </p>
-            <p className="text-[12px] text-ink-faint">{t('{p} points sur {m}', { p: fmt(c.points), m: fmt(c.max) })}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to={`/mes-copies/${c.id}/pdf`} className="fd-btn-ghost min-h-10"><Printer className="h-4 w-4" /> {t('Imprimer')}</Link>
+            <div className="rounded-2xl border border-line bg-white px-5 py-3 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Ma note')}</p>
+              <p dir="ltr" className={`fd-nums text-[30px] font-bold leading-tight ${couleur}`}>
+                {fmt(c.note)}<span className="text-[15px] text-ink-faint"> / {c.note_sur}</span>
+              </p>
+              <p className="text-[12px] text-ink-faint">{t('{p} points sur {m}', { p: fmt(c.points), m: fmt(c.max) })}</p>
+            </div>
           </div>
         )}
       />

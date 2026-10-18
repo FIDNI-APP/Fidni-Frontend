@@ -1,12 +1,16 @@
 // Pilotage › Signalements › « Corriger avec l'IA » : l'IA vérifie le signalement et propose la correction
 // minimale (avant / après, rendue comme sur le site). Rien ne change sur le site avant « Appliquer ».
+// 18/10/2026 : « Prévenir l'élève avec l'explication de l'IA » (coché par défaut) — la correction et la réponse
+// partent en une seule action (POST …/appliquer/ {prevenir, reponse}).
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Loader2, RotateCcw, Send, Sparkles, X } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { MathText } from '@/components/skilliq/MathText';
 import {
   apiError, applyJob, fixReport, getJob, isRunning, lastReportJob, rejectJob, type IAJobDetail,
 } from '@/lib/api/iaApi';
 import { checkHtmlMath } from '@/lib/mathCheck';
+import { texteDepuisHtml } from '@/lib/texteMath';
 import { Running, StatusPill } from './IATab';
 
 const VERDICT = {
@@ -16,11 +20,20 @@ const VERDICT = {
 } as const;
 const CHAMP = { content: 'Énoncé', solution: 'Solution' } as const;
 
-export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolean) => void }> = ({ reportId, onDone }) => {
+export const IAReportFix: React.FC<{
+  reportId: number;
+  /** L'élève existe encore (compte non supprimé) : on peut le prévenir. */
+  canNotify?: boolean;
+  /** Message envoyé à l'élève à partir de l'explication de l'IA (bonjour, explication, formule de fin). */
+  replyFromAi?: (explication: string) => string;
+  /** notified : l'élève a déjà reçu la réponse avec la correction. */
+  onDone: (dismiss?: boolean, notified?: boolean) => void;
+}> = ({ reportId, canNotify = false, replyFromAi, onDone }) => {
   const [job, setJob] = useState<IAJobDetail | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
+  const [notify, setNotify] = useState(true);
 
   const refresh = useCallback(async (id?: number) => {
     const j = id ? await getJob(id) : await lastReportJob(reportId);
@@ -70,6 +83,15 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
 
   const modifs = job?.modifications ?? [];
   const mathErrors = modifs.flatMap((m) => checkHtmlMath(m.apres, m.ou || m.bloc));
+  const explication = job?.explication?.trim() ?? '';
+  const sendAi = canNotify && notify && !!explication;
+  const message = explication ? (replyFromAi ? replyFromAi(explication) : texteDepuisHtml(explication)) : '';
+
+  const apply = () => act(async () => {
+    if (!job) return;
+    const done = await applyJob(job.id, sendAi ? { prevenir: true, reponse: message } : undefined);
+    onDone(false, sendAi && !!done.notified);
+  }, 'L’application a échoué.');
 
   return (
     <div className="mt-3 rounded-2xl border border-line bg-[#faf9f7] p-4">
@@ -88,7 +110,7 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
         <div className="space-y-3">
           <div>
             {job.fonde && <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${VERDICT[job.fonde].cls}`}>{VERDICT[job.fonde].label}</span>}
-            {job.explication && <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">{job.explication}</p>}
+            {explication && <MathText text={texteDepuisHtml(explication)} className="mt-1.5 block whitespace-pre-line break-words text-[13px] leading-relaxed text-ink-soft" />}
             {(job.doutes ?? []).map((d, i) => <p key={i} className="mt-1 text-[12.5px] text-gold-strong">⚠ {d}</p>)}
             {(job.erreurs ?? []).map((d, i) => <p key={`e${i}`} className="mt-1 text-[12.5px] text-[#9c3b2e]">{d}</p>)}
             {mathErrors.map((m, i) => <p key={`m${i}`} className="mt-1 text-[12.5px] text-[#9c3b2e]">{m.where} : formule invalide <code>{m.tex}</code> — {m.message}</p>)}
@@ -113,10 +135,24 @@ export const IAReportFix: React.FC<{ reportId: number; onDone: (dismiss?: boolea
           <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
             {modifs.length > 0 ? (
               <>
+                {canNotify && explication && (
+                  <div className="w-full">
+                    <label className="flex items-center gap-2 text-[12.5px] text-ink">
+                      <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="h-4 w-4 accent-[#1a7a4a]" />
+                      Prévenir l’élève avec l’explication de l’IA
+                    </label>
+                    {notify && (
+                      <details className="mt-1 ps-6 text-[12px] text-ink-faint">
+                        <summary className="cursor-pointer hover:text-ink">Voir le message envoyé</summary>
+                        <MathText text={message} className="mt-1 block max-h-60 overflow-y-auto whitespace-pre-line break-words rounded-xl border-s-2 border-brand bg-white px-3 py-2 text-[12.5px] leading-relaxed text-ink" />
+                      </details>
+                    )}
+                  </div>
+                )}
                 <button type="button" disabled={busy || mathErrors.length > 0 || (job.erreurs ?? []).length > 0}
-                  onClick={() => act(async () => { await applyJob(job.id); onDone(); }, 'L’application a échoué.')}
+                  onClick={apply}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
-                  <Check className="h-3.5 w-3.5" /> Appliquer et classer « Corrigé »
+                  <Check className="h-3.5 w-3.5" /> {sendAi ? 'Appliquer, classer « Corrigé » et prévenir' : 'Appliquer et classer « Corrigé »'}
                 </button>
               </>
             ) : job.fonde === 'non' ? (

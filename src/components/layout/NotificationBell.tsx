@@ -6,14 +6,22 @@
  * Un clic ouvre le commentaire, champ de réponse prêt : c'est ce qui incite à répondre.
  * « report » (11/10/2026) : son signalement d'erreur a été traité, avec la réponse de l'équipe en entier.
  * « quiz » (13/10/2026) : le quiz d'un chapitre de son niveau vient de sortir ; un clic le lance.
+ * Formules $…$ des réponses et des extraits rendues avec KaTeX (18/10/2026), chargé seulement à l'ouverture.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Brain, CornerDownRight, Flag, Loader2, MessageCircle, ClipboardCheck } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAction } from '@/lib/usage';
+import { extraitMath } from '@/lib/texteMath';
 import { t, dateLocale } from '@/i18n';
+
+// KaTeX n'alourdit pas la barre du haut : chargé à la première ouverture de la cloche.
+const LazyMathText = lazy(() => import('@/components/skilliq/MathText').then((m) => ({ default: m.MathText })));
+const Maths: React.FC<{ text: string; className?: string }> = ({ text, className }) => (
+  <Suspense fallback={<span className={className}>{text}</span>}><LazyMathText text={text} className={className} /></Suspense>
+);
 
 interface Notif {
   id: number;
@@ -191,9 +199,10 @@ export const NotificationBell: React.FC = () => {
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] leading-snug text-ink-soft"><Message n={n} /></span>
                         {n.kind === 'report' ? (
-                          <span className="mt-1.5 block whitespace-pre-line rounded-xl border-s-2 border-brand bg-[#f7f6f3] px-3 py-2 text-[12.5px] leading-relaxed text-ink">{n.message || n.excerpt}</span>
+                          <Maths text={n.message || extraitMath(n.excerpt)}
+                            className="mt-1.5 block max-h-[40vh] overflow-y-auto whitespace-pre-line break-words rounded-xl border-s-2 border-brand bg-[#f7f6f3] px-3 py-2 text-[12.5px] leading-relaxed text-ink" />
                         ) : n.kind !== 'quiz' && n.kind !== 'copie' && n.excerpt && (
-                          <span className="mt-1 block truncate text-[12.5px] italic text-ink-faint">“{n.excerpt}”</span>
+                          <span className="mt-1 block truncate text-[12.5px] italic text-ink-faint">“<Maths text={extraitMath(n.excerpt)} />”</span>
                         )}
                         <span className="mt-1.5 flex items-center gap-2 text-[12px]">
                           <span className="text-ink-faint">{timeAgo(n.updated_at)}</span>

@@ -1,10 +1,16 @@
 // Pilotage › Signalements : les erreurs signalées par les élèves, à corriger puis classer ; en classant, on peut
 // répondre à l'élève (texte libre, prérempli) : la réponse arrive dans sa cloche (11/10/2026).
+// 18/10/2026 : formules $…$ rendues (description, réponse, aperçu) ; « Reprendre l'explication de l'IA ».
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Flag, Loader2, MessageSquareReply, RotateCcw, Sparkles, X } from 'lucide-react';
 import { listReports, updateReport, type ContentReportRow, type ReportStatus } from '@/lib/api/reportApi';
+import { lastReportJob } from '@/lib/api/iaApi';
+import { MathText } from '@/components/skilliq/MathText';
+import { aDesFormules, sansFormuleCoupee, texteDepuisHtml } from '@/lib/texteMath';
 import { IAReportFix } from './IAReportFix';
+
+const REPLY_MAX = 4000; // things/reports.RESPONSE_MAX
 
 const TABS: { value: ReportStatus; label: string }[] = [
   { value: 'open', label: 'À traiter' },
@@ -30,24 +36,56 @@ const template = (r: ContentReportRow, status: ReportStatus) => {
     : `${hello} Merci pour ton signalement sur « ${r.content.title} ». Après vérification, `;
 };
 
-/** Classer un signalement et répondre à l'élève (notification de la cloche). */
+/** Même réponse, avec l'explication de l'IA (texte simple, formules $…$ gardées). */
+const aiTemplate = (r: ContentReportRow, status: ReportStatus, explication: string) => {
+  const hello = r.user ? `Bonjour ${r.user} !` : 'Bonjour !';
+  const texte = status === 'resolved'
+    ? `${hello} Merci pour ton signalement sur « ${r.content.title} » : c’est corrigé.\n\n${texteDepuisHtml(explication)}\n\nBonne révision !`
+    : `${hello} Merci pour ton signalement sur « ${r.content.title} ». Après vérification :\n\n${texteDepuisHtml(explication)}`;
+  return texte.length <= REPLY_MAX ? texte : `${sansFormuleCoupee(texte.slice(0, REPLY_MAX - 1))}…`;
+};
+
+/** Classer un signalement et répondre à l'élève (notification de la cloche).
+ *  fromAi : ouvert après « Corriger avec l'IA » → la réponse reprend d'emblée l'explication de l'IA. */
 const ReplyModal: React.FC<{
-  row: ContentReportRow; status: ReportStatus; onClose: () => void;
+  row: ContentReportRow; status: ReportStatus; fromAi?: boolean; onClose: () => void;
   onSubmit: (status: ReportStatus, reply: { reponse: string; prevenir: boolean }) => Promise<void>;
-}> = ({ row, status: initial, onClose, onSubmit }) => {
+}> = ({ row, status: initial, fromAi, onClose, onSubmit }) => {
   const [status, setStatus] = useState<ReportStatus>(initial);
   const [text, setText] = useState(() => row.response || template(row, initial));
   const [notify, setNotify] = useState(!!row.user);
   const [sending, setSending] = useState(false);
+  // Explication de la dernière proposition de l'IA pour ce signalement (s'il y en a une).
+  const [aiText, setAiText] = useState('');
   const edited = useRef(false);
+  const source = useRef<'modele' | 'ia'>('modele');
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+  useEffect(() => {
+    if (!row.user) return undefined;
+    let alive = true;
+    lastReportJob(row.id).then((job) => {
+      const expl = job?.explication?.trim();
+      if (!alive || !expl) return;
+      setAiText(expl);
+      if (fromAi && !edited.current && !row.response) {
+        source.current = 'ia';
+        setText(aiTemplate(row, initial, expl));
+      }
+    }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [row, fromAi, initial]);
   const choose = (next: ReportStatus) => {
     setStatus(next);
-    if (!edited.current) setText(template(row, next));
+    if (!edited.current) setText(source.current === 'ia' && aiText ? aiTemplate(row, next, aiText) : template(row, next));
+  };
+  const takeAi = () => {
+    source.current = 'ia';
+    edited.current = false;
+    setText(aiTemplate(row, status, aiText));
   };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,14 +93,14 @@ const ReplyModal: React.FC<{
     try { await onSubmit(status, { reponse: notify ? text.trim() : '', prevenir: notify }); } finally { setSending(false); }
   };
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(20,18,16,.4)] p-4 [align-items:safe_center]" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(20,18,16,.4)] p-4 [align-items:safe_center]" onClick={onClose}>
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="reply-title"
         className="w-full max-w-lg rounded-2xl border border-line bg-white p-5 shadow-[0_20px_50px_rgba(20,18,16,.22)]">
         <h3 id="reply-title" className="fd-display text-[19px] text-ink">Classer et répondre</h3>
         <p className="mt-1 text-[12.5px] text-ink-faint">
           {reasonLabel(row)} · « {row.content.title} » · {row.user ?? 'compte supprimé'}
         </p>
-        {row.description && <p className="mt-2 rounded-xl bg-[#f7f6f3] px-3 py-2 text-[12.5px] text-ink-soft whitespace-pre-line">{row.description}</p>}
+        {row.description && <MathText text={row.description} className="mt-2 block rounded-xl bg-[#f7f6f3] px-3 py-2 text-[12.5px] text-ink-soft whitespace-pre-line break-words" />}
         <div className="mt-4 inline-flex rounded-xl border border-line bg-[#faf9f7] p-0.5" role="radiogroup" aria-label="Statut">
           {(['resolved', 'dismissed'] as const).map((s) => (
             <button key={s} type="button" role="radio" aria-checked={status === s} onClick={() => choose(s)}
@@ -76,9 +114,24 @@ const ReplyModal: React.FC<{
           Prévenir l’élève avec ce message (notification)
         </label>
         <textarea value={text} onChange={(e) => { edited.current = true; setText(e.target.value); }} disabled={!notify}
-          rows={5} maxLength={2000} aria-label="Réponse à l’élève"
+          rows={6} maxLength={REPLY_MAX} aria-label="Réponse à l’élève"
           className="mt-2 w-full resize-y rounded-xl border border-line bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-[#f7f6f3] disabled:text-ink-faint" />
-        <p className="mt-1 text-end text-[11px] text-ink-faint fd-nums">{text.length} / 2000</p>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          {aiText ? (
+            <button type="button" onClick={takeAi} disabled={!notify}
+              title="Remplace le message par l’explication de la dernière proposition de l’IA (modifiable avant l’envoi)."
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2 py-1 text-[12px] font-medium text-ink hover:border-ink disabled:opacity-50">
+              <Sparkles className="h-3.5 w-3.5" /> Reprendre l’explication de l’IA
+            </button>
+          ) : <span className="text-[11px] text-ink-faint">Formules : $ … $</span>}
+          <p className="text-[11px] text-ink-faint fd-nums">{text.length} / {REPLY_MAX}</p>
+        </div>
+        {notify && aDesFormules(text) && (
+          <div className="mt-2 rounded-xl border border-line bg-[#faf9f7] px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">Aperçu (comme l’élève le verra)</p>
+            <MathText text={text} className="mt-0.5 block max-h-60 overflow-y-auto whitespace-pre-line break-words text-[13px] leading-relaxed text-ink" />
+          </div>
+        )}
         <div className="mt-3 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="fd-btn-ghost min-h-10">Annuler</button>
           <button type="submit" disabled={sending || (notify && !text.trim())} className="fd-btn-primary min-h-10 disabled:opacity-50">
@@ -100,7 +153,7 @@ export const ReportsPanel: React.FC<{ onOpenCountChange?: (open: number) => void
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiFor, setAiFor] = useState<number | null>(null);
-  const [replyFor, setReplyFor] = useState<{ row: ContentReportRow; status: ReportStatus } | null>(null);
+  const [replyFor, setReplyFor] = useState<{ row: ContentReportRow; status: ReportStatus; fromAi?: boolean } | null>(null);
 
   const load = useCallback(async (status: ReportStatus) => {
     setError(null);
@@ -184,17 +237,17 @@ export const ReportsPanel: React.FC<{ onOpenCountChange?: (open: number) => void
                   <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] text-ink-soft">{TYPE_LABEL[r.content.type] ?? r.content.type}</span>
                   <Link to={r.content.url} className="min-w-0 truncate text-[13.5px] font-semibold text-ink hover:text-brand">{r.content.title}</Link>
                 </div>
-                <p className="mt-1 text-[13px] text-ink-soft">
+                <p className="mt-1 break-words text-[13px] text-ink-soft">
                   <span className="font-medium text-ink">{r.item_label || 'Tout le contenu'}</span>
-                  {r.description && <> — <span className="whitespace-pre-line">{r.description}</span></>}
+                  {r.description && <> — <MathText text={r.description} className="whitespace-pre-line" /></>}
                 </p>
                 <p className="mt-0.5 text-[11.5px] text-ink-faint">
                   {r.user ? <Link to={`/profile/${r.user}`} className="hover:text-ink">{r.user}</Link> : 'Compte supprimé'} · {ago(r.created_at)}
                   {r.handled_at && <> · {r.status === 'resolved' ? 'corrigé' : 'classé'} {ago(r.handled_at)}{r.handled_by ? ` par ${r.handled_by}` : ''}</>}
                 </p>
                 {r.response_sent_at && (
-                  <p className="mt-1.5 rounded-xl border-s-2 border-brand bg-[#f7f6f3] px-3 py-1.5 text-[12.5px] text-ink-soft whitespace-pre-line">
-                    <span className="font-semibold text-ink">Réponse envoyée {ago(r.response_sent_at)} :</span> {r.response}
+                  <p className="mt-1.5 break-words rounded-xl border-s-2 border-brand bg-[#f7f6f3] px-3 py-1.5 text-[12.5px] text-ink-soft whitespace-pre-line">
+                    <span className="font-semibold text-ink">Réponse envoyée {ago(r.response_sent_at)} :</span> <MathText text={r.response} />
                   </p>
                 )}
               </div>
@@ -234,18 +287,21 @@ export const ReportsPanel: React.FC<{ onOpenCountChange?: (open: number) => void
               </div>
             </div>
             {aiFor === r.id && (
-              <IAReportFix reportId={r.id} onDone={(dismiss) => {
-                setAiFor(null);
-                // Correction appliquée (corrigé) ou signalement non fondé : on propose la réponse à l'élève.
-                setReplyFor({ row: r, status: dismiss ? 'dismissed' : 'resolved' });
-                if (!dismiss) load(tab);
-              }} />
+              <IAReportFix reportId={r.id} canNotify={!!r.user}
+                replyFromAi={(explication) => aiTemplate(r, 'resolved', explication)}
+                onDone={(dismiss, notified) => {
+                  setAiFor(null);
+                  // Correction appliquée (corrigé) ou signalement non fondé : on propose la réponse à l'élève,
+                  // sauf si elle vient de partir avec la correction (explication de l'IA).
+                  if (!notified) setReplyFor({ row: r, status: dismiss ? 'dismissed' : 'resolved', fromAi: !!dismiss });
+                  if (!dismiss) load(tab);
+                }} />
             )}
             </li>
           ))}
         </ul>
       )}
-      {replyFor && <ReplyModal row={replyFor.row} status={replyFor.status} onClose={() => setReplyFor(null)} onSubmit={reply} />}
+      {replyFor && <ReplyModal row={replyFor.row} status={replyFor.status} fromAi={replyFor.fromAi} onClose={() => setReplyFor(null)} onSubmit={reply} />}
     </section>
   );
 };

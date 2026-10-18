@@ -77,8 +77,9 @@ export const publishJob = async (id: number, body: { doublon_ok: boolean }) =>
 export const ignoreDuplicate = async (id: number, ignorer: boolean) =>
   (await api.post(`/pilotage/ia/${id}/doublon/`, { ignorer })).data as IAJobDetail;
 
-export const applyJob = async (id: number) =>
-  (await api.post(`/pilotage/ia/${id}/appliquer/`)).data as IAJobDetail;
+/** `prevenir` : la réponse (`reponse`, sinon l'explication de l'IA) part dans la cloche de l'élève, même action. */
+export const applyJob = async (id: number, notify?: { prevenir: boolean; reponse?: string }) =>
+  (await api.post(`/pilotage/ia/${id}/appliquer/`, notify ?? {})).data as IAJobDetail & { notified?: boolean };
 
 export const rejectJob = async (id: number) => (await api.post(`/pilotage/ia/${id}/rejeter/`)).data as IAJobSummary;
 

@@ -238,6 +238,32 @@ export async function exporterNotes(cid: number | string, eid: number | string, 
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+/** Feuille de correction à imprimer (professeur) : une copie, avec ses commentaires et sa transcription. */
+export interface FeuilleCopie extends Note {
+  id: number;
+  statut: StatutCopie;
+  validee: boolean;
+  publiee: boolean;
+  /** nom : prénom et nom du compte, sinon le pseudo ; élève sans compte : le nom tapé. */
+  eleve: { id: number | null; username: string; nom: string; sans_compte?: boolean };
+  finales: Record<string, NoteQuestion>;
+  transcription: Record<string, { texte: string; illisible: boolean }>;
+  commentaire_prof: string;
+  commentaire_global: string;
+  points_faibles: PointFaible[];
+}
+
+export interface Impression {
+  evaluation: EvaluationResume & { total_max: number };
+  classe: { id: number; name: string };
+  questions: QuestionBareme[];
+  copies: FeuilleCopie[];
+}
+
+/** Une copie (copie) ou toutes celles qui ont une note. */
+export async function getImpression(cid: number | string, eid: number | string, copie?: number | string) {
+  return (await api.get<Impression>(`${base(cid)}${eid}/impression/`, { params: copie ? { copie } : {} })).data;
+}
 export async function envoyerLot(cid: number | string, eid: number | string, fichier: File, pagesParCopie?: number | null) {
   const fd = new FormData();
   fd.append('fichier', fichier);

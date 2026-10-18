@@ -197,5 +197,19 @@
   "Écrire un commentaire": "كتابة تعليق",
   "Pas de commentaire.": "لا يوجد تعليق.",
   "Formules entre $…$, par exemple $x \\neq 0$": "الصيغ بين $…$، مثلا $x \\neq 0$",
-  "IA": "الذكاء الاصطناعي"
+  "IA": "الذكاء الاصطناعي",
+  "Feuille A4 avec la note, les points et le commentaire de chaque question": "ورقة A4 فيها النقطة ونقط كل سؤال والتعليق عليه",
+  "Imprimer la correction": "طباعة التصحيح",
+  "Une feuille de correction par élève, à rendre à la classe": "ورقة تصحيح لكل تلميذ، لتوزيعها على القسم",
+  "Imprimer toutes les corrections ({n})": "طباعة كل التصحيحات ({n})",
+  "Impossible de charger la correction.": "تعذّر تحميل التصحيح.",
+  "Feuille de correction": "ورقة التصحيح",
+  "Toutes les corrections ({n})": "كل التصحيحات ({n})",
+  "Inclure l’énoncé": "إدراج نص السؤال",
+  "Inclure le corrigé": "إدراج الحل",
+  "Inclure la réponse de l’élève (transcription)": "إدراج جواب التلميذ (النص المنقول)",
+  "Copies validées seulement": "الأوراق المصادق عليها فقط",
+  "Attention : certaines corrections ne sont pas encore validées.": "انتبه: بعض التصحيحات لم تتم المصادقة عليها بعد.",
+  "Ce que tu vois est exactement ce qui sera imprimé. Choisis « Enregistrer au format PDF » dans la fenêtre d’impression pour obtenir un fichier.": "ما تراه هو بالضبط ما ستتم طباعته. اختر « Enregistrer au format PDF » في نافذة الطباعة للحصول على ملف.",
+  "Aucune copie corrigée à imprimer pour l’instant.": "لا توجد ورقة مصحّحة للطباعة حاليًا."
 }

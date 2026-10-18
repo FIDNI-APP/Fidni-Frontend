@@ -80,6 +80,7 @@ const ClassroomDetailPage = page(() => import('./pages/ClassroomDetail'), 'defau
 const EvaluationPage = page(() => import('./pages/classrooms/EvaluationPage'), 'default');
 const CorrectionCopie = page(() => import('./pages/classrooms/CorrectionCopie'), 'default');
 const MaCopiePage = page(() => import('./pages/MaCopie'), 'default');
+const FeuilleCorrection = page(() => import('./pages/classrooms/FeuilleCorrection'), 'default');
 const ConcoursListPage = page(() => import('./pages/concours/ConcoursList'), 'default');
 const ConcoursExamDetailPage = page(() => import('./pages/concours/ConcoursExamDetail'), 'default');
 const ConcoursSimulatePage = page(() => import('./pages/concours/ConcoursSimulate'), 'default');
@@ -413,6 +414,10 @@ function App() {
                     <Route path="/mes-copies/:id" element={
                       <NavbarWrapper><MaCopiePage /></NavbarWrapper>
                     } />
+                    {/* Feuilles de correction à imprimer (18/10/2026) : pleine page, comme l'aperçu PDF des sujets. */}
+                    <Route path="/classrooms/:id/evaluations/:eid/copies/:copieId/pdf" element={<FeuilleCorrection source="prof" />} />
+                    <Route path="/classrooms/:id/evaluations/:eid/corrections/pdf" element={<FeuilleCorrection source="prof" />} />
+                    <Route path="/mes-copies/:id/pdf" element={<FeuilleCorrection source="eleve" />} />
                     {/* Concours */}
                     <Route path="/concours" element={
                       <NavbarWrapper><ConcoursListPage /></NavbarWrapper>

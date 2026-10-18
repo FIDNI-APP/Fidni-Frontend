@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, CheckCircle2, ChevronRight, Download, FileUp, Loader2, Merge, Plus, Scissors, Send, Sparkles, Trash2,
+  AlertTriangle, CheckCircle2, ChevronRight, Download, FileUp, Loader2, Merge, Plus, Printer, Scissors, Send, Sparkles, Trash2,
   Upload, UserPlus,
 } from 'lucide-react';
 import { ModalShell, FormError, fieldCls } from '@/components/enregistrements/ModalShell';
@@ -182,6 +182,7 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
   const aCorriger = (lignes || []).filter((l) => l.copie && l.copie.nb_pages > 0
     && (l.copie.statut === 'deposee' || l.copie.statut === 'erreur')).length;
   const aPublier = (lignes || []).filter((l) => l.copie?.statut === 'validee' && !l.copie.publiee).length;
+  const aImprimer = (lignes || []).filter((l) => aUneCorrection(l.copie)).length;
 
   const lancer = async () => {
     setBusy(true);
@@ -231,6 +232,12 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
           <Send className="h-4 w-4" /> {aPublier ? t('Publier les copies validées ({n})', { n: aPublier }) : t('Publier les copies validées')}
         </button>
         <LotBouton evId={ev.id} classeId={id} onLot={setLot} />
+        {aImprimer > 0 && (
+          <Link to={`/classrooms/${id}/evaluations/${ev.id}/corrections/pdf`} className="fd-btn-ghost min-h-10"
+            title={t('Une feuille de correction par élève, à rendre à la classe')}>
+            <Printer className="h-4 w-4" /> {t('Imprimer toutes les corrections ({n})', { n: aImprimer })}
+          </Link>
+        )}
         {quota !== null && <span className="ms-auto text-[12px] text-ink-faint">{t('Corrections restantes ce mois-ci : {n}', { n: quota })}</span>}
       </div>
 
@@ -270,6 +277,9 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
     </div>
   );
 }
+
+/** Copie notée (par l'IA ou le professeur) : sa feuille de correction peut s'imprimer. */
+const aUneCorrection = (c: LigneCopie['copie']): c is NonNullable<LigneCopie['copie']> => !!c && (c.statut === 'corrigee' || c.statut === 'validee');
 
 type Cible = { eleve?: number; copie?: number };
 const cibleDe = (l: LigneCopie): Cible => (l.eleve.id ? { eleve: l.eleve.id } : { copie: l.copie?.id });
@@ -326,6 +336,13 @@ function LigneEleve({ l, evId, classeId, envoi, onDeposer, onSupprimer }: {
             <Link to={`/classrooms/${classeId}/evaluations/${evId}/copies/${c.id}`}
               className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-[12.5px] font-semibold text-brand-hover hover:bg-brand-soft">
               {statut === 'corrigee' ? t('Vérifier') : t('Ouvrir')} <ChevronRight className="h-4 w-4" />
+            </Link>
+          )}
+          {aUneCorrection(c) && (
+            <Link to={`/classrooms/${classeId}/evaluations/${evId}/copies/${c.id}/pdf`} title={t('Imprimer la correction')}
+              aria-label={t('Imprimer la correction')}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-[#f2f1ee] hover:text-ink">
+              <Printer className="h-4 w-4" />
             </Link>
           )}
           {c && !envoi && statut !== 'en_cours' && (l.sans_compte || c.nb_pages > 0) && (

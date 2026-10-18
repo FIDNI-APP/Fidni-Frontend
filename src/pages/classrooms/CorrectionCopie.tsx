@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Loader2, RotateCcw, Save, Sparkles,
+  AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Loader2, Printer, RotateCcw, Save, Sparkles,
 } from 'lucide-react';
 import { t } from '@/i18n';
 import { SEO } from '@/components/layout/SEO';
@@ -163,7 +163,18 @@ export default function CorrectionCopie() {
         </p>
       ))}
 
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        {(c.statut === 'corrigee' || c.statut === 'validee') && (
+          <button type="button" className="fd-btn-ghost min-h-9 text-[12.5px]" disabled={busy}
+            title={t('Feuille A4 avec la note, les points et le commentaire de chaque question')}
+            onClick={async () => {
+              // La feuille lit la correction enregistrée : on enregistre d'abord ce qui a été changé ici.
+              if (modifie && !(await enregistrer())) return;
+              navigate(`/classrooms/${id}/evaluations/${eid}/copies/${c.id}/pdf`);
+            }}>
+            <Printer className="h-4 w-4" /> {t('Imprimer la correction')}
+          </button>
+        )}
         <button type="button" onClick={() => setScan((v) => !v)} className="fd-btn-ghost min-h-9 text-[12.5px]">
           {scan ? t('Masquer le scan') : t('Afficher le scan')}
         </button>

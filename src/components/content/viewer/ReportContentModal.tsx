@@ -1,8 +1,11 @@
 // Fenêtre « Signaler une erreur » : raison, question concernée (facultatif), précision (facultatif).
 // Les signalements arrivent dans Pilotage, où les administrateurs les traitent.
+// Formules (18/10/2026) : l'élève écrit $…$ (bouton « Formule »), aperçu rendu sous le champ ; le texte part brut.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, Flag, Loader2, X } from 'lucide-react';
+import { CheckCircle2, Flag, Loader2, Sigma, X } from 'lucide-react';
+import { MathText } from '@/components/skilliq/MathText';
+import { aDesFormules } from '@/lib/texteMath';
 import { reportContent, type ReportReason } from '@/lib/api/reportApi';
 import { reportTargets, targetLabel } from '@/lib/reportTargets';
 import { t } from '@/i18n';
@@ -52,6 +55,7 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
 
   const reasons = useMemo(() => reasonsFor(contentType), [contentType]);
   const groups = useMemo(() => reportTargets(contentType, structure), [contentType, structure]);
@@ -72,6 +76,19 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  // « Formule » : $ … $ au curseur (autour de la sélection s'il y en a une), curseur placé dedans.
+  const insertFormula = () => {
+    const el = textRef.current;
+    const start = el?.selectionStart ?? description.length;
+    const end = el?.selectionEnd ?? description.length;
+    const sel = description.slice(start, end);
+    const bout = sel ? `$${sel}$` : '$  $';
+    if (description.length - sel.length + bout.length > MAX) return;
+    setDescription(description.slice(0, start) + bout + description.slice(end));
+    const pos = sel ? start + bout.length : start + 2;
+    window.requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(pos, pos); });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,11 +186,26 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
               <label htmlFor="report-text" className="text-sm font-semibold text-ink">
                 {t('Précise si tu veux')} <span className="font-normal text-ink-faint">{t('(facultatif)')}</span>
               </label>
-              <textarea id="report-text" value={description} maxLength={MAX} rows={3}
+              <textarea ref={textRef} id="report-text" value={description} maxLength={MAX} rows={3}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={reason ? t(PLACEHOLDER[reason]) : t('Ce qui ne va pas, et ce qu’il faudrait selon toi.')}
                 className="mt-1.5 w-full resize-y rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30" />
-              <p className="mt-1 text-end text-[11.5px] text-ink-faint fd-nums">{description.length} / {MAX}</p>
+              <div className="mt-1 flex items-start justify-between gap-3">
+                <p className="min-w-0 text-[11.5px] leading-relaxed text-ink-faint">
+                  <button type="button" onClick={insertFormula}
+                    className="me-1.5 inline-flex items-center gap-1 rounded-md border border-line bg-white px-1.5 py-0.5 align-middle text-[11.5px] font-medium text-ink-soft hover:border-ink hover:text-ink">
+                    <Sigma className="h-3 w-3" /> {t('Formule')}
+                  </button>
+                  {t('Écris une formule entre $ … $, par ex.')} <code dir="ltr" className="inline-block">{'$\\frac{1}{x}$'}</code>
+                </p>
+                <p className="shrink-0 text-[11.5px] text-ink-faint fd-nums">{description.length} / {MAX}</p>
+              </div>
+              {aDesFormules(description) && (
+                <div className="mt-2 rounded-xl border border-line bg-[#faf9f7] px-3 py-2" aria-live="polite">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Aperçu')}</p>
+                  <MathText text={description} className="mt-0.5 block whitespace-pre-line break-words text-[13px] leading-relaxed text-ink" />
+                </div>
+              )}
             </div>
 
             {error && <p role="alert" className="rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-3 py-2.5 text-[13px] text-[#9c3b2e]">{error}</p>}
