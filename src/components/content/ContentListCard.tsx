@@ -235,7 +235,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
         )}
         <Link
           to={path}
-          state={{ from }}
+          state={{ from, niveau: levelSlug || undefined }}
           className="fd-display mt-2 text-[18.5px] leading-[1.25] font-semibold text-ink line-clamp-2 transition-colors group-hover:text-brand-hover after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
         >
           {content.title}
@@ -277,7 +277,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
         )}
         <Link
           to={path}
-          state={{ from }}
+          state={{ from, niveau: levelSlug || undefined }}
           data-tour={first ? 'liste-ouvrir' : undefined}
           className="ms-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap h-9 px-3.5 rounded-[10px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hover transition-colors"
         >

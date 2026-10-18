@@ -309,7 +309,8 @@ export const ExamView: React.FC<Props> = ({
   const feltLabel = felt ? (felt.differs ? (DIFFICULTY[felt.level]?.label ? t(DIFFICULTY[felt.level].label) : DIFFICULTY[felt.level]?.label) : t('Comme annoncé')) : null;
 
   const confirmFinish = () => { if (window.confirm(t('Terminer l’épreuve et passer à la correction ?'))) epreuve.finish(); };
-  const levelName = content.class_levels?.[0]?.name;
+  // Tous les niveaux du sujet (pas seulement le premier : un devoir SM + PC/SVT n'est pas « 2ème Bac SM » seul).
+  const levelName = (content.class_levels || []).map((l) => l?.name).filter(Boolean).join(' · ');
 
   // ── Épreuve : lancement dans la fiche du sujet ; pendant l'épreuve, le compte à rebours (colonne de droite
   //    sur ordinateur, bandeau collé en haut sur téléphone).

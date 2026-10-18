@@ -36,6 +36,18 @@ export function contentHub(
   return { level, chapter: level && chapter && inChapter(level) ? chapter : null };
 }
 
+/**
+ * Niveau d'où l'on vient (18/10/2026 : un exercice PC + SM ouvert depuis « 2ème Bac PC/SVT » affichait « 2ème Bac
+ * SM ») : `niveau` de l'état de navigation posé par les cartes, sinon le niveau de la liste d'origine (`from`,
+ * /exercises/niveau/<niveau>/…). Passe avant le niveau de l'élève dans contentHub.
+ */
+export function levelFromState(state: unknown): string | null {
+  const s = (state || {}) as { niveau?: unknown; from?: unknown };
+  if (typeof s.niveau === 'string' && s.niveau) return s.niveau;
+  const m = typeof s.from === 'string' ? s.from.match(/\/niveau\/([^/?#]+)/) : null;
+  return m && m[1] !== 'tous' ? decodeURIComponent(m[1]) : null;
+}
+
 // Une seule demande à l'élève à la fois sur la page : tant qu'un « Tu avais trouvé ? » attend sa réponse,
 // les autres (ressenti du FinishPanel…) patientent. Compteur partagé, lu avec useFoundPromptOpen().
 let openPrompts = 0;

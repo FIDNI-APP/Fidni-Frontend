@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import {
   exerciseContentAPI,
@@ -55,7 +55,7 @@ import { assessablePaths } from '@/lib/utils/contentHelpers';
 import { trackAction } from '@/lib/usage';
 import { recordHelp } from '@/lib/helpTracking';
 import { SimilarContents } from '@/components/content/viewer/SimilarContents';
-import { contentHub, DETAIL_MAX_WIDTH } from '@/components/content/viewer/pageHelpers';
+import { contentHub, DETAIL_MAX_WIDTH, levelFromState } from '@/components/content/viewer/pageHelpers';
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
 import { t } from '@/i18n';
@@ -653,11 +653,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // s'allume). Effacé en quittant la page.
   const { setCrumbs } = useBreadcrumb();
   const studentLevel = studentLevelSlug(user);
+  // Niveau de la liste d'où l'on vient (contenu sur plusieurs niveaux), sinon celui de l'élève.
+  const fromLevel = levelFromState(useLocation().state);
   useEffect(() => {
     if (!content) { setCrumbs(null); return; }
     const national = contentType === 'exam' && !!(content as ContentExam).is_national_exam;
     const section = config.basePath.replace(/^\//, '');
-    const { level, chapter } = contentHub(content, studentLevel);
+    const { level, chapter } = contentHub(content, fromLevel ?? studentLevel);
     const cl = level ?? content.class_levels?.[0];
     const chap = chapter ?? content.chapters?.[0];
     const query = (f: Record<string, string | undefined>) => {
@@ -689,7 +691,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
     setCrumbs(crumbs, national ? '/exams/nationaux' : config.basePath);
     return () => setCrumbs(null);
-  }, [content, contentType, config.basePath, setCrumbs, studentLevel]);
+  }, [content, contentType, config.basePath, setCrumbs, studentLevel, fromLevel]);
 
   if (isLoading || (authLoading && !content)) {
     return <DetailSkeleton maxWidth={DETAIL_MAX_WIDTH[contentType]} />;

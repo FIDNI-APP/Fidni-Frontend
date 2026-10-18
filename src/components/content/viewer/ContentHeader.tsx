@@ -21,7 +21,7 @@ import { studentLevelSlug } from '@/components/layout/nav';
 import { DifficultyChip } from '@/components/content/listing/ListingParts';
 import { trackAction } from '@/lib/usage';
 import { t } from '@/i18n';
-import { contentHub } from './pageHelpers';
+import { contentHub, levelFromState } from './pageHelpers';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -101,7 +101,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   // Retour : arrivé depuis une liste (ou un autre contenu), on y revient tel quel (filtres, position) ;
   // sinon, page du chapitre au niveau de l'élève. Un examen national revient à sa section.
   const from = (location.state as { from?: string } | null)?.from;
-  const hub = contentHub(content, studentLevelSlug(user));
+  const hub = contentHub(content, levelFromState(location.state) ?? studentLevelSlug(user));
   const back = (() => {
     if (isNational) return { to: '/exams/nationaux', label: t('Bac national') };
     const { level, chapter } = hub;
