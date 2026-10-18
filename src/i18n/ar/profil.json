@@ -324,5 +324,12 @@
   "à revoir": "للمراجعة",
   "Toutes les questions d’un chapitre, chronométrées, corrigées une à une, et ton bilan théorème par théorème.": "كل أسئلة فصل، محدَّدة المدة، ومصحَّحة واحدا واحدا، مع حصيلتك مبرهنة مبرهنة.",
   "Fermer": "إغلاق",
-  "Mon suivi": "متابعتي"
+  "Mon suivi": "متابعتي",
+  "Impossible de charger tes messages.": "تعذّر تحميل رسائلك.",
+  "Les réponses de l’équipe Fidni à tes signalements d’erreur.": "ردود فريق Fidni على الأخطاء التي أبلغت عنها.",
+  "Aucun message pour l’instant": "لا توجد رسائل حاليا",
+  "Quand tu signales une erreur sur un exercice, notre réponse arrive ici.": "عندما تبلغ عن خطأ في تمرين، يصلك ردّنا هنا.",
+  "Sans suite": "دون متابعة",
+  "Ton signalement": "بلاغك",
+  "Réponse de l’équipe Fidni": "ردّ فريق Fidni"
 }

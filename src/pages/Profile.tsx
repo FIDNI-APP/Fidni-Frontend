@@ -1,8 +1,8 @@
 /**
  * Profil (/profile/:username, refonte du 11/10/2026).
- *  - Propriétaire : un en-tête (photo, pseudo, niveau, « membre depuis », Modifier mon profil), puis trois onglets
- *    gardés dans l'adresse : ?tab=overview (Profil, par défaut) · progress (Réussis / à revoir) · settings (Paramètres) ;
- *    enseignant : overview · students (Mes élèves) · settings.
+ *  - Propriétaire : un en-tête (photo, pseudo, niveau, « membre depuis », Modifier mon profil), puis des onglets
+ *    gardés dans l'adresse : ?tab=overview (Profil, par défaut) · progress (Réussis / à revoir) · messages (réponses à
+ *    ses signalements, 18/10/2026) · settings (Paramètres) ; enseignant : overview · students (Mes élèves) · messages · settings.
  *  - Visiteur : l'en-tête et les publications, rien d'autre (le serveur ne lui envoie pas le reste).
  * Anciens onglets (propriétaire) : statistics → /progression, revisionlists → /reviser#mes-listes,
  * saved → /enregistrements, notebooks → /enregistrements?onglet=cahiers, skilliq → /skill-iq.
@@ -20,21 +20,24 @@ import { PublicationsList, type Goal, type PublishedItem } from '@/components/pr
 import { ProfileOverview } from '@/components/profile/ProfileOverview';
 import { ProgressSection } from '@/components/profile/ProgressSection';
 import { SettingsSection } from '@/components/profile/SettingsSection';
+import { MessagesSection } from '@/components/profile/MessagesSection';
 import TeacherStudentsPanel from '@/components/profile/TeacherStudentsPanel';
 import { ModerationDeleteButton } from '@/components/profile/ModerationDeleteButton';
 import { t, dateLocale } from '@/i18n';
 
-type TabId = 'overview' | 'progress' | 'students' | 'settings';
+type TabId = 'overview' | 'progress' | 'students' | 'messages' | 'settings';
 
 const TABS: Record<'student' | 'teacher', { key: TabId; label: string }[]> = {
   student: [
     { key: 'overview', label: 'Profil' },
     { key: 'progress', label: 'Réussis / à revoir' },
+    { key: 'messages', label: 'Messages' },
     { key: 'settings', label: 'Paramètres' },
   ],
   teacher: [
     { key: 'overview', label: 'Profil' },
     { key: 'students', label: 'Mes élèves' },
+    { key: 'messages', label: 'Messages' },
     { key: 'settings', label: 'Paramètres' },
   ],
 };
@@ -362,6 +365,7 @@ export const ProfilePage: React.FC = () => {
               />
             ))}
             {userType === 'teacher' && panel('students', <TeacherStudentsPanel />)}
+            {panel('messages', <MessagesSection />)}
             {panel('settings', <SettingsSection />)}
           </div>
         </>
