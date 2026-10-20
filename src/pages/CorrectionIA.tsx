@@ -113,6 +113,11 @@ export default function CorrectionIA() {
         {t('Correction automatique par l’IA, d’après le corrigé de Fidni : elle peut se tromper ou mal lire un symbole. Vérifie « Ce que l’IA a lu » avant de t’inquiéter d’une note.')}
       </p>
 
+      <p className="mb-5 text-[12.5px] text-ink-soft">
+        {t('Ton auto-évaluation de ce sujet a été mise à jour : réussi, partiel ou à revoir, question par question.')}{' '}
+        <Link to={lien} className="font-semibold text-brand-hover hover:underline">{t('Voir le sujet')}</Link>
+      </p>
+
       {c.commentaire_global && (
         <section className="mb-6 rounded-2xl border border-brand-line bg-brand-soft/50 p-4">
           <TexteMaths texte={c.commentaire_global} className="text-[14px] leading-relaxed text-ink" />
