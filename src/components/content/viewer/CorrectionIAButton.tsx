@@ -13,7 +13,7 @@ import {
 } from '@/lib/api/correctionIaApi';
 
 const ACCEPT = 'image/*,.pdf,application/pdf';
-const PAGES_MAX = 20;
+const PAGES_MAX = 12;
 
 export const CorrectionIAButton: React.FC<{ contentId: number | string; enabled: boolean }> = ({ contentId, enabled }) => {
   const navigate = useNavigate();
@@ -52,7 +52,9 @@ export const CorrectionIAButton: React.FC<{ contentId: number | string; enabled:
   const ajouter = (liste: FileList | null) => {
     if (!liste) return;
     setErreur('');
-    setFichiers((avant) => [...avant, ...Array.from(liste)].slice(0, PAGES_MAX));
+    // Copie tout de suite : la FileList est « vivante », vider l'entrée juste après la viderait aussi.
+    const choisis = Array.from(liste);
+    setFichiers((avant) => [...avant, ...choisis].slice(0, PAGES_MAX));
     if (entree.current) entree.current.value = '';
   };
 
