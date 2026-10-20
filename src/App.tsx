@@ -80,6 +80,7 @@ const ClassroomDetailPage = page(() => import('./pages/ClassroomDetail'), 'defau
 const EvaluationPage = page(() => import('./pages/classrooms/EvaluationPage'), 'default');
 const CorrectionCopie = page(() => import('./pages/classrooms/CorrectionCopie'), 'default');
 const MaCopiePage = page(() => import('./pages/MaCopie'), 'default');
+const CorrectionIAPage = page(() => import('./pages/CorrectionIA'), 'default');
 const FeuilleCorrection = page(() => import('./pages/classrooms/FeuilleCorrection'), 'default');
 const ConcoursListPage = page(() => import('./pages/concours/ConcoursList'), 'default');
 const ConcoursExamDetailPage = page(() => import('./pages/concours/ConcoursExamDetail'), 'default');
@@ -410,6 +411,10 @@ function App() {
                     } />
                     <Route path="/classrooms/:id/evaluations/:eid/copies/:copieId" element={
                       <NavbarWrapper showFooter={false}><CorrectionCopie /></NavbarWrapper>
+                    } />
+                    {/* Correction de sa propre copie par l'IA (20/10/2026, fonction cachée : admins et personnes autorisées). */}
+                    <Route path="/correction-ia/:id" element={
+                      <NavbarWrapper><CorrectionIAPage /></NavbarWrapper>
                     } />
                     <Route path="/mes-copies/:id" element={
                       <NavbarWrapper><MaCopiePage /></NavbarWrapper>

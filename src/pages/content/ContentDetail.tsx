@@ -35,6 +35,7 @@ import { isModerator } from '@/lib/features';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { ContentHeader } from '@/components/content/viewer/ContentHeader';
 import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
+import { CorrectionIAButton } from '@/components/content/viewer/CorrectionIAButton';
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
@@ -845,6 +846,12 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             {afterSheet}
           </ContentMainCard>
           </QuestionStatsContext.Provider>
+        )}
+
+        {/* « Corriger ma copie » : bouton flottant en bas à droite d'un examen, pour les administrateurs et les personnes
+            autorisées seulement (le bouton se cache tout seul sinon). */}
+        {activeTab === 'exercise' && isAuthenticated && id && contentType === 'exam' && !examRunning && (
+          <CorrectionIAButton contentId={id} enabled />
         )}
 
         {/* Avis de l'IA sur le contenu (administrateurs) : sous la feuille, depuis la fin de l'onglet Activité. */}

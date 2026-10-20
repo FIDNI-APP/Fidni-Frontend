@@ -16,6 +16,7 @@ import {
   type IAJobDetail, type IAJobSummary, type IAStatus, type Origine,
 } from '@/lib/api/iaApi';
 import { checkStructureMath } from '@/lib/mathCheck';
+import { CorrectionAccesPanel } from '@/components/pilotage/CorrectionAccesPanel';
 
 const NIVEAUX = ['Tronc commun Sciences', '1ère Bac SM', '2ème Bac SM', '2ème Bac PC/SVT'];
 const HADDAR = 'M. Haddar, professeur de mathématiques';
@@ -484,6 +485,7 @@ export const IATab: React.FC = () => {
             )}
         </section>
       </div>
+      <CorrectionAccesPanel />
     </div>
   );
 };
