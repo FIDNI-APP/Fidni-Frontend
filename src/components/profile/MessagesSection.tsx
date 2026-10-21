@@ -11,6 +11,7 @@ import { t, dateLocale } from '@/i18n';
 
 interface Message {
   id: number;
+  kind?: 'report' | 'message';
   title: string;
   link: string;
   message: string;
@@ -60,7 +61,7 @@ export const MessagesSection: React.FC = () => {
 
   return (
     <Section id="messages" title={t('Messages')} count={items.length}
-      hint={t('Les réponses de l’équipe Fidni à tes signalements d’erreur.')}>
+      hint={t('Les messages de l’équipe Fidni et ses réponses à tes signalements d’erreur.')}>
       {items.length === 0 ? (
         <EmptyState icon={Inbox} title={t('Aucun message pour l’instant')}
           text={t('Quand tu signales une erreur sur un exercice, notre réponse arrive ici.')} />
@@ -98,14 +99,14 @@ export const MessagesSection: React.FC = () => {
 
                 <div className="mt-4">
                   <p className="flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[.06em] text-brand-hover">
-                    <MessageSquare className="h-3.5 w-3.5" aria-hidden /> {t('Réponse de l’équipe Fidni')}
+                    <MessageSquare className="h-3.5 w-3.5" aria-hidden /> {m.kind === 'message' ? t('Message de l’équipe Fidni') : t('Réponse de l’équipe Fidni')}
                   </p>
                   <Texte text={m.message} className="mt-1.5 text-[14.5px] leading-relaxed text-ink" />
                 </div>
 
-                <Link to={m.link} className="mt-4 inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
+                {m.kind !== 'message' && <Link to={m.link} className="mt-4 inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-hover hover:underline">
                   {t('Voir le contenu')} <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
-                </Link>
+                </Link>}
               </li>
             );
           })}
