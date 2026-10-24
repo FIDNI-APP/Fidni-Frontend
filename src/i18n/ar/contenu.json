@@ -348,5 +348,8 @@
   "à {num}. {titre}": "عند {num}. {titre}",
   "Revenir au début": "العودة إلى البداية",
   "{n} annotations sur cette leçon": "{n} تعليقات على هذا الدرس",
-  "1 annotation sur cette leçon": "تعليق واحد على هذا الدرس"
+  "1 annotation sur cette leçon": "تعليق واحد على هذا الدرس",
+  "{r} élève(s) sur {n} réussissent la question {num}": "{r} من أصل {n} تلاميذ ينجحون في السؤال {num}",
+  "Personne ne s’est encore évalué sur cette question.": "لم يقيّم أحد نفسه في هذا السؤال بعد.",
+  "élèves la réussissent pour l’instant": "تلاميذ ينجحون فيه حتى الآن"
 }

@@ -3,7 +3,8 @@
  * vertical dans la colonne de droite (examen : à la place de « Ta copie », dont il garde la note). Une ligne par
  * question : la part d'élèves qui la réussissent (barre verte, or sous 50 %) et le résultat de l'élève (pastille). Un clic sur
  * une ligne la déplie (le détail, « Aller à la question ») ; au bout de chaque ligne, les boutons rapides Réussi /
- * (En partie, examen) / À revoir : s'évaluer en un clic, sans ouvrir la solution. Pas de pourcentage sous 3 évaluations ; comptes de l'équipe exclus.
+ * (En partie, examen) / À revoir : s'évaluer en un clic, sans ouvrir la solution. Dès la 1re évaluation (25/10/2026) : un compte « 2/3 » tant qu'il y en a
+ * peu, un pourcentage à partir de 5 ; comptes de l'équipe exclus.
  */
 import React, { useMemo, useState } from 'react';
 import { ArrowDown, Check, Contrast, RotateCcw } from 'lucide-react';
@@ -13,7 +14,8 @@ import { questionAnchor } from './ExerciseRenderer';
 import { useQuestionStats } from './questionStats';
 import { t } from '@/i18n';
 
-const MIN_EVALUATIONS = 3;
+// En dessous, « 2/3 » plutôt qu'un pourcentage trompeur (« 100 % » pour un seul élève).
+const POURCENT_DES = 5;
 
 const STATUS: Partial<Record<AssessmentStatus, { label: string; icon: React.ElementType; dot: string; hover: string }>> = {
   success: { label: 'Réussi', icon: Check, dot: 'bg-brand text-white', hover: 'hover:border-brand-line hover:text-brand-hover' },
@@ -44,10 +46,11 @@ export const QuestionChart: React.FC<{
 
   const rate = (path: string) => {
     const s = stats?.[path];
-    return s && s.total >= MIN_EVALUATIONS ? Math.round((s.success / s.total) * 100) : null;
+    return s && s.total >= 1 ? Math.round((s.success / s.total) * 100) : null;
   };
-  // La plus ratée (au moins 3 évaluations, et vraiment ratée) : un repère, pas un classement.
-  const known = rows.map((r) => ({ path: r.path, p: rate(r.path) })).filter((x) => x.p !== null) as { path: string; p: number }[];
+  // La plus ratée (au moins POURCENT_DES évaluations, et vraiment ratée) : un repère, pas un classement.
+  const known = rows.map((r) => ({ path: r.path, p: (stats?.[r.path]?.total ?? 0) >= POURCENT_DES ? rate(r.path) : null }))
+    .filter((x) => x.p !== null) as { path: string; p: number }[];
   const trap = known.length > 1 ? known.reduce((a, b) => (b.p < a.p ? b : a)) : null;
   const trapPath = trap && trap.p < 50 ? trap.path : null;
   const grouped = rows.some((r) => r.part) && new Set(rows.map((r) => r.part)).size > 1;
@@ -63,6 +66,7 @@ export const QuestionChart: React.FC<{
           {rows.map((r, i) => {
             const p = rate(r.path);
             const s = stats?.[r.path];
+            const peu = !!s && s.total < POURCENT_DES;
             const mine = shown(progress[r.path], options);
             const m = mine ? STATUS[mine] : undefined;
             const isOpen = open === r.path;
@@ -79,13 +83,15 @@ export const QuestionChart: React.FC<{
                 {/* La ligne : un clic déplie le détail ; au bout, les boutons rapides (un clic pour s'évaluer). */}
                 <div className={`flex items-center gap-1.5 rounded-lg pe-1 transition-colors ${isOpen ? 'bg-[#f2f1ee]' : 'hover:bg-[#f7f6f3]'}`}>
                   <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : r.path)}
-                    title={p !== null ? t('{p} % des élèves réussissent la question {num}', { p, num: r.num }) : t('Question {num}', { num: r.num })}
+                    title={p === null ? t('Question {num}', { num: r.num }) : peu
+                      ? t('{r} élève(s) sur {n} réussissent la question {num}', { r: s!.success, n: s!.total, num: r.num })
+                      : t('{p} % des élèves réussissent la question {num}', { p, num: r.num })}
                     className="grid min-w-0 flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.5rem] items-center gap-2 rounded-lg py-1.5 ps-1 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                     <span className="text-[12.5px] font-medium text-ink-soft fd-nums">{r.num}</span>
                     <span className="block h-2 overflow-hidden rounded-full bg-[#f2f1ee]" aria-hidden>
                       {p !== null && <span className={`block h-full rounded-full ${p >= 50 ? 'bg-brand' : 'bg-gold'}`} style={{ width: `${Math.max(p, 3)}%` }} />}
                     </span>
-                    <span className="text-end text-[12px] text-ink-faint fd-nums">{p !== null ? `${p} %` : '—'}</span>
+                    <span dir="ltr" className="text-end text-[12px] text-ink-faint fd-nums">{p === null ? '—' : peu ? `${s!.success}/${s!.total}` : `${p} %`}</span>
                   </button>
                   {onAssess ? (
                     <span role="group" aria-label={t('As-tu réussi la question {num} ?', { num: r.num })} className="flex shrink-0 items-center gap-1">
@@ -113,9 +119,11 @@ export const QuestionChart: React.FC<{
                 {isOpen && (
                   <div className="mb-1.5 mt-1 rounded-lg bg-[#faf9f7] px-2.5 py-2.5">
                     <p className="text-[12.5px] leading-snug text-ink-soft">
-                      {p !== null
-                        ? <><b className="text-ink fd-nums">{p} %</b> {t('des élèves la réussissent')} <span className="text-ink-faint fd-nums">{t('({n} évaluations)', { n: s!.total })}</span></>
-                        : t('Pas encore assez d’évaluations pour cette question.')}
+                      {p === null
+                        ? t('Personne ne s’est encore évalué sur cette question.')
+                        : peu
+                          ? <><b className="text-ink fd-nums">{s!.success}/{s!.total}</b> {t('élèves la réussissent pour l’instant')}</>
+                          : <><b className="text-ink fd-nums">{p} %</b> {t('des élèves la réussissent')} <span className="text-ink-faint fd-nums">{t('({n} évaluations)', { n: s!.total })}</span></>}
                     </p>
                     {trapPath === r.path && <p className="mt-0.5 text-[12px] text-gold-strong">{t('La plus ratée : prends ton temps.')}</p>}
                     <button type="button" onClick={() => goTo(r.path)}
