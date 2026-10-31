@@ -10,17 +10,21 @@ Une vraie application ([Capacitor 8](https://capacitorjs.com) + [Ionic](https://
 ## Les écrans de l'application (`src/mobile/`)
 
 Onglets (barre d'onglets native, une pile d'écrans par onglet, glissement et retour par balayage) :
-**Accueil** (prochain objectif, où j'en suis, prochain DS, à refaire) · **Explorer** (Exercices / Cours / Devoirs,
-niveaux, chapitres, contenus « Pour toi », Bac national) · **Réviser** (DS, à refaire, mes listes) · **Progression**
-(chiffres, activité, points faibles, chapitres) · **Profil** (favoris, réglages, langue, mode sombre). Plus l'accueil
-de l'application, la connexion, l'inscription et le premier lancement d'un compte.
+**Accueil** (prochain objectif, où j'en suis, prochain DS, à refaire) · **Explorer** (Exercices / Cours / Devoirs /
+Quiz, niveaux, chapitres, listes avec Trier et Filtres, Bac national) · **Réviser** (DS, à refaire, mes listes) ·
+**Progression** (chiffres, activité, points faibles, chapitres) · **Profil** (favoris, quiz, réglages, langue, mode
+sombre). Plus l'accueil de l'application, la connexion, l'inscription et le premier lancement d'un compte.
+
+Un contenu : une seule feuille (énoncé, parties, questions), indication, solution, « Tu avais trouvé ? » et la
+réussite des élèves par question ; vues, j'aime, discussion ; « ⋯ » : partager, liste de révision, PDF, signaler.
+Quiz : passage corrigé question par question, minuteur, reprise d'un passage commencé (aussi sur le site), résultat.
 
 Réutilisé du site, sans copie : `lib/api/*`, `AuthContext`, `ThemeContext`, `i18n` (arabe : `i18n/ar/mobile.json`),
 le rendu des formules (`TipTapRenderer`, `LessonRenderer`), le temps passé (`usePageTimeTracker`), les aides
 (`helpTracking`). Une question évaluée dans l'application l'est sur le site, et inversement.
 
-Pas encore refait en écrans natifs : quiz par chapitre, plan de DS et DS blanc, cahiers, classes et copies, concours,
-documents, Pilotage, modifier son profil. Ils s'ouvrent dans la **version complète du site**, dans l'application,
+Pas encore refait en écrans natifs : plan de DS et DS blanc, solutions proposées par les élèves, cahiers, classes et
+copies, concours, documents, Pilotage, modifier son profil. Ils s'ouvrent dans la **version complète du site**, dans l'application,
 avec « Retour à l'app » (`openWeb`, `SiteInApp` dans `MobileApp.tsx`) ; les onglets restent où on les avait laissés.
 
 Ajouter un écran : un composant qui rend `<Screen>` (`src/mobile/ui.tsx`), ouvert par `useNav().push(() => <MonEcran />)`.
