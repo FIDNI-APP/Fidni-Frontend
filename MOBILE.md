@@ -102,8 +102,17 @@ Chaque version à tester :
 3. Sur l'iPhone : installer **TestFlight** (App Store), ouvrir l'invitation reçue par e-mail › Installer. Les versions
    suivantes arrivent dans TestFlight (notification). Un build TestFlight expire au bout de 90 jours.
 
-Sans compte payant, seul un Mac permet d'essayer : Xcode, un identifiant Apple gratuit, l'iPhone branché en USB,
-`npm run mobile:ios`, ▶ (l'application cesse de s'ouvrir au bout de 7 jours ; la réinstaller depuis Xcode).
+Sans compte payant, seul un Mac permet d'essayer (gratuit) :
+1. Mac : Xcode (App Store), Node 22 (nodejs.org), puis
+   `git clone -b feat/mobile-app https://github.com/FIDNI-APP/Fidni-Frontend.git && cd Fidni-Frontend && npm ci && npm run mobile:ios`.
+2. Xcode › Settings › Accounts › **+** › Apple ID (le sien, gratuit). Cible **App** › Signing & Capabilities :
+   Team = « (Personal Team) », Bundle Identifier = **`fr.fidni.app.test`** (une équipe gratuite s'approprie l'identifiant :
+   garder `fr.fidni.app` pour le compte payant).
+3. iPhone branché en USB, « Faire confiance » ; iPhone › Réglages › Confidentialité et sécurité › **Mode développeur**
+   (redémarrage). Choisir l'iPhone en haut de Xcode, ▶.
+4. Premier lancement refusé : iPhone › Réglages › Général › VPN et gestion de l'appareil › faire confiance au développeur.
+L'application cesse de s'ouvrir au bout de 7 jours : la réinstaller depuis Xcode (▶). Ne pas commiter le changement
+d'identifiant ni d'équipe fait dans Xcode.
 
 ## Publier
 
