@@ -1,17 +1,17 @@
 // Passage d'un quiz, en mise en page « focus » : une question à la fois, grandes réponses, clavier (1 à 4, Entrée,
 // ← →). Depuis le 13/10/2026, façon concours :
-//  - un minuteur (1 min par question, donné par le serveur), qui s'arrête pendant la correction de chaque question ;
-//    à zéro, le quiz est envoyé tel quel (une question sans réponse compte comme fausse) ;
+//  - pas de chronomètre (retiré le 31/10/2026 : il stressait les élèves) ; le temps passé est seulement mesuré, hors
+//    correction, pour les statistiques du quiz (`temps`, `time_spent`) ;
 //  - « Valider » corrige la question tout de suite (POST /skill-assessments/verifier/<id>/) : bonne réponse,
 //    explication, théorème ; la réponse est alors verrouillée (côté serveur aussi).
 // 14/10/2026 : le passage est gardé sur le serveur. Quitter ne perd rien : on reprend à la première question pas encore
-// corrigée, avec les corrections déjà vues et le temps restant (`initial`, `left`). Une barre fine et une grille
+// corrigée, avec les corrections déjà vues et le temps déjà passé (`initial`, `left`). Une barre fine et une grille
 // (numéros des questions) remplacent la rangée de 30 segments ; sur téléphone, les boutons restent en bas de l'écran.
 // Textes en police LaTeX (.fd-latex) ; la difficulté des questions n'est pas montrée (elle ne sert qu'au score).
 // 16/10/2026 : questions à plusieurs bonnes réponses (`nb_bonnes` > 1) : cases à cocher, « Choisis {n} réponses »,
 // « Valider » quand n cases sont cochées ; juste seulement si ce sont exactement les bonnes (tout ou rien).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, ChevronDown, ChevronLeft, Clock, LayoutGrid, Loader2, Pause, RotateCcw, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronLeft, LayoutGrid, Loader2, RotateCcw, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
@@ -25,22 +25,7 @@ const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </kbd>
 );
 
-const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const letter = (i: number) => String.fromCharCode(65 + i);
-
-/** Minuteur : temps restant ; « en pause » pendant la correction ; plus visible sous la dernière minute. */
-const Timer: React.FC<{ left: number; paused: boolean }> = ({ left, paused }) => {
-  const low = left <= 60 && !paused;
-  return (
-    <span role="timer" aria-label={paused ? t('Temps restant : {temps}, en pause', { temps: clock(left) }) : t('Temps restant : {temps}', { temps: clock(left) })}
-      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 ${
-        low ? 'border-gold-line bg-gold-soft text-[#8a6318]' : paused ? 'border-line bg-[#f7f6f3] text-ink-faint' : 'border-line bg-white text-ink'}`}>
-      {low ? <AlertTriangle className="h-4 w-4" aria-hidden /> : paused ? <Pause className="h-4 w-4" aria-hidden /> : <Clock className="h-4 w-4" aria-hidden />}
-      <span className="fd-nums text-[15px] font-bold tracking-wide">{clock(left)}</span>
-      {paused && <span className="hidden text-[11.5px] font-medium sm:inline">{t('en pause')}</span>}
-    </span>
-  );
-};
 
 /** Correction de la question, juste après « Valider » (or pour une erreur : ce n'est pas une faute). Plusieurs
  *  bonnes réponses : juste seulement si l'élève les a toutes cochées, et rien d'autre ; on les rappelle toutes. */
@@ -96,7 +81,7 @@ const Grid: React.FC<{
 export const QuizRunner: React.FC<{
   quiz: ActiveQuiz;
   questions: QuizQuestion[];
-  /** Durée du minuteur et temps restant (reprise d'un passage commencé), en secondes. */
+  /** Durée prévue et temps restant donnés par le serveur (reprise : le temps déjà passé = seconds − left), en secondes. */
   seconds: number;
   left?: number;
   /** Corrections déjà données (reprise). */
@@ -114,8 +99,6 @@ export const QuizRunner: React.FC<{
   const [checked, setChecked] = useState<Record<number, CorrectionItem>>(known);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
-  const [left, setLeft] = useState(leftAtStart);
-  const [timeUp, setTimeUp] = useState(false);
   const [grid, setGrid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<'' | 'reseau' | 'expire'>('');
@@ -137,8 +120,8 @@ export const QuizRunner: React.FC<{
   const done = total - missing.length;
   const complete = missing.length === 0;
   const isLast = index === total - 1;
-  // Le chrono ne tourne que sur une question pas encore corrigée.
-  const paused = !!correction || submitting || timeUp;
+  // Le temps passé n'est compté que sur une question pas encore corrigée.
+  const paused = !!correction || submitting;
 
   const go = (i: number) => { setCheckError(false); setGrid(false); setIndex(Math.max(0, Math.min(total - 1, i))); };
   /** Une réponse : la choisir ; plusieurs : cocher / décocher (pas plus que le nombre de bonnes réponses). */
@@ -156,8 +139,8 @@ export const QuizRunner: React.FC<{
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
-  const submit = useCallback(async (force = false) => {
-    if (submitting || (!force && !complete)) return;
+  const submit = useCallback(async () => {
+    if (submitting || !complete) return;
     setSubmitting(true);
     setError('');
     // Sans réponse : -1, compté faux par le serveur (qui note de toute façon toutes les questions du passage).
@@ -169,25 +152,16 @@ export const QuizRunner: React.FC<{
       setSubmitting(false);
     }
   }, [submitting, complete, questions, answers, quiz.id, quiz.levelId, onDone]);
-  const submitRef = useRef(submit);
-  submitRef.current = submit;
-
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
       if (!pausedRef.current) used.current += now - lastTick.current;
       lastTick.current = now;
-      const rest = Math.max(0, seconds - Math.floor(used.current / 1000));
-      setLeft(rest);
-      if (rest === 0 && !pausedRef.current) {
-        setTimeUp(true);
-        submitRef.current(true);
-      }
     };
     const t = setInterval(tick, 500);
     document.addEventListener('visibilitychange', tick);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
-  }, [seconds]);
+  }, []);
 
   const validate = async () => {
     if (!ready || correction || checking) return;
@@ -249,7 +223,7 @@ export const QuizRunner: React.FC<{
 
   // Action principale de la barre du bas : Valider → Question suivante → Voir mon bilan.
   const primary = !correction ? (
-    <button type="button" onClick={validate} disabled={!ready || checking || timeUp}
+    <button type="button" onClick={validate} disabled={!ready || checking}
       className="fd-btn-primary min-h-12 flex-1 justify-center px-6 text-[15px] disabled:opacity-50 sm:flex-none">
       {checking ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Correction…')}</> : <><Check className="h-4 w-4" aria-hidden /> {t('Valider')}</>}
     </button>
@@ -270,7 +244,6 @@ export const QuizRunner: React.FC<{
           className="-ms-1 inline-flex min-h-10 items-center gap-1 rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
           <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quitter')}
         </button>
-        <Timer left={left} paused={!!correction && !timeUp} />
       </div>
 
       <header className="min-w-0">
@@ -296,12 +269,6 @@ export const QuizRunner: React.FC<{
         </div>
         {grid && <div className="mt-2"><Grid questions={questions} index={index} checked={checked} answers={answers} onGo={go} /></div>}
       </div>
-
-      {timeUp && (
-        <div role="alert" className="rounded-2xl border border-gold-line bg-gold-soft p-4 text-[13.5px] text-ink">
-          <b className="font-semibold">{t('Temps écoulé.')}</b> {t('Ton quiz est envoyé tel quel : les questions sans réponse comptent comme fausses.')}
-        </div>
-      )}
 
       <section className="rounded-3xl border border-line bg-white p-5 sm:p-7" aria-labelledby="quiz-question">
         <h2 id="quiz-question" className="text-[17px] font-semibold leading-relaxed text-ink sm:text-[18px]">
@@ -355,7 +322,7 @@ export const QuizRunner: React.FC<{
           </p>
           {error === 'expire'
             ? <button type="button" onClick={onRestart} className="fd-btn-ghost min-h-9 text-[13px]"><RotateCcw className="h-4 w-4" aria-hidden /> {t('Recommencer')}</button>
-            : <button type="button" onClick={() => submit(true)} className="fd-btn-ghost min-h-9 text-[13px]">{t('Réessayer')}</button>}
+            : <button type="button" onClick={() => submit()} className="fd-btn-ghost min-h-9 text-[13px]">{t('Réessayer')}</button>}
         </div>
       )}
 

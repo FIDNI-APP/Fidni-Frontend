@@ -41,7 +41,7 @@ export const ComingSoon: React.FC<{
           <>
             <span className="block text-balance">
               {student
-                ? t('Pour chaque chapitre, des questions chronométrées et corrigées pour mesurer ta maîtrise, théorème par théorème. En attendant, le meilleur entraînement reste les exercices.')
+                ? t('Pour chaque chapitre, des questions corrigées pour mesurer ta maîtrise, théorème par théorème. En attendant, le meilleur entraînement reste les exercices.')
                 : t('Pour chaque chapitre, des questions corrigées pour que tes élèves mesurent leur maîtrise. En attendant, les exercices corrigés sont là.')}
             </span>
             {variant === 'student' && fragile && (
