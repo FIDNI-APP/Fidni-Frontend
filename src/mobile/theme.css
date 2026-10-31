@@ -1,0 +1,134 @@
+/* Application mobile : thème Ionic aux couleurs de FIDNI (jetons --c-* de index.css, clair et .dark). */
+
+:root {
+  --ion-font-family: 'DM Sans', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --ion-color-primary: #1a7a4a;
+  --ion-color-primary-rgb: 26, 122, 74;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #156b41;
+  --ion-color-primary-tint: #31875c;
+
+  --ion-color-warning: #c0892f;
+  --ion-color-warning-rgb: 192, 137, 47;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #a97929;
+  --ion-color-warning-tint: #c69544;
+
+  --ion-color-danger: #a23b34;
+  --ion-color-danger-rgb: 162, 59, 52;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #8f342e;
+  --ion-color-danger-tint: #ab4f48;
+
+  --ion-background-color: #f6f5f2;
+  --ion-background-color-rgb: 246, 245, 242;
+  --ion-text-color: #1a1a1a;
+  --ion-text-color-rgb: 26, 26, 26;
+  --ion-toolbar-background: #ffffff;
+  --ion-tab-bar-background: #ffffff;
+  --ion-tab-bar-color: #8a867e;
+  --ion-tab-bar-color-selected: #1a7a4a;
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-border-color: #e7e3dc;
+
+  --fdm-card: #ffffff;
+  --fdm-muted: #6b6862;
+  --fdm-line: #ebe8e2;
+  --fdm-brand-soft: #eaf3ed;
+  --fdm-gold-soft: #faf3e2;
+  --fdm-gold-strong: #9a6e1c;
+}
+
+html.dark {
+  --ion-color-primary: #2ea066;
+  --ion-color-primary-rgb: 46, 160, 102;
+  --ion-color-primary-shade: #288d5a;
+  --ion-color-primary-tint: #43aa75;
+
+  --ion-background-color: #121110;
+  --ion-background-color-rgb: 18, 17, 16;
+  --ion-text-color: #ece9e4;
+  --ion-text-color-rgb: 236, 233, 228;
+  --ion-toolbar-background: #24221f;
+  --ion-tab-bar-background: #24221f;
+  --ion-tab-bar-color: #8f8a82;
+  --ion-tab-bar-color-selected: #4cc07f;
+  --ion-item-background: #1f1e1b;
+  --ion-card-background: #1f1e1b;
+  --ion-border-color: #34312c;
+
+  --fdm-card: #1f1e1b;
+  --fdm-muted: #9c968d;
+  --fdm-line: #2f2c28;
+  --fdm-brand-soft: #1e3629;
+  --fdm-gold-soft: #372d1b;
+  --fdm-gold-strong: #e8c07a;
+}
+
+/* Version complète du site ouverte dans l'application : la page défile comme dans un navigateur (structure.css
+   d'Ionic fige le body pour ses propres écrans). */
+html.fdm-site body {
+  position: static; overflow: visible; height: auto; max-height: none; transform: none; touch-action: auto;
+}
+
+/* Le fond de page de index.css ne doit pas passer devant celui d'Ionic. */
+html.fdm, html.fdm body { background: var(--ion-background-color); }
+html.fdm body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+
+.fdm-title { font-family: 'Fraunces', Georgia, serif; letter-spacing: -0.015em; }
+.fdm-large-title { font-family: 'Fraunces', Georgia, serif; font-size: 30px; line-height: 1.12; letter-spacing: -0.02em; font-weight: 600; }
+.fdm-muted { color: var(--fdm-muted); }
+
+/* Cartes : coins arrondis, ombre douce (iOS) ou élévation légère (Android). */
+.fdm-card {
+  background: var(--fdm-card);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(20, 18, 16, .05), 0 4px 14px rgba(20, 18, 16, .05);
+}
+html.dark .fdm-card { box-shadow: none; border: 1px solid var(--fdm-line); }
+
+.fdm-pressable { transition: transform .12s ease, opacity .12s ease; }
+.fdm-pressable:active { transform: scale(.975); opacity: .85; }
+
+.fdm-section-label {
+  font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--fdm-muted);
+  margin: 26px 20px 10px;
+}
+
+.fdm-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+}
+
+/* Formules et contenus : texte un peu plus grand sur téléphone, formules longues défilables. */
+.fdm-math { font-size: 16.5px; line-height: 1.6; color: var(--ion-text-color); }
+.fdm-math .tiptap-full-renderer, .fdm-math .ProseMirror { padding: 0 !important; min-height: 0 !important; }
+.fdm-math .ProseMirror > *:first-child { margin-top: 0 !important; }
+.fdm-math .ProseMirror > *:last-child { margin-bottom: 0 !important; }
+.fdm-math .math-display, .fdm-math .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.fdm-math img { max-width: 100%; height: auto; border-radius: 10px; }
+.fdm-math table { display: block; overflow-x: auto; }
+
+/* Passage d'un quiz : pas de barre d'onglets (rester concentré). */
+body.fdm-focus ion-tab-bar { display: none; }
+
+/* Rangées qui défilent à l'horizontale (niveaux) : sans barre de défilement. */
+.fdm-hscroll { scrollbar-width: none; }
+.fdm-hscroll::-webkit-scrollbar { display: none; }
+
+/* Barre d'onglets un peu plus haute, libellés lisibles. */
+ion-tab-bar { --border: 1px solid var(--fdm-line); height: 58px; }
+ion-tab-button { --padding-top: 4px; font-size: 11px; font-weight: 600; }
+ion-tab-button ion-icon { font-size: 24px; }
+
+ion-toolbar { --border-width: 0 0 1px 0; --border-color: var(--fdm-line); }
+/* Boutons en casse normale (Android les met en majuscules par défaut), comme sur le site. */
+ion-button { text-transform: none; letter-spacing: normal; font-weight: 650; }
+ion-segment-button { text-transform: none; letter-spacing: normal; font-weight: 600; min-width: 0; --padding-start: 4px; --padding-end: 4px; }
+ion-alert .alert-button { text-transform: none !important; font-weight: 650; }
+ion-content.fdm-plain { --background: var(--ion-background-color); }

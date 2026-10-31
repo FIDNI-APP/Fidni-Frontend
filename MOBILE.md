@@ -1,15 +1,35 @@
 # Application mobile FIDNI (iOS + Android)
 
-L'application est **le site lui-même**, construit (`dist/`) et embarqué dans une coquille native
-[Capacitor 8](https://capacitorjs.com). Toutes les pages et fonctions du site y sont : exercices, leçons, devoirs,
-quiz, DS blancs, Ma progression, Réviser, cahiers, classes et copies corrigées par l'IA, concours, parcours vidéo,
-documents, Pilotage… Un seul code : ce qui change sur le site change dans l'application à la prochaine version.
+Une vraie application ([Capacitor 8](https://capacitorjs.com) + [Ionic](https://ionicframework.com) 9) : ses propres
+écrans, pensés pour le téléphone, avec les mêmes données et les mêmes règles que le site.
 
 - Identifiant : `fr.fidni.app` · nom affiché : **FIDNI** · configuration : `capacitor.config.ts`
 - Projets natifs : `android/` (Android Studio) et `ios/` (Xcode). Images sources des icônes : `assets/`.
-- Le code du site sait s'il tourne dans l'application : `isNativeApp` (`src/lib/native.ts`).
+- `src/main.tsx` charge `src/mobile/` dans l'application (`isNativeApp`, `src/lib/native.ts`), le site sinon.
 
-## Ce qui diffère du navigateur
+## Les écrans de l'application (`src/mobile/`)
+
+Onglets (barre d'onglets native, une pile d'écrans par onglet, glissement et retour par balayage) :
+**Accueil** (prochain objectif, où j'en suis, prochain DS, à refaire) · **Explorer** (Exercices / Cours / Devoirs /
+Quiz, niveaux, chapitres, listes avec Trier et Filtres, Bac national) · **Réviser** (DS, à refaire, mes listes) ·
+**Progression** (chiffres, activité, points faibles, chapitres) · **Profil** (favoris, quiz, réglages, langue, mode
+sombre). Plus l'accueil de l'application, la connexion, l'inscription et le premier lancement d'un compte.
+
+Un contenu : une seule feuille (énoncé, parties, questions), indication, solution, « Tu avais trouvé ? » et la
+réussite des élèves par question ; vues, j'aime, discussion ; « ⋯ » : partager, liste de révision, PDF, signaler.
+Quiz : passage corrigé question par question, minuteur, reprise d'un passage commencé (aussi sur le site), résultat.
+
+Réutilisé du site, sans copie : `lib/api/*`, `AuthContext`, `ThemeContext`, `i18n` (arabe : `i18n/ar/mobile.json`),
+le rendu des formules (`TipTapRenderer`, `LessonRenderer`), le temps passé (`usePageTimeTracker`), les aides
+(`helpTracking`). Une question évaluée dans l'application l'est sur le site, et inversement.
+
+Pas encore refait en écrans natifs : plan de DS et DS blanc, solutions proposées par les élèves, cahiers, classes et
+copies, concours, documents, Pilotage, modifier son profil. Ils s'ouvrent dans la **version complète du site**, dans l'application,
+avec « Retour à l'app » (`openWeb`, `SiteInApp` dans `MobileApp.tsx`) ; les onglets restent où on les avait laissés.
+
+Ajouter un écran : un composant qui rend `<Screen>` (`src/mobile/ui.tsx`), ouvert par `useNav().push(() => <MonEcran />)`.
+
+## Le site dans l'application (version complète) : ce qui diffère du navigateur
 
 | Sur le site | Dans l'application | Où |
 |---|---|---|
@@ -102,8 +122,17 @@ Chaque version à tester :
 3. Sur l'iPhone : installer **TestFlight** (App Store), ouvrir l'invitation reçue par e-mail › Installer. Les versions
    suivantes arrivent dans TestFlight (notification). Un build TestFlight expire au bout de 90 jours.
 
-Sans compte payant, seul un Mac permet d'essayer : Xcode, un identifiant Apple gratuit, l'iPhone branché en USB,
-`npm run mobile:ios`, ▶ (l'application cesse de s'ouvrir au bout de 7 jours ; la réinstaller depuis Xcode).
+Sans compte payant, seul un Mac permet d'essayer (gratuit) :
+1. Mac : Xcode (App Store), Node 22 (nodejs.org), puis
+   `git clone -b feat/mobile-app https://github.com/FIDNI-APP/Fidni-Frontend.git && cd Fidni-Frontend && npm ci && npm run mobile:ios`.
+2. Xcode › Settings › Accounts › **+** › Apple ID (le sien, gratuit). Cible **App** › Signing & Capabilities :
+   Team = « (Personal Team) », Bundle Identifier = **`fr.fidni.app.test`** (une équipe gratuite s'approprie l'identifiant :
+   garder `fr.fidni.app` pour le compte payant).
+3. iPhone branché en USB, « Faire confiance » ; iPhone › Réglages › Confidentialité et sécurité › **Mode développeur**
+   (redémarrage). Choisir l'iPhone en haut de Xcode, ▶.
+4. Premier lancement refusé : iPhone › Réglages › Général › VPN et gestion de l'appareil › faire confiance au développeur.
+L'application cesse de s'ouvrir au bout de 7 jours : la réinstaller depuis Xcode (▶). Ne pas commiter le changement
+d'identifiant ni d'équipe fait dans Xcode.
 
 ## Publier
 
