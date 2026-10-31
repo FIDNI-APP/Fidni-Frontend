@@ -10,6 +10,7 @@
 // `retour` donne « Retour à mon DS » après le résultat ; `&resultat=1` rouvre le dernier résultat. Les éléments sont dans
 // components/skilliq/. 14/10/2026 : un quiz commencé se reprend (gardé sur le serveur) ; un quiz passé rouvre son
 // dernier résultat, correction comprise (GET /skill-assessments/chapter/<id>/).
+// 31/10/2026 : deux quiz par chapitre, le quiz du cours et l'approfondissement (&type=approfondissement dans le lien).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Brain, ChevronLeft, Dumbbell, Hourglass, RotateCcw, X } from 'lucide-react';
@@ -31,9 +32,16 @@ import { QuizRunner } from '@/components/skilliq/QuizRunner';
 import { useQuizChapters } from '@/components/skilliq/useQuizChapters';
 import { quizDecouvert, quizDejaDecouvert } from '@/components/skilliq/annonce';
 import { t } from '@/i18n';
-import { isFresh, quizKey, safeReturn, takenOn, type ActiveQuiz, type CorrectionItem, type QuizChapter, type QuizEnCours, type QuizQuestion, type SkillAssessment } from '@/components/skilliq/types';
+import {
+  isFresh, quizKey, safeReturn, stageOf, takenOn, typeOf, type ActiveQuiz, type CorrectionItem, type QuizChapter, type QuizEnCours,
+  type QuizQuestion, type QuizType, type SkillAssessment,
+} from '@/components/skilliq/types';
 
 const SUBTITLE = 'Toutes les questions d’un chapitre, corrigées une à une, sans chrono, et ton bilan théorème par théorème.';
+const SUBTITLE_DEEP = 'Pour chaque chapitre, le quiz du cours, puis l’approfondissement : de vrais problèmes, avec des pièges. Corrigés une à une, sans chrono.';
+
+/** « type » d'un lien (?type=approfondissement, notification d'un approfondissement), sinon le quiz du cours. */
+const typeParam = (v: string | null): QuizType => (v === 'approfondissement' ? 'approfondissement' : 'cours');
 
 /** Page sur /skill-iq ; simple colonne quand le composant est affiché dans le profil (?tab=skilliq). */
 const Shell: React.FC<{ narrow?: boolean; children: React.ReactNode }> = ({ narrow = false, children }) => {
@@ -121,6 +129,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
   // Arrivée depuis un lien (?chapitre=, ?retour=) : gardée ici, puis l'adresse est nettoyée.
   const [wanted, setWanted] = useState<number | null>(() => Number(searchParams.get('chapitre')) || null);
   const [wantedLevel, setWantedLevel] = useState<number | null>(() => Number(searchParams.get('niveau')) || null);
+  const [wantedType, setWantedType] = useState<QuizType>(() => typeParam(searchParams.get('type')));
   const [retour, setRetour] = useState(() => safeReturn(searchParams.get('retour')));
   const [missing, setMissing] = useState<{ id: number; name: string | null; hub_url: string | null } | null>(null);
   const [active, setActive] = useState<ActiveQuiz | null>(null);
@@ -134,7 +143,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
   const [wantedResult, setWantedResult] = useState(() => searchParams.get('resultat') === '1');
   const [enCours, setEnCours] = useState<Record<string, QuizEnCours>>({});
   const refreshEnCours = () => {
-    getEnCours().then((rows) => setEnCours(Object.fromEntries(rows.map((r) => [quizKey(r.niveau, r.chapitre), r])))).catch(() => {});
+    getEnCours().then((rows) => setEnCours(Object.fromEntries(rows.map((r) => [quizKey(r.niveau, r.chapitre, typeOf(r)), r])))).catch(() => {});
   };
   useEffect(refreshEnCours, []);
   // Page découverte : plus de « Nouveau » dans le menu ni sur l'accueil (skilliq/annonce.ts).
@@ -150,17 +159,22 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     getTaxonomy().then((t) => { if (alive) setTaxonomy(t); }).catch(() => { if (alive) setTaxonomy([]); });
     return () => { alive = false; };
   }, [student]);
-  const otherLevels = useMemo(() => levelsWithQuizzes(taxonomy ?? [], data.availableAll, data.level?.id ?? null),
-    [taxonomy, data.availableAll, data.level?.id]);
+  const otherLevels = useMemo(() => levelsWithQuizzes(taxonomy ?? [], data.availableAll, data.deepAll, data.level?.id ?? null),
+    [taxonomy, data.availableAll, data.deepAll, data.level?.id]);
 
   useEffect(() => {
     if (!searchParams.has('chapitre') && !searchParams.has('retour')) return;
     const id = Number(searchParams.get('chapitre')) || null;
     if (id) setWanted(id);
     setWantedLevel(Number(searchParams.get('niveau')) || null);
+    setWantedType(typeParam(searchParams.get('type')));
     if (searchParams.has('retour')) setRetour(safeReturn(searchParams.get('retour')));
     setWantedResult(searchParams.get('resultat') === '1');
-    setSearchParams((p) => { const next = new URLSearchParams(p); ['chapitre', 'niveau', 'retour', 'resultat'].forEach((k) => next.delete(k)); return next; }, { replace: true });
+    setSearchParams((p) => {
+      const next = new URLSearchParams(p);
+      ['chapitre', 'niveau', 'type', 'retour', 'resultat'].forEach((k) => next.delete(k));
+      return next;
+    }, { replace: true });
   }, [searchParams, setSearchParams]);
 
   /** Lance le quiz : reprend le passage commencé s'il y en a un, sinon un nouveau tirage (`nouveau` : toujours). */
@@ -172,7 +186,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     setQuestions(null);
     setMissing(null);
     window.scrollTo({ top: 0 });
-    getQuiz(q.id, q.levelId, nouveau)
+    getQuiz(q, nouveau)
       .then((r) => {
         if (request.current !== id) return;
         if (r.reprise) trackAction('quiz-repris');
@@ -197,7 +211,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     setDernier('charge');
     setMissing(null);
     window.scrollTo({ top: 0 });
-    getLastResult(q.id, q.levelId)
+    getLastResult(q)
       .then((r) => { if (request.current === id) { setResult(r); setDernier('ok'); } })
       .catch(() => { if (request.current === id) setDernier('echec'); });
   };
@@ -212,11 +226,23 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     window.scrollTo({ top: 0 });
   };
 
-  const fromChapter = (c: QuizChapter): ActiveQuiz => ({ id: c.id, name: c.name, subject: c.subject ?? c.subfield, hub_url: c.hub_url,
-    levelId: data.level?.id ?? null });
-  const startChapter = (c: QuizChapter) => {
-    const q = fromChapter(c);
-    if (enCours[quizKey(q.levelId, c.id)]) start(q); else if (c.taken) redo(q); else start(q);
+  const fromChapter = (c: QuizChapter, type: QuizType = 'cours'): ActiveQuiz => ({ id: c.id, name: c.name,
+    subject: c.subject ?? c.subfield, hub_url: c.hub_url, levelId: data.level?.id ?? null, type });
+  const startChapter = (c: QuizChapter, type: QuizType) => {
+    const q = fromChapter(c, type);
+    if (enCours[quizKey(q.levelId, c.id, type)]) start(q); else if (stageOf(c, type).taken) redo(q); else start(q);
+  };
+
+  /** Questions prêtes de l'approfondissement de ce chapitre, à ce niveau (0 : pas encore). */
+  const deepReady = (q: ActiveQuiz) => {
+    const own = data.level?.id ?? null;
+    return ((q.levelId ?? own) === own ? data.deepAvailable[String(q.id)] : data.deepAll[String(q.levelId)]?.[String(q.id)]) ?? 0;
+  };
+  /** Après le quiz du cours : l'approfondissement du même chapitre (reprise d'un passage commencé, sinon nouveau tirage). */
+  const startDeep = (q: ActiveQuiz) => {
+    const deep: ActiveQuiz = { ...q, type: 'approfondissement' };
+    const taken = takenOn(data.mine, q.id, q.levelId, data.level?.id ?? null, 'approfondissement');
+    if (taken && !enCours[quizKey(q.levelId, q.id, 'approfondissement')]) redo(deep); else start(deep);
   };
 
   // Lien vers le quiz d'un chapitre : on le lance s'il est prêt, sinon on le dit (bandeau) au lieu de rien.
@@ -226,20 +252,25 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
     const own = data.level?.id ?? null;
     // Le quiz d'un autre niveau (lien d'une notification, par exemple) : celui-là, pas celui de l'élève.
     const lv = wantedLevel && wantedLevel !== own ? wantedLevel : own;
+    const type = wantedType;
     setWanted(null);
     setWantedLevel(null);
+    setWantedType('cours');
     const mine = lv === own ? data.chapters.find((c) => c.id === id) : undefined;
-    const ready = (lv === own ? data.available[String(id)] : data.availableAll[String(lv)]?.[String(id)]) ?? mine?.ready ?? 0;
-    const taken = takenOn(data.mine, id, lv, own);
+    const ready = type === 'cours'
+      ? (lv === own ? data.available[String(id)] : data.availableAll[String(lv)]?.[String(id)]) ?? mine?.ready ?? 0
+      : (lv === own ? data.deepAvailable[String(id)] : data.deepAll[String(lv)]?.[String(id)]) ?? 0;
+    const taken = takenOn(data.mine, id, lv, own, type);
     const showResult = wantedResult;
     setWantedResult(false);
     (async () => {
       const info = mine ? { name: mine.name, subject: mine.subfield } : await findChapter(id).catch(() => null);
-      const quiz = { id, name: info?.name ?? t('Quiz du chapitre'), subject: info?.subject ?? null, hub_url: mine?.hub_url ?? null, levelId: lv };
+      const quiz: ActiveQuiz = { id, name: info?.name ?? t('Quiz du chapitre'), subject: info?.subject ?? null, hub_url: mine?.hub_url ?? null,
+        levelId: lv, type };
       if (showResult && taken) {
         showLast(quiz);
       } else if (ready > 0) {
-        if (taken && !enCours[quizKey(lv, id)]) redo(quiz); else start(quiz);
+        if (taken && !enCours[quizKey(lv, id, type)]) redo(quiz); else start(quiz);
       } else {
         setMissing({ id, name: info?.name ?? null, hub_url: quiz.hub_url });
       }
@@ -254,7 +285,8 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
       <Shell narrow>
         {result ? (
           <QuizResult quiz={active} result={result} questions={questions ?? []} retour={retour} dernier={dernier === 'ok'}
-            onRedo={() => redo(active)} onBack={close} />
+            onRedo={() => redo(active)} onBack={close}
+            onDeep={typeOf(active) === 'cours' && deepReady(active) > 0 ? () => startDeep(active) : undefined} />
         ) : dernier === 'charge' ? (
           <QuestionSkeleton name={active.name} onQuit={close} />
         ) : dernier === 'echec' ? (
@@ -274,7 +306,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
               secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">{t('Retour aux quiz')}</button>} />
           </div>
         ) : (
-          <QuizRunner key={`${active.id}:${active.levelId}:${request.current}`} quiz={active} questions={questions} seconds={seconds}
+          <QuizRunner key={`${quizKey(active.levelId, active.id, typeOf(active))}:${request.current}`} quiz={active} questions={questions} seconds={seconds}
             left={left} initial={initial} onQuit={close} onRestart={() => start(active, true)}
             onDone={(r) => { setResult(r); setDernier(null); data.refreshMine(); refreshEnCours(); window.scrollTo({ top: 0 }); }} />
         )}
@@ -289,7 +321,8 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
   // Professeur ou élève sans niveau : les quiz de tous les niveaux, choisis par niveau.
   const browse = variant !== 'student' && data.elsewhere > 0;
   const other = (
-    <OtherLevel availableByLevel={data.availableAll} mine={data.mine} fresh={data.fresh} excludeLevelId={data.level?.id ?? null} standalone={browse}
+    <OtherLevel availableByLevel={data.availableAll} deepByLevel={data.deepAll} mine={data.mine} fresh={data.fresh}
+      excludeLevelId={data.level?.id ?? null} standalone={browse}
       enCours={enCours} onStart={(q, again) => (again ? redo : start)(q)} onView={showLast} />
   );
 
@@ -299,7 +332,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
 
   return (
     <Shell>
-      <Header subtitle={hasHere || browse || levelBar ? t(SUBTITLE) : undefined} />
+      <Header subtitle={hasHere || browse || levelBar ? (data.hasDeep ? t(SUBTITLE_DEEP) : t(SUBTITLE)) : undefined} />
 
       {levelBar && !data.loading && (
         <div role="tablist" aria-label={t('Niveau des quiz')} className="mb-5 flex flex-wrap items-center gap-2" data-tour="skilliq-choix-niveau">
@@ -310,7 +343,8 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
           </button>
           {otherLevels.map((l) => {
             const on = shown?.id === l.id;
-            const hasNew = l.subjects.some((s) => s.chapters.some((c) => isFresh(data.fresh[quizKey(l.id, c.id)], takenOn(data.mine, c.id, l.id))));
+            const hasNew = l.subjects.some((s) => s.chapters.some((c) => (['cours', 'approfondissement'] as const).some((type) =>
+              isFresh(data.fresh[quizKey(l.id, c.id, type)], takenOn(data.mine, c.id, l.id, undefined, type)))));
             return (
               <button key={l.id} type="button" role="tab" aria-selected={on} onClick={() => setView(l.id)}
                 className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-[13px] font-semibold transition-colors ${
@@ -335,10 +369,10 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
 
       {data.loading ? <PageSkeleton />
         : shown ? (
-          <LevelQuizzes fixedLevelId={shown.id} availableByLevel={data.availableAll} mine={data.mine} fresh={data.fresh}
+          <LevelQuizzes fixedLevelId={shown.id} availableByLevel={data.availableAll} deepByLevel={data.deepAll} mine={data.mine} fresh={data.fresh}
             enCours={enCours} onStart={(q, again) => (again ? redo : start)(q)} onView={showLast} />
         ) : hasHere ? (
-          <QuizList data={data} enCours={enCours} onStart={startChapter} onView={(c) => showLast(fromChapter(c))}>
+          <QuizList data={data} enCours={enCours} onStart={startChapter} onView={(c, type) => showLast(fromChapter(c, type))}>
             {data.elsewhere > 0 && !levelBar && other}
           </QuizList>
         ) : browse ? (

@@ -4,23 +4,26 @@
 // montre toutes ses réponses (la sienne, la bonne) et l'explication. Le bilan par théorème ne garde que les points
 // faibles (le reste se déplie). Le même écran rouvre le dernier passage (`dernier`), corrigé tel qu'il était
 // (correction figée côté serveur : énoncé et réponses de ce passage-là).
+// 31/10/2026 : l'approfondissement a son écran de résultat : badge « Chapitre approfondi » à BADGE_PCT % (ou ce qu'il
+// manque pour l'avoir), pièges expliqués dans la correction. Après un bon quiz du cours, « Passer à l'approfondissement »
+// quand le chapitre en a un (`onDeep`).
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, Dumbbell, LineChart, RotateCcw, Trophy, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, Dumbbell, LineChart, Mountain, RotateCcw, Trophy, X } from 'lucide-react';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { lessonsUrl, practiceUrl } from '@/pages/progression/links';
 import { Delta } from './QuizRow';
 import { t } from '@/i18n';
 import { MathText } from './MathText';
 import {
-  RING, answered, frDate, goodAnswers, hasReport, pct, picked, previousPct,
+  BADGE_PCT, RING, answered, frDate, goodAnswers, hasReport, pct, picked, previousPct, typeOf,
   type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment, type TheoremReport,
 } from './types';
 
 const WEAK_SHOWN = 3;
 
 /** Bilan par théorème : les points faibles d'abord (or), le reste replié (vert à 100 % : jamais de rouge). */
-const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
+const TheoremBoard: React.FC<{ report: TheoremReport; deep: boolean }> = ({ report, deep }) => {
   const [all, setAll] = useState(false);
   const weak = report.theoremes.filter((th) => th.pct < 100);
   const shown = all ? report.theoremes : weak.slice(0, WEAK_SHOWN);
@@ -31,8 +34,12 @@ const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
         <div className="flex items-start gap-3 rounded-xl bg-brand-soft px-4 py-3">
           <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-brand-hover" aria-hidden />
           <div>
-            <h2 id="quiz-theorems-title" className="text-[15px] font-semibold text-brand-hover">{t('Chapitre maîtrisé à 100 %')}</h2>
-            <p className="mt-0.5 text-[13px] text-ink-soft">{t('Tous les théorèmes évalués, toutes les réponses justes.')}</p>
+            <h2 id="quiz-theorems-title" className="text-[15px] font-semibold text-brand-hover">
+              {deep ? t('Aucun piège ne t’a eu') : t('Chapitre maîtrisé à 100 %')}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-ink-soft">
+              {deep ? t('Tous les problèmes justes, sur tous les théorèmes évalués.') : t('Tous les théorèmes évalués, toutes les réponses justes.')}
+            </p>
           </div>
         </div>
       ) : (
@@ -77,19 +84,45 @@ const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
   );
 };
 
-const sentence = (score: number, progressed: boolean) => {
-  const base = score >= 80 ? t('Très bien : ce chapitre est solide.')
-    : score >= 50 ? t('Bonne base : quelques exercices ciblés, et c’est acquis.')
-      : t('Reprends ce chapitre, en commençant par les exercices faciles.');
+const sentence = (score: number, progressed: boolean, deep: boolean) => {
+  const base = deep
+    ? (score >= BADGE_PCT ? t('Bravo : tu as déjoué les pièges, ce chapitre est approfondi.')
+      : score >= 50 ? t('Bon travail : relis les pièges dans la correction, puis retente.')
+        : t('Ces problèmes sont exigeants : revois le cours et ses exercices, puis retente.'))
+    : score >= 80 ? t('Très bien : ce chapitre est solide.')
+      : score >= 50 ? t('Bonne base : quelques exercices ciblés, et c’est acquis.')
+        : t('Reprends ce chapitre, en commençant par les exercices faciles.');
   return progressed ? t('Tu progresses ! {base}', { base }) : base;
 };
+
+/** Approfondissement : le badge obtenu, ou ce qu'il manque pour l'avoir. */
+const BadgeBanner: React.FC<{ score: number }> = ({ score }) => (score >= BADGE_PCT ? (
+  <div className="flex items-center gap-3.5 border-t border-gold-line bg-gold-soft px-5 py-4 sm:px-7">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gold text-white shadow-sm" aria-hidden>
+      <Award className="h-6 w-6" />
+    </span>
+    <div className="min-w-0">
+      <p className="text-[15px] font-semibold text-ink">{t('Badge « Chapitre approfondi »')}</p>
+      <p className="text-[13px] text-ink-soft">{t('Il s’affiche sur ce chapitre, dans tes quiz.')}</p>
+    </div>
+  </div>
+) : (
+  <div className="flex items-center gap-3 border-t border-line px-5 py-3.5 sm:px-7">
+    <Award className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+    <p className="fd-nums text-[13.5px] text-ink-soft">
+      {BADGE_PCT - score > 1 ? t('Encore {n} points pour le badge « Chapitre approfondi ».', { n: BADGE_PCT - score })
+        : t('Encore {n} point pour le badge « Chapitre approfondi ».', { n: BADGE_PCT - score })}
+    </p>
+  </div>
+));
 
 const linkCls = 'inline-flex min-h-10 items-center gap-1.5 font-semibold text-ink-soft transition-colors hover:text-ink';
 
 type Item = CorrectionItem & { n: number; question: string; options: string[] };
 
-/** Une question corrigée : toutes ses réponses (la tienne, la bonne — ou les bonnes), puis l'explication. */
-const Corrected: React.FC<{ c: Item }> = ({ c }) => {
+/** Une question corrigée : toutes ses réponses (la tienne, la bonne — ou les bonnes), puis l'explication (les pièges,
+ *  pour l'approfondissement). */
+const Corrected: React.FC<{ c: Item; deep: boolean }> = ({ c, deep }) => {
   const skipped = !answered(c);
   const goods = goodAnswers(c);
   const mines = picked(c.your_answer);
@@ -124,9 +157,10 @@ const Corrected: React.FC<{ c: Item }> = ({ c }) => {
         })}
       </ul>
       {c.explanation && (
-        <p className="mt-3 rounded-xl bg-paper px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink-soft">
+        <div className="mt-3 rounded-xl bg-paper px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink-soft">
+          {deep && <p className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Les pièges, expliqués')}</p>}
           <MathText text={c.explanation} className="fd-latex" />
-        </p>
+        </div>
       )}
     </li>
   );
@@ -144,9 +178,14 @@ export const QuizResult: React.FC<{
   dernier?: boolean;
   onRedo: () => void;
   onBack: () => void;
-}> = ({ quiz, result, questions, retour, dernier = false, onRedo, onBack }) => {
+  /** Lancer l'approfondissement du chapitre (quiz du cours terminé, approfondissement prêt). */
+  onDeep?: () => void;
+}> = ({ quiz, result, questions, retour, dernier = false, onRedo, onBack, onDeep }) => {
   const score = pct(result);
   const before = previousPct(result);
+  const deep = typeOf(quiz) === 'approfondissement';
+  // Après un bon quiz du cours, l'approfondissement devient la suite logique (pas depuis un plan de DS).
+  const goDeeper = !deep && !!onDeep && score >= 50 && !retour;
   const hub = result.hub_url ?? quiz.hub_url;
   // Le thème du chapitre (Analyse…) dit plus que la matière, toujours « Mathématiques ».
   const subject = quiz.subject ?? result.subject_name;
@@ -167,9 +206,10 @@ export const QuizResult: React.FC<{
   // Le pourcentage compte un peu plus les questions difficiles : on le dit quand il s'écarte du simple compte.
   const weighted = items.length > 0 && Math.round((right.length / items.length) * 100) !== score;
 
+  const practicePrimary = !retour && !dernier && !goDeeper;
   const practice = (
-    <Link to={practiceUrl(hub, quiz.id)} className={retour || dernier ? linkCls : 'fd-btn-primary min-h-11 justify-center text-[14px]'}>
-      <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')} {!retour && !dernier && <ArrowRight className="h-4 w-4" aria-hidden />}
+    <Link to={practiceUrl(hub, quiz.id)} className={practicePrimary ? 'fd-btn-primary min-h-11 justify-center text-[14px]' : linkCls}>
+      <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')} {practicePrimary && <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden />}
     </Link>
   );
   const tabs: [Tab, string, number][] = [['erreurs', t('Erreurs'), wrong.length], ['sans', t('Sans réponse'), skipped.length], ['toutes', t('Toutes'), items.length]];
@@ -187,8 +227,12 @@ export const QuizResult: React.FC<{
             <span className="fd-nums text-[28px] font-bold leading-none text-ink">{score}<span className="text-[15px]"> %</span></span>
           </ProgressRing>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
-              {dernier ? t('Ton dernier passage · {date}', { date: frDate(result.completed_at) }) : `${t('Quiz terminé')}${subject ? ` · ${subject}` : ''}`}
+            <p className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] ${deep ? 'text-ink' : 'text-gold-strong'}`}>
+              {deep ? <Mountain className="h-3.5 w-3.5" aria-hidden /> : <BookOpen className="h-3.5 w-3.5" aria-hidden />}
+              {dernier
+                ? (deep ? t('Approfondissement · ton dernier passage · {date}', { date: frDate(result.completed_at) })
+                  : t('Quiz du cours · ton dernier passage · {date}', { date: frDate(result.completed_at) }))
+                : `${deep ? t('Approfondissement terminé') : t('Quiz du cours terminé')}${subject ? ` · ${t(subject)}` : ''}`}
             </p>
             <h1 id="quiz-result-title" className="fd-display mt-1.5 text-[24px] leading-tight text-ink sm:text-[26px]">{quiz.name}</h1>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:justify-start">
@@ -197,10 +241,12 @@ export const QuizResult: React.FC<{
               </p>
               <Delta a={result} long />
             </div>
-            {!dernier && <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">{sentence(score, before !== null && score > before)}</p>}
+            {!dernier && <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">{sentence(score, before !== null && score > before, deep)}</p>}
             {weighted && <p className="mt-1.5 text-[12px] text-ink-faint">{t('Les questions difficiles comptent un peu plus dans le score.')}</p>}
           </div>
         </div>
+
+        {deep && <BadgeBanner score={score} />}
 
         <div className="flex flex-col gap-2 border-t border-line bg-[#fcfbf9] px-5 py-4 sm:flex-row sm:items-center sm:gap-5 sm:px-7">
           {dernier ? (
@@ -211,17 +257,22 @@ export const QuizResult: React.FC<{
             <Link to={retour} className="fd-btn-primary min-h-11 justify-center text-[14px]">
               <ArrowLeft className="h-4 w-4" aria-hidden /> {t('Retour à mon DS')}
             </Link>
+          ) : goDeeper ? (
+            <button type="button" onClick={onDeep} className="fd-btn-primary min-h-11 shrink-0 justify-center whitespace-nowrap text-[14px]">
+              <Mountain className="h-4 w-4" aria-hidden /> {t('Passer à l’approfondissement')}
+            </button>
           ) : practice}
           <div className="flex flex-wrap items-center justify-center gap-x-4 text-[13px] sm:justify-start">
-            {(retour || dernier) && practice}
+            {!practicePrimary && practice}
             <Link to={lessonsUrl(hub, quiz.id)} className={linkCls}><BookOpen className="h-4 w-4" aria-hidden /> {t('Le cours')}</Link>
-            <Link to={`/progression?chapitre=${quiz.id}`} className={linkCls}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>
+            {/* L'approfondissement ne compte pas dans la maîtrise : pas de détour par Ma progression. */}
+            {!deep && <Link to={`/progression?chapitre=${quiz.id}`} className={linkCls}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>}
             {!dernier && <button type="button" onClick={onRedo} className={linkCls}><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
           </div>
         </div>
       </section>
 
-      {hasReport(result.par_theoreme) && <TheoremBoard report={result.par_theoreme} />}
+      {hasReport(result.par_theoreme) && <TheoremBoard report={result.par_theoreme} deep={deep} />}
 
       {items.length > 0 ? (
         <section aria-labelledby="quiz-correction-title" className="flex flex-col gap-3">
@@ -238,7 +289,7 @@ export const QuizResult: React.FC<{
             </div>
           </div>
           {list.length ? (
-            <ol className="flex flex-col gap-3">{list.map((c) => <Corrected key={c.id} c={c} />)}</ol>
+            <ol className="flex flex-col gap-3">{list.map((c) => <Corrected key={c.id} c={c} deep={deep} />)}</ol>
           ) : (
             <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[14px] text-ink-soft">
               <CheckCircle2 className="me-1.5 inline h-4 w-4 text-brand" aria-hidden /> {t('Aucune erreur : tout est juste.')}

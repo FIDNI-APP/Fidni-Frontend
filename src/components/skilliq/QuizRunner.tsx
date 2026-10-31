@@ -10,14 +10,20 @@
 // Textes en police LaTeX (.fd-latex) ; la difficulté des questions n'est pas montrée (elle ne sert qu'au score).
 // 16/10/2026 : questions à plusieurs bonnes réponses (`nb_bonnes` > 1) : cases à cocher, « Choisis {n} réponses »,
 // « Valider » quand n cases sont cochées ; juste seulement si ce sont exactement les bonnes (tout ou rien).
+// 31/10/2026 : l'approfondissement (vrais problèmes, réponses pièges) passe par le même écran : son nom en tête, un
+// conseil avant la première réponse, des énoncés longs en texte courant. La barre d'avancement montre justes et fausses.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronDown, ChevronLeft, LayoutGrid, Loader2, RotateCcw, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronLeft, LayoutGrid, Lightbulb, Loader2, RotateCcw, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
 import { MathText } from './MathText';
+import { QUIZ_TYPE } from './quizTypes';
 import { t } from '@/i18n';
-import { goodAnswers, picked, toPick, type ActiveQuiz, type Answer, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
+import { goodAnswers, picked, toPick, typeOf, type ActiveQuiz, type Answer, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
+
+/** Au-delà, un énoncé est un vrai problème : texte courant plutôt que gras. */
+const LONG_STATEMENT = 220;
 
 const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line bg-[#faf9f7] px-1.5 font-sans text-[11px] font-semibold text-ink-faint">
@@ -29,16 +35,20 @@ const letter = (i: number) => String.fromCharCode(65 + i);
 
 /** Correction de la question, juste après « Valider » (or pour une erreur : ce n'est pas une faute). Plusieurs
  *  bonnes réponses : juste seulement si l'élève les a toutes cochées, et rien d'autre ; on les rappelle toutes. */
-const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion }> = ({ c, q }) => {
+const Feedback: React.FC<{ c: CorrectionItem; q: QuizQuestion; deep?: boolean }> = ({ c, q, deep = false }) => {
   const good = goodAnswers(c);
   const multi = good.length > 1;
+  // Approfondissement : les mauvaises réponses sont des pièges, on le dit (et l'explication dit pourquoi).
+  const lettres = good.map(letter).join(', ');
+  const lettre = letter(c.correct_answer);
+  const wrong = deep
+    ? (multi ? t('Piège : les bonnes réponses sont {lettres}', { lettres }) : t('Piège : la bonne réponse est {lettre}', { lettre }))
+    : (multi ? t('Pas tout à fait : les bonnes réponses sont {lettres}', { lettres }) : t('Pas tout à fait : la bonne réponse est {lettre}', { lettre }));
   return (
     <div role="status" className={`mt-5 rounded-2xl border p-4 ${c.is_correct ? 'border-brand/30 bg-brand-soft/50' : 'border-gold-line bg-gold-soft/60'}`}>
       <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${c.is_correct ? 'text-brand-hover' : 'text-[#8a6318]'}`}>
         {c.is_correct ? <Check className="h-4 w-4" aria-hidden /> : <X className="h-4 w-4" aria-hidden />}
-        {c.is_correct ? (multi ? t('Bonnes réponses') : t('Bonne réponse'))
-          : multi ? t('Pas tout à fait : les bonnes réponses sont {lettres}', { lettres: good.map(letter).join(', ') })
-            : t('Pas tout à fait : la bonne réponse est {lettre}', { lettre: letter(c.correct_answer) })}
+        {c.is_correct ? (deep ? t('Bonne réponse : piège évité') : multi ? t('Bonnes réponses') : t('Bonne réponse')) : wrong}
       </p>
       {!c.is_correct && good.map((i) => (
         <p key={i} className="mt-1 flex gap-1.5 text-[13.5px] font-semibold text-ink">
@@ -146,12 +156,12 @@ export const QuizRunner: React.FC<{
     // Sans réponse : -1, compté faux par le serveur (qui note de toute façon toutes les questions du passage).
     const all = Object.fromEntries(questions.map((x) => [x.id, picked(answers[x.id]).length ? answers[x.id] : -1]));
     try {
-      onDone(await submitQuiz(quiz.id, quiz.levelId, all, Math.round(used.current / 1000)));
+      onDone(await submitQuiz(quiz, all, Math.round(used.current / 1000)));
     } catch (e) {
       setError(isAxiosError(e) && e.response?.status === 409 ? 'expire' : 'reseau');
       setSubmitting(false);
     }
-  }, [submitting, complete, questions, answers, quiz.id, quiz.levelId, onDone]);
+  }, [submitting, complete, questions, answers, quiz, onDone]);
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
@@ -220,6 +230,11 @@ export const QuizRunner: React.FC<{
   });
 
   const good = Object.values(checked).filter((c) => c.is_correct).length;
+  const bad = done - good;
+  const type = typeOf(quiz);
+  const deep = type === 'approfondissement';
+  const TypeIcon = QUIZ_TYPE[type].icon;
+  const long = q.question.length > LONG_STATEMENT;
 
   // Action principale de la barre du bas : Valider → Question suivante → Voir mon bilan.
   const primary = !correction ? (
@@ -247,31 +262,49 @@ export const QuizRunner: React.FC<{
       </div>
 
       <header className="min-w-0">
-        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Quiz')}{quiz.subject ? ` · ${quiz.subject}` : ''}</p>
+        <p className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] ${deep ? 'text-ink' : 'text-gold-strong'}`}>
+          <TypeIcon className="h-3.5 w-3.5" aria-hidden /> {t(QUIZ_TYPE[type].label)}{quiz.subject ? ` · ${t(quiz.subject)}` : ''}
+        </p>
         <h1 className="fd-display mt-1 text-[22px] leading-tight text-ink sm:text-[26px]">{quiz.name}</h1>
       </header>
 
-      {/* Avancement : une barre fine, « Question 7/30 », et la grille pour aller à une question. */}
+      {/* Approfondissement : le conseil, jusqu'à la première correction. */}
+      {deep && done === 0 && (
+        <p className="flex items-start gap-2.5 rounded-2xl bg-ink px-4 py-3 text-[13.5px] leading-relaxed text-white/90">
+          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
+          <span>{t('De vrais problèmes : certaines réponses sont des pièges qui ressemblent à la bonne. Fais le calcul au brouillon avant de choisir, rien ne presse.')}</span>
+        </p>
+      )}
+
+      {/* Avancement : « Question 7/30 », justes et fausses dans la barre, et la grille pour aller à une question. */}
       <div>
         <div className="flex items-center justify-between gap-3 text-[13px]">
           <span className="fd-nums font-semibold text-ink" aria-live="polite">{t('Question {n}', { n: index + 1 })}<span className="font-normal text-ink-faint">/{total}</span></span>
           <span className="flex items-center gap-3">
-            {done > 0 && <span className="fd-nums text-ink-soft"><b className="text-ink">{good}</b> {good > 1 ? t('bonnes réponses') : t('bonne réponse')}</span>}
+            {done > 0 && (
+              <span className="fd-nums flex items-center gap-2.5 text-ink-soft">
+                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-brand" aria-hidden /><b className="text-ink">{good}</b><span className="sr-only">{good > 1 ? t('bonnes réponses') : t('bonne réponse')}</span></span>
+                {bad > 0 && <span className="inline-flex items-center gap-1"><X className="h-3.5 w-3.5 text-gold" aria-hidden /><b className="text-ink">{bad}</b><span className="sr-only">{bad > 1 ? t('réponses fausses') : t('réponse fausse')}</span></span>}
+              </span>
+            )}
             <button type="button" onClick={() => setGrid((v) => !v)} aria-expanded={grid}
               className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 font-medium text-ink-soft hover:bg-paper hover:text-ink">
               <LayoutGrid className="h-4 w-4" aria-hidden /> {t('Grille')} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${grid ? 'rotate-180' : ''}`} aria-hidden />
             </button>
           </span>
         </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#efece6]" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}
+        <div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#efece6]" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}
           aria-label={t('{done} questions corrigées sur {total}', { done, total })}>
-          <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${(done / total) * 100}%` }} />
+          <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${(good / total) * 100}%` }} />
+          <div className="h-full bg-gold transition-[width] duration-300" style={{ width: `${(bad / total) * 100}%` }} />
         </div>
         {grid && <div className="mt-2"><Grid questions={questions} index={index} checked={checked} answers={answers} onGo={go} /></div>}
       </div>
 
       <section className="rounded-3xl border border-line bg-white p-5 sm:p-7" aria-labelledby="quiz-question">
-        <h2 id="quiz-question" className="text-[17px] font-semibold leading-relaxed text-ink sm:text-[18px]">
+        <h2 id="quiz-question" className={long
+          ? 'text-[16px] font-normal leading-[1.75] text-ink sm:text-[16.5px]'
+          : 'text-[17px] font-semibold leading-relaxed text-ink sm:text-[18px]'}>
           <MathText text={q.question} className="fd-latex" />
         </h2>
         {/* Plusieurs bonnes réponses : la consigne (nombre à cocher, jamais lesquelles) et le compte des cases cochées. */}
@@ -307,7 +340,7 @@ export const QuizRunner: React.FC<{
             );
           })}
         </div>
-        {correction && <Feedback c={correction} q={q} />}
+        {correction && <Feedback c={correction} q={q} deep={deep} />}
         {checkError && (
           <p role="alert" className="mt-4 rounded-xl border border-gold-line bg-gold-soft px-4 py-3 text-[13.5px] text-[#7a560f]">
             {t('La correction n’a pas pu se charger : vérifie ta connexion, puis appuie à nouveau sur « Valider ».')}

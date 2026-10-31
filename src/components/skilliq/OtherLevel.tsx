@@ -1,16 +1,21 @@
 // « Un autre niveau ? » : les quiz prêts des autres niveaux (cas rare : réviser l'année d'avant, professeur,
-// élève sans niveau). Le programme de tous les niveaux n'est chargé qu'à l'ouverture.
+// élève sans niveau). Le programme de tous les niveaux n'est chargé qu'à l'ouverture. Chaque chapitre a ses deux quiz
+// (31/10/2026) : le quiz du cours et, s'il existe à ce niveau, l'approfondissement.
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { getTaxonomy, type TaxonomyLevel } from './api';
-import { QuizRow } from './QuizRow';
+import { ChapterListHeader, ChapterRow, type StageProps } from './QuizRow';
 import { t } from '@/i18n';
-import { isFresh, quizKey, takenOn, type ActiveQuiz, type QuizEnCours, type SkillAssessment } from './types';
+import { isFresh, quizKey, takenOn, type ActiveQuiz, type QuizEnCours, type QuizType, type SkillAssessment } from './types';
+
+type ByLevel = Record<string, Record<string, number>>;
 
 interface Props {
-  /** Quiz prêts par niveau : { "<niveau>": { "<chapitre>": nombre } } (un quiz = chapitre + niveau). */
-  availableByLevel: Record<string, Record<string, number>>;
-  /** Tous les résultats de l'élève (un par chapitre et par niveau). */
+  /** Quiz du cours prêts par niveau : { "<niveau>": { "<chapitre>": nombre } } (un quiz = chapitre + niveau). */
+  availableByLevel: ByLevel;
+  /** Approfondissements prêts par niveau, même forme. */
+  deepByLevel?: ByLevel;
+  /** Tous les résultats de l'élève (un par chapitre, niveau et type). */
   mine: SkillAssessment[];
   /** Niveau de l'élève, déjà montré au-dessus. */
   excludeLevelId?: number | null;
@@ -18,9 +23,9 @@ interface Props {
   standalone?: boolean;
   /** Un seul niveau, choisi ailleurs (barre de niveaux de la page, 13/10/2026) : pas d'onglets ici. */
   fixedLevelId?: number;
-  /** Quiz sortis récemment ({chapitre: date}) : étiquette « Nouveau ». */
+  /** Quiz sortis récemment ({quizKey: date}) : étiquette « Nouveau ». */
   fresh?: Record<string, string>;
-  /** Quiz commencés (clé : niveau:chapitre) : « Reprendre ». */
+  /** Quiz commencés (clé : quizKey) : « Reprendre ». */
   enCours?: Record<string, QuizEnCours>;
   /** `redo` : quiz déjà passé et pas de passage en cours (nouveau tirage). */
   onStart: (q: ActiveQuiz, redo: boolean) => void;
@@ -28,25 +33,29 @@ interface Props {
   onView?: (q: ActiveQuiz) => void;
 }
 
-/** Niveaux qui ont au moins un quiz prêt, avec leurs chapitres prêts (par matière, sans doublon). */
-export function levelsWithQuizzes(levels: TaxonomyLevel[], availableByLevel: Record<string, Record<string, number>>,
+/** Niveaux qui ont au moins un quiz prêt (cours ou approfondissement), avec ces chapitres (par matière, sans doublon). */
+export function levelsWithQuizzes(levels: TaxonomyLevel[], availableByLevel: ByLevel, deepByLevel: ByLevel = {},
   excludeLevelId?: number | null) {
   return levels
     .filter((l) => l.id !== excludeLevelId)
     .map((l) => {
-      const available = availableByLevel[String(l.id)] ?? {};
+      const cours = availableByLevel[String(l.id)] ?? {};
+      const deep = deepByLevel[String(l.id)] ?? {};
       const subjects = l.subjects.map((s) => {
         const seen = new Set<number>();
-        const chapters = s.chapters.filter((c) => available[String(c.id)] > 0 && !seen.has(c.id) && (seen.add(c.id), true))
+        const chapters = s.chapters
+          .filter((c) => (cours[String(c.id)] > 0 || deep[String(c.id)] > 0) && !seen.has(c.id) && (seen.add(c.id), true))
           .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
         return { ...s, chapters };
       }).filter((s) => s.chapters.length > 0);
-      return { ...l, subjects, count: subjects.reduce((n, s) => n + s.chapters.length, 0) };
+      return { ...l, subjects, count: subjects.reduce((n, s) => n + s.chapters.length, 0), hasDeep: Object.values(deep).some((n) => n > 0) };
     })
     .filter((l) => l.count > 0);
 }
 
-export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByLevel, mine, excludeLevelId, fixedLevelId, fresh = {}, enCours = {}, onStart, onView }) => {
+export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({
+  availableByLevel, deepByLevel = {}, mine, excludeLevelId, fixedLevelId, fresh = {}, enCours = {}, onStart, onView,
+}) => {
   const [levels, setLevels] = useState<TaxonomyLevel[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [levelId, setLevelId] = useState<number | null>(fixedLevelId ?? null);
@@ -60,7 +69,8 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByL
     return () => { alive = false; };
   }, [attempt]);
 
-  const withQuizzes = useMemo(() => levelsWithQuizzes(levels ?? [], availableByLevel, excludeLevelId), [levels, availableByLevel, excludeLevelId]);
+  const withQuizzes = useMemo(() => levelsWithQuizzes(levels ?? [], availableByLevel, deepByLevel, excludeLevelId),
+    [levels, availableByLevel, deepByLevel, excludeLevelId]);
 
   if (failed) {
     return (
@@ -77,6 +87,18 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByL
     return <p className="text-[13.5px] text-ink-faint">{t('Pas encore de quiz pour les autres niveaux.')}</p>;
   }
   const level = withQuizzes.find((l) => l.id === levelId) ?? withQuizzes[0];
+
+  /** Un des deux quiz d'un chapitre de ce niveau, pour sa ligne. */
+  const stage = (c: { id: number; name: string }, subject: string, type: QuizType): StageProps => {
+    const taken = takenOn(mine, c.id, level.id, undefined, type);
+    const started = enCours[quizKey(level.id, c.id, type)] ?? null;
+    const q: ActiveQuiz = { id: c.id, name: c.name, subject, hub_url: taken?.hub_url ?? null, levelId: level.id, type };
+    const ready = (type === 'cours' ? availableByLevel : deepByLevel)[String(level.id)]?.[String(c.id)] ?? 0;
+    return {
+      stage: { ready, taken, fresh: isFresh(fresh[quizKey(level.id, c.id, type)], taken) },
+      enCours: started, onStart: () => onStart(q, !!taken && !started), onView: onView && taken ? () => onView(q) : undefined,
+    };
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -97,18 +119,12 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({ availableByL
       )}
       {level.subjects.map((s) => (
         <div key={s.id}>
-          {level.subjects.length > 1 && <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{s.name}</h3>}
+          <ChapterListHeader title={level.subjects.length > 1 ? s.name : null} deep={level.hasDeep} />
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
-            {s.chapters.map((c) => {
-              const t = takenOn(mine, c.id, level.id);
-              const started = enCours[quizKey(level.id, c.id)] ?? null;
-              const q: ActiveQuiz = { id: c.id, name: c.name, subject: s.name, hub_url: t?.hub_url ?? null, levelId: level.id };
-              return (
-                <QuizRow key={c.id} name={c.name} ready={availableByLevel[String(level.id)]?.[String(c.id)] ?? 0} taken={t}
-                  isNew={isFresh(fresh[quizKey(level.id, c.id)], t)} enCours={started}
-                  onStart={() => onStart(q, !!t && !started)} onView={onView && t ? () => onView(q) : undefined} />
-              );
-            })}
+            {s.chapters.map((c) => (
+              <ChapterRow key={c.id} name={c.name} cours={stage(c, s.name, 'cours')}
+                deep={level.hasDeep ? stage(c, s.name, 'approfondissement') : undefined} />
+            ))}
           </ul>
         </div>
       ))}

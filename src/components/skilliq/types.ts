@@ -2,12 +2,28 @@
 import type { ChapterStatus } from '@/pages/progression/types';
 import { dateLocale } from '@/i18n';
 
+/** Deux quiz par chapitre (31/10/2026) : le quiz du cours (QCM sur le cours, compte dans Ma progression) et
+ *  l'approfondissement (de vrais problèmes en QCM, avec des réponses pièges ; à part de la maîtrise). */
+export type QuizType = 'cours' | 'approfondissement';
+
+/** Type d'un résultat, d'un passage ou d'un quiz ouvert ; absent : le quiz du cours (tout ce qui précède). */
+export const typeOf = (x: { type?: QuizType | null } | null | undefined): QuizType => x?.type ?? 'cours';
+
+/** Score de l'approfondissement qui donne le badge « Chapitre approfondi ». */
+export const BADGE_PCT = 80;
+
+/** Le dernier passage de l'approfondissement donne-t-il le badge « Chapitre approfondi » ? */
+export const isApprofondi = (a: SkillAssessment | null | undefined) =>
+  !!a && typeOf(a) === 'approfondissement' && pct(a) >= BADGE_PCT;
+
 /** Résultat d'un quiz (GET /skill-assessments/my/, POST /skill-assessments/submit/<id>/). */
 export interface SkillAssessment {
   id: number;
   chapter: number;
   chapter_name: string;
   subject_name: string | null;
+  /** Quiz du cours ou approfondissement (absent : le cours). */
+  type?: QuizType;
   /** Score pondéré (facile 1, moyen 2, difficile 3) : sert au pourcentage, jamais montré en points. */
   score: number;
   max_score: number;
@@ -62,7 +78,7 @@ export interface CorrectionItem {
 }
 
 /** Quiz commencé, pas encore envoyé (GET /skill-assessments/en-cours/) : « Reprendre ». */
-export interface QuizEnCours { chapitre: number; niveau: number; repondues: number; total: number; maj: string }
+export interface QuizEnCours { chapitre: number; niveau: number; type?: QuizType; repondues: number; total: number; maj: string }
 
 /** Un passage chargé (GET quiz/<id>/) : nouveau tirage, ou reprise d'un passage commencé. */
 export interface QuizStart {
@@ -108,30 +124,45 @@ export interface QuizChapter {
   subject: string | null;
   status: ChapterStatus;
   mastery: number | null;
-  /** Nombre de questions actives (0 = pas encore de quiz). */
+  /** Quiz du cours : nombre de questions actives (0 = pas encore de quiz). */
   ready: number;
   hub_url: string | null;
   last_at: string | null;
-  /** Dernier passage de l'élève. */
+  /** Dernier passage de l'élève au quiz du cours. */
   taken: SkillAssessment | null;
-  /** Quiz sorti il y a moins de 14 jours, pas encore passé depuis (étiquette « Nouveau »). */
+  /** Quiz du cours sorti il y a moins de 14 jours, pas encore passé depuis (étiquette « Nouveau »). */
   fresh: boolean;
+  /** L'approfondissement du chapitre : mêmes informations (ready 0 : pas encore d'approfondissement). */
+  deep: QuizStage;
 }
+
+/** Un des deux quiz d'un chapitre, vu par la liste. */
+export interface QuizStage { ready: number; taken: SkillAssessment | null; fresh: boolean }
+
+/** Le quiz du cours ou l'approfondissement d'un chapitre de la liste. */
+export const stageOf = (c: QuizChapter, type: QuizType): QuizStage => (type === 'cours' ? c : c.deep);
 
 /** Quiz ouvert : le chapitre, et d'où l'on vient pour la suite. */
 export interface ActiveQuiz {
   id: number; name: string; subject: string | null; hub_url: string | null;
   /** Niveau du quiz (un quiz = chapitre + niveau) ; absent : celui de l'élève. */
   levelId?: number | null;
+  /** Quiz du cours (défaut) ou approfondissement. */
+  type?: QuizType;
 }
 
-/** Clé d'un quiz : niveau + chapitre (« Nouveau », résultats). */
-export const quizKey = (levelId: number | null | undefined, chapterId: number) => `${levelId ?? ''}:${chapterId}`;
+/** Clé d'un quiz : niveau + chapitre, + type pour l'approfondissement (« Nouveau », passages en cours). */
+export const quizKey = (levelId: number | null | undefined, chapterId: number, type: QuizType = 'cours') =>
+  `${levelId ?? ''}:${chapterId}${type === 'cours' ? '' : `:${type}`}`;
 
-/** Dernier résultat de l'élève sur le quiz (chapitre, niveau) ; un passage sans niveau compte pour le sien. */
-export const takenOn = (mine: SkillAssessment[], chapterId: number, levelId: number | null | undefined, ownLevelId?: number | null) =>
-  mine.find((a) => a.chapter === chapterId && a.class_level === levelId)
-  ?? (levelId === ownLevelId ? mine.find((a) => a.chapter === chapterId && a.class_level == null) : undefined) ?? null;
+/** Dernier résultat de l'élève sur le quiz (chapitre, niveau, type) ; un passage sans niveau (forcément du cours)
+ *  compte pour le sien. */
+export const takenOn = (mine: SkillAssessment[], chapterId: number, levelId: number | null | undefined,
+  ownLevelId?: number | null, type: QuizType = 'cours') => {
+  const ofQuiz = mine.filter((a) => a.chapter === chapterId && typeOf(a) === type);
+  return ofQuiz.find((a) => a.class_level === levelId)
+    ?? (levelId === ownLevelId ? ofQuiz.find((a) => a.class_level == null) : undefined) ?? null;
+};
 
 export const DIFFICULTY: Record<Difficulty, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
 
