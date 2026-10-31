@@ -33,7 +33,7 @@ import { quizDecouvert, quizDejaDecouvert } from '@/components/skilliq/annonce';
 import { t } from '@/i18n';
 import { isFresh, quizKey, safeReturn, takenOn, type ActiveQuiz, type CorrectionItem, type QuizChapter, type QuizEnCours, type QuizQuestion, type SkillAssessment } from '@/components/skilliq/types';
 
-const SUBTITLE = 'Toutes les questions d’un chapitre, chronométrées, corrigées une à une, et ton bilan théorème par théorème.';
+const SUBTITLE = 'Toutes les questions d’un chapitre, corrigées une à une, sans chrono, et ton bilan théorème par théorème.';
 
 /** Page sur /skill-iq ; simple colonne quand le composant est affiché dans le profil (?tab=skilliq). */
 const Shell: React.FC<{ narrow?: boolean; children: React.ReactNode }> = ({ narrow = false, children }) => {
@@ -376,10 +376,10 @@ export const SkillIQSection: React.FC = () => {
     return (
       <Shell>
         {/* Invitation à s'inscrire, rien à indexer. */}
-        <SEO title={t('Quiz par chapitre – Fidni')} description={t('Des quiz chronométrés et corrigés par chapitre, avec un compte gratuit.')} noindex />
+        <SEO title={t('Quiz par chapitre – Fidni')} description={t('Des quiz corrigés par chapitre, sans chrono, avec un compte gratuit.')} noindex />
         <Header />
         <EmptyState tone="brand" icon={Brain} title={t('Les quiz par chapitre, avec ton compte')}
-          text={t('Des questions chronométrées et corrigées sur un chapitre, pour mesurer ta maîtrise théorème par théorème. Avec un compte gratuit, ton score est gardé dans ta progression.')}
+          text={t('Des questions corrigées sur un chapitre, sans chrono, pour mesurer ta maîtrise théorème par théorème. Avec un compte gratuit, ton score est gardé dans ta progression.')}
           action={<button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary min-h-11">{t('Créer mon compte')}</button>}
           secondary={<button type="button" onClick={() => openSignup('login')} className="fd-btn-ghost min-h-11 text-[13px]">{t('J’ai déjà un compte')}</button>} />
       </Shell>

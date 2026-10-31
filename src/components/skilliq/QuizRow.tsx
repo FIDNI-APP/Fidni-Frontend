@@ -4,7 +4,7 @@ import React from 'react';
 import { Brain, ChevronRight, Play, RotateCcw } from 'lucide-react';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { t } from '@/i18n';
-import { RING, estMinutes, frDate, pct, previousPct, quizSize, type QuizEnCours, type SkillAssessment } from './types';
+import { RING, frDate, pct, previousPct, quizSize, type QuizEnCours, type SkillAssessment } from './types';
 
 /** Petit anneau du dernier score (hors .fd-card : la règle CSS des cartes forcerait le vert). */
 export const ScoreRing: React.FC<{ value: number; size?: number }> = ({ value, size = 44 }) => (
@@ -68,7 +68,7 @@ export const QuizRow: React.FC<{
               <Delta a={taken} />
               {view && <span className="font-medium text-ink-soft">· {t('Voir mon résultat')}</span>}
             </>
-          ) : <span className="fd-nums">{t('{n} questions · {m} min', { n: quizSize(ready), m: estMinutes(ready) })}</span>}
+          ) : <span className="fd-nums">{t('{n} questions', { n: quizSize(ready) })}</span>}
         </span>
       </span>
       {view && <ChevronRight className="hidden h-4 w-4 shrink-0 text-ink-faint sm:block" aria-hidden />}

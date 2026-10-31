@@ -67,7 +67,7 @@ export interface QuizEnCours { chapitre: number; niveau: number; repondues: numb
 /** Un passage chargé (GET quiz/<id>/) : nouveau tirage, ou reprise d'un passage commencé. */
 export interface QuizStart {
   questions: QuizQuestion[];
-  /** Durée totale du minuteur et temps restant (reprise), en secondes. */
+  /** Durée prévue et temps restant (reprise : temps déjà passé), en secondes ; plus de chronomètre affiché. */
   seconds: number;
   left: number;
   reprise: boolean;
@@ -151,8 +151,6 @@ export const quizSize = (ready: number) => Math.min(Math.max(ready, 1), 30);
 export const isFresh = (since: string | undefined, taken: SkillAssessment | null | undefined) =>
   !!since && (!taken || new Date(taken.completed_at) < new Date(since));
 
-/** Durée du minuteur : 1 min par question (le chrono s'arrête pendant la correction de chaque question). */
-export const estMinutes = (ready: number) => quizSize(ready);
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 

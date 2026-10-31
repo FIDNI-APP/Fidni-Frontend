@@ -6,7 +6,7 @@ import { Section, StatTile } from '@/components/space/Page';
 import type { ChapterStatus } from '@/pages/progression/types';
 import { ChapterPlan } from './ChapterPlan';
 import { NewBadge, QuizRow, ScoreRing } from './QuizRow';
-import { bySubfield, estMinutes, pct, quizKey, quizSize, type QuizChapter, type QuizEnCours } from './types';
+import { bySubfield, pct, quizKey, quizSize, type QuizChapter, type QuizEnCours } from './types';
 import type { QuizChapters } from './useQuizChapters';
 import { t } from '@/i18n';
 
@@ -49,7 +49,7 @@ const NextQuizCard: React.FC<{ chapter: QuizChapter; enCours: QuizEnCours | null
             <h3 className="fd-display mt-2 text-[22px] leading-tight text-ink sm:text-[24px]">{chapter.name}</h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-faint">
               <Clock className="h-3.5 w-3.5" aria-hidden />
-              <span className="fd-nums">{t('{n} questions · chrono {m} min', { n: quizSize(chapter.ready), m: estMinutes(chapter.ready) })}</span>
+              <span className="fd-nums">{t('{n} questions', { n: quizSize(chapter.ready) })}</span>
               {chapter.subfield && <span>· {chapter.subfield}</span>}
             </p>
           </div>

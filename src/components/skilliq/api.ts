@@ -33,7 +33,7 @@ export const getQuiz = async (chapterId: number, levelId?: number | null, nouvea
     verifiees: (data.verifiees ?? []) as CorrectionItem[] };
 };
 
-/** Correction d'une question de son passage dès qu'on y a répondu (réponse verrouillée) ; `temps` : minuteur utilisé.
+/** Correction d'une question de son passage dès qu'on y a répondu (réponse verrouillée) ; `temps` : temps passé (statistiques).
  *  Plusieurs bonnes réponses : `answer` = les index cochés (juste seulement si ce sont exactement les bonnes). */
 export const checkAnswer = async (questionId: number, answer: Answer, temps: number) =>
   (await api.post(`/skill-assessments/verifier/${questionId}/`, { answer, temps })).data as CorrectionItem;
