@@ -114,6 +114,9 @@ html.dark .fdm-card { box-shadow: none; border: 1px solid var(--fdm-line); }
 .fdm-math img { max-width: 100%; height: auto; border-radius: 10px; }
 .fdm-math table { display: block; overflow-x: auto; }
 
+/* Passage d'un quiz : pas de barre d'onglets (rester concentré). */
+body.fdm-focus ion-tab-bar { display: none; }
+
 /* Rangées qui défilent à l'horizontale (niveaux) : sans barre de défilement. */
 .fdm-hscroll { scrollbar-width: none; }
 .fdm-hscroll::-webkit-scrollbar { display: none; }
@@ -126,6 +129,6 @@ ion-tab-button ion-icon { font-size: 24px; }
 ion-toolbar { --border-width: 0 0 1px 0; --border-color: var(--fdm-line); }
 /* Boutons en casse normale (Android les met en majuscules par défaut), comme sur le site. */
 ion-button { text-transform: none; letter-spacing: normal; font-weight: 650; }
-ion-segment-button { text-transform: none; letter-spacing: normal; font-weight: 600; }
+ion-segment-button { text-transform: none; letter-spacing: normal; font-weight: 600; min-width: 0; --padding-start: 4px; --padding-end: 4px; }
 ion-alert .alert-button { text-transform: none !important; font-weight: 650; }
 ion-content.fdm-plain { --background: var(--ion-background-color); }

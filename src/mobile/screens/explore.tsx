@@ -1,22 +1,24 @@
 /**
  * Onglet « Explorer » : Exercices / Cours / Devoirs, le niveau (celui de l'élève d'abord), les chapitres du
  * programme dans l'ordre (dossiers du site : GET /api/hubs/), puis les contenus d'un chapitre, les plus utiles à
- * l'élève d'abord (« Pour toi », sort=recommended). Bac national par année dans Devoirs.
+ * l'élève d'abord (« Pour toi », sort=recommended). Bac national par année dans Devoirs ; quiz par chapitre (quiz.tsx).
  */
 import { useEffect, useState } from 'react';
-import {
-  IonIcon, IonInfiniteScroll, IonInfiniteScrollContent, IonLabel, IonSegment, IonSegmentButton, IonToggle,
-} from '@ionic/react';
-import { chevronForward, folderOpenOutline, ribbonOutline, schoolOutline } from 'ionicons/icons';
+import { IonIcon, IonLabel, IonSegment, IonSegmentButton } from '@ionic/react';
+import { chevronForward, folderOpenOutline, ribbonOutline } from 'ionicons/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHub, getLevelFolders, getNationalYears, profileLevel, type HubFolder, type HubSection, type LevelFolder } from '@/lib/api/hubApi';
-import { examContentAPI, exerciseContentAPI, lessonContentAPI } from '@/lib/api/contentItemApi';
 import type { ContentExamFilters } from '@/types/content';
 import { t } from '@/i18n';
 import { useNav } from '../nav';
-import { countLabel, DifficultyChip, Empty, ErrorState, Loading, Screen, StatusChip, haptic, useLoad } from '../ui';
-import { ContentScreen, type ContentKind } from './ContentScreen';
+import { countLabel, Empty, ErrorState, Loading, Screen, haptic, useLoad } from '../ui';
+import type { ContentKind } from './ContentScreen';
+import { ContentListScreen } from './ContentList';
+import { QuizChapters } from './quiz';
 
+export { ContentListScreen };
+
+type Section = HubSection | 'quiz';
 const SECTIONS: { key: HubSection; label: string; kind: ContentKind }[] = [
   { key: 'exercises', label: 'Exercices', kind: 'exercise' },
   { key: 'lessons', label: 'Cours', kind: 'lesson' },
@@ -27,14 +29,15 @@ const LEVEL_KEY = 'fdm:niveau';
 export function ExploreRoot() {
   const { user } = useAuth();
   const nav = useNav();
-  const [section, setSection] = useState<HubSection>('exercises');
+  const [section, setSection] = useState<Section>('exercises');
   const mine = profileLevel(user);
   const [levelSlug, setLevelSlug] = useState<string | null>(() => {
     try { return mine?.slug ?? localStorage.getItem(LEVEL_KEY); } catch { return mine?.slug ?? null; }
   });
   useEffect(() => { if (mine?.slug) setLevelSlug(mine.slug); }, [mine?.slug]);
 
-  const levels = useLoad(() => getLevelFolders(section), [section]);
+  // Quiz : les niveaux de la rubrique Exercices (un quiz = un chapitre d'un niveau).
+  const levels = useLoad(() => getLevelFolders(section === 'quiz' ? 'exercises' : section), [section]);
   const available = (levels.data?.levels ?? []).filter((l) => l.count > 0);
   const current = available.find((l) => l.slug === levelSlug) ?? available[0];
 
@@ -49,8 +52,9 @@ export function ExploreRoot() {
   return (
     <Screen title={t('Explorer')} back={false} large onRefresh={async () => { await levels.reload(); setRefreshKey((k) => k + 1); }}>
       <div style={{ padding: '6px 16px 0' }}>
-        <IonSegment value={section} onIonChange={(e) => { haptic.tap(); setSection(e.detail.value as HubSection); }}>
+        <IonSegment value={section} onIonChange={(e) => { haptic.tap(); setSection(e.detail.value as Section); }}>
           {SECTIONS.map((s) => <IonSegmentButton key={s.key} value={s.key}><IonLabel>{t(s.label)}</IonLabel></IonSegmentButton>)}
+          <IonSegmentButton value="quiz"><IonLabel>{t('Quiz')}</IonLabel></IonSegmentButton>
         </IonSegment>
       </div>
 
@@ -86,7 +90,9 @@ export function ExploreRoot() {
         </button>
       )}
 
-      {current && <ChapterFolders key={`${section}-${current.slug}-${refreshKey}`} section={section} level={current} />}
+      {current && (section === 'quiz'
+        ? <QuizChapters key={`quiz-${current.slug}-${refreshKey}`} level={current} />
+        : <ChapterFolders key={`${section}-${current.slug}-${refreshKey}`} section={section} level={current} />)}
     </Screen>
   );
 }
@@ -160,82 +166,6 @@ function Ring({ pct }: { pct: number }) {
         strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 21 21)" />
       <text x="21" y="25" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--ion-text-color)">{Math.round(pct * 100)}%</text>
     </svg>
-  );
-}
-
-interface ListItem {
-  id: number; title: string; difficulty?: string | null; user_complete?: 'success' | 'review' | null;
-  item_count?: number; national_year?: number | null;
-}
-
-type ListPage = { results: unknown[]; next: string | null };
-const LISTS: Record<ContentKind, { list: (filters: ContentExamFilters, page: number) => Promise<ListPage> }> = {
-  exercise: exerciseContentAPI, exam: examContentAPI, lesson: lessonContentAPI,
-};
-
-/** Contenus d'un chapitre (ou d'une année du Bac), page par page en défilant ; « À faire » cache ce qui est réussi. */
-export function ContentListScreen({ title, kind, filters }: { title: string; kind: ContentKind; filters: ContentExamFilters }) {
-  const { isAuthenticated } = useAuth();
-  const nav = useNav();
-  const [todo, setTodo] = useState(false);
-  const [items, setItems] = useState<ListItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  const query: ContentExamFilters = {
-    ...filters, sort: 'recommended', ...(kind !== 'lesson' ? { view: 'card' as const } : {}),
-    ...(kind === 'exam' && filters.is_national === undefined ? { is_national: false } : {}), ...(todo ? { todo: true } : {}),
-  };
-  const first = useLoad(() => LISTS[kind].list(query, 1), [JSON.stringify(query), isAuthenticated]);
-  useEffect(() => {
-    if (!first.data) return;
-    setItems(first.data.results as unknown as ListItem[]);
-    setPage(1);
-    setHasMore(!!first.data.next);
-  }, [first.data]);
-
-  const more = async () => {
-    const r = await LISTS[kind].list(query, page + 1);
-    setItems((cur) => [...cur, ...(r.results as unknown as ListItem[])]);
-    setPage(page + 1);
-    setHasMore(!!r.next);
-  };
-
-  return (
-    <Screen title={title} onRefresh={first.reload}>
-      {isAuthenticated && kind !== 'lesson' && (
-        <div className="fdm-card" style={{ margin: '14px 16px 4px', padding: '4px 16px', display: 'flex', alignItems: 'center' }}>
-          <IonToggle checked={todo} onIonChange={(e) => { haptic.tap(); setTodo(e.detail.checked); }} justify="space-between" style={{ width: '100%' }}>
-            {t('Seulement ce qu’il me reste à faire')}
-          </IonToggle>
-        </div>
-      )}
-      {first.loading && !first.data && <Loading />}
-      {first.error && !first.data ? <ErrorState onRetry={first.reload} /> : null}
-      <div style={{ padding: '10px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {items.map((it, i) => (
-          <button key={it.id} type="button" className="fdm-card fdm-pressable" onClick={() => { haptic.tap(); nav.push(() => <ContentScreen id={it.id} kind={kind} />); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', textAlign: 'start', color: 'inherit' }}>
-            <span className="fdm-muted" style={{ width: 22, fontWeight: 700, fontSize: 14 }}>{i + 1}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span className="fdm-title" style={{ display: 'block', fontSize: 16.5, fontWeight: 600, lineHeight: 1.3 }}>{it.title}</span>
-              <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, alignItems: 'center' }}>
-                <DifficultyChip value={it.difficulty} />
-                <StatusChip value={it.user_complete} />
-                {it.item_count ? <span className="fdm-muted" style={{ fontSize: 12.5 }}>{countLabel(it.item_count, '{n} question', '{n} questions')}</span> : null}
-              </span>
-            </span>
-            <IonIcon flipRtl icon={chevronForward} className="fdm-muted" />
-          </button>
-        ))}
-        {first.data && !items.length && (
-          <Empty icon={schoolOutline} title={todo ? t('Tout est fait ici, bravo !') : t('Rien ici pour l’instant')} />
-        )}
-      </div>
-      <IonInfiniteScroll disabled={!hasMore} onIonInfinite={async (e) => { try { await more(); } finally { e.target.complete(); } }}>
-        <IonInfiniteScrollContent />
-      </IonInfiniteScroll>
-    </Screen>
   );
 }
 

@@ -17,6 +17,7 @@ import { useSession } from '../session';
 import { countLabel, DifficultyChip, Screen, haptic, useLoad } from '../ui';
 import { ContentScreen } from './ContentScreen';
 import { ContentListScreen, LevelScreen, NationalYears } from './explore';
+import { QuizScreen, quizFor } from './quiz';
 
 export function HomeRoot() {
   const { user, isAuthenticated } = useAuth();
@@ -96,7 +97,10 @@ function ObjectifCard({ objectif, levelId }: { objectif: Objectif; levelId: numb
     else if (a.kind === 'devoirs') nav.push(() => <ContentListScreen title={chapter?.name ?? t('Devoirs')} kind="exam" filters={chapterFilters} />);
     else if (a.kind === 'nationaux') nav.push(() => <NationalYears />);
     else if (a.kind === 'ds_blanc' && a.test_id) openWeb(`/revisions/ds/${a.test_id}/blanc`);
-    else if (a.kind === 'quiz') openWeb('/skill-iq');
+    else if (a.kind === 'quiz') {
+      if (chapter && levelId) void quizFor(chapter, levelId).then((q) => (q ? nav.push(() => <QuizScreen quiz={q} />) : openWeb('/skill-iq')));
+      else openWeb('/skill-iq');
+    }
   };
   return (
     <>

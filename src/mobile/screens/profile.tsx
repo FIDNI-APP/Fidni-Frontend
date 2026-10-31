@@ -17,6 +17,8 @@ import { useNav } from '../nav';
 import { useSession } from '../session';
 import { Empty, ErrorState, Loading, Screen, StatusChip, haptic, useLoad } from '../ui';
 import { ContentScreen, type ContentKind } from './ContentScreen';
+import { QuizListScreen } from './quiz';
+import { profileLevel } from '@/lib/api/hubApi';
 
 export function ProfileRoot() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -65,7 +67,11 @@ export function ProfileRoot() {
       {isAuthenticated && (
         <IonList inset>
           {row(bookmarkOutline, t('Mes favoris'), () => nav.push(() => <SavedScreen />))}
-          {row(helpCircleOutline, t('Quiz par chapitre'), () => openWeb('/skill-iq'))}
+          {row(helpCircleOutline, t('Quiz par chapitre'), () => {
+            const lv = profileLevel(user);
+            if (lv) nav.push(() => <QuizListScreen level={{ id: Number(lv.id), name: lv.name, slug: lv.slug, url: '', count: 0, chapters_total: 0, chapters_filled: 0 }} />);
+            else openWeb('/skill-iq');
+          })}
           {row(bookOutline, t('Mes cahiers'), () => openWeb('/enregistrements?onglet=cahiers'))}
           {row(peopleOutline, t('Classes'), () => openWeb('/classrooms'))}
           {row(trophyOutline, t('Concours'), () => openWeb('/concours'))}

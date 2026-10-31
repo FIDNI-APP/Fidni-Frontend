@@ -1,39 +1,49 @@
 /**
- * Un exercice, un devoir ou une leçon dans l'application. Pour chaque question : énoncé, « Indication »,
- * « Solution », puis « Tu avais trouvé ? » (Réussi / À revoir ; un devoir ajoute « En partie »). Mêmes appels que la
- * page du site (pages/content/ContentDetail.tsx) : progression par question (`assess_many`, résultat du contenu
- * déduit quand tout est évalué), aides ouvertes (`/aide/`), vue du jour, temps passé, favori.
+ * Un exercice, un devoir ou une leçon dans l'application, comme la page du site (pages/content/ContentDetail.tsx) :
+ * une seule feuille (énoncé, parties, questions numérotées) ; pour chaque question « Indication », « Solution »,
+ * « Tu avais trouvé ? » et la réussite des élèves (question_stats) ; vues, j'aime, discussion. Mêmes appels que le
+ * site : progression par question (`assess_many`, résultat déduit quand tout est évalué), aides (`/aide/`), vue du
+ * jour, temps passé, favori, liste de révision, signalement. Le « ⋯ » garde l'en-tête léger.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { IonButton, IonIcon, IonProgressBar } from '@ionic/react';
+import { IonButton, IonIcon, IonProgressBar, useIonActionSheet, useIonToast } from '@ionic/react';
 import {
-  bookmark, bookmarkOutline, bulbOutline, checkmarkCircle, eyeOffOutline, eyeOutline, refreshCircle, shareOutline,
-  ellipseOutline, arrowForward,
+  arrowForward, bookmark, bookmarkOutline, bulbOutline, chatbubbleOutline, checkmarkCircle, ellipseOutline,
+  ellipsisHorizontal, eyeOffOutline, eyeOutline, peopleOutline, refreshCircle, thumbsUpOutline,
 } from 'ionicons/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTimeTracker } from '@/hooks/usePageTimeTracker';
 import {
   assessQuestions, examContentAPI, exerciseContentAPI, getRecommendations, lessonContentAPI, type RecommendedItem,
 } from '@/lib/api/contentItemApi';
+import { getQuestionStats, type QuestionStat } from '@/lib/api/statisticsApi';
+import { quickAddToRevision } from '@/lib/api/revisionListApi';
 import { recordHelp } from '@/lib/helpTracking';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import { publicUrl, shareLink } from '@/lib/native';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
-import type { ExerciseBlock, FlexibleExerciseStructure, SubQuestionBlock } from '@/components/content/editor/FlexibleExerciseEditor';
+import type { ExerciseBlock, FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
+import type { Comment, VoteValue } from '@/types';
 import type { AssessmentStatus, ContentBlock, ContentExam, ContentExercise, ContentLesson } from '@/types/content';
 import { t } from '@/i18n';
 import { useNav } from '../nav';
 import { useSession } from '../session';
-import { DifficultyChip, ErrorState, Loading, MathHtml, Screen, haptic, useLoad } from '../ui';
+import { DifficultyChip, ErrorState, Loading, MathHtml, Screen, countLabel, haptic, useLoad } from '../ui';
+import { Discussion, Votes } from './Discussion';
+import { ReportSheet } from './ReportSheet';
 
 export type ContentKind = 'exercise' | 'exam' | 'lesson';
-type Content = ContentExercise | ContentExam | ContentLesson;
+type Content = (ContentExercise | ContentExam | ContentLesson) & { comments?: Comment[]; comment_count?: number };
 type Progress = Record<string, AssessmentStatus>;
+type Stats = Record<string, QuestionStat>;
 
 const API = { exercise: exerciseContentAPI, exam: examContentAPI, lesson: lessonContentAPI };
 const KIND_LABEL: Record<ContentKind, string> = { exercise: 'Exercice', exam: 'Devoir', lesson: 'Leçon' };
+const PATH: Record<ContentKind, string> = { exercise: 'exercises', exam: 'exams', lesson: 'lessons' };
 const SUB_LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+// En dessous, « 2/3 » plutôt qu'un pourcentage trompeur (même règle que QuestionChart du site).
+const PERCENT_FROM = 5;
 
 const OPTIONS: Record<AssessmentStatus, { label: string; icon: string; color: string; soft: string }> = {
   success: { label: 'Réussi', icon: checkmarkCircle, color: 'var(--ion-color-primary)', soft: 'var(--fdm-brand-soft)' },
@@ -42,10 +52,26 @@ const OPTIONS: Record<AssessmentStatus, { label: string; icon: string; color: st
   failed: { label: 'À revoir', icon: refreshCircle, color: 'var(--fdm-gold-strong)', soft: 'var(--fdm-gold-soft)' },
 };
 
+/** Questions numérotées (la numérotation repart à 1 à chaque partie d'un devoir) : chemin et libellé. */
+function numbering(structure?: FlexibleExerciseStructure): { path: string; label: string }[] {
+  const out: { path: string; label: string }[] = [];
+  let n = 0;
+  for (const b of structure?.blocks ?? []) {
+    if (b.type === 'section') { n = 0; continue; }
+    if (b.type !== 'question') continue;
+    n += 1;
+    if (b.subQuestions?.length) b.subQuestions.forEach((sq, i) => out.push({ path: `${b.id}.${sq.id}`, label: t('Question {n} {lettre}', { n, lettre: SUB_LETTERS[i] ?? i + 1 }) }));
+    else out.push({ path: b.id, label: t('Question {n}', { n }) });
+  }
+  return out;
+}
+
 export function ContentScreen({ id, kind }: { id: number | string; kind: ContentKind }) {
   const { isAuthenticated } = useAuth();
-  const { requireAccount } = useSession();
+  const { requireAccount, openWeb } = useSession();
   const nav = useNav();
+  const [sheet] = useIonActionSheet();
+  const [toast] = useIonToast();
   const api = API[kind];
   const sid = String(id);
 
@@ -64,6 +90,8 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
   const [completion, setCompletion] = useState<'success' | 'review' | null>(null);
   const [saved, setSaved] = useState(false);
   const [next, setNext] = useState<RecommendedItem[] | null>(null);
+  const [stats, setStats] = useState<Stats>({});
+  const [reporting, setReporting] = useState(false);
   const progressRef = useRef(progress);
   progressRef.current = progress;
 
@@ -73,6 +101,11 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
     setCompletion(data.content.user_complete ?? null);
     setSaved(!!data.content.user_save);
   }, [data]);
+
+  // Réussite des élèves question par question ; relue peu après une évaluation (le serveur efface son cache).
+  const loadStats = () => { if (kind !== 'lesson') getQuestionStats(sid).then((r) => setStats(r.questions || {})).catch(() => undefined); };
+  useEffect(loadStats, [sid, kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  const statsTimer = useRef<number>();
 
   usePageTimeTracker({ contentType: kind, contentId: sid, enabled: !!content });
 
@@ -90,6 +123,7 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
 
   const structure = content?.structure as unknown as FlexibleExerciseStructure | undefined;
   const leaves = useMemo(() => (kind === 'lesson' ? [] : assessablePaths(structure)), [structure, kind]);
+  const questions = useMemo(() => (kind === 'lesson' ? [] : numbering(structure)), [structure, kind]);
   const assessedCount = leaves.filter((p) => progress[p]).length;
   const options: AssessmentStatus[] = kind === 'exam' ? ['success', 'partial', 'review'] : ['success', 'review'];
 
@@ -109,6 +143,8 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
     if (value === 'success') haptic.success(); else haptic.tap();
     try {
       await assessQuestions(sid, { [path]: value }, { source, ...(sendCompletion ? { completion: target } : {}) });
+      window.clearTimeout(statsTimer.current);
+      statsTimer.current = window.setTimeout(loadStats, 700);
       if (sendCompletion && target) getRecommendations(sid, target).then(setNext).catch(() => setNext([]));
     } catch {
       setProgress(before);
@@ -128,17 +164,30 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
     try { if (was) await api.unsave(sid); else await api.save(sid); } catch { setSaved(was); }
   };
 
-  const share = () => {
+  const more = () => {
     if (!content) return;
     haptic.tap();
-    const path = kind === 'exercise' ? 'exercises' : kind === 'exam' ? 'exams' : 'lessons';
-    void shareLink({ title: content.title, text: t('{titre} – sur Fidni', { titre: content.title }), url: publicUrl(`/${path}/${sid}`) });
+    void sheet({
+      header: content.title,
+      buttons: [
+        { text: t('Partager'), handler: () => { void shareLink({ title: content.title, text: t('{titre} – sur Fidni', { titre: content.title }), url: publicUrl(`/${PATH[kind]}/${sid}`) }); } },
+        ...(kind !== 'lesson' ? [{ text: t('Ajouter à une liste de révision'), handler: () => {
+          if (!requireAccount()) return;
+          quickAddToRevision(Number(sid))
+            .then((r) => toast({ message: t('Ajouté à « {liste} »', { liste: r.list_name }), duration: 2200, position: 'top' }))
+            .catch(() => toast({ message: t('Impossible d’ajouter ce contenu.'), duration: 2200, position: 'top' }));
+        } }] : []),
+        { text: t('Version PDF à imprimer'), handler: () => openWeb(`/${PATH[kind]}/${sid}/pdf`) },
+        { text: t('Signaler une erreur'), handler: () => { if (requireAccount(t('Crée un compte gratuit pour signaler une erreur : tu recevras la réponse de l’équipe.'))) setReporting(true); } },
+        { text: t('Annuler'), role: 'cancel' },
+      ],
+    });
   };
 
   const actions = content ? (
     <>
-      <IonButton onClick={share} aria-label={t('Partager')}><IonIcon slot="icon-only" icon={shareOutline} /></IonButton>
       <IonButton onClick={toggleSave} aria-label={t('Favori')}><IonIcon slot="icon-only" icon={saved ? bookmark : bookmarkOutline} /></IonButton>
+      <IonButton onClick={more} aria-label={t('Plus')}><IonIcon slot="icon-only" icon={ellipsisHorizontal} /></IonButton>
     </>
   ) : undefined;
 
@@ -165,7 +214,8 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
             ? <div className="fdm-card fdm-math" style={{ margin: '0 16px', padding: '18px 18px 8px' }}>
                 <LessonRenderer structure={content.structure as unknown as FlexibleLessonStructure} />
               </div>
-            : <Blocks structure={structure} progress={progress} options={options} onAssess={assess} onHelp={onHelp} />}
+            : <Paper structure={structure} progress={progress} options={options} stats={stats} onAssess={assess} onHelp={onHelp} />}
+
           {completion && next !== null && next.length > 0 && (
             <div style={{ margin: '22px 16px 0' }}>
               <div className="fdm-section-label" style={{ margin: '0 4px 10px' }}>
@@ -184,6 +234,10 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
               ))}
             </div>
           )}
+
+          <Votes id={sid} api={api} likes={content.like_count ?? 0} dislikes={content.dislike_count ?? 0} userVote={(content.user_vote ?? 0) as VoteValue} />
+          <Discussion id={sid} api={api} initial={content.comments ?? []} />
+          <ReportSheet open={reporting} onClose={() => setReporting(false)} contentId={sid} kind={kind} questions={questions} />
         </>
       )}
     </Screen>
@@ -193,99 +247,132 @@ export function ContentScreen({ id, kind }: { id: number | string; kind: Content
 function ContentHeading({ content, kind }: { content: Content; kind: ContentKind }) {
   const chapter = content.chapters?.[0]?.name;
   const level = content.class_levels?.[0]?.name;
+  const comments = content.comment_count ?? content.comments?.length ?? 0;
+  const credit = (content.structure as { credit?: string } | undefined)?.credit;
+  const meta = (icon: string, value: number | string) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><IonIcon icon={icon} />{value}</span>
+  );
   return (
     <div style={{ padding: '18px 20px 14px' }}>
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--fdm-gold-strong)' }}>
         {[t(KIND_LABEL[kind]), chapter, level].filter(Boolean).join(' · ')}
       </div>
       <h1 className="fdm-title" style={{ fontSize: 25, lineHeight: 1.2, margin: '8px 0 10px', fontWeight: 600 }}>{content.title}</h1>
-      <DifficultyChip value={content.difficulty} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, fontSize: 13.5 }} className="fdm-muted">
+        <DifficultyChip value={content.difficulty} />
+        {meta(eyeOutline, content.view_count ?? 0)}
+        {meta(thumbsUpOutline, content.like_count ?? 0)}
+        {meta(chatbubbleOutline, comments)}
+      </div>
+      {(credit || content.author?.username) && (
+        <div className="fdm-muted" style={{ fontSize: 13, marginTop: 8 }}>
+          {credit || t('Par {auteur}', { auteur: content.author?.is_deleted ? t('Compte supprimé') : content.author.username })}
+        </div>
+      )}
     </div>
   );
 }
 
-interface BlocksProps {
+interface PaperProps {
   structure?: FlexibleExerciseStructure;
   progress: Progress;
   options: AssessmentStatus[];
+  stats: Stats;
   onAssess: (path: string, status: AssessmentStatus, source?: 'question' | 'apres_solution') => void;
   onHelp: (path: string, kind: 'indice' | 'solution') => void;
 }
 
-/** Énoncé, parties (devoirs : la numérotation repart à 1) et questions. */
-function Blocks({ structure, progress, options, onAssess, onHelp }: BlocksProps) {
+/** Toute la feuille dans un seul cadre, comme sur le site : énoncé, parties (devoirs) et questions. */
+function Paper({ structure, ...rest }: PaperProps) {
   let n = 0;
+  const blocks = structure?.blocks ?? [];
   return (
-    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {(structure?.blocks ?? []).map((block) => {
+    <div className="fdm-card" style={{ margin: '0 16px', padding: '4px 16px 6px' }}>
+      {blocks.map((block, i) => {
+        const divider: React.CSSProperties = i ? { borderTop: '1px solid var(--fdm-line)' } : {};
         if (block.type === 'section') {
           n = 0;
           return (
-            <div key={block.id} className="fdm-title" style={{ fontSize: 20, fontWeight: 600, margin: '14px 4px 0' }}>
-              <MathHtml html={block.content?.html} />
+            <div key={block.id} style={{ ...divider, padding: '18px 0 6px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <div className="fdm-title" style={{ flex: 1, fontSize: 19, fontWeight: 600, color: 'var(--ion-color-primary)' }}><MathHtml html={block.content?.html} /></div>
+              {Number(block.points) > 0 && <span className="fdm-muted" style={{ fontSize: 12.5, fontWeight: 700 }}>{countLabel(Number(block.points), '{n} pt', '{n} pts')}</span>}
             </div>
           );
         }
         if (block.type === 'context') {
-          return (
-            <div key={block.id} className="fdm-card" style={{ padding: '16px 18px' }}>
-              <MathHtml html={block.content?.html} />
-            </div>
-          );
+          return <div key={block.id} style={{ ...divider, padding: '14px 0' }}><MathHtml html={block.content?.html} /></div>;
         }
         n += 1;
-        return <QuestionCard key={block.id} block={block} number={n} progress={progress} options={options} onAssess={onAssess} onHelp={onHelp} />;
+        return <div key={block.id} style={{ ...divider, padding: '14px 0' }}><Question block={block} number={n} {...rest} /></div>;
       })}
     </div>
   );
 }
 
-function QuestionCard({ block, number, progress, options, onAssess, onHelp }: { block: ExerciseBlock; number: number } & Omit<BlocksProps, 'structure'>) {
+function Question({ block, number, ...rest }: { block: ExerciseBlock; number: number } & Omit<PaperProps, 'structure'>) {
   const subs = block.subQuestions ?? [];
   return (
-    <div className="fdm-card" style={{ padding: '16px 16px 14px' }}>
-      <div style={{ display: 'flex', gap: 12 }}>
+    <>
+      <div style={{ display: 'flex', gap: 10 }}>
         <span style={{
-          flexShrink: 0, width: 28, height: 28, borderRadius: 14, background: 'var(--fdm-brand-soft)', color: 'var(--ion-color-primary)',
-          display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 14,
+          flexShrink: 0, width: 26, height: 26, borderRadius: 13, background: 'var(--fdm-brand-soft)', color: 'var(--ion-color-primary)',
+          display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13.5, marginTop: 1,
         }}>{number}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <MathHtml html={block.content?.html} />
-          {block.points ? <div className="fdm-muted" style={{ fontSize: 12, marginTop: 4 }}>{t('{n} pts', { n: String(block.points) })}</div> : null}
+          {Number(block.points) > 0 && <div className="fdm-muted" style={{ fontSize: 12, marginTop: 4, fontWeight: 600 }}>{countLabel(Number(block.points), '{n} pt', '{n} pts')}</div>}
         </div>
       </div>
       {subs.length === 0
-        ? <Leaf path={block.id} hint={block.hint} solution={block.solution} progress={progress} options={options} onAssess={onAssess} onHelp={onHelp} />
-        : subs.map((sq: SubQuestionBlock, i) => (
-            <div key={sq.id} style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--fdm-line)' }}>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <span style={{ fontWeight: 700, color: 'var(--fdm-muted)', minWidth: 18 }}>{SUB_LETTERS[i] ?? i + 1})</span>
+        ? <Leaf path={block.id} hint={block.hint} solution={block.solution} {...rest} />
+        : subs.map((sq, i) => (
+            <div key={sq.id} style={{ marginTop: 14, marginInlineStart: 36 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontWeight: 700, color: 'var(--fdm-muted)', minWidth: 16 }}>{SUB_LETTERS[i] ?? i + 1})</span>
                 <div style={{ flex: 1, minWidth: 0 }}><MathHtml html={sq.content?.html} /></div>
               </div>
-              <Leaf path={`${block.id}.${sq.id}`} hint={sq.hint} solution={sq.solution} progress={progress} options={options} onAssess={onAssess} onHelp={onHelp} />
+              <Leaf path={`${block.id}.${sq.id}`} hint={sq.hint} solution={sq.solution} indent={24} {...rest} />
             </div>
           ))}
-    </div>
+    </>
   );
 }
 
-/** Indication, solution et auto-évaluation d'une question (ou sous-question). */
-function Leaf({ path, hint, solution, progress, options, onAssess, onHelp }: {
+/** Réussite des élèves sur une question : « 2/3 » tant qu'il y a peu d'évaluations, un pourcentage ensuite. */
+function ClassRate({ stat }: { stat?: QuestionStat }) {
+  if (!stat || stat.total < 1) return null;
+  const pct = Math.round((stat.success / stat.total) * 100);
+  const low = stat.total >= PERCENT_FROM && pct < 50;
+  return (
+    <span title={t('Élèves qui réussissent cette question')} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, fontWeight: 700,
+      color: low ? 'var(--fdm-gold-strong)' : 'var(--fdm-muted)',
+    }}>
+      <IonIcon icon={peopleOutline} />
+      {stat.total >= PERCENT_FROM ? t('{pct} % réussissent', { pct }) : t('{n}/{total} réussissent', { n: stat.success, total: stat.total })}
+    </span>
+  );
+}
+
+/** Indication, solution, réussite des élèves et auto-évaluation d'une question (ou sous-question). */
+function Leaf({ path, hint, solution, indent = 36, progress, options, stats, onAssess, onHelp }: {
   path: string; hint?: ContentBlock; solution?: ContentBlock;
-} & Omit<BlocksProps, 'structure'>) {
+  /** Retrait : aligné sur l'énoncé (après le numéro, ou la lettre d'une sous-question). */
+  indent?: number;
+} & Omit<PaperProps, 'structure'>) {
   const [hintOpen, setHintOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const current = progress[path];
   const shown = current === 'failed' || (current === 'partial' && !options.includes('partial')) ? 'review' : current;
 
   const pill = (active: boolean): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', borderRadius: 18, fontSize: 14, fontWeight: 600,
+    display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 13px', borderRadius: 17, fontSize: 13.5, fontWeight: 600,
     background: active ? 'var(--ion-color-primary)' : 'rgba(120,115,105,.10)', color: active ? '#fff' : 'var(--ion-text-color)',
   });
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div style={{ marginTop: 10, marginInlineStart: indent }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
         {hint?.html && (
           <button type="button" className="fdm-pressable" style={pill(hintOpen)}
             onClick={() => { haptic.tap(); if (!hintOpen) onHelp(path, 'indice'); setHintOpen(!hintOpen); }}>
@@ -311,25 +398,27 @@ function Leaf({ path, hint, solution, progress, options, onAssess, onHelp }: {
           <MathHtml html={solution.html} />
         </div>
       )}
-      <div style={{ marginTop: 12 }}>
-        <div className="fdm-muted" style={{ fontSize: 12.5, marginBottom: 6 }}>{t('Tu avais trouvé ?')}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, 1fr)`, gap: 8 }}>
-          {options.map((o) => {
-            const opt = OPTIONS[o];
-            const active = shown === o;
-            return (
-              <button key={o} type="button" className="fdm-pressable" aria-pressed={active}
-                onClick={() => onAssess(path, o, solutionOpen ? 'apres_solution' : 'question')}
-                style={{
-                  height: 42, borderRadius: 12, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  background: active ? opt.soft : 'transparent', color: active ? opt.color : 'var(--fdm-muted)',
-                  border: `1.5px solid ${active ? opt.color : 'var(--fdm-line)'}`,
-                }}>
-                <IonIcon icon={opt.icon} />{t(opt.label)}
-              </button>
-            );
-          })}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 6 }}>
+        <span className="fdm-muted" style={{ fontSize: 12.5, flex: 1 }}>{t('Tu avais trouvé ?')}</span>
+        <ClassRate stat={stats[path]} />
+      </div>
+      {/* Un seul rang, choix de même largeur (deux pour un exercice, trois pour un devoir). */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, 1fr)`, gap: 6 }}>
+        {options.map((o) => {
+          const opt = OPTIONS[o];
+          const active = shown === o;
+          return (
+            <button key={o} type="button" className="fdm-pressable" aria-pressed={active}
+              onClick={() => onAssess(path, o, solutionOpen ? 'apres_solution' : 'question')}
+              style={{
+                height: 36, padding: '0 6px', borderRadius: 12, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                background: active ? opt.soft : 'transparent', color: active ? opt.color : 'var(--fdm-muted)',
+                border: `1.5px solid ${active ? opt.color : 'var(--fdm-line)'}`, whiteSpace: 'nowrap',
+              }}>
+              <IonIcon icon={opt.icon} />{t(opt.label)}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
