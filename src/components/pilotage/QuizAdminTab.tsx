@@ -7,17 +7,29 @@
 // élèves avant d'être validées ici, une à une ou toutes celles du chapitre une fois relues.
 // 16/10/2026 : bonnes réponses en cases à cocher (une ou plusieurs, 6 réponses au plus) ; plusieurs = l'élève doit les
 // cocher toutes, et rien d'autre.
+// 31/10/2026 : deux quiz par chapitre et par niveau, chacun son onglet : le quiz du cours et l'approfondissement (vrais
+// problèmes, réponses pièges ; à part de la maîtrise). Questions, validation et mise en ligne ne concernent que l'onglet
+// choisi ; l'autre onglet montre combien de questions y attendent une relecture.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, CheckCheck, ChevronRight, Eye, EyeOff, Loader2, Plus, Search, Target, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, CheckCheck, ChevronRight, Eye, EyeOff, Loader2, Mountain, Plus, Search, Target, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { getClassLevels } from '@/lib/api';
 import { MathText } from '@/components/skilliq/MathText';
+import type { QuizType } from '@/components/skilliq/types';
 import type { ClassLevelModel } from '@/types';
 
 interface ChapterRow {
   id: number; name: string; domaine: string; total: number; en_ligne: number; brouillons: number; passages: number;
   a_relire: number; contenus: boolean;
+  /** L'autre quiz du chapitre (onglet d'à côté) : ses questions et celles à relire. */
+  autre?: { total: number; a_relire: number };
 }
+
+const TYPES: { key: QuizType; label: string; icon: React.ComponentType<{ className?: string }>; about: string }[] = [
+  { key: 'cours', label: 'Quiz du cours', icon: BookOpen, about: 'QCM sur le cours ; le score compte dans la maîtrise du chapitre (Ma progression).' },
+  { key: 'approfondissement', label: 'Approfondissement', icon: Mountain,
+    about: 'De vrais problèmes en QCM, avec des réponses pièges (l’explication dit pourquoi on y tombe). À part de la maîtrise : badge « Chapitre approfondi » à 80 %.' },
+];
 interface TheoremRef { id: number; name: string }
 interface ChapterTheorem extends TheoremRef { niveaux: string[] }
 interface Question {
@@ -231,14 +243,17 @@ const QuestionCard: React.FC<{
   );
 };
 
-const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; onBack: () => void; onChanged: () => void }> = ({ chapterId, levelId, onBack, onChanged }) => {
+const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; type: QuizType; onBack: () => void; onChanged: () => void }> = ({
+  chapterId, levelId, type, onBack, onChanged,
+}) => {
   const [data, setData] = useState<Detail | null>(null);
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const niveau = { niveau: levelId };
-  const load = useCallback(() => api.get(`/pilotage/quiz/chapitre/${chapterId}/`, { params: { niveau: levelId } })
-    .then((r) => setData(r.data)), [chapterId, levelId]);
+  const niveau = { niveau: levelId, type };
+  const load = useCallback(() => api.get(`/pilotage/quiz/chapitre/${chapterId}/`, { params: { niveau: levelId, type } })
+    .then((r) => setData(r.data)), [chapterId, levelId, type]);
+  const kind = TYPES.find((x) => x.key === type) ?? TYPES[0];
   useEffect(() => { load(); }, [load]);
 
   if (!data) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-ink-faint" /></div>;
@@ -260,7 +275,7 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; onBack: () => 
     setBusy(true); setMsg(null);
     try {
       await api.post(`/pilotage/quiz/chapitre/${chapterId}/publier/`, { en_ligne: on, ...niveau });
-      setMsg({ ok: true, text: on ? 'Quiz en ligne : les élèves le voient dans « Quiz par chapitre ».' : 'Quiz retiré : les élèves ne le voient plus.' });
+      setMsg({ ok: true, text: on ? `${kind.label} en ligne : les élèves le voient dans « Quiz par chapitre ».` : `${kind.label} retiré : les élèves ne le voient plus.` });
       await load(); onChanged();
     } catch (e) { setMsg({ ok: false, text: errorText(e, 'Échec.') }); } finally { setBusy(false); }
   };
@@ -281,12 +296,15 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; onBack: () => 
       </button>
       <div className="fd-card flex flex-wrap items-start justify-between gap-3 p-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{data.chapitre.domaine} · quiz {data.chapitre.niveau.name}</p>
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
+            <kind.icon className="h-3.5 w-3.5" aria-hidden /> {data.chapitre.domaine} · {kind.label} · {data.chapitre.niveau.name}
+          </p>
           <h2 className="fd-display mt-1 text-[20px] leading-tight text-ink">{data.chapitre.name}</h2>
           <p className="mt-1 text-[12.5px] text-ink-faint">
             {total} question{total > 1 ? 's' : ''} · {online} en ligne{toReview ? ` · ${toReview} à relire` : ''} · {data.passages} passage{data.passages > 1 ? 's' : ''} d’élèves.
             Chaque passage pose toutes les questions en ligne ({data.par_quiz} au plus), dans un ordre au hasard.
           </p>
+          <p className="mt-1 text-[12.5px] text-ink-soft">{kind.about}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Status row={{ total: validated, en_ligne: online }} />
@@ -311,7 +329,8 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; onBack: () => 
       {toReview > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gold/60 bg-[#fffaf0] p-4">
           <p className="min-w-0 flex-1 text-[13px] text-ink-soft">
-            <b className="font-semibold text-ink">{toReview} question{toReview > 1 ? 's' : ''} rédigée{toReview > 1 ? 's' : ''} par Claude</b> d’après les résultats des élèves.
+            <b className="font-semibold text-ink">{toReview} question{toReview > 1 ? 's' : ''} rédigée{toReview > 1 ? 's' : ''} par Claude</b>
+            {type === 'cours' ? ' d’après les résultats des élèves.' : ' : de vrais problèmes, aux pièges tirés des erreurs classiques du chapitre.'}
             Les élèves ne les voient pas tant que tu ne les as pas validées : relis-les, corrige ou supprime si besoin.
           </p>
           <button type="button" onClick={validateAll} disabled={busy}
@@ -349,11 +368,12 @@ export const QuizAdminTab: React.FC = () => {
   const [open, setOpen] = useState<number | null>(null);
   const [q, setQ] = useState('');
   const [onlyReview, setOnlyReview] = useState(false);
+  const [type, setType] = useState<QuizType>('cours');
   useEffect(() => { getClassLevels().then((l) => { setLevels(l); if (l[0]) setLevel(String(l[0].id)); }).catch(() => {}); }, []);
   const load = useCallback(() => {
     if (!level) return;
-    api.get('/pilotage/quiz/', { params: { niveau: level } }).then((r) => setRows(r.data)).catch(() => setRows([]));
-  }, [level]);
+    api.get('/pilotage/quiz/', { params: { niveau: level, type } }).then((r) => setRows(r.data)).catch(() => setRows([]));
+  }, [level, type]);
   useEffect(() => { setRows(null); load(); }, [load]);
 
   const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -362,9 +382,10 @@ export const QuizAdminTab: React.FC = () => {
     .reduce<Record<string, ChapterRow[]>>((acc, r) => { (acc[r.domaine || 'Autres'] ||= []).push(r); return acc; }, {})), [rows, q, onlyReview]);
   const counts = (rows ?? []).reduce((a, r) => ({
     on: a.on + (r.en_ligne > 0 ? 1 : 0), draft: a.draft + (r.en_ligne === 0 && r.total > 0 ? 1 : 0), review: a.review + r.a_relire,
-  }), { on: 0, draft: 0, review: 0 });
+    otherReview: a.otherReview + (r.autre?.a_relire ?? 0),
+  }), { on: 0, draft: 0, review: 0, otherReview: 0 });
 
-  if (open !== null) return <ChapterQuiz chapterId={open} levelId={Number(level)} onBack={() => { setOpen(null); load(); }} onChanged={load} />;
+  if (open !== null) return <ChapterQuiz chapterId={open} levelId={Number(level)} type={type} onBack={() => { setOpen(null); load(); }} onChanged={load} />;
 
   return (
     <div className="space-y-4">
@@ -381,9 +402,24 @@ export const QuizAdminTab: React.FC = () => {
             </button>
           ))}
         </div>
+        <div className="mt-3 inline-flex flex-wrap gap-1 rounded-xl bg-[#f2f1ee] p-1" role="tablist" aria-label="Quiz du chapitre">
+          {TYPES.map((x) => {
+            const on = type === x.key;
+            return (
+              <button key={x.key} type="button" role="tab" aria-selected={on} onClick={() => { setType(x.key); setOnlyReview(false); }}
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold ${on ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}>
+                <x.icon className="h-4 w-4" aria-hidden /> {x.label}
+                {!on && counts.otherReview > 0 && (
+                  <span className="rounded-full bg-gold-soft px-1.5 text-[11px] font-semibold text-gold-strong">{counts.otherReview} à relire</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-[12.5px] text-ink-faint">{(TYPES.find((x) => x.key === type) ?? TYPES[0]).about}</p>
         {rows && (
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-ink-soft">
-            <span>{counts.on} quiz en ligne · {counts.draft} en brouillon · {rows.length - counts.on - counts.draft} chapitre{rows.length - counts.on - counts.draft > 1 ? 's' : ''} sans quiz</span>
+            <span>{counts.on} en ligne · {counts.draft} en brouillon · {rows.length - counts.on - counts.draft} chapitre{rows.length - counts.on - counts.draft > 1 ? 's' : ''} sans {type === 'cours' ? 'quiz du cours' : 'approfondissement'}</span>
             {counts.review > 0 && (
               <button type="button" aria-pressed={onlyReview} onClick={() => setOnlyReview((v) => !v)}
                 className={`rounded-full border px-2.5 py-0.5 font-semibold ${onlyReview ? 'border-gold bg-gold-soft text-gold-strong' : 'border-gold/60 bg-white text-gold-strong'}`}>

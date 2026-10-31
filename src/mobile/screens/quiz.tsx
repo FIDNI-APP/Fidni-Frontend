@@ -12,7 +12,7 @@ import { getHub, type HubFolder, type LevelFolder } from '@/lib/api/hubApi';
 import { checkAnswer, getAvailable, getEnCours, getLastResult, getMine, getQuiz, submitQuiz } from '@/components/skilliq/api';
 import { MathText } from '@/components/skilliq/MathText';
 import {
-  goodAnswers, hasReport, pct, picked, previousPct, takenOn, toPick, type Answer, type CorrectionItem, type QuizEnCours,
+  goodAnswers, hasReport, pct, picked, previousPct, takenOn, toPick, typeOf, type Answer, type CorrectionItem, type QuizEnCours,
   type QuizQuestion, type QuizStart, type SkillAssessment,
 } from '@/components/skilliq/types';
 import { dateLocale, t } from '@/i18n';
@@ -21,7 +21,12 @@ import { useSession } from '../session';
 import { DifficultyChip, Empty, ErrorState, Loading, Screen, countLabel, haptic, useLoad } from '../ui';
 import { ContentListScreen } from './ContentList';
 
+// Le quiz du cours seulement pour l'instant (type absent) : l'approfondissement arrivera avec la refonte des quiz de l'appli.
 interface QuizRef { id: number; name: string; levelId: number; ready: number }
+
+/** Passage en cours du quiz du cours de ce chapitre, à ce niveau. */
+const enCoursDu = (rows: QuizEnCours[], chapterId: number, levelId: number) =>
+  rows.find((e) => e.chapitre === chapterId && e.niveau === levelId && typeOf(e) === 'cours') ?? null;
 
 const LETTERS = 'ABCDEFGH';
 
@@ -70,7 +75,7 @@ export function QuizChapters({ level }: { level: LevelFolder }) {
     return ids.map((id) => ({
       quiz: { id: Number(id), name: named.get(id) ?? t('Chapitre'), levelId: level.id, ready: available[id] } as QuizRef,
       taken: takenOn(mine, Number(id), level.id),
-      enCours: enCours.find((e: QuizEnCours) => e.chapitre === Number(id) && e.niveau === level.id) ?? null,
+      enCours: enCoursDu(enCours, Number(id), level.id),
     }));
   }, [level.id, isAuthenticated]);
 
@@ -127,7 +132,7 @@ export function QuizScreen({ quiz }: { quiz: QuizRef }) {
     const [mine, enCours] = await Promise.all([getMine().catch(() => []), getEnCours().catch(() => [])]);
     return {
       taken: takenOn(mine, quiz.id, quiz.levelId),
-      enCours: enCours.find((e: QuizEnCours) => e.chapitre === quiz.id && e.niveau === quiz.levelId) ?? null,
+      enCours: enCoursDu(enCours, quiz.id, quiz.levelId),
     };
   }, [quiz.id, stage === 'fiche']);
 
@@ -135,13 +140,13 @@ export function QuizScreen({ quiz }: { quiz: QuizRef }) {
     haptic.tap();
     setBusy(true);
     try {
-      setStart(await getQuiz(quiz.id, quiz.levelId, nouveau));
+      setStart(await getQuiz(quiz, nouveau));
       setStage('run');
     } finally { setBusy(false); }
   };
   const showLast = async () => {
     setBusy(true);
-    try { setResult(await getLastResult(quiz.id, quiz.levelId)); setStage('result'); } finally { setBusy(false); }
+    try { setResult(await getLastResult(quiz)); setStage('result'); } finally { setBusy(false); }
   };
   const practice = () => nav.push(() => (
     <ContentListScreen title={quiz.name} kind="exercise" filters={{ classLevels: [String(quiz.levelId)], chapters: [String(quiz.id)], todo: true }} />
@@ -250,13 +255,13 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
     setError('');
     const all = Object.fromEntries(questions.map((x) => [x.id, picked(answers[x.id]).length ? answers[x.id] : -1]));
     try {
-      onDone(await submitQuiz(quiz.id, quiz.levelId, all, Math.round(used.current / 1000)));
+      onDone(await submitQuiz(quiz, all, Math.round(used.current / 1000)));
     } catch (e) {
       setError((e as { response?: { status?: number } })?.response?.status === 409
         ? t('Ce passage a expiré. Relance le quiz.') : t('L’envoi a échoué. Vérifie ta connexion et réessaie.'));
       setSubmitting(false);
     }
-  }, [submitting, complete, questions, answers, quiz.id, quiz.levelId, onDone]);
+  }, [submitting, complete, questions, answers, quiz, onDone]);
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
