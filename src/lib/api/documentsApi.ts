@@ -1,5 +1,6 @@
 /** Documents de l'éditeur « façon Word » (12/10/2026) : `/api/documents/`, ceux du membre connecté. */
 import { api } from './apiClient';
+import { saveFile } from '@/lib/native';
 
 export type Orientation = 'portrait' | 'paysage';
 export type Marges = 'normale' | 'etroite' | 'large';
@@ -48,11 +49,6 @@ export const documentsAPI = {
   /** Le document en Word (.docx), téléchargé par le navigateur. */
   downloadDocx: async (id: number | string, title: string): Promise<void> => {
     const res = await api.get(`/documents/${id}/docx/`, { responseType: 'blob', timeout: 120000 });
-    const url = URL.createObjectURL(res.data as Blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${(title || 'document').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}.docx`;
-    a.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    await saveFile(res.data as Blob, `${(title || 'document').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}.docx`);
   },
 };

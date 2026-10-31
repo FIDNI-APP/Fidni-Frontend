@@ -3,10 +3,42 @@
 // jamais sur les autres pages : même principe que loadAdSense (lib/ads.ts). Google renvoie un jeton
 // d'identité que le serveur vérifie (POST /api/auth/google/, backend apps/authentication/google.py).
 
+// Application mobile : Google refuse sa connexion dans une WebView. Android passe par le sélecteur de compte du
+// téléphone (@capgo/capacitor-social-login), qui renvoie le même jeton d'identité pour le même Client ID : le
+// serveur ne voit pas la différence. iPhone : pas de bouton Google tant que « Se connecter avec Apple » n'existe
+// pas (règle 4.8 de l'App Store) ; l'e-mail reste disponible.
+import { SocialLogin, type GoogleLoginResponse } from '@capgo/capacitor-social-login';
+import { isNativeApp, nativePlatform } from './native';
+
 /** Client ID OAuth PUBLIC (console Google Cloud). Le code secret n'est ni utilisé ni stocké côté site. */
 export const GOOGLE_CLIENT_ID = '344349997591-ns0tpm59m2ugm33783rsrvl60avp9eeb.apps.googleusercontent.com';
 const GSI_SRC = 'https://accounts.google.com/gsi/client';
 const LOAD_TIMEOUT_MS = 15000;
+
+/** La connexion avec Google est-elle proposée ici ? (site, application Android) */
+export const googleSignInAvailable = !isNativeApp || nativePlatform === 'android';
+
+let nativeInit: Promise<void> | null = null;
+
+/**
+ * Application Android : sélecteur de compte Google du téléphone. Renvoie le jeton d'identité, ou null si la
+ * personne a fermé le sélecteur. Autre échec (réseau, application mal déclarée chez Google) : la promesse est rejetée.
+ */
+export async function nativeGoogleCredential(): Promise<string | null> {
+  nativeInit ??= SocialLogin.initialize({ google: { webClientId: GOOGLE_CLIENT_ID } })
+    .catch((e) => { nativeInit = null; throw e; });
+  await nativeInit;
+  let result: GoogleLoginResponse;
+  try {
+    // Portées par défaut (openid, email, profile) : le jeton d'identité suffit au serveur. Des `scopes` explicites
+    // exigeraient de modifier MainActivity (plugin), pour rien ici.
+    result = (await SocialLogin.login({ provider: 'google', options: {} })).result as GoogleLoginResponse;
+  } catch (e) {
+    if (/cancel/i.test(String((e as Error)?.message ?? e))) return null;
+    throw e;
+  }
+  return result.responseType === 'online' ? result.idToken : null;
+}
 
 // ---- Types minimaux de window.google.accounts.id (seulement ce qu'on utilise)
 export interface GoogleCredentialResponse { credential: string; select_by?: string }

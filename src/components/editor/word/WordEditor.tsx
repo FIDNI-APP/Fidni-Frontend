@@ -25,6 +25,7 @@ import { htmlToLatex } from './latex';
 import { useLivePagination } from '@/components/paper/livePagination';
 import { DENSITIES, SHEET_CONTENT_CSS, densityVars } from '@/components/paper/sheetStyles';
 import { sheetHeaderBlocks } from '@/components/paper/paperBlocks';
+import { printPage, saveFile } from '@/lib/native';
 import './word.css';
 
 export interface WordEditorProps {
@@ -493,7 +494,7 @@ export const WordEditor: React.FC<WordEditorProps> = ({
       window.removeEventListener('afterprint', done);
     };
     window.addEventListener('afterprint', done);
-    window.setTimeout(() => window.print(), 50);
+    window.setTimeout(() => { void printPage(g.title || 'document'); }, 50);
   }, [eq]);
 
   const ui: EditorUi = {
@@ -506,12 +507,8 @@ export const WordEditor: React.FC<WordEditorProps> = ({
       exportTex: () => {
         if (!editor) return;
         const tex = htmlToLatex(toStoredHtml(editor.getHTML()), documentTitle);
-        const url = URL.createObjectURL(new Blob([tex], { type: 'application/x-tex;charset=utf-8' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${(documentTitle || 'document').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}.tex`;
-        a.click();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        void saveFile(new Blob([tex], { type: 'application/x-tex;charset=utf-8' }),
+          `${(documentTitle || 'document').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}.tex`);
       },
     },
     // (1), (2)… dans l'ordre du document, après un ajout ou une suppression.
