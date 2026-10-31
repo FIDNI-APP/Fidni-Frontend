@@ -133,5 +133,6 @@
   "{n}/{total} réussissent": "{n}/{total} ينجحون",
   "{pct} % la dernière fois": "{pct} % في المرة السابقة",
   "{pct} % réussissent": "{pct} % ينجحون",
-  "Élèves qui réussissent cette question": "التلاميذ الذين ينجحون في هذا السؤال"
+  "Élèves qui réussissent cette question": "التلاميذ الذين ينجحون في هذا السؤال",
+  "Pas de chrono : prends ton temps. Chaque réponse est corrigée dès que tu la valides.": "بدون مؤقت: خذ وقتك. تُصحَّح كل إجابة فور تأكيدها."
 }

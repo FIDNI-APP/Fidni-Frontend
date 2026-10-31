@@ -1,12 +1,12 @@
 /**
  * Quiz par chapitre (page /skill-iq du site, components/skilliq) : liste des quiz d'un niveau, fiche d'un quiz,
- * passage (une question à la fois, corrigée dès qu'on valide — réponse verrouillée —, minuteur en pause pendant la
- * correction, reprise d'un passage commencé, envoi automatique au temps écoulé) et résultat (score, bilan par
+ * passage (une question à la fois, corrigée dès qu'on valide — réponse verrouillée —, sans chronomètre : il stressait
+ * les élèves ; reprise d'un passage commencé) et résultat (score, bilan par
  * théorème, correction). Mêmes appels que le site : un passage commencé sur le site se reprend ici, et inversement.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IonButton, IonIcon, IonLabel, IonProgressBar, IonSegment, IonSegmentButton, IonSpinner } from '@ionic/react';
-import { checkmarkCircle, chevronForward, closeCircle, helpCircleOutline, playCircleOutline, timeOutline, trophyOutline } from 'ionicons/icons';
+import { checkmarkCircle, chevronForward, closeCircle, helpCircleOutline, playCircleOutline, trophyOutline } from 'ionicons/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHub, type HubFolder, type LevelFolder } from '@/lib/api/hubApi';
 import { checkAnswer, getAvailable, getEnCours, getLastResult, getMine, getQuiz, submitQuiz } from '@/components/skilliq/api';
@@ -23,7 +23,6 @@ import { ContentListScreen } from './ContentList';
 
 interface QuizRef { id: number; name: string; levelId: number; ready: number }
 
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 const LETTERS = 'ABCDEFGH';
 
 /** Anneau de score : vert à partir de 50 %, or en dessous (jamais rouge : ce n'est pas une faute). */
@@ -103,7 +102,7 @@ export function QuizChapters({ level }: { level: LevelFolder }) {
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontWeight: 650, fontSize: 15.5 }}>{quiz.name}</span>
               <span className="fdm-muted" style={{ fontSize: 13 }}>
-                {countLabel(Math.min(quiz.ready, 30), '{n} question', '{n} questions')} · {t('{n} min', { n: String(Math.min(quiz.ready, 30)) })}
+                {countLabel(Math.min(quiz.ready, 30), '{n} question', '{n} questions')}
               </span>
               {enCours && <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--fdm-gold-strong)', marginTop: 3 }}>
                 {t('En cours : {n}/{total}', { n: String(enCours.repondues), total: String(enCours.total) })}</span>}
@@ -175,10 +174,9 @@ export function QuizScreen({ quiz }: { quiz: QuizRef }) {
         <h1 className="fdm-title" style={{ fontSize: 26, fontWeight: 600, margin: '14px 0 6px' }}>{quiz.name}</h1>
         <div className="fdm-muted" style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 14.5 }}>
           <span>{countLabel(n, '{n} question', '{n} questions')}</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><IonIcon icon={timeOutline} />{t('{n} min', { n: String(n) })}</span>
         </div>
         <p className="fdm-muted" style={{ fontSize: 14, lineHeight: 1.5, margin: '14px 0 0' }}>
-          {t('Chaque réponse est corrigée dès que tu la valides. Le chrono s’arrête pendant la correction.')}
+          {t('Pas de chrono : prends ton temps. Chaque réponse est corrigée dès que tu la valides.')}
         </p>
       </div>
 
@@ -219,7 +217,6 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
     Object.fromEntries(start.verifiees.filter((c) => picked(c.your_answer).length > 0).map((c) => [c.id, c.your_answer as Answer])));
   const [checked, setChecked] = useState<Record<number, CorrectionItem>>(known);
   const [checking, setChecking] = useState(false);
-  const [left, setLeft] = useState(start.left);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const dotsRef = useRef<HTMLDivElement>(null);
@@ -240,14 +237,15 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
   const complete = missing.length === 0;
   const paused = !!correction || submitting;
 
-  // Temps consommé, cumulé tic après tic (juste même si le téléphone met l'application en veille) ; reprise : le temps déjà pris.
+  // Pas de chronomètre affiché ni de limite : le temps passé est seulement mesuré (statistiques du quiz), hors
+  // correction, cumulé tic après tic ; reprise : le temps déjà pris.
   const used = useRef((seconds - start.left) * 1000);
   const lastTick = useRef(Date.now());
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
-  const submit = useCallback(async (force = false) => {
-    if (submitting || (!force && !complete)) return;
+  const submit = useCallback(async () => {
+    if (submitting || !complete) return;
     setSubmitting(true);
     setError('');
     const all = Object.fromEntries(questions.map((x) => [x.id, picked(answers[x.id]).length ? answers[x.id] : -1]));
@@ -259,22 +257,16 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
       setSubmitting(false);
     }
   }, [submitting, complete, questions, answers, quiz.id, quiz.levelId, onDone]);
-  const submitRef = useRef(submit);
-  submitRef.current = submit;
-
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
       if (!pausedRef.current) used.current += now - lastTick.current;
       lastTick.current = now;
-      const rest = Math.max(0, seconds - Math.floor(used.current / 1000));
-      setLeft(rest);
-      if (rest === 0 && !pausedRef.current) void submitRef.current(true);
     };
     const timer = window.setInterval(tick, 500);
     document.addEventListener('visibilitychange', tick);
     return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', tick); };
-  }, [seconds]);
+  }, []);
 
   useEffect(() => {
     dotsRef.current?.querySelector<HTMLElement>(`[data-i="${index}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
@@ -309,15 +301,7 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
   };
 
   const good = correction ? goodAnswers(correction) : [];
-  const low = left <= 60 && !paused;
-  const timer = (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0 12px', height: 32, borderRadius: 16, marginInlineEnd: 8, fontWeight: 700,
-      fontVariantNumeric: 'tabular-nums', background: low ? 'var(--fdm-gold-soft)' : 'rgba(120,115,105,.10)', color: low ? 'var(--fdm-gold-strong)' : 'inherit',
-    }}><IonIcon icon={timeOutline} />{clock(left)}{paused && !submitting ? ' ⏸' : ''}</span>
-  );
-
-  const footer = (
+    const footer = (
     <div style={{ background: 'var(--ion-toolbar-background)', borderTop: '1px solid var(--fdm-line)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom, 0px))' }}>
       {error && <p style={{ color: 'var(--ion-color-danger)', fontSize: 13.5, margin: '0 0 8px' }}>{error}</p>}
       {!correction
@@ -329,7 +313,7 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
   );
 
   return (
-    <Screen title={quiz.name} actions={timer} footer={footer}>
+    <Screen title={quiz.name} footer={footer}>
       <div style={{ padding: '12px 16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
           <span>{t('Question {n} sur {total}', { n: String(index + 1), total: String(total) })}</span>
