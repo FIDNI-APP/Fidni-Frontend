@@ -1,0 +1,128 @@
+# Application iPhone (MOBILE.md) construite sur un Mac de GitHub : pas besoin d'avoir un Mac.
+# - compilation : à chaque push qui touche l'application mobile, sans compte Apple (vérifie que le projet se construit) ;
+# - TestFlight : à la demande (Actions › iOS › Run workflow), signée et envoyée sur TestFlight pour l'installer sur un iPhone.
+# Secrets du dépôt pour TestFlight : APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (MOBILE.md, « Tester sur iPhone »).
+name: iOS
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'package-lock.json'
+      - 'src/lib/native.ts'
+      - 'src/components/layout/NativeBridge.tsx'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: 'Envoyer cette version sur TestFlight'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  compilation:
+    name: Compilation (simulateur, sans signature)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Site + copie dans ios/
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npx cap sync ios
+
+      - name: xcodebuild
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+  testflight:
+    name: TestFlight
+    needs: compilation
+    if: github.event_name == 'workflow_dispatch' && inputs.testflight
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - name: Secrets présents ?
+        run: |
+          for s in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!s}" ] || { echo "::error::Secret $s manquant (MOBILE.md, « Tester sur iPhone »)"; exit 1; }
+          done
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Site + copie dans ios/
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npx cap sync ios
+
+      - name: Clé App Store Connect
+        run: |
+          mkdir -p "$HOME/private_keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      # Signature gérée par Apple (certificat et profil créés avec la clé API) ; numéro de build = numéro du lancement.
+      - name: Archive
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/FIDNI.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            archive | tail -n 40
+
+      - name: Envoi sur App Store Connect (TestFlight)
+        run: |
+          set -o pipefail
+          cat > build/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive -archivePath build/FIDNI.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist -exportPath build/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 40
+          echo "Build ${{ github.run_number }} envoyé : il apparaît dans TestFlight après le traitement d'Apple (10 à 30 min)."
+
+      - name: Effacer la clé
+        if: always()
+        run: rm -rf "$HOME/private_keys"

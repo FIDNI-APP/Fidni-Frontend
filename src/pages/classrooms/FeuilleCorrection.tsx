@@ -17,6 +17,7 @@ import PagedSheet, { type SheetBlock } from '@/components/paper/PagedSheet';
 import { Rich, RichPart, richParts } from '@/components/paper/paperBlocks';
 import { texteEnHtml } from '@/components/classrooms/copies/TexteMaths';
 import { trackAction } from '@/lib/usage';
+import { printPage } from '@/lib/native';
 import {
   copiesError, fmt, getImpression, maCopie, type FeuilleCopie, type Impression, type QuestionBareme,
 } from '@/lib/api/copiesApi';
@@ -121,7 +122,7 @@ export default function FeuilleCorrection({ source }: Props) {
       await document.fonts?.ready;
     } finally { setPreparation(false); }
     trackAction('imprimer');
-    window.print();
+    void printPage();
   };
 
   if (err || !data) {

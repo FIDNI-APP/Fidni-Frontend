@@ -4,6 +4,7 @@
  * Backend : apps/copies (views.py).
  */
 import { api } from './apiClient';
+import { saveFile } from '@/lib/native';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 
 export type StatutCopie = 'vide' | 'deposee' | 'en_attente' | 'en_cours' | 'corrigee' | 'validee' | 'erreur';
@@ -231,12 +232,7 @@ export async function getRapport(cid: number | string, eid: number | string) {
 /** Télécharge le tableau des notes (CSV pour Excel en français, ou XLSX). */
 export async function exporterNotes(cid: number | string, eid: number | string, type: 'csv' | 'xlsx', nom: string) {
   const r = await api.get(`${base(cid)}${eid}/export/`, { params: { type }, responseType: 'blob' });
-  const url = URL.createObjectURL(r.data as Blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${nom}.${type}`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  await saveFile(r.data as Blob, `${nom}.${type}`);
 }
 /** Feuille de correction à imprimer (professeur) : une copie, avec ses commentaires et sa transcription. */
 export interface FeuilleCopie extends Note {

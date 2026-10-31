@@ -1,7 +1,9 @@
 // Publicité Google AdSense, chargée UNIQUEMENT après accord explicite (bandeau de consentement).
 // Tant que le visiteur n'a pas cliqué « Accepter », aucun script ni cookie Google n'est chargé.
+import { isNativeApp } from './native';
 
-export const ADS_ENABLED = true;
+// Pas dans l'application mobile : AdSense y est interdit (WebView), ni script ni bandeau de consentement.
+export const ADS_ENABLED = !isNativeApp;
 export const ADSENSE_CLIENT = 'ca-pub-1910021700658911'; // identique à public/ads.txt
 /** ID d'un bloc « Annonce display » créé dans AdSense (Annonces → Par bloc d'annonces). Vide = aucun emplacement. */
 export const ADSENSE_SLOT = '';

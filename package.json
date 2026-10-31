@@ -8,9 +8,21 @@
     "build": "tsc -p tsconfig.app.json --noEmit && vite build && node scripts/check-build.mjs",
     "lint": "eslint . --report-unused-disable-directives",
     "preview": "vite preview",
-    "start": "vite preview --host --port 3000"
+    "start": "vite preview --host --port 3000",
+    "mobile:sync": "npm run build && cap sync",
+    "mobile:android": "npm run mobile:sync && cap open android",
+    "mobile:ios": "npm run mobile:sync && cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capgo/capacitor-social-login": "^8.7.5",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-select": "^2.2.5",
@@ -52,6 +64,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@eslint/js": "^9.39.5",
     "@types/katex": "^0.16.7",
     "@types/node": "^20.11.25",

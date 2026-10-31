@@ -20,6 +20,7 @@ import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
 import { DifficultyChip } from '@/components/content/listing/ListingParts';
 import { trackAction } from '@/lib/usage';
+import { publicUrl, shareLink } from '@/lib/native';
 import { t } from '@/i18n';
 import { contentHub, levelFromState } from './pageHelpers';
 
@@ -117,17 +118,13 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
 
   const handleShare = () => {
     trackAction('partager');
-    if (navigator.share) {
-      navigator.share({
-        title: content?.title || 'Fidni',
-        text: t('{titre} – sur Fidni', { titre: content?.title }),
-        url: window.location.href,
-      }).catch(() => { /* partage annulé */ });
-    } else {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => alert(t('Lien copié !')))
-        .catch((err) => console.error('Error copying link:', err));
-    }
+    shareLink({
+      title: content?.title || 'Fidni',
+      text: t('{titre} – sur Fidni', { titre: content?.title }),
+      url: publicUrl(),
+    })
+      .then((r) => { if (r === 'copied') alert(t('Lien copié !')); })
+      .catch((err) => console.error('Error copying link:', err));
   };
   const pick = (fn?: () => void) => () => { setMenuOpen(false); fn?.(); };
 

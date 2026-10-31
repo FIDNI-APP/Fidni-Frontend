@@ -14,6 +14,7 @@ import type { Difficulty } from '@/types';
 import { TourHelpButton } from '@/components/tour/TourProvider';
 import { SignupCard, useOpenSignup } from '@/components/auth/SignupPrompt';
 import { trackAction } from '@/lib/usage';
+import { printPage } from '@/lib/native';
 import { SEO } from '@/components/layout/SEO';
 import PagedSheet, { type SheetBlock, type SheetLayout } from '@/components/paper/PagedSheet';
 import {
@@ -224,7 +225,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
       setPreparing(false);
     }
     trackAction('imprimer');
-    window.print();
+    void printPage(custom?.title);
   };
 
   const goBack = () => {

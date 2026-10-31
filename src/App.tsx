@@ -15,6 +15,7 @@ import { AuthModalProvider, useAuthModal } from '@/components/auth/AuthControlle
 import { FilterProvider } from './components/navbar/FilterContext';
 import LegalRedirector from './components/layout/LegalRedirector';
 import ConsentBanner from './components/ads/ConsentBanner';
+import { NativeBridge } from './components/layout/NativeBridge';
 import { TourProvider } from '@/components/tour/TourProvider';
 import Footer from './components/layout/Footer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -277,6 +278,7 @@ function App() {
         <LegalRedirector />
         <ConsentBanner />
         <ThemeProvider>
+          <NativeBridge />
           <AuthProvider>
             <AuthModalProvider>
               <FilterProvider>

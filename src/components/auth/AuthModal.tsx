@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { requestPasswordReset, resendVerification, type SignupConsents } from '@/lib/api/authApi';
 import { GoogleButton } from '@/components/auth/GoogleButton';
+import { googleSignInAvailable } from '@/lib/googleAuth';
 import { trackAction } from '@/lib/usage';
 import { LEGAL } from '@/lib/legal';
 import { t } from '@/i18n';
@@ -279,7 +280,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
   );
 
   // Bouton Google en tête des deux onglets (pas sur « Mot de passe oublié » ni pendant une autre étape).
-  const showGoogle = !pendingEmail && !googleConsent && !(activeTab === 'login' && forgot);
+  const showGoogle = googleSignInAvailable && !pendingEmail && !googleConsent && !(activeTab === 'login' && forgot);
 
   const tabClass = (active: boolean) =>
     `relative flex-1 py-4 text-center font-medium transition-colors ${
