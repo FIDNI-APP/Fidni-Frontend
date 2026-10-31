@@ -1,15 +1,31 @@
 # Application mobile FIDNI (iOS + Android)
 
-L'application est **le site lui-même**, construit (`dist/`) et embarqué dans une coquille native
-[Capacitor 8](https://capacitorjs.com). Toutes les pages et fonctions du site y sont : exercices, leçons, devoirs,
-quiz, DS blancs, Ma progression, Réviser, cahiers, classes et copies corrigées par l'IA, concours, parcours vidéo,
-documents, Pilotage… Un seul code : ce qui change sur le site change dans l'application à la prochaine version.
+Une vraie application ([Capacitor 8](https://capacitorjs.com) + [Ionic](https://ionicframework.com) 9) : ses propres
+écrans, pensés pour le téléphone, avec les mêmes données et les mêmes règles que le site.
 
 - Identifiant : `fr.fidni.app` · nom affiché : **FIDNI** · configuration : `capacitor.config.ts`
 - Projets natifs : `android/` (Android Studio) et `ios/` (Xcode). Images sources des icônes : `assets/`.
-- Le code du site sait s'il tourne dans l'application : `isNativeApp` (`src/lib/native.ts`).
+- `src/main.tsx` charge `src/mobile/` dans l'application (`isNativeApp`, `src/lib/native.ts`), le site sinon.
 
-## Ce qui diffère du navigateur
+## Les écrans de l'application (`src/mobile/`)
+
+Onglets (barre d'onglets native, une pile d'écrans par onglet, glissement et retour par balayage) :
+**Accueil** (prochain objectif, où j'en suis, prochain DS, à refaire) · **Explorer** (Exercices / Cours / Devoirs,
+niveaux, chapitres, contenus « Pour toi », Bac national) · **Réviser** (DS, à refaire, mes listes) · **Progression**
+(chiffres, activité, points faibles, chapitres) · **Profil** (favoris, réglages, langue, mode sombre). Plus l'accueil
+de l'application, la connexion, l'inscription et le premier lancement d'un compte.
+
+Réutilisé du site, sans copie : `lib/api/*`, `AuthContext`, `ThemeContext`, `i18n` (arabe : `i18n/ar/mobile.json`),
+le rendu des formules (`TipTapRenderer`, `LessonRenderer`), le temps passé (`usePageTimeTracker`), les aides
+(`helpTracking`). Une question évaluée dans l'application l'est sur le site, et inversement.
+
+Pas encore refait en écrans natifs : quiz par chapitre, plan de DS et DS blanc, cahiers, classes et copies, concours,
+documents, Pilotage, modifier son profil. Ils s'ouvrent dans la **version complète du site**, dans l'application,
+avec « Retour à l'app » (`openWeb`, `SiteInApp` dans `MobileApp.tsx`) ; les onglets restent où on les avait laissés.
+
+Ajouter un écran : un composant qui rend `<Screen>` (`src/mobile/ui.tsx`), ouvert par `useNav().push(() => <MonEcran />)`.
+
+## Le site dans l'application (version complète) : ce qui diffère du navigateur
 
 | Sur le site | Dans l'application | Où |
 |---|---|---|

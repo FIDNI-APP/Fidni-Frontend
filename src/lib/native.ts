@@ -16,6 +16,12 @@ export const nativePlatform = Capacitor.getPlatform() as 'ios' | 'android' | 'we
 /** Adresse publique du site : les liens partagés depuis l'application pointent vers fidni.fr. */
 export const PUBLIC_SITE = 'https://fidni.fr';
 
+/**
+ * Version complète du site ouverte depuis les écrans de l'application (src/mobile/MobileApp.tsx) : `close` y
+ * revient. Tant qu'elle est ouverte, les liens reçus par le téléphone restent gérés par l'application.
+ */
+export const siteInApp: { close: (() => void) | null } = { close: null };
+
 /** Plugin natif de l'application (android/…/FidniNativePlugin.java, ios/App/App/FidniNativePlugin.swift). */
 interface FidniNativePlugin {
   /** Fenêtre d'impression du système pour la page affichée (styles @media print) : imprimante ou PDF. */
@@ -92,11 +98,15 @@ export function openExternal(url: string): void {
   else window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+/** Couleur des bandes de la barre d'état (et de navigation d'Android) ; `darkBackground` : icônes claires. */
+export function setSystemBars(color: string, darkBackground: boolean): void {
+  if (!isNativeApp) return;
+  void SystemBars.setStyle({ style: darkBackground ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => undefined);
+  void FidniNative.setBackground({ color }).catch(() => undefined);
+}
+
 /** Barre d'état assortie au thème du site (fond de la barre du haut, icônes lisibles). */
 export function syncSystemBars(theme: 'light' | 'dark'): void {
-  if (!isNativeApp) return;
   // Fond de la barre du haut et de la barre d'onglets (bg-white ; en sombre : styles/mode-sombre.css).
-  const color = theme === 'dark' ? '#24221f' : '#ffffff';
-  void SystemBars.setStyle({ style: theme === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => undefined);
-  void FidniNative.setBackground({ color }).catch(() => undefined);
+  setSystemBars(theme === 'dark' ? '#24221f' : '#ffffff', theme === 'dark');
 }

@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { useTheme } from '@/contexts/ThemeContext';
-import { isNativeApp, openExternal, syncSystemBars } from '@/lib/native';
+import { isNativeApp, openExternal, siteInApp, syncSystemBars } from '@/lib/native';
 
 const SITE_HOSTS = new Set(['fidni.fr', 'www.fidni.fr']);
 // Un fichier du site (/emails/bienvenue.png, /robots.txt…) n'est pas une page de l'application.
@@ -49,11 +49,16 @@ export function NativeBridge() {
       return false;
     };
 
-    // Lien d'une page du site ouvert depuis le téléphone, application fermée ou en arrière-plan.
-    void CapApp.getLaunchUrl().then((r) => { if (r?.url) open(r.url); }).catch(() => undefined);
-    const urlOpen = CapApp.addListener('appUrlOpen', ({ url }) => { open(url); });
+    // Lien d'une page du site ouvert depuis le téléphone, application fermée ou en arrière-plan (sauf site ouvert
+    // depuis les écrans de l'application : c'est elle qui les reçoit).
+    const embedded = siteInApp.close !== null;
+    if (!embedded) void CapApp.getLaunchUrl().then((r) => { if (r?.url) open(r.url); }).catch(() => undefined);
+    const urlOpen = embedded ? null : CapApp.addListener('appUrlOpen', ({ url }) => { open(url); });
+    // Première page : retour aux écrans de l'application s'ils ont ouvert le site, sinon fermer l'application.
     const back = CapApp.addListener('backButton', ({ canGoBack }) => {
-      if (canGoBack) window.history.back(); else void CapApp.exitApp();
+      if (canGoBack) window.history.back();
+      else if (siteInApp.close) siteInApp.close();
+      else void CapApp.exitApp();
     });
 
     // Après les gestionnaires de React (phase de bouillonnement sur window) : un <Link> déjà traité est ignoré.
@@ -74,7 +79,7 @@ export function NativeBridge() {
     }) as typeof window.open;
 
     return () => {
-      void urlOpen.then((h) => h.remove());
+      void urlOpen?.then((h) => h.remove());
       void back.then((h) => h.remove());
       window.removeEventListener('click', onClick);
       window.open = nativeOpen;
