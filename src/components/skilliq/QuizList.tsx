@@ -1,161 +1,80 @@
-// Des quiz sont prêts pour le niveau de l'élève. 31/10/2026 : deux quiz par chapitre. En haut, les deux quiz en deux
-// cartes (ce qu'ils sont, où l'élève en est : quiz du cours faits et moyenne, chapitres approfondis) ; puis le prochain
-// quiz à passer (ou à refaire) ; puis tous les chapitres du niveau rangés par sous-domaine, chacun avec ses deux quiz ;
-// les chapitres qui n'en ont pas encore sont repliés.
-import React from 'react';
-import { ArrowRight, Award, CheckCircle2, Circle, CircleDashed, Clock, Play, RotateCcw, Target, TrendingUp } from 'lucide-react';
-import { Section } from '@/components/space/Page';
-import type { ChapterStatus } from '@/pages/progression/types';
+// Page des quiz d'un niveau (refaite le 31/10/2026). En tête : le quiz à faire maintenant (un passage commencé,
+// sinon le prochain, sinon le moins réussi) et les chiffres du niveau. Puis les chapitres en cartes, rangés par thème,
+// chacun avec ses deux quiz ; un filtre garde ceux qui restent à faire, ceux qui sont faits ou approfondis. Les
+// chapitres sans quiz sont repliés à la fin.
+import React, { useMemo, useState } from 'react';
+import { ArrowRight, Award, Play, RotateCcw } from 'lucide-react';
+import { Section, Segmented } from '@/components/space/Page';
+import { ChapterCard, type StageProps } from './ChapterCard';
 import { ChapterPlan } from './ChapterPlan';
-import { ChapterListHeader, ChapterRow, NewBadge, ScoreRing, TypeChip } from './QuizRow';
 import { QUIZ_TYPE } from './quizTypes';
-import { BADGE_PCT, bySubfield, isApprofondi, pct, quizKey, quizSize, stageOf, type QuizChapter, type QuizEnCours, type QuizType } from './types';
+import { bySubfield, isApprofondi, pct, quizKey, quizSize, stageOf, typeOf, type QuizChapter, type QuizEnCours, type QuizType } from './types';
 import type { QuizChapters, Suggestion } from './useQuizChapters';
 import { t } from '@/i18n';
 
-const REASON: Record<ChapterStatus, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
-  weak: { label: 'À renforcer d’après tes exercices', icon: Target, cls: 'bg-gold-soft text-gold-strong' },
-  started: { label: 'Chapitre commencé', icon: CircleDashed, cls: 'bg-[#f2f1ee] text-ink-soft' },
-  todo: { label: 'Pas encore travaillé', icon: Circle, cls: 'bg-[#f2f1ee] text-ink-soft' },
-  good: { label: 'En bonne voie : vérifie-le', icon: TrendingUp, cls: 'bg-brand-soft text-brand-hover' },
-  mastered: { label: 'Maîtrisé : confirme-le', icon: CheckCircle2, cls: 'bg-brand-soft text-brand-hover' },
-};
+type Filter = 'tous' | 'a-faire' | 'faits' | 'approfondis';
+type Featured = Suggestion & { mode: 'reprendre' | 'prochain' | 'refaire' };
 
-/** Ce que chaque quiz apporte, en une phrase (cartes du haut, carte du prochain quiz). */
-const ABOUT: Record<QuizType, string> = {
-  cours: 'Chaque réponse est corrigée tout de suite, puis tu vois ce que tu maîtrises, théorème par théorème. Ton score s’ajoute à Ma progression.',
-  approfondissement: 'De vrais problèmes, avec des réponses pièges : calcule avant de choisir, rien ne presse. Réussis-le à {n} % pour le badge « Chapitre approfondi ».',
-};
-
-const Bar: React.FC<{ value: number; total: number; tone: string; label: string }> = ({ value, total, tone, label }) => (
-  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#efece6]" role="progressbar" aria-valuemin={0} aria-valuemax={total}
-    aria-valuenow={value} aria-label={label}>
-    <div className={`h-full rounded-full transition-[width] duration-500 ${tone}`} style={{ width: `${total ? (value / total) * 100 : 0}%` }} />
-  </div>
-);
-
-/** Les deux quiz du niveau : ce qu'ils sont, et où l'élève en est. */
-const Overview: React.FC<{ ready: QuizChapter[]; hasDeep: boolean }> = ({ ready, hasDeep }) => {
-  const cours = ready.filter((c) => c.ready > 0);
-  const coursDone = cours.filter((c) => c.taken);
-  const average = coursDone.length ? Math.round(coursDone.reduce((s, c) => s + pct(c.taken!), 0) / coursDone.length) : null;
-  const deep = ready.filter((c) => c.deep.ready > 0);
-  const earned = deep.filter((c) => isApprofondi(c.deep.taken)).length;
-  const C = QUIZ_TYPE.cours;
-  const D = QUIZ_TYPE.approfondissement;
+/** Le quiz à faire maintenant, en grand. */
+const Hero: React.FC<{ f: Featured; enCours: QuizEnCours | null; onStart: () => void }> = ({ f, enCours, onStart }) => {
+  const stage = stageOf(f.chapter, f.type);
+  const Icon = QUIZ_TYPE[f.type].icon;
+  const last = stage.taken ? pct(stage.taken) : null;
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <section className="rounded-2xl border border-line bg-white p-4 sm:p-5" aria-labelledby="quiz-cours-titre">
-        <div className="flex items-start gap-3">
-          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${C.tile}`} aria-hidden><C.icon className="h-5 w-5" /></span>
-          <div className="min-w-0">
-            <h2 id="quiz-cours-titre" className="text-[14.5px] font-semibold text-ink">{t(C.label)}</h2>
-            <p className="text-[12.5px] leading-snug text-ink-faint">{t('Des QCM sur le cours, pour vérifier que tout est su.')}</p>
-          </div>
-        </div>
-        <div className="mt-4 flex items-baseline justify-between gap-3">
-          <p className="text-[13px] text-ink-soft">
-            <b className="fd-display fd-nums text-[26px] font-normal leading-none text-ink">{coursDone.length}</b>
-            <span className="fd-nums"> / {cours.length}</span> {cours.length > 1 ? t('quiz faits') : t('quiz fait')}
-          </p>
-          {average !== null && <p className="fd-nums text-[12.5px] text-ink-faint">{t('Moyenne')} <b className="font-semibold text-ink">{average} %</b></p>}
-        </div>
-        <Bar value={coursDone.length} total={cours.length} tone="bg-brand" label={t('{a} quiz du cours faits sur {n}', { a: coursDone.length, n: cours.length })} />
-      </section>
-
-      <section className={`rounded-2xl border p-4 sm:p-5 ${hasDeep ? 'border-line bg-white' : 'border-dashed border-line bg-transparent'}`}
-        aria-labelledby="quiz-approfondissement-titre">
-        <div className="flex items-start gap-3">
-          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${hasDeep ? D.tile : 'bg-[#f2f1ee] text-ink-faint'}`} aria-hidden>
-            <D.icon className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <h2 id="quiz-approfondissement-titre" className="text-[14.5px] font-semibold text-ink">{t(D.label)}</h2>
-            <p className="text-[12.5px] leading-snug text-ink-faint">{t('De vrais problèmes en QCM, avec des réponses pièges.')}</p>
-          </div>
-        </div>
-        {hasDeep ? (
-          <>
-            <div className="mt-4 flex items-baseline justify-between gap-3">
-              <p className="text-[13px] text-ink-soft">
-                <b className="fd-display fd-nums text-[26px] font-normal leading-none text-ink">{earned}</b>
-                <span className="fd-nums"> / {deep.length}</span> {deep.length > 1 ? t('chapitres approfondis') : t('chapitre approfondi')}
-              </p>
-              <p className="inline-flex items-center gap-1 text-[12.5px] text-gold-strong"><Award className="h-3.5 w-3.5" aria-hidden /> {t('badge à {n} %', { n: BADGE_PCT })}</p>
-            </div>
-            <Bar value={earned} total={deep.length} tone="bg-gold" label={t('{a} chapitres approfondis sur {n}', { a: earned, n: deep.length })} />
-          </>
-        ) : (
-          <p className="mt-4 text-[13px] text-ink-faint">
-            <span className="me-1.5 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">{t('Bientôt')}</span>
-            {t('Pour aller plus loin, une fois le cours su.')}
-          </p>
-        )}
-      </section>
-    </div>
+    <section aria-labelledby="quiz-hero-titre" className="relative overflow-hidden rounded-3xl bg-ink p-6 text-white sm:p-8">
+      <Icon className="pointer-events-none absolute -bottom-6 end-6 hidden h-36 w-36 text-white/10 sm:block" aria-hidden />
+      <p className="relative text-[11px] font-bold uppercase tracking-[.12em] text-white/70">
+        {f.mode === 'reprendre' ? t('À reprendre') : f.mode === 'refaire' ? t('À refaire') : t('Prochain quiz')}
+      </p>
+      <h2 id="quiz-hero-titre" className="fd-display relative mt-2 max-w-xl text-[27px] leading-[1.12] sm:text-[34px]">{f.chapter.name}</h2>
+      <p className="fd-nums relative mt-2 text-[13.5px] text-white/70">
+        {t(QUIZ_TYPE[f.type].label)} · {t('{n} questions', { n: quizSize(stage.ready) })}{f.chapter.subfield ? ` · ${t(f.chapter.subfield)}` : ''}
+      </p>
+      <div className="relative mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button type="button" onClick={onStart}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-ink transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+          {f.mode === 'reprendre' ? (
+            <><Play className="h-4 w-4" aria-hidden /> {t('Reprendre')}{enCours && <span className="fd-nums font-normal text-ink-faint">{enCours.repondues}/{enCours.total}</span>}</>
+          ) : f.mode === 'refaire' ? <><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire')}</>
+            : <>{t('Commencer')} <ArrowRight className="h-4 w-4" aria-hidden /></>}
+        </button>
+        {last !== null && f.mode !== 'reprendre' && <span className="fd-nums text-[13px] text-white/70">{t('Dernier score : {n} %', { n: last })}</span>}
+      </div>
+    </section>
   );
 };
 
-/** Le quiz à passer maintenant (ou, tous passés, celui à refaire). */
-const NextQuizCard: React.FC<{ suggestion: Suggestion; enCours: QuizEnCours | null; onStart: () => void }> = ({ suggestion, enCours, onStart }) => {
-  const { chapter, type } = suggestion;
-  const stage = stageOf(chapter, type);
-  const taken = stage.taken;
-  const reason = REASON[chapter.status];
-  const ReasonIcon = reason.icon;
-  const coursPct = chapter.taken ? pct(chapter.taken) : null;
-  const Icon = QUIZ_TYPE[type].icon;
+/** Les chiffres du niveau, en rangée : quiz du cours faits, moyenne, chapitres approfondis, passages en cours. */
+const Stats: React.FC<{ ready: QuizChapter[]; hasDeep: boolean; inProgress: number }> = ({ ready, hasDeep, inProgress }) => {
+  const cours = ready.filter((c) => c.ready > 0);
+  const done = cours.filter((c) => c.taken);
+  const average = done.length ? Math.round(done.reduce((s, c) => s + pct(c.taken!), 0) / done.length) : null;
+  const deep = ready.filter((c) => c.deep.ready > 0);
+  const earned = deep.filter((c) => isApprofondi(c.deep.taken)).length;
+  const items: { key: string; label: string; value: string; bar?: number; badge?: boolean }[] = [
+    { key: 'faits', label: t('Quiz du cours faits'), value: `${done.length}/${cours.length}`, bar: cours.length ? done.length / cours.length : 0 },
+    { key: 'moyenne', label: t('Moyenne au quiz du cours'), value: average !== null ? `${average} %` : '–' },
+    ...(hasDeep ? [{ key: 'approfondis', label: t('Chapitres approfondis'), value: `${earned}/${deep.length}`, badge: true }] : []),
+    ...(inProgress ? [{ key: 'en-cours', label: t('Quiz en cours'), value: String(inProgress) }] : []),
+  ];
   return (
-    <div className="overflow-hidden rounded-3xl border border-line bg-white">
-      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-        <div className="flex min-w-0 items-start gap-4 sm:flex-1">
-          {/* Repère visuel (ordinateur) ; sur téléphone, le texte prend toute la largeur. */}
-          <span className="hidden sm:block">
-            {taken ? <ScoreRing value={pct(taken)} size={56} /> : (
-              <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${QUIZ_TYPE[type].tile}`} aria-hidden>
-                <Icon className="h-6 w-6" />
-              </span>
-            )}
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <TypeChip type={type} />
-              {stage.fresh && <NewBadge />}
-              {taken ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">
-                  <RotateCcw className="h-3.5 w-3.5" aria-hidden /> {t('Ton score le plus bas :')} <span className="fd-nums">{pct(taken)} %</span>
-                </span>
-              ) : type === 'approfondissement' ? (
-                coursPct !== null && (
-                  <span className="fd-nums inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-0.5 text-[12px] font-semibold text-brand-hover">
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> {t('Cours fait : {n} %', { n: coursPct })}
-                  </span>
-                )
-              ) : (
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${reason.cls}`}>
-                  <ReasonIcon className="h-3.5 w-3.5" aria-hidden /> {t(reason.label)}
-                </span>
-              )}
+    <dl className={`grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-line bg-line ${
+      items.length === 4 ? 'sm:grid-cols-4' : items.length === 3 ? 'sm:grid-cols-3' : ''}`}>
+      {items.map((it, i) => (
+        <div key={it.key} className={`flex flex-col justify-center bg-white px-5 py-4 ${
+          items.length % 2 && i === items.length - 1 ? 'col-span-2 sm:col-span-1' : ''}`}>
+          <dt className="text-[12.5px] text-ink-faint">{it.label}</dt>
+          <dd className="fd-nums mt-1 flex items-center gap-1.5 text-[24px] font-bold leading-none text-ink">
+            {it.badge && <Award className="h-5 w-5 text-gold" aria-hidden />}{it.value}
+          </dd>
+          {it.bar !== undefined && (
+            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#efece6]" aria-hidden>
+              <div className="h-full rounded-full bg-brand" style={{ width: `${it.bar * 100}%` }} />
             </div>
-            <h3 className="fd-display mt-2 text-[22px] leading-tight text-ink sm:text-[24px]">{chapter.name}</h3>
-            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-faint">
-              <Clock className="h-3.5 w-3.5" aria-hidden />
-              <span className="fd-nums">{t('{n} questions', { n: quizSize(stage.ready) })}</span>
-              <span>· {t('sans chrono')}</span>
-              {chapter.subfield && <span>· {t(chapter.subfield)}</span>}
-            </p>
-          </div>
+          )}
         </div>
-        <button type="button" onClick={onStart} className="fd-btn-primary min-h-11 w-full justify-center text-[14px] sm:w-auto">
-          {enCours ? <><Play className="h-4 w-4" aria-hidden /> {t('Reprendre ({a}/{n})', { a: enCours.repondues, n: enCours.total })}</>
-            : taken ? <><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</>
-              : <>{t('Commencer')} <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden /></>}
-        </button>
-      </div>
-      <p className="border-t border-line bg-[#fcfbf9] px-5 py-2.5 text-[12.5px] leading-relaxed text-ink-faint sm:px-6">
-        {t(ABOUT[type], { n: BADGE_PCT })}
-      </p>
-    </div>
+      ))}
+    </dl>
   );
 };
 
@@ -168,43 +87,69 @@ export const QuizList: React.FC<{
   onView?: (c: QuizChapter, type: QuizType) => void;
   children?: React.ReactNode;
 }> = ({ data, enCours = {}, onStart, onView, children }) => {
-  const started = (c: QuizChapter, type: QuizType) => enCours[quizKey(data.level?.id ?? null, c.id, type)] ?? null;
   const { ready, soon, next, redo, level, hasDeep } = data;
-  const featured = next ?? redo;
-  // Le prochain quiz est déjà mis en avant : la liste reprend tous les quiz, groupés comme le programme.
-  const groups = bySubfield(ready);
-  const stage = (c: QuizChapter, type: QuizType) => {
+  const lv = level?.id ?? null;
+  const started = (c: QuizChapter, type: QuizType) => enCours[quizKey(lv, c.id, type)] ?? null;
+  const [filter, setFilter] = useState<Filter>('tous');
+
+  // Un passage commencé passe avant tout : le plus récent.
+  const mine = useMemo(() => Object.values(enCours).filter((e) => e.niveau === lv && ready.some((c) => c.id === e.chapitre)),
+    [enCours, lv, ready]);
+  const featured = useMemo<Featured | null>(() => {
+    const last = [...mine].sort((a, b) => b.maj.localeCompare(a.maj))[0];
+    const chapter = last ? ready.find((c) => c.id === last.chapitre) : undefined;
+    if (last && chapter) return { chapter, type: typeOf(last), mode: 'reprendre' };
+    if (next) return { ...next, mode: 'prochain' };
+    return redo ? { ...redo, mode: 'refaire' } : null;
+  }, [mine, ready, next, redo]);
+
+  const toDo = (c: QuizChapter) => (c.ready > 0 && (!c.taken || !!started(c, 'cours')))
+    || (c.deep.ready > 0 && (!c.deep.taken || !!started(c, 'approfondissement')));
+  const keep: Record<Filter, (c: QuizChapter) => boolean> = {
+    tous: () => true, 'a-faire': toDo, faits: (c) => !toDo(c), approfondis: (c) => isApprofondi(c.deep.taken),
+  };
+  const groups = bySubfield(ready.filter(keep[filter]));
+  const count = (f: Filter) => ready.filter(keep[f]).length;
+  const stage = (c: QuizChapter, type: QuizType): StageProps => {
     const s = stageOf(c, type);
-    return { stage: s, enCours: started(c, type), onStart: () => onStart(c, type),
-      onView: onView && s.taken ? () => onView(c, type) : undefined };
+    return { stage: s, enCours: started(c, type), onStart: () => onStart(c, type), onView: onView && s.taken ? () => onView(c, type) : undefined };
   };
 
   return (
     <div className="flex flex-col gap-10">
-      <Overview ready={ready} hasDeep={hasDeep} />
+      <div className="flex flex-col gap-3">
+        {featured && <Hero f={featured} enCours={started(featured.chapter, featured.type)} onStart={() => onStart(featured.chapter, featured.type)} />}
+        <Stats ready={ready} hasDeep={hasDeep} inProgress={mine.length} />
+      </div>
 
-      {featured && (
-        <Section id="prochain-quiz" title={next ? t('Ton prochain quiz') : t('À refaire')}
-          hint={next ? undefined : t('Tu as passé tous les quiz de ton niveau : refais le moins réussi.')}>
-          <NextQuizCard suggestion={featured} enCours={started(featured.chapter, featured.type)}
-            onStart={() => onStart(featured.chapter, featured.type)} />
-        </Section>
-      )}
-
-      <Section id="tous-les-quiz" title={t('Tous les quiz de ton niveau')} count={ready.length}
-        hint={level ? t('{niveau} · rangés par thème', { niveau: level.name }) : undefined}>
-        <div data-tour="skilliq-niveaux" className="flex flex-col gap-5">
+      <Section id="tous-les-quiz" title={t('Chapitres')} count={ready.length} hint={level ? level.name : undefined}>
+        <div className="mb-5">
+          <Segmented label="Filtrer les chapitres" value={filter} onChange={setFilter} options={[
+            { key: 'tous', label: 'Tous', count: count('tous') },
+            { key: 'a-faire', label: 'À faire', count: count('a-faire') },
+            { key: 'faits', label: 'Faits', count: count('faits') },
+            ...(hasDeep ? [{ key: 'approfondis' as const, label: 'Approfondis', count: count('approfondis') }] : []),
+          ]} />
+        </div>
+        <div data-tour="skilliq-niveaux" className="flex flex-col gap-7">
           {groups.map(([name, list]) => (
             <div key={name}>
-              <ChapterListHeader title={groups.length > 1 ? t(name) : null} deep={hasDeep} />
-              <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
-                {list.map((c) => <ChapterRow key={c.id} name={c.name} cours={stage(c, 'cours')}
+              {groups.length > 1 && (
+                <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
+                  {t(name)} <span className="fd-nums font-semibold text-ink-faint/70">· {list.length}</span>
+                </h3>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {list.map((c) => <ChapterCard key={c.id} name={c.name} cours={stage(c, 'cours')}
                   deep={hasDeep ? stage(c, 'approfondissement') : undefined} />)}
-              </ul>
+              </div>
             </div>
           ))}
-          {soon.length > 0 && (
-            <ChapterPlan title={t('Bientôt')} meta={soon.length > 1 ? t('chapitres sans quiz pour l’instant') : t('chapitre sans quiz pour l’instant')} chapters={soon} />
+          {groups.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-line px-5 py-8 text-center text-[13.5px] text-ink-faint">{t('Aucun chapitre dans ce filtre.')}</p>
+          )}
+          {filter === 'tous' && soon.length > 0 && (
+            <ChapterPlan title={t('Sans quiz pour l’instant')} chapters={soon} />
           )}
         </div>
       </Section>

@@ -1,10 +1,10 @@
-// « Un autre niveau ? » : les quiz prêts des autres niveaux (cas rare : réviser l'année d'avant, professeur,
-// élève sans niveau). Le programme de tous les niveaux n'est chargé qu'à l'ouverture. Chaque chapitre a ses deux quiz
-// (31/10/2026) : le quiz du cours et, s'il existe à ce niveau, l'approfondissement.
+// « Autres niveaux » : les quiz prêts des autres niveaux (cas rare : réviser l'année d'avant, professeur, élève sans
+// niveau). Le programme de tous les niveaux n'est chargé qu'à l'ouverture. Chaque chapitre est une carte avec ses deux
+// quiz (31/10/2026) : le quiz du cours et, s'il existe à ce niveau, l'approfondissement.
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { getTaxonomy, type TaxonomyLevel } from './api';
-import { ChapterListHeader, ChapterRow, type StageProps } from './QuizRow';
+import { ChapterCard, type StageProps } from './ChapterCard';
 import { t } from '@/i18n';
 import { isFresh, quizKey, takenOn, type ActiveQuiz, type QuizEnCours, type QuizType, type SkillAssessment } from './types';
 
@@ -119,13 +119,13 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({
       )}
       {level.subjects.map((s) => (
         <div key={s.id}>
-          <ChapterListHeader title={level.subjects.length > 1 ? s.name : null} deep={level.hasDeep} />
-          <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
+          {level.subjects.length > 1 && <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{s.name}</h3>}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {s.chapters.map((c) => (
-              <ChapterRow key={c.id} name={c.name} cours={stage(c, s.name, 'cours')}
+              <ChapterCard key={c.id} name={c.name} cours={stage(c, s.name, 'cours')}
                 deep={level.hasDeep ? stage(c, s.name, 'approfondissement') : undefined} />
             ))}
-          </ul>
+          </div>
         </div>
       ))}
     </div>
@@ -139,7 +139,7 @@ export const OtherLevel: React.FC<Props> = ({ standalone = false, ...props }) =>
     <details className="group rounded-2xl border border-line bg-white" onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 text-[13.5px] text-ink-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:px-5 [&::-webkit-details-marker]:hidden">
         <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-open:rotate-90" aria-hidden />
-        <span className="min-w-0 flex-1"><b className="font-semibold text-ink">{t('Un autre niveau ?')}</b> · {t('des quiz existent aussi pour d’autres niveaux')}</span>
+        <span className="min-w-0 flex-1 font-semibold text-ink">{t('Autres niveaux')}</span>
       </summary>
       {open && <div className="border-t border-line px-4 py-4 sm:px-5"><LevelQuizzes {...props} /></div>}
     </details>

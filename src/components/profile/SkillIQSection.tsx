@@ -13,7 +13,7 @@
 // 31/10/2026 : deux quiz par chapitre, le quiz du cours et l'approfondissement (&type=approfondissement dans le lien).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Brain, ChevronLeft, Dumbbell, Hourglass, RotateCcw, X } from 'lucide-react';
+import { ArrowLeft, Brain, Dumbbell, Hourglass, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { Page, PageHeader, EmptyState, Section } from '@/components/space/Page';
@@ -28,7 +28,7 @@ import { SEO } from '@/components/layout/SEO';
 import { LevelQuizzes, OtherLevel, levelsWithQuizzes } from '@/components/skilliq/OtherLevel';
 import { QuizList } from '@/components/skilliq/QuizList';
 import { QuizResult } from '@/components/skilliq/QuizResult';
-import { QuizRunner } from '@/components/skilliq/QuizRunner';
+import { QuizRunner, RunnerSkeleton } from '@/components/skilliq/QuizRunner';
 import { useQuizChapters } from '@/components/skilliq/useQuizChapters';
 import { quizDecouvert, quizDejaDecouvert } from '@/components/skilliq/annonce';
 import { t } from '@/i18n';
@@ -36,9 +36,6 @@ import {
   isFresh, quizKey, safeReturn, stageOf, takenOn, typeOf, type ActiveQuiz, type CorrectionItem, type QuizChapter, type QuizEnCours,
   type QuizQuestion, type QuizType, type SkillAssessment,
 } from '@/components/skilliq/types';
-
-const SUBTITLE = 'Toutes les questions d’un chapitre, corrigées une à une, sans chrono, et ton bilan théorème par théorème.';
-const SUBTITLE_DEEP = 'Pour chaque chapitre, le quiz du cours, puis l’approfondissement : de vrais problèmes, avec des pièges. Corrigés une à une, sans chrono.';
 
 /** « type » d'un lien (?type=approfondissement, notification d'un approfondissement), sinon le quiz du cours. */
 const typeParam = (v: string | null): QuizType => (v === 'approfondissement' ? 'approfondissement' : 'cours');
@@ -70,22 +67,18 @@ const PageSkeleton: React.FC = () => (
   </div>
 );
 
-/** Questions en cours de chargement : la forme de la carte question. */
-const QuestionSkeleton: React.FC<{ name: string; onQuit: () => void }> = ({ name, onQuit }) => (
-  <div className="mx-auto flex w-full max-w-2xl flex-col gap-5" role="status" aria-label={t('Préparation du quiz')}>
-    <button type="button" onClick={onQuit} className="-ms-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint hover:text-ink">
-      <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quitter')}
-    </button>
-    <div>
-      <div className="h-3 w-24 rounded bg-[#efece6]" />
-      <h1 className="fd-display mt-2 text-[24px] leading-tight text-ink sm:text-[28px]">{name}</h1>
-    </div>
-    <div className="animate-pulse rounded-3xl border border-line bg-white p-5 sm:p-7">
-      <div className="h-6 w-24 rounded-full bg-[#f2f1ee]" />
-      <div className="mt-4 h-4 w-11/12 rounded bg-[#efece6]" />
-      <div className="mt-2.5 h-4 w-2/3 rounded bg-[#efece6]" />
-      <div className="mt-6 flex flex-col gap-2.5">
-        {[0, 1, 2, 3].map((i) => <div key={i} className="h-14 rounded-2xl border border-line bg-[#fcfbf9]" />)}
+/** Dernier résultat en cours de chargement : la forme de l'écran de résultat. */
+const ResultSkeleton: React.FC = () => (
+  <div className="mx-auto flex w-full max-w-3xl flex-col gap-5" role="status" aria-label={t('Chargement')}>
+    <div className="h-10 w-40 rounded-lg" />
+    <div className="animate-pulse rounded-3xl border border-line bg-white p-6 sm:p-8">
+      <div className="h-3 w-40 rounded bg-[#f2f1ee]" />
+      <div className="mt-3 h-8 w-2/3 rounded bg-[#efece6]" />
+      <div className="mt-7 flex items-center gap-8">
+        <div className="h-[136px] w-[136px] rounded-full bg-[#f2f1ee]" />
+        <div className="hidden flex-1 grid-cols-4 gap-6 sm:grid">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-12 rounded bg-[#f2f1ee]" />)}
+        </div>
       </div>
     </div>
   </div>
@@ -101,9 +94,8 @@ const MissingBanner: React.FC<{ chapter: { id: number; name: string | null; hub_
     </span>
     <div className="min-w-0 flex-1">
       <p className="text-[14.5px] font-semibold leading-snug text-ink">
-        {chapter.name ? <>{t('Le quiz « {name} » n’est pas encore prêt.', { name: chapter.name })}</> : t('Le quiz de ce chapitre n’est pas encore prêt.')}
+        {chapter.name ? <>{t('Pas encore de quiz pour « {name} ».', { name: chapter.name })}</> : t('Pas encore de quiz pour ce chapitre.')}
       </p>
-      <p className="mt-0.5 text-[13px] text-ink-soft">{t('En attendant, entraîne-toi sur ses exercices, les plus faciles d’abord.')}</p>
     </div>
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       <Link to={practiceUrl(chapter.hub_url, chapter.id)} className="fd-btn-primary min-h-11 justify-center sm:min-h-10">
@@ -288,20 +280,19 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
             onRedo={() => redo(active)} onBack={close}
             onDeep={typeOf(active) === 'cours' && deepReady(active) > 0 ? () => startDeep(active) : undefined} />
         ) : dernier === 'charge' ? (
-          <QuestionSkeleton name={active.name} onQuit={close} />
+          <ResultSkeleton />
         ) : dernier === 'echec' ? (
           <div className="mx-auto w-full max-w-2xl">
-            <EmptyState tone="gold" icon={Hourglass} title={t('Ton dernier résultat n’a pas pu se charger')}
-              text={t('Vérifie ta connexion, ou refais le quiz.')}
+            <EmptyState tone="gold" icon={Hourglass} title={t('Le résultat n’a pas pu se charger')}
+              text={t('Vérifie ta connexion.')}
               action={<button type="button" onClick={() => redo(active)} className="fd-btn-primary min-h-11"><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
               secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">{t('Retour aux quiz')}</button>} />
           </div>
         ) : questions === null ? (
-          <QuestionSkeleton name={active.name} onQuit={close} />
+          <RunnerSkeleton name={active.name} onQuit={close} />
         ) : questions.length === 0 ? (
           <div className="mx-auto w-full max-w-2xl">
-            <EmptyState tone="gold" icon={Hourglass} title={t('Ce quiz n’est pas encore prêt')}
-              text={t('Les questions de « {name} » arrivent bientôt. En attendant, entraîne-toi sur ses exercices.', { name: active.name })}
+            <EmptyState tone="gold" icon={Hourglass} title={t('Pas encore de quiz pour « {name} ».', { name: active.name })}
               action={<Link to={practiceUrl(active.hub_url, active.id)} className="fd-btn-primary min-h-11"><Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')}</Link>}
               secondary={<button type="button" onClick={close} className="fd-btn-ghost min-h-11 text-[13px]">{t('Retour aux quiz')}</button>} />
           </div>
@@ -332,14 +323,14 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
 
   return (
     <Shell>
-      <Header subtitle={hasHere || browse || levelBar ? (data.hasDeep ? t(SUBTITLE_DEEP) : t(SUBTITLE)) : undefined} />
+      <Header />
 
       {levelBar && !data.loading && (
         <div role="tablist" aria-label={t('Niveau des quiz')} className="mb-5 flex flex-wrap items-center gap-2" data-tour="skilliq-choix-niveau">
           <button type="button" role="tab" aria-selected={!shown} onClick={() => setView(null)}
             className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-[13px] font-semibold transition-colors ${
               !shown ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
-            {t('Mon niveau')}{level ? <span className={`font-normal ${!shown ? 'text-white/75' : 'text-ink-faint'}`}>· {level.name}</span> : null}
+            {t('Mon niveau')}{level ? <span className={`font-normal ${!shown ? 'text-white/70' : 'text-ink-faint'}`}>· {level.name}</span> : null}
           </button>
           {otherLevels.map((l) => {
             const on = shown?.id === l.id;
@@ -382,7 +373,7 @@ const QuizPage: React.FC<{ user: User; onRetry: () => void }> = ({ user, onRetry
                 <Link to={`/profile/${encodeURIComponent(user.username)}/edit#scolarite`} className="font-semibold text-brand-hover hover:underline">{t('Indique ton niveau')}</Link>
                 {' '}{t('pour voir directement tes quiz.')}
               </>
-            ) : t('Les quiz prêts, niveau par niveau.')}>
+            ) : undefined}>
             <div data-tour="skilliq-niveaux">{other}</div>
           </Section>
         ) : (
@@ -410,10 +401,10 @@ export const SkillIQSection: React.FC = () => {
     return (
       <Shell>
         {/* Invitation à s'inscrire, rien à indexer. */}
-        <SEO title={t('Quiz par chapitre – Fidni')} description={t('Des quiz corrigés par chapitre, sans chrono, avec un compte gratuit.')} noindex />
+        <SEO title={t('Quiz par chapitre – Fidni')} description={t('Quiz corrigés par chapitre, avec un compte gratuit.')} noindex />
         <Header />
-        <EmptyState tone="brand" icon={Brain} title={t('Les quiz par chapitre, avec ton compte')}
-          text={t('Des questions corrigées sur un chapitre, sans chrono, pour mesurer ta maîtrise théorème par théorème. Avec un compte gratuit, ton score est gardé dans ta progression.')}
+        <EmptyState tone="brand" icon={Brain} title={t('Connecte-toi pour passer les quiz')}
+          text={t('Ton score est gardé dans ta progression. Le compte est gratuit.')}
           action={<button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary min-h-11">{t('Créer mon compte')}</button>}
           secondary={<button type="button" onClick={() => openSignup('login')} className="fd-btn-ghost min-h-11 text-[13px]">{t('J’ai déjà un compte')}</button>} />
       </Shell>

@@ -26,9 +26,9 @@ interface ChapterRow {
 }
 
 const TYPES: { key: QuizType; label: string; icon: React.ComponentType<{ className?: string }>; about: string }[] = [
-  { key: 'cours', label: 'Quiz du cours', icon: BookOpen, about: 'QCM sur le cours ; le score compte dans la maîtrise du chapitre (Ma progression).' },
+  { key: 'cours', label: 'Quiz du cours', icon: BookOpen, about: 'QCM sur le cours. Compte dans la maîtrise (Ma progression).' },
   { key: 'approfondissement', label: 'Approfondissement', icon: Mountain,
-    about: 'De vrais problèmes en QCM, avec des réponses pièges (l’explication dit pourquoi on y tombe). À part de la maîtrise : badge « Chapitre approfondi » à 80 %.' },
+    about: 'Problèmes en QCM. Ne compte pas dans la maîtrise ; badge « Chapitre approfondi » à 80 %.' },
 ];
 interface TheoremRef { id: number; name: string }
 interface ChapterTheorem extends TheoremRef { niveaux: string[] }
@@ -329,9 +329,8 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; type: QuizType
       {toReview > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gold/60 bg-[#fffaf0] p-4">
           <p className="min-w-0 flex-1 text-[13px] text-ink-soft">
-            <b className="font-semibold text-ink">{toReview} question{toReview > 1 ? 's' : ''} rédigée{toReview > 1 ? 's' : ''} par Claude</b>
-            {type === 'cours' ? ' d’après les résultats des élèves.' : ' : de vrais problèmes, aux pièges tirés des erreurs classiques du chapitre.'}
-            Les élèves ne les voient pas tant que tu ne les as pas validées : relis-les, corrige ou supprime si besoin.
+            <b className="font-semibold text-ink">{toReview} question{toReview > 1 ? 's' : ''} rédigée{toReview > 1 ? 's' : ''} par Claude, à relire.</b>
+            {' '}Invisibles des élèves tant qu’elles ne sont pas validées.
           </p>
           <button type="button" onClick={validateAll} disabled={busy}
             className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-ink bg-white px-3 text-[13px] font-semibold text-ink hover:bg-paper">
