@@ -14,6 +14,7 @@ import { isAxiosError } from 'axios';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
 import { MathText } from './MathText';
+import { ExplanationBox } from './QuizRow';
 import { QUIZ_TYPE } from './quizTypes';
 import { t } from '@/i18n';
 import { goodAnswers, picked, toPick, typeOf, type ActiveQuiz, type Answer, type CorrectionItem, type QuizQuestion, type SkillAssessment } from './types';
@@ -299,20 +300,9 @@ export const QuizRunner: React.FC<{
             })}
           </div>
 
-          {correction && (correction.explanation || (correction.theoremes?.length ?? 0) > 0) && (
-            <section id="quiz-explication" className="mt-6 scroll-mb-4 rounded-2xl border border-line bg-white p-4 sm:p-5" aria-label={t('Explication')}>
-              {correction.explanation && (
-                <>
-                  <h3 className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Explication')}</h3>
-                  <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft"><MathText text={correction.explanation} className="fd-latex" /></p>
-                </>
-              )}
-              {correction.theoremes && correction.theoremes.length > 0 && (
-                <p className={`flex flex-wrap gap-1.5 ${correction.explanation ? 'mt-3' : ''}`}>
-                  {correction.theoremes.map((th) => <span key={th} className="rounded-full bg-paper px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft ring-1 ring-line">{th}</span>)}
-                </p>
-              )}
-            </section>
+          {correction && (
+            <ExplanationBox id="quiz-explication" ok={correct} text={correction.explanation} theoremes={correction.theoremes}
+              className="mt-6 scroll-mb-4 sm:p-5" />
           )}
           {checkError && (
             <p role="alert" className="mt-5 rounded-xl border border-gold-line bg-gold-soft px-4 py-3 text-[13.5px] text-gold-strong">
