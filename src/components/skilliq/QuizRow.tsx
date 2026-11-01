@@ -1,9 +1,33 @@
 // Petits éléments communs des quiz : écart avec le passage précédent, étiquettes « Nouveau » et « Chapitre
-// approfondi ». Les chapitres eux-mêmes sont des cartes (ChapterCard.tsx).
+// approfondi », explication d'une question corrigée. Les chapitres eux-mêmes sont des cartes (ChapterCard.tsx).
 import React from 'react';
 import { Award } from 'lucide-react';
 import { t } from '@/i18n';
+import { MathText } from './MathText';
 import { pct, previousPct, type SkillAssessment } from './types';
+
+/** Explication d'une question corrigée : verte si la réponse est juste, orange sinon (sans réponse compris). */
+export const ExplanationBox: React.FC<{ ok: boolean; text?: string; theoremes?: string[]; id?: string; className?: string }> = ({
+  ok, text, theoremes = [], id, className = '',
+}) => {
+  if (!text && !theoremes.length) return null;
+  return (
+    <section id={id} aria-label={t('Explication')}
+      className={`rounded-2xl border p-4 ${ok ? 'border-brand-line bg-brand-soft' : 'border-gold-line bg-gold-soft'} ${className}`}>
+      {text && (
+        <>
+          <h3 className={`text-[11px] font-bold uppercase tracking-[.08em] ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>{t('Explication')}</h3>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft"><MathText text={text} className="fd-latex" /></p>
+        </>
+      )}
+      {theoremes.length > 0 && (
+        <p className={`flex flex-wrap gap-1.5 ${text ? 'mt-3' : ''}`}>
+          {theoremes.map((th) => <span key={th} className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">{th}</span>)}
+        </p>
+      )}
+    </section>
+  );
+};
 
 /** Écart avec le passage précédent (« +20 pts »), rien au premier passage. */
 export const Delta: React.FC<{ a: SkillAssessment; long?: boolean; className?: string }> = ({ a, long = false, className = '' }) => {
