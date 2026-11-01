@@ -28,6 +28,8 @@ export interface SkillAssessment {
   score: number;
   max_score: number;
   completed_at: string;
+  /** Temps passé sur le passage, hors corrections, en secondes. */
+  time_spent?: number;
   /** Passage précédent (null au premier) et nombre de passages. */
   previous_score?: number | null;
   previous_max?: number | null;

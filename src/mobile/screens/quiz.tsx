@@ -181,7 +181,7 @@ export function QuizScreen({ quiz }: { quiz: QuizRef }) {
           <span>{countLabel(n, '{n} question', '{n} questions')}</span>
         </div>
         <p className="fdm-muted" style={{ fontSize: 14, lineHeight: 1.5, margin: '14px 0 0' }}>
-          {t('Pas de chrono : prends ton temps. Chaque réponse est corrigée dès que tu la valides.')}
+          {t('Sans chrono. Chaque réponse est corrigée dès que tu la valides.')}
         </p>
       </div>
 

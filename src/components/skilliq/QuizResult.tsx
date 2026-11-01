@@ -1,67 +1,51 @@
-// Résultat d'un quiz : le score (anneau), l'écart avec le passage précédent, une phrase pour la suite et UNE action
-// principale (s'entraîner sur le chapitre, ou « Retour à mon DS » quand on vient du plan d'un DS : ?retour=).
-// 14/10/2026 : la correction n'est plus repliée. Onglets « Erreurs », « Sans réponse », « Toutes » ; chaque question
-// montre toutes ses réponses (la sienne, la bonne) et l'explication. Le bilan par théorème ne garde que les points
-// faibles (le reste se déplie). Le même écran rouvre le dernier passage (`dernier`), corrigé tel qu'il était
-// (correction figée côté serveur : énoncé et réponses de ce passage-là).
-// 31/10/2026 : l'approfondissement a son écran de résultat : badge « Chapitre approfondi » à BADGE_PCT % (ou ce qu'il
-// manque pour l'avoir), pièges expliqués dans la correction. Après un bon quiz du cours, « Passer à l'approfondissement »
-// quand le chapitre en a un (`onDeep`).
+// Résultat d'un quiz (refait le 31/10/2026) : le score en grand avec justes, fausses, sans réponse et temps, l'écart
+// avec le passage précédent ; pour l'approfondissement, la médaille « Chapitre approfondi » (BADGE_PCT %) ou ce qu'il
+// manque ; une action principale (s'entraîner, l'approfondissement après un bon quiz du cours, « Retour à mon DS »
+// depuis un plan de DS : ?retour=), puis le bilan par théorème et la correction, question par question (dépliée pour
+// les erreurs). Le même écran rouvre le dernier passage (`dernier`), corrigé tel qu'il était (correction figée côté
+// serveur : énoncé et réponses de ce passage-là).
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Award, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, Dumbbell, LineChart, Mountain, RotateCcw, Trophy, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, Dumbbell, LineChart, Minus, Mountain, RotateCcw, X } from 'lucide-react';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { Segmented } from '@/components/space/Page';
 import { lessonsUrl, practiceUrl } from '@/pages/progression/links';
 import { Delta } from './QuizRow';
+import { QUIZ_TYPE } from './quizTypes';
 import { t } from '@/i18n';
 import { MathText } from './MathText';
 import {
-  BADGE_PCT, RING, answered, frDate, goodAnswers, hasReport, pct, picked, previousPct, typeOf,
+  BADGE_PCT, RING, answered, frDate, goodAnswers, hasReport, pct, picked, typeOf,
   type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment, type TheoremReport,
 } from './types';
 
 const WEAK_SHOWN = 3;
 
+/** Durée lisible : « 45 s », « 8 min ». */
+const duree = (s: number) => (s < 60 ? t('{n} s', { n: Math.max(1, Math.round(s)) }) : t('{n} min', { n: Math.round(s / 60) }));
+
 /** Bilan par théorème : les points faibles d'abord (or), le reste replié (vert à 100 % : jamais de rouge). */
-const TheoremBoard: React.FC<{ report: TheoremReport; deep: boolean }> = ({ report, deep }) => {
+const TheoremBoard: React.FC<{ report: TheoremReport }> = ({ report }) => {
   const [all, setAll] = useState(false);
   const weak = report.theoremes.filter((th) => th.pct < 100);
   const shown = all ? report.theoremes : weak.slice(0, WEAK_SHOWN);
   const hidden = report.theoremes.length - shown.length;
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 sm:p-6" aria-labelledby="quiz-theorems-title">
-      {report.complet ? (
-        <div className="flex items-start gap-3 rounded-xl bg-brand-soft px-4 py-3">
-          <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-brand-hover" aria-hidden />
-          <div>
-            <h2 id="quiz-theorems-title" className="text-[15px] font-semibold text-brand-hover">
-              {deep ? t('Aucun piège ne t’a eu') : t('Chapitre maîtrisé à 100 %')}
-            </h2>
-            <p className="mt-0.5 text-[13px] text-ink-soft">
-              {deep ? t('Tous les problèmes justes, sur tous les théorèmes évalués.') : t('Tous les théorèmes évalués, toutes les réponses justes.')}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <h2 id="quiz-theorems-title" className="fd-display text-[18px] leading-tight text-ink">
-          {weak.length ? <>{t('À revoir')} · <span className="fd-nums">{weak.length}</span> {weak.length > 1 ? t('théorèmes') : t('théorème')} {t('sur {total}', { total: report.theoremes.length })}</> : t('Tous les théorèmes évalués sont justes')}
-        </h2>
-      )}
+    <section className="rounded-3xl border border-line bg-white p-5 sm:p-6" aria-labelledby="quiz-theorems-title">
+      <h2 id="quiz-theorems-title" className="fd-display flex items-center gap-2 text-[19px] leading-tight text-ink">
+        {report.complet ? <><CheckCircle2 className="h-5 w-5 text-brand" aria-hidden /> {t('Tous les théorèmes à 100 %')}</>
+          : weak.length ? <>{t('À revoir')} <span className="fd-nums text-[14px] font-normal text-ink-faint">{t('{n} théorèmes sur {total}', { n: weak.length, total: report.theoremes.length })}</span></>
+            : t('Tous les théorèmes évalués sont justes')}
+      </h2>
       {shown.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-3">
+        <ul className="mt-4 flex flex-col gap-3.5">
           {shown.map((th) => {
             const ok = th.pct === 100;
             return (
               <li key={th.id}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-1.5 text-[13.5px] text-ink">
-                    {ok ? <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-label={t('Maîtrisé')} />
-                      : <span className="h-4 w-4 shrink-0 rounded-full border-2 border-gold" aria-label={t('À revoir')} />}
-                    <span className="min-w-0">{th.name}</span>
-                  </span>
-                  <span className={`fd-nums shrink-0 text-[13px] font-semibold ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>
-                    {th.justes}/{th.total}
-                  </span>
+                  <span className="min-w-0 text-[13.5px] text-ink">{th.name}</span>
+                  <span className={`fd-nums shrink-0 text-[13px] font-semibold ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>{th.justes}/{th.total}</span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#efece6]" aria-hidden>
                   <div className="h-full rounded-full" style={{ width: `${Math.max(th.pct, 3)}%`, background: ok ? RING.good : RING.low }} />
@@ -84,82 +68,91 @@ const TheoremBoard: React.FC<{ report: TheoremReport; deep: boolean }> = ({ repo
   );
 };
 
-const sentence = (score: number, progressed: boolean, deep: boolean) => {
-  const base = deep
-    ? (score >= BADGE_PCT ? t('Bravo : tu as déjoué les pièges, ce chapitre est approfondi.')
-      : score >= 50 ? t('Bon travail : relis les pièges dans la correction, puis retente.')
-        : t('Ces problèmes sont exigeants : revois le cours et ses exercices, puis retente.'))
-    : score >= 80 ? t('Très bien : ce chapitre est solide.')
-      : score >= 50 ? t('Bonne base : quelques exercices ciblés, et c’est acquis.')
-        : t('Reprends ce chapitre, en commençant par les exercices faciles.');
-  return progressed ? t('Tu progresses ! {base}', { base }) : base;
-};
-
-/** Approfondissement : le badge obtenu, ou ce qu'il manque pour l'avoir. */
-const BadgeBanner: React.FC<{ score: number }> = ({ score }) => (score >= BADGE_PCT ? (
-  <div className="flex items-center gap-3.5 border-t border-gold-line bg-gold-soft px-5 py-4 sm:px-7">
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gold text-white shadow-sm" aria-hidden>
-      <Award className="h-6 w-6" />
-    </span>
-    <div className="min-w-0">
-      <p className="text-[15px] font-semibold text-ink">{t('Badge « Chapitre approfondi »')}</p>
-      <p className="text-[13px] text-ink-soft">{t('Il s’affiche sur ce chapitre, dans tes quiz.')}</p>
+/** Approfondissement : la médaille, obtenue ou pas encore (avec ce qu'il manque). */
+const Medal: React.FC<{ score: number }> = ({ score }) => {
+  const earned = score >= BADGE_PCT;
+  return (
+    <div className={`flex items-center gap-4 border-t px-6 py-4 sm:px-8 ${earned ? 'border-gold-line bg-gold-soft' : 'border-line'}`}>
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+        earned ? 'bg-gold text-white shadow-[0_0_0_5px_rgba(192,137,47,.18)]' : 'bg-paper text-ink-faint ring-1 ring-line'}`} aria-hidden>
+        <Award className="h-6 w-6" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold text-ink">{t('Chapitre approfondi')}</p>
+        {earned ? <p className="text-[13px] font-medium text-gold-strong">{t('Badge obtenu')}</p> : (
+          <>
+            <p className="fd-nums text-[13px] text-ink-faint">
+              {t('Badge à {n} %', { n: BADGE_PCT })} · {BADGE_PCT - score > 1 ? t('il manque {n} points', { n: BADGE_PCT - score }) : t('il manque {n} point', { n: BADGE_PCT - score })}
+            </p>
+            <div className="mt-2 h-1.5 max-w-xs overflow-hidden rounded-full bg-[#efece6]" aria-hidden>
+              <div className="h-full rounded-full bg-gold" style={{ width: `${Math.min(100, (score / BADGE_PCT) * 100)}%` }} />
+            </div>
+          </>
+        )}
+      </div>
     </div>
-  </div>
-) : (
-  <div className="flex items-center gap-3 border-t border-line px-5 py-3.5 sm:px-7">
-    <Award className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
-    <p className="fd-nums text-[13.5px] text-ink-soft">
-      {BADGE_PCT - score > 1 ? t('Encore {n} points pour le badge « Chapitre approfondi ».', { n: BADGE_PCT - score })
-        : t('Encore {n} point pour le badge « Chapitre approfondi ».', { n: BADGE_PCT - score })}
-    </p>
-  </div>
-));
-
-const linkCls = 'inline-flex min-h-10 items-center gap-1.5 font-semibold text-ink-soft transition-colors hover:text-ink';
+  );
+};
 
 type Item = CorrectionItem & { n: number; question: string; options: string[] };
 
-/** Une question corrigée : toutes ses réponses (la tienne, la bonne — ou les bonnes), puis l'explication (les pièges,
- *  pour l'approfondissement). */
-const Corrected: React.FC<{ c: Item; deep: boolean }> = ({ c, deep }) => {
+/** Une question corrigée, repliable : son statut et son énoncé ; dépliée, ses réponses et l'explication. */
+const Corrected: React.FC<{ c: Item; open: boolean }> = ({ c, open: openAtStart }) => {
+  const [open, setOpen] = useState(openAtStart);
   const skipped = !answered(c);
   const goods = goodAnswers(c);
   const mines = picked(c.your_answer);
   const multi = goods.length > 1;
+  const status = c.is_correct ? t('juste') : skipped ? t('sans réponse') : t('fausse');
   return (
-    <li className="rounded-2xl border border-line bg-white p-4 sm:p-5">
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold">
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${c.is_correct ? 'bg-brand-soft text-brand-hover' : skipped ? 'bg-[#f2f1ee] text-ink-soft' : 'bg-gold-soft text-[#8a6318]'}`}>
-          {c.is_correct ? <Check className="h-3.5 w-3.5" aria-hidden /> : skipped ? null : <X className="h-3.5 w-3.5" aria-hidden />}
-          {t('Question {n}', { n: c.n })} · {c.is_correct ? t('juste') : skipped ? t('sans réponse') : t('fausse')}
+    <li className="rounded-2xl border border-line bg-white">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+        className="flex w-full items-start gap-3 rounded-2xl p-4 text-start transition-colors hover:bg-paper/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+          c.is_correct ? 'bg-brand text-white' : skipped ? 'bg-paper text-ink-faint ring-1 ring-line' : 'bg-gold text-white'}`} aria-hidden>
+          {c.is_correct ? <Check className="h-4 w-4" /> : skipped ? <Minus className="h-4 w-4" /> : <X className="h-4 w-4" />}
         </span>
-        {multi && <span className="font-normal text-ink-soft">{t('{n} bonnes réponses', { n: goods.length })}</span>}
-        {c.theoremes && c.theoremes.length > 0 && <span className="font-normal text-ink-faint">{c.theoremes.join(' · ')}</span>}
-      </p>
-      <p className="mt-2 text-[14.5px] font-semibold leading-relaxed text-ink"><MathText text={c.question} className="fd-latex" /></p>
-      <ul className="mt-2.5 flex flex-col gap-1.5">
-        {c.options.map((opt, i) => {
-          const good = goods.includes(i);
-          const mine = mines.includes(i);
-          return (
-            <li key={i} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[14px] ${
-              good ? 'border-brand/40 bg-brand-soft/60' : mine ? 'border-gold-line bg-gold-soft/60' : 'border-transparent'}`}>
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11.5px] font-bold ${
-                good ? 'bg-brand text-white' : mine ? 'bg-gold text-white' : 'border border-[#d8d4cc] text-ink-faint'}`} aria-hidden>
-                {good ? <Check className="h-3.5 w-3.5" /> : mine ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + i)}
-              </span>
-              <MathText text={opt} className={`fd-latex min-w-0 flex-1 ${good ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
-              {mine ? <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('ta réponse')}</span>
-                : multi && good && !skipped && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('oubliée')}</span>}
-            </li>
-          );
-        })}
-      </ul>
-      {c.explanation && (
-        <div className="mt-3 rounded-xl bg-paper px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink-soft">
-          {deep && <p className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Les pièges, expliqués')}</p>}
-          <MathText text={c.explanation} className="fd-latex" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12px] font-semibold text-ink-faint">
+            {t('Question {n}', { n: c.n })} · {status}{multi ? ` · ${t('{n} bonnes réponses', { n: goods.length })}` : ''}
+          </span>
+          <span className={`mt-1 block text-[14.5px] font-medium leading-relaxed text-ink ${open ? '' : 'line-clamp-2'}`}>
+            <MathText text={c.question} className="fd-latex" />
+          </span>
+        </span>
+        <ChevronDown className={`mt-1 h-4 w-4 shrink-0 text-ink-faint transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 sm:ps-14">
+          <ul className="flex flex-col gap-1.5">
+            {c.options.map((opt, i) => {
+              const good = goods.includes(i);
+              const mine = mines.includes(i);
+              return (
+                <li key={i} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[14px] ${
+                  good ? 'border-brand-line bg-brand-soft' : mine ? 'border-gold-line bg-gold-soft' : 'border-transparent'}`}>
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11.5px] font-bold ${
+                    good ? 'bg-brand text-white' : mine ? 'bg-gold text-white' : 'text-ink-faint ring-1 ring-line'}`} aria-hidden>
+                    {good ? <Check className="h-3.5 w-3.5" /> : mine ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + i)}
+                  </span>
+                  <MathText text={opt} className={`fd-latex min-w-0 flex-1 ${good ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
+                  {mine ? <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('ta réponse')}</span>
+                    : multi && good && !skipped && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('oubliée')}</span>}
+                </li>
+              );
+            })}
+          </ul>
+          {c.explanation && (
+            <div className="mt-3 rounded-xl bg-paper px-3.5 py-3 text-[13.5px] leading-relaxed text-ink-soft">
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Explication')}</p>
+              <MathText text={c.explanation} className="fd-latex" />
+            </div>
+          )}
+          {c.theoremes && c.theoremes.length > 0 && (
+            <p className="mt-2.5 flex flex-wrap gap-1.5">
+              {c.theoremes.map((th) => <span key={th} className="rounded-full bg-paper px-2.5 py-0.5 text-[11.5px] text-ink-soft ring-1 ring-line">{th}</span>)}
+            </p>
+          )}
         </div>
       )}
     </li>
@@ -182,8 +175,9 @@ export const QuizResult: React.FC<{
   onDeep?: () => void;
 }> = ({ quiz, result, questions, retour, dernier = false, onRedo, onBack, onDeep }) => {
   const score = pct(result);
-  const before = previousPct(result);
-  const deep = typeOf(quiz) === 'approfondissement';
+  const type = typeOf(quiz);
+  const deep = type === 'approfondissement';
+  const TypeIcon = QUIZ_TYPE[type].icon;
   // Après un bon quiz du cours, l'approfondissement devient la suite logique (pas depuis un plan de DS).
   const goDeeper = !deep && !!onDeep && score >= 50 && !retour;
   const hub = result.hub_url ?? quiz.hub_url;
@@ -206,99 +200,92 @@ export const QuizResult: React.FC<{
   // Le pourcentage compte un peu plus les questions difficiles : on le dit quand il s'écarte du simple compte.
   const weighted = items.length > 0 && Math.round((right.length / items.length) * 100) !== score;
 
-  const practicePrimary = !retour && !dernier && !goDeeper;
-  const practice = (
-    <Link to={practiceUrl(hub, quiz.id)} className={practicePrimary ? 'fd-btn-primary min-h-11 justify-center text-[14px]' : linkCls}>
-      <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')} {practicePrimary && <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden />}
+  const ghost = 'fd-btn-ghost min-h-11 justify-center text-[13.5px]';
+  const practice = (primary: boolean) => (
+    <Link to={practiceUrl(hub, quiz.id)} className={primary ? 'fd-btn-primary min-h-11 justify-center text-[14px]' : ghost}>
+      <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')} {primary && <ArrowRight className="h-4 w-4" aria-hidden />}
     </Link>
   );
-  const tabs: [Tab, string, number][] = [['erreurs', t('Erreurs'), wrong.length], ['sans', t('Sans réponse'), skipped.length], ['toutes', t('Toutes'), items.length]];
+  const main = dernier ? (
+    <button type="button" onClick={onRedo} className="fd-btn-primary min-h-11 justify-center text-[14px]">
+      <RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}
+    </button>
+  ) : retour ? (
+    <Link to={retour} className="fd-btn-primary min-h-11 justify-center text-[14px]"><ArrowLeft className="h-4 w-4" aria-hidden /> {t('Retour à mon DS')}</Link>
+  ) : goDeeper ? (
+    <button type="button" onClick={onDeep} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90">
+      <Mountain className="h-4 w-4" aria-hidden /> {t('Passer à l’approfondissement')}
+    </button>
+  ) : practice(true);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       <button type="button" onClick={onBack}
         className="-ms-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quiz par chapitre')}
       </button>
 
       <section className="overflow-hidden rounded-3xl border border-line bg-white" aria-labelledby="quiz-result-title">
-        <div className="flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:gap-7 sm:p-7 sm:text-start">
-          <ProgressRing percentage={score} size={112} strokeWidth={9} trackColor={RING.track} progressColor={score >= 50 ? RING.good : RING.low}>
-            <span className="fd-nums text-[28px] font-bold leading-none text-ink">{score}<span className="text-[15px]"> %</span></span>
-          </ProgressRing>
-          <div className="min-w-0">
-            <p className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] ${deep ? 'text-ink' : 'text-gold-strong'}`}>
-              {deep ? <Mountain className="h-3.5 w-3.5" aria-hidden /> : <BookOpen className="h-3.5 w-3.5" aria-hidden />}
-              {dernier
-                ? (deep ? t('Approfondissement · ton dernier passage · {date}', { date: frDate(result.completed_at) })
-                  : t('Quiz du cours · ton dernier passage · {date}', { date: frDate(result.completed_at) }))
-                : `${deep ? t('Approfondissement terminé') : t('Quiz du cours terminé')}${subject ? ` · ${t(subject)}` : ''}`}
-            </p>
-            <h1 id="quiz-result-title" className="fd-display mt-1.5 text-[24px] leading-tight text-ink sm:text-[26px]">{quiz.name}</h1>
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:justify-start">
-              <p className="text-[14px] text-ink-soft">
-                <b className="fd-nums text-ink">{right.length}</b> {right.length > 1 ? t('bonnes réponses sur') : t('bonne réponse sur')} <span className="fd-nums">{total}</span>
-              </p>
-              <Delta a={result} long />
-            </div>
-            {!dernier && <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">{sentence(score, before !== null && score > before, deep)}</p>}
-            {weighted && <p className="mt-1.5 text-[12px] text-ink-faint">{t('Les questions difficiles comptent un peu plus dans le score.')}</p>}
+        <div className="p-6 sm:p-8">
+          <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-semibold text-ink-faint">
+            <TypeIcon className="h-3.5 w-3.5" aria-hidden /> {t(QUIZ_TYPE[type].label)}{subject ? ` · ${t(subject)}` : ''}
+            {dernier && <span>· {t('dernier passage, le {date}', { date: frDate(result.completed_at) })}</span>}
+          </p>
+          <h1 id="quiz-result-title" className="fd-display mt-2 text-[28px] leading-[1.12] text-ink sm:text-[34px]">{quiz.name}</h1>
+          <div className="mt-7 flex flex-col items-center gap-7 sm:flex-row sm:gap-10">
+            <ProgressRing percentage={score} size={136} strokeWidth={10} trackColor={RING.track} progressColor={score >= 50 ? RING.good : RING.low}>
+              <span className="fd-nums text-[34px] font-bold leading-none text-ink">{score}<span className="text-[16px]"> %</span></span>
+            </ProgressRing>
+            <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-5 sm:w-auto sm:grid-cols-4 sm:gap-x-9">
+              {[
+                { key: 'justes', label: t('Justes'), value: String(right.length), tone: 'text-brand-hover' },
+                { key: 'fausses', label: t('Fausses'), value: String(wrong.length), tone: wrong.length ? 'text-gold-strong' : 'text-ink' },
+                { key: 'sans', label: t('Sans réponse'), value: String(skipped.length), tone: 'text-ink' },
+                ...(result.time_spent ? [{ key: 'temps', label: t('Temps'), value: duree(result.time_spent), tone: 'text-ink' }] : []),
+              ].map((it) => (
+                <div key={it.key}>
+                  <dt className="text-[12.5px] text-ink-faint">{it.label}</dt>
+                  <dd className={`fd-nums mt-1 text-[26px] font-bold leading-none ${it.tone}`}>{it.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-ink-faint">
+            <span className="fd-nums">{t('{n} questions', { n: total })}</span>
+            <Delta a={result} long />
+            {weighted && <span>{t('Score pondéré par la difficulté des questions')}</span>}
           </div>
         </div>
 
-        {deep && <BadgeBanner score={score} />}
+        {deep && <Medal score={score} />}
 
-        <div className="flex flex-col gap-2 border-t border-line bg-[#fcfbf9] px-5 py-4 sm:flex-row sm:items-center sm:gap-5 sm:px-7">
-          {dernier ? (
-            <button type="button" onClick={onRedo} className="fd-btn-primary min-h-11 shrink-0 justify-center whitespace-nowrap text-[14px]">
-              <RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}
-            </button>
-          ) : retour ? (
-            <Link to={retour} className="fd-btn-primary min-h-11 justify-center text-[14px]">
-              <ArrowLeft className="h-4 w-4" aria-hidden /> {t('Retour à mon DS')}
-            </Link>
-          ) : goDeeper ? (
-            <button type="button" onClick={onDeep} className="fd-btn-primary min-h-11 shrink-0 justify-center whitespace-nowrap text-[14px]">
-              <Mountain className="h-4 w-4" aria-hidden /> {t('Passer à l’approfondissement')}
-            </button>
-          ) : practice}
-          <div className="flex flex-wrap items-center justify-center gap-x-4 text-[13px] sm:justify-start">
-            {!practicePrimary && practice}
-            <Link to={lessonsUrl(hub, quiz.id)} className={linkCls}><BookOpen className="h-4 w-4" aria-hidden /> {t('Le cours')}</Link>
-            {/* L'approfondissement ne compte pas dans la maîtrise : pas de détour par Ma progression. */}
-            {!deep && <Link to={`/progression?chapitre=${quiz.id}`} className={linkCls}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>}
-            {!dernier && <button type="button" onClick={onRedo} className={linkCls}><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
-          </div>
+        <div className="flex flex-col gap-2 border-t border-line bg-paper/60 px-6 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-8">
+          {main}
+          {!dernier && <button type="button" onClick={onRedo} className={ghost}><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
+          {(dernier || retour || goDeeper) && practice(false)}
+          <Link to={lessonsUrl(hub, quiz.id)} className={ghost}><BookOpen className="h-4 w-4" aria-hidden /> {t('Le cours')}</Link>
+          {/* L'approfondissement ne compte pas dans la maîtrise : pas de lien vers Ma progression. */}
+          {!deep && <Link to={`/progression?chapitre=${quiz.id}`} className={ghost}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>}
         </div>
       </section>
 
-      {hasReport(result.par_theoreme) && <TheoremBoard report={result.par_theoreme} deep={deep} />}
+      {hasReport(result.par_theoreme) && <TheoremBoard report={result.par_theoreme} />}
 
       {items.length > 0 ? (
         <section aria-labelledby="quiz-correction-title" className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="quiz-correction-title" className="fd-display text-[20px] text-ink">{t('La correction')}</h2>
-            <div role="tablist" aria-label={t('Questions à revoir')} className="flex flex-wrap gap-1.5">
-              {tabs.map(([id, label, n]) => (n > 0 || id === 'toutes') && (
-                <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-                  className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
-                    tab === id ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-soft hover:text-ink'}`}>
-                  {label} <span className={`fd-nums font-normal ${tab === id ? 'text-white/75' : 'text-ink-faint'}`}>{n}</span>
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="quiz-correction-title" className="fd-display text-[20px] text-ink">{t('Correction')}</h2>
+            <Segmented label="Questions à revoir" value={tab} onChange={setTab} options={[
+              ...(wrong.length ? [{ key: 'erreurs' as const, label: 'Erreurs', count: wrong.length }] : []),
+              ...(skipped.length ? [{ key: 'sans' as const, label: 'Sans réponse', count: skipped.length }] : []),
+              { key: 'toutes' as const, label: 'Toutes', count: items.length },
+            ]} />
           </div>
-          {list.length ? (
-            <ol className="flex flex-col gap-3">{list.map((c) => <Corrected key={c.id} c={c} deep={deep} />)}</ol>
-          ) : (
-            <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[14px] text-ink-soft">
-              <CheckCircle2 className="me-1.5 inline h-4 w-4 text-brand" aria-hidden /> {t('Aucune erreur : tout est juste.')}
-            </p>
-          )}
+          <ol className="flex flex-col gap-2">{list.map((c) => <Corrected key={`${tab}:${c.id}`} c={c} open={tab !== 'toutes'} />)}</ol>
         </section>
       ) : dernier && (
         <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[13.5px] text-ink-faint">
-          {t('La correction de ce passage n’a pas été gardée (passage d’avant la mise à jour des quiz).')} {total > 1 ? t('{n} questions.', { n: total }) : t('{n} question.', { n: total })}
+          {t('La correction de ce passage n’a pas été gardée (passage d’avant la mise à jour des quiz).')}
         </p>
       )}
     </div>
