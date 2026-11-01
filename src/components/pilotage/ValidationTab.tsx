@@ -222,7 +222,12 @@ const Relecture: React.FC<{
     setBusy(true);
     setError(null);
     if (avance) setSuivant(next);
-    try { await fn(); await load(); onChanged(); return true; } catch (e) { setError(apiError(e, fallback)); return false; } finally { setBusy(false); }
+    try { await fn(); await load(); onChanged(); return true; } catch (e) {
+      // Rechargé aussi en cas d'échec : un doublon trouvé à la publication s'affiche avec « Ignorer le doublon ».
+      const msg = apiError(e, fallback);
+      setSuivant(null);
+      await load(); onChanged(); setError(msg); return false;
+    } finally { setBusy(false); }
   };
 
   if (!job) {
