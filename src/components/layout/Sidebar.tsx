@@ -18,7 +18,8 @@ import { canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/featur
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom } from './nav';
-import Logo3 from '@/assets/logo3.svg';
+import LogoFidni from '@/assets/logo-fidni.svg';
+import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import { t } from '@/i18n';
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -275,7 +276,8 @@ const SidebarInner: React.FC<{
       <div className={cx('flex h-[60px] flex-shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between ps-5 pe-3')}>
         {!collapsed && (
           <Link to="/" onClick={onClose} className="flex items-center rounded-lg" aria-label={t('Fidni, accueil')}>
-            <img src={Logo3} alt="Fidni" className="h-8 w-auto object-contain" />
+            <img src={LogoFidni} alt="Fidni" className="fd-logo-clair h-10 w-auto object-contain" />
+            <img src={LogoFidniSombre} alt="Fidni" className="fd-logo-sombre h-10 w-auto object-contain" />
           </Link>
         )}
         {drawer ? (

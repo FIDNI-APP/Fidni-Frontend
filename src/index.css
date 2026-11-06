@@ -366,6 +366,10 @@ html {
   color-scheme: dark;
 }
 .dark body { background: rgb(var(--c-paper)); color: rgb(var(--c-ink)); }
+/* Logo : or foncé sur fond clair, or vif sur fond sombre. */
+.fd-logo-sombre { display: none; }
+.dark .fd-logo-clair { display: none; }
+.dark .fd-logo-sombre { display: block; }
 /* Encre en fond (boutons, pastilles actives) : le texte blanc devient sombre pour rester lisible. */
 .dark .bg-ink, .dark .bg-accent, .dark .bg-ink .text-white, .dark .bg-accent .text-white,
 .dark .bg-ink .text-white\/70 { color: rgb(var(--c-paper)); }
