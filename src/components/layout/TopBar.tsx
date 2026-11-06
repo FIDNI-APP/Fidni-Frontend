@@ -10,7 +10,8 @@ import { NotificationBell } from './NotificationBell';
 import { useMobileTabBarVisible } from './nav';
 import { trackAction } from '@/lib/usage';
 import { t, useLang } from '@/i18n';
-import Logo3 from '@/assets/logo3.svg';
+import LogoFidni from '@/assets/logo-fidni.svg';
+import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 
 interface TopBarProps {
   onOpenMobile: () => void;
@@ -128,7 +129,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
           <div className="flex min-w-0 items-center md:hidden">
             {isHome ? (
               <Link to="/" aria-label={t('Fidni, accueil')} className="flex items-center rounded-lg px-2">
-                <img src={Logo3} alt="Fidni" className="h-7 w-auto object-contain" />
+                <img src={LogoFidni} alt="Fidni" className="fd-logo-clair h-9 w-auto object-contain" />
+                <img src={LogoFidniSombre} alt="Fidni" className="fd-logo-sombre h-9 w-auto object-contain" />
               </Link>
             ) : current && back ? (
               <>
