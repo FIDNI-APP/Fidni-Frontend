@@ -181,6 +181,12 @@ export const uploadAvatar = async (file: File): Promise<{ avatar_url: string }> 
   return response.data;
 };
 
+// Choisir un lionceau parmi ceux de Fidni
+export const chooseAvatar = async (avatar: string): Promise<{ avatar_url: string }> => {
+  const response = await api.post('/users/avatar/choisir/', { avatar });
+  return response.data;
+};
+
 // Remove avatar
 export const removeAvatar = async (): Promise<void> => {
   await api.delete('/users/avatar/');

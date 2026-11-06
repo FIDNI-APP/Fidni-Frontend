@@ -11,7 +11,7 @@ import {
   Camera, Check, Eye, Loader2, Lock, Plus, Settings, Trash2, User,
 } from 'lucide-react';
 import { getClassLevels, getSubjects, updateUserProfile } from '@/lib/api';
-import { removeAvatar, updateUserInfo, uploadAvatar } from '@/lib/api/userApi';
+import { chooseAvatar, removeAvatar, updateUserInfo, uploadAvatar } from '@/lib/api/userApi';
 import { IdentityFields } from '@/components/profile/IdentityForm';
 import { identityError, identityFromUser, identityPayload, type IdentityValue } from '@/lib/identity';
 import { TABBAR_OFFSET } from '@/components/layout/nav';
@@ -27,6 +27,9 @@ interface Grade {
 const BIO_MAX = 500; // même limite que Profil → Paramètres
 const AVATAR_MAX = 5 * 1024 * 1024;
 const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+// Mêmes noms que AVATARS_LIONS côté serveur, images dans public/avatars.
+const LIONS = Array.from({ length: 36 }, (_, i) => `lion-${String(i + 1).padStart(2, '0')}`);
+const lionSrc = (nom: string) => `/avatars/${nom}.webp`;
 
 const inputClass =
   'w-full px-4 py-2.5 bg-white border border-line rounded-xl text-sm text-ink placeholder:text-ink-faint '
@@ -86,6 +89,7 @@ export function EditProfile() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [avatarRemoved, setAvatarRemoved] = useState(false);
+  const [avatarLion, setAvatarLion] = useState<string | null>(null);
   // Photo enregistrée qui ne se charge plus : l'initiale à la place.
   const [avatarBroken, setAvatarBroken] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -153,6 +157,7 @@ export function EditProfile() {
     if (file.size > AVATAR_MAX) return fail('photo', t('Image trop lourde : 5 Mo maximum.'));
     setError(null);
     setAvatarFile(file);
+    setAvatarLion(null);
     setAvatarRemoved(false);
     setAvatarBroken(false);
     const reader = new FileReader();
@@ -160,8 +165,18 @@ export function EditProfile() {
     reader.readAsDataURL(file);
   };
 
+  const pickLion = (nom: string) => {
+    setError(null);
+    setAvatarFile(null);
+    setAvatarLion(nom);
+    setAvatarRemoved(false);
+    setAvatarBroken(false);
+    setAvatarPreview(lionSrc(nom));
+  };
+
   const dropAvatar = () => {
     setAvatarFile(null);
+    setAvatarLion(null);
     setAvatarPreview('');
     setAvatarRemoved(true);
   };
@@ -185,6 +200,7 @@ export function EditProfile() {
     setError(null);
     try {
       if (avatarFile) await uploadAvatar(avatarFile);
+      else if (avatarLion) await chooseAvatar(avatarLion);
       else if (avatarRemoved && user.profile?.avatar) await removeAvatar();
 
       await updateUserInfo(identityPayload(identity));
@@ -267,6 +283,29 @@ export function EditProfile() {
                 <input ref={fileInput} type="file" accept={AVATAR_TYPES.join(',')} onChange={pickAvatar} className="hidden" />
               </div>
             </div>
+
+            <fieldset className="mt-6">
+              <legend className="mb-2.5 text-sm font-medium text-ink-soft">{t('Ou choisis un lionceau')}</legend>
+              <div className="grid grid-cols-6 gap-2 sm:grid-cols-9">
+                {LIONS.map((nom, i) => {
+                  const choisi = avatarPreview.endsWith(lionSrc(nom));
+                  return (
+                    <button key={nom} type="button" onClick={() => pickLion(nom)} aria-pressed={choisi}
+                      aria-label={t('Lionceau {n}', { n: i + 1 })}
+                      className={`relative aspect-square overflow-hidden rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+                        choisi ? 'ring-[3px] ring-brand ring-offset-2 ring-offset-surface' : 'ring-1 ring-line hover:ring-2 hover:ring-brand/50'
+                      }`}>
+                      <img src={lionSrc(nom)} alt="" width={160} height={160} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      {choisi && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/30" aria-hidden>
+                          <Check className="h-5 w-5 text-white" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
 
             <div className="mt-6 space-y-4">
               <div>
