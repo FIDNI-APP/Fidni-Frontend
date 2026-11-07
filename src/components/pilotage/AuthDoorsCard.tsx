@@ -20,6 +20,7 @@ const DOOR_LABEL: Record<string, string> = {
   // Invitations (components/auth/SignupPrompt, layout, Landing)
   bandeau: 'Bandeau en bas de page', carte: 'Carte « Crée ton compte »', sidebar: 'Menu latéral',
   'barre-haut': 'Bouton « Connexion » (barre du haut)', hero: 'Accueil : haut de page', cta: 'Accueil : bas de page',
+  defi: 'Défi du jour',
   autre: 'Autre (non précisé)',
 };
 // hasOwn : une source envoyée par n'importe quel visiteur (« constructor »…) ne doit pas lire le prototype.

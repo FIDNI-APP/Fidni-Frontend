@@ -32,6 +32,7 @@ import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { IATab } from '@/components/pilotage/IATab';
 import { ValidationTab } from '@/components/pilotage/ValidationTab';
 import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
+import { DefisAdminTab } from '@/components/pilotage/DefisAdminTab';
 import { VisitorsTab, type AnonymousStats } from '@/components/pilotage/VisitorsTab';
 import { LoginDiagnostic } from '@/components/pilotage/LoginDiagnostic';
 import { BansCard } from '@/components/pilotage/BansCard';
@@ -85,7 +86,7 @@ interface UserRow {
 interface UsersPage { count: number; pages: number; results: UserRow[]; counts: Record<string, number> }
 
 const PERIODS = [7, 30, 90];
-type TabKey = 'apercu' | 'a-traiter' | 'validation' | 'membres' | 'usage' | 'visiteurs' | 'quiz' | 'ia';
+type TabKey = 'apercu' | 'a-traiter' | 'validation' | 'membres' | 'usage' | 'visiteurs' | 'quiz' | 'defis' | 'ia';
 
 /* Réponse de /api/pilotage/ remise en forme une seule fois (10/10/2026) : un champ absent, nul ou d'un autre
  * type (serveur plus ancien ou plus récent que la page) devient une valeur vide au lieu de faire planter
@@ -922,7 +923,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
 export default function Pilotage() {
   const { user, isLoading } = useAuth();
   const [params, setParams] = useSearchParams();
-  const tab = (['apercu', 'a-traiter', 'validation', 'membres', 'usage', 'visiteurs', 'quiz', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
+  const tab = (['apercu', 'a-traiter', 'validation', 'membres', 'usage', 'visiteurs', 'quiz', 'defis', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
   const days = PERIODS.includes(Number(params.get('periode'))) ? Number(params.get('periode')) : 30;
   const setParam = (key: string, value: string) => setParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n; }, { replace: true });
 
@@ -970,6 +971,7 @@ export default function Pilotage() {
     { key: 'usage', label: 'Usage' },
     { key: 'visiteurs', label: 'Visiteurs' },
     { key: 'quiz', label: 'Quiz' },
+    { key: 'defis', label: 'Défis', badge: live.data?.todo.defis_a_valider },
     { key: 'ia', label: 'IA', badge: live.data?.todo.ia_a_relire },
   ];
 
@@ -1023,6 +1025,8 @@ export default function Pilotage() {
         </>
       ) : tab === 'quiz' ? (
         <QuizAdminTab />
+      ) : tab === 'defis' ? (
+        <DefisAdminTab />
       ) : tab === 'ia' ? (
         <IATab />
       ) : tab === 'validation' ? (
