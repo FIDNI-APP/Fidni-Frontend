@@ -14,6 +14,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import type { ListSort } from '@/types/content';
 import { getClassLevels, getSubjects, getChapters, getTheorems, getDifficultyCounts } from '@/lib/api';
 import { slugify } from '@/lib/api/hubApi';
@@ -248,6 +249,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   // Tiroir du téléphone : Échap ferme, la page derrière ne défile pas, le focus revient au bouton.
   const sheetOpen = phone && isPanelOpen;
   const sheetRef = useRef<HTMLDivElement>(null);
+  const glisser = useGlisserPourFermer({ onClose: () => setIsPanelOpen(false), refPanneau: sheetRef, ouvert: sheetOpen, actif: phone });
   useEffect(() => {
     if (!sheetOpen) return;
     const prevOverflow = document.body.style.overflow;
@@ -543,24 +545,29 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
           {sheetOpen && (
             <div className="fixed inset-0 z-[60] flex flex-col justify-end print:hidden">
               <motion.div
-                className="absolute inset-0 bg-black/40"
+                className="absolute inset-0"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setIsPanelOpen(false)}
                 aria-hidden
-              />
+              >
+                <motion.div className="absolute inset-0 bg-black/40" style={{ opacity: glisser.opaciteVoile }} />
+              </motion.div>
               <motion.div
                 ref={sheetRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="filtres-titre"
                 tabIndex={-1}
+                {...glisser.panneau}
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
+                transition={RESSORT_FEUILLE}
                 className="relative flex max-h-[88vh] flex-col rounded-t-2xl bg-white shadow-2xl outline-none"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
               >
-                <span className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[#e7e3dc]" aria-hidden />
-                <div className="flex items-center justify-between h-12 ps-4 pe-2 border-b border-[#f0ede8]">
+                <div aria-hidden {...glisser.poignee} className="flex shrink-0 justify-center pb-1 pt-2">
+                  <span className="h-1 w-10 rounded-full bg-[#e7e3dc]" />
+                </div>
+                <div {...glisser.poignee} className="flex items-center justify-between h-12 ps-4 pe-2 border-b border-[#f0ede8]">
                   <h2 id="filtres-titre" className="text-[16px] font-semibold text-ink">
                     {t('Filtres')}{panelCount > 0 ? <span className="ms-1.5 text-ink-faint font-medium">({panelCount})</span> : null}
                   </h2>

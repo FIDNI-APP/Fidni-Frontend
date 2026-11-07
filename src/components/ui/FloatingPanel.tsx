@@ -37,7 +37,7 @@ export const FloatingPanel: React.FC<FloatingPanelProps> = ({
   // Le menu lui-même (avec ses classes) : c'est lui qu'on mesure. L'enveloppe `ref` ne fait que
   // le placer et, si l'écran manque de place, le limiter en hauteur.
   const innerRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width?: number; maxHeight?: number; origin: string } | null>(null);
 
   const setRefs = (el: HTMLDivElement | null) => {
     ref.current = el;
@@ -74,9 +74,11 @@ export const FloatingPanel: React.FC<FloatingPanelProps> = ({
       width: matchWidth ? a.width : undefined,
       // Limite posée seulement si l'écran manque de place.
       maxHeight: naturalHeight > room ? Math.floor(room) : undefined,
+      // Le menu naît de son bouton : le point d'origine est le coin le plus proche du bouton.
+      origin: `${placement.endsWith('end') ? 'right' : placement.endsWith('start') ? 'left' : 'center'} ${top ? 'bottom' : 'top'}`,
     };
     setPos((prev) => (prev && prev.top === next.top && prev.left === next.left && prev.width === next.width
-      && prev.maxHeight === next.maxHeight ? prev : next));
+      && prev.maxHeight === next.maxHeight && prev.origin === next.origin ? prev : next));
   }, [anchorRef, matchWidth, offset, placement]);
 
   // Première mesure avant l'affichage (pas de saut visible), puis à chaque défilement ou redimensionnement.
@@ -135,7 +137,8 @@ export const FloatingPanel: React.FC<FloatingPanelProps> = ({
         visibility: pos ? 'visible' : 'hidden',
       }}
     >
-      <div ref={innerRef} id={id} role={role} className={className} style={style}>
+      <div ref={innerRef} id={id} role={role} className={`fd-surgir ${className ?? ''}`}
+        style={{ transformOrigin: pos?.origin, ...style }}>
         {children}
       </div>
     </div>,

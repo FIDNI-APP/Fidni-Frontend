@@ -11,6 +11,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LangProvider, t } from './i18n';
 import { Suspense, lazy, useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { AuthModalProvider, useAuthModal } from '@/components/auth/AuthController';
 import { FilterProvider } from './components/navbar/FilterContext';
 import LegalRedirector from './components/layout/LegalRedirector';
@@ -264,6 +265,9 @@ function App() {
 
   return (
     <div className="App">
+      {/* « Réduire les animations » du système vaut aussi pour framer-motion (le CSS seul ne le couvrait pas) :
+          plus de glissements, les fondus restent. */}
+      <MotionConfig reducedMotion="user">
       <BrowserRouter>
         <ScrollToTopOnNavigate />
         {/* Messages brefs (« Cahier créé », « Leçon ajoutée »…) : aucun conteneur n'était monté, ils restaient muets. */}
@@ -682,6 +686,7 @@ function App() {
         </ThemeProvider>
         </LangProvider>
       </BrowserRouter>
+      </MotionConfig>
     </div>
   );
 }

@@ -123,7 +123,7 @@ export const NationalTag: React.FC<{ year?: number | null }> = ({ year }) => (
   </span>
 );
 
-const iconBtn = 'relative z-10 w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand';
+const iconBtn = 'fd-hit relative z-10 w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand';
 
 export const BookmarkButton: React.FC<{ saved: boolean; busy: boolean; onClick: (e: React.MouseEvent) => void; className?: string }> = ({
   saved, busy, onClick, className = '',

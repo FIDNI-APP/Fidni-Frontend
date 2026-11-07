@@ -102,7 +102,7 @@ export const QuestionChart: React.FC<{
                         return (
                           <button key={st} type="button" aria-pressed={active} aria-label={t('{label} (question {num})', { label: t(o.label), num: r.num })} title={t(o.label)}
                             onClick={() => onAssess(r.path, active && progress[r.path] ? progress[r.path]! : st)}
-                            className={`inline-flex h-6 w-6 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:w-8 ${
+                            className={`fd-hit inline-flex h-6 w-6 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:w-8 ${
                               active ? `${o.dot} border-transparent` : `border-line bg-white text-[#b9b3a8] ${o.hover}`}`}>
                             <o.icon className="h-3 w-3" strokeWidth={active ? 3 : 2.25} aria-hidden />
                           </button>

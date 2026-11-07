@@ -2,10 +2,12 @@
 // les chapitres sans leçon, une ligne chacun qui mène aux leçons de ce chapitre (la consigne est dite une fois).
 // Ordinateur : colonne à gauche. Téléphone : un sélecteur pleine largeur qui ouvre une feuille du bas,
 // pour laisser toute la largeur à la leçon.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ChevronRight, Printer, X } from 'lucide-react';
+import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import { t } from '@/i18n';
 import { chapterLessonsPath, plural, sameId, splitSections, type Id, type NbNotebook } from './notebookModel';
 
@@ -78,6 +80,8 @@ const NotebookSections: React.FC<Props> = (props) => {
   const { filled, empty } = splitSections(notebook);
   const active = filled.find((s) => sameId(s.id, activeId)) ?? null;
   const position = active ? filled.indexOf(active) + 1 : 0;
+  const feuille = useRef<HTMLDivElement>(null);
+  const glisser = useGlisserPourFermer({ onClose: () => setOpen(false), refPanneau: feuille, ouvert: open });
 
   useEffect(() => {
     if (!open) return;
@@ -116,22 +120,34 @@ const NotebookSections: React.FC<Props> = (props) => {
         <ChapterList {...props} />
       </nav>
 
-      {open && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-[rgba(20,18,16,.4)] md:hidden" onClick={() => setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-label={t('Chapitres du cahier')} onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[80dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-12px_40px_rgba(20,18,16,.18)]">
-            <div className="flex shrink-0 items-center gap-2 border-b border-line py-2 ps-5 pe-2">
-              <p className="fd-display min-w-0 flex-1 truncate text-[19px] text-ink">{notebook.title}</p>
-              <button type="button" onClick={() => setOpen(false)} aria-label={t('Fermer')}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-                <X className="h-5 w-5" />
-              </button>
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {open && (
+            <div className="fixed inset-0 z-[80] flex flex-col justify-end md:hidden">
+              <motion.div aria-hidden className="absolute inset-0" onClick={() => setOpen(false)}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
+                <motion.div className="absolute inset-0 bg-[rgba(20,18,16,.4)]" style={{ opacity: glisser.opaciteVoile }} />
+              </motion.div>
+              <motion.div ref={feuille} role="dialog" aria-modal="true" aria-label={t('Chapitres du cahier')} {...glisser.panneau}
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={RESSORT_FEUILLE}
+                className="relative flex max-h-[80dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-12px_40px_rgba(20,18,16,.18)]">
+                <div aria-hidden {...glisser.poignee} className="flex shrink-0 justify-center pb-1 pt-2">
+                  <span className="h-1 w-10 rounded-full bg-[#dcd8d0]" />
+                </div>
+                <div {...glisser.poignee} className="flex shrink-0 items-center gap-2 border-b border-line pb-2 ps-5 pe-2">
+                  <p className="fd-display min-w-0 flex-1 truncate text-[19px] text-ink">{notebook.title}</p>
+                  <button type="button" onClick={() => setOpen(false)} aria-label={t('Fermer')}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="overflow-y-auto overscroll-contain px-2 pb-5 pt-3">
+                  <ChapterList {...props} onPicked={() => setOpen(false)} />
+                </div>
+              </motion.div>
             </div>
-            <div className="overflow-y-auto overscroll-contain px-2 pb-5 pt-3">
-              <ChapterList {...props} onPicked={() => setOpen(false)} />
-            </div>
-          </div>
-        </div>,
+          )}
+        </AnimatePresence>,
         document.body,
       )}
     </>

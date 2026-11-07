@@ -92,7 +92,7 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
     <nav
       aria-label={t('Navigation principale')}
       data-tour="barre-mobile"
-      className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur print:hidden"
+      className="fd-chrome md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur print:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <ul className="mx-auto flex max-w-lg items-stretch px-1">
