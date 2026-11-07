@@ -16,6 +16,8 @@ yarn-error.log*
 
 # Environment
 .env
+# Jetons de registres npm (07/11/2026 : un jeton TipTap avait été publié ici)
+.npmrc
 .env.local
 .env.development.local
 .env.test.local
