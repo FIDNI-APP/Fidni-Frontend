@@ -4,24 +4,37 @@ import type { DashboardOverview as Overview, OverviewContent, RecommendedItem } 
 import type { WeeklyProgress } from '@/lib/api';
 import { KIND_LABEL, type UpcomingTest } from '@/lib/api/devoirsApi';
 import type { NextTestState } from '@/components/devoirs/useNextTest';
+import type { ToRedoItem } from '@/lib/api/revisionListApi';
 import { t } from '@/i18n';
 
 /* ───────────────────────── L'action principale ───────────────────────── */
 
 export type NextChoice =
   | { kind: 'ds'; test: UpcomingTest; resume: OverviewContent | null }
-  | { kind: 'resume'; item: OverviewContent; others: OverviewContent[]; forTest: boolean }
+  | { kind: 'resume'; item: OverviewContent; others: OverviewContent[]; forTest: boolean; finish?: boolean }
+  | { kind: 'redo'; item: ToRedoItem; others: ToRedoItem[]; count: number }
   | { kind: 'start'; exercise: RecommendedItem | null }
   | { kind: 'teacher' };
 
 /** DS assez proche pour passer avant « Reprendre ». */
 const DS_FIRST_DAYS = 3;
 
-/** Priorité : DS dans 3 jours au plus › reprendre › DS dans les deux semaines › commencer (prof : ses classes). */
-export function chooseNext(data: Overview, test: UpcomingTest | null, exercises: RecommendedItem[], teacher: boolean): NextChoice {
+/** Priorité : DS dans 3 jours au plus › devoir à terminer › questions à revoir › reprendre › DS dans les deux semaines ›
+ * commencer (prof : ses classes). */
+// Audit d'usage (07/11/2026) : peu d'élèves reviennent la deuxième semaine. Celui qui revient voit d'abord ce qu'il a
+// laissé en plan : un devoir commencé, puis ses questions à revoir ; ensuite seulement le reste.
+export function chooseNext(data: Overview, test: UpcomingTest | null, exercises: RecommendedItem[], teacher: boolean,
+  redo: ToRedoItem[] = []): NextChoice {
   if (teacher) return { kind: 'teacher' };
   const [last, ...others] = data.resume;
   if (test && test.days_left >= 0 && test.days_left <= DS_FIRST_DAYS) return { kind: 'ds', test, resume: last ?? null };
+  const exam = data.resume.find((r) => r.type === 'exam' && (r.total ?? 0) > 0 && (r.assessed ?? 0) < (r.total ?? 0));
+  if (exam) {
+    const rest = data.resume.filter((r) => r !== exam).slice(0, 2);
+    const forExam = !!(exam.chapter && test && test.days_left >= 0 && test.chapters.some((c) => c.name === exam.chapter));
+    return { kind: 'resume', item: exam, others: rest, forTest: forExam, finish: true };
+  }
+  if (redo.length) return { kind: 'redo', item: redo[0], others: redo.slice(1, 3), count: redo.length };
   // Le contenu à reprendre est-il au programme du DS annoncé ? (on le dit : ça motive)
   const forTest = !!(last?.chapter && test && test.days_left >= 0 && test.chapters.some((c) => c.name === last.chapter));
   if (last) return { kind: 'resume', item: last, others: others.slice(0, 2), forTest };
