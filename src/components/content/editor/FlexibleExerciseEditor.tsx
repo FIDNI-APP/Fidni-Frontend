@@ -21,6 +21,7 @@ import { TextBlockEditor } from './TextBlockEditor';
 import { api } from '@/lib/api/apiClient';
 import type { ContentBlock } from '@/types/content';
 import type { Difficulty } from '@/types';
+import type { QuestionDifficulty } from '@/components/content/viewer/QuestionDifficultyTag';
 import { t } from '@/i18n';
 
 // =====================
@@ -36,7 +37,7 @@ export type BlockType = 'context' | 'question' | 'section';
 // proposés. Jamais montrés aux élèves.
 export interface QuestionMeta {
   theorems?: string[];
-  difficulty?: Difficulty;
+  difficulty?: QuestionDifficulty;
   expected_seconds?: number;
   common_mistakes?: string[];
   hint?: string;
@@ -103,6 +104,12 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; active: string }[]
   { value: 'easy',   label: 'Facile',    active: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
   { value: 'medium', label: 'Moyen',     active: 'bg-amber-100 text-amber-700 border-amber-300' },
   { value: 'hard',   label: 'Difficile', active: 'bg-red-100 text-red-700 border-red-300' },
+];
+
+// Une question va un cran plus haut que son contenu (07/11/2026) : un exercice « moyen » peut en avoir une très difficile.
+const QUESTION_DIFFICULTY_OPTIONS: { value: QuestionDifficulty; label: string }[] = [
+  ...DIFFICULTY_OPTIONS,
+  { value: 'very_hard', label: 'Très difficile' },
 ];
 
 // =====================
@@ -223,8 +230,8 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
 
           {/* Difficulté + temps estimé */}
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              {DIFFICULTY_OPTIONS.map(d => {
+            <div className="flex flex-wrap items-center gap-1.5" title={t('Affichée aux élèves à côté de la question.')}>
+              {QUESTION_DIFFICULTY_OPTIONS.map(d => {
                 const active = meta?.difficulty === d.value;
                 return (
                   <button

@@ -32,6 +32,7 @@ import { trackAction } from '@/lib/usage';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import { useRegisterPrompt } from './pageHelpers';
 import { FoldedSolution } from './FoldedSolution';
+import { QuestionFacts } from './QuestionDifficultyTag';
 import { t } from '@/i18n';
 
 // =====================
@@ -354,15 +355,15 @@ const InlineSolution: React.FC<{ solution?: ContentBlock; hint?: ContentBlock; i
 
 /** Barre d'actions d'une question : barème, solution, auto-évaluation. */
 const QuestionActions: React.FC<{
-  points?: number; showSolution: boolean; onToggleSolution: () => void; hasSolution: boolean;
+  points?: number; difficulty?: string | null; showSolution: boolean; onToggleSolution: () => void; hasSolution: boolean;
   assess?: { current?: AssessmentStatus; onAssess: (s: AssessmentStatus) => void; options?: AssessmentStatus[] };
   className?: string;
-}> = ({ points, showSolution, onToggleSolution, hasSolution, assess, className = '' }) => (
+}> = ({ points, difficulty, showSolution, onToggleSolution, hasSolution, assess, className = '' }) => (
   <div className={`flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-1 -ms-1.5 [@media(pointer:coarse)]:gap-y-1.5 [@media(pointer:coarse)]:ms-0 ${className}`}>
     <SolutionToggle isOpen={showSolution} onToggle={onToggleSolution} hasSolution={hasSolution} />
     {hasSolution && assess && <span className="w-px h-4 bg-line mx-1" aria-hidden />}
     {assess && <QuickAssess current={assess.current} onAssess={assess.onAssess} options={assess.options} />}
-    {points ? <span className="ms-1 text-xs text-ink-faint fd-nums">{formatPoints(points)}</span> : null}
+    <QuestionFacts difficulty={difficulty} points={points ? formatPoints(points) : null} className="ms-1" />
   </div>
 );
 
@@ -511,10 +512,10 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
  * avec « Tu avais trouvé ? » à son pied. Sans solution, l'auto-évaluation reste sous la question.
  */
 const ReadingQuestionBody: React.FC<{
-  path: string; points?: number; hint?: ContentBlock; solution?: ContentBlock; locked: boolean; globalShow: boolean;
+  path: string; points?: number; difficulty?: string | null; hint?: ContentBlock; solution?: ContentBlock; locked: boolean; globalShow: boolean;
   progress?: ProgressData; onAssess?: AssessHandler; canAssess: boolean; assessOptions?: AssessmentStatus[];
   onSolutionOpen?: (path: string) => void; onHintOpen?: (path: string) => void; onReport?: (path: string) => void;
-}> = ({ path, points, hint, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onHintOpen, onReport }) => {
+}> = ({ path, points, difficulty, hint, solution, locked, globalShow, progress, onAssess, canAssess, assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onHintOpen, onReport }) => {
   const hasSolution = Boolean(solution?.html) && !locked;
   const { shown, toggle, openedHere } = useSolutionState(path, globalShow, locked, onSolutionOpen);
   // Indication : cachée pendant l'épreuve comme la solution ; une solution ouverte la montre aussi (la
@@ -529,7 +530,11 @@ const ReadingQuestionBody: React.FC<{
   const current = progress?.[path]?.status;
   const assess = (s: AssessmentStatus, source: AssessSource) => onAssess?.(path, s, source);
   const report = onReport ? () => onReport(path) : undefined;
-  const pts = points ? <span className="ms-auto ps-2 text-[12.5px] text-ink-faint fd-nums">{formatPoints(points)}</span> : null;
+  // Difficulté de la question : jamais pendant une épreuve (ce serait un indice).
+  const niveau = !locked && difficulty ? difficulty : null;
+  const pts = points || niveau ? (
+    <QuestionFacts difficulty={niveau} points={points ? formatPoints(points) : null} className="ms-auto ps-2" />
+  ) : null;
   if (!hasSolution && !hasHint && !(canAssess && !locked) && !pts) return null;
   return (
     <>
@@ -559,6 +564,8 @@ const ReadingQuestionBody: React.FC<{
 
 interface SubQuestionRendererProps {
   subQuestion: SubQuestionBlock;
+  /** Difficulté de la question : celle de la sous-question si elle n'a pas la sienne. */
+  parentDifficulty?: string | null;
   questionIndex: number;
   sqIndex: number;
   questionPath: string;
@@ -574,6 +581,7 @@ interface SubQuestionRendererProps {
 
 const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
   subQuestion,
+  parentDifficulty,
   questionIndex,
   sqIndex,
   questionPath,
@@ -602,6 +610,7 @@ const SubQuestionRenderer: React.FC<SubQuestionRendererProps> = ({
         </div>
         <QuestionActions
           points={subQuestion.points}
+          difficulty={locked ? null : subQuestion.meta?.difficulty ?? parentDifficulty}
           showSolution={showSolution}
           onToggleSolution={toggle}
           hasSolution={hasSolution}
@@ -676,6 +685,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
         <QuestionActions
           className="ms-5 sm:ms-6"
           points={block.points}
+          difficulty={locked ? null : block.meta?.difficulty}
           showSolution={showSolution}
           onToggleSolution={toggle}
           hasSolution={hasSolution}
@@ -703,6 +713,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             <SubQuestionRenderer
               key={sq.id}
               subQuestion={sq}
+              parentDifficulty={block.meta?.difficulty}
               questionIndex={questionIndex}
               sqIndex={sqIdx}
               questionPath={path}
@@ -744,7 +755,7 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
             <div className="min-w-0 flex-1"><RenderContent content={block.content} /></div>
             {onReport && <ReportQuestionButton group="q" onClick={() => onReport(path)} />}
           </div>
-          {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} hint={block.hint} solution={block.solution} {...common} />}
+          {subs.length === 0 && <ReadingQuestionBody path={path} points={block.points} difficulty={block.meta?.difficulty} hint={block.hint} solution={block.solution} {...common} />}
           {/* « Tout réussi » d'une question n'est pas repris ici : « Où en es-tu ? » (haut de page, rappel en bas) le fait pour tout le contenu. */}
           {subs.length > 0 && (
             <>
@@ -758,7 +769,7 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
                         <div className="min-w-0 flex-1"><RenderContent content={sq.content} /></div>
                         {onReport && <ReportQuestionButton group="sq" onClick={() => onReport(sqPath)} />}
                       </div>
-                      <ReadingQuestionBody path={sqPath} points={sq.points} hint={sq.hint} solution={sq.solution} {...common} />
+                      <ReadingQuestionBody path={sqPath} points={sq.points} difficulty={sq.meta?.difficulty ?? block.meta?.difficulty} hint={sq.hint} solution={sq.solution} {...common} />
                     </div>
                   </div>
                 );
