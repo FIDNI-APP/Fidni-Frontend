@@ -90,6 +90,7 @@ export function VoteButtons({
         type="button"
         onClick={(e) => { e.stopPropagation(); handleVote(1); }}
         aria-pressed={liked}
+        data-effet="aime"
         aria-label={t("J'aime ({n})", { n: counts.likes })}
         title={liked ? t('Tu aimes ce contenu · cliquer pour retirer') : t('J’aime : ce contenu m’a aidé')}
         className={`inline-flex items-center rounded-full border font-semibold fd-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${s.pill} ${
@@ -117,6 +118,7 @@ export function VoteButtons({
         type="button"
         onClick={(e) => { e.stopPropagation(); handleVote(-1); }}
         aria-pressed={disliked}
+        data-effet="neutre"
         aria-label={t("Je n'aime pas ({n})", { n: counts.dislikes })}
         title={disliked ? t('Tu n’aimes pas ce contenu · cliquer pour retirer') : t('Je n’aime pas')}
         className={`inline-flex items-center rounded-full border fd-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${s.pill} ${

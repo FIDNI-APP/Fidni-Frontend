@@ -169,7 +169,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
         </button>
 
         <div className="ms-auto flex shrink-0 items-center gap-0.5">
-          <button type="button" onClick={onToggleSave} disabled={isSaving} data-tour="detail-enregistrer" aria-pressed={isSaved}
+          <button type="button" onClick={onToggleSave} disabled={isSaving} data-tour="detail-enregistrer" aria-pressed={isSaved} data-effet="neutre"
             aria-label={isSaved ? t('Retirer de mes favoris') : t('Enregistrer dans mes favoris')}
             className={`${headBtn} ${isSaved ? 'text-ink' : ''}`}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />}

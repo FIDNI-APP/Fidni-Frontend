@@ -250,7 +250,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
 
         {/* Aperçu : ce qu'il y a dedans, lisible, coupé en fondu. */}
         {structure && (
-          <div className="fd-card-preview mt-3 mb-4 rounded-xl border border-[#efece6] bg-[#fcfbf9] px-4 py-3 text-[13.5px] leading-[1.55] text-ink-soft">
+          <div className="fd-card-preview mt-3 mb-4 rounded-xl border border-[#efece6] bg-[#fcfbf9] px-4 py-3 text-[14.5px] leading-[1.55] text-ink-soft">
             <div className="fd-card-preview-clip">
               {contentType === 'exam' ? <ExamPreview structure={structure} total={exam?.section_count} />
                 : contentType === 'lesson' ? <LessonPreview structure={structure} />

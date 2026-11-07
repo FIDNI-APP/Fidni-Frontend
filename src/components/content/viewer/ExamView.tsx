@@ -420,7 +420,7 @@ export const ExamView: React.FC<Props> = ({
           </button>
         )}
         {allPaths.length > 0 && (
-          <button type="button" onClick={toutReussi} aria-pressed={allSuccess}
+          <button type="button" onClick={toutReussi} aria-pressed={allSuccess} data-effet="reussi"
             title={allSuccess ? t('Tout réussi : clique pour effacer') : t('Marquer toutes les questions comme réussies')}
             className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[12px] font-semibold transition-colors ${
               allSuccess ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-soft hover:border-brand-line hover:text-brand-hover'}`}>
