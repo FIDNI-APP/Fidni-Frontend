@@ -10,7 +10,6 @@ ENV VITE_API_URL=${VITE_API_URL}
 
 # Copy package files
 COPY package*.json ./
-COPY .npmrc ./
 
 # Install ALL dependencies (dev deps needed for TypeScript/Vite build)
 RUN npm ci

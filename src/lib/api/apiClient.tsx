@@ -53,6 +53,20 @@ api.interceptors.request.use(
 let refreshing: Promise<string | null> | null = null;
 
 /**
+ * Refus du renouvellement : un autre onglet a peut-être renouvelé juste avant avec le même jeton (chaque jeton de
+ * rafraîchissement ne sert qu'une fois depuis le 07/11/2026). Si un jeton neuf apparaît dans le stockage, on le
+ * prend ; sinon la session est bien terminée.
+ */
+async function renouveleAilleurs(utilise: string): Promise<string | null> {
+  for (let i = 0; i < 4; i++) {
+    const actuel = localStorage.getItem(REFRESH_KEY);
+    if (actuel && actuel !== utilise) return localStorage.getItem(ACCESS_KEY);
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return null;
+}
+
+/**
  * Renouvelle le jeton d'accès (valable 1 h) avec le jeton de rafraîchissement (14 jours).
  * Plusieurs requêtes qui échouent en même temps partagent un seul renouvellement.
  */
@@ -62,7 +76,7 @@ export function refreshAccessToken(): Promise<string | null> {
     refreshing = (refresh
       ? axios.post(`${api.defaults.baseURL}/token/refresh/`, { refresh })
           .then((r) => { storeTokens(r.data.access, r.data.refresh); return r.data.access as string; })
-          .catch(() => null)
+          .catch(() => renouveleAilleurs(refresh))
       : Promise.resolve(null)
     ).finally(() => { refreshing = null; });
   }
