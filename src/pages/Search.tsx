@@ -6,12 +6,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon, BookOpen, Loader2, RotateCcw, X } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
-import { HomeContentCard } from '@/components/content/HomeContentCard';
-import { getExercises, getLessons, getExams, getClassLevels, voteExercise, voteLesson, voteExam } from '@/lib/api';
+import { ContentListCard } from '@/components/content/ContentListCard';
+import type { ListItem } from '@/components/content/listing/listingUtils';
+import { getExercises, getLessons, getExams, getClassLevels } from '@/lib/api';
 import { getHub, hubPath, profileLevel, slugify } from '@/lib/api/hubApi';
-import { Content, VoteValue } from '@/types';
+import { Content } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthModal } from '@/components/auth/AuthController';
 import { SEO } from '@/components/layout/SEO';
 import { trackAction } from '@/lib/usage';
 import { t } from '@/i18n';
@@ -25,8 +25,7 @@ interface Suggestion { label: string; url: string; count?: number }
 export function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const { openModal } = useAuthModal();
+  const { isLoading: authLoading, user } = useAuth();
   const myLevel = profileLevel(user);
 
   // La requête lancée (adresse) est distincte de la saisie : l'en-tête et l'état vide ne bougent pas
@@ -62,9 +61,9 @@ export function Search() {
     let cancelled = false;
     const classLevels = levelId ? [levelId] : undefined;
     Promise.all([
-      getExercises({ search: submitted, classLevels, per_page: 20 }),
-      getLessons({ search: submitted, classLevels, per_page: 20 }),
-      getExams({ search: submitted, classLevels, per_page: 20 }),
+      getExercises({ search: submitted, classLevels, per_page: 20, view: 'card' }),
+      getLessons({ search: submitted, classLevels, per_page: 20, view: 'card' }),
+      getExams({ search: submitted, classLevels, per_page: 20, view: 'card' }),
     ])
       .then(([ex, le, exa]) => {
         if (cancelled) return;
@@ -127,29 +126,6 @@ export function Search() {
     setSearchParams(next, { replace: true });
   };
 
-  // Le bon vote selon le type du contenu (et la bonne liste à mettre à jour).
-  const handleVote = async (id: string, value: VoteValue, contentType?: Kind) => {
-    if (!isAuthenticated) { openModal('vote'); return; }
-    const kind: Kind = contentType
-      ?? (lessons.some((i) => String(i.id) === id) ? 'lesson' : exams.some((i) => String(i.id) === id) ? 'exam' : 'exercise');
-    const vote = kind === 'lesson' ? voteLesson : kind === 'exam' ? voteExam : voteExercise;
-    const setList = kind === 'lesson' ? setLessons : kind === 'exam' ? setExams : setExercises;
-    try {
-      // Seulement les compteurs : la ligne renvoyée par le vote n'a pas la forme d'un résultat de liste.
-      const updated = await vote(id, value) as Partial<Content> | undefined;
-      if (updated) {
-        setList((p) => p.map((i) => (String(i.id) === id ? {
-          ...i,
-          like_count: updated.like_count ?? i.like_count,
-          dislike_count: updated.dislike_count ?? i.dislike_count,
-          vote_count: updated.vote_count ?? i.vote_count,
-          // Vote retiré : null côté serveur.
-          user_vote: 'user_vote' in updated ? (updated.user_vote ?? 0) : i.user_vote,
-        } : i)));
-      }
-    } catch (err) { console.error('Failed to vote:', err); }
-  };
-
   const clearSearch = () => {
     setSearchTerm('');
     const next = new URLSearchParams(searchParams);
@@ -157,13 +133,12 @@ export function Search() {
     navigate(`/search${next.toString() ? `?${next}` : ''}`);
   };
 
-  const allResults = [...exercises, ...lessons, ...exams];
+  // Chaque résultat garde son type : la carte (la même que dans les listes) en dépend pour son aperçu et ses votes.
+  const tag = (kind: Kind) => (c: Content) => ({ kind, content: c });
+  const byKind = { exercise: exercises.map(tag('exercise')), lesson: lessons.map(tag('lesson')), exam: exams.map(tag('exam')) };
+  const allResults = [...byKind.exercise, ...byKind.lesson, ...byKind.exam];
   const totalResults = allResults.length;
-  const filteredResults =
-    activeTab === 'exercise' ? exercises :
-    activeTab === 'lesson' ? lessons :
-    activeTab === 'exam' ? exams :
-    allResults;
+  const filteredResults = activeTab === 'all' ? allResults : byKind[activeTab];
 
   const TABS: { id: Tab; label: string; count: number; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'all',      label: 'Tout',      count: totalResults,     icon: SearchIcon },
@@ -331,10 +306,10 @@ export function Search() {
                       <span style={{ color: '#000000', fontWeight: 600 }}>{submitted}</span>&nbsp;»{scope}
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredResults.map((content, idx) => (
-                      <div key={`${content.type}-${content.id}`} className="animate-fade-up" style={{ animationDelay: `${idx * 40}ms` }}>
-                        <HomeContentCard content={content} onVote={handleVote} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredResults.map(({ kind, content }, idx) => (
+                      <div key={`${kind}-${content.id}`} className="animate-fade-up" style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}>
+                        <ContentListCard content={content as unknown as ListItem} contentType={kind} />
                       </div>
                     ))}
                   </div>

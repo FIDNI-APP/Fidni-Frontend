@@ -5,7 +5,8 @@ import {
   FileText, Check, ListChecks, Map, LineChart, Gift,
 } from 'lucide-react';
 import { SEO } from '@/components/layout/SEO';
-import { HomeContentCard } from '@/components/content/HomeContentCard';
+import { ContentListCard } from '@/components/content/ContentListCard';
+import type { ListItem } from '@/components/content/listing/listingUtils';
 import { getClassLevels, getExercises } from '@/lib/api';
 import { getHub, hubPath, type HubInfo } from '@/lib/api/hubApi';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
@@ -54,7 +55,7 @@ export function Landing() {
     let cancelled = false;
     (async () => {
       try {
-        const ex = await getExercises({ sort: 'most_upvoted', per_page: 3 });
+        const ex = await getExercises({ sort: 'most_upvoted', per_page: 3, view: 'card' });
         if (!cancelled) setPopular(ex.results || []);
       } catch (err) {
         console.error('Landing: failed to load popular exercises', err);
@@ -65,9 +66,6 @@ export function Landing() {
     return () => { cancelled = true; };
   }, []);
 
-  // Voting requires an account — nudge visitors to sign up.
-  const openSignup = useOpenSignup('vote');
-  const handleVote = () => openSignup();
 
   return (
     <div style={{ background: PAPER }}>
@@ -84,7 +82,7 @@ export function Landing() {
       <Pillars />
       <HowItWorks />
       <Curriculum levels={levels} />
-      <PopularPreview items={popular} loading={loading} onVote={handleVote} />
+      <PopularPreview items={popular} loading={loading} />
       <FinalCTA />
     </div>
   );
@@ -480,8 +478,8 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
 
 /* ═══════════════════════════════ Popular preview ═══════════════════════════════ */
 
-function PopularPreview({ items, loading, onVote }: {
-  items: Content[]; loading: boolean; onVote: () => void;
+function PopularPreview({ items, loading }: {
+  items: Content[]; loading: boolean;
 }) {
   if (!loading && items.length === 0) return null;
   return (
@@ -492,15 +490,15 @@ function PopularPreview({ items, loading, onVote }: {
           <Link to="/exercises" className="fd-btn-ghost">{t('Voir tout')} <ArrowRight className="w-3.5 h-3.5" /></Link>
         </div>
         {loading ? (
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map(i => (
-              <div key={i} className="fd-card animate-pulse" style={{ height: 260, background: SURFACE }} />
+              <div key={i} className="fd-card animate-pulse" style={{ height: 360, background: SURFACE }} />
             ))}
           </div>
         ) : (
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.slice(0, 3).map(item => (
-              <HomeContentCard key={item.id} content={item} onVote={onVote} />
+              <ContentListCard key={item.id} content={item as unknown as ListItem} contentType="exercise" />
             ))}
           </div>
         )}

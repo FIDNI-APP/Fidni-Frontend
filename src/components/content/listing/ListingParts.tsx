@@ -2,9 +2,9 @@
 // Mêmes mots partout pour l'état de l'élève : « Réussi », « À revoir », « Pas encore fait » (« À faire » dans
 // les cartes de liste, comme le filtre).
 import React, { useState } from 'react';
-import { Bookmark, Check, Loader2, Pencil, RotateCcw, School, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
+import { Bookmark, Check, Eye, Loader2, Pencil, RotateCcw, School, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import type { Felt, UserProgress } from '@/types/content';
-import { DIFFICULTY, feltTooltip, type Progress } from './listingUtils';
+import { DIFFICULTY, feltTooltip, type CardState, type Progress } from './listingUtils';
 import { DifficultyBars } from '@/components/common/DifficultyBars';
 import { t } from '@/i18n';
 
@@ -123,7 +123,7 @@ export const NationalTag: React.FC<{ year?: number | null }> = ({ year }) => (
   </span>
 );
 
-const iconBtn = 'fd-hit relative z-10 w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand';
+const iconBtn = 'fd-hit relative z-10 w-10 h-10 sm:w-9 sm:h-9 rounded-lg inline-flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand';
 
 export const BookmarkButton: React.FC<{ saved: boolean; busy: boolean; onClick: (e: React.MouseEvent) => void; className?: string }> = ({
   saved, busy, onClick, className = '',
@@ -158,58 +158,45 @@ export const OwnerButtons: React.FC<{ onEdit?: () => void; onDelete?: () => void
 /** Bouton icône des cartes : 40 px au doigt, 36 px à la souris. */
 export const cardIconBtn = 'relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:h-9 sm:w-9';
 
-/**
- * État de l'élève en un mot, en haut à gauche des cartes : ✓ Réussi (vert), ↻ À revoir (or), « 1/3 » (commencé),
- * ◌ À faire (discret). Leçon : « Lue ». Visiteur : rien (rien n'est suivi).
- */
-export const CardStatus: React.FC<{
-  progress: Progress;
-  started?: UserProgress | null;
-  lesson?: boolean;
-  signedIn: boolean;
-}> = ({ progress, started, lesson = false, signedIn }) => {
-  const base = 'inline-flex shrink-0 items-center gap-1.5 text-[12.5px]';
-  if (progress === 'success') {
+/** État de l'élève, en tête de carte : ✓ Réussi (Lue), ↻ À revoir, ◔ En cours (part évaluée), Déjà ouvert. */
+export const StateChip: React.FC<{ state: CardState; started?: UserProgress | null; lesson?: boolean }> = ({ state, started, lesson = false }) => {
+  const chip = 'inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[11.5px] font-semibold';
+  if (state === 'success') {
     return (
-      <span className={`${base} font-semibold text-brand-hover`}>
-        <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-brand text-white" aria-hidden>
-          <Check className="h-3 w-3" strokeWidth={3} />
-        </span>
-        {lesson ? t('Lue') : t('Réussi')}
+      <span className={`${chip} bg-brand text-white`}>
+        <Check className="h-3 w-3" strokeWidth={3} aria-hidden /> {lesson ? t('Lue') : t('Réussi')}
       </span>
     );
   }
-  if (progress === 'review') {
+  if (state === 'review') {
     return (
-      <span className={`${base} font-semibold text-gold-strong`}>
-        <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-gold-soft ring-1 ring-gold-line" aria-hidden>
-          <RotateCcw className="h-2.5 w-2.5" strokeWidth={3} />
-        </span>
-        {t('À revoir')}
+      <span className={`${chip} bg-gold-soft text-gold-strong ring-1 ring-inset ring-gold-line`}>
+        <RotateCcw className="h-3 w-3" strokeWidth={2.5} aria-hidden /> {t('À revoir')}
       </span>
     );
   }
-  if (!signedIn) return null;
-  if (started && !lesson) {
-    const pct = Math.min(100, Math.round((started.assessed / started.total) * 100));
+  if (state === 'started') {
+    // Petit anneau : la part des questions déjà évaluées.
+    const part = started ? Math.min(1, started.assessed / started.total) : 0;
+    const r = 4.5, tour = 2 * Math.PI * r;
     return (
-      <span className={`${base} font-medium text-ink-soft`}
-        title={started.assessed > 1
-          ? (started.success > 1 ? t('{a} questions évaluées sur {total}, dont {s} réussies', { a: started.assessed, total: started.total, s: started.success }) : t('{a} questions évaluées sur {total}, dont {s} réussie', { a: started.assessed, total: started.total, s: started.success }))
-          : (started.success > 1 ? t('{a} question évaluée sur {total}, dont {s} réussies', { a: started.assessed, total: started.total, s: started.success }) : t('{a} question évaluée sur {total}, dont {s} réussie', { a: started.assessed, total: started.total, s: started.success }))}>
-        <span className="h-1.5 w-8 overflow-hidden rounded-full bg-[#efece6]" aria-hidden>
-          <span className="block h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
-        </span>
-        <span className="fd-nums">{started.total > 1 ? t('{a}/{total} questions', { a: started.assessed, total: started.total }) : t('{a}/{total} question', { a: started.assessed, total: started.total })}</span>
+      <span className={`${chip} bg-brand-soft text-brand-hover`}>
+        <svg viewBox="0 0 12 12" className="h-3 w-3 -rotate-90" aria-hidden>
+          <circle cx="6" cy="6" r={r} fill="none" stroke="currentColor" strokeOpacity={0.25} strokeWidth="2.2" />
+          <circle cx="6" cy="6" r={r} fill="none" stroke="currentColor" strokeWidth="2.2" strokeDasharray={`${part * tour} ${tour}`} />
+        </svg>
+        {t('En cours')}
       </span>
     );
   }
-  return (
-    <span className={`${base} text-ink-faint`}>
-      <span className="h-[18px] w-[18px] rounded-full border-[1.5px] border-dashed border-[#cfc9bf]" aria-hidden />
-      {lesson ? t('Pas encore lue') : t('À faire')}
-    </span>
-  );
+  if (state === 'opened') {
+    return (
+      <span className={`${chip} bg-white text-ink-faint ring-1 ring-inset ring-line`}>
+        <Eye className="h-3 w-3" aria-hidden /> {lesson ? t('Déjà ouverte') : t('Déjà ouvert')}
+      </span>
+    );
+  }
+  return null;
 };
 
 /**
@@ -226,13 +213,13 @@ export const QuietVotes: React.FC<{
   const stop = (e: React.MouseEvent, v: 1 | -1) => { e.preventDefault(); e.stopPropagation(); onVote(v); };
   return (
     <span className="inline-flex items-center">
-      <button type="button" onClick={(e) => stop(e, 1)} aria-pressed={userVote === 1} aria-label={t('J’aime ({n})', { n: likes })}
+      <button type="button" data-effet="aime" onClick={(e) => stop(e, 1)} aria-pressed={userVote === 1} aria-label={t('J’aime ({n})', { n: likes })}
         title={userVote === 1 ? t('Tu aimes ce contenu · touche pour retirer') : t('J’aime : ce contenu m’a aidé')}
         className={`${btn} ${userVote === 1 ? 'bg-brand-soft text-brand-hover' : 'text-ink-faint hover:bg-[#f2f1ee] hover:text-ink'}`}>
         <ThumbsUp className="h-4 w-4" fill={userVote === 1 ? 'currentColor' : 'none'} fillOpacity={userVote === 1 ? 0.25 : 0} aria-hidden />
         {likes > 0 && <span>{likes}</span>}
       </button>
-      <button type="button" onClick={(e) => stop(e, -1)} aria-pressed={userVote === -1} aria-label={t('Je n’aime pas ({n})', { n: dislikes })}
+      <button type="button" data-effet="neutre" onClick={(e) => stop(e, -1)} aria-pressed={userVote === -1} aria-label={t('Je n’aime pas ({n})', { n: dislikes })}
         title={userVote === -1 ? t('Tu n’aimes pas ce contenu · touche pour retirer') : t('Je n’aime pas')}
         className={`${btn} ${userVote === -1 ? 'bg-[#efede9] text-ink' : 'text-ink-faint hover:bg-[#f2f1ee] hover:text-ink'}`}>
         <ThumbsDown className="h-4 w-4" fill={userVote === -1 ? 'currentColor' : 'none'} fillOpacity={userVote === -1 ? 0.25 : 0} aria-hidden />

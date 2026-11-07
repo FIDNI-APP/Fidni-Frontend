@@ -39,6 +39,8 @@ export interface BaseContentQueryParams {
   page?: number;
   per_page?: number;
   search?: string;
+  /** « card » : la structure (début de l’énoncé) vient avec chaque ligne, pour l’aperçu des cartes. */
+  view?: 'card';
 }
 
 /**
@@ -103,6 +105,7 @@ export function createContentAPI<T = any>(config: ContentAPIConfig) {
         // Le serveur lit page_size (things/views.py) : per_page seul était ignoré (toujours 20 lignes).
         page_size: params.per_page,
         search: params.search,
+        view: params.view,
       };
 
       const response = await api.get(`/${resourcePath}/`, { params: queryParams });

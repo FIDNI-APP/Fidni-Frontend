@@ -349,6 +349,10 @@ body.mobile-menu-open {
    secours que lib/paperFont.ts. */
 @font-face { font-family: 'FidniPaperGlyphs'; src: local('Times New Roman'), local('Georgia'), local('Noto Serif'), local('DejaVu Serif');
   unicode-range: U+00AB, U+00B0, U+00BB, U+2032-2034, U+2116, U+20AC; }
+/* Carte d'un contenu déjà ouvert : grisée, au second plan. En sombre, le fond de page : la carte paraît en creux. */
+.fd-carte-grisee { background: rgb(var(--c-line) / .38); }
+.dark .fd-carte-grisee { background: rgb(var(--c-paper)); }
+
 .fd-card-preview, .fd-preview-line { font-family: 'FidniPaperGlyphs', 'KaTeX_Main', 'Latin Modern Roman', 'Times New Roman', serif; }
 
 /* Aperçu dans les cartes de liste : le vrai rendu (formules comprises), resserré, coupé en fondu
