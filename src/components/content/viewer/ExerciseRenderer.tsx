@@ -32,7 +32,7 @@ import { trackAction } from '@/lib/usage';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import { useRegisterPrompt } from './pageHelpers';
 import { FoldedSolution } from './FoldedSolution';
-import { QuestionDifficultyTag } from './QuestionDifficultyTag';
+import { QuestionFacts } from './QuestionDifficultyTag';
 import { t } from '@/i18n';
 
 // =====================
@@ -363,8 +363,7 @@ const QuestionActions: React.FC<{
     <SolutionToggle isOpen={showSolution} onToggle={onToggleSolution} hasSolution={hasSolution} />
     {hasSolution && assess && <span className="w-px h-4 bg-line mx-1" aria-hidden />}
     {assess && <QuickAssess current={assess.current} onAssess={assess.onAssess} options={assess.options} />}
-    {points ? <span className="ms-1 text-xs text-ink-faint fd-nums">{formatPoints(points)}</span> : null}
-    <QuestionDifficultyTag difficulty={difficulty} className="ms-1" />
+    <QuestionFacts difficulty={difficulty} points={points ? formatPoints(points) : null} className="ms-1" />
   </div>
 );
 
@@ -534,10 +533,7 @@ const ReadingQuestionBody: React.FC<{
   // Difficulté de la question : jamais pendant une épreuve (ce serait un indice).
   const niveau = !locked && difficulty ? difficulty : null;
   const pts = points || niveau ? (
-    <span className="ms-auto ps-2 inline-flex items-center gap-2.5 text-[12.5px] text-ink-faint fd-nums">
-      <QuestionDifficultyTag difficulty={niveau} />
-      {points ? formatPoints(points) : null}
-    </span>
+    <QuestionFacts difficulty={niveau} points={points ? formatPoints(points) : null} className="ms-auto ps-2" />
   ) : null;
   if (!hasSolution && !hasHint && !(canAssess && !locked) && !pts) return null;
   return (

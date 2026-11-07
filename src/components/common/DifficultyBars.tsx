@@ -7,12 +7,12 @@ const LEVEL: Record<string, number> = { easy: 1, medium: 2, hard: 3, facile: 1, 
 export const difficultyLevel = (d?: string | null): number => LEVEL[(d ?? '').toLowerCase()] ?? 0;
 
 /** `total` : 3 barres pour un contenu ; 4 pour une question, qui peut être « très difficile » (07/11/2026). */
-export const DifficultyBars: React.FC<{ difficulty?: string | null; level?: number; size?: number; className?: string; total?: 3 | 4 }> = ({
+export const DifficultyBars: React.FC<{ difficulty?: string | null; level?: number; size?: number | string; className?: string; total?: 3 | 4 }> = ({
   difficulty, level, size = 11, className, total = 3,
 }) => {
   const n = level ?? difficultyLevel(difficulty);
   if (!n) return null;
-  const [pas, largeur, base, marche] = total === 4 ? [3.2, 2.4, 3, 3] : [4.5, 3, 4, 3.5];
+  const [pas, largeur, base, marche] = total === 4 ? [10 / 3, 2, 3, 3] : [4.5, 3, 4, 3.5];
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" aria-hidden className={className} style={{ flexShrink: 0 }}>
       {Array.from({ length: total }, (_, i) => (

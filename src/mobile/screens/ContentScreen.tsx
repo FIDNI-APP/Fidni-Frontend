@@ -22,7 +22,7 @@ import { recordHelp } from '@/lib/helpTracking';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import { publicUrl, shareLink } from '@/lib/native';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
-import { QuestionDifficultyTag } from '@/components/content/viewer/QuestionDifficultyTag';
+import { QuestionFacts } from '@/components/content/viewer/QuestionDifficultyTag';
 import type { ExerciseBlock, FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { FlexibleLessonStructure } from '@/components/content/editor/FlexibleLessonEditor';
 import type { Comment, VoteValue } from '@/types';
@@ -321,8 +321,10 @@ function Question({ block, number, ...rest }: { block: ExerciseBlock; number: nu
         }}>{number}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <MathHtml html={block.content?.html} />
-          {Number(block.points) > 0 && <div className="fdm-muted" style={{ fontSize: 12, marginTop: 4, fontWeight: 600 }}>{countLabel(Number(block.points), '{n} pt', '{n} pts')}</div>}
-          {subs.length === 0 && <QuestionDifficultyTag difficulty={block.meta?.difficulty} className="mt-1" />}
+          <div style={{ marginTop: 6 }}>
+            <QuestionFacts difficulty={subs.length === 0 ? block.meta?.difficulty : null}
+              points={Number(block.points) > 0 ? countLabel(Number(block.points), '{n} pt', '{n} pts') : null} />
+          </div>
         </div>
       </div>
       {subs.length === 0
@@ -333,7 +335,7 @@ function Question({ block, number, ...rest }: { block: ExerciseBlock; number: nu
                 <span style={{ fontWeight: 700, color: 'var(--fdm-muted)', minWidth: 16 }}>{SUB_LETTERS[i] ?? i + 1})</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <MathHtml html={sq.content?.html} />
-                  <QuestionDifficultyTag difficulty={sq.meta?.difficulty ?? block.meta?.difficulty} className="mt-1" />
+                  <div style={{ marginTop: 6 }}><QuestionFacts difficulty={sq.meta?.difficulty ?? block.meta?.difficulty} /></div>
                 </div>
               </div>
               <Leaf path={`${block.id}.${sq.id}`} hint={sq.hint} solution={sq.solution} indent={24} {...rest} />
