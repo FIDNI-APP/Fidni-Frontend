@@ -139,6 +139,23 @@ export function questionProgress(item: ListItem): UserProgress | null {
   return p && p.total > 0 && p.assessed > 0 ? p : null;
 }
 
+/**
+ * Où en est l'élève connecté (un visiteur n'a aucun de ces champs) : à repérer d'un coup d'œil dans une liste.
+ * Le plus avancé l'emporte : réussi, à revoir, en cours (questions évaluées), déjà ouvert.
+ */
+export type CardState = 'success' | 'review' | 'started' | 'opened' | null;
+export const cardState = (progress: Progress, started: UserProgress | null, viewed?: boolean | null): CardState =>
+  progress === 'success' ? 'success' : progress === 'review' ? 'review' : started ? 'started' : viewed ? 'opened' : null;
+
+/** Réussi : carte teintée de vert ; à revoir : teintée d'or ; déjà ouvert : grisée, au second plan (demande de Natsu) ;
+ *  le reste est blanc, ce qui est à découvrir ressort le plus. `hover` : le filet se renforce au survol (carte
+ *  entièrement cliquable). */
+export const cardTone = (state: CardState, hover = false): string => {
+  if (state === 'success') return `border-brand-line/70 bg-brand-soft/40 ${hover ? 'hover:border-brand-line' : ''}`;
+  if (state === 'review') return `border-gold-line/70 bg-gold-soft/40 ${hover ? 'hover:border-gold-line' : ''}`;
+  return `border-line ${state === 'opened' ? 'fd-carte-grisee' : 'bg-white'} ${hover ? 'hover:border-[#d6d2ca]' : ''}`;
+};
+
 /** Infobulle du ressenti : « 34 % des 22 élèves l'ont réussi · 9 avis ». */
 export function feltTooltip(felt: Felt): string {
   const parts: string[] = [];

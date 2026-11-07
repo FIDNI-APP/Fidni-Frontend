@@ -16,9 +16,9 @@ import type { FlexibleLessonStructure } from '@/components/content/editor/Flexib
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import type { AssessmentStatus } from '@/types/content';
-import { BookmarkButton, DifficultyChip, QuietVotes, SchoolTag } from './ListingParts';
+import { BookmarkButton, DifficultyChip, QuietVotes, SchoolTag, StateChip } from './ListingParts';
 import { t } from '@/i18n';
-import { chapterLabel, dateLongue, facts, ilYa, levelLabel, type ListItem, type ListKind } from './listingUtils';
+import { cardState, cardTone, chapterLabel, dateLongue, facts, ilYa, levelLabel, questionProgress, type ListItem, type ListKind } from './listingUtils';
 
 type Completion = 'success' | 'review' | null;
 /** Questions évaluées : le type attendu par le rendu de l'énoncé. */
@@ -75,13 +75,18 @@ export const StatementCard: React.FC<StatementCardProps> = ({
   const infos = [...facts(item, kind), hideLevel ? null : levelLabel(item)].filter(Boolean).join(' · ');
   const comments = item.comment_count ?? 0;
 
+  const started = lesson ? null : questionProgress(item);
+  const state = cardState(completion, started, item.user_viewed);
+
   const pick = (s: 'success' | 'review') => { onSetCompletion(completion === s ? null : s); setMenuOpen(false); };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-line bg-white">
+    <article data-etat={state ?? undefined} className={`overflow-hidden rounded-2xl border ${cardTone(state)}`}>
       <header className="px-5 pb-4 pt-4 sm:px-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-2 text-[12.5px] text-ink-faint">
+            {/* Réussi / À revoir : déjà dits par la teinte et le bouton d’état juste en dessous. */}
+            {state !== 'success' && state !== 'review' && <StateChip state={state} started={started} lesson={lesson} />}
             {chapter && <span className="font-semibold text-ink-soft">{chapter}</span>}
             {national && <span className="font-semibold text-gold-strong">{t('Bac national')}{year ? ` ${year}` : ''}</span>}
             {'difficulty' in item && <DifficultyChip difficulty={item.difficulty} felt={item.felt} plain />}

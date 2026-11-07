@@ -49,6 +49,9 @@ export async function getExams(params: ExamQueryParams) {
     sort: params.sort,
     page: params.page,
     per_page: params.per_page,
+    // Texte cherché et aperçu des cartes : oubliés ici jusqu’au 07/11/2026 (la recherche renvoyait tous les devoirs).
+    search: params.search,
+    view: params.view,
   };
 
   // Add exam-specific query parameters

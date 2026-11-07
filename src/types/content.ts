@@ -43,6 +43,8 @@ export interface ListChapter { id: number; name: string; slug?: string; levels?:
 interface ListExtras {
   felt?: Felt | null;
   user_progress?: UserProgress | null;
+  /** Déjà ouvert par l’élève connecté (null pour un visiteur) : repère « Déjà ouvert » des cartes. */
+  user_viewed?: boolean | null;
   /** « ≈ N min » : somme des meta.expected_seconds des questions, null si aucune. */
   expected_minutes?: number | null;
   /** Tri « Pour toi » : pourquoi ce contenu est proposé. */
