@@ -55,7 +55,9 @@ export const ModalShell: React.FC<{
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[2px] [align-items:safe_center]"
+        // Le voile arrive et repart en fondu, avec la fenêtre (avant : il apparaissait et disparaissait d'un coup).
+        <motion.div className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[2px] [align-items:safe_center]"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
           onClick={onClose}>
           <motion.form
             ref={formRef}
@@ -76,7 +78,7 @@ export const ModalShell: React.FC<{
             {subtitle && <p className="mt-1 pe-6 text-[13px] leading-relaxed text-ink-faint">{subtitle}</p>}
             {children}
           </motion.form>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>,
     document.body,

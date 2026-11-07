@@ -100,6 +100,11 @@ export default {
       gridTemplateColumns: {
         '5': 'repeat(5, minmax(0, 1fr))',
       },
+      // `scale` en plus : le bouton s'enfonce en douceur à l'appui (index.css, « Réponse à l'appui »).
+      transitionProperty: {
+        DEFAULT: 'color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, scale',
+        colors: 'color, background-color, border-color, text-decoration-color, fill, stroke, scale',
+      },
       keyframes: {
         fadeUp: {
           'from': { opacity: '0', transform: 'translateY(16px)' },

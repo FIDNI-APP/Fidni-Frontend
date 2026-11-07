@@ -40,7 +40,7 @@ body {
   font-size: 12px;
   font-weight: 500;
   color: #6b6862;
-  transition: all .15s;
+  transition: background-color .15s, border-color .15s, color .15s, scale .12s ease-out;
   white-space: nowrap;
 }
 .fd-pill:hover { border-color: #1a7a4a; color: #15633c; }
@@ -54,7 +54,7 @@ body {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all .15s;
+  transition: background-color .15s, border-color .15s, color .15s, scale .12s ease-out;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -69,7 +69,7 @@ body {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all .15s;
+  transition: background-color .15s, border-color .15s, color .15s, scale .12s ease-out;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -84,166 +84,6 @@ body.mobile-menu-open {
   overflow: hidden;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Success/Fail message animations */
-@keyframes successMessagePop {
-  0% {
-    transform: scale(0) rotate(-10deg);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1) rotate(5deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-  }
-}
-
-@keyframes failMessageBounce {
-  0% {
-    transform: translateY(30px) scale(0.8);
-    opacity: 0;
-  }
-  60% {
-    transform: translateY(-10px) scale(1.05);
-  }
-  80% {
-    transform: translateY(5px) scale(0.98);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes successIconSpin {
-  0% {
-    transform: scale(0) rotate(-180deg);
-  }
-  70% {
-    transform: scale(1.2) rotate(10deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
-}
-
-@keyframes motivateIconPulse {
-  0%, 100% {
-    transform: scale(1) rotate(0deg);
-  }
-  25% {
-    transform: scale(1.15) rotate(-5deg);
-  }
-  50% {
-    transform: scale(1.1) rotate(5deg);
-  }
-  75% {
-    transform: scale(1.15) rotate(-5deg);
-  }
-}
-
-.success-message-animate {
-  animation: successMessagePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.fail-message-animate {
-  animation: failMessageBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.animate-success-icon {
-  animation: successIconSpin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.animate-motivate-icon {
-  animation: motivateIconPulse 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Button validation animations */
-@keyframes btnSuccess {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-@keyframes btnFail {
-  0% { transform: scale(1); }
-  25% { transform: translateX(-4px); }
-  50% { transform: translateX(4px); }
-  75% { transform: translateX(-2px); }
-  100% { transform: scale(1) translateX(0); }
-}
-
-@keyframes iconPop {
-  0% { transform: scale(0.8) rotate(0deg); opacity: 0; }
-  50% { transform: scale(1.2) rotate(5deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-@keyframes ripple {
-  0% { box-shadow: 0 0 0 0 currentColor; opacity: 0.6; }
-  100% { box-shadow: 0 0 0 12px currentColor; opacity: 0; }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.btn-validation {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-validation:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.btn-validation.btn-success-active {
-  animation: btnSuccess 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.btn-validation.btn-fail-active {
-  animation: btnFail 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.btn-validation .icon-wrapper {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-validation.btn-animating .icon-wrapper {
-  animation: iconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.btn-validation::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-  pointer-events: none;
-}
-
-.btn-validation:active:not(:disabled)::before {
-  width: 300px;
-  height: 300px;
-}
-
-/* (Removed the infinite hover shimmer — constant motion was distracting
-   during reading. A simple background transition handles hover instead.) */
 
 /* ──────────────────────────────────────────────────────────────
    "Ink & paper" theme layer — APP-WIDE.
@@ -477,6 +317,9 @@ html {
   font-weight: 600;
   letter-spacing: -0.02em;
 }
+/* Interligne serré des grands titres (ils héritaient de 1.5, trop lâche quand un titre passe sur deux lignes).
+   :where : sans poids CSS, leading-* et les styles en ligne l'emportent toujours. */
+:where(.fd-display) { line-height: 1.15; }
 
 /* Tabular figures — line stats, streaks, scores and progress numbers
    up in columns so they stop jittering as values change. */
@@ -527,7 +370,50 @@ html {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 6px;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Réponse à l'appui (07/11/2026, principes d'Apple : « réagir dès l'appui, pas au lâcher »).
+   Un bouton s'enfonce très légèrement, un lien s'atténue. `scale` (propriété à part) ne touche pas
+   aux `transform` de Tailwind : un bouton centré avec -translate-x-1/2 ne saute pas.
+   La transition vit dans tailwind.config.js (transition-colors) et ici pour les boutons qui n'en ont pas.
+   ────────────────────────────────────────────────────────────── */
+html { -webkit-tap-highlight-color: transparent; }
+:where(a, button, input, select, textarea, label, summary, [role="button"]) { touch-action: manipulation; }
+a:active { opacity: .72; }
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, [role="button"]) { transition: scale .12s ease-out; }
+  button:not(:disabled):active, [role="button"]:not([aria-disabled="true"]):active,
+  .fd-btn-primary:active, .fd-btn-ghost:active, .fd-pill:active { scale: .98; transition-duration: 50ms; }
+}
+
+/* Tiroir du téléphone : un glissé horizontal commencé sur un lien doit aller au tiroir. Sa liste est une zone de
+   défilement : sans ceci, le navigateur prend le geste pour lui et l'annule (pointercancel). */
+.fd-tiroir, .fd-tiroir * { touch-action: pan-y; }
+
+/* Zone de toucher agrandie sans changer le dessin (petits boutons voulus discrets). Seulement au doigt,
+   et seulement sur un élément non positionné. */
+@media (pointer: coarse) {
+  .fd-hit { position: relative; }
+  .fd-hit::after { content: ''; position: absolute; inset: -6px -2px; }
+}
+
+/* Un menu naît de son bouton (transform-origin posé par FloatingPanel) ; rapide, sans rebond. */
+@keyframes fd-surgir { from { opacity: 0; scale: .97; } }
+.fd-surgir { animation: fd-surgir .13s ease-out; }
+
+/* Passage clair ↔ sombre (ThemeContext). */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }
+
+/* Réglages d'accessibilité du système : moins de transparence, plus de contraste. */
+@media (prefers-reduced-transparency: reduce) {
+  .fd-chrome { background: rgb(var(--c-surface)) !important; }
+  [class*="backdrop-blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+@media (prefers-contrast: more) {
+  :root { --c-line: 120 116 108; --c-ink-faint: 75 72 67; --line: #78746c; --ink-faint: #4b4843; }
+  .dark { --c-line: 134 128 120; --c-ink-faint: 214 209 201; --line: rgb(134 128 120); --ink-faint: rgb(214 209 201); }
+  .fd-card { border-color: rgb(var(--c-line)); }
 }
 
 /* ──────────────────────────────────────────────────────────────

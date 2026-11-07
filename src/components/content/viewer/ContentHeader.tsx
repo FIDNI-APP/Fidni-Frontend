@@ -160,13 +160,15 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
     <header className="mb-6 sm:mb-8">
       {/* Retour nommé + actions */}
       <div className="-mx-1 flex items-center justify-between gap-2 print:hidden">
+        {/* Téléphone : la barre du haut, juste au-dessus, a déjà ce retour vers le chapitre. « Retour » à la page d'où
+            l'on vient (une autre destination) reste affiché. */}
         <button type="button" onClick={goBack} title={from ? t('Revenir à la page précédente') : back.label}
-          className="inline-flex min-h-10 min-w-0 items-center gap-1 rounded-lg px-1 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink">
+          className={`inline-flex min-h-10 min-w-0 items-center gap-1 rounded-lg px-1 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink ${from ? '' : 'max-md:hidden'}`}>
           <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
           <span className="max-w-[46vw] truncate sm:max-w-xs">{from ? t('Retour') : back.label}</span>
         </button>
 
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="ms-auto flex shrink-0 items-center gap-0.5">
           <button type="button" onClick={onToggleSave} disabled={isSaving} data-tour="detail-enregistrer" aria-pressed={isSaved}
             aria-label={isSaved ? t('Retirer de mes favoris') : t('Enregistrer dans mes favoris')}
             className={`${headBtn} ${isSaved ? 'text-ink' : ''}`}>

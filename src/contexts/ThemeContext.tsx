@@ -63,8 +63,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [effectiveTheme]);
 
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
+    const root = document.documentElement;
+    const sombre = newTheme === 'dark'
+      || (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const appliquer = () => {
+      root.classList.toggle('dark', sombre);
+      setThemeState(newTheme);
+      localStorage.setItem('theme', newTheme);
+    };
+    // Passage clair ↔ sombre en fondu (l'éclair d'un coup fatigue, le soir surtout) ; immédiat si le navigateur ne sait
+    // pas le faire ou si l'élève a demandé moins d'animations.
+    const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduit || !document.startViewTransition || root.classList.contains('dark') === sombre) appliquer();
+    else document.startViewTransition(appliquer);
   };
 
   return (

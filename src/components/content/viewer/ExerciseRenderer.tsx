@@ -194,7 +194,7 @@ const QuickAssess: React.FC<{ current?: AssessmentStatus; onAssess: (status: Ass
             aria-pressed={active}
             title={active ? t('{titre} : cliquer pour effacer', { titre: title }) : title}
             onClick={(e) => { e.stopPropagation(); onAssess(active && current ? current : value); }}
-            className={`inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${COARSE_CHIP} ${
+            className={`fd-hit inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${COARSE_CHIP} ${
               active ? `${o.on} font-semibold` : 'text-ink-faint hover:text-ink'}`}
           >
             {o.icon}{t(o.label)}

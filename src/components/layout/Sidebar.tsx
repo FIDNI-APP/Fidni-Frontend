@@ -6,8 +6,12 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText, FilePlus2,
+  FileText, FilePlus2, Moon, Sun,
 } from 'lucide-react';
+import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
+import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
+import { useTheme } from '@/contexts/ThemeContext';
+import { trackAction } from '@/lib/usage';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +24,7 @@ import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom } from './nav';
 import LogoFidni from '@/assets/logo-fidni.svg';
 import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
-import { t } from '@/i18n';
+import { t, useLang } from '@/i18n';
 
 type IconType = React.ComponentType<{ className?: string }>;
 type LevelBase = '/exercises' | '/lessons' | '/exams';
@@ -147,18 +151,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <SidebarInner collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
     </aside>
 
-    {mobileOpen && <MobileDrawer onClose={onCloseMobile} />}
+    <AnimatePresence>
+      {mobileOpen && <MobileDrawer key="menu" onClose={onCloseMobile} />}
+    </AnimatePresence>
   </>
 );
 
 /**
  * Tiroir du téléphone : une vraie fenêtre (annoncée comme telle, Échap pour fermer, focus dedans
  * puis rendu au bouton qui l'a ouverte). Il liste tout : rubriques, suivi, classe et compte.
+ * Il suit le doigt et se ferme d'un glissé vers son bord (07/11/2026) ; il repart par où il est arrivé,
+ * à droite en arabe (son ancienne animation le faisait venir de la gauche, même là).
  */
 const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const { lang } = useLang();
+  const sens = lang === 'ar' ? 1 : -1;
+  const dehors = { x: `${sens * 100}%` };
+  const { panneau, opaciteVoile } = useGlisserPourFermer({ onClose, refPanneau: panelRef, axe: 'x', sens });
+  // Pendant sa sortie, le tiroir ne bloque plus la page.
+  const present = useIsPresent();
 
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -184,32 +198,31 @@ const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="md:hidden fixed inset-0 z-[60] print:hidden">
-      <style>{`
-        @keyframes fd-drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
-        @keyframes fd-veil-in { from { opacity: 0; } to { opacity: 1; } }
-      `}</style>
-      <div
+    <div className={cx('md:hidden fixed inset-0 z-[60] print:hidden', !present && 'pointer-events-none')}>
+      <motion.div
         aria-hidden
-        className="absolute inset-0 bg-[rgba(20,18,16,.38)]"
-        style={{ animation: 'fd-veil-in .2s ease both' }}
+        className="absolute inset-0"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
         onClick={onClose}
-      />
-      <aside
+      >
+        <motion.div className="absolute inset-0 bg-[rgba(20,18,16,.38)]" style={{ opacity: opaciteVoile }} />
+      </motion.div>
+      <motion.aside
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={t('Menu')}
-        className="absolute start-0 top-0 flex h-full flex-col bg-white shadow-[8px_0_32px_rgba(20,18,16,.12)]"
+        {...panneau}
+        initial={dehors} animate={{ x: 0 }} exit={dehors} transition={RESSORT_FEUILLE}
+        className="fd-tiroir absolute start-0 top-0 flex h-full flex-col bg-white shadow-[8px_0_32px_rgba(20,18,16,.12)]"
         style={{
           width: 'min(320px, 86vw)',
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          animation: 'fd-drawer-in .24s cubic-bezier(.25,.46,.45,.94) both',
         }}
       >
         <SidebarInner collapsed={false} onClose={onClose} drawer />
-      </aside>
+      </motion.aside>
     </div>
   );
 };
@@ -320,6 +333,7 @@ const SidebarInner: React.FC<{
 
         {/* Tiroir : le compte déplié dans la liste (rien de caché derrière un bouton). */}
         {drawer && <DrawerAccount onNavigate={onClose} canJoinClass={isAuthenticated && !hasClassroom} />}
+        {drawer && <DrawerTheme />}
       </nav>
 
       {/* Compte (ordinateur) */}
@@ -657,6 +671,20 @@ const RailAccount: React.FC<{ collapsed: boolean; canJoinClass?: boolean }> = ({
 };
 
 /** Tiroir du téléphone : le compte en clair, en fin de liste. */
+/** Mode clair / sombre sur téléphone : ici plutôt que dans la barre du haut, où le titre de la page manquait de place. */
+const DrawerTheme: React.FC = () => {
+  const { effectiveTheme, setTheme } = useTheme();
+  const dark = effectiveTheme === 'dark';
+  const Icon = dark ? Sun : Moon;
+  return (
+    <button type="button" onClick={() => { trackAction('mode-sombre'); setTheme(dark ? 'light' : 'dark'); }}
+      className="mt-3 flex min-h-11 w-full items-center gap-3 rounded-xl px-2.5 text-[15px] font-medium text-ink-soft transition-colors hover:bg-[#f7f6f3] hover:text-ink">
+      <Icon aria-hidden className="h-5 w-5 shrink-0" />
+      {dark ? t('Mode clair') : t('Mode sombre')}
+    </button>
+  );
+};
+
 const DrawerAccount: React.FC<{ onNavigate?: () => void; canJoinClass?: boolean }> = ({ onNavigate, canJoinClass }) => {
   const { isAuthenticated, user } = useAuth();
   const entries = useAccountEntries(canJoinClass, onNavigate);

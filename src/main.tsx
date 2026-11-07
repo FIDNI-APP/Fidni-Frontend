@@ -15,6 +15,9 @@ if (nativePlatform === 'ios') {
   document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
 }
 
+// Safari sur iPhone n'applique :active (retour visuel à l'appui) que si la page écoute le toucher.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
 // Pas de <StrictMode> : en mode développement, il exécute chaque effet deux fois
 // (double requête, double chargement). fidni.fr étant servi par le serveur de dev
 // Vite, chaque visiteur subissait ce doublement sur toutes les pages.

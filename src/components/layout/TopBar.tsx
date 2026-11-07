@@ -107,7 +107,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobile }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 h-[60px] border-b border-line bg-white/90 backdrop-blur-lg print:hidden">
+    <header className="fd-chrome sticky top-0 z-30 h-[60px] border-b border-line bg-white/90 backdrop-blur-lg print:hidden">
       <div className="flex h-full items-center gap-1 ps-2 pe-2 sm:gap-2 sm:ps-4 sm:pe-3 md:px-6">
         {/* Téléphone : le menu est dans la barre du bas ; ce bouton ne revient que si elle est cachée. */}
         {!tabBarVisible && (
@@ -252,12 +252,13 @@ const LangToggle: React.FC = () => {
   );
 };
 
-/** Lune / soleil : bascule entre clair et sombre (le choix est gardé ; Paramètres propose aussi « comme l'appareil »). */
+/** Lune / soleil : bascule entre clair et sombre (le choix est gardé ; Paramètres propose aussi « comme l'appareil »).
+ *  Sur téléphone, dans le menu (07/11/2026) : la barre manquait de place, le titre de la page s'y réduisait à « Dériv… ». */
 const ThemeToggle: React.FC = () => {
   const { effectiveTheme, setTheme } = useTheme();
   const dark = effectiveTheme === 'dark';
   return (
-    <button type="button" className={BAR_ICON_BTN} onClick={() => { trackAction('mode-sombre'); setTheme(dark ? 'light' : 'dark'); }}
+    <button type="button" className={`${BAR_ICON_BTN} max-md:hidden`} onClick={() => { trackAction('mode-sombre'); setTheme(dark ? 'light' : 'dark'); }}
       aria-label={dark ? t('Passer en mode clair') : t('Passer en mode sombre')} title={dark ? t('Mode clair') : t('Mode sombre')}>
       {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>
