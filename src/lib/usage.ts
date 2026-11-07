@@ -34,6 +34,8 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/progression', label: 'Ma progression', group: 'Mon espace' },
   { pattern: '/statistiques', label: 'Mes statistiques (ancienne page)', group: 'Mon espace' },
   { pattern: '/reviser', label: 'Réviser', group: 'Mon espace' },
+  { pattern: '/defis', label: 'Défi du jour', group: 'Mon espace' },
+  { pattern: '/defis/:date', label: 'Défi précédent', group: 'Mon espace' },
   { pattern: '/enregistrements', label: 'Mes enregistrements', group: 'Mon espace' },
   { pattern: '/documents', label: 'Mes documents', group: 'Mon espace' },
   { pattern: '/documents/:id', label: 'Éditeur de documents', group: 'Mon espace' },
@@ -68,6 +70,7 @@ const LABELS = new Map(PAGES.map((p) => [p.pattern, p]));
 export const pageInfo = (pattern: string) => LABELS.get(pattern) ?? { pattern, label: pattern, group: 'Autres' };
 
 export type UsageAction =
+  | 'defi-repondu' | 'defi-trouve' | 'defi-indice' | 'defi-solution' | 'defi-archives'
   | 'voir-solution' | 'voir-indication' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'rattrapage-liste' | 'imprimer'
   | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions' | 'mode-sombre' | 'langue-ar' | 'langue-fr'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'

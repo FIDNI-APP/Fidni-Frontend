@@ -108,6 +108,8 @@ const PaperExport = page(() => import('./pages/PaperExport'), 'PaperExport');
 const MesEnregistrements = page(() => import('./pages/enregistrements/MesEnregistrements'), 'MesEnregistrements');
 // Réviser (11/10/2026) : prochain DS, à refaire et listes sur une seule page (remplace /revision-lists).
 const Reviser = page(() => import('./pages/reviser/Reviser'), 'Reviser');
+const Defis = page(() => import('./pages/defis/Defis'), 'Defis');
+const DefiPasse = page(() => import('./pages/defis/Defis'), 'DefiPasse');
 // Éditeur de documents « façon Word » avec équations (12/10/2026), inspiré de wordcraft.
 const MesDocuments = page(() => import('./pages/documents/MesDocuments'), 'MesDocuments');
 const DocumentEditor = page(() => import('./pages/documents/DocumentEditor'), 'DocumentEditor');
@@ -453,6 +455,8 @@ function App() {
                     <Route path="/concours/tips/:id" element={
                       <NavbarWrapper><ConcoursTipDetailPage /></NavbarWrapper>
                     } />
+                    <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
+                    <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />
                     <Route path="/pilotage" element={
                       <NavbarWrapper><PilotagePage /></NavbarWrapper>
                     } />

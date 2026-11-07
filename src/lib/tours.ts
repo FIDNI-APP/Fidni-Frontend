@@ -113,6 +113,7 @@ export const TOURS: Tour[] = [
       { target: 'menu-mobile', title: 'Le menu', body: 'Toutes les rubriques : leçons, exercices, devoirs, Bac national, concours, ton suivi et ton compte.' },
       { target: 'recherche', title: 'Rechercher', body: 'Un mot-clé, un chapitre ou un théorème (ex. « TVI ») pour trouver un contenu.' },
       { target: 'notifications', title: 'Notifications', body: 'Quand quelqu’un commente un contenu sur lequel tu as travaillé, ou répond à ton commentaire, la cloche te prévient. Un clic et tu peux lui répondre.' },
+      { target: 'home-defi', title: 'Le défi du jour', body: 'Chaque jour, un nouveau problème, le même pour tous les niveaux. Bloqué ? Les indices t’expliquent l’outil à utiliser.' },
       { target: 'home-stats', title: 'Où j’en suis', body: 'Ta maîtrise, ton évolution sur 30 jours et ta priorité du moment, en bref. Le détail et le « pourquoi » sont dans Ma progression.' },
       { target: 'home-reco', title: 'Pour toi', body: 'Des contenus choisis d’après ton niveau et ton travail : la suite de tes chapitres en cours, ce qui est à retravailler, des nouveautés. Ouvre une carte pour commencer.' },
       { target: 'nav-compte', title: 'Ton compte', body: 'Ton profil et tes paramètres.' },

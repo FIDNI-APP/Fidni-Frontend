@@ -32,6 +32,7 @@ import { RedoBlock } from './RedoBlock';
 import { ForYou } from './ForYou';
 import { ClassChart } from './ClassChart';
 import { QuizAnnonce } from './QuizAnnonce';
+import { DefiDuJour } from '@/components/defi/DefiPanel';
 import { REDO_SHOWN, chooseNext, easiest, firstSteps, hasClassChart, hasWeekData, sameTarget } from './home';
 
 // Le formulaire « Annoncer un DS » n'est chargé qu'à l'ouverture (taxonomie, animations).
@@ -155,6 +156,9 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
 
         {/* Annonce d'une nouveauté : après ce que l'élève a à faire, pas avant. */}
         <QuizAnnonce />
+
+        {/* Défi du jour (07/11/2026) : une raison de revenir chaque jour, pour tous les niveaux. Replié une fois fini. */}
+        <DefiDuJour compact />
 
         {!isTeacher && !newcomer && !failed && (
           <OuJenSuis data={apercu.data} failed={apercu.failed} onRetry={apercu.reload}

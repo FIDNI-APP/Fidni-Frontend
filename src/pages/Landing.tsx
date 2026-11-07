@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DefiDuJour } from '@/components/defi/DefiPanel';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight, ArrowUpRight, BookOpen, GraduationCap,
@@ -81,6 +82,7 @@ export function Landing() {
       <TrustRow />
       <Pillars />
       <HowItWorks />
+      <DefiSection />
       <Curriculum levels={levels} />
       <PopularPreview items={popular} loading={loading} />
       <FinalCTA />
@@ -341,6 +343,15 @@ const STEPS = [
   { n: '02', title: 'Entraîne-toi', desc: 'Exercices, leçons et examens adaptés à ton programme et corrigés.' },
   { n: '03', title: 'Progresse', desc: 'Suis tes statistiques, garde ta série et vise le bac avec confiance.' },
 ];
+
+function DefiSection() {
+  return (
+    <DefiDuJour avant={(
+      <SectionHead eyebrow={t('Essaie sans compte')} title={t('Défi du jour')}
+        subtitle={t('Un problème par jour, ouvert à tous les niveaux. Sans compte, sans calculatrice.')} />
+    )} enveloppe={(enfants) => <section><div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-14 md:px-6 md:py-20">{enfants}</div></section>} />
+  );
+}
 
 function HowItWorks() {
   return (

@@ -36,6 +36,7 @@ const SECTION_LABELS: Record<string, string> = {
   revisions: 'Réviser',
   notebooks: 'Mes enregistrements',
   'skill-iq': 'Quiz par chapitre',
+  defis: 'Défi du jour',
   settings: 'Paramètres',
   'mes-copies': 'Ma copie',
   search: 'Recherche',
