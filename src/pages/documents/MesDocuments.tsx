@@ -3,6 +3,7 @@
  * (devoirs rédigés, fiches de cours, brouillons d'exercices…). Nouveau, importer un Word, ouvrir, dupliquer, supprimer.
  * Réservé aux enseignants (déclarés) et à l'équipe pour l'instant (12/10/2026 ; serveur : IsTeacherOrAdmin).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Copy, FileDown, FilePlus2, FileText, Loader2, RotateCcw, Search, Sigma, Trash2 } from 'lucide-react';
@@ -65,7 +66,7 @@ export const MesDocuments: React.FC = () => {
     } catch { toast.error(t('La copie n’a pas pu être créée.')); }
   };
   const remove = async (d: DocumentSummary) => {
-    if (!window.confirm(t('Supprimer « {title} » ? Cette action est définitive.', { title: d.title }))) return;
+    if (!await confirmer(t('Supprimer « {title} » ? Cette action est définitive.', { title: d.title }), { action: t('Supprimer'), danger: true })) return;
     try {
       await documentsAPI.remove(d.id);
       setDocs((list) => (list ?? []).filter((x) => x.id !== d.id));

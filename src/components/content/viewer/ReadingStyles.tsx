@@ -16,7 +16,7 @@ import { EXAM_TWO_COLUMNS_PX, SHEET_TEXT_PX } from './pageHelpers';
 const CSS = `
 ${PAPER_GLYPHS_FACE}
 .fd-paper { font-family: ${PAPER_SERIF}; }
-/* Énoncés et solutions (exercices, devoirs) : police de LaTeX, comme la feuille PDF ; les boutons restent en DM Sans. */
+/* Énoncés et solutions (exercices, devoirs) : police de LaTeX, comme la feuille PDF ; les boutons gardent la police du système. */
 .fd-read .tiptap-full-renderer .ProseMirror { font-family: ${PAPER_SERIF}; font-size: 17.5px; line-height: 1.62; color: #1a1a1a; }
 .fd-read .tiptap-full-renderer .ProseMirror p { margin-bottom: .5em; }
 .fd-read .tiptap-full-renderer .ProseMirror > div > :last-child { margin-bottom: 0; }
@@ -56,7 +56,7 @@ ${PAPER_GLYPHS_FACE}
 }
 .fd-lesson .tiptap-full-renderer .callout-head { margin-bottom: 3px; gap: 2px 8px; }
 .fd-lesson .tiptap-full-renderer [data-callout-type] .callout-kind {
-  font: 700 11.5px/1.5 'DM Sans', system-ui, sans-serif; letter-spacing: .08em; color: #15633c;
+  font: 700 11.5px/1.5 var(--fd-sans); letter-spacing: .08em; color: #15633c;
 }
 .fd-lesson .tiptap-full-renderer .callout-name { font-size: 16.5px; font-weight: 700; color: #1a1a1a; }
 .fd-lesson .tiptap-full-renderer [data-callout-type="theorem"],

@@ -1,6 +1,7 @@
 // Assistant « Ajouter un contenu », étape « Écrire » (exercice, examen) : une carte par question, l'énoncé
 // d'abord ; indication, solution, barème et sous-questions s'ajoutent d'un clic, sans rien imposer.
 // Même structure que le reste du site (blocks / subQuestions, champ `hint` pour l'indication).
+import { confirmer } from '@/lib/confirmer';
 import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Heading, Lightbulb, ListPlus, Plus, Text, Trash2, CheckCircle2 } from 'lucide-react';
 import { TextBlockEditor } from '@/components/content/editor/TextBlockEditor';
@@ -79,10 +80,10 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
     [next[i], next[i + d]] = [next[i + d], next[i]];
     onChange(next);
   };
-  const remove = (i: number) => {
+  const remove = async (i: number) => {
     const b = blocks[i];
     if ((filled(b.content) || b.subQuestions?.length) && b.type !== 'section'
-      && !window.confirm(t('Supprimer cette question et tout ce qu’elle contient ?'))) return;
+      && !await confirmer(t('Supprimer cette question et tout ce qu’elle contient ?'), { action: t('Supprimer'), danger: true })) return;
     onChange(blocks.filter((_, j) => j !== i));
   };
   const sections = blocks.filter((b) => b.type === 'section').length;

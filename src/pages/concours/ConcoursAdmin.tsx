@@ -5,6 +5,7 @@
  *  - Exams: CRUD on exams + JSON-based question editor (statement/options/correct/explanation/metadata)
  *  - Tips:  CRUD on tips + video URL or uploaded file via existing FileUpload
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -98,7 +99,7 @@ function ExamsAdmin() {
   useEffect(() => { refresh(); }, []);
 
   const onDelete = async (e: ConcoursExamListItem) => {
-    if (!window.confirm(t('Supprimer "{titre}" ? Tous les résultats associés seront détachés.', { titre: e.title }))) return;
+    if (!await confirmer(t('Supprimer "{titre}" ? Tous les résultats associés seront détachés.', { titre: e.title }), { action: t('Supprimer'), danger: true })) return;
     await deleteConcoursExam(e.id);
     await refresh();
   };
@@ -107,7 +108,7 @@ function ExamsAdmin() {
     <>
       <div className="flex items-center justify-between mb-3">
         <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-          {t('Examens')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {exams.length}</span>
+          {t('Examens')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'var(--fd-mono)' }}>· {exams.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditingMeta('new')}>
           <Plus className="w-4 h-4" /> {t('Nouvel examen')}
@@ -240,7 +241,7 @@ function TipsAdmin() {
   useEffect(() => { refresh(); }, []);
 
   const onDelete = async (tp: ConcoursTip) => {
-    if (!window.confirm(t('Supprimer "{titre}" ?', { titre: tp.title }))) return;
+    if (!await confirmer(t('Supprimer "{titre}" ?', { titre: tp.title }), { action: t('Supprimer'), danger: true })) return;
     await deleteConcoursTip(tp.id);
     await refresh();
   };
@@ -249,7 +250,7 @@ function TipsAdmin() {
     <>
       <div className="flex items-center justify-between mb-3">
         <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
-          {t('Astuces')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'DM Mono' }}>· {tips.length}</span>
+          {t('Astuces')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'var(--fd-mono)' }}>· {tips.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditing('new')}>
           <Plus className="w-4 h-4" /> {t('Nouvelle astuce')}
@@ -454,7 +455,7 @@ const inputStyle: React.CSSProperties = {
   border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
-  fontFamily: 'DM Sans',
+  fontFamily: 'var(--fd-sans)',
   color: '#1a1a1a',
   background: '#faf9f7',
   outline: 'none',

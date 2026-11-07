@@ -5,6 +5,7 @@
  * Uses CompactTipTapEditor *directly* with no modal/portal wrapper, so the
  * editor focus behaves like in the regular exercise editor.
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useRef, useState, memo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
@@ -27,7 +28,7 @@ const inputStyle: React.CSSProperties = {
   border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
-  fontFamily: 'DM Sans',
+  fontFamily: 'var(--fd-sans)',
   color: '#1a1a1a',
   background: '#faf9f7',
   outline: 'none',
@@ -121,7 +122,7 @@ const OptionsEditor = memo(function OptionsEditor({
               );
               updateQuestion(activeIdx, { options: newOpts });
             }}
-            style={{ ...inputStyle, width: 50, textAlign: 'center', fontFamily: 'DM Mono', fontWeight: 700, marginTop: 4 }}
+            style={{ ...inputStyle, width: 50, textAlign: 'center', fontFamily: 'var(--fd-mono)', fontWeight: 700, marginTop: 4 }}
           />
           <div className="flex-1 min-w-0">
             <EditorField
@@ -276,8 +277,8 @@ export default function ConcoursExamQuestionsPage() {
     setActiveIdx(structure.questions.length);
   };
 
-  const removeQuestion = (idx: number) => {
-    if (!window.confirm(t('Supprimer cette question ?'))) return;
+  const removeQuestion = async (idx: number) => {
+    if (!await confirmer(t('Supprimer cette question ?'), { action: t('Supprimer'), danger: true })) return;
     setStructure(prev => ({
       ...prev,
       questions: prev.questions.filter((_, i) => i !== idx),
@@ -814,7 +815,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
                 width: '100%', minHeight: 220,
                 padding: '10px 12px', borderRadius: 8,
                 border: '1px solid #e7e3dc', background: '#fff',
-                fontFamily: 'DM Mono', fontSize: 11, color: '#33302b',
+                fontFamily: 'var(--fd-mono)', fontSize: 11, color: '#33302b',
                 outline: 'none', resize: 'vertical', whiteSpace: 'pre-wrap',
               }}
             />
@@ -829,7 +830,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
             width: '100%', minHeight: 240,
             padding: '12px 14px', borderRadius: 10,
             border: '1.5px solid #e7e3dc', background: '#faf9f7',
-            fontFamily: 'DM Mono', fontSize: 12, color: '#1a1a1a',
+            fontFamily: 'var(--fd-mono)', fontSize: 12, color: '#1a1a1a',
             outline: 'none', resize: 'vertical',
           }}
         />

@@ -7,6 +7,7 @@
  * Les outils (monter, descendre, supprimer, sous-question, indication, solution) sont dans la marge de
  * droite, au survol : rien de ce qui n'est pas imprimé ne prend de place sur la feuille.
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { ArrowDown, ArrowUp, CheckCircle2, Lightbulb, ListPlus, Trash2 } from 'lucide-react';
@@ -176,9 +177,9 @@ export const SheetEditor: React.FC<SheetEditorProps> = (p) => {
   ));
   const setBlock = (i: number, b: ExerciseBlock) => onBlocks(blocks.map((x, j) => (j === i ? b : x)));
   const moveBlock = (i: number, dir: -1 | 1) => { const n = [...blocks]; [n[i], n[i + dir]] = [n[i + dir], n[i]]; onBlocks(n); };
-  const removeBlock = (i: number) => {
+  const removeBlock = async (i: number) => {
     const b = blocks[i];
-    if ((filled(b.content) || b.subQuestions?.length) && b.type !== 'section' && !window.confirm('Supprimer cette question et tout ce qu’elle contient ?')) return;
+    if ((filled(b.content) || b.subQuestions?.length) && b.type !== 'section' && !await confirmer('Supprimer cette question et tout ce qu’elle contient ?', { action: 'Supprimer', danger: true })) return;
     onBlocks(blocks.filter((_, j) => j !== i));
   };
   const blockTools = (i: number, extra?: React.ReactNode) => (
@@ -214,12 +215,12 @@ export const SheetEditor: React.FC<SheetEditorProps> = (p) => {
   };
   const extraTools = (q: { hint?: ContentBlock; solution?: ContentBlock }, set: (patch: { hint?: ContentBlock; solution?: ContentBlock }) => void) => (
     <>
-      <Tool label={q.hint !== undefined ? 'Retirer l’indication' : 'Ajouter une indication'} onClick={() => {
-        if (q.hint !== undefined) { if (!filled(q.hint) || window.confirm('Retirer l’indication ?')) set({ hint: undefined }); return; }
+      <Tool label={q.hint !== undefined ? 'Retirer l’indication' : 'Ajouter une indication'} onClick={async () => {
+        if (q.hint !== undefined) { if (!filled(q.hint) || await confirmer('Retirer l’indication ?', { action: 'Retirer', danger: true })) set({ hint: undefined }); return; }
         set({ hint: text('') }); if (!showSolutions) p.onShowSolutions();
       }}><Lightbulb className={`h-3.5 w-3.5 ${q.hint !== undefined ? 'text-gold-strong' : ''}`} /></Tool>
-      <Tool label={q.solution !== undefined ? 'Retirer la solution' : 'Ajouter la solution'} onClick={() => {
-        if (q.solution !== undefined) { if (!filled(q.solution) || window.confirm('Retirer la solution ?')) set({ solution: undefined }); return; }
+      <Tool label={q.solution !== undefined ? 'Retirer la solution' : 'Ajouter la solution'} onClick={async () => {
+        if (q.solution !== undefined) { if (!filled(q.solution) || await confirmer('Retirer la solution ?', { action: 'Retirer', danger: true })) set({ solution: undefined }); return; }
         set({ solution: text('') }); if (!showSolutions) p.onShowSolutions();
       }}><CheckCircle2 className={`h-3.5 w-3.5 ${q.solution !== undefined ? 'text-brand' : ''}`} /></Tool>
     </>
@@ -286,7 +287,7 @@ export const SheetEditor: React.FC<SheetEditorProps> = (p) => {
               <Tool label="Ajouter une sous-question après" onClick={() => setSubs([...subs.slice(0, k + 1), { id: newId(), content: text('') }, ...subs.slice(k + 1)])}><ListPlus className="h-3.5 w-3.5" /></Tool>
               {pointsTool(sq.id, !!sq.points)}
               {extraTools(sq, setSq)}
-              <Tool label="Supprimer la sous-question" danger onClick={() => { if (!filled(sq.content) || window.confirm('Supprimer cette sous-question ?')) setSubs(subs.filter((_, j) => j !== k)); }}><Trash2 className="h-3.5 w-3.5" /></Tool>
+              <Tool label="Supprimer la sous-question" danger onClick={async () => { if (!filled(sq.content) || await confirmer('Supprimer cette sous-question ?', { action: 'Supprimer', danger: true })) setSubs(subs.filter((_, j) => j !== k)); }}><Trash2 className="h-3.5 w-3.5" /></Tool>
             </>
           )}>
             <div className={`fp-q fp-sq ${k === subs.length - 1 && !showSolutions ? 'fp-q-last' : ''}`}>
@@ -311,7 +312,7 @@ export const SheetEditor: React.FC<SheetEditorProps> = (p) => {
             <Tool label="Monter" disabled={i === 0} onClick={() => { const n = [...sections]; [n[i], n[i - 1]] = [n[i - 1], n[i]]; onSections(n); }}><ArrowUp className="h-3.5 w-3.5" /></Tool>
             <Tool label="Descendre" disabled={i === sections.length - 1} onClick={() => { const n = [...sections]; [n[i], n[i + 1]] = [n[i + 1], n[i]]; onSections(n); }}><ArrowDown className="h-3.5 w-3.5" /></Tool>
             <Tool label="Ajouter une sous-partie" onClick={() => setSubs([...subs, { id: newId(), title: '', content: text('') }])}><ListPlus className="h-3.5 w-3.5" /></Tool>
-            <Tool label="Supprimer la partie" danger onClick={() => { if (!filled(s.content) || window.confirm('Supprimer cette partie et son texte ?')) onSections(sections.filter((_, j) => j !== i)); }}><Trash2 className="h-3.5 w-3.5" /></Tool>
+            <Tool label="Supprimer la partie" danger onClick={async () => { if (!filled(s.content) || await confirmer('Supprimer cette partie et son texte ?', { action: 'Supprimer', danger: true })) onSections(sections.filter((_, j) => j !== i)); }}><Trash2 className="h-3.5 w-3.5" /></Tool>
           </>
         )}>
           <h2 className="fp-l-h2"><span>{ROMAN[i] || i + 1}.</span>{' '}
@@ -330,7 +331,7 @@ export const SheetEditor: React.FC<SheetEditorProps> = (p) => {
         const setSs = (patch: Partial<SubSectionBlock>) => setSubs(subs.map((x, j) => (j === k ? { ...x, ...patch } : x)));
         rows.push(
           <Row key={`${ss.id}:t`} k={`${ss.id}:t`} kwn tools={(
-            <Tool label="Supprimer la sous-partie" danger onClick={() => { if (!filled(ss.content) || window.confirm('Supprimer cette sous-partie ?')) setSubs(subs.filter((_, j) => j !== k)); }}><Trash2 className="h-3.5 w-3.5" /></Tool>
+            <Tool label="Supprimer la sous-partie" danger onClick={async () => { if (!filled(ss.content) || await confirmer('Supprimer cette sous-partie ?', { action: 'Supprimer', danger: true })) setSubs(subs.filter((_, j) => j !== k)); }}><Trash2 className="h-3.5 w-3.5" /></Tool>
           )}>
             <h3 className="fp-l-h3 fp-l-indent"><span>{k + 1}.</span>{' '}
               <input className="se-input" value={ss.title} placeholder="Titre de la sous-partie" aria-label={`Titre de la sous-partie ${k + 1}`}
@@ -383,7 +384,7 @@ const SHEET_EDITOR_CSS = `
   .se-row:hover, .se-row:focus-within { background: linear-gradient(90deg, transparent, rgba(26,122,74,.035) 8%, rgba(26,122,74,.035) 92%, transparent); }
   .se-tools { position: absolute; top: 0; display: flex; flex-direction: column; gap: 2px; padding: 2px; border-radius: 8px;
     background: #fff; box-shadow: 0 4px 14px -6px rgba(20,18,16,.3); opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 5;
-    font-family: 'DM Sans', system-ui, sans-serif; }
+    font-family: var(--fd-sans); }
   .se-row:hover > .se-tools, .se-row:focus-within > .se-tools { opacity: 1; pointer-events: auto; }
   .se-tool { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; color: #6b6862; }
   .se-tool:hover:not(:disabled) { background: #f2f1ee; color: #1a1a1a; }

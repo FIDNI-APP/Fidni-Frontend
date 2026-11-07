@@ -3,6 +3,7 @@
  * correction par l'IA, publication), Sujet et barème (points, arrondi, consignes de correction, sujet privé) et Bilan
  * (notes de la classe, réussite par question, théorèmes à retravailler, export des notes).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -65,7 +66,7 @@ export default function EvaluationPage() {
   if (!ev) return <Page width="wide"><CardsSkeleton n={3} /></Page>;
 
   const supprimer = async () => {
-    if (!window.confirm(t('Supprimer cette évaluation, ses copies et leurs notes ? Les élèves ne les verront plus.'))) return;
+    if (!await confirmer(t('Supprimer cette évaluation, ses copies et leurs notes ? Les élèves ne les verront plus.'), { action: t('Supprimer'), danger: true })) return;
     await deleteEvaluation(id, eid);
     navigate(`/classrooms/${id}?onglet=evaluations`);
   };
@@ -174,7 +175,7 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
   };
 
   const supprimer = async (copieId: number, nom: string) => {
-    if (!window.confirm(t('Supprimer la copie de {nom} (pages et notes) ?', { nom }))) return;
+    if (!await confirmer(t('Supprimer la copie de {nom} (pages et notes) ?', { nom }), { action: t('Supprimer'), danger: true })) return;
     try { await deleteCopie(id, ev.id, copieId); charger(); }
     catch (e) { setMessage({ ton: 'rouge', texte: copiesError(e, t('Suppression impossible.')) }); }
   };
@@ -197,7 +198,7 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
   };
 
   const publierTout = async () => {
-    if (!window.confirm(t('Publier les copies validées ? Chaque élève verra sa copie corrigée et recevra une notification.'))) return;
+    if (!await confirmer(t('Publier les copies validées ? Chaque élève verra sa copie corrigée et recevra une notification.'), { action: t('Publier') })) return;
     setBusy(true);
     try {
       const r = await publier(id, ev.id, 'validees');

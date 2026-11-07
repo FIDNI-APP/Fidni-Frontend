@@ -137,7 +137,7 @@ export const FloatingPanel: React.FC<FloatingPanelProps> = ({
         visibility: pos ? 'visible' : 'hidden',
       }}
     >
-      <div ref={innerRef} id={id} role={role} className={`fd-surgir ${className ?? ''}`}
+      <div ref={innerRef} id={id} role={role} className={`fd-surgir fd-verre ${className ?? ''}`}
         style={{ transformOrigin: pos?.origin, ...style }}>
         {children}
       </div>

@@ -2,6 +2,7 @@
  * « Publier sur FIDNI » : le prof choisit ce que devient son document (exercice, devoir, leçon), voit le
  * découpage trouvé, puis continue dans « Ajouter un contenu » prérempli (niveau, chapitre, vérification).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, X } from 'lucide-react';
@@ -38,7 +39,7 @@ export const PublishDialog: React.FC<{
     // Un brouillon de contenu en cours (un seul par compte) serait remplacé : on demande.
     try {
       if (user && localStorage.getItem(`fidni:brouillon-contenu:${user.id}`)
-        && !window.confirm(t('Un brouillon de contenu non publié est en cours dans « Ajouter un contenu ». Le remplacer par ce document ?'))) return;
+        && !await confirmer(t('Un brouillon de contenu non publié est en cours dans « Ajouter un contenu ». Le remplacer par ce document ?'), { action: t('Remplacer') })) return;
     } catch { /* stockage bloqué */ }
     await beforeLeave();
     if (type === 'serie') {

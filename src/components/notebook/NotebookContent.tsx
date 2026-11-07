@@ -2,6 +2,7 @@
 // Les annotations existantes sont visibles (sauf `showAnnotations={false}` : téléphone) ; la barre d'outils
 // n'apparaît qu'en mode « Annoter » (bouton de SectionContent, proposé seulement avec une souris).
 // Enregistrement automatique, 1 s après un geste, et aussitôt si la leçon se ferme avant (autre leçon, autre page).
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Eraser, Highlighter, Loader2, Pen, Redo2, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import { t } from '@/i18n';
@@ -235,8 +236,8 @@ const NotebookContent: React.FC<NotebookContentProps> = ({
     setAnnotations(next);
     setHistory((h) => ({ ...h, list: h.list.map((l, i) => (i === h.at ? next : l)) }));
   };
-  const clearAll = () => {
-    if (annotations.length && window.confirm(t('Effacer toutes tes annotations de cette leçon ?'))) commit([]);
+  const clearAll = async () => {
+    if (annotations.length && await confirmer(t('Effacer toutes tes annotations de cette leçon ?'), { action: t('Effacer'), danger: true })) commit([]);
   };
 
   const erasing = annotating && tool === 'eraser';

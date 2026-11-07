@@ -1,6 +1,7 @@
 // Pilotage › IA : envoyer un document (PDF, Word, photos), l'IA prépare les fiches, l'administrateur relit
 // l'aperçu (rendu du site, solutions ouvertes), demande des corrections, puis publie ou rejette.
 // Même circuit que l'import fait à la main : contrôle automatique, points à vérifier.
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -380,7 +381,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
                       className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
                       <Check className="h-4 w-4" /> Publier {(job.apercus?.length ?? 0) > 1 ? `les ${job.apercus!.length} fiches` : ''}
                     </button>
-                    <button type="button" disabled={busy} onClick={() => { if (window.confirm('Rejeter ce brouillon ? Le document envoyé sera effacé.')) act(() => rejectJob(job.id), 'Échec.'); }}
+                    <button type="button" disabled={busy} onClick={async () => { if (await confirmer('Rejeter ce brouillon ? Le document envoyé sera effacé.', { action: 'Rejeter', danger: true })) act(() => rejectJob(job.id), 'Échec.'); }}
                       className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink-soft hover:border-ink">
                       <X className="h-3.5 w-3.5" /> Rejeter
                     </button>

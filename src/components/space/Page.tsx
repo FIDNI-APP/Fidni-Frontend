@@ -1,7 +1,7 @@
 /**
  * Briques communes de l'espace de l'élève (refonte du 11/10/2026) : une seule façon de faire une page,
  * un en-tête, une section, un état vide, des onglets. Identité « encre et papier » : fond papier, titres
- * Fraunces (fd-display), vert pour l'action, or pour les repères, beaucoup d'air.
+ * titres en gras (fd-display), vert pour l'action, or pour les repères, beaucoup d'air.
  *
  *   <Page>
  *     <PageHeader eyebrow="Mon suivi" title="Réviser" subtitle="…" actions={…} />

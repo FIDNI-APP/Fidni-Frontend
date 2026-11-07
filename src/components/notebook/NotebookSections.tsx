@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ChevronRight, Printer, X } from 'lucide-react';
-import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
+import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import { t } from '@/i18n';
 import { chapterLessonsPath, plural, sameId, splitSections, type Id, type NbNotebook } from './notebookModel';
 
@@ -129,8 +129,8 @@ const NotebookSections: React.FC<Props> = (props) => {
                 <motion.div className="absolute inset-0 bg-[rgba(20,18,16,.4)]" style={{ opacity: glisser.opaciteVoile }} />
               </motion.div>
               <motion.div ref={feuille} role="dialog" aria-modal="true" aria-label={t('Chapitres du cahier')} {...glisser.panneau}
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={RESSORT_FEUILLE}
-                className="relative flex max-h-[80dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-12px_40px_rgba(20,18,16,.18)]">
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%', transition: SORTIE_FEUILLE }} transition={RESSORT_FEUILLE}
+                className="fd-feuille relative flex max-h-[80dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-12px_40px_rgba(20,18,16,.18)]">
                 <div aria-hidden {...glisser.poignee} className="flex shrink-0 justify-center pb-1 pt-2">
                   <span className="h-1 w-10 rounded-full bg-[#dcd8d0]" />
                 </div>

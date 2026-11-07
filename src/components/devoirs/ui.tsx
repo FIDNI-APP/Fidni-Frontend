@@ -37,7 +37,7 @@ export function DateTile({ date, size = 'md', urgent = false }: { date: string; 
       <span className={`py-[3px] text-[10px] font-bold uppercase tracking-[.08em] text-white ${urgent ? 'bg-[#a23b34]' : 'bg-ink'}`}>
         {t(DAYS[d.getDay()])}
       </span>
-      <span className={`fd-nums pt-1 font-bold leading-none text-ink ${num}`} style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
+      <span className={`fd-nums pt-1 font-bold leading-none text-ink ${num}`} style={{ fontFamily: 'var(--fd-mono)' }}>
         {d.getDate()}
       </span>
       <span className="pb-1.5 pt-0.5 text-[10.5px] font-semibold uppercase tracking-[.04em] text-ink-faint">{t(MONTHS[d.getMonth()])}</span>
@@ -98,7 +98,7 @@ export function ReadinessRing({ value, size = 92 }: { value: number | null; size
           strokeDasharray={`${(Math.max(pct, 2) / 100) * c} ${c}`} transform="rotate(-90 50 50)" />
       )}
       <text x="50" y={value === null ? 57 : 55} textAnchor="middle" fontSize={value === null ? 26 : 22} fontWeight={700}
-        fill={value === null ? '#9a958c' : '#1a1a1a'} style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
+        fill={value === null ? '#9a958c' : '#1a1a1a'} style={{ fontFamily: 'var(--fd-mono)' }}>
         {value === null ? '?' : `${pct}%`}
       </text>
     </svg>

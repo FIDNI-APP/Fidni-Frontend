@@ -1,12 +1,14 @@
 // Feuilles et tiroirs du téléphone : ils suivent le doigt et se ferment d'un geste (07/11/2026, principes d'Apple,
 // « Designing Fluid Interfaces »). Le panneau colle au doigt ; au lâcher, on projette le geste : un petit coup rapide
-// ferme autant qu'un long glissé lent. Ressort sans rebond : le site reste calme. Le voile s'éclaircit pendant le geste.
+// ferme autant qu'un long glissé lent. Léger rebond à l'arrivée, aucun au départ. Le voile s'éclaircit pendant le geste.
 // Le bouton Fermer et Échap restent les chemins au clavier et au lecteur d'écran.
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import { animate, useDragControls, useMotionValue, useTransform, type PanInfo, type Transition } from 'framer-motion';
 
-/** Entrée et sortie par le même chemin, à la même vitesse. */
-export const RESSORT_FEUILLE: Transition = { type: 'spring', bounce: 0, duration: 0.34 };
+/** Arrivée : un léger rebond (Apple : amortissement 0,8 pour un tiroir). Le bord est couvert par .fd-feuille / .fd-tiroir. */
+export const RESSORT_FEUILLE: Transition = { type: 'spring', bounce: 0.2, duration: 0.42 };
+/** Sortie, par le même chemin : nette, sans rebond. Sur ordinateur, le tiroir arrive aussi ainsi. */
+export const SORTIE_FEUILLE: Transition = { type: 'spring', bounce: 0, duration: 0.3 };
 
 /** Où le geste s'arrêterait s'il continuait sur sa lancée (formule de décélération d'Apple). */
 const projection = (vitesse: number, deceleration = 0.998) => (vitesse / 1000) * deceleration / (1 - deceleration);
@@ -62,9 +64,9 @@ export function useGlisserPourFermer({ onClose, refPanneau, ouvert = true, actif
       ? { top: 0.05, bottom: 1 }
       : sens < 0 ? { left: 1, right: 0.05 } : { left: 0.05, right: 1 },
     dragMomentum: false,
-    // Retour en place sans rebond et sans traîner : amortissement critique (49 = 2 × √600), environ 0,3 s.
-    // Le réglage par défaut de framer-motion mettait près d'une seconde à se poser.
-    dragTransition: { bounceStiffness: 600, bounceDamping: 49 },
+    // Retour en place avec un léger rebond, le geste l'a mérité (amortissement ≈ 0,63). Le réglage par défaut de
+    // framer-motion mettait près d'une seconde à se poser, sans rebond.
+    dragTransition: { bounceStiffness: 500, bounceDamping: 28 },
     onDragStart: () => { points.current = []; },
     onDrag: (_: unknown, info: PanInfo) => {
       points.current.push({ t: performance.now(), p: info.point[axe] });
@@ -75,7 +77,7 @@ export function useGlisserPourFermer({ onClose, refPanneau, ouvert = true, actif
       const parcouru = info.offset[axe] * sens;
       const vitesse = vitesseAuLacher(points.current, { t: performance.now(), p: info.point[axe] }, info.velocity[axe]);
       if (parcouru > GESTE_MINIMUM && parcouru + projection(vitesse * sens) > taille() / 2) fermer.current();
-      else animate(avancement, 0, RESSORT_FEUILLE);
+      else animate(avancement, 0, SORTIE_FEUILLE);
     },
   } : {};
 

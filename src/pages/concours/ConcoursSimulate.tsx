@@ -9,6 +9,7 @@
  *   Ordinateur (lg) : question à gauche + grille des questions à droite (280 px)
  *   Téléphone : question pleine largeur + barre Précédente / Suivante collée en bas, à portée de pouce
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -57,7 +58,7 @@ function QuestionPill({ index, current, answered, onClick, square = false }: {
           ? 'rgba(180,176,168,.3)'
           : answered ? 'rgba(34,197,94,.15)' : 'transparent',
         color: current ? '#fff' : answered ? '#86efac' : '#d8d4cc',
-        fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono',
+        fontSize: 12, fontWeight: 700, fontFamily: 'var(--fd-mono)',
         cursor: 'pointer',
       }}
     >
@@ -122,9 +123,11 @@ export default function ConcoursSimulatePage() {
 
   const handleSubmit = useCallback(async (silent = false) => {
     if (!sess || submittedRef.current) return;
-    if (!silent && !window.confirm(t('Soumettre la simulation maintenant ?'))) {
+    if (!silent && !await confirmer(t('Soumettre la simulation maintenant ?'), { action: t('Soumettre') })) {
       return;
     }
+    // Le chrono a pu envoyer la copie pendant la question.
+    if (submittedRef.current) return;
     submittedRef.current = true;
     setSubmitting(true);
     setSubmitError('');
@@ -284,7 +287,7 @@ export default function ConcoursSimulatePage() {
               }}
             >
               {lowTime ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-              <span style={{ fontFamily: 'DM Mono', fontSize: 16, fontWeight: 700, letterSpacing: '.05em' }}>
+              <span style={{ fontFamily: 'var(--fd-mono)', fontSize: 16, fontWeight: 700, letterSpacing: '.05em' }}>
                 {formatTime(secondsLeft)}
               </span>
             </div>
@@ -354,7 +357,7 @@ export default function ConcoursSimulatePage() {
               style={{
                 width: 40, height: 40, borderRadius: 11,
                 background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-                fontSize: 16, fontWeight: 800, fontFamily: 'DM Mono',
+                fontSize: 16, fontWeight: 800, fontFamily: 'var(--fd-mono)',
               }}
             >
               {pos + 1}
@@ -388,7 +391,7 @@ export default function ConcoursSimulatePage() {
                       width: 34, height: 34, borderRadius: 9,
                       background: selected ? '#1a1a1a' : 'transparent',
                       color: selected ? '#fff' : '#d8d4cc',
-                      fontSize: 14, fontWeight: 800, fontFamily: 'DM Mono',
+                      fontSize: 14, fontWeight: 800, fontFamily: 'var(--fd-mono)',
                       border: `1.5px solid ${selected ? '#1a1a1a' : 'rgba(255,255,255,.18)'}`,
                     }}
                   >

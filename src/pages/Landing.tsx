@@ -27,8 +27,7 @@ const rememberedLevel = () => { try { return localStorage.getItem(LEVEL_KEY); } 
  *  · The hero is a real worked exercise that unfolds its solution on load —
  *    the product demonstrates its value instead of asserting it.
  *  · The curriculum is a numbered table of contents, like a textbook sommaire.
- *  · Fraunces (display serif) rhymes with the mathematical typesetting;
- *    DM Sans carries body & UI; DM Mono carries figures.
+ *  · Police du système pour l'interface (07/11/2026) ; les maths gardent la police de LaTeX.
  *  · Green marks action / progress only. No emojis, no gradients, flat + bordered.
  */
 export function Landing() {
@@ -169,7 +168,7 @@ function LevelPicker({ levels }: { levels: Level[] | null }) {
 }
 
 /* The maths is typeset in a serif italic so it reads natively as mathematics —
-   the same world the Fraunces headings live in. */
+   the same typesetting as the exercises themselves. */
 function M({ children }: { children: React.ReactNode }) {
   return <span style={{ fontFamily: SERIF, fontStyle: 'italic' }}>{children}</span>;
 }
@@ -567,8 +566,8 @@ const ACCENT = 'var(--brand)';
 const ACCENT_HOVER = 'var(--brand-hover)';
 const ACCENT_SOFT = 'var(--brand-soft)';
 const BRAND_LINE = 'var(--brand-line)';
-const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif";
-const MONO = "'DM Mono', ui-monospace, monospace";
+const SERIF = "'KaTeX_Main', 'Latin Modern Roman', 'Times New Roman', serif";
+const MONO = 'var(--fd-mono)';
 
 const heroTitle: React.CSSProperties = {
   fontSize: 'clamp(34px, 5vw, 54px)', fontWeight: 700, color: INK,

@@ -288,7 +288,7 @@ const TipTapRenderer: React.FC<TipTapRendererProps> = memo(({
         }
         .tiptap-full-renderer .callout-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-bottom: 6px; }
         .tiptap-full-renderer .callout-kind {
-          font: 600 11px/1.4 'DM Mono', ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; color: #1a1a1a;
+          font: 600 11px/1.4 var(--fd-mono); letter-spacing: .08em; text-transform: uppercase; color: #1a1a1a;
         }
         .tiptap-full-renderer .callout-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
         .tiptap-full-renderer [data-callout-type="theorem"] .callout-kind,

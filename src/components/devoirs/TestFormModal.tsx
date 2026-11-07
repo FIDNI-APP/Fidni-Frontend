@@ -1,6 +1,7 @@
 // Annoncer un DS (ou le modifier) : type, matière, date, chapitres au programme (08/10/2026).
 // Le niveau vient du profil ; sans niveau, l'élève le choisit d'abord. Modifier : le niveau du DS (13/10/2026 : il
 // était deviné par ses chapitres, et « Suites numériques », en 1ère comme en 2ème Bac, ouvrait la 1ère Bac).
+import { confirmer } from '@/lib/confirmer';
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ArrowRight, Check, Loader2, RotateCcw, Trash2, X } from 'lucide-react';
@@ -112,7 +113,7 @@ export const TestFormModal: React.FC<{
   };
 
   const remove = async () => {
-    if (!test || !window.confirm(t('Supprimer ce DS et sa préparation ? Tes exercices et résultats restent sur Fidni.'))) return;
+    if (!test || !await confirmer(t('Supprimer ce DS et sa préparation ? Tes exercices et résultats restent sur Fidni.'), { action: t('Supprimer'), danger: true })) return;
     setSaving(true);
     try {
       await devoirsApi.remove(test.id);

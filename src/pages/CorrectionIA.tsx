@@ -4,6 +4,7 @@
  * les points faibles par théorème et les scans. Pas de professeur : c'est une correction automatique, qui peut se
  * tromper, et le dit.
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, ChevronDown, FileText, Info, Loader2, Target, Trash2 } from 'lucide-react';
@@ -47,7 +48,7 @@ export default function CorrectionIA() {
   if (!c) return <Page><CardsSkeleton n={3} /></Page>;
 
   const supprimer = async () => {
-    if (!window.confirm(t('Supprimer cette correction et les photos de ta copie ?'))) return;
+    if (!await confirmer(t('Supprimer cette correction et les photos de ta copie ?'), { action: t('Supprimer'), danger: true })) return;
     setSuppr(true);
     try { await supprimerCorrection(c.id); navigate(lien); } catch (e) { setErr(copiesError(e, t('Suppression impossible.'))); setSuppr(false); }
   };

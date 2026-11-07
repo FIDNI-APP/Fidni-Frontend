@@ -2,10 +2,20 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/* Polices (07/11/2026) : celle de l'appareil pour l'interface (San Francisco, Segoe UI, Roboto), nette et familière,
+   sans téléchargement. Noto Sans Arabic d'abord : elle ne couvre que l'arabe (unicode-range), le reste passe à la suivante.
+   Les contenus (.fd-read, .fd-lesson, .fd-latex, KaTeX) gardent la police de LaTeX, les feuilles PDF leur DM Sans :
+   une feuille imprimée doit être la même sur toutes les machines. */
+:root {
+  --fd-sans: 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fd-display: 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fd-mono: ui-monospace, SFMono-Regular, 'SF Mono', 'Cascadia Mono', Consolas, Menlo, monospace;
+}
+
 /* ── "Ink & paper" foundation — monochrome, flat, bordered, no gradients ── */
 body {
   margin: 0;
-  font-family: 'DM Sans', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--fd-sans);
   background: #faf9f7;
   color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
@@ -40,7 +50,7 @@ body {
   font-size: 12px;
   font-weight: 500;
   color: #6b6862;
-  transition: background-color .15s, border-color .15s, color .15s, scale .12s ease-out;
+  transition: background-color .15s, border-color .15s, color .15s, scale .28s cubic-bezier(.34, 1.56, .64, 1);
   white-space: nowrap;
 }
 .fd-pill:hover { border-color: #1a7a4a; color: #15633c; }
@@ -54,7 +64,7 @@ body {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color .15s, border-color .15s, color .15s, scale .12s ease-out;
+  transition: background-color .15s, border-color .15s, color .15s, scale .28s cubic-bezier(.34, 1.56, .64, 1);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -69,7 +79,7 @@ body {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color .15s, border-color .15s, color .15s, scale .12s ease-out;
+  transition: background-color .15s, border-color .15s, color .15s, scale .28s cubic-bezier(.34, 1.56, .64, 1);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -304,18 +314,12 @@ body.mobile-menu-open {
 .fd-text-muted { color: var(--ink-muted); }
 .fd-text-faint { color: var(--ink-faint); }
 
-/* ──────────────────────────────────────────────────────────────
-   Display type — Fraunces, an optical serif whose forms rhyme with
-   the KaTeX maths on the page. Reserved for the big page-defining
-   headings (hero, section titles), NOT small UI labels — that's
-   what keeps it characterful instead of decorative. DM Sans still
-   carries all body, UI, and caption text.
-   ────────────────────────────────────────────────────────────── */
+/* Grands titres : police du système, en gras, resserrés (les lettres paraissent trop espacées quand elles grandissent). */
 .fd-display {
-  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+  font-family: var(--fd-display);
   font-optical-sizing: auto;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.022em;
 }
 /* Interligne serré des grands titres (ils héritaient de 1.5, trop lâche quand un titre passe sur deux lignes).
    :where : sans poids CSS, leading-* et les styles en ligne l'emportent toujours. */
@@ -371,6 +375,8 @@ body.mobile-menu-open {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Conteneur qui reçoit le focus par le code (feuille qui s'ouvre) : pas une commande, pas d'anneau autour de tout le panneau. */
+[tabindex="-1"]:focus-visible { outline: none; }
 
 /* ──────────────────────────────────────────────────────────────
    Réponse à l'appui (07/11/2026, principes d'Apple : « réagir dès l'appui, pas au lâcher »).
@@ -382,14 +388,20 @@ html { -webkit-tap-highlight-color: transparent; }
 :where(a, button, input, select, textarea, label, summary, [role="button"]) { touch-action: manipulation; }
 a:active { opacity: .72; }
 @media (prefers-reduced-motion: no-preference) {
-  :where(button, [role="button"]) { transition: scale .12s ease-out; }
+  :where(button, [role="button"]) { transition: scale .28s cubic-bezier(.34, 1.56, .64, 1); }
+  /* Au lâcher, il dépasse à peine et se remet en place : l'appui vient du doigt, le rebond est mérité. */
+  button:not(:disabled):not(:active) { transition-timing-function: cubic-bezier(.34, 1.56, .64, 1); }
   button:not(:disabled):active, [role="button"]:not([aria-disabled="true"]):active,
-  .fd-btn-primary:active, .fd-btn-ghost:active, .fd-pill:active { scale: .98; transition-duration: 50ms; }
+  .fd-btn-primary:active, .fd-btn-ghost:active, .fd-pill:active { scale: .97; transition-duration: 50ms; transition-timing-function: ease-out; }
 }
 
 /* Tiroir du téléphone : un glissé horizontal commencé sur un lien doit aller au tiroir. Sa liste est une zone de
    défilement : sans ceci, le navigateur prend le geste pour lui et l'annule (pointercancel). */
 .fd-tiroir, .fd-tiroir * { touch-action: pan-y; }
+/* Le ressort fait dépasser la feuille de quelques pixels : cette ombre pleine évite de voir la page par le bord. */
+.fd-feuille { box-shadow: 0 80px 0 0 rgb(var(--c-surface)), 0 -16px 40px rgba(20, 18, 16, .18) !important; }
+.fd-tiroir { box-shadow: -80px 0 0 0 rgb(var(--c-surface)), 8px 0 32px rgba(20, 18, 16, .12) !important; }
+[dir="rtl"] .fd-tiroir { box-shadow: 80px 0 0 0 rgb(var(--c-surface)), -8px 0 32px rgba(20, 18, 16, .12) !important; }
 
 /* Zone de toucher agrandie sans changer le dessin (petits boutons voulus discrets). Seulement au doigt,
    et seulement sur un élément non positionné. */
@@ -399,16 +411,55 @@ a:active { opacity: .72; }
 }
 
 /* Un menu naît de son bouton (transform-origin posé par FloatingPanel) ; rapide, sans rebond. */
-@keyframes fd-surgir { from { opacity: 0; scale: .97; } }
-.fd-surgir { animation: fd-surgir .13s ease-out; }
+@keyframes fd-surgir { from { opacity: 0; scale: .95; } }
+.fd-surgir { animation: fd-surgir .18s cubic-bezier(.34, 1.3, .64, 1); }
+
+/* Icône d'un bouton à bascule (Réussi, J'aime, Enregistrer…) : petit rebond au clic seulement (main.tsx), jamais au chargement. */
+@keyframes fd-pop { from { scale: .65; } }
+[data-fd-pop] svg { animation: fd-pop .34s cubic-bezier(.34, 1.56, .64, 1); }
 
 /* Passage clair ↔ sombre (ThemeContext). */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }
 
-/* Réglages d'accessibilité du système : moins de transparence, plus de contraste. */
-@media (prefers-reduced-transparency: reduce) {
-  .fd-chrome { background: rgb(var(--c-surface)) !important; }
-  [class*="backdrop-blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* Verre (07/11/2026) : seulement ce qui flotte au-dessus d'une page encore visible (barres, menus, bandeau), jamais les
+   cartes ni le texte à lire. Feuilles et fenêtres posées sur un voile sombre : presque pleines. À 84 %, le voile les
+   grisait et le texte de la page se devinait derrière leurs titres ; le verre n'y apporte rien.
+   `:has` et `.fixed` : un voile déjà flouté ferait écran (un filtre dans un filtre ne voit plus la page). */
+.fd-chrome {
+  background: rgb(var(--c-surface) / .72) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+}
+.fd-verre {
+  background: rgb(var(--c-surface) / .84) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
+}
+[role="dialog"][aria-modal="true"].bg-white:not(.fd-fixe),
+[role="alertdialog"].fd-verre,
+[role="dialog"][aria-modal="true"].fixed:not(.fd-opaque) > .bg-white {
+  background: rgb(var(--c-surface) / .96) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
+}
+/* Navigateur sans flou : surfaces pleines, jamais de texte sur du texte. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .fd-chrome, .fd-verre { background: rgb(var(--c-surface)) !important; }
+}
+[role="dialog"].fixed, .fixed.inset-0:has(> [role="dialog"][aria-modal="true"]) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Réglages d'accessibilité du système : moins de transparence, plus de contraste : surfaces pleines. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .fd-chrome, .fd-verre,
+  [role="alertdialog"].fd-verre,
+  [role="dialog"][aria-modal="true"].bg-white:not(.fd-fixe),
+  [role="dialog"][aria-modal="true"].fixed:not(.fd-opaque) > .bg-white { background: rgb(var(--c-surface)) !important; }
+  [class*="backdrop-blur"], .fd-chrome, .fd-verre,
+  [role="dialog"][aria-modal="true"].bg-white:not(.fd-fixe),
+  [role="dialog"][aria-modal="true"].fixed:not(.fd-opaque) > .bg-white { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 }
 @media (prefers-contrast: more) {
   :root { --c-line: 120 116 108; --c-ink-faint: 75 72 67; --line: #78746c; --ink-faint: #4b4843; }

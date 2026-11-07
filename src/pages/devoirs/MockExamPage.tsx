@@ -10,6 +10,7 @@
  * Refonte du 11/10/2026 : mêmes briques que Réviser et le plan (components/space/Page) ; pendant l'épreuve,
  * la barre d'onglets du téléphone est cachée et le chronomètre montre aussi le temps écoulé en barre.
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -120,7 +121,7 @@ export default function MockExamPage() {
 
   const act = async (action: 'start' | 'finish') => {
     if (!data || busy) return;
-    if (action === 'finish' && !window.confirm(t('Terminer le DS blanc ? Tu verras ensuite les solutions pour te corriger.'))) return;
+    if (action === 'finish' && !await confirmer(t('Terminer le DS blanc ? Tu verras ensuite les solutions pour te corriger.'), { action: t('Terminer') })) return;
     setBusy(true);
     setActError(false);
     try {
@@ -267,7 +268,7 @@ export default function MockExamPage() {
           <div className="sticky top-[68px] z-20 mb-5 overflow-hidden rounded-2xl border border-line bg-white/95 shadow-[0_6px_16px_rgba(20,18,16,.06)] backdrop-blur">
             <div className="flex items-center gap-3 py-2 ps-2 pe-2 sm:ps-2.5">
               <span className={`fd-nums inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[18px] font-bold ${timerTone}`}
-                style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }} role="timer" aria-live="off" aria-label={over ? t('Temps dépassé') : t('Temps restant')}>
+                style={{ fontFamily: 'var(--fd-mono)' }} role="timer" aria-live="off" aria-label={over ? t('Temps dépassé') : t('Temps restant')}>
                 <Timer className="h-4 w-4" aria-hidden />{over ? `+${clock(remaining)}` : clock(remaining)}
               </span>
               <span className="min-w-0 text-[12.5px] leading-tight text-ink-faint">

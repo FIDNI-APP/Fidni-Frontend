@@ -1,6 +1,7 @@
 // Onglet « Mes élèves » du profil enseignant (refonte du 11/10/2026) : inviter un élève par son pseudo,
 // la liste de ses élèves, les invitations en attente et l'historique. Tutoiement, couleurs de la palette,
 // bouton « Retirer » toujours visible (avant : seulement au survol, inaccessible au doigt).
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Loader2, RotateCcw, School, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
@@ -109,7 +110,7 @@ const TeacherStudentsPanel: React.FC = () => {
   };
 
   const remove = async (id: number, confirmText?: string) => {
-    if (confirmText && !window.confirm(confirmText)) return;
+    if (confirmText && !await confirmer(confirmText, { action: t('Retirer'), danger: true })) return;
     setBusy(id);
     setActionError(null);
     try {

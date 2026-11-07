@@ -10,6 +10,7 @@
 // 11/10/2026 : la fiche porte l'action principale (« Lancer l'épreuve », puis « Terminée : à toi de
 //   corriger ») ; la colonne de droite ne montre que le compte à rebours pendant l'épreuve, sinon ta copie
 //   (qui sert aussi de sommaire). Sur téléphone, la copie passe après le sujet. Logique de l'épreuve inchangée.
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, CheckCircle2, Eye, EyeOff, Flag, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import type { AssessmentStatus, ContentExam } from '@/types/content';
@@ -308,7 +309,7 @@ export const ExamView: React.FC<Props> = ({
   const felt = content.felt;
   const feltLabel = felt ? (felt.differs ? (DIFFICULTY[felt.level]?.label ? t(DIFFICULTY[felt.level].label) : DIFFICULTY[felt.level]?.label) : t('Comme annoncé')) : null;
 
-  const confirmFinish = () => { if (window.confirm(t('Terminer l’épreuve et passer à la correction ?'))) epreuve.finish(); };
+  const confirmFinish = async () => { if (await confirmer(t('Terminer l’épreuve et passer à la correction ?'), { action: t('Terminer') })) epreuve.finish(); };
   // Tous les niveaux du sujet (pas seulement le premier : un devoir SM + PC/SVT n'est pas « 2ème Bac SM » seul).
   const levelName = (content.class_levels || []).map((l) => l?.name).filter(Boolean).join(' · ');
 

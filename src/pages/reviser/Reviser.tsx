@@ -6,6 +6,7 @@
  *  3. Mes listes : les exercices que j'ai mis de côté, à refaire à la suite ou à imprimer.
  * Les anciennes adresses (/revision-lists?onglet=ds|listes) y mènent (App.tsx, RevisionsRedirect).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -320,7 +321,7 @@ export const Reviser: React.FC = () => {
   };
 
   const removeList = async (list: RevisionList) => {
-    if (!window.confirm(t('Supprimer la liste « {name} » ? Les exercices eux-mêmes restent sur Fidni.', { name: list.name }))) return;
+    if (!await confirmer(t('Supprimer la liste « {name} » ? Les exercices eux-mêmes restent sur Fidni.', { name: list.name }), { action: t('Supprimer'), danger: true })) return;
     setDeleting(list.id);
     try {
       await deleteRevisionList(list.id);

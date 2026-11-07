@@ -151,7 +151,7 @@ const SectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ bl
       <TipTapRenderer content={block.content?.html || ''} />
     </div>
     {Number(block.points) > 0 && (
-      <span className="shrink-0 text-xs text-ink-faint" style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
+      <span className="shrink-0 text-xs text-ink-faint" style={{ fontFamily: 'var(--fd-mono)' }}>
         {formatPoints(Number(block.points))}
       </span>
     )}

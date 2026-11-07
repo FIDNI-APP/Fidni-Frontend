@@ -327,7 +327,7 @@ const TourOverlay: React.FC<{ active: ActiveTour; context: TourContext; onClose:
         )}
         <div className="flex items-start justify-between gap-3">
           <span className="text-[10.5px] font-semibold uppercase tracking-widest text-gold-strong fd-nums"
-            style={{ fontFamily: "'DM Mono', ui-monospace, monospace" }}>
+            style={{ fontFamily: 'var(--fd-mono)' }}>
             {visibleSteps.length > 1 ? `${position + 1} / ${visibleSteps.length}` : t('Guide')}
           </span>
           <button type="button" onClick={() => onClose(false)} aria-label={t('Fermer le guide')}

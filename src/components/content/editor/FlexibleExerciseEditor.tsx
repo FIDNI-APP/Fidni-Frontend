@@ -267,7 +267,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
 const chipStyle: React.CSSProperties = {
   fontSize: 11.5, fontWeight: 500, color: '#33302b',
   background: '#f2f1ee', border: '1px solid #e7e3dc',
-  padding: '3px 8px', borderRadius: 99, fontFamily: 'DM Mono, monospace',
+  padding: '3px 8px', borderRadius: 99, fontFamily: 'var(--fd-mono)',
 };
 
 // =====================

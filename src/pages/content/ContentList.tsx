@@ -14,6 +14,7 @@
  *   la présentation pour les moteurs de recherche passe en bas de page.
  */
 
+import { confirmer } from '@/lib/confirmer';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { hubPath, type HubInfo } from '@/lib/api/hubApi';
@@ -920,7 +921,7 @@ export const ContentList: React.FC<ContentListProps> = ({
   );
 
   const handleDeleteItem = async (id: string) => {
-    if (!window.confirm(t('Supprimer définitivement ce contenu ?'))) return;
+    if (!await confirmer(t('Supprimer définitivement ce contenu ?'), { action: t('Supprimer'), danger: true })) return;
     try {
       await config.api.delete(id);
       load(1);

@@ -5,6 +5,7 @@
  * et bannir à la main une adresse ou une IP (par exemple celle d'un compte déjà supprimé, retrouvée dans les
  * journaux d'envoi des e-mails). Backend : /api/pilotage/bannis/ (apps/users/bans.py, bans_views.py).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Ban, ChevronDown, Loader2, Undo2 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
@@ -53,7 +54,7 @@ export const BansCard: React.FC = () => {
   };
 
   const remove = async (row: BanRow) => {
-    if (!window.confirm(`Débannir ${KIND[row.kind].toLowerCase()} « ${row.value} » ?`)) return;
+    if (!await confirmer(`Débannir ${KIND[row.kind].toLowerCase()} « ${row.value} » ?`, { action: 'Débannir' })) return;
     try {
       await api.delete(`/pilotage/bannis/${row.id}/`);
       setRows((rs) => (rs ?? []).filter((r) => r.id !== row.id));

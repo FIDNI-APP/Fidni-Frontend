@@ -9,6 +9,7 @@
  *      plus solide ; les exercices conseillés, repliés.
  * Backend : apps/interactions/devoirs.py (plan, ds-blanc).
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -280,9 +281,9 @@ function MockSettings({ settings, busy, started, onChange }: {
   settings: NonNullable<NonNullable<TestPlan['mock']>['settings']>; busy: boolean; started: boolean;
   onChange: (minutes: number, difficulty: MockDifficulty) => void;
 }) {
-  const pick = (minutes: number, difficulty: MockDifficulty) => {
+  const pick = async (minutes: number, difficulty: MockDifficulty) => {
     if (minutes === settings.minutes && difficulty === settings.difficulty) return;
-    if (started && !window.confirm(t('Ton DS blanc est commencé : le changer en tire un nouveau. Continuer ?'))) return;
+    if (started && !await confirmer(t('Ton DS blanc est commencé : le changer en tire un nouveau. Continuer ?'), { action: t('Continuer') })) return;
     onChange(minutes, difficulty);
   };
   const seg = (on: boolean) => `min-h-9 rounded-lg px-3 text-[13px] font-medium transition-colors disabled:opacity-60 ${

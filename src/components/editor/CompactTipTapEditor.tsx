@@ -756,7 +756,7 @@ const CompactTipTapEditor: React.FC<CompactTipTapEditorProps> = ({
 
       {/* Plein écran : le champ dans l'éditeur de documents complet ; chaque modification revient au champ. */}
       {fullscreen && createPortal(
-        <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label={fullscreenTitle || 'Éditeur plein écran'}>
+        <div className="fd-opaque fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label={fullscreenTitle || 'Éditeur plein écran'}>
           <Suspense fallback={<div className="flex h-full items-center justify-center bg-[#e9e6e0]"><Loader2 className="h-6 w-6 animate-spin text-brand" /></div>}>
             <WordEditor initialContent={lastHtml.current} onChange={(html) => onChangeRef.current?.(html)}
               titleBar={<>

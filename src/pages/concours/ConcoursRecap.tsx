@@ -182,7 +182,7 @@ export default function ConcoursRecapPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexDirection: 'column',
                 }}>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: '#fff', fontFamily: 'DM Mono' }}>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: '#fff', fontFamily: 'var(--fd-mono)' }}>
                     {overall}%
                   </div>
                   <div style={{ fontSize: 9, color: '#d8d4cc', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
@@ -248,7 +248,7 @@ export default function ConcoursRecapPage() {
                         background: '#1a1a1a',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', fontFamily: 'DM Mono' }}>{pct}%</span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', fontFamily: 'var(--fd-mono)' }}>{pct}%</span>
                       </div>
                     </div>
                     <div className="min-w-0">
@@ -314,7 +314,7 @@ export default function ConcoursRecapPage() {
                         border: `1.5px ${kind === 'skipped' ? 'dashed' : 'solid'} ${st.border}`,
                         // La question ouverte garde sa couleur de résultat, entourée de blanc.
                         boxShadow: isCurrent ? '0 0 0 2px #1a1a1a, 0 0 0 4px #fff' : undefined,
-                        color: st.color, fontSize: 12, fontWeight: 700, fontFamily: 'DM Mono', cursor: 'pointer',
+                        color: st.color, fontSize: 12, fontWeight: 700, fontFamily: 'var(--fd-mono)', cursor: 'pointer',
                       }}
                     >
                       {p + 1}
@@ -455,7 +455,7 @@ function QuestionReview({ recap, pos, positions, onGo }: {
                   width: 28, height: 28, borderRadius: 7,
                   background: isCorrect ? '#16a34a' : isChosen ? '#dc2626' : 'transparent',
                   color: '#fff',
-                  fontSize: 12, fontWeight: 800, fontFamily: 'DM Mono',
+                  fontSize: 12, fontWeight: 800, fontFamily: 'var(--fd-mono)',
                   border: `1.5px solid ${isCorrect ? '#16a34a' : isChosen ? '#dc2626' : 'rgba(255,255,255,.18)'}`,
                 }}
               >

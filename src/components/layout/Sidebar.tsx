@@ -9,7 +9,7 @@ import {
   FileText, FilePlus2, Moon, Sun,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
-import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
+import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import { useTheme } from '@/contexts/ThemeContext';
 import { trackAction } from '@/lib/usage';
 import { APlusIcon } from '@/components/icons/APlusIcon';
@@ -213,7 +213,7 @@ const MobileDrawer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         aria-modal="true"
         aria-label={t('Menu')}
         {...panneau}
-        initial={dehors} animate={{ x: 0 }} exit={dehors} transition={RESSORT_FEUILLE}
+        initial={dehors} animate={{ x: 0 }} exit={{ ...dehors, transition: SORTIE_FEUILLE }} transition={RESSORT_FEUILLE}
         className="fd-tiroir absolute start-0 top-0 flex h-full flex-col bg-white shadow-[8px_0_32px_rgba(20,18,16,.12)]"
         style={{
           width: 'min(320px, 86vw)',
