@@ -332,6 +332,12 @@ body.mobile-menu-open {
   font-feature-settings: 'tnum' 1;
 }
 
+/* Contenus vus depuis une carte : même police de LaTeX que sur la page de l'exercice (07/11/2026). Mêmes caractères de
+   secours que lib/paperFont.ts. */
+@font-face { font-family: 'FidniPaperGlyphs'; src: local('Times New Roman'), local('Georgia'), local('Noto Serif'), local('DejaVu Serif');
+  unicode-range: U+00AB, U+00B0, U+00BB, U+2032-2034, U+2116, U+20AC; }
+.fd-card-preview, .fd-preview-line { font-family: 'FidniPaperGlyphs', 'KaTeX_Main', 'Latin Modern Roman', 'Times New Roman', serif; }
+
 /* Aperçu dans les cartes de liste : le vrai rendu (formules comprises), resserré, coupé en fondu
    (masque CSS, pas de classe bg-gradient-* : index.css les rend noires). */
 .fd-card-preview-clip {
@@ -414,24 +420,44 @@ a:active { opacity: .72; }
 @keyframes fd-surgir { from { opacity: 0; scale: .95; } }
 .fd-surgir { animation: fd-surgir .18s cubic-bezier(.34, 1.3, .64, 1); }
 
-/* Icône d'un bouton à bascule (Réussi, J'aime, Enregistrer…) : petit rebond au clic seulement (main.tsx), jamais au chargement. */
-@keyframes fd-pop { from { scale: .65; } }
-[data-fd-pop] svg { animation: fd-pop .34s cubic-bezier(.34, 1.56, .64, 1); }
+/* Effet au clic des boutons qui comptent (lib/effetsBoutons.ts), jamais au chargement ni sur les barres d'outils.
+   `on` : on vient de choisir. `off` : on efface, un petit rebond suffit. Rien avec « Réduire les animations ». */
+:where([data-effet]) { position: relative; }
+[data-effet="reussi"], [data-effet="aime"] { --fd-effet: var(--brand); }
+[data-effet="revoir"] { --fd-effet: var(--gold); }
+[data-effet="partie"] { --fd-effet: var(--ink-faint); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fd-pop { from { scale: .65; } }
+  @keyframes fd-rebond { from { scale: .9; } }
+  @keyframes fd-onde { from { opacity: .6; scale: 1; } to { opacity: 0; scale: 1.4; } }
+  @keyframes fd-trace { from { stroke-dashoffset: 32; } to { stroke-dashoffset: 0; } }
+  @keyframes fd-tour { from { rotate: 220deg; } }
+  [data-fd-pop] svg { animation: fd-pop .34s cubic-bezier(.34, 1.56, .64, 1); }
+  [data-fd-pop="on"] { animation: fd-rebond .42s cubic-bezier(.34, 1.56, .64, 1); }
+  [data-fd-pop="on"]:not([data-effet="neutre"])::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    border: 2px solid var(--fd-effet, currentColor); animation: fd-onde .52s ease-out both;
+  }
+  [data-effet="reussi"][data-fd-pop="on"] svg :is(path, polyline) { stroke-dasharray: 32; animation: fd-trace .36s ease-out both; }
+  [data-effet="revoir"][data-fd-pop="on"] svg { animation: fd-tour .5s cubic-bezier(.34, 1.3, .64, 1); }
+}
 
 /* Passage clair ↔ sombre (ThemeContext). */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }
 
 /* Verre (07/11/2026) : seulement ce qui flotte au-dessus d'une page encore visible (barres, menus, bandeau), jamais les
-   cartes ni le texte à lire. Feuilles et fenêtres posées sur un voile sombre : presque pleines. À 84 %, le voile les
+   cartes ni le texte à lire. 88 % : moins, le texte de la page reste lisible à travers quand le flou ne prend pas (mesuré
+   sur de vraies images, 07/11/2026 : le navigateur annonce le flou sans l'appliquer sur la barre du haut).
+   Feuilles et fenêtres posées sur un voile sombre : presque pleines. À 84 %, le voile les
    grisait et le texte de la page se devinait derrière leurs titres ; le verre n'y apporte rien.
    `:has` et `.fixed` : un voile déjà flouté ferait écran (un filtre dans un filtre ne voit plus la page). */
 .fd-chrome {
-  background: rgb(var(--c-surface) / .72) !important;
+  background: rgb(var(--c-surface) / .88) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
 }
 .fd-verre {
-  background: rgb(var(--c-surface) / .84) !important;
+  background: rgb(var(--c-surface) / .88) !important;
   -webkit-backdrop-filter: blur(28px) saturate(170%);
   backdrop-filter: blur(28px) saturate(170%);
 }

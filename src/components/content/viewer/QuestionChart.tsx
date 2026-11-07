@@ -6,6 +6,7 @@
  * (En partie, examen) / À revoir : s'évaluer en un clic, sans ouvrir la solution. Dès la 1re évaluation (25/10/2026) : un compte « 2/3 » tant qu'il y en a
  * peu, un pourcentage à partir de 5 ; comptes de l'équipe exclus.
  */
+import { effetResultat } from '@/lib/effetsBoutons';
 import React, { useMemo, useState } from 'react';
 import { ArrowDown, Check, Contrast, RotateCcw } from 'lucide-react';
 import type { AssessmentStatus } from '@/types/content';
@@ -100,7 +101,7 @@ export const QuestionChart: React.FC<{
                         if (!o) return null;
                         const active = mine === st;
                         return (
-                          <button key={st} type="button" aria-pressed={active} aria-label={t('{label} (question {num})', { label: t(o.label), num: r.num })} title={t(o.label)}
+                          <button key={st} type="button" aria-pressed={active} data-effet={effetResultat(st)} aria-label={t('{label} (question {num})', { label: t(o.label), num: r.num })} title={t(o.label)}
                             onClick={() => onAssess(r.path, active && progress[r.path] ? progress[r.path]! : st)}
                             className={`fd-hit inline-flex h-6 w-6 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:w-8 ${
                               active ? `${o.dot} border-transparent` : `border-line bg-white text-[#b9b3a8] ${o.hover}`}`}>

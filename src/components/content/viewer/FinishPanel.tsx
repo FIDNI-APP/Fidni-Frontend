@@ -150,14 +150,14 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
 
   const buttons = (
     <div className={`grid gap-2 sm:flex sm:shrink-0 ${isLesson ? 'grid-cols-1' : 'grid-cols-2'} ${top && !isLesson ? 'min-w-0 flex-1 sm:flex-none' : ''}`}>
-      <button type="button" onClick={() => toggle('success')} aria-pressed={success}
+      <button type="button" onClick={() => toggle('success')} aria-pressed={success} data-effet="reussi"
         title={success ? t('Clique pour annuler') : undefined}
         className={`${btn} ${success ? 'border-brand bg-brand text-white hover:bg-brand-hover' : 'border-brand-line bg-white text-brand-hover hover:bg-brand-soft'}`}>
         {success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <CheckCheck className="h-4 w-4 shrink-0" />}
         {isLesson ? (success ? t('Lue') : t('Marquer comme lue')) : t('Tout réussi')}
       </button>
       {!isLesson && (
-        <button type="button" onClick={() => toggle('review')} aria-pressed={review}
+        <button type="button" onClick={() => toggle('review')} aria-pressed={review} data-effet="revoir"
           title={review ? t('Clique pour annuler') : undefined}
           className={`${btn} ${review ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-[#cfc9bf] hover:text-ink'}`}>
           <RotateCcw className="h-4 w-4 shrink-0" /> {t('À revoir')}

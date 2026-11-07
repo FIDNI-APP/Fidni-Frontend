@@ -128,7 +128,7 @@ const iconBtn = 'fd-hit relative z-10 w-9 h-9 rounded-lg inline-flex items-cente
 export const BookmarkButton: React.FC<{ saved: boolean; busy: boolean; onClick: (e: React.MouseEvent) => void; className?: string }> = ({
   saved, busy, onClick, className = '',
 }) => (
-  <button type="button" onClick={onClick} data-tour="favori"
+  <button type="button" onClick={onClick} data-tour="favori" data-effet="neutre"
     className={`${iconBtn} ${saved ? 'text-brand hover:bg-brand-soft' : 'text-ink-faint hover:text-ink hover:bg-[#f2f1ee]'} ${className}`}
     aria-label={saved ? t('Retirer des favoris') : t('Ajouter aux favoris')} aria-pressed={saved}
     title={saved ? t('Retirer des favoris') : t('Ajouter aux favoris')}>

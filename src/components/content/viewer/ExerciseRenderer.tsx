@@ -23,6 +23,7 @@
  * garde son résultat à côté du bouton. Les autres pages (listes, révisions, DS blanc) gardent le rendu compact.
  */
 
+import { effetResultat } from '@/lib/effetsBoutons';
 import React, { useEffect, useState } from 'react';
 import { Check, RotateCcw, Eye, EyeOff, Flag, CheckCheck, Contrast, ChevronDown, Lightbulb } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
@@ -192,6 +193,7 @@ const QuickAssess: React.FC<{ current?: AssessmentStatus; onAssess: (status: Ass
             key={value}
             type="button"
             aria-pressed={active}
+            data-effet={effetResultat(value)}
             title={active ? t('{titre} : cliquer pour effacer', { titre: title }) : title}
             onClick={(e) => { e.stopPropagation(); onAssess(active && current ? current : value); }}
             className={`fd-hit inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${COARSE_CHIP} ${
@@ -393,7 +395,7 @@ const ReadingAssess: React.FC<{ current?: AssessmentStatus; options?: Assessment
         const active = shown === value;
         const Icon = o.icon;
         return (
-          <button key={value} type="button" aria-pressed={active}
+          <button key={value} type="button" aria-pressed={active} data-effet={effetResultat(value)}
             title={active ? t('{label} : clique pour effacer', { label: t(o.label) }) : t(o.label)}
             onClick={(e) => { e.stopPropagation(); onPick(active && current ? current : value); }}
             className={`inline-flex h-10 items-center gap-1.5 rounded-full border text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-8 sm:px-3 [@media(pointer:coarse)]:h-10 ${
