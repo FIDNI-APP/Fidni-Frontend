@@ -10,6 +10,7 @@
 // 31/10/2026 : deux quiz par chapitre et par niveau, chacun son onglet : le quiz du cours et l'approfondissement (vrais
 // problèmes, réponses pièges ; à part de la maîtrise). Questions, validation et mise en ligne ne concernent que l'onglet
 // choisi ; l'autre onglet montre combien de questions y attendent une relecture.
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, BookOpen, Check, CheckCheck, ChevronRight, Eye, EyeOff, Loader2, Mountain, Plus, Search, Target, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
@@ -235,7 +236,7 @@ const QuestionCard: React.FC<{
         </button>
         <button type="button" onClick={onCancel} className="min-h-10 rounded-xl px-3 text-[13px] text-ink-soft hover:bg-[#f2f1ee]">Annuler</button>
         {onDelete && (
-          <button type="button" onClick={() => { if (window.confirm('Supprimer cette question ?')) onDelete(); }}
+          <button type="button" onClick={async () => { if (await confirmer('Supprimer cette question ?', { action: 'Supprimer', danger: true })) onDelete(); }}
             className="ms-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] text-ink-faint hover:text-[#a23b34]"><Trash2 className="h-3.5 w-3.5" /> Supprimer</button>
         )}
       </div>
@@ -280,7 +281,7 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; type: QuizType
     } catch (e) { setMsg({ ok: false, text: errorText(e, 'Échec.') }); } finally { setBusy(false); }
   };
   const validateAll = async () => {
-    if (!window.confirm(`Tu as relu les ${toReview} questions rédigées par Claude ? Elles deviendront publiables${online ? ' et seront aussitôt en ligne' : ''}.`)) return;
+    if (!await confirmer(`Tu as relu les ${toReview} questions rédigées par Claude ? Elles deviendront publiables${online ? ' et seront aussitôt en ligne' : ''}.`, { action: 'Valider' })) return;
     setBusy(true); setMsg(null);
     try {
       const r = await api.post(`/pilotage/quiz/chapitre/${chapterId}/valider/`, niveau);

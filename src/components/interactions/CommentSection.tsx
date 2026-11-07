@@ -14,6 +14,7 @@
  * - 11/10/2026 : titre serif et une phrase d'aide sous le titre ; plus de grand encart vide quand personne
  *   n'a encore écrit (la phrase suffit).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, CornerDownRight, FileIcon, Image as ImageIcon, Loader2, Paperclip, Pencil, Send, Trash2, X } from 'lucide-react';
@@ -293,7 +294,7 @@ export function CommentSection({
     const question = replies
       ? (replies > 1 ? t('Supprimer ce commentaire et ses {n} réponses ?', { n: replies }) : t('Supprimer ce commentaire et sa réponse ?'))
       : t('Supprimer ce commentaire ?');
-    if (!window.confirm(question)) return;
+    if (!await confirmer(question, { action: t('Supprimer'), danger: true })) return;
     await onDeleteComment(String(c.id)).catch(() => {});
   };
 

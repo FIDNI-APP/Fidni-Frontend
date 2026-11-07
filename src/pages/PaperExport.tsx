@@ -506,7 +506,7 @@ const styles = () => `
   .fp-pagecount.is-warn { color: #9a6e1c; }
 
   .fp-panel { box-sizing: border-box; width: 210mm; max-width: 100%; margin: -12px auto 20px; padding: 16px 18px;
-    background: #fff; border: 1px solid #e7e3dc; border-radius: 14px; font-family: 'DM Sans', system-ui, sans-serif; }
+    background: #fff; border: 1px solid #e7e3dc; border-radius: 14px; font-family: var(--fd-sans); }
   .fp-panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
   @media (max-width: 640px) { .fp-panel-grid { grid-template-columns: 1fr; } }
   .fp-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; font-weight: 600; color: #33302b; }
@@ -526,7 +526,7 @@ const styles = () => `
   /* Aperçu pour un visiteur : le haut de la feuille, qui s'efface, puis l'invitation. */
   .fp-teaser { max-height: 250mm; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
     mask-image: linear-gradient(to bottom, #000 62%, transparent); }
-  .fp-guest-cta { position: relative; max-width: 440px; margin: -90px auto 0; font-family: 'DM Sans', system-ui, sans-serif;
+  .fp-guest-cta { position: relative; max-width: 440px; margin: -90px auto 0; font-family: var(--fd-sans);
     background: #fff; border-radius: 16px; box-shadow: 0 16px 40px rgba(20,18,16,.12); }
   .fp-guest-print { display: none; }
 

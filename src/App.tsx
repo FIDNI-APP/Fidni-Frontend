@@ -12,6 +12,7 @@ import { LangProvider, t } from './i18n';
 import { Suspense, lazy, useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
+import { ConfirmerHote } from '@/components/ui/ConfirmerHote';
 import { AuthModalProvider, useAuthModal } from '@/components/auth/AuthController';
 import { FilterProvider } from './components/navbar/FilterContext';
 import LegalRedirector from './components/layout/LegalRedirector';
@@ -281,6 +282,7 @@ function App() {
         <LangProvider>
         <LegalRedirector />
         <ConsentBanner />
+        <ConfirmerHote />
         <ThemeProvider>
           <NativeBridge />
           <AuthProvider>

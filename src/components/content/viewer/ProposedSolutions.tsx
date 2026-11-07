@@ -3,6 +3,7 @@
 // ou supprimer la sienne. La correction officielle reste dans l'onglet « Exercice ».
 // L'éditeur (lourd) n'est téléchargé qu'à l'ouverture de « Proposer ma solution ».
 // 11/10/2026 : titre de section serif, état vide commun (EmptyState) qui porte seul les actions, squelette.
+import { confirmer } from '@/lib/confirmer';
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -212,9 +213,9 @@ const SolutionCard: React.FC<{
   const documents = solution.attachments.filter((a) => a.file_type !== 'image');
 
   const remove = async () => {
-    if (!confirm(solution.is_mine
+    if (!await confirmer(solution.is_mine
       ? t('Supprimer ta solution ? Ses photos seront supprimées aussi.')
-      : t('Supprimer la solution de {nom} ? Ses photos seront supprimées aussi.', { nom: solution.author.username }))) return;
+      : t('Supprimer la solution de {nom} ? Ses photos seront supprimées aussi.', { nom: solution.author.username }), { action: t('Supprimer'), danger: true })) return;
     setDeleting(true);
     try { await deleteProposedSolution(solution.id); onDeleted(); } finally { setDeleting(false); }
   };

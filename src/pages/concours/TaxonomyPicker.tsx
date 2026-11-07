@@ -41,7 +41,7 @@ const inputStyle: React.CSSProperties = {
   border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
-  fontFamily: 'DM Sans',
+  fontFamily: 'var(--fd-sans)',
   color: '#1a1a1a',
   background: '#faf9f7',
   outline: 'none',

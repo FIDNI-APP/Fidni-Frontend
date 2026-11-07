@@ -3,6 +3,7 @@
 // proposé qu'avec une souris (les outils ne sont pas faits pour le doigt), et seulement une fois les annotations
 // chargées : l'enregistrement remplace toutes celles de la leçon, il ne doit jamais partir d'une liste vide par erreur.
 // Sur téléphone, les annotations (placées à la largeur d'un ordinateur) ne sont pas affichées.
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -83,7 +84,7 @@ const SectionContent: React.FC<{
 
   const remove = async () => {
     setMenu(false);
-    if (!entry || !window.confirm(t('Retirer « {title} » de ton cahier ? La leçon reste sur Fidni.', { title: entry.lesson.title }))) return;
+    if (!entry || !await confirmer(t('Retirer « {title} » de ton cahier ? La leçon reste sur Fidni.', { title: entry.lesson.title }), { action: t('Retirer'), danger: true })) return;
     setRemoving(true);
     try {
       await removeFromNotebook(String(notebookId), String(section.id), String(entry.id));

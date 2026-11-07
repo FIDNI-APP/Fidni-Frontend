@@ -2,6 +2,7 @@
 // l'onglet IA (Natsu, 14/10/2026 : « un espace complètement optimisé pour cette tâche, avec des cards »).
 // Cartes regroupées par document → relecture au rendu du site, avec les commentaires de Claude
 // → « Valider et publier », « Modifier » (l'IA du site applique la demande) ou « Rejeter ». Rien n'est en ligne avant.
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -400,7 +401,7 @@ const Relecture: React.FC<{
                 )}
                 <button type="button" disabled={busy}
                   onClick={async () => {
-                    if (!window.confirm('Rejeter ce brouillon ? Rien ne sera publié.')) return;
+                    if (!await confirmer('Rejeter ce brouillon ? Rien ne sera publié.', { action: 'Rejeter', danger: true })) return;
                     const n = next;
                     if (await act(() => rejectJob(job.id), 'Le rejet a échoué.')) onSelect(n);
                   }}
@@ -584,7 +585,7 @@ export const ValidationTab: React.FC = () => {
   const publierSelection = async () => {
     const liste = (items ?? []).filter((b) => choisis.has(b.id) && publiable(b));
     if (!liste.length) return;
-    if (!window.confirm(`Publier ${plural(liste.length, 'contenu')} ?`)) return;
+    if (!await confirmer(`Publier ${plural(liste.length, 'contenu')} ?`, { action: 'Publier' })) return;
     setBilan(null);
     setLot({ fait: 0, total: liste.length });
     const echecs: { titre: string; detail: string }[] = [];

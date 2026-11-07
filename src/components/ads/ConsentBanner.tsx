@@ -27,7 +27,7 @@ export const ConsentBanner: React.FC = () => {
     // « Connexion » en bas de la barre latérale.
     <div role="dialog" aria-live="polite" aria-labelledby="consent-title"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] p-3 sm:p-4 print:hidden" style={{ bottom: TABBAR_OFFSET }}>
-      <div className="pointer-events-auto max-w-3xl mx-auto bg-white border border-[#e7e3dc] rounded-2xl shadow-lg p-3.5 sm:p-5">
+      <div className="fd-verre pointer-events-auto max-w-3xl mx-auto bg-white border border-[#e7e3dc] rounded-2xl shadow-lg p-3.5 sm:p-5">
         <div className="sm:flex sm:items-center sm:gap-5">
           <p id="consent-title" className="flex-1 text-sm text-[#33302b] leading-snug">
             <strong className="text-[#1a1a1a]">{t('Fidni est gratuit grâce à quelques pubs.')}</strong>{' '}

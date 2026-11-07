@@ -112,12 +112,12 @@ export function ConcoursExamActivityTab({
                   </div>
                   <div style={{ textAlign: 'end', flexShrink: 0 }}>
                     <div style={{
-                      fontSize: 18, fontWeight: 800, fontFamily: 'DM Mono',
+                      fontSize: 18, fontWeight: 800, fontFamily: 'var(--fd-mono)',
                       color: submitted ? scoreColor(pct) : '#6b6862',
                     }}>
                       {submitted ? `${pct}%` : '—'}
                     </div>
-                    <div style={{ fontSize: 10, color: '#6b6862', fontFamily: 'DM Mono' }}>
+                    <div style={{ fontSize: 10, color: '#6b6862', fontFamily: 'var(--fd-mono)' }}>
                       {s.correct_count}/{s.total_questions}
                     </div>
                   </div>
@@ -175,11 +175,11 @@ export function ConcoursExamActivityTab({
                   </div>
                   <div style={{ textAlign: 'end', flexShrink: 0 }}>
                     <div style={{
-                      fontSize: 17, fontWeight: 800, fontFamily: 'DM Mono', color: scoreColor(pct),
+                      fontSize: 17, fontWeight: 800, fontFamily: 'var(--fd-mono)', color: scoreColor(pct),
                     }}>
                       {pct}%
                     </div>
-                    <div style={{ fontSize: 10, color: '#6b6862', fontFamily: 'DM Mono' }}>
+                    <div style={{ fontSize: 10, color: '#6b6862', fontFamily: 'var(--fd-mono)' }}>
                       {s.correct_count}/{s.total_questions}
                     </div>
                   </div>

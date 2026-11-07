@@ -1,3 +1,4 @@
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -171,7 +172,7 @@ export default function ClassroomDetailPage() {
   };
 
   const regenerate = async () => {
-    if (!window.confirm(t("Régénérer le code ? L'ancien ne fonctionnera plus."))) return;
+    if (!await confirmer(t("Régénérer le code ? L'ancien ne fonctionnera plus."), { action: t('Régénérer') })) return;
     setBusy(true);
     try {
       const r = await regenerateJoinCode(classroom.id);
@@ -295,7 +296,7 @@ export default function ClassroomDetailPage() {
           isOwner={isOwner}
           members={members}
           onRemoveMember={async (sid) => {
-            if (!window.confirm(t('Retirer cet élève de la classe ?'))) return;
+            if (!await confirmer(t('Retirer cet élève de la classe ?'), { action: t('Retirer'), danger: true })) return;
             try { await removeMember(classroom.id, sid); await refresh(); }
             catch (e) { alert(classroomError(e, t("Impossible de retirer cet élève."))); }
           }}
@@ -696,7 +697,7 @@ function RadarChart({ axes }: { axes: SkillAxes }) {
           <text
             key={label.key}
             x={tx} y={ty} textAnchor="middle" dominantBaseline="middle"
-            fontSize="10" fontWeight="700" fontFamily="DM Sans" fill="#33302b"
+            fontSize="10" fontWeight="700" fontFamily="inherit" fill="#33302b"
           >
             {t(label.short)}
           </text>
@@ -879,7 +880,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
   };
 
   const remove = async (itemId: number) => {
-    if (!window.confirm(t('Retirer cet exercice du TD ?'))) return;
+    if (!await confirmer(t('Retirer cet exercice du TD ?'), { action: t('Retirer'), danger: true })) return;
     setBusy(true);
     try { await removeTDListItem(classroomId, td.id, itemId); await onChanged(); }
     catch (e) { alert(classroomError(e, t("Impossible de retirer cet exercice."))); }
@@ -887,7 +888,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
   };
 
   const destroy = async () => {
-    if (!window.confirm(t('Supprimer ce TD ?'))) return;
+    if (!await confirmer(t('Supprimer ce TD ?'), { action: t('Supprimer'), danger: true })) return;
     setBusy(true);
     try { await deleteTDList(classroomId, td.id); onClose(); await onChanged(); }
     catch (e) { alert(classroomError(e, t('Impossible de supprimer ce TD.'))); setBusy(false); }
@@ -1374,7 +1375,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
   };
 
   const removeS = async (id: number, name: string) => {
-    if (!window.confirm(t('Retirer {name} de la classe ?', { name }))) return;
+    if (!await confirmer(t('Retirer {name} de la classe ?', { name }), { action: t('Retirer'), danger: true })) return;
     try { await removeSubject(classroom.id, id); await onChanged(); }
     catch (e) { alert(classroomError(e, t('Impossible de retirer cette matière.'))); }
   };
@@ -1466,7 +1467,7 @@ const inputStyle: React.CSSProperties = {
   border: '1.5px solid #e7e3dc',
   borderRadius: 10,
   fontSize: 13,
-  fontFamily: 'DM Sans',
+  fontFamily: 'var(--fd-sans)',
   color: '#1a1a1a',
   background: '#fcfbf9',
   outline: 'none',

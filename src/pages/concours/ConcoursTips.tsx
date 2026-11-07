@@ -6,6 +6,7 @@
  * Refonte du 11/10/2026 : en-tête commun des concours, cartes sobres (plus de bandeau ambre),
  * filtres montrés seulement quand il y a des astuces, états vides utiles.
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useScrollToHash } from '@/hooks/useScrollToHash';
@@ -324,7 +325,7 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
   };
 
   const remove = async (cid: number) => {
-    if (!window.confirm(t('Supprimer ce commentaire ?'))) return;
+    if (!await confirmer(t('Supprimer ce commentaire ?'), { action: t('Supprimer'), danger: true })) return;
     await deleteConcoursComment(cid); await refresh();
   };
 

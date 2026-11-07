@@ -56,7 +56,7 @@ export const ModalShell: React.FC<{
     <AnimatePresence>
       {open && (
         // Le voile arrive et repart en fondu, avec la fenêtre (avant : il apparaissait et disparaissait d'un coup).
-        <motion.div className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-[rgba(20,18,16,.4)] p-4 backdrop-blur-[2px] [align-items:safe_center]"
+        <motion.div className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-[rgba(20,18,16,.4)] p-4 [align-items:safe_center]"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
           onClick={onClose}>
           <motion.form
@@ -64,8 +64,8 @@ export const ModalShell: React.FC<{
             onSubmit={(e) => { e.preventDefault(); onSubmit?.(e); }}
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 8 }}
-            transition={{ duration: 0.16 }}
+            exit={{ opacity: 0, scale: 0.97, y: 8, transition: { duration: 0.14 } }}
+            transition={{ type: 'spring', bounce: 0.25, duration: 0.34 }}
             onClick={(e) => e.stopPropagation()}
             role="dialog" aria-modal="true" aria-labelledby={labelId}
             className="relative w-full max-w-md rounded-2xl border border-line bg-white p-5 shadow-[0_20px_50px_rgba(20,18,16,.22)] sm:p-6"

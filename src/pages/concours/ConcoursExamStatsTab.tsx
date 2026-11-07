@@ -103,7 +103,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                     }}>
                       {r.name}
                     </span>
-                    <span style={{ fontSize: 12, color: '#6b6862', fontFamily: 'DM Mono', fontWeight: 600 }}>
+                    <span style={{ fontSize: 12, color: '#6b6862', fontFamily: 'var(--fd-mono)', fontWeight: 600 }}>
                       {r.count} {t('Q')} · {r.pct}%
                     </span>
                   </div>

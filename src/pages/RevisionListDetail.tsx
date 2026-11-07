@@ -8,6 +8,7 @@
  * On y arrive depuis Réviser (« Mes listes ») : mêmes briques (components/space/Page), mêmes couleurs
  * (vert = réussi, or = à revoir).
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -270,7 +271,7 @@ export const RevisionListDetail: React.FC = () => {
 
   const handleRemoveItem = async (itemId: number) => {
     if (!id || !list) return;
-    if (!confirm(t('Retirer cet exercice de la liste ? Il reste sur Fidni, avec ta progression.'))) return;
+    if (!await confirmer(t('Retirer cet exercice de la liste ? Il reste sur Fidni, avec ta progression.'), { action: t('Retirer'), danger: true })) return;
     try {
       await removeItemFromRevisionList(parseInt(id), itemId);
       await load(true);

@@ -1,5 +1,6 @@
 // Pilotage › IA : qui peut faire corriger sa copie par l'IA (fonction cachée, 20/10/2026) et combien de fois.
 // Les administrateurs y ont droit sans limite ; les autres seulement s'ils sont dans cette liste, avec leur limite.
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { copiesError } from '@/lib/api/copiesApi';
@@ -88,7 +89,7 @@ export const CorrectionAccesPanel: React.FC = () => {
                   <Check className="h-3.5 w-3.5" aria-hidden /> {l.actif ? 'Suspendre' : 'Réactiver'}
                 </button>
                 <button type="button" disabled={occupe} aria-label={`Retirer l’accès de ${l.user.username}`}
-                  onClick={() => { if (window.confirm(`Retirer l’accès de ${l.user.username} ?`)) agir(() => retirerAcces(l.user.id)); }}
+                  onClick={async () => { if (await confirmer(`Retirer l’accès de ${l.user.username} ?`, { action: 'Retirer', danger: true })) agir(() => retirerAcces(l.user.id)); }}
                   className="inline-flex min-h-9 items-center rounded-lg px-2 text-[#a23b34] hover:bg-[#fbecea]">
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </button>

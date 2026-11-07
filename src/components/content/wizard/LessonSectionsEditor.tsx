@@ -1,5 +1,6 @@
 // Assistant « Ajouter un contenu », étape « Écrire » (leçon) : des parties (I., II.…) avec leur texte et,
 // au besoin, des sous-parties (1., 2.…). Les encadrés (définition, théorème…) sont dans la barre « Encarts ».
+import { confirmer } from '@/lib/confirmer';
 import React from 'react';
 import { ArrowDown, ArrowUp, ListPlus, Plus, Trash2 } from 'lucide-react';
 import { TextBlockEditor } from '@/components/content/editor/TextBlockEditor';
@@ -14,8 +15,8 @@ const iconBtn = 'inline-flex h-8 w-8 items-center justify-center rounded-lg text
 export const LessonSectionsEditor: React.FC<{ sections: SectionBlock[]; onChange: (s: SectionBlock[]) => void }> = ({ sections, onChange }) => {
   const set = (i: number, s: SectionBlock) => onChange(sections.map((x, j) => (j === i ? s : x)));
   const move = (i: number, d: -1 | 1) => { const n = [...sections]; [n[i], n[i + d]] = [n[i + d], n[i]]; onChange(n); };
-  const remove = (i: number) => {
-    if (sections[i].content?.html && !window.confirm(t('Supprimer cette partie et son texte ?'))) return;
+  const remove = async (i: number) => {
+    if (sections[i].content?.html && !await confirmer(t('Supprimer cette partie et son texte ?'), { action: t('Supprimer'), danger: true })) return;
     onChange(sections.filter((_, j) => j !== i));
   };
   return (

@@ -13,6 +13,7 @@
  * depuis « Tu as fini ? » ou le menu ⋯ (fenêtres ici). Pendant une épreuve : ni onglets, ni suite, ni discussion.
  */
 
+import { confirmer } from '@/lib/confirmer';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
@@ -388,7 +389,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Handle delete
   const handleDelete = async () => {
     if (!id || !content) return;
-    if (!confirm(t(config.deleteConfirm))) return;
+    if (!await confirmer(t(config.deleteConfirm), { action: t('Supprimer'), danger: true })) return;
 
     try {
       await config.api.delete(id);

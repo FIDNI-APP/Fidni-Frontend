@@ -50,8 +50,8 @@
 .wd-style.is-active { border-color: #1a7a4a; box-shadow: 0 0 0 1px #1a7a4a; }
 .wd-style-sample { font-size: 14px; line-height: 1.2; white-space: nowrap; }
 .wd-style-name { margin-top: .2rem; font-size: 11px; color: #6b6862; }
-.wd-style-h1 .wd-style-sample { font-family: 'Fraunces', Georgia, serif; font-size: 17px; font-weight: 600; color: #15633c; }
-.wd-style-h2 .wd-style-sample { font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 600; color: #15633c; }
+.wd-style-h1 .wd-style-sample { font-family: var(--fd-display); font-size: 17px; font-weight: 600; color: #15633c; }
+.wd-style-h2 .wd-style-sample { font-family: var(--fd-display); font-size: 15px; font-weight: 600; color: #15633c; }
 .wd-style-h3 .wd-style-sample { font-size: 13.5px; font-weight: 700; color: #33302b; }
 .wd-style-quote .wd-style-sample { font-style: italic; color: #4b4843; }
 
@@ -60,7 +60,7 @@
 .wd-split-top { flex: 1; display: flex; align-items: center; justify-content: center; }
 .wd-split-bottom { padding-bottom: .25rem; font-size: 11.5px; white-space: nowrap; }
 .wd-tv-icon { font-size: 15px; color: #15633c; }
-.wd-eq-icon { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-style: italic; line-height: 1; color: #15633c; }
+.wd-eq-icon { font-family: var(--fd-display); font-size: 26px; font-style: italic; line-height: 1; color: #15633c; }
 
 /* Onglet Équation */
 .wd-structures .wd-group-body { gap: .1rem; }

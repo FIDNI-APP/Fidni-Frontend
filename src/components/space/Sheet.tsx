@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
+import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import { t, useLang } from '@/i18n';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -74,8 +74,8 @@ export const Sheet: React.FC<{
             <motion.div className="absolute inset-0 bg-[rgba(20,18,16,.38)]" style={{ opacity: opaciteVoile }} />
           </motion.div>
           <motion.div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={labelId} {...panneau}
-            initial={dehors} animate={{ opacity: 1, x: 0, y: 0 }} exit={dehors} transition={RESSORT_FEUILLE}
-            className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl border-t border-line bg-white shadow-[0_-16px_40px_rgba(20,18,16,.18)] outline-none lg:inset-y-0 lg:start-auto lg:end-0 lg:max-h-none lg:w-[min(480px,100vw)] lg:rounded-none lg:rounded-s-3xl lg:border-s lg:border-t-0">
+            initial={dehors} animate={{ opacity: 1, x: 0, y: 0 }} exit={{ ...dehors, transition: SORTIE_FEUILLE }} transition={grandEcran ? SORTIE_FEUILLE : RESSORT_FEUILLE}
+            className={`${grandEcran ? '' : 'fd-feuille '}absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl border-t border-line bg-white shadow-[0_-16px_40px_rgba(20,18,16,.18)] outline-none lg:inset-y-0 lg:start-auto lg:end-0 lg:max-h-none lg:w-[min(480px,100vw)] lg:rounded-none lg:rounded-s-3xl lg:border-s lg:border-t-0`}>
             <div aria-hidden {...poignee} className="flex shrink-0 justify-center pb-1 pt-2 lg:hidden">
               <span className="h-1 w-10 rounded-full bg-[#dcd8d0]" />
             </div>

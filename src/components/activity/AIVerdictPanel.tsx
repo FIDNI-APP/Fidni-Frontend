@@ -90,7 +90,7 @@ export const AIVerdictPanel: React.FC<{ contentId: string }> = ({ contentId }) =
               const cfg = VERDICT[v.verdict] || VERDICT.not_attempted;
               return (
                 <div key={v.path} className="flex items-start gap-3" style={{ padding: '10px 12px', border: '1px solid #f2f1ee', borderRadius: 10 }}>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: '#6b6862', minWidth: 34, paddingTop: 2 }}>
+                  <span style={{ fontFamily: 'var(--fd-mono)', fontSize: 12, color: '#6b6862', minWidth: 34, paddingTop: 2 }}>
                     {v.label || v.path.slice(0, 6)}
                   </span>
                   <div className="flex-1 min-w-0">

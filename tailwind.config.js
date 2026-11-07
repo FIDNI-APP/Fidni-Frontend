@@ -81,8 +81,8 @@ export default {
         200: '2',
       },
       fontFamily: {
-        sans: ['DM Sans', 'Noto Sans Arabic', 'system-ui', 'sans-serif'],
-        mono: ['DM Mono', 'ui-monospace', 'monospace'],
+        sans: ['var(--fd-sans)'],
+        mono: ['var(--fd-mono)'],
         // legacy
         trebuchet: ['Trebuchet MS', 'sans-serif'],
         baloo: ['Baloo 2', 'sans-serif'],

@@ -18,6 +18,16 @@ if (nativePlatform === 'ios') {
 // Safari sur iPhone n'applique :active (retour visuel à l'appui) que si la page écoute le toucher.
 document.addEventListener('touchstart', () => {}, { passive: true });
 
+// Petit rebond de l'icône d'un bouton à bascule, au clic seulement (un attribut : React réécrit les classes au même moment).
+document.addEventListener('click', (e) => {
+  const bouton = (e.target as Element | null)?.closest?.('button[aria-pressed]');
+  if (!bouton) return;
+  bouton.removeAttribute('data-fd-pop');
+  void (bouton as HTMLElement).offsetWidth;
+  bouton.setAttribute('data-fd-pop', '');
+  window.setTimeout(() => bouton.removeAttribute('data-fd-pop'), 400);
+});
+
 // Pas de <StrictMode> : en mode développement, il exécute chaque effet deux fois
 // (double requête, double chargement). fidni.fr étant servi par le serveur de dev
 // Vite, chaque visiteur subissait ce doublement sur toutes les pages.

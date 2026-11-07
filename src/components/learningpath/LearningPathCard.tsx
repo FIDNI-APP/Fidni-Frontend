@@ -1,3 +1,4 @@
+import { confirmer } from '@/lib/confirmer';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -114,9 +115,9 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
             {isAdmin && onDelete && (
               <button
                 type="button"
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (window.confirm(t('Supprimer le parcours « {title} » ? Cette action est définitive.', { title: learningPath.title }))) {
+                  if (await confirmer(t('Supprimer le parcours « {title} » ? Cette action est définitive.', { title: learningPath.title }), { action: t('Supprimer'), danger: true })) {
                     onDelete(learningPath.id);
                   }
                 }}

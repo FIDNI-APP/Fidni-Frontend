@@ -1,6 +1,7 @@
 // Onglet « Cahiers » de Mes enregistrements : l'étagère des cahiers, leur création en un clic (petite fenêtre
 // pré-remplie) et, quand il n'y en a pas, comment on en remplit un. Une seule action « Nouveau cahier » visible
 // (la case pointillée ; sur téléphone, le bouton de la section) et une seule explication, sous l'étagère.
+import { confirmer } from '@/lib/confirmer';
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -69,7 +70,7 @@ export const CahiersPanel: React.FC<{ state: NotebooksState; level: Level }> = (
     const question = n === 1 ? t('Supprimer le cahier « {title} » ? La leçon qui y est rangée reste sur Fidni.', { title: nb.title })
       : n > 1 ? t('Supprimer le cahier « {title} » ? Les {n} leçons qui y sont rangées restent sur Fidni.', { title: nb.title, n })
         : t('Supprimer le cahier « {title} » ?', { title: nb.title });
-    if (!window.confirm(question)) return;
+    if (!await confirmer(question, { action: t('Supprimer'), danger: true })) return;
     try {
       await remove(nb.id);
       toast.success(t('Cahier supprimé'));

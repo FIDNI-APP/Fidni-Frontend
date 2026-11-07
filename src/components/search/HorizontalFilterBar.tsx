@@ -14,7 +14,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RESSORT_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
+import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import type { ListSort } from '@/types/content';
 import { getClassLevels, getSubjects, getChapters, getTheorems, getDifficultyCounts } from '@/lib/api';
 import { slugify } from '@/lib/api/hubApi';
@@ -559,9 +559,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 aria-labelledby="filtres-titre"
                 tabIndex={-1}
                 {...glisser.panneau}
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%', transition: SORTIE_FEUILLE }}
                 transition={RESSORT_FEUILLE}
-                className="relative flex max-h-[88vh] flex-col rounded-t-2xl bg-white shadow-2xl outline-none"
+                className="fd-feuille relative flex max-h-[88vh] flex-col rounded-t-2xl bg-white shadow-2xl outline-none"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
               >
                 <div aria-hidden {...glisser.poignee} className="flex shrink-0 justify-center pb-1 pt-2">

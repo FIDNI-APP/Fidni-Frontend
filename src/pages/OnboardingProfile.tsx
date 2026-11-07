@@ -371,7 +371,7 @@ const Stepper: React.FC<{ current: number }> = ({ current }) => (
   </div>
 );
 
-// Shared step heading — Fraunces title + muted subtitle.
+// Shared step heading — title + muted subtitle.
 const StepHeading: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
   <div className="text-center">
     <h2 className="fd-display text-ink mb-2" style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h2>

@@ -237,7 +237,7 @@ export function Search() {
             className="min-w-0 flex-1"
             style={{
               border: 'none', outline: 'none',
-              background: 'transparent', fontSize: 15, fontFamily: 'DM Sans',
+              background: 'transparent', fontSize: 15, fontFamily: 'var(--fd-sans)',
               color: '#1a1a1a', padding: '10px 0',
             }}
           />
@@ -290,7 +290,7 @@ export function Search() {
                     >
                       <Icon className="w-3 h-3" />
                       {t(tab.label)}
-                      <span style={{ fontFamily: 'DM Mono', fontSize: 10, opacity: .8, marginInlineStart: 2 }}>
+                      <span style={{ fontFamily: 'var(--fd-mono)', fontSize: 10, opacity: .8, marginInlineStart: 2 }}>
                         {tab.count}
                       </span>
                     </button>
@@ -324,7 +324,7 @@ export function Search() {
                 <>
                   <div className="mb-4">
                     <p style={{ fontSize: 12.5, color: '#6b6862' }}>
-                      <span style={{ fontFamily: 'DM Mono', color: '#1a1a1a', fontWeight: 600 }}>
+                      <span style={{ fontFamily: 'var(--fd-mono)', color: '#1a1a1a', fontWeight: 600 }}>
                         {filteredResults.length}
                       </span>{' '}
                       {filteredResults.length > 1 ? t('résultats pour «') : t('résultat pour «')}&nbsp;

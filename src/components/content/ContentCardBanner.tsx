@@ -70,7 +70,7 @@ const iconBtn = (active = false): React.CSSProperties => ({
 
 /**
  * En-tête des cartes de contenu : même langage que la page d'un exercice (fond clair,
- * étiquettes discrètes, titre en Fraunces). Il remplace un bandeau noir avec un grand
+ * étiquettes discrètes, titre en gras). Il remplace un bandeau noir avec un grand
  * filigrane « Mathématiques » coupé, qui transformait chaque liste en pile de blocs sombres.
  */
 export const ContentCardBanner: React.FC<ContentCardBannerProps> = ({

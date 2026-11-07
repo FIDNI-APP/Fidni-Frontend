@@ -2,6 +2,7 @@
  * Non-simulation view of a single concours exam.
  * Shows every question with correct answer + explanation.
  */
+import { confirmer } from '@/lib/confirmer';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useScrollToHash } from '@/hooks/useScrollToHash';
@@ -435,7 +436,7 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
   };
 
   const remove = async (cid: number) => {
-    if (!window.confirm(t('Supprimer ce commentaire ?'))) return;
+    if (!await confirmer(t('Supprimer ce commentaire ?'), { action: t('Supprimer'), danger: true })) return;
     try { await deleteConcoursComment(cid); await refresh(); }
     catch (e) { console.error(e); setErr(t("Le commentaire n'a pas pu être supprimé.")); }
   };

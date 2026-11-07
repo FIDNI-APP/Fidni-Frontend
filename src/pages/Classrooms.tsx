@@ -5,6 +5,7 @@
  *  - Élève avec classes : ses classes en cartes, et une tuile « Un autre code ? » pour en rejoindre une autre.
  *  - Prof : « Créer une classe », puis ses classes avec l'effectif et le code à copier pour l'envoyer aux élèves.
  */
+import { confirmer } from '@/lib/confirmer';
 import React, { useCallback, useEffect, useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -58,7 +59,7 @@ export function ClassroomsPage() {
   const joined = (c: Classroom) => { setShowJoin(false); navigate(`/classrooms/${c.id}`); };
 
   const remove = async (c: Classroom) => {
-    if (!window.confirm(t('Supprimer la classe « {name} » ? Ses TD et la liste de ses élèves seront perdus.', { name: c.name }))) return;
+    if (!await confirmer(t('Supprimer la classe « {name} » ? Ses TD et la liste de ses élèves seront perdus.', { name: c.name }), { action: t('Supprimer'), danger: true })) return;
     setBusyId(c.id);
     try { await deleteClassroom(c.id); setError(''); await refresh(); }
     catch (e) { setError(classroomError(e, t('Impossible de supprimer la classe.'))); }
@@ -66,7 +67,7 @@ export function ClassroomsPage() {
   };
 
   const leave = async (c: Classroom) => {
-    if (!window.confirm(t('Quitter la classe « {name} » ?', { name: c.name }))) return;
+    if (!await confirmer(t('Quitter la classe « {name} » ?', { name: c.name }), { action: t('Quitter'), danger: true })) return;
     setBusyId(c.id);
     try { await leaveClassroom(c.id); setError(''); await refresh(); }
     catch (e) { setError(classroomError(e, t('Impossible de quitter la classe.'))); }
