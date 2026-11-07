@@ -46,7 +46,7 @@ export const DifficultyGapsPanel: React.FC<{ items: DifficultyGap[] }> = ({ item
         {items.length > 0 && <span className="fd-nums rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[12px] font-semibold text-ink-soft">{items.length}</span>}
       </h2>
       <p className="mt-0.5 text-[12px] text-ink-faint">
-        Ressenti des élèves différent de la difficulté affichée (au moins 5 avis, ou 8 élèves et une réussite nettement
+        Ressenti des élèves différent de la difficulté affichée (au moins 5 avis, ou 5 élèves et une réussite nettement
         hors de la bande annoncée). Comptes maison exclus. Si l’écart te paraît juste, corrige la difficulté dans l’éditeur.
       </p>
       {items.length === 0 ? (

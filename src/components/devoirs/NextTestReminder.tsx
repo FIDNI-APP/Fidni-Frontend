@@ -30,7 +30,9 @@ export const NextTestReminder: React.FC<{
   later: boolean;
   onLater: () => void;
   className?: string;
-}> = ({ state, onAnnounce, later, onLater, className = '' }) => {
+  /** Mise en avant (accueil, 1ère et 2ème Bac SM) : carte pleine et bouton principal. */
+  featured?: boolean;
+}> = ({ state, onAnnounce, later, onLater, className = '', featured = false }) => {
   if (!nextTestVisible(state, later)) return null;
   const test = state.test;
 
@@ -43,19 +45,28 @@ export const NextTestReminder: React.FC<{
             <X className="h-3.5 w-3.5" aria-hidden /> {t('Plus tard')}
           </button>
         )}>
-        <div className="flex items-start gap-3.5 rounded-2xl border border-dashed border-[#d8d4cc] bg-white p-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f1ee] text-ink-soft" aria-hidden>
-            <CalendarPlus className="h-5 w-5" />
+        <div className={featured
+          ? 'flex flex-col gap-4 rounded-2xl border border-brand-line bg-brand-soft p-5 sm:flex-row sm:items-center'
+          : 'flex items-start gap-3.5 rounded-2xl border border-dashed border-[#d8d4cc] bg-white p-4'}>
+          <span className={`flex shrink-0 items-center justify-center rounded-xl ${featured ? 'h-12 w-12 bg-white text-brand-hover ring-1 ring-brand-line' : 'h-10 w-10 bg-[#f2f1ee] text-ink-soft'}`} aria-hidden>
+            <CalendarPlus className={featured ? 'h-6 w-6' : 'h-5 w-5'} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14.5px] font-semibold leading-snug text-ink">{t('Un DS bientôt ?')}</p>
-            <p className="mt-0.5 text-[13px] leading-relaxed text-ink-faint">
+            <p className={featured ? 'text-[17px] font-semibold leading-snug text-ink' : 'text-[14.5px] font-semibold leading-snug text-ink'}>{t('Un DS bientôt ?')}</p>
+            <p className={featured ? 'mt-1 text-[14px] leading-relaxed text-ink-soft' : 'mt-0.5 text-[13px] leading-relaxed text-ink-faint'}>
               {t('Indique sa date et ses chapitres : tu auras une révision ciblée et un DS blanc.')}
             </p>
+            {!featured && (
             <button type="button" onClick={onAnnounce} className="fd-btn-ghost mt-3 min-h-10 text-[13px] font-semibold">
               <CalendarPlus className="h-4 w-4" /> {t('Annoncer mon DS')}
             </button>
+            )}
           </div>
+          {featured && (
+            <button type="button" onClick={onAnnounce} className="fd-btn-primary min-h-11 shrink-0 justify-center text-[14px]">
+              <CalendarPlus className="h-4 w-4" /> {t('Annoncer mon DS')}
+            </button>
+          )}
         </div>
       </Section>
     );

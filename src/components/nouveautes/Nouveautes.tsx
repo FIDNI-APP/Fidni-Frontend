@@ -46,6 +46,30 @@ const noterOuverture = (userId: string) => {
   try { localStorage.setItem(derniere(userId), String(Date.now())); } catch { /* stockage indisponible */ }
 };
 
+// Pas pendant la première visite (audit d'usage, 07/11/2026 : 417 fenêtres, souvent à des élèves qui découvraient le
+// site, pour qui tout est nouveau). Visite = session du navigateur ; la première vue d'un compte sur ce navigateur est
+// notée, la fenêtre attend une autre session au moins 30 min plus tard. Un compte de plus de 2 jours n'attend pas.
+const SESSION_KEY = 'fidni:session';
+const PREMIERE_KEY = (userId: string) => `fidni:premiere-visite:${userId}`;
+const DEUX_JOURS = 2 * 86400000;
+const session = () => {
+  try {
+    let id = sessionStorage.getItem(SESSION_KEY);
+    if (!id) { id = `${Date.now()}-${Math.random().toString(36).slice(2)}`; sessionStorage.setItem(SESSION_KEY, id); }
+    return id;
+  } catch { return 'sans-stockage'; }
+};
+export const deuxiemeVisite = (userId: string, inscritLe?: string) => {
+  if (inscritLe && Date.now() - new Date(inscritLe).getTime() > DEUX_JOURS) return true;
+  try {
+    const ici = session();
+    const brut = localStorage.getItem(PREMIERE_KEY(userId));
+    if (!brut) { localStorage.setItem(PREMIERE_KEY(userId), JSON.stringify({ s: ici, t: Date.now() })); return false; }
+    const premiere = JSON.parse(brut) as { s: string; t: number };
+    return premiere.s !== ici && Date.now() - premiere.t > 30 * 60000;
+  } catch { return false; }
+};
+
 const TICK = 500;
 const STABLE = 1000; // avant le lancement automatique des visites (1,2 s au plus tôt) : la visite attendra
 
@@ -67,6 +91,7 @@ export const Nouveautes: React.FC = () => {
       return n ? { n, apercu: true } : null;
     }
     if (ouverteRecemment(String(user.id))) return null;
+    if (!deuxiemeVisite(String(user.id), (user as { date_joined?: string }).date_joined)) return null;
     const deja = [...vuesIci(String(user.id)), ...montrees];
     const id = (user.nouveautes ?? []).find((x) => NOUVEAUTES[x] && !deja.includes(x));
     return id ? { n: NOUVEAUTES[id], apercu: false } : null;

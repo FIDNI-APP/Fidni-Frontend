@@ -11,18 +11,20 @@ import { t } from '@/i18n';
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'very_hard';
 
-const NIVEAUX: Record<QuestionDifficulty, { level: number; label: string; tone: string }> = {
-  easy: { level: 1, label: 'Facile', tone: 'text-ink-faint' },
-  medium: { level: 2, label: 'Moyen', tone: 'text-ink-faint' },
-  hard: { level: 3, label: 'Difficile', tone: 'text-ink-soft font-medium' },
-  very_hard: { level: 4, label: 'Très difficile', tone: 'text-gold-strong font-semibold' },
+// 07/11/2026 (Natsu) : seules les questions difficiles et très difficiles sont signalées, en rouge, pour qu'on les
+// voie ; facile et moyen n'apparaissent plus (trop de signes sur la feuille). Couleurs : .fd-diff-q (index.css).
+const NIVEAUX: Partial<Record<QuestionDifficulty, { level: number; label: string; tone: string }>> = {
+  hard: { level: 3, label: 'Difficile', tone: 'fd-diff-q font-semibold' },
+  very_hard: { level: 4, label: 'Très difficile', tone: 'fd-diff-q fd-diff-q-fort font-bold' },
 };
+/** La question a-t-elle un badge ? (sinon le barème reste seul). */
+export const difficulteVisible = (difficulty?: string | null) => !!difficulty && !!NIVEAUX[difficulty as QuestionDifficulty];
 
 export const QuestionDifficultyTag: React.FC<{ difficulty?: string | null; className?: string }> = ({ difficulty, className = '' }) => {
   const niveau = difficulty ? NIVEAUX[difficulty as QuestionDifficulty] : undefined;
   if (!niveau) return null;
   return (
-    <span className={`inline-flex items-center gap-[0.35em] whitespace-nowrap text-[0.75rem] leading-none tracking-[0.01em] contrast-more:text-ink ${niveau.tone} ${className}`}>
+    <span className={`inline-flex items-center gap-[0.35em] whitespace-nowrap rounded-full px-[0.55em] py-[0.3em] text-[0.75rem] leading-none tracking-[0.01em] ${niveau.tone} ${className}`}>
       <span className="sr-only">{t('Difficulté :')} </span>
       <DifficultyBars level={niveau.level} total={4} size="1em" />
       {t(niveau.label)}
@@ -32,11 +34,11 @@ export const QuestionDifficultyTag: React.FC<{ difficulty?: string | null; class
 
 /** Difficulté et barème forment un seul groupe (« Difficile · 1 pt »), toujours dans cet ordre. */
 export const QuestionFacts: React.FC<{ difficulty?: string | null; points?: React.ReactNode; className?: string }> = ({ difficulty, points, className = '' }) => {
-  if (!difficulty && !points) return null;
+  const visible = difficulteVisible(difficulty);
+  if (!visible && !points) return null;
   return (
     <span className={`inline-flex items-center gap-[0.45em] text-[0.75rem] leading-none text-ink-faint ${className}`}>
       <QuestionDifficultyTag difficulty={difficulty} />
-      {difficulty && points ? <span aria-hidden className="opacity-60">·</span> : null}
       {points ? <span className="fd-nums">{points}</span> : null}
     </span>
   );

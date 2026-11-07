@@ -430,9 +430,15 @@ const ReadingFound: React.FC<{
   current?: AssessmentStatus; options?: AssessmentStatus[]; openedHere: boolean; onAssess: (s: AssessmentStatus, source: AssessSource) => void;
 }> = ({ current, options = DEFAULT_OPTIONS, openedHere, onAssess }) => {
   useRegisterPrompt(!current);
+  // Audit d'usage (07/11/2026) : la moitié des auto-évaluations viennent d'ici. Tant que l'élève n'a pas répondu, la
+  // question prend toute la largeur, en vert pâle, au-dessus de la solution qu'il vient de lire ; ensuite, une ligne calme.
+  const attend = !current;
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2" data-tour={current ? undefined : 'trouve'}>
-      <span className="text-[13px] font-medium text-ink-soft">{t('Tu avais trouvé ?')}</span>
+    <div data-tour={attend ? 'trouve' : undefined}
+      className={attend
+        ? 'fd-trouve -mx-4 -my-2.5 flex w-[calc(100%+2rem)] flex-wrap items-center gap-x-4 gap-y-2.5 bg-brand-soft px-4 py-3.5 sm:-mx-5 sm:w-[calc(100%+2.5rem)] sm:px-5'
+        : 'flex flex-wrap items-center gap-x-2.5 gap-y-2'}>
+      <span className={attend ? 'text-[15px] font-semibold text-ink' : 'text-[13px] font-medium text-ink-soft'}>{t('Tu avais trouvé ?')}</span>
       <ReadingAssess current={current} options={options} fill onPick={(s) => {
         // Première réponse après avoir ouvert la solution soi-même : c'est « Tu avais trouvé ? ».
         if (openedHere && !current) {

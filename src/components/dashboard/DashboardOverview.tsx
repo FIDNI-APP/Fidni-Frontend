@@ -101,17 +101,24 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   const steps = data ? firstSteps(data, ds) : [];
   // Nouvel élève : ses premiers pas plutôt qu'une ligne de zéros.
   const newcomer = !!data && !isTeacher && data.totals.questions === 0 && steps.some((x) => !x.done);
-  const choice = data ? chooseNext(data, ds.test, recs?.exercises ?? [], isTeacher) : null;
+  const choice = data ? chooseNext(data, ds.test, recs?.exercises ?? [], isTeacher, redo?.results ?? []) : null;
   // L'action principale attend ce dont elle dépend (pas de « Reprendre » remplacé une seconde plus tard par le DS).
   const needsRecs = newcomer || choice?.kind === 'start';
-  const heroReady = !!data && ds.loaded && (!needsRecs || !!recs || recsFailed);
+  // Les questions à revoir peuvent devenir l'action principale : on les attend aussi (pas de carte qui change sous le doigt).
+  const heroReady = !!data && ds.loaded && (isTeacher || !!redo) && (!needsRecs || !!recs || recsFailed);
 
   // « Ton prochain DS » : pas en double avec l'action principale ; pour un nouvel élève, l'invitation est déjà un pas.
   const dsInHero = !newcomer && choice?.kind === 'ds';
   const showDs = heroReady && !isTeacher && !dsInHero && (newcomer ? !!ds.test : nextTestVisible(ds, later));
-  const showRedo = !!redo && redo.results.length > 0;
+  // Déjà dans la carte principale (le premier et ses deux voisins) : pas une seconde fois dans « À refaire ».
+  const redoBelow = useMemo(() => (redo?.results ?? []).slice(choice?.kind === 'redo' ? 3 : 0), [redo, choice?.kind]);
+  const showRedo = redoBelow.length > 0;
   // Les contenus d'« À refaire » (les trois montrés) ne se répètent pas dans « Pour toi ».
-  const redoShown = useMemo(() => new Set((showRedo ? redo!.results.slice(0, REDO_SHOWN) : []).map((x) => `${x.type}-${x.id}`)), [showRedo, redo]);
+  const redoShown = useMemo(() => new Set((redo?.results ?? []).slice(0, choice?.kind === 'redo' ? 3 + REDO_SHOWN : REDO_SHOWN)
+    .map((x) => `${x.type}-${x.id}`)), [redo, choice?.kind]);
+  // « Annoncer mon DS » mis en avant juste sous la carte principale pour la 1ère et la 2ème Bac SM (audit d'usage,
+  // 07/11/2026 : 44 élèves l'utilisent, un DS prévu est une raison de revenir) ; ailleurs il reste plus bas.
+  const promoDs = showDs && !ds.test && /Bac SM/i.test(data?.level?.name ?? '');
   const levelLink = user?.profile && !user.profile.onboarding_completed
     ? '/complete-profile' : `/profile/${encodeURIComponent(username ?? '')}/edit#scolarite`;
   const exercisesHub = data?.level_hub_url ?? '/exercises';
@@ -129,7 +136,6 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
         subtitle={subtitle} />
 
       <div className="flex flex-col gap-10">
-        <QuizAnnonce />
         {failed ? (
           <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
             <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ton accueil n’a pas pu se charger. Vérifie ta connexion.')}</p>
@@ -145,15 +151,20 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
           <NextAction choice={choice} data={data} />
         )}
 
+        {promoDs && <NextTestReminder state={ds} later={later} onLater={dismiss} onAnnounce={openAnnounce} featured />}
+
+        {/* Annonce d'une nouveauté : après ce que l'élève a à faire, pas avant. */}
+        <QuizAnnonce />
+
         {!isTeacher && !newcomer && !failed && (
           <OuJenSuis data={apercu.data} failed={apercu.failed} onRetry={apercu.reload}
             sameAsHero={!!choice && sameTarget(choice, apercu.data?.objectif ?? null)} />
         )}
 
-        {(showDs || showRedo) && (
+        {((showDs && !promoDs) || showRedo) && (
           <div className="flex flex-wrap items-start gap-x-6 gap-y-10">
-            {showDs && <NextTestReminder state={ds} later={later} onLater={dismiss} onAnnounce={openAnnounce} className={HALF} />}
-            {showRedo && <RedoBlock items={redo!.results} count={redo!.count} className={HALF} />}
+            {showDs && !promoDs && <NextTestReminder state={ds} later={later} onLater={dismiss} onAnnounce={openAnnounce} className={HALF} />}
+            {showRedo && <RedoBlock items={redoBelow} count={redo!.count} className={HALF} />}
           </div>
         )}
 

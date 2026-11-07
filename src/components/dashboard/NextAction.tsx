@@ -1,12 +1,13 @@
 // Carte principale de l'accueil (refonte du 11/10/2026) : UNE action, choisie par `chooseNext` :
 //   1. un DS dans 3 jours au plus → « Préparer mon DS de mercredi » ;
-//   2. un contenu commencé → « Reprendre » (le plus récent) ;
+//   2. un devoir commencé et pas fini → « Terminer le devoir » ; sinon des questions à revoir → « Revoir » (07/11/2026) ;
+//   2 bis. un contenu commencé → « Reprendre » (le plus récent) ;
 //   3. un DS dans les deux semaines → « Préparer mon DS de … » ;
 //   4. sinon « Commencer » : le 1er exercice proposé pour toi (à défaut, les exercices de ton niveau).
 // Un prof : ses classes. Le bouton porte data-tour="home-reprendre" et la mesure « accueil-reprendre ».
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, GraduationCap, PlayCircle, Sparkles, Timer } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, PlayCircle, RotateCcw, Sparkles, Timer } from 'lucide-react';
 import type { DashboardOverview as Overview, RecommendedItem } from '@/lib/api/dashboardApi';
 import { longDate, testTitle } from '@/lib/api/devoirsApi';
 import { Countdown, DateTile, Readiness } from '@/components/devoirs/ui';
@@ -47,8 +48,8 @@ const Hero: React.FC<{
   </section>
 );
 
-const IconBadge: React.FC<{ icon: React.ComponentType<{ className?: string }> }> = ({ icon: Icon }) => (
-  <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand-hover ring-1 ring-brand-line sm:flex" aria-hidden>
+const IconBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; gold?: boolean }> = ({ icon: Icon, gold }) => (
+  <span className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:flex ${gold ? 'bg-gold-soft text-gold-strong ring-gold-line' : 'bg-brand-soft text-brand-hover ring-brand-line'}`} aria-hidden>
     <Icon className="h-6 w-6" />
   </span>
 );
@@ -128,13 +129,37 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
     );
   }
 
-  if (choice.kind === 'resume') {
-    const { item, others, forTest } = choice;
+  if (choice.kind === 'redo') {
+    const { item, others, count } = choice;
+    const why = item.failed ? t('Marqué à revoir')
+      : item.weak_questions > 1 ? t('{n} questions à reprendre', { n: item.weak_questions }) : t('{n} question à reprendre', { n: item.weak_questions });
     return (
-      <Hero badge={<IconBadge icon={PlayCircle} />}
-        eyebrow={t('Reprendre · {quand}', { quand: ago(item.last_at) || t('là où tu t’es arrêté') })}
+      <Hero badge={<IconBadge icon={RotateCcw} gold />}
+        eyebrow={count > 1 ? t('À revoir · {n} contenus', { n: count }) : t('À revoir')}
         title={item.title}
-        action={<MainButton to={item.url}>{t('Reprendre')}</MainButton>}
+        action={<MainButton to={`/${item.type === 'exam' ? 'exams' : 'exercises'}/${item.id}`}>{t('Revoir')}</MainButton>}
+        footer={others.length > 0 ? (
+          <>
+            <span className="text-ink-faint">{t('Aussi à revoir :')}</span>
+            {others.map((o) => <FootLink key={`${o.type}-${o.id}`} to={`/${o.type === 'exam' ? 'exams' : 'exercises'}/${o.id}`}>{o.title}</FootLink>)}
+          </>
+        ) : undefined}>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">{why}</span>
+          {item.chapters[0] && <span className="rounded-full bg-[#f2f1ee] px-2.5 py-0.5 text-[12px] font-medium text-ink-soft">{item.chapters[0]}</span>}
+        </div>
+      </Hero>
+    );
+  }
+
+  if (choice.kind === 'resume') {
+    const { item, others, forTest, finish } = choice;
+    return (
+      <Hero badge={<IconBadge icon={finish ? Timer : PlayCircle} />}
+        eyebrow={finish ? t('Devoir à terminer · {quand}', { quand: ago(item.last_at) || t('là où tu t’es arrêté') })
+          : t('Reprendre · {quand}', { quand: ago(item.last_at) || t('là où tu t’es arrêté') })}
+        title={item.title}
+        action={<MainButton to={item.url}>{finish ? t('Terminer le devoir') : t('Reprendre')}</MainButton>}
         footer={others.length > 0 ? (
           <>
             <span className="text-ink-faint">{t('Aussi en cours :')}</span>

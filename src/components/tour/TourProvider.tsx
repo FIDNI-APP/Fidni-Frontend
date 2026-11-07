@@ -43,6 +43,20 @@ export const marquerVisiteVue = (id: string) => {
   if (tour) markSeen(tour);
 };
 const everSeen = (tour: Tour) => readSeen()[tour.id] !== undefined;
+
+// Audit d'usage (07/11/2026) : 1 593 lancements automatiques, 739 passés. Elle ne démarre plus seule que sur le PREMIER
+// contenu ouvert (exercice, devoir ou leçon), une seule fois ; toutes les autres restent au bouton « ? ».
+const PREMIER_CONTENU = new Set(['exercice', 'examen', 'lecon']);
+const AUTO_KEY = 'fidni:visite-auto-faite';
+const autoDejaFaite = () => {
+  try {
+    if (localStorage.getItem(AUTO_KEY)) return true;
+    // Un membre qui a déjà vu la visite d'un contenu n'en est plus à son premier.
+    const seen = readSeen();
+    return [...PREMIER_CONTENU].some((id) => seen[id] !== undefined);
+  } catch { return true; }
+};
+const noterAuto = () => { try { localStorage.setItem(AUTO_KEY, String(Date.now())); } catch { /* stockage indisponible */ } };
 const hasNews = (tour: Tour) => everSeen(tour) && (readSeen()[tour.id] ?? 0) < (tour.version ?? 1);
 
 /** Premier élément `data-tour="name"` réellement visible (ni masqué, ni hors du rendu). */
@@ -134,11 +148,13 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Lancement automatique : membres connectés seulement.
       if (active || !canAutoRef.current || document.visibilityState !== 'visible' || somethingOpen()) return;
-      const next = candidates.find((t) => t.auto !== false && !everSeen(t) && now - stableSince.current[t.id] >= 1200);
+      if (autoDejaFaite()) return;
+      const next = candidates.find((t) => PREMIER_CONTENU.has(t.id) && t.auto !== false && !everSeen(t) && now - stableSince.current[t.id] >= 1200);
       const prepared = next && prepare(next, contextRef.current, true);
       // Rien d'affichable pour l'instant (cibles pas encore là) : on réessaie au prochain passage.
       if (prepared && prepared.steps.some((s) => !s.target || findTarget(s.target))) {
         setActive(prepared);
+        noterAuto();
         trackAction('visite-auto');
       }
     };

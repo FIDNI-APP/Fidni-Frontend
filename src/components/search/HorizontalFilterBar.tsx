@@ -306,8 +306,6 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapters, chaptersKey]);
 
-  const nationalYears = Array.from({ length: new Date().getFullYear() - 2008 + 1 }, (_, i) => 2008 + i).reverse();
-
   const rows = (
     // La dernière ligne n'a pas de trait sous elle.
     <div className="[&>*:last-child]:mb-0 [&>*:last-child]:border-b-0 [&>*:last-child]:pb-1">
@@ -317,16 +315,6 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
           {visible(classLevels, filters.classLevels).map((o) => (
             <OptionButton key={o.id} option={o} selected={filters.classLevels.includes(String(o.id))} className={pill(filters.classLevels.includes(String(o.id)))}
               onClick={() => toggle('classLevels', String(o.id))} />
-          ))}
-        </FilterRow>
-      )}
-
-      {/* Matière : seulement s'il y en a plusieurs (sinon choisie d'office). */}
-      {inFolder !== 'chapter' && filters.classLevels.length > 0 && subjects.length > 1 && (
-        <FilterRow title={t('Matière')}>
-          {visible(subjects, filters.subjects).map((o) => (
-            <OptionButton key={o.id} option={o} selected={filters.subjects.includes(String(o.id))} className={pill(filters.subjects.includes(String(o.id)))}
-              onClick={() => toggle('subjects', String(o.id))} />
           ))}
         </FilterRow>
       )}
@@ -401,32 +389,6 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
         </FilterRow>
       )}
 
-      {/* Examens nationaux : filtre par année du Bac (la section décide national / devoirs). */}
-      {contentType === 'exam' && nationalSection && inFolder !== 'year' && (
-        <FilterRow title={t('Année du Bac')} last>
-          <div className="flex items-center gap-3">
-            <select
-              value={filters.dateStart || ''}
-              onChange={(e) => emit({ ...filters, dateStart: e.target.value || null })}
-              aria-label={t('Depuis l’année')}
-              className="h-10 rounded-xl border border-line bg-white px-3 text-[13.5px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-            >
-              <option value="">{t('De…')}</option>
-              {nationalYears.map((year) => <option key={year} value={year}>{year}</option>)}
-            </select>
-            <span className="text-[13px] text-ink-faint">{t('à')}</span>
-            <select
-              value={filters.dateEnd || ''}
-              onChange={(e) => emit({ ...filters, dateEnd: e.target.value || null })}
-              aria-label={t('Jusqu’à l’année')}
-              className="h-10 rounded-xl border border-line bg-white px-3 text-[13.5px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-            >
-              <option value="">{t('À…')}</option>
-              {nationalYears.map((year) => <option key={year} value={year}>{year}</option>)}
-            </select>
-          </div>
-        </FilterRow>
-      )}
     </div>
   );
 

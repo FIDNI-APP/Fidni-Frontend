@@ -481,5 +481,10 @@
   "Devoirs": "الفروض",
   "Confirmer": "تأكيد",
   "Régénérer": "إعادة الإنشاء",
-  "Remplacer": "استبدال"
+  "Remplacer": "استبدال",
+  "À revoir · {n} contenus": "للمراجعة · {n} محتويات",
+  "Revoir": "مراجعة",
+  "Aussi à revoir :": "للمراجعة أيضًا:",
+  "Devoir à terminer · {quand}": "فرض لإكماله · {quand}",
+  "Terminer le devoir": "إكمال الفرض"
 }
