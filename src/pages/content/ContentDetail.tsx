@@ -37,7 +37,7 @@ import { CorrectionIAButton } from '@/components/content/viewer/CorrectionIAButt
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
-import { ContentDiscussions } from '@/components/discussions/ContentDiscussions';
+import { ContentDiscussions, messageCount } from '@/components/discussions/ContentDiscussions';
 import { getDiscussions, type DiscussionPage } from '@/lib/api/discussionsApi';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
 import { FinishPanel } from '@/components/content/viewer/FinishPanel';
@@ -359,15 +359,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const tabFromUrl: ContentTab = searchParams.get('onglet') === 'discussions' || focusCommentId ? 'discussions' : 'exercise';
   useEffect(() => { setActiveTab(tabFromUrl); }, [id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Discussions qui taguent ce contenu (onglet « Discussions » et son compteur).
+  // Discussions qui taguent ce contenu : messages de l'onglet « Discussions » et nombre de messages de sa pastille.
   const [discussions, setDiscussions] = useState<DiscussionPage | null>(null);
-  useEffect(() => {
+  const loadDiscussions = useCallback(() => {
     if (!id) return;
-    let alive = true;
-    setDiscussions(null);
-    getDiscussions({ contenu: Number(id), niveau: 'tous' }).then((p) => { if (alive) setDiscussions(p); }).catch(() => {});
-    return () => { alive = false; };
+    getDiscussions({ contenu: Number(id), niveau: 'tous' }).then(setDiscussions).catch(() => {});
   }, [id]);
+  useEffect(() => { setDiscussions(null); loadDiscussions(); }, [loadDiscussions]);
   // Réussite de la classe : chargée avec la page, relue peu après chaque auto-évaluation (le serveur efface son cache).
   const loadQuestionStats = useCallback(() => {
     if (!id || contentType === 'lesson') return;
@@ -738,7 +736,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           }}
           basePath={config.basePath}
           solutionCount={proposedSolutions?.length ?? 0}
-          discussionCount={discussions?.count ?? 0}
+          discussionCount={messageCount(discussions)}
           onCollect={openCollect}
           sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
           onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
@@ -812,7 +810,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
         {activeTab === 'discussions' && id && (
           <div className="max-w-3xl">
-            <ContentDiscussions contentId={Number(id)} contentType={contentType} page={discussions} />
+            <ContentDiscussions contentId={Number(id)} contentTitle={content.title} page={discussions} onChanged={loadDiscussions}
+              levelId={content.class_levels?.[0]?.id != null ? Number(content.class_levels[0].id) : null} />
           </div>
         )}
       </div>

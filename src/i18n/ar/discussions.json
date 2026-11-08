@@ -1,5 +1,12 @@
 {
   "Discussions": "النقاشات",
+  "Connecte-toi pour écrire un message ou répondre.": "سجّل الدخول لكتابة رسالة أو الرد.",
+  "modifié": "معدّل",
+  "Ouvrir dans l’espace Discussions": "فتح في فضاء النقاشات",
+  "Supprimer ce message ?": "حذف هذه الرسالة؟",
+  "Supprimer ce message et sa réponse ?": "حذف هذه الرسالة وجوابها؟",
+  "Supprimer ce message et ses {n} réponses ?": "حذف هذه الرسالة وأجوبتها الـ{n}؟",
+  "Ton message…": "رسالتك…",
   "Toutes les discussions": "كل النقاشات",
   "Mes discussions": "نقاشاتي",
   "Discussions de {nom}": "نقاشات {nom}",

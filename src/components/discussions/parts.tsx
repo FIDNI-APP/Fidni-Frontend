@@ -30,6 +30,30 @@ export const SalonChip: React.FC<{ salon: Salon; to?: string }> = ({ salon, to }
   return to ? <Link to={to} className={`${cls} hover:opacity-80`}>{inner}</Link> : <span className={cls}>{inner}</span>;
 };
 
+/** Texte d'un message écrit avec l'éditeur (HTML), sans balises, espaces simples. DOMParser : document inerte (aucun
+ *  script ni image chargé), contrairement à un élément de la page. */
+export const plainText = (html: string) => {
+  const doc = new DOMParser().parseFromString(html.replace(/<(br|\/p|\/li|\/div)[^>]*>/gi, ' '), 'text/html');
+  return (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
+};
+
+/**
+ * Titre d'un message écrit sous un contenu (onglet « Discussions ») : sa première phrase, coupée à un mot, ou
+ * « À propos de … » s'il est trop court. Même règle que la reprise des anciens commentaires (discussions/0002).
+ */
+export const titleFromMessage = (html: string, contentTitle: string) => {
+  const text = plainText(html);
+  let phrase = text.split(/(?<=[.?!])\s/, 1)[0].trim();
+  if (phrase.length > 90) phrase = `${phrase.slice(0, 90).replace(/\s+\S*$/, '').replace(/[ ,;:]+$/, '')}…`;
+  return (phrase.length < 6 ? `À propos de « ${contentTitle} »` : phrase).slice(0, 160);
+};
+
+/** Le titre d'une discussion est-il sa première phrase (message écrit sous un contenu, commentaire repris) ? */
+export const titleIsFirstSentence = (title: string, html: string) => {
+  const norm = (s: string) => s.replace(/…$/, '').replace(/\s+/g, ' ').trim();
+  return title.startsWith('À propos de « ') || norm(plainText(html)).startsWith(norm(title));
+};
+
 export const timeAgo = (iso: string) => {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return t('à l’instant');
