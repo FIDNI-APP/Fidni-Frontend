@@ -25,7 +25,9 @@ const Maths: React.FC<{ text: string; className?: string }> = ({ text, className
 
 interface Notif {
   id: number;
-  kind: 'comment' | 'reply' | 'report' | 'quiz' | 'copie';
+  /** Espace Discussions (08/11/2026) : « discussion » (nouvelle discussion où il peut aider), « reponse » (réponse dans
+   *  une discussion qu'il suit), « mention » (@pseudo). */
+  kind: 'comment' | 'reply' | 'report' | 'quiz' | 'copie' | 'discussion' | 'reponse' | 'mention';
   title: string;
   url: string;
   excerpt: string;
@@ -75,6 +77,19 @@ function Message({ n }: { n: Notif }) {
   const what = <span className="font-semibold text-ink">« {n.title} »</span>;
   if (n.kind === 'reply') {
     return <>{who} {n.count > 1 ? t('t’a répondu {n} fois', { n: n.count }) : t('a répondu à ton commentaire')} {t('sur')} {what}</>;
+  }
+  if (n.kind === 'discussion') {
+    return n.count > 1
+      ? <><b className="font-semibold text-ink">{t('{n} nouvelles discussions', { n: n.count })}</b>, {t('dont')} {what}</>
+      : <>{who} {t('a lancé une discussion :')} {what}</>;
+  }
+  if (n.kind === 'reponse') {
+    return n.count > 1
+      ? <><b className="font-semibold text-ink">{t('{n} nouvelles réponses', { n: n.count })}</b> {t('dans')} {what}</>
+      : <>{who} {t('a répondu dans')} {what}</>;
+  }
+  if (n.kind === 'mention') {
+    return <>{who} {t('t’a mentionné dans')} {what}</>;
   }
   return n.count > 1
     ? <><b className="font-semibold text-ink">{t('{n} nouveaux commentaires', { n: n.count })}</b> {t('sur')} {what} ({t('le dernier de')} {who})</>

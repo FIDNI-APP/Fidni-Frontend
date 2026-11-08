@@ -108,6 +108,9 @@ const PaperExport = page(() => import('./pages/PaperExport'), 'PaperExport');
 const MesEnregistrements = page(() => import('./pages/enregistrements/MesEnregistrements'), 'MesEnregistrements');
 // Réviser (11/10/2026) : prochain DS, à refaire et listes sur une seule page (remplace /revision-lists).
 const Reviser = page(() => import('./pages/reviser/Reviser'), 'Reviser');
+const DiscussionsHub = page(() => import('./pages/discussions/DiscussionsHub'), 'DiscussionsHub');
+const DiscussionThread = page(() => import('./pages/discussions/DiscussionThread'), 'DiscussionThread');
+const DiscussionForm = page(() => import('./pages/discussions/DiscussionForm'), 'DiscussionForm');
 const Defis = page(() => import('./pages/defis/Defis'), 'Defis');
 const DefiPasse = page(() => import('./pages/defis/Defis'), 'DefiPasse');
 // Éditeur de documents « façon Word » avec équations (12/10/2026), inspiré de wordcraft.
@@ -455,6 +458,10 @@ function App() {
                     <Route path="/concours/tips/:id" element={
                       <NavbarWrapper><ConcoursTipDetailPage /></NavbarWrapper>
                     } />
+                    <Route path="/discussions" element={<NavbarWrapper><DiscussionsHub /></NavbarWrapper>} />
+                    <Route path="/discussions/nouvelle" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
+                    <Route path="/discussions/:id" element={<NavbarWrapper><DiscussionThread /></NavbarWrapper>} />
+                    <Route path="/discussions/:id/modifier" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
                     <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
                     <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />
                     <Route path="/pilotage" element={

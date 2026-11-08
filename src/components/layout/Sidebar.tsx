@@ -6,7 +6,7 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText, FilePlus2, Moon, Sun,
+  FileText, FilePlus2, Moon, Sun, MessagesSquare,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
@@ -21,7 +21,7 @@ import { getClassLevels } from '@/lib/api';
 import { canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
-import { sectionHome, useHasClassroom } from './nav';
+import { sectionHome, useHasClassroom, useDiscussionCount } from './nav';
 import LogoFidni from '@/assets/logo-fidni.svg';
 import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import { t, useLang } from '@/i18n';
@@ -40,6 +40,8 @@ interface NavItem {
   levels?: LevelBase;
   /** Pastille « Nouveau » tant que la page n'a pas été découverte (skilliq/annonce.ts). */
   nouveau?: 'quiz';
+  /** Nombre de discussions sans réponse à son niveau (nav.ts). */
+  compteur?: boolean;
 }
 
 interface NavGroup {
@@ -69,6 +71,7 @@ const WORK_GROUP: NavGroup = {
     { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux', ...NEW_CONTENT], levels: '/exams' },
     { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
     { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
+    { to: '/discussions', label: 'Discussions', icon: MessagesSquare, match: ['/discussions'], compteur: true },
   ],
 };
 
@@ -388,6 +391,19 @@ const QuizNouveau: React.FC<{ place: 'dessous' | 'droite' | 'point'; active: boo
   );
 };
 
+/** Discussions sans réponse : à droite du libellé ; point doré quand la barre est repliée. */
+const DiscussionCount: React.FC<{ collapsed: boolean; active: boolean }> = ({ collapsed, active }) => {
+  const n = useDiscussionCount();
+  if (!n) return null;
+  if (collapsed) return <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label={t('{n} sans réponse', { n })} />;
+  return (
+    <span aria-label={t('{n} sans réponse', { n })}
+      className={cx('ms-auto me-1 shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-bold fd-nums', active ? 'bg-white/15 text-white' : 'bg-gold-soft text-gold-strong')}>
+      {n > 99 ? '99+' : n}
+    </span>
+  );
+};
+
 const NavRow: React.FC<{
   item: NavItem; href: string; active: boolean; collapsed: boolean; drawer?: boolean; onNavigate?: () => void;
   /** Rubrique à niveaux : chevron du menu déroulant, à droite du lien. */
@@ -433,6 +449,7 @@ const NavRow: React.FC<{
         </span>
       ) : <span className="truncate">{t(item.label)}</span>)}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
+      {item.compteur && <DiscussionCount collapsed={collapsed} active={active} />}
     </Link>
   );
 };
