@@ -21,14 +21,11 @@ import {
   exerciseContentAPI,
   examContentAPI,
   lessonContentAPI,
-  voteComment,
-  updateComment,
-  deleteComment,
 } from '@/lib/api';
 import { getQuestionStats, type QuestionStat } from '@/lib/api/statisticsApi';
 import { QuestionStatsContext } from '@/components/content/viewer/questionStats';
 import { assessQuestions, saveSessionScore, type AssessSource, type TimerSession } from '@/lib/api/contentItemApi';
-import type { VoteValue, Comment } from '@/types';
+import type { VoteValue } from '@/types';
 import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus, Felt } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
@@ -40,7 +37,8 @@ import { CorrectionIAButton } from '@/components/content/viewer/CorrectionIAButt
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
-import { CommentSection } from '@/components/interactions/CommentSection';
+import { ContentDiscussions, messageCount } from '@/components/discussions/ContentDiscussions';
+import { getDiscussions, type DiscussionPage } from '@/lib/api/discussionsApi';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
 import { FinishPanel } from '@/components/content/viewer/FinishPanel';
 import type { ContentTab } from '@/components/content/viewer/ContentHeader';
@@ -225,7 +223,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const config = CONTENT_TYPE_CONFIG[contentType];
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // Lien d'une notification : « ?commentaire=<id>#discussion » ouvre ce commentaire, réponse prête.
+  // Ancien lien de notification « ?commentaire=<id> » : ouvre l'onglet « Discussions » (voir tabFromUrl).
   const [searchParams] = useSearchParams();
   const focusCommentId = searchParams.get('commentaire');
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -281,9 +279,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   // Réussite de la classe question par question (pastille à côté de chaque question) ; {} en attendant.
   const [questionStats, setQuestionStats] = useState<Record<string, QuestionStat>>({});
 
-  // Comments state (placeholder - structured content may not have comments yet)
-  const [comments, setComments] = useState<Comment[]>([]);
-
   // Session history state
   const [sessionHistory, setSessionHistory] = useState<TimerSession[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -314,7 +309,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       .then(([data, progress]) => {
         if (!alive) return;
         loadedIdRef.current = id;
-        const d = data as ContentItem & { comments?: Comment[] };
+        const d = data as ContentItem;
         setContent(d);
         setVoteCount(typeof d.vote_count === 'number' ? d.vote_count : 0);
         setLikeCounts({ likes: d.like_count ?? 0, dislikes: d.dislike_count ?? 0 });
@@ -322,8 +317,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         setIsSaved(Boolean(d.user_save));
         setCompletionStatus(d.user_complete || null);
         completionRef.current = d.user_complete || null;
-        // La discussion est dans la même réponse : plus de second appel au chargement.
-        setComments(Array.isArray(d.comments) ? d.comments : []);
 
         const statuses: Record<string, AssessmentStatus> = {};
         const dates: Record<string, string> = {};
@@ -361,7 +354,18 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     return () => { alive = false; };
   }, [id, config, isAuthenticated, authLoading, contentType, reloadKey]);
 
-  useEffect(() => { setActiveTab('exercise'); }, [id]);
+  // Onglet de l'adresse : « ?onglet=discussions » (espace Discussions, « Les plus discutés »), ou un ancien lien de
+  // notification vers un commentaire (« ?commentaire= ») : les commentaires sont devenus des discussions.
+  const tabFromUrl: ContentTab = searchParams.get('onglet') === 'discussions' || focusCommentId ? 'discussions' : 'exercise';
+  useEffect(() => { setActiveTab(tabFromUrl); }, [id]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Discussions qui taguent ce contenu : messages de l'onglet « Discussions » et nombre de messages de sa pastille.
+  const [discussions, setDiscussions] = useState<DiscussionPage | null>(null);
+  const loadDiscussions = useCallback(() => {
+    if (!id) return;
+    getDiscussions({ contenu: Number(id), niveau: 'tous' }).then(setDiscussions).catch(() => {});
+  }, [id]);
+  useEffect(() => { setDiscussions(null); loadDiscussions(); }, [loadDiscussions]);
   // Réussite de la classe : chargée avec la page, relue peu après chaque auto-évaluation (le serveur efface son cache).
   const loadQuestionStats = useCallback(() => {
     if (!id || contentType === 'lesson') return;
@@ -590,64 +594,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     }
   };
 
-  // Comment handlers
-  const handleAddComment = async (commentContent: string, parentId?: string, fileIds?: string[]) => {
-    if (!isAuthenticated) {
-      openModal('commentaire');
-      return;
-    }
-    if (!id) return;
-
-    try {
-      await config.api.addComment(id, commentContent, parentId, fileIds);
-      // Reload comments
-      const commentsData = await config.api.getComments(id);
-      setComments(commentsData as Comment[]);
-    } catch (err) {
-      console.error('Failed to add comment:', err);
-      throw err;  // la zone d'écriture garde le texte et affiche l'échec
-    }
-  };
-
-  const handleVoteComment = async (commentId: string, value: VoteValue) => {
-    if (!isAuthenticated || !id) {
-      openModal('vote');
-      return;
-    }
-    try {
-      await voteComment(commentId, value);
-      // Reload comments to get updated vote counts
-      const commentsData = await config.api.getComments(id);
-      setComments(commentsData as Comment[]);
-    } catch (err) {
-      console.error('Vote comment failed:', err);
-    }
-  };
-
-  const handleEditComment = async (commentId: string, newContent: string) => {
-    if (!id) return;
-    try {
-      await updateComment(commentId, newContent);
-      // Reload comments
-      const commentsData = await config.api.getComments(id);
-      setComments(commentsData as Comment[]);
-    } catch (err) {
-      console.error('Edit comment failed:', err);
-      throw err;
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    if (!id) return;
-    try {
-      await deleteComment(commentId);
-      // Reload comments
-      const commentsData = await config.api.getComments(id);
-      setComments(commentsData as Comment[]);
-    } catch (err) {
-      console.error('Delete comment failed:', err);
-    }
-  };
 
   // Fil d'Ariane de la barre du haut : Section › Niveau › Chapitre (matière unique : pas de « Mathématiques »),
   // vers les pages de niveau et de chapitre, avec les mots du menu (Exercices, Leçons, Devoirs (DS), Bac
@@ -754,20 +700,9 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             ? t('Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.')
             : t('Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.')} />
       )}
-      {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. */}
+      {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. La discussion n'est plus en bas de
+          page (08/11/2026) : elle est dans l'onglet « Discussions » et dans l'espace Discussions. */}
       {!examRunning && id && <SimilarContents contentId={id} />}
-      {!examRunning && (
-        <section id="discussion" className="scroll-mt-20 rounded-2xl border border-line bg-white p-5 sm:p-6" data-tour="detail-discussion">
-          <CommentSection
-            comments={comments}
-            onAddComment={handleAddComment}
-            onVoteComment={handleVoteComment}
-            onEditComment={handleEditComment}
-            onDeleteComment={handleDeleteComment}
-            focusCommentId={focusCommentId}
-          />
-        </section>
-      )}
     </>
   );
 
@@ -801,6 +736,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           }}
           basePath={config.basePath}
           solutionCount={proposedSolutions?.length ?? 0}
+          discussionCount={messageCount(discussions)}
           onCollect={openCollect}
           sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
           onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
@@ -869,6 +805,13 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
               onRequireLogin={() => openModal('solution')}
               onChanged={loadProposedSolutions}
             />
+          </div>
+        )}
+
+        {activeTab === 'discussions' && id && (
+          <div className="max-w-3xl">
+            <ContentDiscussions contentId={Number(id)} contentTitle={content.title} page={discussions} onChanged={loadDiscussions}
+              levelId={content.class_levels?.[0]?.id != null ? Number(content.class_levels[0].id) : null} />
           </div>
         )}
       </div>

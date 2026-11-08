@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { listClassrooms } from '@/lib/api/classroomApi';
+import { getDiscussionCount } from '@/lib/api/discussionsApi';
 import { slugify } from '@/lib/api/hubApi';
 import type { User } from '@/types';
 
@@ -73,6 +74,32 @@ export function revisionTab(search: string): 'ds' | 'listes' {
     if (stored === 'ds' || stored === 'listes') return stored;
   } catch { /* stockage indisponible */ }
   return 'ds';
+}
+
+/**
+ * Discussions sans réponse à son niveau (entrée « Discussions » du menu, 08/11/2026). Relu au plus une fois par minute, au
+ * changement de page ; une lecture ratée garde le dernier nombre connu. Visiteur : rien (il n'a pas de niveau).
+ */
+let discussionCount: { at: number; n: number; uid: string } | null = null;
+const DISCUSSION_COUNT_MS = 60_000;
+export function useDiscussionCount(): number {
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const uid = user?.id ? String(user.id) : null;
+  const [n, setN] = useState(() => (uid && discussionCount?.uid === uid ? discussionCount.n : 0));
+  useEffect(() => {
+    if (!uid) { setN(0); return; }
+    if (discussionCount?.uid === uid && Date.now() - discussionCount.at < DISCUSSION_COUNT_MS) { setN(discussionCount.n); return; }
+    let alive = true;
+    getDiscussionCount()
+      .then((value) => {
+        discussionCount = { at: Date.now(), n: value, uid };
+        if (alive) setN(value);
+      })
+      .catch(() => { /* on garde le dernier nombre connu */ });
+    return () => { alive = false; };
+  }, [uid, pathname]);
+  return n;
 }
 
 const CLASS_KEY = 'fidni:a-une-classe:';
