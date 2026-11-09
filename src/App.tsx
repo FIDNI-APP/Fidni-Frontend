@@ -3,7 +3,8 @@ import { Routes, Route, Navigate, useParams, generatePath, useLocation, useNavig
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { useAuth } from './contexts/AuthContext';
-import { canSeeParcours } from './lib/features';
+import { MEMBRES_OUVERT, canSeeParcours } from './lib/features';
+import { MembresFerme } from './pages/communaute/MembresFerme';
 import { trackPage } from './lib/usage';
 import { AppShell } from './components/layout/AppShell';
 import { AuthProvider } from './contexts/AuthContext';
@@ -463,7 +464,7 @@ function App() {
                     <Route path="/discussions/nouvelle" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
                     <Route path="/discussions/:id" element={<NavbarWrapper><DiscussionThread /></NavbarWrapper>} />
                     <Route path="/discussions/:id/modifier" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
-                    <Route path="/membres" element={<NavbarWrapper><Membres /></NavbarWrapper>} />
+                    <Route path="/membres" element={MEMBRES_OUVERT ? <NavbarWrapper><Membres /></NavbarWrapper> : <MembresFerme />} />
                     <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
                     <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />
                     <Route path="/pilotage" element={

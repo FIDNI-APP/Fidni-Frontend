@@ -84,6 +84,19 @@ export interface DiscussionPage {
   results: DiscussionCardData[];
 }
 
+/**
+ * Colonnes de /discussions, au niveau demandé : salons, nombre sans réponse et contenus les plus discutés (le forum
+ * seulement), membres les plus utiles sur 30 jours (« utile » reçus au forum et dans les commentaires).
+ */
+export interface DiscussionPanel {
+  niveau: number | null;
+  salons: { key: Salon; label: string; count: number }[];
+  total: number;
+  sans_reponse: number;
+  tendances: { content: ContentTag; discussions: number }[];
+  utiles: { author: DiscussionAuthor; utile: number }[];
+}
+
 export interface DiscussionFilters {
   genre: DiscussionGenre;
   salon?: Salon | null;
@@ -97,12 +110,15 @@ export interface DiscussionFilters {
   page?: number;
 }
 
-const params = (f: DiscussionFilters) => Object.fromEntries(
+const params = (f: Partial<DiscussionFilters>) => Object.fromEntries(
   Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== ''),
 );
 
 export const getDiscussions = async (f: DiscussionFilters) =>
   (await api.get('/discussions/', { params: params(f) })).data as DiscussionPage;
+
+export const getDiscussionPanel = async (niveau?: number | 'tous' | null) =>
+  (await api.get('/discussions/panneau/', { params: params({ niveau }) })).data as DiscussionPanel;
 
 export const getDiscussion = async (id: number | string) =>
   (await api.get(`/discussions/${id}/`)).data as DiscussionDetail;

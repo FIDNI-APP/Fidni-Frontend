@@ -13,15 +13,12 @@ import { t, dateLocale } from '@/i18n';
 
 type Icon = React.ComponentType<{ className?: string }>;
 
-/**
- * Les quatre salons : nom, icône, teinte de la pastille, point de couleur (lignes du forum), couleur de leur bloc
- * (texte blanc, contraste d'au moins 4,5:1 : SalonBlocs).
- */
-export const SALONS: { key: Salon; label: string; icon: Icon; tone: string; dot: string; bloc: string }[] = [
-  { key: 'entraide', label: 'Entraide', icon: LifeBuoy, tone: 'bg-brand-soft text-brand-hover', dot: '#2f9a68', bloc: '#1a7a4a' },
-  { key: 'methodes', label: 'Méthodes', icon: Lightbulb, tone: 'bg-gold-soft text-gold-strong', dot: '#d09a3e', bloc: '#9a6e1c' },
-  { key: 'bac', label: 'Bac & concours', icon: GraduationCap, tone: 'bg-[#eef1f8] text-[#3b4f7a]', dot: '#5b7fb8', bloc: '#3f5f96' },
-  { key: 'orientation', label: 'Orientation', icon: Compass, tone: 'bg-[#f6eef2] text-[#7a3b5c]', dot: '#b0668c', bloc: '#8f4f72' },
+/** Les quatre salons : nom, icône, teinte de la pastille. */
+export const SALONS: { key: Salon; label: string; icon: Icon; tone: string }[] = [
+  { key: 'entraide', label: 'Entraide', icon: LifeBuoy, tone: 'bg-brand-soft text-brand-hover' },
+  { key: 'methodes', label: 'Méthodes', icon: Lightbulb, tone: 'bg-gold-soft text-gold-strong' },
+  { key: 'bac', label: 'Bac & concours', icon: GraduationCap, tone: 'bg-[#eef1f8] text-[#3b4f7a]' },
+  { key: 'orientation', label: 'Orientation', icon: Compass, tone: 'bg-[#f6eef2] text-[#7a3b5c]' },
 ];
 export const salonOf = (key: Salon) => SALONS.find((s) => s.key === key) ?? SALONS[0];
 
@@ -84,13 +81,15 @@ const TYPE: Record<ContentTag['type'], { label: string; icon: Icon; tone: string
   lesson: { label: 'Leçon', icon: LessonIcon, tone: 'bg-gold-soft text-gold-strong' },
 };
 export const contentTypeLabel = (type: ContentTag['type']) => t(TYPE[type].label);
-export const contentTypeIcon = (type: ContentTag['type']) => TYPE[type].icon;
 
 /**
  * Carte d'un contenu tagué : type, titre, chapitre, niveau, difficulté, et où en est l'élève connecté. Un clic ouvre
- * le contenu ; `onRemove` (formulaire) : une croix à la place du lien.
+ * le contenu ; `onRemove` (formulaire) : une croix à la place du lien ; `statique` : pas de lien, dans une carte qui en est
+ * déjà un (commentaire de /discussions).
  */
-export const ContentTagCard: React.FC<{ tag: ContentTag; compact?: boolean; onRemove?: () => void }> = ({ tag, compact = false, onRemove }) => {
+export const ContentTagCard: React.FC<{ tag: ContentTag; compact?: boolean; onRemove?: () => void; statique?: boolean }> = ({
+  tag, compact = false, onRemove, statique = false,
+}) => {
   const type = TYPE[tag.type];
   const Ico = type.icon;
   const body = (
@@ -124,6 +123,7 @@ export const ContentTagCard: React.FC<{ tag: ContentTag; compact?: boolean; onRe
       </div>
     );
   }
+  if (statique) return <div className={cls}>{body}</div>;
   return <Link to={tag.url} className={`${cls} transition-colors hover:border-ink`}>{body}</Link>;
 };
 
@@ -178,3 +178,12 @@ export const UtileButton: React.FC<{
     </button>
   );
 };
+
+/** Les derniers membres qui ont répondu, en pile. */
+export const RepliersStack: React.FC<{ users: { username: string; avatar: string | null }[] }> = ({ users }) => (
+  users.length ? (
+    <span className="flex -space-x-1.5" aria-hidden>
+      {users.map((u) => <Avatar key={u.username} user={u} size={20} ring />)}
+    </span>
+  ) : null
+);

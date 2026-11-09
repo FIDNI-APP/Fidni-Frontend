@@ -7,7 +7,7 @@
  *  - Abonnés : les demandes à valider, puis tes abonnés.
  * Réservé aux membres connectés (les profils restent publics, la recherche non).
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, Search, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,6 +22,7 @@ import {
 import { CarteMembre, LigneMembre, profilUrl } from '@/components/communaute/CarteMembre';
 import { BoutonSuivre } from '@/components/communaute/BoutonSuivre';
 import { ListeMembres } from '@/components/communaute/ListeMembres';
+import { useDemandes } from '@/components/communaute/useDemandes';
 import { Medaille, libelleBadge } from '@/components/communaute/art';
 import { MathText } from '@/components/skilliq/MathText';
 import { Avatar, timeAgo } from '@/components/discussions/parts';
@@ -313,27 +314,19 @@ const OngletFil: React.FC<{ username: string; versDecouvrir: () => void }> = ({ 
 /* ────── Abonnés ────── */
 
 const OngletAbonnes: React.FC<{ username: string; onDemandes: (n: number) => void }> = ({ username, onDemandes }) => {
-  const [demandes, setDemandes] = useState<Membre[] | null>(null);
   const [abonnes, setAbonnes] = useState<Membre[] | null>(null);
+  const relireAbonnes = useCallback(() => {
+    communauteApi.abonnes(username).then((r) => setAbonnes(r.results)).catch(() => setAbonnes((a) => a ?? []));
+  }, [username]);
+  // Demande acceptée : le nouvel abonné entre dans la liste.
+  const { demandes, repondre } = useDemandes(true, (accepte) => { if (accepte) relireAbonnes(); });
 
-  useEffect(() => {
-    communauteApi.demandes().then((r) => { setDemandes(r.results); onDemandes(r.results.length); }).catch(() => setDemandes([]));
-    communauteApi.abonnes(username).then((r) => setAbonnes(r.results)).catch(() => setAbonnes([]));
-  }, [username, onDemandes]);
+  useEffect(() => { relireAbonnes(); }, [relireAbonnes]);
+  useEffect(() => { if (demandes) onDemandes(demandes.length); }, [demandes, onDemandes]);
 
-  const relire = () => {
-    communauteApi.demandes().then((r) => { setDemandes(r.results); onDemandes(r.results.length); }).catch(() => {});
-    communauteApi.abonnes(username).then((r) => setAbonnes(r.results)).catch(() => {});
-  };
-  const repondre = async (m: Membre, accepter: boolean) => {
-    try {
-      if (accepter) await communauteApi.accepter(m.username); else await communauteApi.refuser(m.username);
-      relire();
-    } catch { toast.error(t('Action impossible pour le moment.')); }
-  };
   const retirer = async (m: Membre) => {
     if (!await confirmer(t('Retirer {name} de tes abonnés ?', { name: m.username }), { action: t('Retirer') })) return;
-    try { await communauteApi.retirer(m.username); relire(); } catch { toast.error(t('Action impossible pour le moment.')); }
+    try { await communauteApi.retirer(m.username); relireAbonnes(); } catch { toast.error(t('Action impossible pour le moment.')); }
   };
 
   if (demandes === null || abonnes === null) return <CardsSkeleton n={2} />;

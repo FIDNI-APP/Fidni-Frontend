@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
-import { canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
+import { MEMBRES_OUVERT, canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom, useDiscussionCount, useDefiMenu } from './nav';
@@ -84,13 +84,13 @@ const WORK_GROUP: NavGroup = {
   ],
 };
 
-// Communauté (09/11/2026) : le forum et les membres (profils, abonnements, fil).
+// Communauté (09/11/2026) : le forum ; la page Membres quand elle est ouverte (lib/features.ts, MEMBRES_OUVERT).
 const COMMUNITY_GROUP: NavGroup = {
   title: 'Communauté',
   tour: 'nav-communaute',
   items: [
     { to: '/discussions', label: 'Discussions', icon: MessagesSquare, match: ['/discussions'], compteur: true },
-    { to: '/membres', label: 'Membres', icon: Users, match: ['/membres'], membres: true },
+    ...(MEMBRES_OUVERT ? [{ to: '/membres', label: 'Membres', icon: Users, match: ['/membres'], membres: true }] : []),
   ],
 };
 
