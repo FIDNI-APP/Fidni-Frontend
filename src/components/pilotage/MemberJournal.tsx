@@ -2,16 +2,18 @@
  * Pilotage › Membres — journal d'un membre (14/10/2026) : ce qu'il a fait, jour par jour et contenu par contenu
  * (backend apps/users/member_journal.py, GET /api/pilotage/utilisateurs/<id>/journal/?avant=).
  * Par jour : le temps d'étude, les contenus travaillés (questions évaluées, aides, gestes ; détail question par
- * question en dépliant) et les autres actions (quiz, DS, listes, classes…). « Voir plus » remonte de 14 jours.
+ * question en dépliant), les autres actions (quiz, DS, listes, classes, défis…) et, depuis le 09/11/2026, les pages
+ * vues et les gestes du jour (gardés 6 mois). « Voir plus » remonte de 14 jours.
  * Les documents privés du membre ne sont jamais montrés.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Activity, Bookmark, CalendarClock, ChevronDown, Clock, GraduationCap, Lightbulb, ListPlus, Loader2, LogIn,
-  NotebookPen, UserPlus, Users, type LucideIcon,
+  Activity, Bookmark, CalendarClock, ChevronDown, Clock, Compass, Flame, GraduationCap, Lightbulb, ListPlus, Loader2,
+  LogIn, MousePointerClick, NotebookPen, UserPlus, Users, type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
+import { pageInfo } from '@/lib/usage';
 
 interface ContentRef { id: number; type: string; title: string; url: string }
 interface Geste { at: string; kind: string; label: string }
@@ -21,13 +23,35 @@ interface Contenu {
   aides: Record<string, number>; statut: string | null; gestes: Geste[]; detail: Detail[]; debut: string | null; fin: string | null;
 }
 interface Evenement { at: string; kind: string; label: string; url?: string | null }
-interface Jour { date: string; minutes: number; contenus: Contenu[]; evenements: Evenement[] }
+interface Trace { name: string; count: number; premier: string; dernier: string; label?: string }
+interface Jour {
+  date: string; minutes: number; contenus: Contenu[]; evenements: Evenement[];
+  pages?: Trace[]; gestes?: Trace[];  // depuis le 09/11/2026 (UsageMember, 6 mois)
+}
 interface Journal { jours: Jour[]; suivant: string | null; plus_ancien: string }
 
 const EVENT_ICON: Record<string, LucideIcon> = {
   quiz: GraduationCap, ds: CalendarClock, liste: ListPlus, classe: Users, cahier: NotebookPen, concours: GraduationCap,
-  inscription: UserPlus, connexion: LogIn,
+  inscription: UserPlus, connexion: LogIn, defi: Flame,
 };
+
+/** Pages vues ou gestes du jour, en pastilles : « Défi du jour ×3 », avec les heures au survol. */
+const Traces: React.FC<{ icon: LucideIcon; titre: string; items: Trace[]; libelle: (t: Trace) => string }> = ({ icon: Icon, titre, items, libelle }) => (
+  <div className="flex items-start gap-2 text-[12.5px] text-ink-soft">
+    <Icon className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden />
+    <div className="min-w-0">
+      <span className="mr-1.5 text-ink-faint">{titre}</span>
+      <span className="inline-flex flex-wrap gap-1 align-middle">
+        {items.map((t) => (
+          <span key={t.name} title={hm(t.premier) === hm(t.dernier) ? hm(t.premier) : `${hm(t.premier)} – ${hm(t.dernier)}`}
+            className="inline-flex items-center rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-medium text-ink-soft">
+            {libelle(t)}{t.count > 1 && <span className="fd-nums ms-1 text-ink-faint">×{t.count}</span>}
+          </span>
+        ))}
+      </span>
+    </div>
+  </div>
+);
 const TYPE = { exercise: 'Exercice', exam: 'Examen', lesson: 'Leçon' } as Record<string, string>;
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
@@ -147,7 +171,8 @@ export const MemberJournal: React.FC<{ userId: number }> = ({ userId }) => {
             <div className="mb-1.5 flex items-baseline justify-between gap-3 border-b border-line pb-1">
               <h4 className="text-[13px] font-semibold capitalize text-ink">{dayLabel(j.date)}</h4>
               <span className="fd-nums text-[12px] text-ink-faint">
-                {j.minutes > 0 ? `${j.minutes} min d’étude · ` : ''}{plural(j.contenus.length, 'contenu')}
+                {[j.minutes > 0 ? `${j.minutes} min d’étude` : '', j.contenus.length ? plural(j.contenus.length, 'contenu') : '']
+                  .filter(Boolean).join(' · ')}
               </span>
             </div>
             {j.evenements.length > 0 && (
@@ -158,11 +183,23 @@ export const MemberJournal: React.FC<{ userId: number }> = ({ userId }) => {
                     <li key={i} className="flex items-baseline gap-2 text-[12.5px] text-ink-soft">
                       <span className="fd-nums w-11 shrink-0 text-ink-faint">{hm(e.at)}</span>
                       <Icon className="h-3.5 w-3.5 shrink-0 translate-y-0.5 text-ink-faint" aria-hidden />
-                      <span className="min-w-0">{e.label}</span>
+                      {e.url
+                        ? <Link to={e.url} className="min-w-0 hover:text-brand hover:underline">{e.label}</Link>
+                        : <span className="min-w-0">{e.label}</span>}
                     </li>
                   );
                 })}
               </ul>
+            )}
+            {((j.pages?.length ?? 0) > 0 || (j.gestes?.length ?? 0) > 0) && (
+              <div className="mb-2 space-y-1">
+                {(j.pages?.length ?? 0) > 0 && (
+                  <Traces icon={Compass} titre="Pages vues" items={j.pages!} libelle={(t) => pageInfo(t.name).label} />
+                )}
+                {(j.gestes?.length ?? 0) > 0 && (
+                  <Traces icon={MousePointerClick} titre="Gestes" items={j.gestes!} libelle={(t) => t.label ?? t.name} />
+                )}
+              </div>
             )}
             {j.contenus.length > 0 && <ul className="flex flex-col gap-1.5">{j.contenus.map((c) => <ContenuCard key={c.content.id} c={c} />)}</ul>}
           </li>
