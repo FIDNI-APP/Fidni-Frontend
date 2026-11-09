@@ -38,6 +38,7 @@ const SECTION_LABELS: Record<string, string> = {
   'skill-iq': 'Quiz par chapitre',
   defis: 'Défi du jour',
   discussions: 'Discussions',
+  membres: 'Membres',
   settings: 'Paramètres',
   'mes-copies': 'Ma copie',
   search: 'Recherche',

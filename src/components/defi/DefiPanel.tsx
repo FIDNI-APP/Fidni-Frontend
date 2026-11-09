@@ -11,7 +11,10 @@ import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmer } from '@/lib/confirmer';
 import { trackAction } from '@/lib/usage';
-import { defiApi, type Defi, type DefiDifficulte, type DefiEtat, type DefiTheme } from '@/lib/api/defiApi';
+import {
+  DEFI_MAJ, defiApi, ecrireDefiLocal as ecrireLocal, lireDefiLocal as lireLocal, type Defi, type DefiDifficulte, type DefiEtat,
+  type DefiTheme,
+} from '@/lib/api/defiApi';
 import { dateLocale, t } from '@/i18n';
 
 export const NIVEAU: Record<DefiDifficulte, { level: number; label: string }> = {
@@ -33,15 +36,6 @@ const Texte: React.FC<{ texte: string; className?: string }> = ({ texte, classNa
   </div>
 );
 
-// Un visiteur n'a rien en base : son navigateur garde où il en est. Illisible (navigation privée…) : il repart de zéro.
-const cleLocale = (date: string) => `fidni-defi-${date}`;
-function lireLocal(date: string): { essais: number; indices: number; statut: DefiEtat['statut'] } | null {
-  try { return JSON.parse(localStorage.getItem(cleLocale(date)) ?? 'null'); } catch { return null; }
-}
-function ecrireLocal(date: string, v: { essais: number; indices: number; statut: DefiEtat['statut'] }) {
-  try { localStorage.setItem(cleLocale(date), JSON.stringify(v)); } catch { /* sans stockage : rien de grave */ }
-}
-
 export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean }> = ({ defi: initial, compact = false }) => {
   const { isAuthenticated } = useAuth();
   const openSignup = useOpenSignup('defi');
@@ -58,6 +52,8 @@ export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean }> = ({ defi: i
   const appliquer = (e: DefiEtat) => setDefi((d) => ({ ...d, ...e, serie: e.serie === undefined ? d.serie : e.serie }));
   const memoriser = (e: DefiEtat, nbIndices = indices) => {
     if (!isAuthenticated) ecrireLocal(defi.date, { essais: e.essais, indices: nbIndices, statut: e.statut });
+    // Pastille « Défi du jour » du menu (layout/nav.ts) : relue après chaque réponse.
+    window.dispatchEvent(new Event(DEFI_MAJ));
   };
 
   // Visiteur qui revient : on reprend ses essais et ses indices ; s'il avait fini, on redemande la solution.

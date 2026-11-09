@@ -1,24 +1,24 @@
-// Onglet « Discussions » d'un exercice, d'une leçon ou d'un examen (08/11/2026). Refait le même soir (Natsu : « ça doit
-// ressembler à l'interface de commentaires précédente, pas créer un topic juste pour un commentaire ») : même
-// présentation que l'ancienne discussion du bas de page — on écrit directement, les réponses s'affichent dessous
-// (« à @x », repliées au-delà de 5), « utile », modifier, supprimer. Les messages sont ceux de l'espace Discussions :
-// un message écrit ici devient une discussion qui tague ce contenu (titre = sa première phrase, jamais demandé), ses
-// réponses sont les réponses de la discussion ; ils apparaissent donc aussi dans /discussions.
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowUpRight, ChevronDown, CornerDownRight, FileIcon, Pencil, Trash2 } from 'lucide-react';
+// Onglet « Commentaires » d'un exercice, d'une leçon ou d'un examen (08/11/2026, séparé du forum le 09/11/2026 ; Natsu : « des
+// fois, les gens commentent sans poser de question »). On écrit directement, sans titre ni salon ; les réponses s'affichent
+// dessous (« à @x », repliées au-delà de 5), « utile », modifier, supprimer. Une notification ou une ligne de /discussions
+// arrive ici avec « ?fil=<commentaire> » (et « #reponse-<id> ») : le message visé est montré. Les discussions du forum qui
+// taguent ce contenu sont à part, en bas, et mènent au forum.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { ChevronDown, CornerDownRight, FileIcon, Loader2, Pencil, Trash2 } from 'lucide-react';
 import TipTapRenderer from '@/components/editor/TipTapRenderer';
+import { MathText } from '@/components/skilliq/MathText';
 import { confirmer } from '@/lib/confirmer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { isModerator } from '@/lib/features';
 import {
-  createDiscussion, deleteDiscussion, deleteReply, getDiscussion, replyToDiscussion, updateDiscussion, updateReply,
-  type DiscussionAuthor, type DiscussionDetail, type DiscussionPage, type DiscussionReply,
+  createComment, deleteDiscussion, deleteReply, getDiscussion, getDiscussions, replyToDiscussion, updateDiscussion, updateReply,
+  type DiscussionAuthor, type DiscussionCardData, type DiscussionDetail, type DiscussionPage, type DiscussionReply,
 } from '@/lib/api/discussionsApi';
 import type { FileAttachment } from '@/types/fileAttachment';
 import { MessageComposer } from './MessageComposer';
-import { AuthorName, Avatar, RoleBadge, UtileButton, fullDate, timeAgo, titleFromMessage, titleIsFirstSentence } from './parts';
+import { AuthorName, Avatar, RoleBadge, UtileButton, fullDate, timeAgo } from './parts';
 import { t } from '@/i18n';
 
 type Sort = 'utiles' | 'recents' | 'anciens';
@@ -58,41 +58,93 @@ const Files: React.FC<{ files: FileAttachment[] }> = ({ files }) => (
   ) : null
 );
 
-/** Messages d'un contenu (racines + réponses) : pour la pastille de l'onglet. */
+/** Messages d'un contenu (commentaires + réponses déjà chargées) : pour la pastille de l'onglet. */
 export const messageCount = (page: DiscussionPage | null) =>
-  (page ? page.results.reduce((n, d) => n + 1 + d.reply_count, 0) : 0);
+  (page ? page.count + page.results.reduce((n, d) => n + d.reply_count, 0) : 0);
 
-export const ContentDiscussions: React.FC<{
+export const ContentComments: React.FC<{
   contentId: number;
-  contentTitle: string;
-  /** Niveau du contenu : celui des messages écrits ici (les filtres de l'espace Discussions le suivent). */
-  levelId: number | null;
+  /** Première page des commentaires, lue par la page du contenu (pastille de l'onglet). */
   page: DiscussionPage | null;
   /** Un message écrit, modifié ou supprimé : la page relit la liste (pastille de l'onglet). */
   onChanged: () => void;
-}> = ({ contentId, contentTitle, levelId, page, onChanged }) => {
+}> = ({ contentId, page, onChanged }) => {
   const { user, isAuthenticated } = useAuth();
   const { openModal } = useAuthModal();
+  const { hash } = useLocation();
+  const [params] = useSearchParams();
   const moderator = isModerator(user as { is_superuser?: boolean; is_staff?: boolean } | null);
   const [threads, setThreads] = useState<DiscussionDetail[] | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);   // « d12 » (message) ou « r40 » (réponse)
   const [editing, setEditing] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set());
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [forum, setForum] = useState<DiscussionCardData[]>([]);
+  const [derniere, setDerniere] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [sort, setSort] = useState<Sort>(() => {
     try {
       const saved = localStorage.getItem(SORT_KEY);
       return SORTS.some((s) => s.key === saved) ? (saved as Sort) : 'utiles';
     } catch { return 'utiles'; }
   });
+  // Pages suivantes et message visé : gardés quand la première page est relue.
+  const horsPremierePage = useRef(new Set<number>());
+  const dejaMontre = useRef('');
+  const filDemande = useRef<number | null>(null);
+  // Hors de l'effet qui les lance : une liste relue entre-temps ne doit pas laisser le message surligné.
+  const minuteurs = useRef<number[]>([]);
+  useEffect(() => () => minuteurs.current.forEach((m) => window.clearTimeout(m)), []);
 
-  // Chaque discussion du contenu avec ses réponses (la liste n'a que les cartes).
+  // Chaque commentaire avec ses réponses (la liste n'a que les cartes).
   useEffect(() => {
-    if (!page) { setThreads(null); return; }
+    if (!page) { setThreads(null); setDerniere(1); horsPremierePage.current.clear(); return; }
     let alive = true;
     Promise.all(page.results.map((d) => getDiscussion(d.id).catch(() => null)))
-      .then((all) => { if (alive) setThreads(all.filter((x): x is DiscussionDetail => !!x)); });
+      .then((all) => {
+        if (!alive) return;
+        const fresh = all.filter((x): x is DiscussionDetail => !!x);
+        const ids = new Set(fresh.map((x) => x.id));
+        setThreads((prev) => [...fresh, ...(prev ?? []).filter((x) => horsPremierePage.current.has(x.id) && !ids.has(x.id))]);
+      });
     return () => { alive = false; };
   }, [page]);
+
+  // Les discussions du forum qui taguent ce contenu.
+  useEffect(() => {
+    let alive = true;
+    getDiscussions({ genre: 'forum', contenu: contentId, niveau: 'tous' })
+      .then((r) => { if (alive) setForum(r.results); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [contentId]);
+
+  // Arrivée sur un message précis : chargé s'il n'est pas dans la première page, déplié, montré, mis en valeur.
+  const fil = Number(params.get('fil')) || null;
+  useEffect(() => {
+    if (!fil || !threads) return;
+    const reponse = hash.match(/^#reponse-(\d+)$/);
+    const cible = reponse ? `reponse-${reponse[1]}` : `discussion-${fil}`;
+    if (dejaMontre.current === cible) return;
+    if (!threads.some((x) => x.id === fil)) {
+      if (filDemande.current === fil) return;
+      filDemande.current = fil;
+      getDiscussion(fil).then((x) => {
+        if (x.genre !== 'commentaire' || !x.tags.some((c) => c.id === contentId)) return;
+        horsPremierePage.current.add(x.id);
+        setThreads((prev) => (prev?.some((y) => y.id === x.id) ? prev : [x, ...(prev ?? [])]));
+      }).catch(() => {});
+      return;
+    }
+    dejaMontre.current = cible;
+    if (reponse) setExpanded((prev) => new Set(prev).add(fil));
+    setHighlight(cible);
+    const calme = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    minuteurs.current.push(
+      window.setTimeout(() => document.getElementById(cible)?.scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'center' }), 150),
+      window.setTimeout(() => setHighlight(null), 3500),
+    );
+  }, [fil, hash, threads, contentId]);
 
   const reload = async (id?: number) => {
     if (id) {
@@ -102,6 +154,24 @@ export const ContentDiscussions: React.FC<{
     onChanged();
   };
 
+  const more = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await getDiscussions({ genre: 'commentaire', contenu: contentId, niveau: 'tous', page: derniere + 1 });
+      const all = await Promise.all(next.results.map((d) => getDiscussion(d.id).catch(() => null)));
+      const fresh = all.filter((x): x is DiscussionDetail => !!x);
+      fresh.forEach((x) => horsPremierePage.current.add(x.id));
+      setThreads((prev) => {
+        const ids = new Set((prev ?? []).map((x) => x.id));
+        return [...(prev ?? []), ...fresh.filter((x) => !ids.has(x.id))];
+      });
+      setDerniere(next.page);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const roots = useMemo(() => {
     const list = [...(threads ?? [])];
     const time = (iso: string) => new Date(iso).getTime();
@@ -109,7 +179,7 @@ export const ContentDiscussions: React.FC<{
     if (sort === 'anciens') return list.sort((a, b) => time(a.created_at) - time(b.created_at));
     return list.sort((a, b) => (b.utile - a.utile) || (time(b.last_activity_at) - time(a.last_activity_at)));
   }, [threads, sort]);
-  const total = (threads ?? []).reduce((n, d) => n + 1 + d.replies.length, 0);
+  const total = messageCount(page);
 
   const changeSort = (next: Sort) => {
     setSort(next);
@@ -125,8 +195,8 @@ export const ContentDiscussions: React.FC<{
 
   const removeRoot = async (d: DiscussionDetail) => {
     const n = d.replies.length;
-    const question = n ? (n > 1 ? t('Supprimer ce message et ses {n} réponses ?', { n }) : t('Supprimer ce message et sa réponse ?'))
-      : t('Supprimer ce message ?');
+    const question = n ? (n > 1 ? t('Supprimer ce commentaire et ses {n} réponses ?', { n }) : t('Supprimer ce commentaire et sa réponse ?'))
+      : t('Supprimer ce commentaire ?');
     if (!await confirmer(question, { action: t('Supprimer'), danger: true })) return;
     await deleteDiscussion(d.id).catch(() => {});
     setThreads((prev) => (prev ?? []).filter((x) => x.id !== d.id));
@@ -155,18 +225,17 @@ export const ContentDiscussions: React.FC<{
 
   const action = 'inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[12.5px] font-semibold text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink';
 
-  /** Un message (racine) ou une réponse, présenté comme les anciens commentaires. */
+  /** Un commentaire (racine) ou une réponse. */
   const card = (d: DiscussionDetail, r: DiscussionReply | null) => {
     const key = r ? `r${r.id}` : `d${d.id}`;
+    const domId = r ? `reponse-${r.id}` : `discussion-${d.id}`;
     const author = r ? r.author : d.author;
     const own = mine(author);
     const body = r ? r.body : d.body;
     const canEdit = r ? r.can_edit : d.can_edit;
-    // Discussion lancée depuis l'espace Discussions (titre écrit à part) : son titre en tête du message.
-    const showTitle = !r && !titleIsFirstSentence(d.title, d.body);
     return (
-      <article key={key} id={r ? `reponse-${r.id}` : `discussion-${d.id}`}
-        className={`-mx-2 scroll-mt-24 rounded-xl px-2 ${r ? 'py-2' : 'py-2.5'}`}>
+      <article key={key} id={domId}
+        className={`-mx-2 scroll-mt-24 rounded-xl px-2 transition-colors duration-700 motion-reduce:transition-none ${r ? 'py-2' : 'py-2.5'} ${highlight === domId ? 'bg-brand-soft' : ''}`}>
         <div className="flex gap-3">
           <Avatar user={author} size={r ? 28 : 36} />
           <div className="min-w-0 flex-1">
@@ -185,19 +254,17 @@ export const ContentDiscussions: React.FC<{
 
             {editing === key ? (
               <div className="mt-2">
-                <MessageComposer autoFocus attachments={false} initial={asHtml(body)} placeholder={t('Ton message…')} submitLabel={t('Enregistrer')}
+                <MessageComposer autoFocus attachments={false} initial={asHtml(body)} placeholder={r ? t('Ta réponse…') : t('Ton commentaire…')} submitLabel={t('Enregistrer')}
                   onCancel={() => setEditing(null)}
                   onSubmit={async (html) => {
                     if (r) await updateReply(r.id, html);
-                    else await updateDiscussion(d.id, titleIsFirstSentence(d.title, d.body)
-                      ? { body: html, title: titleFromMessage(html, contentTitle) } : { body: html });
+                    else await updateDiscussion(d.id, { body: html });
                     setEditing(null);
                     await reload(d.id);
                   }} />
               </div>
             ) : (
               <>
-                {showTitle && <p dir="auto" className="mt-1 text-[15px] font-semibold text-ink">{d.title}</p>}
                 {body && <div dir="auto"><TipTapRenderer content={asHtml(body)} className="fd-comment-body mt-1 text-[14.5px] leading-relaxed text-ink-soft" /></div>}
                 <Files files={r ? r.attachments : d.files} />
                 <div className="-ms-2 mt-1 flex flex-wrap items-center gap-0.5">
@@ -216,12 +283,6 @@ export const ContentDiscussions: React.FC<{
                       className={`${action} hover:!bg-[#fbecea] hover:!text-[#a23b34]`}>
                       <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t('Supprimer')}</span>
                     </button>
-                  )}
-                  {!r && (
-                    <Link to={`/discussions/${d.id}`} title={t('Ouvrir dans l’espace Discussions')} aria-label={t('Ouvrir dans l’espace Discussions')}
-                      className={`${action} ms-auto`}>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </Link>
                   )}
                 </div>
               </>
@@ -265,7 +326,7 @@ export const ContentDiscussions: React.FC<{
     <section id="discussion" className="scroll-mt-20 rounded-2xl border border-line bg-white p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <h2 className="fd-display flex items-baseline gap-2 text-[20px] leading-tight text-ink">
-          {t('Discussion')}
+          {t('Commentaires')}
           {total > 0 && <span className="font-sans text-[13px] font-semibold text-ink-faint fd-nums">{total}</span>}
         </h2>
         {roots.length > 1 && (
@@ -282,12 +343,11 @@ export const ContentDiscussions: React.FC<{
 
       {isAuthenticated ? (
         <div className={roots.length > 0 ? 'mb-6' : ''}>
-          <MessageComposer deferred placeholder={t('Écris un message…')} submitLabel={t('Publier')}
+          <MessageComposer deferred placeholder={t('Écris un commentaire…')} submitLabel={t('Publier')}
             onSubmit={async (html, fileIds) => {
-              const d = await createDiscussion({
-                title: titleFromMessage(html, contentTitle), body: html, salon: 'entraide',
-                content_ids: [contentId], file_ids: fileIds, ...(levelId ? { class_level: levelId } : {}),
-              });
+              const d = await createComment(contentId, html, fileIds);
+              // Reste en tête tant qu'elle n'est pas relue dans la première page.
+              horsPremierePage.current.add(d.id);
               setThreads((prev) => [d, ...(prev ?? [])]);
               onChanged();
             }} />
@@ -299,7 +359,7 @@ export const ContentDiscussions: React.FC<{
         </div>
       ) : (
         <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3 ${roots.length > 0 ? 'mb-6' : ''}`}>
-          <p className="text-[13.5px] text-ink-soft">{t('Connecte-toi pour écrire un message ou répondre.')}</p>
+          <p className="text-[13.5px] text-ink-soft">{t('Connecte-toi pour écrire un commentaire ou répondre.')}</p>
           <button type="button" onClick={() => openModal('discussion')}
             className="inline-flex min-h-10 items-center rounded-xl bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover">
             {t('Se connecter')}
@@ -313,13 +373,34 @@ export const ContentDiscussions: React.FC<{
         </div>
       )}
       {roots.length > 0 && <ul className="divide-y divide-line">{roots.map(thread)}</ul>}
-      {page && page.count > page.results.length && (
-        <Link to={`/discussions?contenu=${contentId}&niveau=tous`} className="mt-3 inline-flex min-h-10 items-center font-semibold text-brand-hover hover:underline">
-          {t('Voir les {n} discussions', { n: page.count })}
-        </Link>
+      {page && derniere < page.pages && (
+        <button type="button" onClick={more} disabled={loadingMore}
+          className="mt-3 inline-flex min-h-10 items-center gap-2 font-semibold text-brand-hover hover:underline">
+          {loadingMore && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />} {t('Voir plus')}
+        </button>
+      )}
+
+      {forum.length > 0 && (
+        <div className="mt-6 border-t border-line pt-4">
+          <h3 className="text-[13px] font-semibold text-ink-soft">{t('Dans le forum')}</h3>
+          <ul className="mt-1">
+            {forum.slice(0, 5).map((x) => (
+              <li key={x.id}>
+                <Link to={`/discussions/${x.id}`} className="group flex min-h-10 items-center justify-between gap-3 py-1.5">
+                  <span dir="auto" className="min-w-0 text-start text-[14px] font-medium text-ink group-hover:underline">
+                    <MathText text={x.title} />
+                  </span>
+                  <span className="fd-nums shrink-0 text-[13px] text-ink-faint">
+                    {x.reply_count > 1 ? t('{n} réponses', { n: x.reply_count }) : x.reply_count === 1 ? t('1 réponse') : t('aucune réponse')}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );
 };
 
-export default ContentDiscussions;
+export default ContentComments;

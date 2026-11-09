@@ -1,5 +1,5 @@
-// Espace Discussions (08/11/2026) : briques communes au forum, à l'onglet « Discussions » d'un contenu et à la
-// cloche. Identité du site : papier, encre, or pour les repères, vert pour l'action.
+// Briques communes au forum, à l'onglet « Commentaires » d'un contenu et à la cloche (08/11/2026). Identité du site :
+// papier, encre, or pour les repères, vert pour l'action.
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowBigUp, BookOpen, Compass, GraduationCap, Lightbulb, LifeBuoy, X } from 'lucide-react';
@@ -13,12 +13,15 @@ import { t, dateLocale } from '@/i18n';
 
 type Icon = React.ComponentType<{ className?: string }>;
 
-/** Les quatre salons : nom, icône, teinte de la pastille. */
-export const SALONS: { key: Salon; label: string; icon: Icon; tone: string }[] = [
-  { key: 'entraide', label: 'Entraide', icon: LifeBuoy, tone: 'bg-brand-soft text-brand-hover' },
-  { key: 'methodes', label: 'Méthodes', icon: Lightbulb, tone: 'bg-gold-soft text-gold-strong' },
-  { key: 'bac', label: 'Bac & concours', icon: GraduationCap, tone: 'bg-[#eef1f8] text-[#3b4f7a]' },
-  { key: 'orientation', label: 'Orientation', icon: Compass, tone: 'bg-[#f6eef2] text-[#7a3b5c]' },
+/**
+ * Les quatre salons : nom, icône, teinte de la pastille, point de couleur (lignes du forum), couleur de leur bloc
+ * (texte blanc, contraste d'au moins 4,5:1 : SalonBlocs).
+ */
+export const SALONS: { key: Salon; label: string; icon: Icon; tone: string; dot: string; bloc: string }[] = [
+  { key: 'entraide', label: 'Entraide', icon: LifeBuoy, tone: 'bg-brand-soft text-brand-hover', dot: '#2f9a68', bloc: '#1a7a4a' },
+  { key: 'methodes', label: 'Méthodes', icon: Lightbulb, tone: 'bg-gold-soft text-gold-strong', dot: '#d09a3e', bloc: '#9a6e1c' },
+  { key: 'bac', label: 'Bac & concours', icon: GraduationCap, tone: 'bg-[#eef1f8] text-[#3b4f7a]', dot: '#5b7fb8', bloc: '#3f5f96' },
+  { key: 'orientation', label: 'Orientation', icon: Compass, tone: 'bg-[#f6eef2] text-[#7a3b5c]', dot: '#b0668c', bloc: '#8f4f72' },
 ];
 export const salonOf = (key: Salon) => SALONS.find((s) => s.key === key) ?? SALONS[0];
 
@@ -28,30 +31,6 @@ export const SalonChip: React.FC<{ salon: Salon; to?: string }> = ({ salon, to }
   const cls = `inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${s.tone}`;
   const inner = <><Ico className="h-3 w-3" aria-hidden />{t(s.label)}</>;
   return to ? <Link to={to} className={`${cls} hover:opacity-80`}>{inner}</Link> : <span className={cls}>{inner}</span>;
-};
-
-/** Texte d'un message écrit avec l'éditeur (HTML), sans balises, espaces simples. DOMParser : document inerte (aucun
- *  script ni image chargé), contrairement à un élément de la page. */
-export const plainText = (html: string) => {
-  const doc = new DOMParser().parseFromString(html.replace(/<(br|\/p|\/li|\/div)[^>]*>/gi, ' '), 'text/html');
-  return (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
-};
-
-/**
- * Titre d'un message écrit sous un contenu (onglet « Discussions ») : sa première phrase, coupée à un mot, ou
- * « À propos de … » s'il est trop court. Même règle que la reprise des anciens commentaires (discussions/0002).
- */
-export const titleFromMessage = (html: string, contentTitle: string) => {
-  const text = plainText(html);
-  let phrase = text.split(/(?<=[.?!])\s/, 1)[0].trim();
-  if (phrase.length > 90) phrase = `${phrase.slice(0, 90).replace(/\s+\S*$/, '').replace(/[ ,;:]+$/, '')}…`;
-  return (phrase.length < 6 ? `À propos de « ${contentTitle} »` : phrase).slice(0, 160);
-};
-
-/** Le titre d'une discussion est-il sa première phrase (message écrit sous un contenu, commentaire repris) ? */
-export const titleIsFirstSentence = (title: string, html: string) => {
-  const norm = (s: string) => s.replace(/…$/, '').replace(/\s+/g, ' ').trim();
-  return title.startsWith('À propos de « ') || norm(plainText(html)).startsWith(norm(title));
 };
 
 export const timeAgo = (iso: string) => {
@@ -105,6 +84,7 @@ const TYPE: Record<ContentTag['type'], { label: string; icon: Icon; tone: string
   lesson: { label: 'Leçon', icon: LessonIcon, tone: 'bg-gold-soft text-gold-strong' },
 };
 export const contentTypeLabel = (type: ContentTag['type']) => t(TYPE[type].label);
+export const contentTypeIcon = (type: ContentTag['type']) => TYPE[type].icon;
 
 /**
  * Carte d'un contenu tagué : type, titre, chapitre, niveau, difficulté, et où en est l'élève connecté. Un clic ouvre
@@ -198,12 +178,3 @@ export const UtileButton: React.FC<{
     </button>
   );
 };
-
-/** Les derniers membres qui ont répondu, en pile. */
-export const RepliersStack: React.FC<{ users: { username: string; avatar: string | null }[] }> = ({ users }) => (
-  users.length ? (
-    <span className="flex -space-x-1.5" aria-hidden>
-      {users.map((u) => <Avatar key={u.username} user={u} size={20} ring />)}
-    </span>
-  ) : null
-);

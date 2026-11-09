@@ -6,7 +6,7 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText, FilePlus2, Moon, Sun, MessagesSquare,
+  FileText, FilePlus2, Moon, Sun, MessagesSquare, Flame, Check, Users,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
@@ -21,7 +21,7 @@ import { getClassLevels } from '@/lib/api';
 import { canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
-import { sectionHome, useHasClassroom, useDiscussionCount } from './nav';
+import { sectionHome, useHasClassroom, useDiscussionCount, useDefiMenu } from './nav';
 import LogoFidni from '@/assets/logo-fidni.svg';
 import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import { t, useLang } from '@/i18n';
@@ -42,6 +42,10 @@ interface NavItem {
   nouveau?: 'quiz';
   /** Nombre de discussions sans réponse à son niveau (nav.ts). */
   compteur?: boolean;
+  /** Défi du jour : pastille tant qu'il n'est pas fait, puis la série (nav.ts useDefiMenu). */
+  defi?: boolean;
+  /** Membres connectés seulement. */
+  membres?: boolean;
 }
 
 interface NavGroup {
@@ -56,7 +60,13 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 // Menu du 10/10/2026 : ce qu'on fait (Travailler), puis où on en est (Mon suivi). Les libellés disent
 // ce que contient la page : « Examens » ne contenait que des DS, « Révisions » cachait la préparation d'un DS.
-const HOME_GROUP: NavGroup = { items: [{ to: '/', label: 'Accueil', icon: Home, match: ['/'] }] };
+// Défi du jour sous Accueil (09/11/2026) : un problème par jour, à ne pas manquer pour garder sa série.
+const HOME_GROUP: NavGroup = {
+  items: [
+    { to: '/', label: 'Accueil', icon: Home, match: ['/'] },
+    { to: '/defis', label: 'Défi du jour', icon: Flame, match: ['/defis'], defi: true },
+  ],
+};
 
 // Pages « Ajouter un contenu » : c'est l'entrée Outils prof qui s'allume, pas la rubrique.
 const NEW_CONTENT = ['/exercises/new', '/exams/new', '/lessons/new'];
@@ -71,7 +81,16 @@ const WORK_GROUP: NavGroup = {
     { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux', ...NEW_CONTENT], levels: '/exams' },
     { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
     { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
+  ],
+};
+
+// Communauté (09/11/2026) : le forum et les membres (profils, abonnements, fil).
+const COMMUNITY_GROUP: NavGroup = {
+  title: 'Communauté',
+  tour: 'nav-communaute',
+  items: [
     { to: '/discussions', label: 'Discussions', icon: MessagesSquare, match: ['/discussions'], compteur: true },
+    { to: '/membres', label: 'Membres', icon: Users, match: ['/membres'], membres: true },
   ],
 };
 
@@ -251,13 +270,13 @@ const SidebarInner: React.FC<{
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
     const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/learning-path') };
-    if (!isAuthenticated) return [HOME_GROUP, work];
+    if (!isAuthenticated) return [HOME_GROUP, work, { ...COMMUNITY_GROUP, items: COMMUNITY_GROUP.items.filter((it) => !it.membres) }];
     if (teacherTools) {
       // « Ajouter un contenu » : l'équipe seulement pour l'instant (12/10/2026).
       const tools = { ...TEACHER_GROUP, items: TEACHER_GROUP.items.filter((it) => canCreate || it.to !== '/exercises/new') };
-      return [HOME_GROUP, work, tools, FOLLOW_GROUP];
+      return [HOME_GROUP, work, COMMUNITY_GROUP, tools, FOLLOW_GROUP];
     }
-    return hasClassroom ? [HOME_GROUP, work, FOLLOW_GROUP, CLASS_GROUP] : [HOME_GROUP, work, FOLLOW_GROUP];
+    return hasClassroom ? [HOME_GROUP, work, COMMUNITY_GROUP, FOLLOW_GROUP, CLASS_GROUP] : [HOME_GROUP, work, COMMUNITY_GROUP, FOLLOW_GROUP];
   }, [isAuthenticated, showParcours, hasClassroom, teacherTools, canCreate]);
 
   // Section imposée par la page (ex. un sujet du Bac national, sous /exams/123 comme un DS) :
@@ -404,6 +423,34 @@ const DiscussionCount: React.FC<{ collapsed: boolean; active: boolean }> = ({ co
   );
 };
 
+/**
+ * Défi du jour : pastille dorée tant qu'il n'est pas fait (avec la série en jeu), coche verte et série une fois fait ;
+ * point doré quand la barre est repliée. Rien les jours sans défi.
+ */
+const DefiPastille: React.FC<{ collapsed: boolean; active: boolean }> = ({ collapsed, active }) => {
+  const d = useDefiMenu();
+  if (!d?.aujourdhui) return null;
+  if (collapsed) {
+    return d.fait ? null : <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label={t('Défi du jour à faire')} />;
+  }
+  if (!d.fait) {
+    return (
+      <span className={cx('fd-nums ms-auto me-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold',
+        active ? 'bg-white/15 text-white' : 'bg-gold text-white')}
+        aria-label={d.serie ? t('À faire, série de {n} jours en jeu', { n: d.serie }) : t('À faire')}>
+        {d.serie > 0 ? <><Flame className="h-3 w-3" aria-hidden />{d.serie}</> : t('À faire')}
+      </span>
+    );
+  }
+  return (
+    <span className={cx('fd-nums ms-auto me-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold',
+      active ? 'bg-white/15 text-white' : 'bg-brand-soft text-brand-hover')}
+      aria-label={t('Fait aujourd’hui')}>
+      <Check className="h-3 w-3" aria-hidden />{d.serie > 0 && d.serie}
+    </span>
+  );
+};
+
 const NavRow: React.FC<{
   item: NavItem; href: string; active: boolean; collapsed: boolean; drawer?: boolean; onNavigate?: () => void;
   /** Rubrique à niveaux : chevron du menu déroulant, à droite du lien. */
@@ -450,6 +497,7 @@ const NavRow: React.FC<{
       ) : <span className="truncate">{t(item.label)}</span>)}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
       {item.compteur && <DiscussionCount collapsed={collapsed} active={active} />}
+      {item.defi && <DefiPastille collapsed={collapsed} active={active} />}
     </Link>
   );
 };

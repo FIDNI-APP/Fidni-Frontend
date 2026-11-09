@@ -1,9 +1,10 @@
-// /discussions/:id (08/11/2026) : une discussion. Le message d'origine (contenus tagués en cartes, photos, « utile »,
+// /discussions/:id (08/11/2026) : une discussion du forum. Le message d'origine (contenus tagués en cartes, photos, « utile »,
 // suivre, partager), les réponses dans l'ordre (« en réponse à @x », « utile », répondre, modifier, supprimer), la zone
 // de réponse en bas. Une notification ouvre « #reponse-<id> » : la réponse est mise en valeur. À droite : contenus
-// tagués, participants, autres discussions sur le même contenu.
+// tagués, participants, autres discussions sur le même contenu. Un commentaire n'a pas de page : ses anciens liens mènent à
+// l'onglet de son contenu.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Bell, BellOff, ChevronLeft, CornerDownRight, FileIcon, Loader2, Pencil, Share2, Trash2 } from 'lucide-react';
 import { Page } from '@/components/space/Page';
 import { SEO } from '@/components/layout/SEO';
@@ -71,11 +72,11 @@ export const DiscussionThread: React.FC = () => {
 
   useEffect(() => { setD(null); load(); }, [id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Autres discussions sur le premier contenu tagué.
+  // Autres discussions du forum sur le premier contenu tagué.
   useEffect(() => {
     const first = d?.tags[0];
-    if (!first) { setRelated([]); return; }
-    getDiscussions({ contenu: first.id, niveau: 'tous' })
+    if (!first || d.genre === 'commentaire') { setRelated([]); return; }
+    getDiscussions({ genre: 'forum', contenu: first.id, niveau: 'tous' })
       .then((r) => setRelated(r.results.filter((x) => x.id !== d!.id).slice(0, 4)))
       .catch(() => {});
   }, [d?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -111,8 +112,11 @@ export const DiscussionThread: React.FC = () => {
   if (!d) {
     return <Page width="wide"><div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-ink-faint" aria-label={t('Chargement')} /></div></Page>;
   }
+  if (d.genre === 'commentaire' && d.tags.length > 0) {
+    return <Navigate to={/^#reponse-\d+$/.test(hash) ? `${d.url}${hash}` : d.url} replace />;
+  }
 
-  const own = !!user && String(user.id) === String(d.author.id);
+  const own =!!user && String(user.id) === String(d.author.id);
   const action = 'inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[12.5px] font-semibold text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink';
 
   const follow = async () => {

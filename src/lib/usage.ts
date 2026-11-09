@@ -38,6 +38,7 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/discussions/nouvelle', label: 'Nouvelle discussion', group: 'Discussions' },
   { pattern: '/discussions/:id/modifier', label: 'Modifier une discussion', group: 'Discussions' },
   { pattern: '/discussions/:id', label: 'Page d’une discussion', group: 'Discussions' },
+  { pattern: '/membres', label: 'Membres', group: 'Discussions' },
   { pattern: '/defis', label: 'Défi du jour', group: 'Mon espace' },
   { pattern: '/defis/:date', label: 'Défi précédent', group: 'Mon espace' },
   { pattern: '/enregistrements', label: 'Mes enregistrements', group: 'Mon espace' },

@@ -26,9 +26,9 @@ import { contentHub, levelFromState } from './pageHelpers';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
-// La discussion est sous le contenu, dans l'onglet principal (plus d'onglet Discussions).
+// Les commentaires sont dans leur onglet.
 // Plus d'onglet « Activité » (15/10/2026) : la réussite de la classe est à côté de chaque question.
-/** « discussions » (08/11/2026) : les discussions de l'espace Discussions qui taguent ce contenu. */
+/** « discussions » : l'onglet Commentaires (ce nom reste dans les adresses : « ?onglet=discussions »). */
 export type ContentTab = 'exercise' | 'proposals' | 'discussions';
 
 interface ContentHeaderProps {
@@ -47,8 +47,8 @@ interface ContentHeaderProps {
   basePath: string;
   /** Nombre de solutions proposées par les élèves (pastille de l'onglet). */
   solutionCount?: number;
-  /** Discussions qui taguent ce contenu (pastille de l'onglet « Discussions »). */
-  discussionCount?: number;
+  /** Commentaires et réponses de ce contenu (pastille de l'onglet « Commentaires »). */
+  commentCount?: number;
   /** Ranger le contenu : liste de révision (exercice, examen) ou cahier (leçon). */
   onCollect?: () => void;
   /** Temps (exercice) ou passages (examen) enregistrés. */
@@ -90,7 +90,7 @@ const MenuItem: React.FC<{ icon: React.ElementType; onClick: () => void; childre
 
 export const ContentHeader: React.FC<ContentHeaderProps> = ({
   content, contentType, isSaved, isSaving, onToggleSave, isAuthor, onDelete, onPrint, onReport,
-  activeTab, onTabChange, basePath, solutionCount = 0, discussionCount = 0, onCollect, sessionCount = 0,
+  activeTab, onTabChange, basePath, solutionCount = 0, commentCount = 0, onCollect, sessionCount = 0,
   onOpenHistory, hideTabs = false,
 }) => {
   const navigate = useNavigate();
@@ -154,14 +154,14 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   ].filter(Boolean).join(' · ');
 
   // short : libellé sur téléphone, pour que les onglets tiennent sur une ligne.
-  // « Discussions » (08/11/2026) : à la place de la discussion du bas de page, leçons comprises.
+  // « Commentaires » : à la place de la discussion du bas de page (08/11/2026), leçons comprises.
   const tabs: { id: ContentTab; label: string; short?: string; count?: number }[] = isLesson ? [
     { id: 'exercise', label: t('Leçon') },
-    { id: 'discussions', label: t('Discussions'), count: discussionCount },
+    { id: 'discussions', label: t('Commentaires'), count: commentCount },
   ] : [
     { id: 'exercise', label: exam ? t('Sujet') : t('Exercice') },
     { id: 'proposals', label: t('Solutions des élèves'), short: t('Solutions'), count: solutionCount },
-    { id: 'discussions', label: t('Discussions'), count: discussionCount },
+    { id: 'discussions', label: t('Commentaires'), count: commentCount },
   ];
 
   return (

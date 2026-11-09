@@ -1,6 +1,6 @@
-// /discussions/nouvelle et /discussions/:id/modifier (08/11/2026) : titre, salon, niveau, contenus tagués (leçons,
-// exercices, examens), message (formules, photos). « ?contenu=<id> » (onglet « Discussions » d'un contenu) : ce contenu
-// est déjà tagué ; « ?salon= » : ce salon est choisi.
+// /discussions/nouvelle et /discussions/:id/modifier (08/11/2026) : une discussion du forum. Titre, salon, niveau, contenus
+// tagués (leçons, exercices, examens), message (formules, photos). « ?contenu=<id> » : ce contenu est déjà tagué ;
+// « ?salon= » : ce salon est choisi. Un commentaire se modifie sur place, dans l'onglet de son contenu.
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, Loader2, Send } from 'lucide-react';
@@ -52,7 +52,7 @@ export const DiscussionForm: React.FC = () => {
     setLevel(own ? String(own) : 'tous');
   }, [user, editing]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Contenu déjà tagué (depuis l'onglet « Discussions » d'un contenu).
+  // Contenu déjà tagué (« ?contenu= »).
   useEffect(() => {
     const cid = params.get('contenu');
     if (editing || !cid || !/^\d+$/.test(cid) || !isAuthenticated) return;
@@ -66,10 +66,11 @@ export const DiscussionForm: React.FC = () => {
   useEffect(() => {
     if (!editing) return;
     getDiscussion(id!).then((d) => {
+      if (d.genre === 'commentaire') { navigate(d.url, { replace: true }); return; }
       setTitle(d.title); setSalon(d.salon); setTags(d.tags); setBody(d.body); setInitialBody(d.body);
       setLevel(d.class_level ? String(d.class_level.id) : 'tous');
     }).catch(() => setError(t('La discussion n’a pas pu être chargée.')));
-  }, [id, editing]);
+  }, [id, editing, navigate]);
 
   if (!isLoading && !isAuthenticated) {
     return (
@@ -168,7 +169,7 @@ export const DiscussionForm: React.FC = () => {
             <div className="h-24 animate-pulse rounded-xl border border-line bg-[#faf9f7]" />
           ) : (
             <MessageComposer initial={initialBody} attachments={!editing} minHeight="140px"
-              placeholder={t('Explique ce que tu cherches, ce que tu as essayé… (formules entre $ $, @pseudo pour mentionner)')}
+              placeholder={t('Ton message… (formules entre $ $, @pseudo pour mentionner)')}
               submitLabel="" onChange={setBody} onFilesChange={setFileIds} />
           )}
         </div>
