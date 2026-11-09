@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { listClassrooms } from '@/lib/api/classroomApi';
 import { getDiscussionCount } from '@/lib/api/discussionsApi';
+import { DEFI_MAJ, defiApi, lireDefiLocal } from '@/lib/api/defiApi';
 import { slugify } from '@/lib/api/hubApi';
 import type { User } from '@/types';
 
@@ -100,6 +101,42 @@ export function useDiscussionCount(): number {
     return () => { alive = false; };
   }, [uid, pathname]);
   return n;
+}
+
+/**
+ * « Défi du jour » dans le menu (09/11/2026) : y en a-t-il un aujourd'hui, est-il fait, et la série. Membre : le serveur
+ * (GET /defis/etat/) ; visiteur : son navigateur (lireDefiLocal). Relu au plus une fois par minute au changement de page,
+ * et tout de suite après une réponse (événement DEFI_MAJ, components/defi/DefiPanel).
+ */
+export interface DefiMenu { aujourdhui: boolean; fait: boolean; serie: number }
+let defiMenu: { at: number; uid: string; v: DefiMenu } | null = null;
+const DEFI_MENU_MS = 60_000;
+export function useDefiMenu(): DefiMenu | null {
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const uid = user?.id ? String(user.id) : 'visiteur';
+  const [v, setV] = useState<DefiMenu | null>(() => (defiMenu?.uid === uid ? defiMenu.v : null));
+  const [maj, setMaj] = useState(0);
+  useEffect(() => {
+    const relire = () => { defiMenu = null; setMaj((n) => n + 1); };
+    window.addEventListener(DEFI_MAJ, relire);
+    return () => window.removeEventListener(DEFI_MAJ, relire);
+  }, []);
+  useEffect(() => {
+    if (defiMenu?.uid === uid && Date.now() - defiMenu.at < DEFI_MENU_MS) { setV(defiMenu.v); return; }
+    let alive = true;
+    defiApi.etat()
+      .then((r) => {
+        const local = r.date && !r.statut ? lireDefiLocal(r.date) : null;
+        const statut = r.statut ?? local?.statut ?? 'en_cours';
+        const value = { aujourdhui: !!r.date, fait: statut !== 'en_cours', serie: r.serie ?? 0 };
+        defiMenu = { at: Date.now(), uid, v: value };
+        if (alive) setV(value);
+      })
+      .catch(() => { /* on garde le dernier état connu */ });
+    return () => { alive = false; };
+  }, [uid, pathname, maj]);
+  return v;
 }
 
 const CLASS_KEY = 'fidni:a-une-classe:';

@@ -10,12 +10,20 @@
  */
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Brain, CornerDownRight, Flag, Loader2, MessageCircle, ClipboardCheck } from 'lucide-react';
+import { Award, Bell, Brain, CornerDownRight, Flag, Loader2, MessageCircle, ClipboardCheck } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAction } from '@/lib/usage';
 import { extraitMath } from '@/lib/texteMath';
 import { t, dateLocale } from '@/i18n';
+
+/** Notifications de la communauté (abonnements, badges) : pas d'extrait de message à citer. */
+const COMMUNAUTE = new Set(['abonne', 'demande', 'accepte', 'badge']);
+/** « 10 exercices » (palier d'un badge, en français du serveur) : le nombre, puis l'unité traduite. */
+const badgeExtrait = (excerpt: string) => {
+  const m = /^(\d+)\s+(.+)$/.exec(excerpt);
+  return m ? `${m[1]} ${t(m[2])}` : t(excerpt);
+};
 
 // KaTeX n'alourdit pas la barre du haut : chargé à la première ouverture de la cloche.
 const LazyMathText = lazy(() => import('@/components/skilliq/MathText').then((m) => ({ default: m.MathText })));
@@ -26,8 +34,10 @@ const Maths: React.FC<{ text: string; className?: string }> = ({ text, className
 interface Notif {
   id: number;
   /** Espace Discussions (08/11/2026) : « discussion » (nouvelle discussion où il peut aider), « reponse » (réponse dans
-   *  une discussion qu'il suit), « mention » (@pseudo). */
-  kind: 'comment' | 'reply' | 'report' | 'quiz' | 'copie' | 'discussion' | 'reponse' | 'mention';
+   *  une discussion qu'il suit), « mention » (@pseudo). Communauté (09/11/2026) : « abonne » (nouvel abonné),
+   *  « demande » (demande d'abonnement), « accepte » (sa demande acceptée), « badge » (palier gagné). */
+  kind: 'comment' | 'reply' | 'report' | 'quiz' | 'copie' | 'discussion' | 'reponse' | 'mention'
+    | 'abonne' | 'demande' | 'accepte' | 'badge';
   title: string;
   url: string;
   excerpt: string;
@@ -73,7 +83,20 @@ function Message({ n }: { n: Notif }) {
   if (n.kind === 'quiz') {
     return <><b className="font-semibold text-ink">{t('Nouveau quiz')}</b> {t('sur')} <span className="font-semibold text-ink">« {n.title} »</span>{n.excerpt ? ` · ${n.excerpt}` : ''}</>;
   }
+  if (n.kind === 'badge') {
+    // « Série du défi · Argent » : chaque partie traduite (nom du badge, palier).
+    return <><b className="font-semibold text-ink">{t('Nouveau badge')}</b> : <span className="font-semibold text-ink">{n.title.split(' · ').map((x) => t(x)).join(' · ')}</span></>;
+  }
   const who = <b className="font-semibold text-ink">{n.actor?.username ?? t('Quelqu’un')}</b>;
+  if (n.kind === 'abonne') {
+    return n.count > 1 ? <>{who} {t('et {n} autres te suivent', { n: n.count - 1 })}</> : <>{who} {t('te suit')}</>;
+  }
+  if (n.kind === 'demande') {
+    return n.count > 1 ? <>{who} {t('et {n} autres demandent à te suivre', { n: n.count - 1 })}</> : <>{who} {t('demande à te suivre')}</>;
+  }
+  if (n.kind === 'accepte') {
+    return <>{who} {t('a accepté ta demande d’abonnement')}</>;
+  }
   const what = <span className="font-semibold text-ink">« {n.title} »</span>;
   if (n.kind === 'reply') {
     return <>{who} {n.count > 1 ? t('t’a répondu {n} fois', { n: n.count }) : t('a répondu à ton commentaire')} {t('sur')} {what}</>;
@@ -210,13 +233,17 @@ export const NotificationBell: React.FC = () => {
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-hover"><Brain className="h-4 w-4" /></span>
                       ) : n.kind === 'copie' ? (
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-hover"><ClipboardCheck className="h-4 w-4" /></span>
+                      ) : n.kind === 'badge' ? (
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-soft text-gold-strong"><Award className="h-4 w-4" /></span>
                       ) : <Avatar actor={n.actor} />}
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] leading-snug text-ink-soft"><Message n={n} /></span>
                         {n.kind === 'report' ? (
                           <Maths text={n.message || extraitMath(n.excerpt)}
                             className="mt-1.5 block max-h-[40vh] overflow-y-auto whitespace-pre-line break-words rounded-xl border-s-2 border-brand bg-[#f7f6f3] px-3 py-2 text-[12.5px] leading-relaxed text-ink" />
-                        ) : n.kind !== 'quiz' && n.kind !== 'copie' && n.excerpt && (
+                        ) : n.kind === 'badge' ? (
+                          n.excerpt && <span className="mt-0.5 block text-[12.5px] text-ink-faint">{badgeExtrait(n.excerpt)}</span>
+                        ) : !COMMUNAUTE.has(n.kind) && n.kind !== 'quiz' && n.kind !== 'copie' && n.excerpt && (
                           <span className="mt-1 block truncate text-[12.5px] italic text-ink-faint">“<Maths text={extraitMath(n.excerpt)} />”</span>
                         )}
                         <span className="mt-1.5 flex items-center gap-2 text-[12px]">
@@ -227,6 +254,12 @@ export const NotificationBell: React.FC = () => {
                             <span className="font-semibold text-brand-hover">{t('Passer le quiz')} ›</span>
                           ) : n.kind === 'copie' ? (
                             <span className="font-semibold text-brand-hover">{t('Voir ma copie')} ›</span>
+                          ) : n.kind === 'badge' ? (
+                            <span className="font-semibold text-brand-hover">{t('Voir mes badges')} ›</span>
+                          ) : n.kind === 'demande' ? (
+                            <span className="font-semibold text-brand-hover">{t('Voir la demande')} ›</span>
+                          ) : n.kind === 'abonne' || n.kind === 'accepte' ? (
+                            <span className="font-semibold text-brand-hover">{t('Voir le profil')} ›</span>
                           ) : (
                             <span className="inline-flex items-center gap-0.5 font-semibold text-brand-hover">
                               <CornerDownRight className="h-3.5 w-3.5" /> {t('Répondre')}

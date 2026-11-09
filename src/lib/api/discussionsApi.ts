@@ -1,9 +1,11 @@
-// Espace Discussions (08/11/2026) : forum par salons, à part des contenus (backend apps/discussions).
+// Forum et commentaires (08/11/2026, séparés le 09/11/2026) : backend apps/discussions.
 import { api } from './apiClient';
 import type { FileAttachment } from '@/types/fileAttachment';
 
 export type Salon = 'entraide' | 'methodes' | 'bac' | 'orientation';
 export type DiscussionSort = 'recentes' | 'populaires' | 'sans_reponse' | 'suivies';
+/** Forum : un sujet avec un titre, dans un salon. Commentaire : un message sous un contenu, sans titre. */
+export type DiscussionGenre = 'forum' | 'commentaire';
 
 export interface DiscussionAuthor {
   id: number;
@@ -30,6 +32,10 @@ export interface ContentTag {
 
 export interface DiscussionCardData {
   id: number;
+  genre: DiscussionGenre;
+  /** Où mène ce message : sa page (forum), ou l'onglet Commentaires de son contenu. */
+  url: string;
+  /** Vide pour un commentaire. */
   title: string;
   excerpt: string;
   salon: Salon;
@@ -78,16 +84,8 @@ export interface DiscussionPage {
   results: DiscussionCardData[];
 }
 
-export interface DiscussionPanel {
-  niveau: number | null;
-  salons: { key: Salon; label: string; count: number }[];
-  total: number;
-  sans_reponse: number;
-  tendances: { content: ContentTag; discussions: number }[];
-  utiles: { author: DiscussionAuthor; utile: number }[];
-}
-
 export interface DiscussionFilters {
+  genre: DiscussionGenre;
   salon?: Salon | null;
   /** Absent : le niveau de l'élève ; « tous » : tous les niveaux. */
   niveau?: number | 'tous' | null;
@@ -106,9 +104,6 @@ const params = (f: DiscussionFilters) => Object.fromEntries(
 export const getDiscussions = async (f: DiscussionFilters) =>
   (await api.get('/discussions/', { params: params(f) })).data as DiscussionPage;
 
-export const getDiscussionPanel = async (niveau?: number | 'tous' | null) =>
-  (await api.get('/discussions/panneau/', { params: params({ niveau }) })).data as DiscussionPanel;
-
 export const getDiscussion = async (id: number | string) =>
   (await api.get(`/discussions/${id}/`)).data as DiscussionDetail;
 
@@ -123,7 +118,10 @@ export interface DiscussionInput {
 }
 
 export const createDiscussion = async (input: DiscussionInput) =>
-  (await api.post('/discussions/', input)).data as DiscussionDetail;
+  (await api.post('/discussions/', { ...input, genre: 'forum' })).data as DiscussionDetail;
+
+export const createComment = async (contentId: number, body: string, fileIds: string[]) =>
+  (await api.post('/discussions/', { genre: 'commentaire', body, content_ids: [contentId], file_ids: fileIds })).data as DiscussionDetail;
 
 export const updateDiscussion = async (id: number, input: Partial<DiscussionInput>) =>
   (await api.patch(`/discussions/${id}/`, input)).data as DiscussionDetail;

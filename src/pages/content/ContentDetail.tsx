@@ -37,7 +37,7 @@ import { CorrectionIAButton } from '@/components/content/viewer/CorrectionIAButt
 import { SessionHistoryModal } from '@/components/content/viewer/SessionHistoryModal';
 import { ReportContentModal } from '@/components/content/viewer/ReportContentModal';
 import { AIVerdictPanel } from '@/components/activity/AIVerdictPanel';
-import { ContentDiscussions, messageCount } from '@/components/discussions/ContentDiscussions';
+import { ContentComments, messageCount } from '@/components/discussions/ContentComments';
 import { getDiscussions, type DiscussionPage } from '@/lib/api/discussionsApi';
 import { ProposedSolutions } from '@/components/content/viewer/ProposedSolutions';
 import { FinishPanel } from '@/components/content/viewer/FinishPanel';
@@ -354,18 +354,18 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
     return () => { alive = false; };
   }, [id, config, isAuthenticated, authLoading, contentType, reloadKey]);
 
-  // Onglet de l'adresse : « ?onglet=discussions » (espace Discussions, « Les plus discutés »), ou un ancien lien de
-  // notification vers un commentaire (« ?commentaire= ») : les commentaires sont devenus des discussions.
+  // Onglet de l'adresse : « ?onglet=discussions » (/discussions, notifications), ou un ancien lien de notification vers
+  // un commentaire (« ?commentaire= »). Suit l'adresse : une notification ouverte depuis cette page change d'onglet.
   const tabFromUrl: ContentTab = searchParams.get('onglet') === 'discussions' || focusCommentId ? 'discussions' : 'exercise';
-  useEffect(() => { setActiveTab(tabFromUrl); }, [id]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setActiveTab(tabFromUrl); }, [id, tabFromUrl]);
 
-  // Discussions qui taguent ce contenu : messages de l'onglet « Discussions » et nombre de messages de sa pastille.
-  const [discussions, setDiscussions] = useState<DiscussionPage | null>(null);
-  const loadDiscussions = useCallback(() => {
+  // Commentaires de ce contenu : ceux de l'onglet « Commentaires » et le nombre de messages de sa pastille.
+  const [comments, setComments] = useState<DiscussionPage | null>(null);
+  const loadComments = useCallback(() => {
     if (!id) return;
-    getDiscussions({ contenu: Number(id), niveau: 'tous' }).then(setDiscussions).catch(() => {});
+    getDiscussions({ genre: 'commentaire', contenu: Number(id), niveau: 'tous' }).then(setComments).catch(() => {});
   }, [id]);
-  useEffect(() => { setDiscussions(null); loadDiscussions(); }, [loadDiscussions]);
+  useEffect(() => { setComments(null); loadComments(); }, [loadComments]);
   // Réussite de la classe : chargée avec la page, relue peu après chaque auto-évaluation (le serveur efface son cache).
   const loadQuestionStats = useCallback(() => {
     if (!id || contentType === 'lesson') return;
@@ -700,8 +700,8 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             ? t('Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.')
             : t('Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.')} />
       )}
-      {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. La discussion n'est plus en bas de
-          page (08/11/2026) : elle est dans l'onglet « Discussions » et dans l'espace Discussions. */}
+      {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. Les commentaires ne sont plus en bas de
+          page (08/11/2026) : ils sont dans l'onglet « Commentaires ». */}
       {!examRunning && id && <SimilarContents contentId={id} />}
     </>
   );
@@ -736,7 +736,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           }}
           basePath={config.basePath}
           solutionCount={proposedSolutions?.length ?? 0}
-          discussionCount={messageCount(discussions)}
+          commentCount={messageCount(comments)}
           onCollect={openCollect}
           sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
           onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
@@ -810,8 +810,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
 
         {activeTab === 'discussions' && id && (
           <div className="max-w-3xl">
-            <ContentDiscussions contentId={Number(id)} contentTitle={content.title} page={discussions} onChanged={loadDiscussions}
-              levelId={content.class_levels?.[0]?.id != null ? Number(content.class_levels[0].id) : null} />
+            <ContentComments contentId={Number(id)} page={comments} onChanged={loadComments} />
           </div>
         )}
       </div>

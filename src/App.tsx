@@ -112,6 +112,7 @@ const DiscussionsHub = page(() => import('./pages/discussions/DiscussionsHub'), 
 const DiscussionThread = page(() => import('./pages/discussions/DiscussionThread'), 'DiscussionThread');
 const DiscussionForm = page(() => import('./pages/discussions/DiscussionForm'), 'DiscussionForm');
 const Defis = page(() => import('./pages/defis/Defis'), 'Defis');
+const Membres = page(() => import('./pages/communaute/Membres'), 'Membres');
 const DefiPasse = page(() => import('./pages/defis/Defis'), 'DefiPasse');
 // Éditeur de documents « façon Word » avec équations (12/10/2026), inspiré de wordcraft.
 const MesDocuments = page(() => import('./pages/documents/MesDocuments'), 'MesDocuments');
@@ -462,6 +463,7 @@ function App() {
                     <Route path="/discussions/nouvelle" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
                     <Route path="/discussions/:id" element={<NavbarWrapper><DiscussionThread /></NavbarWrapper>} />
                     <Route path="/discussions/:id/modifier" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
+                    <Route path="/membres" element={<NavbarWrapper><Membres /></NavbarWrapper>} />
                     <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
                     <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />
                     <Route path="/pilotage" element={

@@ -146,8 +146,8 @@ export const TOURS: Tour[] = [
       AUTO_EVAL,
       VOTE,
       { target: 'liste-ouvrir', title: 'Page complète', body: (c) => c.kind === 'lesson'
-        ? 'Ouvre la leçon pour la lire en entier et poser tes questions.'
-        : 'Ouvre-le pour travailler : solutions question par question, chrono, discussion et statistiques.' },
+        ? 'Ouvre la leçon pour la lire en entier et la commenter.'
+        : 'Ouvre-le pour travailler : solutions question par question, chrono, commentaires et statistiques.' },
       { target: 'liste-fiche', title: 'Fiche TD', body: 'Regroupe les exercices de ton choix (glisse-les, ou « + Fiche » sur une carte) en une fiche à imprimer ; elle est rangée dans Réviser.' },
       { target: 'liste-creer', title: 'Publier', body: (c) => parType(c,
         'Tu peux aussi partager une leçon que tu as rédigé.',
@@ -167,7 +167,7 @@ export const TOURS: Tour[] = [
       {
         target: 'detail-onglets',
         title: 'Les onglets',
-        body: 'Solutions des élèves pour comparer ta démarche. Les questions et la discussion sont en bas de l’exercice.',
+        body: 'Solutions des élèves pour comparer ta démarche. Commentaires pour écrire sous l’exercice.',
       },
       { target: 'detail-terminer', title: 'Où en es-tu ?', body: (c) => parType(c,
         'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque la leçon « À revoir ».',
@@ -202,7 +202,7 @@ export const TOURS: Tour[] = [
       SOLUTION,
       AUTO_EVAL,
       { target: 'examen-copie', title: 'Ta copie', body: 'Après l’épreuve, dis pour chaque question si tu l’as réussie (ici ou sous sa solution) : ta note estimée se calcule avec le barème. Chaque ligne montre aussi la part d’élèves qui réussissent la question.' },
-      { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche. Les questions et la discussion sont en bas du sujet.' },
+      { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche. Commentaires pour écrire sous le sujet.' },
       { target: 'detail-terminer', title: 'Où en es-tu ?', body: 'Après l’épreuve, en haut du sujet (et rappelé en bas) : « Tout réussi » coche toutes les questions, puis décoche celles que tu as ratées. Ta note se calcule avec le barème.' },
       { target: 'detail-imprimer', title: 'Imprimer / PDF', body: 'Télécharge le sujet en PDF pour le faire sur papier.' },
       { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ranger dans une liste de révision, revoir tes passages, ou signaler une erreur.' },
@@ -260,7 +260,7 @@ export const TOURS: Tour[] = [
     match: /^\/profile\/[^/]+\/?$/,
     requires: 'profil-modifier',
     steps: [
-      { target: 'profil-identite', title: 'Ton profil public', body: 'Ce que les autres voient : ton pseudo, ta présentation et tes publications. Ton nom, ta date de naissance et ton établissement restent privés.' },
+      { target: 'profil-identite', title: 'Ton profil public', body: 'Ce que les autres voient : ton pseudo, tes badges, ta présentation et ton activité. Ton nom, ta date de naissance et ton établissement restent privés.' },
       { target: 'profil-modifier', title: 'Modifier', body: 'Photo, présentation, identité, niveau et objectifs de notes.' },
       { target: 'profil-onglets', title: 'Les onglets', body: 'Profil pour la vue d’ensemble, Réussis / à revoir pour tes exercices, Paramètres pour ton compte et tes données.' },
     ],

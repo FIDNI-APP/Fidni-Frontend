@@ -8,9 +8,10 @@
  *     <Section title="À refaire" count={3} action={<Link …>Tout voir</Link>}>…</Section>
  *   </Page>
  */
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft } from 'lucide-react';
+import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { t } from '@/i18n';
 
 type Width = 'narrow' | 'default' | 'wide' | 'full';
@@ -160,6 +161,76 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Onglets discrets d'une page (salons d'un forum, vues des membres) : du texte et un filet sous l'onglet actif. Plus
+ * calmes que Segmented quand la page a d'autres repères forts. Sur téléphone, ils défilent jusqu'au bord de l'écran.
+ */
+export function UnderlineTabs<T extends string>({ value, onChange, options, label, className = '' }: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { key: T; label: string; count?: number }[];
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div role="tablist" aria-label={t(label)}
+      className={`-mx-4 flex gap-5 overflow-x-auto border-b border-line px-4 scrollbar-hide sm:gap-7 md:mx-0 md:px-0 ${className}`}>
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <button key={o.key} type="button" role="tab" aria-selected={active} onClick={() => onChange(o.key)}
+            className={`-mb-px inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              active ? 'border-ink text-ink' : 'border-transparent text-ink-faint hover:text-ink-soft'}`}>
+            {t(o.label)}
+            {!!o.count && <span className="fd-nums rounded-full bg-gold-soft px-1.5 text-[12px] font-bold text-gold-strong">{o.count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Choix discret (tri, filtre d'une liste) : se lit comme du texte, le fond n'apparaît qu'au survol ; un clic ouvre le menu
+ * sous le bouton. Pas de <select> natif : sa largeur est celle de sa plus longue option, un trou séparait le texte de la flèche.
+ */
+export function QuietMenu<T extends string>({ label, value, onChange, options, className = '' }: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string }[];
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLDivElement>(null);
+  const current = options.find((o) => o.value === value) ?? options[0];
+  return (
+    <div ref={anchor} className={`shrink-0 ${className}`}>
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-haspopup="menu" aria-expanded={open}
+        aria-label={`${t(label)} : ${current?.label ?? ''}`}
+        className="inline-flex h-11 items-center gap-1 rounded-xl px-3 text-[14px] font-medium text-ink-soft transition-colors hover:bg-[#f2f1ee] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        <span className="max-w-[170px] truncate">{current?.label}</span>
+        <ChevronDown aria-hidden className={`h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <FloatingPanel anchorRef={anchor} open={open} onClose={() => setOpen(false)} placement="bottom-end" offset={6} role="menu"
+        className="max-h-[320px] min-w-[190px] overflow-y-auto rounded-2xl border border-line bg-white p-1.5 shadow-[0_14px_40px_rgba(20,18,16,.16)]">
+        {options.map((o) => {
+          const selected = o.value === value;
+          return (
+            <button key={o.value} type="button" role="menuitemradio" aria-checked={selected}
+              onClick={() => { setOpen(false); if (!selected) onChange(o.value); }}
+              className={`flex min-h-11 w-full items-center justify-between gap-4 rounded-xl px-3 text-start text-[14px] transition-colors hover:bg-[#f7f6f3] focus:outline-none focus-visible:bg-[#f7f6f3] ${
+                selected ? 'font-semibold text-ink' : 'font-medium text-ink-soft'}`}>
+              {o.label}
+              {selected && <Check aria-hidden className="h-4 w-4 shrink-0 text-brand-hover" />}
+            </button>
+          );
+        })}
+      </FloatingPanel>
     </div>
   );
 }
