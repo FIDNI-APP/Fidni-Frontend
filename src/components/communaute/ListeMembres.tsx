@@ -1,5 +1,6 @@
 /**
- * Abonnés ou abonnements d'un membre, dans une fenêtre, page par page. Le propriétaire peut retirer un abonné.
+ * Abonnés ou abonnements d'un membre, dans une fenêtre, page par page. Le propriétaire peut retirer un abonné et, en tête
+ * de ses abonnés, accepter ou refuser les demandes d'abonnement (useDemandes).
  */
 import React, { useEffect, useId, useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -9,20 +10,31 @@ import { communauteApi, type CarteMembre } from '@/lib/api/communauteApi';
 import { confirmer } from '@/lib/confirmer';
 import { BoutonSuivre } from './BoutonSuivre';
 import { LigneMembre } from './CarteMembre';
+import { useDemandes } from './useDemandes';
 import { t } from '@/i18n';
+
+export type ChangementAbonnes = 'retire' | 'accepte' | 'refuse';
 
 export const ListeMembres: React.FC<{
   username: string;
   sens: 'abonnes' | 'abonnements' | null;
   proprietaire: boolean;
   onClose: () => void;
-  onRetire?: () => void;
-}> = ({ username, sens, proprietaire, onClose, onRetire }) => {
+  /** Un abonné retiré, une demande acceptée ou refusée : le profil met ses chiffres à jour. */
+  onChange?: (quoi: ChangementAbonnes) => void;
+}> = ({ username, sens, proprietaire, onClose, onChange }) => {
   const id = useId();
   const [membres, setMembres] = useState<CarteMembre[] | null>(null);
   const [page, setPage] = useState(1);
   const [suite, setSuite] = useState(false);
   const [erreur, setErreur] = useState(false);
+  // Relit la liste depuis le début (demande acceptée : le nouvel abonné y entre).
+  const [lecture, setLecture] = useState(0);
+  const gere = proprietaire && sens === 'abonnes';
+  const { demandes, repondre } = useDemandes(gere, (accepte) => {
+    if (accepte) { setPage(1); setLecture((n) => n + 1); }
+    onChange?.(accepte ? 'accepte' : 'refuse');
+  });
 
   useEffect(() => {
     if (!sens) return;
@@ -32,7 +44,7 @@ export const ListeMembres: React.FC<{
       .then((r) => { if (!vivant) return; setMembres((m) => (page === 1 ? r.results : [...(m ?? []), ...r.results])); setSuite(r.suite); })
       .catch(() => { if (vivant) setErreur(true); });
     return () => { vivant = false; };
-  }, [username, sens, page]);
+  }, [username, sens, page, lecture]);
 
   useEffect(() => { if (!sens) { setMembres(null); setPage(1); } }, [sens]);
 
@@ -41,7 +53,7 @@ export const ListeMembres: React.FC<{
     try {
       await communauteApi.retirer(m.username);
       setMembres((l) => (l ?? []).filter((x) => x.id !== m.id));
-      onRetire?.();
+      onChange?.('retire');
     } catch {
       toast.error(t('Action impossible pour le moment.'));
     }
@@ -50,6 +62,28 @@ export const ListeMembres: React.FC<{
   return (
     <ModalShell open={!!sens} onClose={onClose} labelId={id} title={sens === 'abonnes' ? t('Abonnés') : t('Abonnements')}>
       <div className="-mx-1 mt-3 max-h-[60vh] overflow-y-auto px-1">
+        {gere && !!demandes?.length && (
+          <section aria-label={t('Demandes')} className="mb-3 border-b border-line pb-2">
+            <p className="text-[12.5px] font-semibold text-gold-strong">{t('Demandes')} · <span className="fd-nums">{demandes.length}</span></p>
+            <ul className="divide-y divide-line">
+              {demandes.map((m) => (
+                <li key={m.id}>
+                  <LigneMembre membre={m} onClick={onClose} droite={
+                    <span className="flex shrink-0 items-center gap-2">
+                      <button type="button" onClick={() => repondre(m, true)} className="fd-btn-primary inline-flex min-h-9 items-center !px-3.5 !py-0 text-[13px]">
+                        {t('Accepter')}
+                      </button>
+                      <button type="button" onClick={() => repondre(m, false)}
+                        className="min-h-9 shrink-0 rounded-xl px-3 text-[13px] font-semibold text-ink-faint transition-colors hover:text-ink">
+                        {t('Refuser')}
+                      </button>
+                    </span>
+                  } />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {erreur && <p className="py-6 text-center text-[13.5px] text-[#a23b34]">{t('La liste n’a pas pu se charger.')}</p>}
         {!erreur && membres === null && <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-ink-faint" /></div>}
         {membres?.length === 0 && <p className="py-6 text-center text-[13.5px] text-ink-faint">{t('Personne pour l’instant.')}</p>}

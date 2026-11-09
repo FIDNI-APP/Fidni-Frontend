@@ -12,6 +12,13 @@ export function canSeeParcours(user: { is_superuser?: boolean; is_staff?: boolea
   return PARCOURS_PUBLIC || !!(user?.is_superuser || user?.is_staff);
 }
 
+/**
+ * Page Membres (/membres : découvrir des membres, fil des abonnements) : fermée à tous depuis le 09/11/2026, gardée
+ * pour plus tard. Fermée, elle n'est plus dans le menu et son adresse mène aux discussions (pages/communaute/MembresFerme) ;
+ * abonnés et demandes d'abonnement se règlent depuis la fenêtre des abonnés du profil. Pour la rouvrir : true.
+ */
+export const MEMBRES_OUVERT: boolean = false;
+
 /** Administrateur ou modérateur : peut modifier ou supprimer tout contenu publié par les membres
  *  (le serveur l'autorise pour le staff : config/permissions.py, IsAuthorOrStaffOrReadOnly). */
 export function isModerator(user: { is_superuser?: boolean; is_staff?: boolean } | null | undefined): boolean {

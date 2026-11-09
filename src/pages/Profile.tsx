@@ -231,6 +231,16 @@ export const ProfilePage: React.FC = () => {
     }
   }, [requested, authLoading, currentUser?.username, username, state, navigate, searchParams, setSearchParams]);
 
+  // « ?abonnes=1 » (notification d'un nouvel abonné ou d'une demande, via /membres fermée) : la fenêtre des abonnés, au
+  // propriétaire seulement, puis l'adresse redevient celle du profil.
+  useEffect(() => {
+    if (state !== 'ready' || !isOwner || searchParams.get('abonnes') === null) return;
+    setListe('abonnes');
+    const next = new URLSearchParams(searchParams);
+    next.delete('abonnes');
+    setSearchParams(next, { replace: true });
+  }, [state, isOwner, searchParams, setSearchParams]);
+
   // Lien « #badges » (notification d'un badge gagné) : on descend jusqu'aux badges une fois la page chargée.
   useEffect(() => {
     if (state === 'ready' && window.location.hash === '#badges') {
@@ -384,9 +394,10 @@ export const ProfilePage: React.FC = () => {
               {isOwner ? (
                 <>
                   {!!pub?.reglages?.demandes && (
-                    <Link to="/membres?onglet=abonnes" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-gold-line bg-gold-soft px-3 text-[13px] font-semibold text-gold-strong">
+                    <button type="button" onClick={() => setListe('abonnes')}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-gold-line bg-gold-soft px-3 text-[13px] font-semibold text-gold-strong">
                       {pub.reglages.demandes > 1 ? t('{n} demandes', { n: pub.reglages.demandes }) : t('1 demande')}
-                    </Link>
+                    </button>
                   )}
                   <Link to={editUrl} className="fd-btn-ghost min-h-10" data-tour="profil-modifier">
                     <Pencil className="h-4 w-4" /> {t('Modifier mon profil')}
@@ -490,7 +501,11 @@ export const ProfilePage: React.FC = () => {
 
       {pub && (
         <ListeMembres username={name} sens={liste} proprietaire={isOwner} onClose={() => setListe(null)}
-          onRetire={() => majPub((x) => ({ ...x, abonnes: Math.max(0, x.abonnes - 1) }))} />
+          onChange={(quoi) => majPub((x) => ({
+            ...x,
+            abonnes: Math.max(0, x.abonnes + (quoi === 'accepte' ? 1 : quoi === 'retire' ? -1 : 0)),
+            reglages: x.reglages && quoi !== 'retire' ? { ...x.reglages, demandes: Math.max(0, x.reglages.demandes - 1) } : x.reglages,
+          }))} />
       )}
       {isOwner && pub?.reglages && (
         <Personnaliser open={perso} onClose={() => setPerso(false)} reglages={pub.reglages} badges={pub.badges ?? []}

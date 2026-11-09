@@ -1,6 +1,9 @@
 {
   "Discussions": "النقاشات",
   "Forum": "المنتدى",
+  "Tous les commentaires": "كل التعليقات",
+  "{n} commentaires": "{n} تعليقات",
+  "{n} commentaire": "{n} تعليق",
   "Forum ou commentaires": "المنتدى أو التعليقات",
   "Commentaires de {nom}": "تعليقات {nom}",
   "Mes commentaires": "تعليقاتي",
