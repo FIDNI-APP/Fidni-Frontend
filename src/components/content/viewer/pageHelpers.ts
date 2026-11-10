@@ -14,7 +14,7 @@ export const EXAM_TWO_COLUMNS_PX = SHEET_TEXT_PX + 2 * 32 + 2 + 32 + 272;
 export const DETAIL_MAX_WIDTH = {
   // Exercice : la feuille et la colonne « Question par question » (15/10/2026), comme l'examen.
   exercise: EXAM_TWO_COLUMNS_PX + 2 * 32,
-  lesson: 200 + 40 + SHEET_TEXT_PX + 2 * 48 + PAGE_PAD, // sommaire (200 px, écart 40 px), feuille en sm:px-12
+  lesson: 2 * (200 + 40) + SHEET_TEXT_PX + 2 * 48 + PAGE_PAD, // feuille CENTRÉE, sommaire (200 px) dans la marge gauche sur grand écran
   exam: EXAM_TWO_COLUMNS_PX + 2 * 32,
 } as const;
 

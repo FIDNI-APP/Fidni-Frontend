@@ -172,21 +172,21 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
 
   if (isLesson) {
     return (
-      <div className={withOutline ? 'grid items-start gap-10 lg:grid-cols-[200px_minmax(0,1fr)]' : ''}>
+      <div className={withOutline ? 'min-[1440px]:grid min-[1440px]:items-start min-[1440px]:gap-8 min-[1440px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : ''}>
         <ReadingStyles />
-        {/* Ordinateur : sommaire collant à gauche. */}
+        {/* Grand écran (≥ 1440 px) : sommaire collant dans la marge GAUCHE ; la feuille reste centrée. */}
         {withOutline && (
-          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] overflow-y-auto pb-4 pe-1 lg:block print:!hidden" data-tour="lecon-sommaire"
+          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] w-[200px] overflow-y-auto pb-4 pe-1 min-[1440px]:col-start-1 min-[1440px]:block min-[1440px]:justify-self-end print:!hidden" data-tour="lecon-sommaire"
             onClickCapture={trackOutline}>
             <LessonOutlinePanel outline={outline} storageKey={`lecon-${content.id}`} syncHash />
           </aside>
         )}
-        {/* La feuille garde la largeur du PDF, sommaire ou non (pageHelpers). */}
-        <div className="flex min-w-0 flex-col gap-8 sm:gap-10" style={{ maxWidth: SHEET_TEXT_PX + 2 * 48 + 2 }}>
+        {/* La feuille garde la largeur du PDF et reste CENTRÉE à l'écran (mx-auto), sommaire ou non. */}
+        <div className="mx-auto flex min-w-0 flex-col gap-8 sm:gap-10 min-[1440px]:col-start-2 min-[1440px]:mx-0" style={{ maxWidth: SHEET_TEXT_PX + 2 * 48 + 2 }}>
           <div>
-            {/* Téléphone / tablette : sommaire repliable, collé sous la barre du site. */}
+            {/* Sous 1440 px : sommaire repliable, collé sous la barre du site. */}
             {withOutline && (
-              <div className="sticky top-[68px] z-20 mb-3 lg:hidden print:hidden" onClickCapture={trackOutline}>
+              <div className="sticky top-[68px] z-20 mb-3 min-[1440px]:hidden print:hidden" onClickCapture={trackOutline}>
                 <LessonOutlineBar outline={outline} storageKey={`lecon-${content.id}`} tourId="lecon-sommaire-barre" />
               </div>
             )}
