@@ -6,7 +6,7 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText, FilePlus2, Moon, Sun, MessagesSquare, Flame, Check, Users,
+  FileText, FilePlus2, Moon, Sun, MessagesSquare, MessageSquareText, Flame, Check, Users,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
@@ -46,6 +46,8 @@ interface NavItem {
   defi?: boolean;
   /** Membres connectés seulement. */
   membres?: boolean;
+  /** Entrée liée à une vue de /discussions (forum ou commentaires), distinguée par ?vue. */
+  vue?: 'forum' | 'commentaires';
 }
 
 interface NavGroup {
@@ -84,12 +86,14 @@ const WORK_GROUP: NavGroup = {
   ],
 };
 
-// Communauté (09/11/2026) : le forum ; la page Membres quand elle est ouverte (lib/features.ts, MEMBRES_OUVERT).
+// Communauté : le forum et les commentaires des contenus, séparés en deux entrées (10/11/2026) ; la page Membres
+// quand elle est ouverte (lib/features.ts, MEMBRES_OUVERT). Les deux mènent à /discussions, distinguées par ?vue.
 const COMMUNITY_GROUP: NavGroup = {
   title: 'Communauté',
   tour: 'nav-communaute',
   items: [
-    { to: '/discussions', label: 'Discussions', icon: MessagesSquare, match: ['/discussions'], compteur: true },
+    { to: '/discussions', label: 'Forum', icon: MessagesSquare, match: ['/discussions'], compteur: true, vue: 'forum' },
+    { to: '/discussions?vue=commentaires', label: 'Commentaires', icon: MessageSquareText, match: ['/discussions'], vue: 'commentaires' },
     ...(MEMBRES_OUVERT ? [{ to: '/membres', label: 'Membres', icon: Users, match: ['/membres'], membres: true }] : []),
   ],
 };
@@ -291,6 +295,11 @@ const SidebarInner: React.FC<{
     const p = location.pathname;
     if (item.to === '/') return p === '/';
     if (item.exclude?.some(x => under(p, x))) return false;
+    // Forum vs Commentaires : même page /discussions, distinguée par ?vue.
+    if (item.vue) {
+      const vue = new URLSearchParams(location.search).get('vue') === 'commentaires' ? 'commentaires' : 'forum';
+      return under(p, '/discussions') && vue === item.vue;
+    }
     return item.match?.some(x => under(p, x)) ?? false;
   };
 
