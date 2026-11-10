@@ -1,5 +1,5 @@
 // Petits éléments communs des quiz : écart avec le passage précédent, étiquettes « Nouveau » et « Chapitre
-// approfondi », explication d'une question corrigée. Les chapitres eux-mêmes sont des cartes (ChapterCard.tsx).
+// approfondi », explication d'une question corrigée. Les chapitres eux-mêmes sont des lignes (ChapterRows.tsx).
 import React from 'react';
 import { Award } from 'lucide-react';
 import { t } from '@/i18n';

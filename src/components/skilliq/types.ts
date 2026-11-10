@@ -191,13 +191,3 @@ export const frDate = (iso: string) => new Date(iso).toLocaleDateString(dateLoca
 
 /** Couleurs du score : vert à partir de 50 %, or en dessous (jamais rouge : ce n'est pas une faute). */
 export const RING = { good: '#1a7a4a', low: '#c0892f', track: '#efece6' } as const;
-
-/** Chapitres rangés par sous-domaine (ordre alphabétique, « Autres » en dernier). */
-export function bySubfield(chapters: QuizChapter[]) {
-  const groups = new Map<string, QuizChapter[]>();
-  for (const c of chapters) {
-    const key = c.subfield ?? c.subject ?? 'Autres';
-    groups.set(key, [...(groups.get(key) ?? []), c]);
-  }
-  return [...groups.entries()].sort(([a], [b]) => Number(a === 'Autres') - Number(b === 'Autres') || a.localeCompare(b, 'fr'));
-}
