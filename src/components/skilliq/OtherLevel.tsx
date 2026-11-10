@@ -1,10 +1,10 @@
 // « Autres niveaux » : les quiz prêts des autres niveaux (cas rare : réviser l'année d'avant, professeur, élève sans
-// niveau). Le programme de tous les niveaux n'est chargé qu'à l'ouverture. Chaque chapitre est une carte avec ses deux
-// quiz (31/10/2026) : le quiz du cours et, s'il existe à ce niveau, l'approfondissement.
+// niveau). Le programme de tous les niveaux n'est chargé qu'à l'ouverture. Chaque chapitre est une ligne avec ses deux
+// quiz (le quiz du cours et, s'il existe à ce niveau, l'approfondissement), dans l'ordre du programme (10/11/2026).
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { getTaxonomy, type TaxonomyLevel } from './api';
-import { ChapterCard, type StageProps } from './ChapterCard';
+import { ChapterTable, type StageProps } from './ChapterRows';
 import { t } from '@/i18n';
 import { isFresh, quizKey, takenOn, type ActiveQuiz, type QuizEnCours, type QuizType, type SkillAssessment } from './types';
 
@@ -33,7 +33,8 @@ interface Props {
   onView?: (q: ActiveQuiz) => void;
 }
 
-/** Niveaux qui ont au moins un quiz prêt (cours ou approfondissement), avec ces chapitres (par matière, sans doublon). */
+/** Niveaux qui ont au moins un quiz prêt (cours ou approfondissement), avec ces chapitres (par matière, sans doublon),
+ *  dans l'ordre du programme : c'est celui dans lequel le serveur les envoie, on ne les retrie pas. */
 export function levelsWithQuizzes(levels: TaxonomyLevel[], availableByLevel: ByLevel, deepByLevel: ByLevel = {},
   excludeLevelId?: number | null) {
   return levels
@@ -44,8 +45,7 @@ export function levelsWithQuizzes(levels: TaxonomyLevel[], availableByLevel: ByL
       const subjects = l.subjects.map((s) => {
         const seen = new Set<number>();
         const chapters = s.chapters
-          .filter((c) => (cours[String(c.id)] > 0 || deep[String(c.id)] > 0) && !seen.has(c.id) && (seen.add(c.id), true))
-          .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+          .filter((c) => (cours[String(c.id)] > 0 || deep[String(c.id)] > 0) && !seen.has(c.id) && (seen.add(c.id), true));
         return { ...s, chapters };
       }).filter((s) => s.chapters.length > 0);
       return { ...l, subjects, count: subjects.reduce((n, s) => n + s.chapters.length, 0), hasDeep: Object.values(deep).some((n) => n > 0) };
@@ -120,12 +120,10 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({
       {level.subjects.map((s) => (
         <div key={s.id}>
           {level.subjects.length > 1 && <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{s.name}</h3>}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {s.chapters.map((c) => (
-              <ChapterCard key={c.id} name={c.name} cours={stage(c, s.name, 'cours')}
-                deep={level.hasDeep ? stage(c, s.name, 'approfondissement') : undefined} />
-            ))}
-          </div>
+          <ChapterTable deep={level.hasDeep} lines={s.chapters.map((c) => ({
+            id: c.id, name: c.name, cours: stage(c, s.name, 'cours'),
+            deep: level.hasDeep ? stage(c, s.name, 'approfondissement') : undefined,
+          }))} />
         </div>
       ))}
     </div>
@@ -138,7 +136,7 @@ export const OtherLevel: React.FC<Props> = ({ standalone = false, ...props }) =>
   return (
     <details className="group rounded-2xl border border-line bg-white" onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 text-[13.5px] text-ink-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:px-5 [&::-webkit-details-marker]:hidden">
-        <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-open:rotate-90" aria-hidden />
+        <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-open:rotate-90 rtl:rotate-180" aria-hidden />
         <span className="min-w-0 flex-1 font-semibold text-ink">{t('Autres niveaux')}</span>
       </summary>
       {open && <div className="border-t border-line px-4 py-4 sm:px-5"><LevelQuizzes {...props} /></div>}

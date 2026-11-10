@@ -53,17 +53,30 @@ const Header: React.FC<{ subtitle?: string }> = ({ subtitle }) => (
   </div>
 );
 
-/** Squelette à la forme de l'état le plus fréquent (une carte centrée, une ligne repliée). */
+/** Squelette à la forme de la page : l'encadré du quiz à faire, puis la liste des chapitres. */
 const PageSkeleton: React.FC = () => (
-  <div role="status" aria-label={t('Chargement')} className="flex flex-col gap-3">
-    <div className="flex animate-pulse flex-col items-center rounded-2xl border border-line bg-white px-6 py-10 sm:py-12">
-      <div className="h-14 w-14 rounded-2xl bg-[#efece6]" />
-      <div className="mt-5 h-4 w-1/2 max-w-xs rounded bg-[#efece6]" />
-      <div className="mt-3 h-3 w-2/3 max-w-md rounded bg-[#f2f1ee]" />
-      <div className="mt-2 h-3 w-1/2 max-w-sm rounded bg-[#f2f1ee]" />
-      <div className="mt-6 h-11 w-72 max-w-full rounded-xl bg-[#efece6]" />
+  <div role="status" aria-label={t('Chargement')} className="flex animate-pulse flex-col gap-8 motion-reduce:animate-none">
+    <div className="rounded-2xl border border-line bg-white">
+      <div className="flex items-center gap-5 p-5 sm:p-6">
+        <div className="hidden h-12 w-12 shrink-0 rounded-2xl bg-[#efece6] sm:block" />
+        <div className="min-w-0 flex-1">
+          <div className="h-3 w-24 rounded bg-[#f2f1ee]" />
+          <div className="mt-2.5 h-5 w-2/3 max-w-xs rounded bg-[#efece6]" />
+          <div className="mt-2.5 h-3 w-1/2 max-w-[14rem] rounded bg-[#f2f1ee]" />
+        </div>
+        <div className="hidden h-11 w-36 shrink-0 rounded-xl bg-[#efece6] sm:block" />
+      </div>
+      <div className="border-t border-line px-5 py-4 sm:px-6"><div className="h-3 w-2/3 max-w-md rounded bg-[#f2f1ee]" /></div>
     </div>
-    <div className="h-12 animate-pulse rounded-2xl border border-line bg-white" />
+    <div className="rounded-2xl border border-line bg-white">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex items-center gap-4 border-t border-line px-5 py-4 first:border-t-0">
+          <div className="h-3 w-4 shrink-0 rounded bg-[#f2f1ee]" />
+          <div className="h-4 flex-1 rounded bg-[#efece6]" style={{ maxWidth: `${14 + ((i * 5) % 9)}rem` }} />
+          <div className="ms-auto h-8 w-28 shrink-0 rounded-full bg-[#f2f1ee]" />
+        </div>
+      ))}
+    </div>
   </div>
 );
 
