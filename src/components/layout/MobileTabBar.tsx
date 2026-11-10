@@ -12,7 +12,7 @@
  */
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, GraduationCap, Home, ListChecks, Menu } from 'lucide-react';
+import { BookOpen, Home, ListChecks, Menu } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,8 +75,10 @@ export const MobileTabBar: React.FC<{ menuOpen: boolean; onOpenMenu: () => void 
       ? [
         home,
         { to: '/exercises', label: 'Exercices', icon: BookOpen, active: onExercises },
+        // « Classes » retiré de la barre (fonctionnalité encore peu utilisée, Natsu 10/11/2026) : « Leçons »
+        // à la place. Les Classes restent accessibles par le menu.
+        { to: '/lessons', label: 'Leçons', icon: LessonIcon, active: startsWith(pathname, '/lessons') },
         { to: '/exams', label: 'Devoirs', icon: APlusIcon, active: onExams },
-        { to: '/classrooms', label: 'Classes', icon: GraduationCap, active: startsWith(pathname, '/classrooms') },
       ]
       : [
         home,
