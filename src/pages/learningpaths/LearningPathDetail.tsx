@@ -66,7 +66,7 @@ const ProgressRing: React.FC<{ progress: number; size?: number }> = ({ progress,
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">{progress}%</div>
+          <div className="text-2xl font-semibold text-gray-900">{progress}%</div>
           <div className="text-xs text-gray-500">{t('terminé')}</div>
         </div>
       </div>
@@ -97,7 +97,7 @@ const StatsCard: React.FC<{
         </div>
       )}
     </div>
-    <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+    <div className="text-2xl font-semibold text-gray-900 mb-1">{value}</div>
     <div className="text-sm text-gray-600">{label}</div>
   </motion.div>
 );
@@ -134,7 +134,7 @@ const ChapterCard: React.FC<{
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold ${
                 isCompleted ? 'bg-green-100 text-green-700' : 
                 isCurrent ? 'bg-indigo-100 text-indigo-700' : 
                 'bg-gray-100 text-gray-700'
@@ -176,7 +176,7 @@ const ChapterCard: React.FC<{
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                    className="bg-brand h-2 rounded-full transition-[width] duration-500"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -255,7 +255,7 @@ const ChapterCard: React.FC<{
 
               <Button
                 onClick={onStart}
-                className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                className="w-full mt-4 bg-brand hover:bg-brand-hover"
               >
                 {progress > 0 ? t('Reprendre le chapitre') : t('Commencer le chapitre')}
                 <ChevronRight className="w-4 h-4 ms-2" />
@@ -393,7 +393,7 @@ export const LearningPathDetail: React.FC = () => {
     <div className="min-h-screen bg-[#faf9f7]">
       {/* Enhanced Header */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700"></div>
+        <div className="absolute inset-0 bg-ink"></div>
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="absolute inset-0">
           <div className="absolute top-10 end-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
@@ -426,7 +426,7 @@ export const LearningPathDetail: React.FC = () => {
                 ))}
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              <h1 className="text-4xl md:text-5xl font-semibold text-white mb-4">
                 {learningPath.title}
               </h1>
               
@@ -462,8 +462,8 @@ export const LearningPathDetail: React.FC = () => {
                 <div className="flex items-center gap-6">
                   <ProgressRing progress={progress} />
                   <div>
-                    <h3 className="text-2xl font-bold text-white mb-2">
-                      {t('Tu avances bien !')}
+                    <h3 className="text-2xl font-semibold text-white mb-2">
+                      {t('Tu avances bien')}
                     </h3>
                     <p className="text-white/80">
                       {t('Continue, chapitre après chapitre.')}
@@ -493,7 +493,7 @@ export const LearningPathDetail: React.FC = () => {
             </Button>
             <Button
               onClick={() => navigate(`/learning-path/${id}/chapters/create`)}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              className="bg-brand hover:bg-brand-hover"
             >
               <Plus className="w-4 h-4 me-2" />
               {t('Ajouter un chapitre')}
@@ -512,44 +512,44 @@ export const LearningPathDetail: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-12"
             >
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('Ta progression')}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">{t('Ta progression')}</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatsCard
                   icon={GraduationCap}
                   value={`${stats.completed_chapters}/${stats.total_chapters}`}
                   label={t('Chapitres terminés')}
-                  color="bg-gradient-to-br from-indigo-500 to-indigo-600"
+                  color="bg-ink"
                   trend={10}
                 />
                 <StatsCard
                   icon={Video}
                   value={`${stats.videos_watched}/${stats.total_videos}`}
                   label={t('Vidéos regardées')}
-                  color="bg-gradient-to-br from-purple-500 to-purple-600"
+                  color="bg-ink"
                 />
                 <StatsCard
                   icon={Brain}
                   value={`${Math.round(stats.quiz_average || 0)}%`}
                   label={t('Résultats aux quiz')}
-                  color="bg-gradient-to-br from-green-500 to-green-600"
+                  color="bg-ink"
                   trend={5}
                 />
                 <StatsCard
                   icon={Timer}
                   value={`${Math.round(stats.total_time_spent / 3600)}h`}
                   label={t('Temps passé')}
-                  color="bg-gradient-to-br from-orange-500 to-orange-600"
+                  color="bg-ink"
                 />
               </div>
 
               {/* Achievement Section */}
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+              <div className="bg-ink rounded-xl p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-semibold mb-2">{t('Prochaine étape')}</h3>
                     <p className="text-white/80">
-                      {t('Complete {n} more chapters to earn your next badge!', { n: 5 - (stats.completed_chapters % 5) })}
+                      {t('Complete {n} more chapters to earn your next badge.', { n: 5 - (stats.completed_chapters % 5) })}
                     </p>
                   </div>
                   <Trophy className="w-12 h-12 text-yellow-300" />
@@ -560,7 +560,7 @@ export const LearningPathDetail: React.FC = () => {
 
           {/* Course Content */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">{t('Course Curriculum')}</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-8">{t('Course Curriculum')}</h2>
             
             <div className="space-y-4">
               {learningPath.path_chapters.map((chapter, index) => (
@@ -585,7 +585,7 @@ export const LearningPathDetail: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="mt-16"
             >
-              <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl p-12 text-white text-center">
+              <div className="relative overflow-hidden bg-ink rounded-2xl p-12 text-white text-center">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative z-10">
                   <motion.div
@@ -597,7 +597,7 @@ export const LearningPathDetail: React.FC = () => {
                   </motion.div>
                   
                   <Award className="w-20 h-20 mx-auto mb-6 text-yellow-300" />
-                  <h3 className="text-3xl font-bold mb-4">{t('Parcours terminé, bravo !')}</h3>
+                  <h3 className="text-3xl font-semibold mb-4">{t('Parcours terminé, bravo')}</h3>
                   <p className="text-xl mb-8 max-w-2xl mx-auto">
                     {t('Tu as terminé tous les chapitres de ce parcours. Ton travail régulier a payé.')}
                   </p>

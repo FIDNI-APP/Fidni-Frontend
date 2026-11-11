@@ -58,7 +58,7 @@ function QuestionPill({ index, current, answered, onClick, square = false }: {
           ? 'rgba(180,176,168,.3)'
           : answered ? 'rgba(34,197,94,.15)' : 'transparent',
         color: current ? '#fff' : answered ? '#86efac' : '#d8d4cc',
-        fontSize: 12, fontWeight: 700, fontFamily: 'var(--fd-mono)',
+        fontSize: 12, fontWeight: 600, fontFamily: 'var(--fd-mono)',
         cursor: 'pointer',
       }}
     >
@@ -265,7 +265,7 @@ export default function ConcoursSimulatePage() {
       >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate" style={{ fontSize: 11, letterSpacing: '.06em', color: '#b8b4ac', textTransform: 'uppercase', fontWeight: 700 }}>
+            <div className="truncate" style={{ fontSize: 11, color: '#b8b4ac', fontWeight: 600 }}>
               <span className="hidden sm:inline">{t('Simulation')} · </span>{sess.concours_type.toUpperCase()}
             </div>
             <div className="whitespace-nowrap" style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginTop: 2 }}>
@@ -287,7 +287,7 @@ export default function ConcoursSimulatePage() {
               }}
             >
               {lowTime ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-              <span style={{ fontFamily: 'var(--fd-mono)', fontSize: 16, fontWeight: 700, letterSpacing: '.05em' }}>
+              <span style={{ fontFamily: 'var(--fd-mono)', fontSize: 16, fontWeight: 600, letterSpacing: '.05em' }}>
                 {formatTime(secondsLeft)}
               </span>
             </div>
@@ -356,8 +356,8 @@ export default function ConcoursSimulatePage() {
               className="inline-flex items-center justify-center flex-shrink-0"
               style={{
                 width: 40, height: 40, borderRadius: 11,
-                background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
-                fontSize: 16, fontWeight: 800, fontFamily: 'var(--fd-mono)',
+                background: '#1a1a1a', color: '#fff',
+                fontSize: 16, fontWeight: 600, fontFamily: 'var(--fd-mono)',
               }}
             >
               {pos + 1}
@@ -391,7 +391,7 @@ export default function ConcoursSimulatePage() {
                       width: 34, height: 34, borderRadius: 9,
                       background: selected ? '#1a1a1a' : 'transparent',
                       color: selected ? '#fff' : '#d8d4cc',
-                      fontSize: 14, fontWeight: 800, fontFamily: 'var(--fd-mono)',
+                      fontSize: 14, fontWeight: 600, fontFamily: 'var(--fd-mono)',
                       border: `1.5px solid ${selected ? '#1a1a1a' : 'rgba(255,255,255,.18)'}`,
                     }}
                   >
@@ -454,7 +454,7 @@ export default function ConcoursSimulatePage() {
             top: 92,
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#b8b4ac', marginBottom: 10 }}>
             {t('Questions')}
           </div>
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
@@ -537,7 +537,7 @@ export default function ConcoursSimulatePage() {
           onClick={() => setShowConfirm(false)}
         >
           <div className="fd-card" style={{ maxWidth: 420, padding: 22 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>{t('Soumettre la simulation ?')}</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{t('Soumettre la simulation ?')}</h3>
             <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>
               {t('Tu as répondu à')} <strong style={{ color: '#1a1a1a' }}>{answered.size}</strong> {answered.size > 1 ? t('questions sur {total}.', { total: sess.total_questions }) : t('question sur {total}.', { total: sess.total_questions })}
               {' '}{t('Les questions non répondues compteront comme fausses.')}

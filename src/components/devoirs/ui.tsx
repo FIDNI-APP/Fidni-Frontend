@@ -34,13 +34,13 @@ export function DateTile({ date, size = 'md', urgent = false }: { date: string; 
   const num = size === 'lg' ? 'text-[28px]' : size === 'sm' ? 'text-[18px]' : 'text-[22px]';
   return (
     <div aria-hidden className={`${dims} flex shrink-0 flex-col self-start overflow-hidden rounded-xl border border-line bg-white text-center shadow-[0_1px_0_rgba(20,18,16,.05)]`}>
-      <span className={`py-[3px] text-[10px] font-bold uppercase tracking-[.08em] text-white ${urgent ? 'bg-[#a23b34]' : 'bg-ink'}`}>
+      <span className={`py-[3px] text-[12.5px] font-medium text-white ${urgent ? 'bg-[#a23b34]' : 'bg-ink'}`}>
         {t(DAYS[d.getDay()])}
       </span>
-      <span className={`fd-nums pt-1 font-bold leading-none text-ink ${num}`} style={{ fontFamily: 'var(--fd-mono)' }}>
+      <span className={`fd-nums pt-1 font-semibold leading-none text-ink ${num}`} style={{ fontFamily: 'var(--fd-mono)' }}>
         {d.getDate()}
       </span>
-      <span className="pb-1.5 pt-0.5 text-[10.5px] font-semibold uppercase tracking-[.04em] text-ink-faint">{t(MONTHS[d.getMonth()])}</span>
+      <span className="pb-1.5 pt-0.5 text-[12.5px] font-medium text-ink-faint">{t(MONTHS[d.getMonth()])}</span>
     </div>
   );
 }
@@ -75,7 +75,7 @@ export function Readiness({ value, compact = false }: { value: number | null | u
   return (
     <div className="min-w-0">
       <p className={`${compact ? 'text-[12px]' : 'text-[13px]'} text-ink-soft`}>
-        {t('Prêt à')} <b className="fd-nums font-bold text-ink">{value} %</b>
+        {t('Prêt à')} <b className="fd-nums font-semibold text-ink">{value} %</b>
       </p>
       <div className={`mt-1.5 overflow-hidden rounded-full bg-[#f2f1ee] ${compact ? 'h-1.5' : 'h-2'}`} role="img" aria-label={t('Prêt à {pct} %', { pct: value })}>
         <div className={`h-full rounded-full ${readinessTone(value)}`} style={{ width: `${Math.max(value, 3)}%` }} />
@@ -109,7 +109,7 @@ export function ReadinessRing({ value, size = 92 }: { value: number | null; size
 export function GradeBadge({ grade }: { grade: number }) {
   const ok = grade >= 10;
   return (
-    <span className={`fd-nums inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-bold ${ok ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-gold-strong'}`}>
+    <span className={`fd-nums inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${ok ? 'bg-brand-soft text-brand-hover' : 'bg-gold-soft text-gold-strong'}`}>
       {String(grade).replace('.', ',')} / 20
     </span>
   );

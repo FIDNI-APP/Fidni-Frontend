@@ -119,7 +119,7 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({
       )}
       {level.subjects.map((s) => (
         <div key={s.id}>
-          {level.subjects.length > 1 && <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{s.name}</h3>}
+          {level.subjects.length > 1 && <h3 className="mb-3 text-[12.5px] font-medium text-ink-faint">{s.name}</h3>}
           <ChapterTable deep={level.hasDeep} lines={s.chapters.map((c) => ({
             id: c.id, name: c.name, cours: stage(c, s.name, 'cours'),
             deep: level.hasDeep ? stage(c, s.name, 'approfondissement') : undefined,

@@ -255,7 +255,7 @@ function ContentHeading({ content, kind }: { content: Content; kind: ContentKind
   );
   return (
     <div style={{ padding: '18px 20px 14px' }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--fdm-gold-strong)' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fdm-gold-strong)' }}>
         {[t(KIND_LABEL[kind]), chapter, level].filter(Boolean).join(' · ')}
       </div>
       <h1 className="fdm-title" style={{ fontSize: 25, lineHeight: 1.2, margin: '8px 0 10px', fontWeight: 600 }}>{content.title}</h1>
@@ -296,7 +296,7 @@ function Paper({ structure, ...rest }: PaperProps) {
           return (
             <div key={block.id} style={{ ...divider, padding: '18px 0 6px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <div className="fdm-title" style={{ flex: 1, fontSize: 19, fontWeight: 600, color: 'var(--ion-color-primary)' }}><MathHtml html={block.content?.html} /></div>
-              {Number(block.points) > 0 && <span className="fdm-muted" style={{ fontSize: 12.5, fontWeight: 700 }}>{countLabel(Number(block.points), '{n} pt', '{n} pts')}</span>}
+              {Number(block.points) > 0 && <span className="fdm-muted" style={{ fontSize: 12.5, fontWeight: 600 }}>{countLabel(Number(block.points), '{n} pt', '{n} pts')}</span>}
             </div>
           );
         }
@@ -317,7 +317,7 @@ function Question({ block, number, ...rest }: { block: ExerciseBlock; number: nu
       <div style={{ display: 'flex', gap: 10 }}>
         <span style={{
           flexShrink: 0, width: 26, height: 26, borderRadius: 13, background: 'var(--fdm-brand-soft)', color: 'var(--ion-color-primary)',
-          display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13.5, marginTop: 1,
+          display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 13.5, marginTop: 1,
         }}>{number}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <MathHtml html={block.content?.html} />
@@ -332,7 +332,7 @@ function Question({ block, number, ...rest }: { block: ExerciseBlock; number: nu
         : subs.map((sq, i) => (
             <div key={sq.id} style={{ marginTop: 14, marginInlineStart: 36 }}>
               <div style={{ display: 'flex', gap: 8 }}>
-                <span style={{ fontWeight: 700, color: 'var(--fdm-muted)', minWidth: 16 }}>{SUB_LETTERS[i] ?? i + 1})</span>
+                <span style={{ fontWeight: 600, color: 'var(--fdm-muted)', minWidth: 16 }}>{SUB_LETTERS[i] ?? i + 1})</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <MathHtml html={sq.content?.html} />
                   <div style={{ marginTop: 6 }}><QuestionFacts difficulty={sq.meta?.difficulty ?? block.meta?.difficulty} /></div>
@@ -352,7 +352,7 @@ function ClassRate({ stat }: { stat?: QuestionStat }) {
   const low = stat.total >= PERCENT_FROM && pct < 50;
   return (
     <span title={t('Élèves qui réussissent cette question')} style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, fontWeight: 700,
+      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, fontWeight: 600,
       color: low ? 'var(--fdm-gold-strong)' : 'var(--fdm-muted)',
     }}>
       <IonIcon icon={peopleOutline} />
@@ -395,13 +395,13 @@ function Leaf({ path, hint, solution, indent = 36, progress, options, stats, onA
       </div>
       {hintOpen && hint?.html && (
         <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 14, background: 'var(--fdm-gold-soft)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--fdm-gold-strong)', marginBottom: 4 }}>{t('Indication')}</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fdm-gold-strong)', marginBottom: 4 }}>{t('Indication')}</div>
           <MathHtml html={hint.html} />
         </div>
       )}
       {solutionOpen && solution?.html && (
         <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 14, background: 'var(--fdm-brand-soft)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ion-color-primary)', marginBottom: 4 }}>{t('Solution')}</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ion-color-primary)', marginBottom: 4 }}>{t('Solution')}</div>
           <MathHtml html={solution.html} />
         </div>
       )}
@@ -418,7 +418,7 @@ function Leaf({ path, hint, solution, indent = 36, progress, options, stats, onA
             <button key={o} type="button" className="fdm-pressable" aria-pressed={active}
               onClick={() => onAssess(path, o, solutionOpen ? 'apres_solution' : 'question')}
               style={{
-                height: 36, padding: '0 6px', borderRadius: 12, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                height: 36, padding: '0 6px', borderRadius: 12, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 background: active ? opt.soft : 'transparent', color: active ? opt.color : 'var(--fdm-muted)',
                 border: `1.5px solid ${active ? opt.color : 'var(--fdm-line)'}`, whiteSpace: 'nowrap',
               }}>

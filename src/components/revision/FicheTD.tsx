@@ -206,7 +206,7 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
             className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-start active:bg-paper">
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-white">
               <ClipboardList className="h-[18px] w-[18px]" aria-hidden />
-              {n > 0 && <span className="fd-nums absolute -end-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-white ring-2 ring-white">{n}</span>}
+              {n > 0 && <span className="fd-nums absolute -end-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-semibold text-white ring-2 ring-white">{n}</span>}
             </span>
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block text-[14px] font-semibold text-ink">{created && !n ? t('Fiche créée') : t('Fiche TD')}</span>
@@ -305,7 +305,7 @@ export const FichePanel: React.FC<{ fiche: FicheTD; context: FicheContext }> = (
 
         {related && related.length > 0 && (
           <div className="border-t border-line px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{context.chapterIds.length ? t('Tes listes sur ce chapitre') : t('Tes listes')}</p>
+            <p className="text-[12.5px] font-medium text-ink-faint">{context.chapterIds.length ? t('Tes listes sur ce chapitre') : t('Tes listes')}</p>
             <ul className="mt-1.5 space-y-1">
               {related.slice(0, 6).map((l) => (
                 <li key={l.id} className="flex items-center gap-2 text-[13px]">
@@ -342,7 +342,7 @@ export const FicheButton: React.FC<{ fiche: FicheTD }> = ({ fiche }) => {
       <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
         <ClipboardList className="h-[18px] w-[18px]" aria-hidden />
         {n > 0 && (
-          <span className="fd-nums absolute -end-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-white ring-2 ring-brand">{n}</span>
+          <span className="fd-nums absolute -end-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold px-1 text-[11px] font-semibold text-white ring-2 ring-brand">{n}</span>
         )}
       </span>
       <span className="text-start leading-tight">

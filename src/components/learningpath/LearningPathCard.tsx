@@ -80,14 +80,14 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
       {isStarted && (
         <div className="absolute top-0 start-0 end-0 h-1 bg-gray-100 z-10">
           <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+            className="h-full bg-brand transition-[width] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
 
       {/* Header with gradient */}
-      <div className="relative h-36 bg-gradient-to-br from-blue-600 to-indigo-700 p-4 flex flex-col">
+      <div className="relative h-36 bg-ink p-4 flex flex-col">
         <div className="flex justify-between items-start z-10">
           <span className="inline-flex items-center px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white text-xs font-medium">
             <BookOpen className="w-3 h-3 me-1.5" />
@@ -197,7 +197,7 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
         {/* Action button */}
         <Button
           onClick={handleStartClick}
-          className=" bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg mt-auto w-full"
+          className=" bg-brand hover:bg-brand-hover mt-auto w-full"
           size="sm"
         >
           {isCompleted ? (

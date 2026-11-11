@@ -22,12 +22,12 @@ const FIGURE = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.
 
 const Exercice: React.FC<{ sombre: boolean }> = ({ sombre }) => (
   <Ecran>
-    <span className={`absolute top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint ${sombre ? 'right-2' : 'left-2'}`}>
+    <span className={`absolute top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12.5px] font-medium text-ink-faint ${sombre ? 'right-2' : 'left-2'}`}>
       {sombre ? t('Sombre') : t('Clair')}
     </span>
     <article className="mt-5 rounded-2xl border border-line bg-white p-3.5">
       <p className="flex items-center gap-2">
-        <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold text-gold-strong">{t('Moyen')}</span>
+        <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-semibold text-gold-strong">{t('Moyen')}</span>
         <span className="text-[11.5px] text-ink-faint">Suites numériques</span>
       </p>
       <p className="fd-display mt-1.5 text-[17px] leading-tight text-ink">Exercice 4 · Une suite récurrente</p>

@@ -53,7 +53,7 @@ export const LegalLayout: React.FC<{ title: string; description: string; intro: 
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <nav className="bg-white rounded-2xl border border-[#e7e3dc] p-5 mb-6" aria-label={t('Sommaire')}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#8a857d] mb-3"
+          <p className="text-[13px] font-semibold text-[#8a857d] mb-3"
             style={{ fontFamily: 'var(--fd-mono)' }}>{t('Sommaire')}</p>
           <ol className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
             {sections.map((s, i) => (

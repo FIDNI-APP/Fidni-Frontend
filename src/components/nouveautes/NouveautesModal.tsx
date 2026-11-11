@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
-import { ArrowRight, Sparkles, X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import type { Nouveaute, SceneId } from './registre';
 import SceneApercu from './scene/SceneApercu';
 import SceneFaibles from './scene/SceneFaibles';
@@ -120,8 +120,8 @@ const NouveautesModal: React.FC<{ nouveaute: Nouveaute; ctaLabel: string; onFini
 
         <div className="min-h-[132px] overflow-y-auto px-5 pt-4 sm:px-7 sm:pt-5">
           <p className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold uppercase tracking-[.08em] text-gold-strong">
-              <Sparkles className="h-3 w-3" aria-hidden /> {t('Nouveau')}
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[12.5px] font-medium text-ink-faint">
+{t('Nouveau')}
             </span>
             <span className="text-[12.5px] font-semibold text-ink-faint">{t(nouveaute.sujet)}</span>
           </p>

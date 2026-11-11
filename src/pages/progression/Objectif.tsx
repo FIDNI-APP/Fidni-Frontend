@@ -56,7 +56,7 @@ export function Objectif({ data, className = '' }: { data: ObjectifData; classNa
     <section data-tour="prog-resume" aria-labelledby="objectif-titre"
       className={`flex flex-col self-start rounded-2xl border border-line bg-white p-5 shadow-[0_1px_0_rgba(20,18,16,.03)] sm:p-6 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
+        <p className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-faint">
           <Compass className="h-3.5 w-3.5" aria-hidden /> {t('Ton objectif')}
         </p>
         {data.ds && (

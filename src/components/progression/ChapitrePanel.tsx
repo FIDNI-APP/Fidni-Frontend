@@ -18,7 +18,7 @@ import { t } from '@/i18n';
 const Chiffre: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="rounded-xl border border-line bg-white px-3 py-2.5">
     <p className="text-[11.5px] text-ink-faint">{label}</p>
-    <p className="fd-nums mt-0.5 text-[18px] font-bold leading-tight text-ink">{value}</p>
+    <p className="fd-nums mt-0.5 text-[18px] font-semibold leading-tight text-ink">{value}</p>
   </div>
 );
 
@@ -45,7 +45,7 @@ export const ChapitrePanel: React.FC<{ chapitre: TableauChapitre; data: Tableau;
         className="flex h-full w-full flex-col overflow-y-auto bg-[#faf9f7] shadow-[-12px_0_40px_rgba(20,18,16,.18)] rtl:shadow-[12px_0_40px_rgba(20,18,16,.18)] sm:max-w-[560px]">
         <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-line bg-white/95 px-5 py-4 backdrop-blur">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Chapitre')}</p>
+            <p className="text-[12.5px] font-medium text-ink-faint">{t('Chapitre')}</p>
             <h2 id="chapitre-titre" className="fd-display mt-1 text-[22px] leading-tight text-ink">{c.nom}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label={t('Fermer')} autoFocus

@@ -342,7 +342,7 @@ const TourOverlay: React.FC<{ active: ActiveTour; context: TourContext; onClose:
           />
         )}
         <div className="flex items-start justify-between gap-3">
-          <span className="text-[10.5px] font-semibold uppercase tracking-widest text-gold-strong fd-nums"
+          <span className="text-[12.5px] font-medium text-ink-faint fd-nums"
             style={{ fontFamily: 'var(--fd-mono)' }}>
             {visibleSteps.length > 1 ? `${position + 1} / ${visibleSteps.length}` : t('Guide')}
           </span>
@@ -351,7 +351,7 @@ const TourOverlay: React.FC<{ active: ActiveTour; context: TourContext; onClose:
             <X className="w-4 h-4" />
           </button>
         </div>
-        <h2 id={titleId} className="mt-1 text-[15.5px] font-bold text-ink leading-snug">{resolveText(step.title, context)}</h2>
+        <h2 id={titleId} className="mt-1 text-[15.5px] font-semibold text-ink leading-snug">{resolveText(step.title, context)}</h2>
         <p className="mt-1 text-[13.5px] text-ink-soft leading-relaxed">{resolveText(step.body, context)}</p>
         {/* Version courte : le reste est sur « ? » (sauf si l'étape en parle déjà). */}
         {short && isLast && stepKey(step) !== 'aide' && (

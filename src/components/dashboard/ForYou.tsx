@@ -4,7 +4,7 @@
 // Les votes et l'aperçu de l'énoncé sont sur la page du contenu.
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RotateCcw, Sparkles } from 'lucide-react';
+import { RotateCcw, Inbox } from 'lucide-react';
 import type { RecommendedContent, RecommendedItem } from '@/lib/api/dashboardApi';
 import type { Felt } from '@/types/content';
 import { CardsSkeleton, EmptyState, Section, SectionLink, Segmented } from '@/components/space/Page';
@@ -107,7 +107,7 @@ export const ForYou: React.FC<{
         ) : !recs ? (
           <CardsSkeleton n={SHOWN} className="md:grid-cols-3" />
         ) : items.length === 0 ? (
-          <EmptyState compact tone="ink" icon={Sparkles} title={t('Rien à te proposer pour l’instant')}
+          <EmptyState compact tone="ink" icon={Inbox} title={t('Rien à te proposer pour l’instant')}
             text={t('Les nouveaux contenus de ton niveau arriveront ici, choisis d’après ton travail.')}
             action={<Link to={exercisesHub} className="fd-btn-ghost min-h-10 text-[13px] font-semibold">{t('Voir les exercices')}</Link>} />
         ) : (

@@ -96,7 +96,7 @@ export const CorrectionIAButton: React.FC<{ contentId: number | string; enabled:
             <div className="flex items-start gap-3 border-b border-line px-5 py-4">
               <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-hover"><Sparkles className="h-[18px] w-[18px]" aria-hidden /></span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-[16px] font-bold text-ink">{t('Faire corriger ma copie')}</h2>
+                <h2 className="text-[16px] font-semibold text-ink">{t('Faire corriger ma copie')}</h2>
                 <p className="mt-0.5 text-[12.5px] leading-snug text-ink-faint">
                   {t('Photographie ta copie de ce sujet : l’IA lit ce que tu as écrit, le compare au corrigé de Fidni et te montre où tu as perdu des points.')}
                 </p>
@@ -139,7 +139,7 @@ export const CorrectionIAButton: React.FC<{ contentId: number | string; enabled:
 
               {anciennes.length > 0 && (
                 <div>
-                  <h3 className="text-[11.5px] font-bold uppercase tracking-[.06em] text-ink-faint">{t('Mes corrections de ce sujet')}</h3>
+                  <h3 className="text-[12.5px] font-medium text-ink-faint">{t('Mes corrections de ce sujet')}</h3>
                   <ul className="mt-1.5 divide-y divide-[#f2f1ee]">
                     {anciennes.map((c) => (
                       <li key={c.id}>

@@ -252,7 +252,7 @@ export const ChapterVideo: React.FC = () => {
           <div className="max-w-5xl mx-auto">
             {/* Video Title */}
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
                 {currentVideo.title}
               </h2>
               <div className="flex items-center gap-4 text-sm text-gray-600">

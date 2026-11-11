@@ -184,7 +184,7 @@ export const AddToRevisionListModal: React.FC<AddToRevisionListModalProps> = ({
                 <div className="flex flex-col gap-4">
                   {lists.length > 0 && (
                     <div>
-                      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Tes listes')}</h3>
+                      <h3 className="mb-2 text-[12.5px] font-medium text-ink-faint">{t('Tes listes')}</h3>
                       <ul className="grid gap-2">
                         {lists.map((list) => {
                           const isAdded = addedToLists.has(list.id);

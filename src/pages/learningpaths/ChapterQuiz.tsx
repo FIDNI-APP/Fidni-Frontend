@@ -242,7 +242,7 @@ export const ChapterQuiz: React.FC = () => {
                 <Target className="w-10 h-10 text-indigo-600" />
               </div>
               
-              <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
+              <h1 className="text-3xl font-semibold mb-2">{quiz.title}</h1>
               {quiz.description && (
                 <p className="text-gray-600 mb-6">{quiz.description}</p>
               )}

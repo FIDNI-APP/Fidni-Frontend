@@ -232,7 +232,7 @@ const validateForm = (): boolean => {
               <ArrowLeft className="w-5 h-5 me-2" />
               {t('Retour au parcours')}
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">{t('Ajouter un chapitre')}</h1>
+            <h1 className="text-3xl font-semibold text-gray-800">{t('Ajouter un chapitre')}</h1>
             {learningPath && (
               <p className="text-gray-600 mt-2">
                 {t('Adding to:')} <span className="font-semibold">{learningPath.title}</span>
@@ -244,7 +244,7 @@ const validateForm = (): boolean => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Chapter Info Card */}
             <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-800 mb-6">{t('Chapitre')}</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">{t('Chapitre')}</h2>
               
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
@@ -352,7 +352,7 @@ const validateForm = (): boolean => {
             {/* Videos Section */}
             <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800">{t('Vidéos du chapitre')}</h2>
+                <h2 className="text-xl font-semibold text-gray-800">{t('Vidéos du chapitre')}</h2>
                 <Button
                   type="button"
                   onClick={addVideo}
@@ -505,7 +505,7 @@ const validateForm = (): boolean => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                className="bg-brand hover:bg-brand-hover"
               >
                 {loading ? (
                   <>

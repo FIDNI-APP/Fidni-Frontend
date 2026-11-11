@@ -28,7 +28,7 @@ const HowTo: React.FC = () => (
   <ol className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
     {STEPS.map(([Icon, title, text], i) => (
       <li key={i} className="flex gap-3 bg-[#fcfbf9] px-4 py-3.5">
-        <span className="fd-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11.5px] font-bold text-ink-soft ring-1 ring-line">{i + 1}</span>
+        <span className="fd-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11.5px] font-semibold text-ink-soft ring-1 ring-line">{i + 1}</span>
         <p className="text-[12.5px] leading-snug text-ink-faint">
           <span className="flex items-center gap-1.5 font-semibold text-ink-soft"><Icon className="h-3.5 w-3.5" /> {t(title)}</span>
           {t(text)}

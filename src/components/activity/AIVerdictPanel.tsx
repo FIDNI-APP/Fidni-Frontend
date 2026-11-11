@@ -46,8 +46,8 @@ export const AIVerdictPanel: React.FC<{ contentId: string }> = ({ contentId }) =
     <section style={{ background: '#fff', border: '1px solid #e7e3dc', borderRadius: 16, padding: 22, marginTop: 16 }}>
       <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
         <Sparkles className="w-4 h-4" style={{ color: GREEN }} />
-        <h4 style={{ fontSize: 14, fontWeight: 700, color: INK, margin: 0 }}>{t('Correction IA')}</h4>
-        <span className="inline-flex items-center gap-1" style={{ marginInlineStart: 'auto', fontSize: 10.5, fontWeight: 700, color: '#6b6862', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99 }}>
+        <h4 style={{ fontSize: 14, fontWeight: 600, color: INK, margin: 0 }}>{t('Correction IA')}</h4>
+        <span className="inline-flex items-center gap-1" style={{ marginInlineStart: 'auto', fontSize: 10.5, fontWeight: 600, color: '#6b6862', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99 }}>
           <ShieldCheck className="w-3 h-3" /> {t('Superuser')}
         </span>
       </div>
@@ -79,7 +79,7 @@ export const AIVerdictPanel: React.FC<{ contentId: string }> = ({ contentId }) =
       {result && (
         <div style={{ marginTop: 18 }}>
           <div className="flex items-baseline gap-2" style={{ marginBottom: 12 }}>
-            <span style={{ fontSize: 24, fontWeight: 700, color: INK, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 24, fontWeight: 600, color: INK, fontVariantNumeric: 'tabular-nums' }}>
               {result.score_awarded}<span style={{ color: '#9a958c' }}> / {result.score_total}</span>
             </span>
             <span style={{ fontSize: 11.5, color: '#9a958c' }}>{t('points')} · {(result.processing_time_ms / 1000).toFixed(1)} s</span>
@@ -94,7 +94,7 @@ export const AIVerdictPanel: React.FC<{ contentId: string }> = ({ contentId }) =
                     {v.label || v.path.slice(0, 6)}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 99, background: cfg.bg, color: cfg.color }}>{t(cfg.label)}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 99, background: cfg.bg, color: cfg.color }}>{t(cfg.label)}</span>
                     {v.comment && <p style={{ fontSize: 12.5, color: '#33302b', marginTop: 5, lineHeight: 1.5 }}>{v.comment}</p>}
                   </div>
                 </div>

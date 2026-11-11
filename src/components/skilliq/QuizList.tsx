@@ -27,7 +27,7 @@ const Hero: React.FC<{ f: Featured; enCours: QuizEnCours | null; onStart: () => 
         <Icon className="h-6 w-6" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className={`text-[11px] font-bold uppercase tracking-[.1em] ${resume ? 'text-gold-strong' : 'text-brand-hover'}`}>
+        <p className={`text-[12.5px] font-medium ${resume ? 'text-gold-strong' : 'text-brand-hover'}`}>
           {resume ? t('À reprendre') : f.mode === 'refaire' ? t('À refaire') : t('Prochain quiz')}
         </p>
         <h2 id="quiz-hero-titre" className="fd-display mt-1 text-[22px] leading-tight text-ink sm:text-[24px]">{f.chapter.name}</h2>
@@ -65,7 +65,7 @@ const Stats: React.FC<{ ready: QuizChapter[]; hasDeep: boolean; bordered: boolea
       {items.map((it) => (
         <div key={it.key} className="flex items-center gap-2">
           <dt className="text-[12.5px] text-ink-faint">{it.label}</dt>
-          <dd className="fd-nums inline-flex items-center gap-1 text-[14px] font-bold text-ink">
+          <dd className="fd-nums inline-flex items-center gap-1 text-[14px] font-semibold text-ink">
             {it.badge && earned > 0 && <Award className="h-3.5 w-3.5 text-gold" aria-hidden />}{it.value}
           </dd>
         </div>

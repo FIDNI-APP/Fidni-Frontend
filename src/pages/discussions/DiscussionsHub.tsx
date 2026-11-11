@@ -299,7 +299,7 @@ export const DiscussionsHub: React.FC = () => {
         <aside className="space-y-4 lg:sticky lg:top-[84px]">
           {!commentaires && panel && panel.sans_reponse > 0 && tri !== 'sans_reponse' && (
             <div className="rounded-2xl border border-gold-line bg-gold-soft/60 p-4">
-              <p className="flex items-center gap-2 text-[13px] font-bold text-gold-strong"><Sparkles className="h-4 w-4" /> {t('À aider')}</p>
+              <p className="flex items-center gap-2 text-[13px] font-semibold text-gold-strong"><Sparkles className="h-4 w-4" /> {t('À aider')}</p>
               <p className="mt-1 text-[14px] text-ink">
                 {panel.sans_reponse > 1 ? t('{n} discussions attendent une réponse.', { n: panel.sans_reponse }) : t('Une discussion attend une réponse.')}
               </p>
@@ -311,7 +311,7 @@ export const DiscussionsHub: React.FC = () => {
           )}
           {!commentaires && panel && panel.tendances.length > 0 && (
             <div className="rounded-2xl border border-line bg-white p-4">
-              <p className="mb-2.5 flex items-center gap-2 text-[13px] font-bold text-ink"><Flame className="h-4 w-4 text-gold" /> {t('Les plus discutés')}</p>
+              <p className="mb-2.5 flex items-center gap-2 text-[13px] font-semibold text-ink"><Flame className="h-4 w-4 text-gold" /> {t('Les plus discutés')}</p>
               <ul className="space-y-2">
                 {panel.tendances.map((x) => (
                   <li key={x.content.id} className="flex items-center gap-2">
@@ -328,17 +328,17 @@ export const DiscussionsHub: React.FC = () => {
           )}
           {panel && panel.utiles.length > 0 && (
             <div className="rounded-2xl border border-line bg-white p-4">
-              <p className="mb-2.5 text-[13px] font-bold text-ink">{t('Les plus utiles')} <span className="font-medium text-ink-faint">· {t('30 jours')}</span></p>
+              <p className="mb-2.5 text-[13px] font-semibold text-ink">{t('Les plus utiles')} <span className="font-medium text-ink-faint">· {t('30 jours')}</span></p>
               <ol className="space-y-2.5">
                 {panel.utiles.map((u, i) => (
                   <li key={u.author.id} className="flex items-center gap-2.5">
-                    <span className="w-4 text-center text-[12px] font-bold text-ink-faint fd-nums">{i + 1}</span>
+                    <span className="w-4 text-center text-[12px] font-semibold text-ink-faint fd-nums">{i + 1}</span>
                     <Avatar user={u.author} size={30} />
                     <span className="min-w-0 flex-1 leading-tight">
                       <AuthorName author={u.author} className="block truncate text-[13.5px]" />
                       <RoleBadge author={u.author} />
                     </span>
-                    <span className="shrink-0 text-[12.5px] font-bold text-brand-hover fd-nums">▲ {u.utile}</span>
+                    <span className="shrink-0 text-[12.5px] font-semibold text-brand-hover fd-nums">▲ {u.utile}</span>
                   </li>
                 ))}
               </ol>

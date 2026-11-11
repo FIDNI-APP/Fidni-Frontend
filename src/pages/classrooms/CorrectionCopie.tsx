@@ -139,7 +139,7 @@ export default function CorrectionCopie() {
           <ChevronLeft className="h-4 w-4" /> {c.evaluation.titre}
         </Link>
         <span className="text-ink-faint">/</span>
-        <h1 className="text-[18px] font-bold text-ink">{c.eleve.username}</h1>
+        <h1 className="text-[18px] font-semibold text-ink">{c.eleve.username}</h1>
         <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${STATUT_CLS[c.statut]}`}>{t(STATUT_LABEL[c.statut])}</span>
         <div className="ms-auto flex items-center gap-1">
           <button type="button" disabled={!c.precedente} onClick={() => aller(c.precedente)} title={t('Copie précédente (Alt+↑)')}
@@ -195,8 +195,8 @@ export default function CorrectionCopie() {
         <div className="flex flex-col gap-4">
           <div className="sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-[0_4px_14px_rgba(20,18,16,.05)]">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Total')}</p>
-              <p dir="ltr" className="fd-nums text-[20px] font-bold text-ink">
+              <p className="text-[12.5px] font-medium text-ink-faint">{t('Total')}</p>
+              <p dir="ltr" className="fd-nums text-[20px] font-semibold text-ink">
                 {total === null ? '—' : fmt(total)}<span className="text-[13px] text-ink-faint"> / {fmt(max)}</span>
                 {total !== null && max > 0 && <span className="ms-2 text-[14px] font-semibold text-brand-hover">{fmt(Math.round(total * noteSur * 100 / max) / 100)} / {noteSur}</span>}
               </p>
@@ -255,7 +255,7 @@ export default function CorrectionCopie() {
               <summary className="cursor-pointer font-semibold text-ink-soft">{t('Tout ce que l’IA a lu sur la copie')}</summary>
               {c.transcription._pages.map((texte, i) => (
                 <div key={i} className="mt-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Page {n}', { n: i + 1 })}</p>
+                  <p className="text-[12.5px] font-medium text-ink-faint">{t('Page {n}', { n: i + 1 })}</p>
                   <TexteMaths texte={texte} className="mt-1 text-[13px] text-ink-soft" />
                 </div>
               ))}
@@ -298,7 +298,7 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
       {/* En-tête : question, barème, proposition de l'IA, note retenue */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[16px] font-bold text-ink">{t('Question {q}', { q: q.label })}
+          <h2 className="text-[16px] font-semibold text-ink">{t('Question {q}', { q: q.label })}
             <span dir="ltr" className="ms-2 text-[13.5px] font-medium text-ink-faint">/ {fmt(q.max)}</span></h2>
           {drapeau && (
             <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">
@@ -316,7 +316,7 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
           )}
           <input inputMode="decimal" aria-label={t('Points de la question {q}', { q: q.label })} value={pts}
             onChange={(e) => onSaisie({ points: e.target.value })}
-            className={`fd-nums w-20 rounded-xl border-2 px-2 py-2 text-end text-[17px] font-bold ${f?.source === 'prof' ? 'border-brand' : 'border-line'}`} />
+            className={`fd-nums w-20 rounded-xl border-2 px-2 py-2 text-end text-[17px] font-semibold ${f?.source === 'prof' ? 'border-brand' : 'border-line'}`} />
         </div>
       </div>
 
@@ -326,7 +326,7 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
       {/* Réponse de l'élève, lue par l'IA (toujours visible, formules rendues) */}
       <div className="mt-3 rounded-xl border border-line bg-[#faf9f7] px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Réponse de l’élève')}
+          <p className="text-[12.5px] font-medium text-ink-faint">{t('Réponse de l’élève')}
             {tr?.page ? <a href={`#page-${tr.page}`} className="ms-2 normal-case tracking-normal text-brand-hover hover:underline">{t('page {n}', { n: tr.page })}</a> : null}</p>
           <button type="button" onClick={() => setEdition((e) => !e)} aria-expanded={edition}
             className="text-[12px] font-semibold text-brand-hover hover:underline">
@@ -364,7 +364,7 @@ function QuestionCarte({ c, chemin, pas, saisie, drapeau, onSaisie, onRenoter }:
       {/* Commentaire pour l'élève : rendu (formules), modifiable */}
       <div className="mt-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Commentaire pour l’élève')}</p>
+          <p className="text-[12.5px] font-medium text-ink-faint">{t('Commentaire pour l’élève')}</p>
           <button type="button" onClick={() => setEditCom((e) => !e)} aria-expanded={editCom}
             className="text-[12px] font-semibold text-brand-hover hover:underline">
             {editCom ? t('Fermer') : com ? t('Modifier') : t('Écrire un commentaire')}

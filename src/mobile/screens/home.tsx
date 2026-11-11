@@ -39,12 +39,12 @@ export function HomeRoot() {
       </div>
 
       {!isAuthenticated && (
-        <div className="fdm-card" style={{ margin: '18px 16px 0', padding: 20, background: 'linear-gradient(160deg, #1f8a55, #14583a)', color: '#fff' }}>
+        <div className="fdm-card" style={{ margin: '18px 16px 0', padding: 20, background: '#1a7a4a', color: '#fff' }}>
           <div className="fdm-title" style={{ fontSize: 21, fontWeight: 600 }}>{t('Suis ta progression')}</div>
           <p style={{ margin: '6px 0 14px', opacity: .9, fontSize: 14.5, lineHeight: 1.45 }}>
             {t('Avec un compte gratuit, FIDNI retient tes réussites, te dit quoi revoir et prépare tes DS.')}
           </p>
-          <IonButton color="light" shape="round" onClick={() => setGuest(false)} style={{ '--color': '#14583a', fontWeight: 700 } as React.CSSProperties}>
+          <IonButton color="light" shape="round" onClick={() => setGuest(false)} style={{ '--color': '#14583a', fontWeight: 600 } as React.CSSProperties}>
             {t('Créer mon compte')}
           </IonButton>
         </div>
@@ -106,7 +106,7 @@ function ObjectifCard({ objectif, levelId }: { objectif: Objectif; levelId: numb
     <>
       <div className="fdm-section-label">{t('Ton prochain objectif')}</div>
       <div className="fdm-card" style={{ margin: '0 16px', padding: 18 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: 13 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: 13 }}>
           <IonIcon icon={sparklesOutline} />{chapter?.name ?? t('Pour toi')}
         </div>
         <div className="fdm-title" style={{ fontSize: 21, fontWeight: 600, margin: '6px 0 6px', lineHeight: 1.25 }}>{objectif.titre}</div>
@@ -145,7 +145,7 @@ function Overview({ data }: { data: ApercuData }) {
           <text x="38" y="43" textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--ion-text-color)">{pct == null ? '—' : `${Math.round(pct)}%`}</text>
         </svg>
         <div style={{ flex: 1, fontSize: 14.5, lineHeight: 1.6 }}>
-          <div style={{ fontWeight: 700 }}>{t('Maîtrise estimée')}</div>
+          <div style={{ fontWeight: 600 }}>{t('Maîtrise estimée')}</div>
           <div className="fdm-muted">{t('{n} chapitres évalués sur {total}', { n: String(data.apercu.chapitres.evalues), total: String(data.apercu.chapitres.total) })}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--fdm-gold-strong)', fontWeight: 600 }}>
             <IonIcon icon={flameOutline} />{t('{n} jours actifs sur {sur}', { n: String(data.regularite.jours_actifs), sur: String(data.regularite.sur) })}
@@ -167,7 +167,7 @@ function NextTest({ test }: { test: UpcomingTest }) {
           <IonIcon icon={calendarOutline} style={{ fontSize: 24 }} />
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontWeight: 700 }}>{testTitle(test)} · {whenLabel(test.days_left)}</span>
+          <span style={{ display: 'block', fontWeight: 600 }}>{testTitle(test)} · {whenLabel(test.days_left)}</span>
           <span className="fdm-muted" style={{ fontSize: 13 }}>
             {test.readiness != null ? t('Prêt à {pct} %', { pct: String(Math.round(test.readiness)) }) : test.chapters.map((c) => c.name).join(', ')}
           </span>

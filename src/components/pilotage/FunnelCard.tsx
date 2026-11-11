@@ -55,7 +55,7 @@ export const FunnelCard: React.FC<{ funnel: Funnel; days: number }> = ({ funnel,
                   <span className="fd-nums text-ink-faint">{i + 1}</span>
                   <span className="min-w-0">{s.label}</span>
                 </span>
-                <span className="fd-nums mt-1.5 block text-[24px] font-bold leading-none text-ink">{fmt(s.value)}</span>
+                <span className="fd-nums mt-1.5 block text-[24px] font-semibold leading-none text-ink">{fmt(s.value)}</span>
                 <span className="mt-2 block h-1.5 rounded-full bg-[#f2f1ee]" aria-hidden>
                   <span className="block h-full rounded-full bg-brand" style={{ width: `${s.value ? Math.max(s.width, 3) : 0}%` }} />
                 </span>

@@ -289,7 +289,7 @@ export const QuizRunner: React.FC<{
                 <button key={i} type="button" role={multi ? 'checkbox' : 'radio'} aria-checked={selected} onClick={() => choose(i)}
                   aria-disabled={!!correction}
                   className={`flex min-h-[64px] w-full items-center gap-4 rounded-2xl border-2 px-4 py-3 text-start transition-[border-color,background-color,box-shadow] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${box} ${correction ? 'cursor-default' : ''}`}>
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center text-[14px] font-bold ${multi ? 'rounded-lg' : 'rounded-full'} ${dot}`} aria-hidden>
+                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center text-[14px] font-semibold ${multi ? 'rounded-lg' : 'rounded-full'} ${dot}`} aria-hidden>
                     {right ? <Check className="h-4 w-4" /> : wrong ? <X className="h-4 w-4" /> : multi && selected ? <Check className="h-4 w-4" /> : letter(i)}
                   </span>
                   <MathText text={opt} className={`fd-latex min-w-0 flex-1 text-[16px] leading-snug ${selected || right ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
@@ -331,7 +331,7 @@ export const QuizRunner: React.FC<{
                 {correct ? <Check className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </span>
               <span className="min-w-0">
-                <span className={`block text-[16px] font-bold leading-tight ${correct ? 'text-brand-hover' : 'text-gold-strong'}`}>
+                <span className={`block text-[16px] font-semibold leading-tight ${correct ? 'text-brand-hover' : 'text-gold-strong'}`}>
                   {correct ? t('Bonne réponse') : t('Mauvaise réponse')}
                 </span>
                 {!correct && (

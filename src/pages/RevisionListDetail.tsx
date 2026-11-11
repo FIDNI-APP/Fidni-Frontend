@@ -436,7 +436,7 @@ export const RevisionListDetail: React.FC = () => {
                   <li key={it.id} className="shrink-0">
                     <button type="button" onClick={() => goTo(i)} aria-current={on ? 'step' : undefined}
                       aria-label={t('{kind} {n} : {status}', { kind: kindLabel(it.content_object), n: i + 1, status: t(ui.label).toLowerCase() })} title={it.content_object.title}
-                      className={`fd-nums inline-flex h-10 w-10 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-[box-shadow,border-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${ui.dot} ${
+                      className={`fd-nums inline-flex h-10 w-10 items-center justify-center rounded-full border-2 text-[13px] font-semibold transition-[box-shadow,border-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${ui.dot} ${
                         on ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper' : ''}`}>
                       {s === 'success' ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
                     </button>
@@ -451,7 +451,7 @@ export const RevisionListDetail: React.FC = () => {
               <header className="flex items-start gap-2 border-b border-line py-3.5 ps-4 pe-2 sm:py-4 sm:ps-6 sm:pe-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="fd-nums text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
+                    <span className="fd-nums text-[12.5px] font-medium text-ink-faint">
                       {kindLabel(item.content_object)} {(current ?? 0) + 1} / {items.length}
                     </span>
                     <StatusPill status={statuses[String(item.object_id)]} />
@@ -528,7 +528,7 @@ export const RevisionListDetail: React.FC = () => {
                 {counts.success === items.length ? <CheckCheck className="h-6 w-6" /> : <ListChecks className="h-6 w-6" />}
               </span>
               <h2 id="bilan-titre" className="fd-display mt-4 text-[22px] leading-tight text-ink">
-                {counts.success === items.length ? t('Toute la liste est réussie !') : t('Tu as parcouru la liste.')}
+                {counts.success === items.length ? t('Toute la liste est réussie.') : t('Tu as parcouru la liste.')}
               </h2>
               <SplitBar className="mx-auto mt-4 max-w-xs" success={counts.success} review={counts.review} total={items.length} />
               <p className="fd-nums mt-2 text-[13.5px] text-ink-soft">
@@ -555,7 +555,7 @@ export const RevisionListDetail: React.FC = () => {
         /* ───────────── Feuille à imprimer : tous les énoncés à la suite ───────────── */
         <>
           <div className="revision-print-only">
-            <h1 className="mb-1 text-center text-[22px] font-bold text-ink">{list.name}</h1>
+            <h1 className="mb-1 text-center text-[22px] font-semibold text-ink">{list.name}</h1>
             {list.description && <p className="mb-1 text-center text-[12px] text-ink-faint">{list.description}</p>}
             <p className="mb-4 text-center text-[11px] text-ink-faint">
               {items.length !== 1 ? t('{n} exercices', { n: items.length }) : t('{n} exercice', { n: items.length })} · {formatDate(list.created_at)}
@@ -573,7 +573,7 @@ export const RevisionListDetail: React.FC = () => {
                   <header className="flex items-start gap-2 pb-3 ps-4 pe-2 pt-4 sm:ps-6 sm:pe-3 sm:pt-5">
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <span className="fd-nums text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{kindLabel(content)} {index + 1}</span>
+                        <span className="fd-nums text-[12.5px] font-medium text-ink-faint">{kindLabel(content)} {index + 1}</span>
                         <span className="revision-print-hide"><StatusPill status={statuses[String(it.object_id)]} /></span>
                       </div>
                       <h2 className="text-[17px] font-semibold leading-snug text-ink">{content.title}</h2>

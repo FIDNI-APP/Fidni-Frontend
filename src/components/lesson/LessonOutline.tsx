@@ -119,7 +119,7 @@ export const LessonOutlinePanel: React.FC<Props & { title?: string }> = (props) 
   if (outline.items.length < 2) return null;
   return (
     <nav aria-label={t('Sommaire de la leçon')} className={`text-sm ${className}`}>
-      <p className="mb-3 flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">
+      <p className="mb-3 flex items-center gap-1.5 text-[12.5px] font-medium text-ink-faint">
         <ListTree className="h-3.5 w-3.5" aria-hidden /> {title}
       </p>
       <ProgressLine progress={outline.progress} minutes={outline.minutes} />

@@ -257,7 +257,7 @@ function JoinForm({ onJoined, compact = false, autoFocus = false }: {
           placeholder={compact ? t('Le code') : t('Code de la classe')}
           aria-invalid={!!err}
           aria-describedby={err ? `${id}-err` : undefined}
-          className={`min-h-11 w-full min-w-0 flex-1 rounded-xl border bg-white px-4 font-mono text-[16px] font-bold uppercase tracking-[.14em] text-ink placeholder:font-sans placeholder:text-[14px] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
+          className={`min-h-11 w-full min-w-0 flex-1 rounded-xl border bg-white px-4 font-mono text-[16px] font-semibold text-ink placeholder:font-sans placeholder:text-[14px] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
             err ? 'border-[#e3b7b1]' : 'border-line focus:border-ink-faint'} ${compact ? '' : 'text-center sm:text-start'}`}
         />
         <button type="submit" disabled={busy || !code.trim()} className="fd-btn-primary min-h-11 shrink-0 justify-center disabled:cursor-not-allowed disabled:opacity-60">
@@ -284,8 +284,8 @@ function CopyCode({ code }: { code: string }) {
   };
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t('Code')}</span>
-      <span className="fd-nums truncate font-mono text-[15px] font-bold tracking-[.12em] text-ink">{code}</span>
+      <span className="text-[12.5px] font-medium text-ink-faint">{t('Code')}</span>
+      <span className="fd-nums truncate font-mono text-[15px] font-semibold tracking-[.12em] text-ink">{code}</span>
       <button type="button" onClick={copy} aria-label={copied ? t('Code copié') : t('Copier le code {code}', { code })}
         className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-semibold text-brand-hover transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -308,7 +308,7 @@ function OwnedCard({ classroom: c, busy, onDelete }: { classroom: Classroom; bus
         <span className="block truncate text-[16px] font-semibold text-ink">{c.name}</span>
         {c.class_level_name && <span className="mt-0.5 block text-[12.5px] text-ink-faint">{c.class_level_name}</span>}
         <span className="mt-4 flex items-baseline gap-1.5 text-[13px] text-ink-faint">
-          <b className="fd-nums text-[26px] font-bold leading-none text-ink">{n}</b>
+          <b className="fd-nums text-[26px] font-semibold leading-none text-ink">{n}</b>
           {plural(n, t('élève'), t('élèves'))}
           {subjects > 0 && <> · {subjects} {plural(subjects, t('matière'), t('matières'))}</>}
         </span>

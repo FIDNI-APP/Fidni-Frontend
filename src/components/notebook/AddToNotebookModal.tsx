@@ -137,7 +137,7 @@ export const AddToNotebookModal: React.FC<AddToNotebookModalProps> = ({
                 className={`w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-2.5 text-start transition-colors ${
                   added ? 'bg-brand-soft' : 'hover:bg-[#f7f6f3]'}`}>
                 <span className="min-w-0">
-                  <span className="block text-[11px] font-semibold uppercase tracking-[.06em] text-ink-faint">{t('Chapitre')}</span>
+                  <span className="block text-[12.5px] font-medium text-ink-faint">{t('Chapitre')}</span>
                   <span className={`block truncate text-[14px] font-medium ${added ? 'text-brand-hover' : 'text-ink'}`}>{ch.name}</span>
                   {!section && !added && <span className="block text-[12px] text-ink-faint">{t('Sera ajouté à ce cahier')}</span>}
                 </span>

@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   Users, Copy, Check, RefreshCw, BookOpen, Plus,
   Trash2, Loader2, X, ClipboardList, GraduationCap, Calendar,
-  ChevronRight, FileText, Flag, Sparkles, RotateCcw, SearchX, ClipboardCheck, type LucideIcon,
+  ChevronRight, FileText, Flag, Target, RotateCcw, SearchX, ClipboardCheck, type LucideIcon,
 } from 'lucide-react';
 import { t, dateLocale } from '@/i18n';
 import { SEO } from '@/components/layout/SEO';
@@ -56,7 +56,7 @@ const wideOnly = (I: LucideIcon) => {
   return Wide;
 };
 const TabIcons = {
-  students: wideOnly(Users), tdlists: wideOnly(ClipboardList), subjects: wideOnly(BookOpen), skills: wideOnly(Sparkles),
+  students: wideOnly(Users), tdlists: wideOnly(ClipboardList), subjects: wideOnly(BookOpen), skills: wideOnly(Target),
   evaluations: wideOnly(ClipboardCheck),
 };
 
@@ -227,8 +227,8 @@ export default function ClassroomDetailPage() {
         )}
         actions={(
           <div data-tour="classe-code" className="flex max-w-full items-center gap-1 rounded-2xl border border-line bg-white py-1 ps-4 pe-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t('Code')}</span>
-            <span className="ms-1.5 truncate font-mono text-[18px] font-bold tracking-[.14em] text-ink">{code}</span>
+            <span className="text-[12.5px] font-medium text-ink-faint">{t('Code')}</span>
+            <span className="ms-1.5 truncate font-mono text-[18px] font-semibold tracking-[.14em] text-ink">{code}</span>
             {copyButton}
             {isOwner && (
               <button type="button" onClick={regenerate} disabled={busy} aria-label={t('Régénérer le code')} title={t('Régénérer le code')}
@@ -247,7 +247,7 @@ export default function ClassroomDetailPage() {
       {/* Matière (onglets Élèves et TD) */}
       {tab !== 'subjects' && tab !== 'evaluations' && classroomSubjectOptions.length > 0 && (
         <div className="mb-5 flex flex-wrap items-center gap-2" role="group" aria-label={t('Matière')}>
-          <span className="me-1 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Matière')}</span>
+          <span className="me-1 text-[12.5px] font-medium text-ink-faint">{t('Matière')}</span>
           <button type="button" aria-pressed={activeSubjectId === null} className={chip(activeSubjectId === null)} onClick={() => setActiveSubjectId(null)}>
             {t('Toutes')}
           </button>
@@ -335,7 +335,7 @@ function Avatar({ user, size }: { user: { username: string; avatar?: string | nu
     return <img src={user.avatar} alt="" onError={() => setBroken(true)} className="shrink-0 rounded-full bg-[#f2f1ee] object-cover" style={{ width: size, height: size }} />;
   }
   return (
-    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full bg-ink font-bold text-white"
+    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full bg-ink font-semibold text-white"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}>
       {user.username[0]?.toUpperCase()}
     </span>
@@ -389,7 +389,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
 }
 
 const sectionTitle: React.CSSProperties = {
-  fontSize: 12, fontWeight: 700, color: '#6b6862', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8,
+  fontSize: 12, fontWeight: 600, color: '#6b6862', marginBottom: 8,
 };
 
 /* ─────────────────── Students tab ─────────────────── */
@@ -422,7 +422,7 @@ function StudentsTab({ roster, state, onOpen, isOwner, meId, shareAction }: {
         {mine ? (
           <SkillCard card={mine} onClick={() => onOpen(mine)} />
         ) : (
-          <EmptyState compact icon={Sparkles} title={t('Ta carte apparaît après quelques exercices')}
+          <EmptyState compact icon={Target} title={t('Ta carte apparaît après quelques exercices')}
             text={t('Précision, régularité, persévérance… elles se calculent à partir de ce que tu fais sur Fidni.')}
             action={<Link to="/exercises" className="fd-btn-ghost min-h-10">{t('Faire des exercices')}</Link>} />
         )}
@@ -488,7 +488,7 @@ function SkillCard({ card, onClick, watch = false }: {
         </div>
         {!idle && (
           <div className="shrink-0 text-end">
-            <span className="fd-nums text-[26px] font-bold leading-none text-ink">{card.overall}</span>
+            <span className="fd-nums text-[26px] font-semibold leading-none text-ink">{card.overall}</span>
             <span className="fd-nums ms-0.5 text-[11px] text-ink-faint">/100</span>
           </div>
         )}
@@ -552,7 +552,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
         <div className="flex items-center gap-3 min-w-0">
           <Avatar user={student.student} size={40} />
           <div className="min-w-0">
-            <h3 className="truncate" style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>
+            <h3 className="truncate" style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
               {isSelf ? t('Mes compétences') : student.student.username}
             </h3>
             <p style={{ fontSize: 11, color: '#6b6862' }}>{t('Statistiques de compétences')}</p>
@@ -602,10 +602,10 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
               borderRadius: 14, border: '1px solid #e7e3dc', padding: 14,
             }}
           >
-            <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            <div style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>
               {t('Score global')} {data.subject ? `· ${data.subject.name}` : ''}
             </div>
-            <div style={{ fontSize: 44, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
+            <div style={{ fontSize: 44, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 4 }}>
               {data.overall}
             </div>
           </div>
@@ -623,7 +623,7 @@ function StudentStatsModal({ classroomId, student, isSelf, subjectOptions, initi
                 }}
               >
                 <span style={{ fontSize: 12, color: '#33302b', fontWeight: 600 }}>{t(a.label)}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a' }}>
                   {data.axes[a.key]}
                 </span>
               </div>
@@ -898,7 +898,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
     <Modal label={td.title} maxWidth={isOwner ? 880 : 640} onClose={onClose}>
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             {td.title}
           </h3>
           {td.description && <p style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>{td.description}</p>}
@@ -952,7 +952,7 @@ function TDListDetailModal({ classroomId, td, isOwner, onClose, onChanged }: {
                     className="inline-flex items-center justify-center flex-shrink-0"
                     style={{
                       width: 24, height: 24, borderRadius: 7, background: '#fff', border: '1px solid #e7e3dc',
-                      fontSize: 11, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a',
+                      fontSize: 11, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1a1a1a',
                     }}
                   >
                     {i + 1}
@@ -1079,7 +1079,7 @@ function Pastille({ kind, size = 24 }: { kind: CellKind; size?: number }) {
         width: size, height: size, borderRadius: '50%',
         background: s.bg, color: s.color,
         border: `1.5px ${kind === 'none' ? 'dashed' : 'solid'} ${s.border}`,
-        fontSize: Math.round(size * 0.5), fontWeight: 800, lineHeight: 1,
+        fontSize: Math.round(size * 0.5), fontWeight: 600, lineHeight: 1,
       }}
     >
       {s.mark}
@@ -1136,7 +1136,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
         <h4 style={{ ...sectionTitle, marginBottom: 0 }}>{t('Suivi de la classe')}</h4>
         {summary.total > 0 && nItems > 0 && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: summary.finished === summary.total ? '#15633c' : '#1a1a1a' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: summary.finished === summary.total ? '#15633c' : '#1a1a1a' }}>
             {finishedLabel(summary.finished, summary.total)}
           </span>
         )}
@@ -1157,7 +1157,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                     style={{
                       position: 'sticky', insetInlineStart: 0, zIndex: 1, background: '#fff',
                       textAlign: 'start', padding: '4px 8px 6px 4px', fontSize: 10, color: '#6b6862',
-                      fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em',
+                      fontWeight: 600,
                     }}
                   >
                     {t('Élève')}
@@ -1167,12 +1167,12 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       key={it.object_id}
                       scope="col"
                       title={it.title}
-                      style={{ padding: '4px 0 6px', minWidth: 38, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#1a1a1a' }}
+                      style={{ padding: '4px 0 6px', minWidth: 38, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#1a1a1a' }}
                     >
                       {i + 1}
                     </th>
                   ))}
-                  <th scope="col" style={{ padding: '4px 6px 6px 10px', fontSize: 10, color: '#6b6862', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <th scope="col" style={{ padding: '4px 6px 6px 10px', fontSize: 10, color: '#6b6862', fontWeight: 600 }}>
                     {t('Réussis')}
                   </th>
                 </tr>
@@ -1217,7 +1217,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                       })}
                       <td
                         style={{
-                          padding: '2px 6px 2px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700,
+                          padding: '2px 6px 2px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600,
                           color: done === nItems ? '#15633c' : '#1a1a1a', borderTop: '1px solid #f2f1ee',
                         }}
                       >
@@ -1249,7 +1249,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
 
       {hardest.length > 0 && (
         <div className="mt-4">
-          <h5 style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>{t('Questions les plus ratées')}</h5>
+          <h5 style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>{t('Questions les plus ratées')}</h5>
           <ul className="flex flex-col gap-1.5">
             {hardest.map(h => {
               const n = items.findIndex(it => it.object_id === h.object_id) + 1;
@@ -1259,7 +1259,7 @@ function TDSuiviSection({ classroomId, td }: { classroomId: number; td: TDList }
                   <span
                     className="flex-shrink-0"
                     style={{
-                      fontVariantNumeric: 'tabular-nums', fontSize: 11, fontWeight: 800, color: '#9a6e1c',
+                      fontVariantNumeric: 'tabular-nums', fontSize: 11, fontWeight: 600, color: '#9a6e1c',
                       background: '#faf3e2', borderRadius: 6, padding: '2px 7px',
                     }}
                   >
@@ -1322,7 +1322,7 @@ function CreateTDModal({ classroomId, subjects, onClose, onCreated }: {
   return (
     <Modal label={t('Nouveau TD')} maxWidth={480} onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
-        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>{t('Nouveau TD')}</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a' }}>{t('Nouveau TD')}</h3>
         <CloseButton onClick={onClose} />
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3">
@@ -1384,7 +1384,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
     // La liste des élèves (et leurs e-mails) est réservée au prof.
     <div className={isOwner ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'max-w-xl'}>
       <div className="fd-card p-5">
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>{t('Matières')}</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 10 }}>{t('Matières')}</h3>
         {classroom.subjects.length === 0 ? (
           <p className="text-[13px] text-ink-faint">
             {isOwner ? t('Pas encore de matière : ajoute celles que tu enseignes à cette classe.') : t('Pas encore de matière dans cette classe.')}
@@ -1428,7 +1428,7 @@ function SubjectsTab({ classroom, allSubjects, onChanged, isOwner, members, onRe
 
       {isOwner && (
         <div className="fd-card p-5">
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 10 }}>
             {t('Élèves ({n})', { n: members.length })}
           </h3>
           {members.length === 0 ? (

@@ -185,7 +185,7 @@ function SiteInApp({ onClose }: { onClose: () => void }) {
       </Suspense>
       <button type="button" onClick={onClose} aria-label={t('Retour à l’app')} style={{
         position: 'fixed', zIndex: 2000, left: 12, bottom: 'calc(var(--fd-tabbar-h, 0px) + 14px)', height: 40, padding: '0 14px 0 10px',
-        borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6, background: '#1a7a4a', color: '#fff', fontWeight: 700, fontSize: 14,
+        borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6, background: '#1a7a4a', color: '#fff', fontWeight: 600, fontSize: 14,
         boxShadow: '0 6px 20px rgba(0,0,0,.25)',
       }}>
         <IonIcon icon={arrowBack} />{t('Retour à l’app')}

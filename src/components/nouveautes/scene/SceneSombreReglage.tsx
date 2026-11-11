@@ -33,7 +33,7 @@ const Telephone: React.FC = () => {
 
 const Reglage: React.FC<{ actif: ThemeId }> = ({ actif }) => (
   <Ecran>
-    <p className="text-[10.5px] font-bold uppercase tracking-[.12em] text-gold-strong">{t('Paramètres')}</p>
+    <p className="text-[12.5px] font-medium text-ink-faint">{t('Paramètres')}</p>
     <p className="fd-display mt-0.5 text-[20px] leading-tight text-ink">{t('Apparence')}</p>
     <div className="mt-3 rounded-2xl border border-line bg-white p-3.5">
       <p className="text-[14px] font-semibold text-ink">{t('Thème')}</p>

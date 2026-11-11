@@ -7,7 +7,7 @@
 // Un prof : ses classes. Le bouton porte data-tour="home-reprendre" et la mesure « accueil-reprendre ».
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, GraduationCap, PlayCircle, RotateCcw, Sparkles, Timer } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, PlayCircle, RotateCcw, Compass, Timer } from 'lucide-react';
 import type { DashboardOverview as Overview, RecommendedItem } from '@/lib/api/dashboardApi';
 import { longDate, testTitle } from '@/lib/api/devoirsApi';
 import { Countdown, DateTile, Readiness } from '@/components/devoirs/ui';
@@ -190,7 +190,7 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
   const ex = choice.exercise;
   const reason = ex?.reason;
   return (
-    <Hero badge={<IconBadge icon={Sparkles} />} eyebrow={t('Pour commencer')}
+    <Hero badge={<IconBadge icon={Compass} />} eyebrow={t('Pour commencer')}
       title={ex ? ex.title : t('Un exercice de ton niveau')}
       action={<MainButton to={ex ? `/exercises/${ex.id}` : exercisesHub}>{ex ? t('Commencer') : t('Choisir un exercice')}</MainButton>}
       footer={<FootLink to={lessons} icon={BookOpen}>{t('Revoir le cours de ton niveau')}</FootLink>}>

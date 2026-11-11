@@ -173,7 +173,7 @@ export const AvatarOrne: React.FC<{ src?: string | null; nom: string; taille: nu
     <span className={`relative inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: ext, height: ext }}>
       {orne && (cadre ? <img src={cadre} alt="" aria-hidden className="fd-fixe absolute inset-0 h-full w-full object-contain" />
         : <CadreEtoile metal={METAL_DE(palier)} size={ext} className="absolute inset-0" />)}
-      <span className="relative flex items-center justify-center overflow-hidden rounded-full bg-ink font-bold text-white"
+      <span className="relative flex items-center justify-center overflow-hidden rounded-full bg-ink font-semibold text-white"
         style={{ width: taille, height: taille, fontSize: taille * 0.4, boxShadow: orne ? `0 0 0 ${Math.max(2, taille / 36)}px ${TRAIT}` : '0 0 0 4px #fff' }}>
         {src && !casse ? <img src={src} alt="" onError={() => setCasse(true)} className="h-full w-full object-cover" />
           : <span aria-hidden>{nom.charAt(0).toUpperCase()}</span>}

@@ -50,7 +50,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
         ? t('Presque ! Revois les vidéos du chapitre et retente le quiz.')
         : t('Revois les vidéos du chapitre, puis retente le quiz.');
     }
-    if (scorePercentage === 100) return t('Sans faute, bravo !');
+    if (scorePercentage === 100) return t('Sans faute, bravo');
     if (scorePercentage >= 85) return t('Très bien, tu maîtrises ce chapitre.');
     return t('Quiz réussi, beau travail.');
   };
@@ -79,8 +79,8 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             <div className={cn(
               "p-8 text-center",
               isPassed 
-                ? "bg-gradient-to-br from-green-500 to-emerald-600" 
-                : "bg-gradient-to-br from-red-500 to-rose-600"
+                ? "bg-brand" 
+                : "bg-[#a23b34]"
             )}>
               <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6">
                 {isPassed ? (
@@ -90,8 +90,8 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                 )}
               </div>
               
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {isPassed ? t('Quiz réussi !') : t('Pas encore')}
+              <h1 className="text-3xl font-semibold text-white mb-2">
+                {isPassed ? t('Quiz réussi') : t('Pas encore')}
               </h1>
               
               <p className="text-xl text-white/90 mb-6">
@@ -99,7 +99,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
               </p>
               
               <div className={cn(
-                "text-6xl font-bold mb-2",
+                "text-6xl font-semibold mb-2",
                 getScoreColor(),
                 "bg-white rounded-xl py-4 px-8 inline-block"
               )}>
@@ -114,26 +114,26 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             {/* Stats Grid */}
             <div className="grid grid-cols-4 divide-x divide-gray-200">
               <div className="p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-semibold text-gray-900">
                   {result.correct_answers}/{result.total_questions}
                 </div>
                 <div className="text-sm text-gray-600">{t('Bonnes réponses')}</div>
               </div>
               <div className="p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-semibold text-gray-900">
                   {quiz.passing_score}%
                 </div>
                 <div className="text-sm text-gray-600">{t('Seuil de réussite')}</div>
               </div>
               <div className="p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-semibold text-gray-900">
                   {formatTime(result.time_spent_seconds)}
                 </div>
                 <div className="text-sm text-gray-600">{t('Temps')}</div>
               </div>
               <div className="p-4 text-center">
                 <div className={cn(
-                  "text-2xl font-bold",
+                  "text-2xl font-semibold",
                   isPassed ? "text-green-600" : "text-red-600"
                 )}>
                   {isPassed ? t('RÉUSSI') : t('À RETENTER')}
@@ -169,7 +169,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
           {/* Review Section */}
           {result.results && (
             <div className="space-y-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('Revoir tes réponses')}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">{t('Revoir tes réponses')}</h2>
               
               {questions.map((question, index) => {
                 const questionResult = result.results?.find(r => r.question_id === question.id);

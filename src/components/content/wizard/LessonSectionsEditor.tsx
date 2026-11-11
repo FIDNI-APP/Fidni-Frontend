@@ -27,10 +27,10 @@ export const LessonSectionsEditor: React.FC<{ sections: SectionBlock[]; onChange
         return (
           <div key={s.id} className="rounded-2xl border border-line bg-white p-3 sm:p-4">
             <div className="mb-2 flex items-center gap-2">
-              <span className="fd-paper text-[18px] font-bold text-brand">{ROMAN[i] || i + 1}.</span>
+              <span className="fd-paper text-[18px] font-semibold text-brand">{ROMAN[i] || i + 1}.</span>
               <input value={s.title} onChange={(e) => set(i, { ...s, title: e.target.value })} placeholder={t('Titre de la partie (ex. Dérivabilité)')}
                 aria-label={t('Titre de la partie {n}', { n: i + 1 })}
-                className="fd-paper min-w-0 flex-1 bg-transparent text-[18px] font-bold text-ink placeholder:text-ink-faint focus:outline-none" />
+                className="fd-paper min-w-0 flex-1 bg-transparent text-[18px] font-semibold text-ink placeholder:text-ink-faint focus:outline-none" />
               <button type="button" className={iconBtn} onClick={() => move(i, -1)} disabled={i === 0} aria-label={t('Monter')}><ArrowUp className="h-4 w-4" /></button>
               <button type="button" className={iconBtn} onClick={() => move(i, 1)} disabled={i === sections.length - 1} aria-label={t('Descendre')}><ArrowDown className="h-4 w-4" /></button>
               <button type="button" className={`${iconBtn} hover:!text-[#a23b34]`} onClick={() => remove(i)} aria-label={t('Supprimer la partie')}><Trash2 className="h-4 w-4" /></button>
@@ -42,10 +42,10 @@ export const LessonSectionsEditor: React.FC<{ sections: SectionBlock[]; onChange
                 {subs.map((ss, k) => (
                   <div key={ss.id}>
                     <div className="mb-1 flex items-center gap-2">
-                      <span className="fd-paper text-[15px] font-bold text-brand">{k + 1}.</span>
+                      <span className="fd-paper text-[15px] font-semibold text-brand">{k + 1}.</span>
                       <input value={ss.title} onChange={(e) => setSubs(subs.map((x, j) => (j === k ? { ...x, title: e.target.value } : x)))}
                         placeholder={t('Titre de la sous-partie')} aria-label={t('Titre de la sous-partie {n}', { n: k + 1 })}
-                        className="fd-paper min-w-0 flex-1 bg-transparent text-[15.5px] font-bold text-ink placeholder:text-ink-faint focus:outline-none" />
+                        className="fd-paper min-w-0 flex-1 bg-transparent text-[15.5px] font-semibold text-ink placeholder:text-ink-faint focus:outline-none" />
                       <button type="button" className={`${iconBtn} hover:!text-[#a23b34]`} aria-label={t('Supprimer la sous-partie')}
                         onClick={() => setSubs(subs.filter((_, j) => j !== k))}><Trash2 className="h-4 w-4" /></button>
                     </div>

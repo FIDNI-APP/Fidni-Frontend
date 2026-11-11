@@ -134,7 +134,7 @@ export const LearningPathList: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#faf9f7]">
       {/* Header */}
-      <div className="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white pb-24 relative overflow-hidden">
+      <div className="bg-ink text-white pb-24 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 start-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
         </div>
@@ -146,7 +146,7 @@ export const LearningPathList: React.FC = () => {
               <span className="text-sm font-medium">{t('Parcours guidés')}</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-4xl md:text-5xl font-semibold mb-4">
               {t('Explore les parcours')}
             </h1>
             <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
@@ -176,7 +176,7 @@ export const LearningPathList: React.FC = () => {
           <div className="flex justify-end mb-6">
             <Button
               onClick={() => navigate('/learning-path/create')}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
+              className="bg-brand hover:bg-brand-hover"
             >
               <Plus className="w-4 h-4 me-2" />
               {t('Nouveau parcours')}

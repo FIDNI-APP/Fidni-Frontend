@@ -168,7 +168,7 @@ const MetaEditor: React.FC<{ meta?: QuestionMeta; onChange: (m: QuestionMeta) =>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#33302b' }}>{t('Métadonnées pédagogiques')}</span>
         <span style={{ fontSize: 11, color: '#9a958c' }}>{t('théorèmes · difficulté · temps')}</span>
         {count > 0 && (
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#15633c', background: '#eaf3ed', padding: '1px 7px', borderRadius: 99 }}>{count}</span>
+          <span style={{ fontSize: 10.5, fontWeight: 600, color: '#15633c', background: '#eaf3ed', padding: '1px 7px', borderRadius: 99 }}>{count}</span>
         )}
         <ChevronDown className="w-4 h-4" style={{ color: '#9a958c', marginInlineStart: 'auto', transition: 'transform .18s', transform: open ? 'rotate(180deg)' : 'none' }} />
       </button>
@@ -726,7 +726,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+            <p className="text-[13px] text-slate-400 font-medium">
               {isExam ? t('Examen') : t('Exercice')}
             </p>
             <p className="text-sm text-slate-600">
@@ -769,7 +769,7 @@ export const FlexibleExerciseEditor: React.FC<FlexibleExerciseEditorProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={isExam ? t("Titre de l'examen...") : t("Titre de l'exercice...")}
-            className="w-full text-3xl font-bold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-2"
+            className="w-full text-3xl font-semibold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-2"
           />
 
           {/* Meta row */}

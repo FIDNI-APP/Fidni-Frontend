@@ -132,7 +132,7 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
         {/* En-tête */}
         <div className="px-4 sm:px-6 py-4 border-b border-line flex items-center justify-between">
           <div>
-            <h2 id="session-history-title" className="fd-display text-xl font-bold text-ink">{allExams ? t('Tes passages') : t('Temps enregistrés')}</h2>
+            <h2 id="session-history-title" className="fd-display text-xl font-semibold text-ink">{allExams ? t('Tes passages') : t('Temps enregistrés')}</h2>
             <p className="text-sm text-ink-faint mt-0.5">
               {allExams ? t('Tes épreuves sur ce sujet, de la plus récente à la plus ancienne.') : t('Tes sessions sur ce contenu, de la plus récente à la plus ancienne.')}
             </p>
@@ -152,8 +152,8 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {tiles.map((t) => (
                 <div key={t.label} className="rounded-xl border border-line bg-white px-3 py-2.5">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{t.label}</div>
-                  <div className={`fd-nums text-lg font-bold mt-0.5 ${t.highlight ? 'text-brand' : 'text-ink'}`}>{t.value}</div>
+                  <div className="text-[12.5px] font-medium text-ink-faint">{t.label}</div>
+                  <div className={`fd-nums text-lg font-semibold mt-0.5 ${t.highlight ? 'text-brand' : 'text-ink'}`}>{t.value}</div>
                 </div>
               ))}
             </div>

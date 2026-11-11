@@ -44,7 +44,7 @@ export function ProfileRoot() {
       {isAuthenticated && user ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px 6px' }}>
           <div style={{
-            width: 64, height: 64, borderRadius: 32, display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700,
+            width: 64, height: 64, borderRadius: 32, display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 600,
             background: 'var(--fdm-brand-soft)', color: 'var(--ion-color-primary)',
           }}>{(user.first_name || user.username || '?').slice(0, 1).toUpperCase()}</div>
           <div style={{ minWidth: 0 }}>
@@ -56,9 +56,9 @@ export function ProfileRoot() {
         </div>
       ) : (
         <div className="fdm-card" style={{ margin: '14px 16px 0', padding: 18 }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{t('Tu découvres FIDNI sans compte')}</div>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{t('Tu découvres FIDNI sans compte')}</div>
           <p className="fdm-muted" style={{ margin: '6px 0 10px', fontSize: 14 }}>{t('Crée un compte gratuit pour garder ta progression sur tous tes appareils.')}</p>
-          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: 15 }}>
+          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: 15 }}>
             {t('Créer un compte ou se connecter')}
           </button>
         </div>
@@ -132,7 +132,7 @@ function SavedScreen() {
         {(saved.data ?? []).map((x) => (
           <button key={`${x.kind}-${x.id}`} type="button" className="fdm-card fdm-pressable" onClick={() => nav.push(() => <ContentScreen id={x.id} kind={x.kind} />)}
             style={{ padding: '14px 16px', textAlign: 'start', color: 'inherit' }}>
-            <div className="fdm-muted" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+            <div className="fdm-muted" style={{ fontSize: 12, fontWeight: 600 }}>
               {x.kind === 'lesson' ? t('Leçon') : x.kind === 'exam' ? t('Devoir') : t('Exercice')}
             </div>
             <div style={{ fontWeight: 600, marginTop: 3 }}>{x.title}</div>

@@ -62,7 +62,7 @@ export const QuestionChart: React.FC<{
     <div className="rounded-2xl border border-line bg-white p-5" data-tour={tour}>
       {header}
       <div className={header ? 'mt-4 border-t border-line pt-4' : ''}>
-        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Question par question')}</p>
+        <p className="text-[12.5px] font-medium text-ink-faint">{t('Question par question')}</p>
         <ol className="mt-3 flex flex-col">
           {rows.map((r, i) => {
             const p = rate(r.path);

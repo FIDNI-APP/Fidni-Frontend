@@ -319,7 +319,7 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">{t('Leçon')}</p>
+            <p className="text-[13px] text-slate-400 font-medium">{t('Leçon')}</p>
             <p className="text-sm text-slate-600">{structure.sections.length !== 1 ? t('{n} sections', { n: structure.sections.length }) : t('{n} section', { n: structure.sections.length })}</p>
           </div>
         </div>
@@ -351,7 +351,7 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('Titre de la leçon...')}
-            className="w-full text-3xl font-bold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-6"
+            className="w-full text-3xl font-semibold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-6"
           />
 
           {/* Sections */}

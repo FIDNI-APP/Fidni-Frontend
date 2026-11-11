@@ -152,7 +152,7 @@ export const LogsConsole: React.FC = () => {
     <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Logs Console</h1>
+        <h1 className="text-3xl font-semibold text-slate-900 mb-2">Logs Console</h1>
         <p className="text-slate-600">Monitor errors, analytics, and system events</p>
       </div>
 
@@ -196,7 +196,7 @@ export const LogsConsole: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Total Errors</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.total_errors}</p>
+                <p className="text-2xl font-semibold text-slate-900">{stats.total_errors}</p>
               </div>
               <AlertCircle className="w-10 h-10 text-slate-400" />
             </div>
@@ -206,7 +206,7 @@ export const LogsConsole: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">New Errors</p>
-                <p className="text-2xl font-bold text-red-600">{stats.new_errors}</p>
+                <p className="text-2xl font-semibold text-red-600">{stats.new_errors}</p>
               </div>
               <AlertTriangle className="w-10 h-10 text-red-400" />
             </div>
@@ -216,7 +216,7 @@ export const LogsConsole: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Critical</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.critical_errors}</p>
+                <p className="text-2xl font-semibold text-orange-600">{stats.critical_errors}</p>
               </div>
               <AlertOctagon className="w-10 h-10 text-orange-400" />
             </div>
@@ -226,7 +226,7 @@ export const LogsConsole: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Today</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.errors_today}</p>
+                <p className="text-2xl font-semibold text-blue-600">{stats.errors_today}</p>
               </div>
               <TrendingUp className="w-10 h-10 text-blue-400" />
             </div>
@@ -359,7 +359,7 @@ export const LogsConsole: React.FC = () => {
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 mb-2">{selectedError.exception_type}</h2>
+                  <h2 className="text-xl font-semibold text-slate-900 mb-2">{selectedError.exception_type}</h2>
                   <p className="text-slate-600">{selectedError.message}</p>
                 </div>
                 <button

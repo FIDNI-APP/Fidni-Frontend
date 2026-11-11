@@ -219,7 +219,7 @@ export const ProfilContenu: React.FC<{
                 <Flame className="h-7 w-7 text-[#e07a1f]" />
               </span>
               <div className="min-w-0">
-                <p className="fd-nums text-[26px] font-bold leading-none text-ink">
+                <p className="fd-nums text-[26px] font-semibold leading-none text-ink">
                   {pub.defi.serie} <span className="text-[13px] font-semibold text-ink-faint">{pub.defi.serie > 1 ? t('jours d’affilée') : t('jour d’affilée')}</span>
                 </p>
                 <p className="fd-nums mt-1 text-[12.5px] text-ink-faint">
@@ -244,7 +244,7 @@ export const ProfilContenu: React.FC<{
             <button type="button" onClick={() => onOuvrirListe('abonnes')} className="flex items-center gap-3 text-start">
               <span className="flex -space-x-2 rtl:space-x-reverse">
                 {pub.apercu_abonnes.slice(0, 6).map((a) => (
-                  <span key={a.username} className="inline-flex h-9 w-9 overflow-hidden rounded-full bg-ink text-[13px] font-bold text-white ring-2 ring-white">
+                  <span key={a.username} className="inline-flex h-9 w-9 overflow-hidden rounded-full bg-ink text-[13px] font-semibold text-white ring-2 ring-white">
                     {a.avatar ? <img src={a.avatar} alt="" className="h-full w-full object-cover" />
                       : <span className="m-auto">{a.username.charAt(0).toUpperCase()}</span>}
                   </span>

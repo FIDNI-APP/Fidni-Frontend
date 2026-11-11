@@ -83,7 +83,7 @@ export function ExploreRoot() {
             <IonIcon icon={ribbonOutline} style={{ fontSize: 22 }} />
           </span>
           <span style={{ flex: 1 }}>
-            <span style={{ display: 'block', fontWeight: 700 }}>{t('Bac national')}</span>
+            <span style={{ display: 'block', fontWeight: 600 }}>{t('Bac national')}</span>
             <span className="fdm-muted" style={{ fontSize: 13 }}>{t('Les sujets corrigés, année par année')}</span>
           </span>
           <IonIcon flipRtl icon={chevronForward} className="fdm-muted" />

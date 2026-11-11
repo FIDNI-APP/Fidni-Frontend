@@ -23,7 +23,7 @@ export const ImportPreview: React.FC = () => {
   return (
     <div className="bg-[#faf9f7] min-h-screen py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <p className="text-xs uppercase tracking-widest text-[#9a958c] mb-2">Aperçu avant import · {data.type}</p>
+        <p className="text-[13px] font-medium text-[#9a958c] mb-2">Aperçu avant import · {data.type}</p>
         <h1 className="fd-display text-3xl mb-6">{data.title}</h1>
         <div className="bg-white rounded-2xl border border-line p-6 sm:p-7" id="apercu-contenu">
           {data.type === 'lesson' ? (

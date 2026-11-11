@@ -143,7 +143,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
 
     try {
       await login(formValues.identifier, formValues.password);
-      setSuccessMessage(t('Connexion réussie !'));
+      setSuccessMessage(t('Connexion réussie'));
       setTimeout(() => { onClose(); }, 900);
     } catch (err) {
       const data = (err as ApiError)?.response?.data;
@@ -211,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         navigate('/complete-profile');
         return;
       }
-      setSuccessMessage(t('Connexion réussie !'));
+      setSuccessMessage(t('Connexion réussie'));
       setTimeout(() => { onClose(); }, 900);
     } catch (err) {
       const data = (err as ApiError)?.response?.data;

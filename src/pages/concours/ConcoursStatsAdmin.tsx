@@ -39,7 +39,7 @@ export default function StatsAdmin() {
 
   return (
     <>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>
         {t('Statistiques des examens')}
       </h2>
       <p style={{ fontSize: 13, color: '#6b6862', marginBottom: 16 }}>
@@ -57,11 +57,11 @@ export default function StatsAdmin() {
                     onClick={() => setSelected(e)}>
               <span style={{
                 background: '#f2f1ee', color: '#000000',
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, letterSpacing: '.04em',
+                fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, letterSpacing: '.04em',
               }}>
                 {e.concours_type_display.toUpperCase()}
               </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }} className="flex-1">
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }} className="flex-1">
                 {e.title}
               </span>
               <ChevronRight className="w-4 h-4" style={{ color: '#6b6862' }} />
@@ -121,7 +121,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
           <button onClick={onBack} className="fd-btn-ghost mb-2" style={{ padding: '5px 10px', fontSize: 12 }}>
             {t('← Tous les examens')}
           </button>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1a1a1a' }}>
             {exam.concours_type_display} · {exam.title}
           </h2>
         </div>
@@ -134,7 +134,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
       {/* Insight cards */}
       <div className="fd-card mb-4" style={{ padding: '20px 22px' }}>
         <div className="flex items-center justify-between mb-3">
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{t("Cards d'insight")}</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>{t("Cards d'insight")}</h3>
           <button className="fd-btn-ghost" onClick={addCard} style={{ fontSize: 12, padding: '5px 10px' }}>
             <Plus className="w-3.5 h-3.5" /> {t('Ajouter')}
           </button>
@@ -182,7 +182,7 @@ function StatsEditor({ exam, onBack }: { exam: ConcoursExamListItem; onBack: () 
 
       {/* Rich comparison */}
       <div className="fd-card" style={{ padding: '20px 22px' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>
           {t('Analyse comparative')}
         </h3>
         <p style={{ fontSize: 12, color: '#6b6862', marginBottom: 12 }}>

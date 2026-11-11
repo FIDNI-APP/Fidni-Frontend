@@ -16,7 +16,7 @@ export const ExplanationBox: React.FC<{ ok: boolean; text?: string; theoremes?: 
       className={`rounded-2xl border p-4 ${ok ? 'border-brand-line bg-brand-soft' : 'border-gold-line bg-gold-soft'} ${className}`}>
       {text && (
         <>
-          <h3 className={`text-[11px] font-bold uppercase tracking-[.08em] ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>{t('Explication')}</h3>
+          <h3 className={`text-[12.5px] font-medium ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>{t('Explication')}</h3>
           <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft"><MathText text={text} className="fd-latex" /></p>
         </>
       )}
@@ -50,7 +50,7 @@ export const Delta: React.FC<{ a: SkillAssessment; long?: boolean; className?: s
 
 /** Étiquette « Nouveau » : quiz sorti il y a moins de 14 jours, pas encore passé. */
 export const NewBadge: React.FC = () => (
-  <span className="inline-flex items-center rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[.06em] text-white">{t('Nouveau')}</span>
+  <span className="inline-flex items-center rounded-full bg-gold px-2 py-0.5 text-[12.5px] font-medium text-white">{t('Nouveau')}</span>
 );
 
 /** Badge « Chapitre approfondi » : l'approfondissement réussi à BADGE_PCT % au moins (dernier passage). */

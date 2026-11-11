@@ -67,7 +67,7 @@ export const Personnaliser: React.FC<{
     }
   };
 
-  const titreSection = 'mb-2 mt-6 text-[12px] font-bold uppercase tracking-[.08em] text-ink-faint';
+  const titreSection = 'mb-2 mt-6 text-[12.5px] font-medium text-ink-faint';
   return (
     <ModalShell open={open} onClose={onClose} labelId={id} title={t('Personnaliser mon profil')} onSubmit={enregistrer}>
       <div className="-mx-1 max-h-[64vh] overflow-y-auto px-1">
@@ -111,7 +111,7 @@ export const Personnaliser: React.FC<{
                   <Medaille badge={b.id} palier={b.palier} taille={44} />
                   <span className="line-clamp-2 text-[11.5px] font-medium leading-tight text-ink-soft">{t(b.nom)}</span>
                   <span className="text-[10.5px] text-ink-faint">{nomPalier(b.palier)}</span>
-                  {rang >= 0 && <span className="fd-nums absolute end-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-white">{rang + 1}</span>}
+                  {rang >= 0 && <span className="fd-nums absolute end-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">{rang + 1}</span>}
                 </button>
               );
             })}

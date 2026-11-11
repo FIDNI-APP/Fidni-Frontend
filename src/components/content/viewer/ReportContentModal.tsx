@@ -202,7 +202,7 @@ export const ReportContentModal: React.FC<Props> = ({ isOpen, onClose, contentId
               </div>
               {aDesFormules(description) && (
                 <div className="mt-2 rounded-xl border border-line bg-[#faf9f7] px-3 py-2" aria-live="polite">
-                  <p className="text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Aperçu')}</p>
+                  <p className="text-[12.5px] font-medium text-ink-faint">{t('Aperçu')}</p>
                   <MathText text={description} className="mt-0.5 block whitespace-pre-line break-words text-[13px] leading-relaxed text-ink" />
                 </div>
               )}

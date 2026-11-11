@@ -47,7 +47,7 @@ const QuizCell: React.FC<{ type: QuizType; name: string; p: StageProps }> = ({ t
         {type === 'approfondissement' && isApprofondi(taken) && (
           <span title={t('Chapitre approfondi')} className="inline-flex"><Award className="h-4 w-4 text-gold" aria-hidden /><span className="sr-only">{t('Chapitre approfondi')}</span></span>
         )}
-        <span className={`fd-nums whitespace-nowrap text-[15px] font-bold ${score >= 50 ? 'text-brand-hover' : 'text-gold-strong'}`}>{score} %</span>
+        <span className={`fd-nums whitespace-nowrap text-[15px] font-semibold ${score >= 50 ? 'text-brand-hover' : 'text-gold-strong'}`}>{score} %</span>
         <span className="fd-nums whitespace-nowrap text-[12.5px] font-normal text-ink-faint">{frDate(taken.completed_at)}</span>
       </>
     );
@@ -126,7 +126,7 @@ export const ChapterTable: React.FC<{ lines: ChapterLine[]; deep: boolean }> = (
   };
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-white">
-      <div aria-hidden className="hidden gap-3 border-b border-line bg-paper px-5 py-2.5 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint xl:flex">
+      <div aria-hidden className="hidden gap-3 border-b border-line bg-paper px-5 py-2.5 text-[12.5px] font-medium text-ink-faint xl:flex">
         {numbered && <span className="w-6 shrink-0" />}
         <div className={`min-w-0 flex-1 ${cols(deep)}`}>
           <span>{t('Chapitre')}</span>

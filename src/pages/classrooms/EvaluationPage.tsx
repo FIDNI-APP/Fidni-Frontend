@@ -246,7 +246,7 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
 
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
         <table className="w-full text-[13.5px]">
-          <thead className="bg-[#faf9f7] text-[11.5px] uppercase tracking-[.06em] text-ink-faint">
+          <thead className="bg-[#faf9f7] text-[12.5px] font-medium text-ink-faint">
             <tr>
               <th className="px-4 py-2.5 text-start font-semibold">{t('Élève')}</th>
               <th className="px-3 py-2.5 text-start font-semibold">{t('Copie')}</th>
@@ -541,7 +541,7 @@ function LotPanneau({ classeId, evId, lot, onLot, onFini }: {
         {groupes.map((g, i) => (
           <li key={`${i}-${g.pages[0]}`} className="rounded-xl border border-line p-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span dir="ltr" className="fd-nums text-[12px] font-bold text-ink-faint">{i + 1}.</span>
+              <span dir="ltr" className="fd-nums text-[12px] font-semibold text-ink-faint">{i + 1}.</span>
               <select value={g.eleve_id ?? (g.nom !== undefined ? '__nom__' : '')} aria-label={t('Élève de cette copie')}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -697,7 +697,7 @@ function OngletSujet({ ev, onChange }: { ev: EvaluationDetail; onChange: (e: Eva
         {!vide && (
           <div className="overflow-hidden rounded-2xl border border-line bg-white">
             <table className="w-full text-[13.5px]">
-              <thead className="bg-[#faf9f7] text-[11.5px] uppercase tracking-[.06em] text-ink-faint">
+              <thead className="bg-[#faf9f7] text-[12.5px] font-medium text-ink-faint">
                 <tr>
                   <th className="w-44 px-4 py-2.5 text-start font-semibold">{t('Question')}</th>
                   <th className="hidden px-3 py-2.5 text-start font-semibold md:table-cell">{t('Énoncé')}</th>

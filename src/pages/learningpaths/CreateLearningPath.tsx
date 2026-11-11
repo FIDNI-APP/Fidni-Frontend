@@ -158,7 +158,7 @@ export const CreateLearningPath: React.FC = () => {
               {t('Retour aux parcours')}
             </Button>
             
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-semibold text-gray-900">
               {isEditMode ? t('Modifier le parcours') : t('Nouveau parcours')}
             </h1>
             <p className="text-gray-600 mt-2">

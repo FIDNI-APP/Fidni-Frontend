@@ -52,7 +52,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
       }}>
         <div className="flex items-center gap-2 mb-1">
           <BarChart3 className="w-5 h-5" style={{ color: theme.from }} />
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             {t('Répartition des questions')}
           </h2>
         </div>
@@ -130,7 +130,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
         }}>
           <div className="flex items-center gap-2 mb-4">
             <Layers className="w-5 h-5" style={{ color: theme.from }} />
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
               {t('Analyse & tendances')}
             </h2>
           </div>
@@ -143,7 +143,7 @@ export function ConcoursExamStatsTab({ examId, theme }: { examId: number; theme:
                   background: theme.light, borderRadius: 12, padding: '16px 18px',
                   border: `1px solid ${theme.from}22`,
                 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: theme.text, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 4 }}>
                     {c.title}
                   </div>
                   <div style={{ fontSize: 13, color: '#33302b', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>

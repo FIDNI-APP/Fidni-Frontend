@@ -126,7 +126,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
       text: t('{titre} – sur Fidni', { titre: content?.title }),
       url: publicUrl(),
     })
-      .then((r) => { if (r === 'copied') alert(t('Lien copié !')); })
+      .then((r) => { if (r === 'copied') alert(t('Lien copié')); })
       .catch((err) => console.error('Error copying link:', err));
   };
   const pick = (fn?: () => void) => () => { setMenuOpen(false); fn?.(); };
@@ -231,7 +231,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
       </div>
 
       {/* Repère, titre, infos */}
-      <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong sm:mt-4">
+      <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] font-medium text-ink-faint sm:mt-4">
         <span>{kind}</span>
         {chapters.slice(0, 2).map((ch) => (
           <React.Fragment key={ch.id}>

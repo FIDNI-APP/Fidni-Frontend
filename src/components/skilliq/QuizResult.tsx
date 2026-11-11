@@ -75,7 +75,7 @@ const QuestionDetail: React.FC<{ c: Item }> = ({ c }) => {
           return (
             <li key={i} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[14px] ${
               good ? 'border-brand-line bg-brand-soft' : mine ? 'border-gold-line bg-gold-soft' : 'border-transparent'}`}>
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11.5px] font-bold ${
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11.5px] font-semibold ${
                 good ? 'bg-brand text-white' : mine ? 'bg-gold text-white' : 'text-ink-faint ring-1 ring-line'}`} aria-hidden>
                 {good ? <Check className="h-3.5 w-3.5" /> : mine ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + i)}
               </span>
@@ -138,7 +138,7 @@ const TheoremRow: React.FC<{ g: Group; open: boolean; onToggle: () => void }> = 
           </span>
         )}
       </span>
-      <span className={`fd-nums shrink-0 text-[15px] font-bold ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>
+      <span className={`fd-nums shrink-0 text-[15px] font-semibold ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>
         {g.justes}/{g.total}<span className="sr-only"> {t('justes')}</span>
       </span>
       {can && <ChevronDown className={`h-4 w-4 shrink-0 text-ink-faint transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />}
@@ -176,7 +176,7 @@ const TheoremRecap: React.FC<{ groups: Group[]; nonEvalues: string[] }> = ({ gro
   });
   const list = (title: string, rows: Group[], tone: string) => rows.length > 0 && (
     <div>
-      <h3 className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
+      <h3 className="mb-2 flex items-center gap-2 text-[12.5px] font-medium text-ink-faint">
         {title} <span className={`fd-nums rounded-full px-1.5 py-px text-[11px] ${tone}`}>{rows.length}</span>
       </h3>
       <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
@@ -277,7 +277,7 @@ export const QuizResult: React.FC<{
           <h1 id="quiz-result-title" className="fd-display mt-2 text-[28px] leading-[1.12] text-ink sm:text-[34px]">{quiz.name}</h1>
           <div className="mt-7 flex flex-col items-center gap-7 sm:flex-row sm:gap-10">
             <ProgressRing percentage={score} size={136} strokeWidth={10} trackColor={RING.track} progressColor={score >= 50 ? RING.good : RING.low}>
-              <span className="fd-nums text-[34px] font-bold leading-none text-ink">{score}<span className="text-[16px]"> %</span></span>
+              <span className="fd-nums text-[34px] font-semibold leading-none text-ink">{score}<span className="text-[16px]"> %</span></span>
             </ProgressRing>
             <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-5 sm:w-auto sm:grid-cols-4 sm:gap-x-9">
               {[
@@ -288,7 +288,7 @@ export const QuizResult: React.FC<{
               ].map((it) => (
                 <div key={it.key}>
                   <dt className="text-[12.5px] text-ink-faint">{it.label}</dt>
-                  <dd className={`fd-nums mt-1 text-[26px] font-bold leading-none ${it.tone}`}>{it.value}</dd>
+                  <dd className={`fd-nums mt-1 text-[26px] font-semibold leading-none ${it.tone}`}>{it.value}</dd>
                 </div>
               ))}
             </dl>

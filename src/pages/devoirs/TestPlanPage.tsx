@@ -154,7 +154,7 @@ export default function TestPlanPage() {
         ) : (
           <section aria-labelledby="blanc-titre" className="overflow-hidden rounded-3xl bg-[#14583a] text-white shadow-[0_18px_40px_-18px_rgba(20,88,58,.6)]">
             <div className="p-6 sm:p-8">
-              <p className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[.12em] text-white/70">
+              <p className="flex items-center gap-2 text-[12.5px] font-medium text-white/70">
                 <Timer className="h-4 w-4" aria-hidden /> {t('DS blanc')}
               </p>
               <h2 id="blanc-titre" className="fd-display mt-2 text-[26px] leading-tight sm:text-[30px]">
@@ -371,7 +371,7 @@ function ExerciseCard({ exercise: e }: { exercise: PlanExercise }) {
       <Link to={`/exercises/${e.id}`}
         className="group flex h-full flex-col rounded-2xl border border-line bg-white p-4 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <span className="flex items-start justify-between gap-2">
-          {e.chapter && <span className="min-w-0 truncate text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{e.chapter}</span>}
+          {e.chapter && <span className="min-w-0 truncate text-[12.5px] font-medium text-ink-faint">{e.chapter}</span>}
           {reason && <span className={`ms-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone}`}>{t(reason)}</span>}
         </span>
         <span className="mt-1.5 line-clamp-2 text-[14.5px] font-semibold leading-snug text-ink group-hover:underline">{e.title}</span>

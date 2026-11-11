@@ -42,7 +42,7 @@ export const Tuile: React.FC<{
       <span className="min-w-0 flex-1">{label}</span>
     </span>
     <span className="mt-2.5 flex flex-wrap items-baseline gap-x-1.5">
-      <span className="text-[26px] font-bold leading-none tracking-tight text-ink sm:text-[30px]">{value}</span>
+      <span className="text-[26px] font-semibold leading-none tracking-tight text-ink sm:text-[30px]">{value}</span>
       {unit && <span className="text-[12.5px] font-medium text-ink-faint">{unit}</span>}
     </span>
     {e && <span className="mt-1.5"><Ecart {...e} jours={jours} /></span>}

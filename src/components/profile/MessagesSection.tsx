@@ -89,7 +89,7 @@ export const MessagesSection: React.FC = () => {
 
                 {r && (
                   <div className="mt-4 rounded-xl bg-[#faf9f7] px-4 py-3 text-[13.5px] text-ink-soft">
-                    <p className="text-[11.5px] font-bold uppercase tracking-[.06em] text-ink-faint">
+                    <p className="text-[12.5px] font-medium text-ink-faint">
                       {t('Ton signalement')} · {date(r.created_at)}
                     </p>
                     <p className="mt-1 font-medium text-ink">{t(r.reason)}{r.item_label ? ` — ${r.item_label}` : ''}</p>
@@ -98,7 +98,7 @@ export const MessagesSection: React.FC = () => {
                 )}
 
                 <div className="mt-4">
-                  <p className="flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[.06em] text-brand-hover">
+                  <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-brand-hover">
                     <MessageSquare className="h-3.5 w-3.5" aria-hidden /> {m.kind === 'message' ? t('Message de l’équipe Fidni') : t('Réponse de l’équipe Fidni')}
                   </p>
                   <Texte text={m.message} className="mt-1.5 text-[14.5px] leading-relaxed text-ink" />

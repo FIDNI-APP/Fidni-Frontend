@@ -67,7 +67,7 @@ const Avatar: React.FC<{ actor: Notif['actor'] }> = ({ actor }) => {
   return actor?.avatar && !broken
     ? <img src={actor.avatar} alt="" onError={() => setBroken(true)} className="h-9 w-9 shrink-0 rounded-full object-cover" />
     : (
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-bold uppercase text-ink-soft">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-medium text-ink-soft">
         {actor?.username?.[0] ?? <MessageCircle className="h-4 w-4" />}
       </span>
     );
@@ -197,7 +197,7 @@ export const NotificationBell: React.FC = () => {
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
-          <span className="fd-nums absolute end-0.5 top-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10.5px] font-bold leading-none text-white ring-2 ring-white">
+          <span className="fd-nums absolute end-0.5 top-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10.5px] font-semibold leading-none text-white ring-2 ring-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -207,7 +207,7 @@ export const NotificationBell: React.FC = () => {
         <div role="dialog" aria-label={t('Notifications')}
           className="fixed inset-x-2 top-[64px] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_18px_48px_-12px_rgba(20,18,16,.22)] sm:absolute sm:inset-x-auto sm:end-0 sm:top-[48px] sm:w-[380px]">
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-            <h2 className="text-[14.5px] font-bold text-ink">{t('Notifications')}</h2>
+            <h2 className="text-[14.5px] font-semibold text-ink">{t('Notifications')}</h2>
             {unread > 0 && (
               <button type="button" onClick={() => markRead()} className="text-[12.5px] font-semibold text-brand-hover hover:underline">
                 {t('Tout marquer comme lu')}

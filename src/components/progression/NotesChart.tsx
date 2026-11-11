@@ -37,7 +37,7 @@ export const NotesChart: React.FC<{
     <div>
       <div className="mb-4 min-w-0" aria-live="polite">
         <p className="truncate text-[12.5px] text-ink-faint">{shown ? `${long(shown.date)} · ${shown.titre}` : t('Sur la période')}</p>
-        <p className="fd-nums mt-0.5 text-[18px] font-bold leading-tight text-ink sm:text-[20px]">
+        <p className="fd-nums mt-0.5 text-[18px] font-semibold leading-tight text-ink sm:text-[20px]">
           {shown ? <>{decimal(shown.note)} <span className="text-[14px] font-semibold text-ink-faint">/ 20</span></> : headline}
         </p>
       </div>

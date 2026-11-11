@@ -135,7 +135,7 @@ export const GoalsList: React.FC<{ goals: Goal[]; editUrl: string }> = ({ goals,
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <span className="truncate text-[14px] font-semibold text-ink">{g.subject_name ?? t('Matière')}</span>
               <span className="fd-nums shrink-0 text-[12.5px] text-ink-faint">
-                {now.toLocaleString(dateLocale())} → <b className="font-bold text-brand-hover">{target.toLocaleString(dateLocale())}</b> / 20
+                {now.toLocaleString(dateLocale())} → <b className="font-semibold text-brand-hover">{target.toLocaleString(dateLocale())}</b> / 20
               </span>
             </div>
             <span className="relative block h-1.5 rounded-full bg-[#f2f1ee]" role="img"

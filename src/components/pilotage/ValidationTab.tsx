@@ -96,7 +96,7 @@ const Carte: React.FC<{
     <article className={`group flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-[0_2px_12px_rgba(20,20,20,.06)] ${selected ? 'border-brand ring-1 ring-brand' : 'border-line hover:border-ink-faint'}`}>
       <button type="button" onClick={onOpen} className="flex flex-1 flex-col p-4 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-2xl">
         <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.07em] text-ink-faint">
+          <span className="inline-flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium text-ink-faint">
             <t.icon className="h-3.5 w-3.5 shrink-0" /> <span className="truncate" title={b.niveaux.join(', ')}>{t.label} · {b.niveaux.map((n) => COURT[n] ?? n).join(', ')}</span>
           </span>
           <span className="shrink-0 whitespace-nowrap"><Etat b={b} /></span>
@@ -267,7 +267,7 @@ const Relecture: React.FC<{
       </div>
 
       <header className="fd-card p-5">
-        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-bold uppercase tracking-[.07em] text-ink-faint">
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] font-medium text-ink-faint">
           <span className="inline-flex items-center gap-1.5"><t.icon className="h-3.5 w-3.5" />{t.label}</span>
           {c?.niveaux.length ? <span>· {c.niveaux.join(', ')}</span> : null}
           {c?.difficulte && <span className="normal-case tracking-normal font-medium text-[12px]">· <DiffBars value={c.difficulte} /></span>}
@@ -467,7 +467,7 @@ const Relecture: React.FC<{
 
           {c && c.theoremes.length > 0 && (
             <section className="px-1">
-              <h3 className="text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Théorèmes travaillés</h3>
+              <h3 className="text-[12.5px] font-medium text-ink-faint">Théorèmes travaillés</h3>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {c.theoremes.map((th) => <span key={th} className="rounded-full border border-line bg-white px-2 py-0.5 text-[11.5px] text-ink-soft">{th}</span>)}
                 {c.nb_theoremes > c.theoremes.length && <span className="px-1 text-[11.5px] text-ink-faint">+{c.nb_theoremes - c.theoremes.length}</span>}
@@ -477,7 +477,7 @@ const Relecture: React.FC<{
 
           {job.history.length > 0 && (
             <details className="px-1">
-              <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Historique</summary>
+              <summary className="cursor-pointer text-[12.5px] font-medium text-ink-faint">Historique</summary>
               <ul className="mt-1.5 space-y-1 text-[12px] text-ink-soft">
                 {job.history.map((h, i) => <li key={i}><span className="text-ink-faint">{ago(h.date)} · {h.qui === 'ia' ? 'IA du site' : h.qui} :</span> {h.texte}</li>)}
               </ul>

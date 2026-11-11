@@ -71,7 +71,7 @@ export const ActiveCalendar: React.FC<{
     <div>
       <div className="mb-4 min-w-0" aria-live="polite">
         <p className="text-[12.5px] text-ink-faint">{shown ? titre(shown.date, pas) : t('Sur la période')}</p>
-        <p className="fd-nums mt-0.5 text-[18px] font-bold leading-tight text-ink sm:text-[20px]">{shown ? resume(shown, pas) : headline}</p>
+        <p className="fd-nums mt-0.5 text-[18px] font-semibold leading-tight text-ink sm:text-[20px]">{shown ? resume(shown, pas) : headline}</p>
       </div>
 
       {big ? (

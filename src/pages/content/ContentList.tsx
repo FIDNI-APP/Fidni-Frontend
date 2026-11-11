@@ -960,13 +960,13 @@ export const ContentList: React.FC<ContentListProps> = ({
     let tone: 'brand' | 'gold' | 'ink' = 'ink';
     let actions: React.ReactNode = null;
     if (onlyTodo) {
-      title = t('Tout est réussi ici, bravo !');
+      title = t('Tout est réussi ici, bravo.');
       text = t('Tu as réussi tous les {nouns} de cette liste. Choisis « Tout » pour les revoir.', { nouns: t(many) });
       icon = Check;
       tone = 'brand';
     } else if (only === 'showFailed') {
       title = t('Rien à revoir ici');
-      text = t('Aucun {noun} marqué « À revoir » dans cette liste. Continue comme ça !', { noun: t(one) });
+      text = t('Aucun {noun} marqué « À revoir » dans cette liste. Continue comme ça.', { noun: t(one) });
       icon = Check;
       tone = 'brand';
     } else if (only === 'showCompleted') {

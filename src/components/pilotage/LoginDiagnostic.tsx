@@ -105,7 +105,7 @@ export const LoginDiagnostic: React.FC = () => {
 
               {data.accounts.length > 0 && (
                 <div>
-                  <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Comptes</h3>
+                  <h3 className="mb-1.5 text-[12.5px] font-medium text-ink-faint">Comptes</h3>
                   <ul className="divide-y divide-[#f2f1ee] rounded-xl border border-line">
                     {data.accounts.map((a) => (
                       <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3.5 py-2.5 text-[12.5px] text-ink-soft">
@@ -136,7 +136,7 @@ export const LoginDiagnostic: React.FC = () => {
               )}
 
               <div>
-                <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">
+                <h3 className="mb-1.5 text-[12.5px] font-medium text-ink-faint">
                   Essais en échec ({data.logs.length})
                 </h3>
                 {data.logs.length === 0 ? (
@@ -166,7 +166,7 @@ export const LoginDiagnostic: React.FC = () => {
 
               {data.errors.length > 0 && (
                 <div>
-                  <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Erreurs serveur du compte</h3>
+                  <h3 className="mb-1.5 text-[12.5px] font-medium text-ink-faint">Erreurs serveur du compte</h3>
                   <ul className="divide-y divide-[#f2f1ee] rounded-xl border border-line">
                     {data.errors.map((e, i) => (
                       <li key={i} className="px-3.5 py-2.5 text-[12.5px] text-ink-soft">

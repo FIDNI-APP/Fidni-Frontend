@@ -319,7 +319,7 @@ export const ExamView: React.FC<Props> = ({
   const timerPanel = (
     <div className="rounded-2xl border border-line bg-white p-5" data-tour="examen-epreuve">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Épreuve en cours')}</span>
+        <span className="text-[12.5px] font-medium text-ink-faint">{t('Épreuve en cours')}</span>
         {epreuve.status === 'paused' && <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-faint">{t('en pause')}</span>}
       </div>
       <div className="mt-2 flex items-baseline justify-between">
@@ -413,7 +413,7 @@ export const ExamView: React.FC<Props> = ({
   const copieHeader = isAuthenticated ? (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Ta copie')}</span>
+        <span className="text-[12.5px] font-medium text-ink-faint">{t('Ta copie')}</span>
         {sessionCount > 0 && (
           <button type="button" onClick={onOpenHistory} className="-my-2 ms-auto min-h-10 text-[12.5px] font-medium text-ink-faint hover:text-ink fd-nums">
             {sessionCount > 1 ? t('{n} passages', { n: sessionCount }) : t('{n} passage', { n: sessionCount })}
@@ -431,7 +431,7 @@ export const ExamView: React.FC<Props> = ({
       {corrected > 0 ? (
         <>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="fd-display text-[34px] leading-none text-ink" style={{ fontWeight: 700 }}>{fmtPts(got)}</span>
+            <span className="fd-display text-[34px] leading-none text-ink" style={{ fontWeight: 600 }}>{fmtPts(got)}</span>
             <span className="text-[16px] text-ink-faint fd-nums">/ {fmtPts(total)}</span>
             {total > 0 && total !== 20 && <span className="ms-auto text-[12px] text-ink-faint fd-nums">{t('soit')} {fmtPts(Math.round((got / total) * 200) / 10)} / 20</span>}
           </div>
@@ -502,7 +502,7 @@ export const ExamView: React.FC<Props> = ({
             </div>
             {intro.length > 0 && (
               <div className="border-b border-line px-4 py-5 text-[14.5px] sm:px-8">
-                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Consignes')}</p>
+                <p className="mb-1.5 text-[12.5px] font-medium text-ink-faint">{t('Consignes')}</p>
                 <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} variant="reading" />
               </div>
             )}
@@ -515,7 +515,7 @@ export const ExamView: React.FC<Props> = ({
                 <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-4 pb-9 sm:px-8 sm:pb-10 ${heading ? 'pt-7 sm:pt-8' : 'pt-6 sm:pt-8'} ${i > 0 ? 'border-t border-line' : ''}`}>
                   {heading && (
                     <div className="mb-5 flex items-baseline justify-between gap-3">
-                      <h2 className="fd-paper min-w-0 text-[20px] font-bold leading-snug text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
+                      <h2 className="fd-paper min-w-0 text-[20px] font-semibold leading-snug text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
                       <span className="flex shrink-0 items-center gap-1.5">
                         {sc.corrected > 0 && !locked && (
                           <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title={t('Tes points (auto-évaluation)')}>
@@ -570,7 +570,7 @@ export const ExamView: React.FC<Props> = ({
 function Fact({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
     <div title={title} className="min-w-0">
-      <dt className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{label}</dt>
+      <dt className="text-[12.5px] font-medium text-ink-faint">{label}</dt>
       <dd className="mt-1 text-[16px] font-semibold text-ink fd-nums">{value}</dd>
       {/* Au toucher, pas d'infobulle : le détail est écrit dessous. */}
       {title && <dd className="mt-0.5 max-w-[220px] text-[11.5px] leading-snug text-ink-faint [@media(hover:hover)]:hidden">{title}</dd>}
