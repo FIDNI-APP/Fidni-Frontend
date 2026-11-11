@@ -56,7 +56,7 @@ export const AnalyticsTab: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 mb-1">Active Users (24h)</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.active_users}</p>
+              <p className="text-2xl font-semibold text-slate-900">{stats.active_users}</p>
             </div>
             <Users className="w-10 h-10 text-blue-500" />
           </div>
@@ -66,7 +66,7 @@ export const AnalyticsTab: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 mb-1">Total Sessions (7d)</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.total_sessions}</p>
+              <p className="text-2xl font-semibold text-slate-900">{stats.total_sessions}</p>
             </div>
             <BarChart3 className="w-10 h-10 text-emerald-500" />
           </div>
@@ -76,7 +76,7 @@ export const AnalyticsTab: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 mb-1">Page Views (7d)</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.total_page_views}</p>
+              <p className="text-2xl font-semibold text-slate-900">{stats.total_page_views}</p>
             </div>
             <Eye className="w-10 h-10 text-violet-500" />
           </div>
@@ -86,7 +86,7 @@ export const AnalyticsTab: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 mb-1">Avg Session (mins)</p>
-              <p className="text-2xl font-bold text-slate-900">
+              <p className="text-2xl font-semibold text-slate-900">
                 {Math.round(stats.avg_session_duration / 60)}
               </p>
             </div>
@@ -99,7 +99,7 @@ export const AnalyticsTab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Pages */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Top Pages (7d)</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Pages (7d)</h3>
           <div className="space-y-3">
             {stats.top_pages.slice(0, 8).map((page, idx) => {
               const maxCount = stats.top_pages[0]?.count || 1;
@@ -125,7 +125,7 @@ export const AnalyticsTab: React.FC = () => {
 
         {/* Device & Browser Breakdown */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Devices & Browsers (7d)</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Devices & Browsers (7d)</h3>
 
           <div className="space-y-4">
             <div>
@@ -135,7 +135,7 @@ export const AnalyticsTab: React.FC = () => {
                   <div key={device} className="bg-slate-50 rounded-lg p-3 text-center">
                     <Monitor className="w-6 h-6 mx-auto mb-1 text-slate-600" />
                     <p className="text-xs text-slate-600 capitalize">{device || 'Unknown'}</p>
-                    <p className="text-lg font-bold text-slate-900">{count}</p>
+                    <p className="text-lg font-semibold text-slate-900">{count}</p>
                   </div>
                 ))}
               </div>
@@ -148,7 +148,7 @@ export const AnalyticsTab: React.FC = () => {
                   <div key={browser} className="bg-slate-50 rounded-lg p-3 text-center">
                     <Chrome className="w-6 h-6 mx-auto mb-1 text-slate-600" />
                     <p className="text-xs text-slate-600 capitalize">{browser || 'Unknown'}</p>
-                    <p className="text-lg font-bold text-slate-900">{count}</p>
+                    <p className="text-lg font-semibold text-slate-900">{count}</p>
                   </div>
                 ))}
               </div>
@@ -161,7 +161,7 @@ export const AnalyticsTab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hourly Traffic */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Traffic (Last 24h)</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Traffic (Last 24h)</h3>
           <div className="flex items-end justify-between h-48 gap-1">
             {stats.hourly_traffic.map((hour, idx) => {
               const maxCount = Math.max(...stats.hourly_traffic.map(h => h.count));
@@ -187,7 +187,7 @@ export const AnalyticsTab: React.FC = () => {
 
         {/* Top Interactions */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Top Interactions (7d)</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Interactions (7d)</h3>
           <div className="space-y-2">
             {stats.top_interactions.slice(0, 10).map((interaction, idx) => (
               <div
@@ -195,7 +195,7 @@ export const AnalyticsTab: React.FC = () => {
                 className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center">
+                  <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold flex items-center justify-center">
                     {idx + 1}
                   </span>
                   <div>
@@ -219,7 +219,7 @@ export const AnalyticsTab: React.FC = () => {
             <div className="flex items-center justify-center mb-2">
               <TrendingDown className="w-8 h-8 text-amber-500" />
             </div>
-            <p className="text-3xl font-bold text-slate-900">{stats.bounce_rate.toFixed(1)}%</p>
+            <p className="text-3xl font-semibold text-slate-900">{stats.bounce_rate.toFixed(1)}%</p>
             <p className="text-sm text-slate-600 mt-1">Bounce Rate</p>
           </div>
 
@@ -227,7 +227,7 @@ export const AnalyticsTab: React.FC = () => {
             <div className="flex items-center justify-center mb-2">
               <Eye className="w-8 h-8 text-blue-500" />
             </div>
-            <p className="text-3xl font-bold text-slate-900">
+            <p className="text-3xl font-semibold text-slate-900">
               {(stats.total_page_views / Math.max(stats.total_sessions, 1)).toFixed(1)}
             </p>
             <p className="text-sm text-slate-600 mt-1">Pages per Session</p>
@@ -237,7 +237,7 @@ export const AnalyticsTab: React.FC = () => {
             <div className="flex items-center justify-center mb-2">
               <Clock className="w-8 h-8 text-emerald-500" />
             </div>
-            <p className="text-3xl font-bold text-slate-900">
+            <p className="text-3xl font-semibold text-slate-900">
               {(stats.avg_session_duration / 60).toFixed(1)}m
             </p>
             <p className="text-sm text-slate-600 mt-1">Avg Session Duration</p>

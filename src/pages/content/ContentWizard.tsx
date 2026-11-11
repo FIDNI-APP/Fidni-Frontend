@@ -329,7 +329,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
   const preview = (
     <div className="fd-read rounded-2xl border border-line bg-white px-4 py-5 sm:px-8 sm:py-7" data-tour="creer-apercu">
       <ReadingStyles />
-      <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Aperçu')}</p>
+      <p className="text-[12.5px] font-medium text-ink-faint">{t('Aperçu')}</p>
       <h2 className="fd-display mt-1 text-[22px] leading-tight text-ink">{d.title || <span className="text-ink-faint">{t('Sans titre')}</span>}</h2>
       <div className="mt-5">
         {d.type === 'lesson'
@@ -377,7 +377,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
               <button type="button" onClick={() => go(i)} aria-current={step === i ? 'step' : undefined}
                 className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
                   step === i ? 'border-ink bg-ink text-white' : i < step ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-faint hover:text-ink'}`}>
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11.5px] font-bold ${step === i ? 'bg-white text-ink' : i < step ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-faint'}`}>
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11.5px] font-semibold ${step === i ? 'bg-white text-ink' : i < step ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-faint'}`}>
                   {i < step ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
                 {t(label)}
@@ -505,7 +505,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
                       {groups.length === 0 && <p className="px-2 py-3 text-[13px] text-ink-faint">{t('Aucun chapitre trouvé.')}</p>}
                       {groups.map(([group, list]) => (
                         <div key={group} className="mb-1">
-                          {groups.length > 1 && <p className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{group}</p>}
+                          {groups.length > 1 && <p className="px-2 pb-1 pt-2 text-[12.5px] font-medium text-ink-faint">{group}</p>}
                           {list.map((c) => {
                             const on = d.chapterIds.includes(c.id);
                             return (

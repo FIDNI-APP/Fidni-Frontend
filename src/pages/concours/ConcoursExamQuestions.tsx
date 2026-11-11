@@ -122,7 +122,7 @@ const OptionsEditor = memo(function OptionsEditor({
               );
               updateQuestion(activeIdx, { options: newOpts });
             }}
-            style={{ ...inputStyle, width: 50, textAlign: 'center', fontFamily: 'var(--fd-mono)', fontWeight: 700, marginTop: 4 }}
+            style={{ ...inputStyle, width: 50, textAlign: 'center', fontFamily: 'var(--fd-mono)', fontWeight: 600, marginTop: 4 }}
           />
           <div className="flex-1 min-w-0">
             <EditorField
@@ -333,11 +333,11 @@ export default function ConcoursExamQuestionsPage() {
             <span style={{
               background: '#f2f1ee', color: '#000000',
               padding: '3px 10px', borderRadius: 99,
-              fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
+              fontSize: 10, fontWeight: 600, letterSpacing: '.04em',
             }}>
               {exam.concours_type_display.toUpperCase()} · {exam.year}
             </span>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em', marginTop: 8 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em', marginTop: 8 }}>
               {exam.title}
             </h1>
             <p style={{ fontSize: 12, color: '#6b6862', marginTop: 4 }}>
@@ -408,7 +408,7 @@ export default function ConcoursExamQuestionsPage() {
             ) : (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <span style={{ fontSize: 12, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 12, color: '#6b6862', fontWeight: 600 }}>
                     {t('Question {n} / {total}', { n: activeIdx + 1, total: structure.questions.length })}
                   </span>
                   <div className="flex items-center gap-1">
@@ -763,7 +763,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a' }}>
             {t('Importer un JSON')}
           </h3>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
@@ -795,7 +795,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
             }}
           >
             <div className="flex items-center justify-between mb-2">
-              <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600 }}>
                 {t('Prompt à coller dans le LLM')}
               </span>
               <button
@@ -851,7 +851,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
             color: '#9a6e1c', padding: '10px 12px', borderRadius: 10,
             fontSize: 12, marginTop: 10,
           }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('Avertissements :')}</div>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('Avertissements :')}</div>
             <ul style={{ paddingInlineStart: 18, lineHeight: 1.6 }}>
               {warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
@@ -870,7 +870,7 @@ function ImportJsonModal({ onClose, currentCount, onApply }: ImportJsonModalProp
 
         {parsed && (
           <div style={{ marginTop: 14 }}>
-            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginInlineEnd: 10 }}>
+            <span style={{ fontSize: 11, color: '#6b6862', fontWeight: 600, marginInlineEnd: 10 }}>
               {t('Mode :')}
             </span>
             <div className="inline-flex" style={{

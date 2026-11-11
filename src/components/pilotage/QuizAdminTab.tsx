@@ -98,7 +98,7 @@ const QuestionCard: React.FC<{
           <span className="fd-nums mt-0.5 text-[12px] font-semibold text-ink-faint">{index + 1}.</span>
           <div className="min-w-0 flex-1">
             {review && (
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-gold-strong">Rédigée par Claude · à relire, invisible des élèves</p>
+              <p className="mb-1.5 text-[12.5px] font-medium text-ink-faint">Rédigée par Claude · à relire, invisible des élèves</p>
             )}
             <p className="text-[14.5px] text-ink"><MathText text={value.question} /></p>
             <ul className="mt-2 grid gap-1 sm:grid-cols-2">
@@ -297,7 +297,7 @@ const ChapterQuiz: React.FC<{ chapterId: number; levelId: number; type: QuizType
       </button>
       <div className="fd-card flex flex-wrap items-start justify-between gap-3 p-5">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
+          <p className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-faint">
             <kind.icon className="h-3.5 w-3.5" aria-hidden /> {data.chapitre.domaine} · {kind.label} · {data.chapitre.niveau.name}
           </p>
           <h2 className="fd-display mt-1 text-[20px] leading-tight text-ink">{data.chapitre.name}</h2>
@@ -440,7 +440,7 @@ export const QuizAdminTab: React.FC = () => {
           : groups.length === 0 ? <p className="px-3 py-6 text-center text-[13px] text-ink-faint">Aucun chapitre.</p>
             : groups.map(([g, list]) => (
               <div key={g} className="mb-2">
-                <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{g}</p>
+                <p className="px-3 pb-1 pt-2 text-[12.5px] font-medium text-ink-faint">{g}</p>
                 {list.map((r) => (
                   <button key={r.id} type="button" onClick={() => setOpen(r.id)}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start hover:bg-paper">

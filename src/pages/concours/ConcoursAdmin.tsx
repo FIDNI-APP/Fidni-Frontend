@@ -51,7 +51,7 @@ export default function ConcoursAdminPage() {
         </button>
 
         <div className="mb-5">
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
             {t('Administration des concours')}
           </h1>
           <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
@@ -107,7 +107,7 @@ function ExamsAdmin() {
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
           {t('Examens')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'var(--fd-mono)' }}>· {exams.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditingMeta('new')}>
@@ -131,12 +131,12 @@ function ExamsAdmin() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span style={{
                     background: '#f2f1ee', color: '#000000',
-                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                    fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99,
                     letterSpacing: '.04em',
                   }}>
                     {e.concours_type_display.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>
                     {e.title}
                   </span>
                 </div>
@@ -249,7 +249,7 @@ function TipsAdmin() {
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
           {t('Astuces')} <span style={{ color: '#6b6862', fontSize: 13, fontWeight: 500, fontFamily: 'var(--fd-mono)' }}>· {tips.length}</span>
         </h2>
         <button className="fd-btn-primary" onClick={() => setEditing('new')}>
@@ -273,13 +273,13 @@ function TipsAdmin() {
                 className="inline-flex items-center justify-center flex-shrink-0"
                 style={{
                   width: 40, height: 40, borderRadius: 10,
-                  background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', color: '#fff',
+                  background: '#c0892f', color: '#fff',
                 }}
               >
                 <Lightbulb className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{tp.title}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>{tp.title}</div>
                 <div className="flex items-center gap-2 flex-wrap mt-1">
                   {tp.subject_name && <span style={{ fontSize: 10, color: '#000000', background: '#f2f1ee', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{tp.subject_name}</span>}
                   {tp.subfield_name && <span style={{ fontSize: 10, color: '#6b6862', background: '#f7f6f3', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{tp.subfield_name}</span>}
@@ -494,7 +494,7 @@ function Modal({ onClose, title, children, wide }: {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>{title}</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a' }}>{title}</h3>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b6862' }}>
             <X className="w-5 h-5" />
           </button>

@@ -30,7 +30,7 @@ const SessionRow: React.FC<{ s: SimulationSessionListItem }> = ({ s }) => {
       <Link to={submitted ? `/concours/sessions/${s.id}/recap` : `/concours/simulate/${s.id}`}
         className="group flex items-stretch overflow-hidden rounded-2xl border border-line bg-white transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <span className={`flex w-[76px] shrink-0 flex-col items-center justify-center border-e border-line sm:w-[88px] ${scoreTone(pct, submitted)}`}>
-          <span className="fd-nums text-[20px] font-bold leading-none sm:text-[22px]">{submitted ? `${pct} %` : '—'}</span>
+          <span className="fd-nums text-[20px] font-semibold leading-none sm:text-[22px]">{submitted ? `${pct} %` : '—'}</span>
           <span className="fd-nums mt-1 text-[11px] opacity-80">{s.correct_count}/{s.total_questions}</span>
         </span>
         <span className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5">

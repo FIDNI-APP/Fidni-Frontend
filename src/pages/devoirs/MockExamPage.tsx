@@ -214,12 +214,12 @@ export default function MockExamPage() {
         {actAlert}
         <section aria-labelledby="sujet-titre" className="overflow-hidden rounded-3xl border border-line bg-white">
           <div className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
-            <h2 id="sujet-titre" className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Au programme')}</h2>
+            <h2 id="sujet-titre" className="text-[12.5px] font-medium text-ink-faint">{t('Au programme')}</h2>
             {data.exercises.length ? (
               <ol className="mt-2 divide-y divide-line">
                 {data.exercises.map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 py-3">
-                    <span className="fd-nums inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-bold text-ink-soft">{i + 1}</span>
+                    <span className="fd-nums inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-semibold text-ink-soft">{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14.5px] font-semibold text-ink">{e.chapter ?? e.title}</p>
                       <p className="mt-0.5"><DifficultyDot level={e.difficulty} /></p>
@@ -267,7 +267,7 @@ export default function MockExamPage() {
             subtitle={t('Pas de solution avant la fin. Quand tu as fini, clique sur «\u00a0Terminer\u00a0» pour te corriger.')} />
           <div className="sticky top-[68px] z-20 mb-5 overflow-hidden rounded-2xl border border-line bg-white/95 shadow-[0_6px_16px_rgba(20,18,16,.06)] backdrop-blur">
             <div className="flex items-center gap-3 py-2 ps-2 pe-2 sm:ps-2.5">
-              <span className={`fd-nums inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[18px] font-bold ${timerTone}`}
+              <span className={`fd-nums inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[18px] font-semibold ${timerTone}`}
                 style={{ fontFamily: 'var(--fd-mono)' }} role="timer" aria-live="off" aria-label={over ? t('Temps dépassé') : t('Temps restant')}>
                 <Timer className="h-4 w-4" aria-hidden />{over ? `+${clock(remaining)}` : clock(remaining)}
               </span>
@@ -310,7 +310,7 @@ export default function MockExamPage() {
                 ? <>{t('Ouvre la solution de chaque question (l’œil), puis dis')} <b className="font-semibold text-ink-soft">{t('Réussi')}</b> {t('ou')} <b className="font-semibold text-ink-soft">{t('À revoir')}</b> {t(': ta préparation et Ma progression se mettent à jour.')}</>
                 : <><b className="fd-nums font-semibold text-brand-hover">{succeeded}</b> {succeeded > 1 ? t('réussies') : t('réussie')}
                   {corrected - succeeded > 0 && <> · <b className="fd-nums font-semibold text-gold-strong">{corrected - succeeded}</b> {t('à revoir : refais-les dans 2 ou 3 jours')}</>}.
-                  {' '}{t('Correction terminée !')}</>}
+                  {' '}{t('Correction terminée')}</>}
             </p>
           </section>
         </>

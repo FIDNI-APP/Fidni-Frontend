@@ -124,7 +124,7 @@ export function ContentListScreen({ title, kind, filters }: { title: string; kin
         {items.map((it, i) => (
           <button key={it.id} type="button" className="fdm-card fdm-pressable" onClick={() => { haptic.tap(); nav.push(() => <ContentScreen id={it.id} kind={kind} />); }}
             style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', textAlign: 'start', color: 'inherit' }}>
-            <span className="fdm-muted" style={{ width: 22, fontWeight: 700, fontSize: 14 }}>{i + 1}</span>
+            <span className="fdm-muted" style={{ width: 22, fontWeight: 600, fontSize: 14 }}>{i + 1}</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span className="fdm-title" style={{ display: 'block', fontSize: 16.5, fontWeight: 600, lineHeight: 1.3 }}>{it.title}</span>
               {sort === 'recommended' && isAuthenticated && it.recommendation_reason && (
@@ -143,7 +143,7 @@ export function ContentListScreen({ title, kind, filters }: { title: string; kin
           </button>
         ))}
         {first.data && !items.length && (
-          <Empty icon={schoolOutline} title={status === 'todo' ? t('Tout est fait ici, bravo !') : t('Rien ici pour l’instant')}
+          <Empty icon={schoolOutline} title={status === 'todo' ? t('Tout est fait ici, bravo.') : t('Rien ici pour l’instant')}
             text={activeFilters ? t('Essaie d’enlever un filtre.') : undefined} />
         )}
       </div>

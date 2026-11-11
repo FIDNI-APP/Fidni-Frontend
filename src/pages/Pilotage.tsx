@@ -811,7 +811,7 @@ const MemberDetail: React.FC<{ row: UserRow }> = ({ row }) => {
         </Link>
       </div>
       <div className="min-w-0">
-        <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Journal d’activité</h3>
+        <h3 className="mb-2 text-[12.5px] font-medium text-ink-faint">Journal d’activité</h3>
         <MemberJournal userId={row.id} />
       </div>
     </div>
@@ -880,7 +880,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
             <li key={r.id} className="border-b border-[#f2f1ee] last:border-b-0">
               <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : r.id)}
                 className={`flex w-full items-center gap-3 px-5 py-3 text-start transition-colors hover:bg-[#faf9f7] focus:outline-none focus-visible:bg-[#faf9f7] ${expanded ? 'bg-[#faf9f7]' : ''}`}>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-semibold uppercase text-ink-soft" aria-hidden>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-medium text-ink-soft" aria-hidden>
                   {r.username.slice(0, 1)}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -979,7 +979,7 @@ export default function Pilotage() {
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint"><ShieldCheck className="h-3.5 w-3.5" /> Administration</p>
+          <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-ink-faint"><ShieldCheck className="h-3.5 w-3.5" /> Administration</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <h1 className="fd-display text-[28px] leading-tight text-ink md:text-[32px]">Pilotage</h1>
             <LivePill status={live.status} updatedAt={live.updatedAt} />

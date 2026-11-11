@@ -176,7 +176,7 @@ function NouvelleEvaluation({ open, classroomId, onClose, onCreated }: {
                     <li key={r.id}>
                       <button type="button" onClick={() => { setChoisi(r); setResultats([]); }}
                         className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start text-[13px] text-ink hover:bg-[#f7f6f3]">
-                        <span className="shrink-0 rounded-md bg-[#f2f1ee] px-1.5 py-0.5 text-[10.5px] font-bold uppercase text-ink-faint">
+                        <span className="shrink-0 rounded-md bg-[#f2f1ee] px-1.5 py-0.5 text-[12.5px] font-medium text-ink-faint">
                           {r.type === 'exam' ? t('Devoir') : t('Exercice')}
                         </span>
                         <span className="min-w-0 truncate">{r.title}</span>
@@ -238,7 +238,7 @@ function MesCopiesClasse({ classroomId }: { classroomId: number }) {
             <h3 className="truncate text-[15px] font-semibold text-ink">{c.titre}</h3>
             <p className="mt-0.5 text-[12.5px] text-ink-faint">{dateCourte(c.date)}</p>
           </div>
-          <span dir="ltr" className="fd-nums shrink-0 text-[20px] font-bold text-ink">
+          <span dir="ltr" className="fd-nums shrink-0 text-[20px] font-semibold text-ink">
             {fmt(c.note)}<span className="text-[13px] font-semibold text-ink-faint"> / {c.note_sur}</span>
           </span>
         </Link>

@@ -121,11 +121,11 @@ export const IAReportFix: React.FC<{
               <p className="text-[12px] font-semibold text-ink">{m.ou || m.bloc} · {CHAMP[m.champ]}</p>
               <div className="mt-1.5 grid gap-2 md:grid-cols-2">
                 <div className="min-w-0 rounded-xl border border-line bg-white p-3">
-                  <p className="mb-1 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">Avant</p>
+                  <p className="mb-1 text-[12.5px] font-medium text-ink-faint">Avant</p>
                   {m.avant ? <TipTapRenderer content={m.avant} className="text-[13.5px]" /> : <p className="text-[12.5px] italic text-ink-faint">(vide)</p>}
                 </div>
                 <div className="min-w-0 rounded-xl border border-brand-line bg-white p-3">
-                  <p className="mb-1 text-[10.5px] font-bold uppercase tracking-[.08em] text-brand-hover">Après</p>
+                  <p className="mb-1 text-[12.5px] font-medium text-brand-hover">Après</p>
                   <TipTapRenderer content={m.apres} className="text-[13.5px]" />
                 </div>
               </div>

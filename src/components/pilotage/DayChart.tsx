@@ -54,7 +54,7 @@ export const DayChart: React.FC<DayChartProps> = ({ series, color, unit, headlin
           <p className="text-[12.5px] text-ink-faint">
             {shown ? dayLabel(shown.date, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Sur la période'}
           </p>
-          <p className="fd-nums mt-0.5 text-[20px] font-bold leading-tight text-ink">
+          <p className="fd-nums mt-0.5 text-[20px] font-semibold leading-tight text-ink">
             {shown ? (shown.value === null ? 'pas encore mesuré' : plural(shown.value, unit)) : headline}
           </p>
         </div>

@@ -91,7 +91,7 @@ const ContenuCard: React.FC<{ c: Contenu }> = ({ c }) => {
     <li className="rounded-xl border border-line bg-white px-3.5 py-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <span className="min-w-0 text-[13px]">
-          <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-ink-faint">{TYPE[c.content.type] ?? 'Contenu'} · </span>
+          <span className="text-[12.5px] font-medium text-ink-faint">{TYPE[c.content.type] ?? 'Contenu'} · </span>
           <Link to={c.content.url} className="font-semibold text-ink hover:text-brand hover:underline">{c.content.title}</Link>
         </span>
         <span className="fd-nums shrink-0 text-[11.5px] text-ink-faint">

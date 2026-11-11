@@ -107,7 +107,7 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
             <div key={b.id} className="flex flex-wrap items-center gap-2 border-b-2 border-ink/80 pb-2 pt-4">
               <input value={title} onChange={(e) => set(i, { ...b, content: { type: 'text', html: e.target.value } })}
                 aria-label={t('Titre de la partie')} placeholder="Exercice 1"
-                className="fd-paper min-w-0 flex-1 bg-transparent text-[19px] font-bold text-ink placeholder:text-ink-faint focus:outline-none" />
+                className="fd-paper min-w-0 flex-1 bg-transparent text-[19px] font-semibold text-ink placeholder:text-ink-faint focus:outline-none" />
               <Points value={b.points} onChange={(points) => set(i, { ...b, points })} />
               {tools}
             </div>
@@ -130,7 +130,7 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
         return (
           <div key={b.id} className="rounded-2xl border border-line bg-white p-3 sm:p-4">
             <div className="mb-2 flex items-center gap-2">
-              <span className="fd-paper text-[16px] font-bold text-ink">{q}.</span>
+              <span className="fd-paper text-[16px] font-semibold text-ink">{q}.</span>
               <span className="text-[12.5px] font-semibold text-ink-soft">{t('Question {n}', { n: q })}</span>
               {!subs.length && (isExam || b.points) ? <Points value={b.points} onChange={(points) => set(i, { ...b, points })} /> : null}
               {tools}
@@ -147,7 +147,7 @@ export const QuestionsEditor: React.FC<Props> = ({ blocks, onChange, isExam }) =
                 {subs.map((sq, k) => (
                   <div key={sq.id}>
                     <div className="mb-1 flex items-center gap-2">
-                      <span className="fd-paper text-[15px] font-bold text-ink-soft">{letter(k)})</span>
+                      <span className="fd-paper text-[15px] font-semibold text-ink-soft">{letter(k)})</span>
                       {isExam || sq.points ? <Points value={sq.points} onChange={(points) => setSubs(subs.map((x, j) => (j === k ? { ...x, points } : x)))} /> : null}
                       <button type="button" className={`${iconBtn} ms-auto hover:!text-[#a23b34]`} aria-label={t('Supprimer la sous-question')}
                         onClick={() => setSubs(subs.filter((_, j) => j !== k))}><Trash2 className="h-4 w-4" /></button>

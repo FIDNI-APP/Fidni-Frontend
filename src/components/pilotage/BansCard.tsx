@@ -106,7 +106,7 @@ export const BansCard: React.FC = () => {
             <ul className="mt-4 divide-y divide-[#f2f1ee] rounded-xl border border-line">
               {rows.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5">
-                  <span className="w-[118px] shrink-0 text-[12px] font-semibold uppercase tracking-[.05em] text-ink-faint">{KIND[r.kind]}</span>
+                  <span className="w-[118px] shrink-0 text-[12.5px] font-medium text-ink-faint">{KIND[r.kind]}</span>
                   <span className="min-w-0 flex-1 break-all text-[13.5px] font-medium text-ink">{r.value}</span>
                   <span className="text-[12px] text-ink-faint">
                     {r.username ? <>« {r.username} » · </> : null}{day(r.created_at)}

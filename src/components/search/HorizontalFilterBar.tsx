@@ -326,7 +326,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
             {chapterGroups.map(([group, options]) => (
               <div key={group || '-'}>
                 {chapterGroups.length > 1 && group && (
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{group}</p>
+                  <p className="mb-1.5 text-[12.5px] font-medium text-ink-faint">{group}</p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {options.map((o) => (
@@ -448,7 +448,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
               <SlidersHorizontal className="h-4 w-4" />
               <span>{t('Filtres')}</span>
               {panelCount > 0 && (
-                <span className="fd-nums inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] font-bold text-white">
+                <span className="fd-nums inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] font-semibold text-white">
                   {panelCount}
                 </span>
               )}
@@ -564,7 +564,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 /** Ligne du panneau : libellé + boutons (libellé au-dessus sur téléphone). */
 const FilterRow: React.FC<{ title: string; last?: boolean; children: React.ReactNode }> = ({ title, last, children }) => (
   <div className={`flex flex-col sm:flex-row sm:items-start gap-2 ${last ? 'pb-1' : 'border-b border-[#f0ede8] pb-3.5 mb-3.5'}`}>
-    <span className="w-28 flex-shrink-0 text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint sm:pt-2.5">
+    <span className="w-28 flex-shrink-0 text-[12.5px] font-medium text-ink-faint sm:pt-2.5">
       {title}
     </span>
     <div className="flex flex-wrap gap-2 min-w-0 flex-1">{children}</div>

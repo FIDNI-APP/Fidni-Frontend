@@ -134,7 +134,7 @@ export const LearningPathList: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#faf9f7]">
       {/* Header */}
-      <div className="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white pb-24 relative overflow-hidden">
+      <div className="bg-ink text-white pb-24 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 start-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
         </div>
@@ -146,23 +146,23 @@ export const LearningPathList: React.FC = () => {
               <span className="text-sm font-medium">{t('Parcours guidés')}</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-4xl md:text-5xl font-semibold mb-4">
               {t('Explore les parcours')}
             </h1>
-            <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-brand-soft mb-8 max-w-2xl mx-auto">
               {t('Des cours guidés, chapitre après chapitre, à ton rythme.')}
             </p>
             
             {/* Search Bar */}
             <div className="relative max-w-2xl mx-auto">
               <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-xl -z-10"></div>
-              <Search className="absolute start-4 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+              <Search className="absolute start-4 top-1/2 transform -translate-y-1/2 text-brand-line w-5 h-5" />
               <Input
                 type="text"
                 placeholder={t('Rechercher un parcours…')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full ps-12 pe-4 py-4 bg-white/5 backdrop-blur-sm border-white/20 text-white placeholder-purple-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                className="w-full ps-12 pe-4 py-4 bg-white/5 backdrop-blur-sm border-white/20 text-white placeholder-brand-line rounded-xl focus:ring-2 focus:ring-brand-line focus:border-transparent"
               />
             </div>
           </div>
@@ -176,7 +176,7 @@ export const LearningPathList: React.FC = () => {
           <div className="flex justify-end mb-6">
             <Button
               onClick={() => navigate('/learning-path/create')}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
+              className="bg-brand hover:bg-brand-hover"
             >
               <Plus className="w-4 h-4 me-2" />
               {t('Nouveau parcours')}
@@ -208,14 +208,14 @@ export const LearningPathList: React.FC = () => {
           <div className="hidden md:block w-64 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
               <h3 className="font-semibold text-lg mb-4 flex items-center">
-                <Filter className="w-5 h-5 me-2 text-indigo-600" />
+                <Filter className="w-5 h-5 me-2 text-brand" />
                 {t('Filters')}
               </h3>
               
               <div className="space-y-6">
                 {/* Subject Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Matière')}
                   </label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -235,7 +235,7 @@ export const LearningPathList: React.FC = () => {
 
                 {/* Difficulty Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Difficulté')}
                   </label>
                   <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
@@ -254,7 +254,7 @@ export const LearningPathList: React.FC = () => {
                 {/* Progress Filter */}
                 {isAuthenticated && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-ink-soft mb-2">
                       {t('Progression')}
                     </label>
                     <Select value={progressFilter} onValueChange={(value) => setProgressFilter(value as ProgressFilter)}>
@@ -273,7 +273,7 @@ export const LearningPathList: React.FC = () => {
 
                 {/* Sort By */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Trier par')}
                   </label>
                   <Select value={sortBy} onValueChange={(value) => setSortBy(value as LearningPathSortOption)}>
@@ -296,14 +296,14 @@ export const LearningPathList: React.FC = () => {
           {mobileFiltersOpen && (
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6 md:hidden">
               <h3 className="font-semibold text-lg mb-4 flex items-center">
-                <Filter className="w-5 h-5 me-2 text-indigo-600" />
+                <Filter className="w-5 h-5 me-2 text-brand" />
                 {t('Filters')}
               </h3>
               
               <div className="space-y-4">
                 {/* Subject Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Matière')}
                   </label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -323,7 +323,7 @@ export const LearningPathList: React.FC = () => {
 
                 {/* Difficulty Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Difficulté')}
                   </label>
                   <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
@@ -342,7 +342,7 @@ export const LearningPathList: React.FC = () => {
                 {/* Progress Filter */}
                 {isAuthenticated && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-ink-soft mb-2">
                       {t('Progression')}
                     </label>
                     <Select value={progressFilter} onValueChange={(value) => setProgressFilter(value as ProgressFilter)}>
@@ -361,7 +361,7 @@ export const LearningPathList: React.FC = () => {
 
                 {/* Sort By */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Trier par')}
                   </label>
                   <Select value={sortBy} onValueChange={(value) => setSortBy(value as LearningPathSortOption)}>
@@ -384,7 +384,7 @@ export const LearningPathList: React.FC = () => {
           <div className="flex-1">
             {/* Results Count */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-ink-soft">
                 {t('Showing')} <span className="font-medium">{filteredPaths.length}</span> {t('learning paths')}
               </div>
               <div className="hidden md:block">
@@ -404,7 +404,7 @@ export const LearningPathList: React.FC = () => {
 
             {loading ? (
               <div className="flex justify-center items-center h-64 bg-white rounded-xl shadow-sm">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-brand" />
               </div>
             ) : error ? (
               <div className="bg-white rounded-xl shadow-sm p-6 text-center">
@@ -422,9 +422,9 @@ export const LearningPathList: React.FC = () => {
               </div>
             ) : filteredPaths.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700 mb-2">{t('Aucun parcours trouvé')}</h3>
-                <p className="text-gray-500 mb-6">{t('Modifie tes filtres ou ta recherche.')}</p>
+                <BookOpen className="w-16 h-16 text-[#d8d4cc] mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-ink-soft mb-2">{t('Aucun parcours trouvé')}</h3>
+                <p className="text-ink-faint mb-6">{t('Modifie tes filtres ou ta recherche.')}</p>
                 <Button
                   onClick={() => {
                     setSearchTerm('');

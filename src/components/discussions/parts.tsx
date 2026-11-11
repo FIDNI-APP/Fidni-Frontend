@@ -52,7 +52,7 @@ export const Avatar: React.FC<{ user: { username: string; avatar: string | null 
     ? <img src={user.avatar} alt="" onError={() => setBroken(true)} style={style} className={`shrink-0 rounded-full object-cover ${ringCls}`} />
     : (
       <span aria-hidden style={style}
-        className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] font-bold uppercase text-ink-soft ${ringCls}`}>
+        className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] font-semibold uppercase text-ink-soft ${ringCls}`}>
         {user.username?.[0] ?? '?'}
       </span>
     );
@@ -61,10 +61,10 @@ export const Avatar: React.FC<{ user: { username: string; avatar: string | null 
 /** Repère public de l'auteur : son niveau (élève), « Professeur », « Équipe Fidni ». */
 export const RoleBadge: React.FC<{ author: DiscussionAuthor }> = ({ author }) => {
   if (author.role === 'equipe') {
-    return <span className="rounded-full bg-ink px-1.5 py-px text-[10.5px] font-bold uppercase tracking-[.04em] text-white">{t('Équipe Fidni')}</span>;
+    return <span className="rounded-full bg-ink px-1.5 py-px text-[12.5px] font-medium text-white">{t('Équipe Fidni')}</span>;
   }
   if (author.role === 'prof') {
-    return <span className="rounded-full bg-gold-soft px-1.5 py-px text-[10.5px] font-bold uppercase tracking-[.04em] text-gold-strong">{t('Professeur')}</span>;
+    return <span className="rounded-full bg-gold-soft px-1.5 py-px text-[12.5px] font-medium text-ink-faint">{t('Professeur')}</span>;
   }
   return author.level ? <span className="text-[12px] text-ink-faint">{author.level}</span> : null;
 };
@@ -98,7 +98,7 @@ export const ContentTagCard: React.FC<{ tag: ContentTag; compact?: boolean; onRe
         <Ico className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[10.5px] font-bold uppercase tracking-[.08em] text-ink-faint">
+        <span className="block truncate text-[12.5px] font-medium text-ink-faint">
           {t(type.label)}{tag.chapter ? ` · ${tag.chapter}` : ''}
         </span>
         <span className={`block truncate font-semibold text-ink ${compact ? 'text-[13px]' : 'text-[14px]'}`}>{tag.title}</span>
@@ -162,7 +162,7 @@ export const UtileButton: React.FC<{
   if (vertical) {
     return (
       <button type="button" onClick={click} aria-pressed={state.active} title={label} aria-label={label} disabled={own}
-        className={`flex w-12 shrink-0 flex-col items-center rounded-xl py-1.5 text-[13px] font-bold fd-nums transition-colors disabled:cursor-default ${
+        className={`flex w-12 shrink-0 flex-col items-center rounded-xl py-1.5 text-[13px] font-semibold fd-nums transition-colors disabled:cursor-default ${
           state.active ? 'bg-brand-soft text-brand-hover' : 'text-ink-faint hover:bg-[#f2f1ee] hover:text-ink disabled:hover:bg-transparent disabled:hover:text-ink-faint'}`}>
         <ArrowBigUp className={`h-5 w-5 ${state.active ? 'fill-current' : ''}`} aria-hidden />
         {state.count}

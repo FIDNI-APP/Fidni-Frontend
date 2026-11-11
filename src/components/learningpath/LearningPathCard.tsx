@@ -69,7 +69,7 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
   return (
     <div 
       className={cn(
-        "group relative bg-white rounded-3xl border border-gray-100 overflow-hidden",
+        "group relative bg-white rounded-3xl border border-[#f2f1ee] overflow-hidden",
         "hover:shadow-md transition-shadow duration-200 cursor-pointer",
         "flex flex-col h-full",
         className
@@ -78,16 +78,16 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
     >
       {/* Progress indicator */}
       {isStarted && (
-        <div className="absolute top-0 start-0 end-0 h-1 bg-gray-100 z-10">
+        <div className="absolute top-0 start-0 end-0 h-1 bg-[#f2f1ee] z-10">
           <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+            className="h-full bg-brand transition-[width] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
 
       {/* Header with gradient */}
-      <div className="relative h-36 bg-gradient-to-br from-blue-600 to-indigo-700 p-4 flex flex-col">
+      <div className="relative h-36 bg-ink p-4 flex flex-col">
         <div className="flex justify-between items-start z-10">
           <span className="inline-flex items-center px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white text-xs font-medium">
             <BookOpen className="w-3 h-3 me-1.5" />
@@ -138,19 +138,19 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-grow">
-        <p className="text-gray-600 text-sm line-clamp-2 mb-3">
+        <p className="text-ink-soft text-sm line-clamp-2 mb-3">
           {learningPath.description || t('Un parcours guidé, chapitre par chapitre.')}
         </p>
 
         {/* Metadata */}
         <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
-          <div className="flex items-center text-gray-500">
-            <Clock className="w-3.5 h-3.5 me-1.5 text-gray-400" />
+          <div className="flex items-center text-ink-faint">
+            <Clock className="w-3.5 h-3.5 me-1.5 text-ink-faint" />
             <span>{t('{n}h', { n: learningPath.estimated_hours })}</span>
           </div>
           
-          <div className="flex items-center text-gray-500">
-            <BookOpen className="w-3.5 h-3.5 me-1.5 text-gray-400" />
+          <div className="flex items-center text-ink-faint">
+            <BookOpen className="w-3.5 h-3.5 me-1.5 text-ink-faint" />
             <span>{t('{n} chapters', { n: learningPath.total_chapters || learningPath.path_chapters.length })}</span>
           </div>
         </div>
@@ -169,13 +169,13 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
             {learningPath.class_level.slice(0, 2).map(level => (
               <span 
                 key={level.id}
-                className="px-1.5 py-0.5 bg-gray-100 rounded text-xs text-gray-600"
+                className="px-1.5 py-0.5 bg-[#f2f1ee] rounded text-xs text-ink-soft"
               >
                 {level.name}
               </span>
             ))}
             {learningPath.class_level.length > 2 && (
-              <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs text-gray-600">
+              <span className="px-1.5 py-0.5 bg-[#f2f1ee] rounded text-xs text-ink-soft">
                 +{learningPath.class_level.length - 2}
               </span>
             )}
@@ -197,7 +197,7 @@ export const LearningPathCard: React.FC<LearningPathCardProps> = ({
         {/* Action button */}
         <Button
           onClick={handleStartClick}
-          className=" bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg mt-auto w-full"
+          className=" bg-brand hover:bg-brand-hover mt-auto w-full"
           size="sm"
         >
           {isCompleted ? (

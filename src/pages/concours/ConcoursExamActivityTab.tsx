@@ -48,7 +48,7 @@ export function ConcoursExamActivityTab({
       }}>
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="w-5 h-5" style={{ color: theme.from }} />
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             {t('Mes simulations sur cet examen')}
           </h2>
         </div>
@@ -90,13 +90,13 @@ export function ConcoursExamActivityTab({
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                         {submitted ? t('Terminée') : t('En cours')}
                       </span>
                       {!submitted && (
                         <span style={{
-                          fontSize: 10, fontWeight: 700, color: '#9a6e1c', background: '#faf3e2',
-                          padding: '2px 8px', borderRadius: 99, textTransform: 'uppercase',
+                          fontSize: 10, fontWeight: 600, color: '#9a6e1c', background: '#faf3e2',
+                          padding: '2px 8px', borderRadius: 99,
                         }}>
                           {t('Reprendre')}
                         </span>
@@ -112,7 +112,7 @@ export function ConcoursExamActivityTab({
                   </div>
                   <div style={{ textAlign: 'end', flexShrink: 0 }}>
                     <div style={{
-                      fontSize: 18, fontWeight: 800, fontFamily: 'var(--fd-mono)',
+                      fontSize: 18, fontWeight: 600, fontFamily: 'var(--fd-mono)',
                       color: submitted ? scoreColor(pct) : '#6b6862',
                     }}>
                       {submitted ? `${pct}%` : '—'}
@@ -135,7 +135,7 @@ export function ConcoursExamActivityTab({
       }}>
         <div className="flex items-center gap-2 mb-1">
           <Users className="w-5 h-5" style={{ color: theme.from }} />
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em' }}>
             {t('Dernières sessions de la communauté')}
           </h2>
         </div>
@@ -145,7 +145,7 @@ export function ConcoursExamActivityTab({
 
         {data.community.length === 0 ? (
           <p style={{ fontSize: 13, color: '#6b6862', fontStyle: 'italic' }}>
-            {t("Personne n'a encore terminé de simulation sur cet examen. Sois le premier !")}
+            {t("Personne n'a encore terminé de simulation sur cet examen. Sois le premier.")}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -161,7 +161,7 @@ export function ConcoursExamActivityTab({
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                     background: theme.light, color: theme.text,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 800,
+                    fontSize: 13, fontWeight: 600,
                   }}>
                     {i + 1}
                   </div>
@@ -175,7 +175,7 @@ export function ConcoursExamActivityTab({
                   </div>
                   <div style={{ textAlign: 'end', flexShrink: 0 }}>
                     <div style={{
-                      fontSize: 17, fontWeight: 800, fontFamily: 'var(--fd-mono)', color: scoreColor(pct),
+                      fontSize: 17, fontWeight: 600, fontFamily: 'var(--fd-mono)', color: scoreColor(pct),
                     }}>
                       {pct}%
                     </div>

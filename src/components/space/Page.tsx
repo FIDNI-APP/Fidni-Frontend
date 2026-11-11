@@ -27,7 +27,7 @@ export const Page: React.FC<{ width?: Width; children: React.ReactNode; classNam
   </div>
 );
 
-/** En-tête de page : repère (or), titre serif, une phrase, actions à droite (dessous sur téléphone). */
+/** En-tête de page : repère (gris, casse normale — unslop 11/11/2026), titre, une phrase, actions à droite (dessous sur téléphone). */
 export const PageHeader: React.FC<{
   eyebrow?: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
@@ -48,7 +48,7 @@ export const PageHeader: React.FC<{
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
+          <p className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint">
             {Icon && <Icon className="h-3.5 w-3.5" />}
             {eyebrow}
           </p>
@@ -107,16 +107,14 @@ export const EmptyState: React.FC<{
   tone?: 'brand' | 'gold' | 'ink';
   compact?: boolean;
 }> = ({ icon: Icon, title, text, action, secondary, tone = 'brand', compact = false }) => {
-  const toneCls = tone === 'gold' ? 'bg-gold-soft text-gold-strong ring-gold-line'
-    : tone === 'ink' ? 'bg-[#f2f1ee] text-ink-soft ring-line' : 'bg-brand-soft text-brand-hover ring-brand-line';
+  // Unslop (11/11/2026) : une icône seule, couleur du texte discret ; plus de carré teinté dans un halo.
+  // `tone` reste accepté (les appelants le passent) : seule l'icône or garde une nuance.
+  const toneCls = tone === 'gold' ? 'text-gold-strong' : 'text-ink-faint';
   return (
     <div className={`fd-card flex flex-col items-center text-center ${compact ? 'px-5 py-7' : 'px-6 py-10 sm:py-12'}`}>
-      <div className="relative mb-4" aria-hidden>
-        <span className="absolute inset-0 -m-3 rounded-full bg-[#f7f6f3]" />
-        <span className={`relative flex h-14 w-14 items-center justify-center rounded-2xl ring-1 ${toneCls}`}>
-          <Icon className="h-6 w-6" />
-        </span>
-      </div>
+      <span className={`mb-3 inline-flex ${toneCls}`} aria-hidden>
+        <Icon className="h-6 w-6" />
+      </span>
       <h3 className="text-[16px] font-semibold text-ink">{title}</h3>
       {text && <p className="mt-1.5 max-w-md text-[13.5px] leading-relaxed text-ink-faint">{text}</p>}
       {(action || secondary) && (
@@ -131,8 +129,8 @@ export const StatTile: React.FC<{ label: string; value: React.ReactNode; hint?: 
   label, value, hint, className = '',
 }) => (
   <div className={`rounded-2xl border border-line bg-white px-4 py-3.5 ${className}`}>
-    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t(label)}</p>
-    <p className="fd-nums mt-1 text-[24px] font-bold leading-none text-ink">{value}</p>
+    <p className="text-[12.5px] font-medium text-ink-faint">{t(label)}</p>
+    <p className="fd-nums mt-1 text-[24px] font-semibold leading-none text-ink">{value}</p>
     {hint && <p className="mt-1.5 text-[12px] leading-snug text-ink-faint">{hint}</p>}
   </div>
 );
@@ -186,7 +184,7 @@ export function UnderlineTabs<T extends string>({ value, onChange, options, labe
             className={`-mb-px inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
               active ? 'border-ink text-ink' : 'border-transparent text-ink-faint hover:text-ink-soft'}`}>
             {t(o.label)}
-            {!!o.count && <span className="fd-nums rounded-full bg-gold-soft px-1.5 text-[12px] font-bold text-gold-strong">{o.count}</span>}
+            {!!o.count && <span className="fd-nums rounded-full bg-gold-soft px-1.5 text-[12px] font-semibold text-gold-strong">{o.count}</span>}
           </button>
         );
       })}

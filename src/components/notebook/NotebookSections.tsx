@@ -25,7 +25,7 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
     <div>
       {filled.length > 0 && (
         <>
-          <p className="px-3 pb-2 text-[10.5px] font-bold uppercase tracking-[.1em] text-ink-faint">{t('Chapitres · {n}', { n: filled.length })}</p>
+          <p className="px-3 pb-2 text-[12.5px] font-medium text-ink-faint">{t('Chapitres · {n}', { n: filled.length })}</p>
           <ul className="flex flex-col gap-0.5">
             {filled.map((s) => {
               const on = sameId(s.id, activeId);
@@ -97,7 +97,7 @@ const NotebookSections: React.FC<Props> = (props) => {
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}
         className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 px-4 text-start">
         <span className="min-w-0 flex-1">
-          <span className="block text-[10.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
+          <span className="block text-[12.5px] font-medium text-ink-faint">
             {active ? t('Chapitre {position} sur {total}', { position, total: filled.length }) : t('Chapitres du programme')}
           </span>
           <span className="block truncate text-[14px] font-semibold text-ink">

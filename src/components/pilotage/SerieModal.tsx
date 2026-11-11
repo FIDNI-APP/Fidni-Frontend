@@ -72,7 +72,7 @@ export const SerieModal: React.FC<{ target: SerieTarget; onClose: () => void }> 
         className="max-h-[92vh] w-full max-w-[720px] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[.1em] text-ink-faint">Évolution</p>
+            <p className="text-[12.5px] font-medium text-ink-faint">Évolution</p>
             <h2 id="serie-titre" className="fd-display mt-0.5 text-[19px] leading-tight text-ink">{data?.libelle || target.label}</h2>
           </div>
           <button ref={closeRef} type="button" onClick={onClose} aria-label="Fermer"

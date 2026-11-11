@@ -34,18 +34,18 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
       <IonContent fullscreen scrollY={false}>
         <div style={{
           minHeight: '100%', display: 'flex', flexDirection: 'column', padding: '0 28px',
-          background: 'linear-gradient(170deg, #1f8a55 0%, #14583a 100%)', color: '#fff',
+          background: '#1a7a4a', color: '#fff',
         }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <img src={LOGO} alt="" style={{ width: 150, height: 150, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,.25))' }} />
-            <div className="fdm-title" style={{ fontSize: 44, fontWeight: 700, marginTop: 14, letterSpacing: '0.02em' }}>FIDNI</div>
+            <div className="fdm-title" style={{ fontSize: 44, fontWeight: 600, marginTop: 14, letterSpacing: '0.02em' }}>FIDNI</div>
             <p style={{ fontSize: 18, lineHeight: 1.45, opacity: .92, margin: '10px 0 0', maxWidth: 300 }}>
               {t('Les maths du lycée, étape par étape : exercices corrigés, cours, devoirs et quiz.')}
             </p>
           </div>
           <div style={{ paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 0px))' }}>
             <IonButton expand="block" shape="round" size="large" color="light"
-              style={{ '--color': '#14583a', fontWeight: 700 } as React.CSSProperties}
+              style={{ '--color': '#14583a', fontWeight: 600 } as React.CSSProperties}
               onClick={() => { haptic.tap(); nav.push(() => <Signup />); }}>
               {t('Créer un compte gratuit')}
             </IonButton>

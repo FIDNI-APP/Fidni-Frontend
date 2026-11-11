@@ -179,12 +179,12 @@ export function Search() {
             style={{
               background: '#f2f1ee', color: '#000000',
               padding: '4px 12px', borderRadius: 99,
-              fontSize: 11, fontWeight: 700, letterSpacing: '.04em',
+              fontSize: 11, fontWeight: 600, letterSpacing: '.04em',
             }}
           >
             <SearchIcon className="w-3 h-3" /> {t('RECHERCHE')}
           </span>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
             {t('Recherche')}
           </h1>
           <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
@@ -325,7 +325,7 @@ export function Search() {
                   >
                     <SearchIcon className="w-7 h-7" />
                   </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
                     {t('Aucun résultat pour « {q} »', { q: submitted })}{scope}
                   </h3>
                   <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
@@ -353,7 +353,7 @@ export function Search() {
               >
                 <SearchIcon className="w-7 h-7" />
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
                 {t('Commence ta recherche')}
               </h3>
               <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>

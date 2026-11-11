@@ -48,7 +48,7 @@ const Detail: React.FC = () => {
       <motion.span className="absolute inset-0 bg-[rgba(20,18,16,.22)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} />
       <motion.div className="absolute inset-y-0 end-0 w-[84%] border-s border-line bg-[#faf9f7] p-3 shadow-[-10px_0_30px_rgba(20,18,16,.16)]"
         initial={{ x: '100%' }} animate={{ x: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 30 }}>
-        <p className="text-[10px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Chapitre')}</p>
+        <p className="text-[12.5px] font-medium text-ink-faint">{t('Chapitre')}</p>
         <p className="fd-display text-[17px] leading-tight text-ink">{c.nom}</p>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           {chiffre(t('Moyenne'), moyenne(c.notes))}{chiffre(t('Minimum'), Math.min(...c.notes))}{chiffre(t('Maximum'), Math.max(...c.notes))}

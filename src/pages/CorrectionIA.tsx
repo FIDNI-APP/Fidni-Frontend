@@ -100,8 +100,8 @@ export default function CorrectionIA() {
         subtitle={sous}
         actions={(
           <div className="rounded-2xl border border-line bg-white px-5 py-3 text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Ma note')}</p>
-            <p dir="ltr" className={`fd-nums text-[30px] font-bold leading-tight ${couleur}`}>
+            <p className="text-[12.5px] font-medium text-ink-faint">{t('Ma note')}</p>
+            <p dir="ltr" className={`fd-nums text-[30px] font-semibold leading-tight ${couleur}`}>
               {fmt(c.note)}<span className="text-[15px] text-ink-faint"> / {c.note_sur}</span>
             </p>
             <p className="text-[12px] text-ink-faint">{t('{p} points sur {m}', { p: fmt(c.points), m: fmt(c.max) })}</p>
@@ -126,7 +126,7 @@ export default function CorrectionIA() {
       )}
 
       <section className="mb-6 rounded-2xl border border-gold-line bg-white p-4" aria-labelledby="pertes">
-        <h2 id="pertes" className="inline-flex items-center gap-1.5 text-[14px] font-bold text-ink">
+        <h2 id="pertes" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink">
           <AlertTriangle className="h-4 w-4 text-gold-strong" aria-hidden />
           {pertes.length ? t('Où tu as perdu des points ({p} pts)', { p: fmt(Math.round(perdus * 100) / 100) }) : t('Aucun point perdu')}
         </h2>
@@ -136,12 +136,12 @@ export default function CorrectionIA() {
           <ul className="mt-3 flex flex-col gap-2.5">
             {pertes.map(({ q, f }) => (
               <li key={q.chemin} className="flex items-start gap-3 text-[13.5px]">
-                <a href={`#q-${q.chemin}`} className="mt-0.5 shrink-0 rounded-md bg-gold-soft px-2 py-0.5 text-[12px] font-bold text-gold-strong">{q.label}</a>
+                <a href={`#q-${q.chemin}`} className="mt-0.5 shrink-0 rounded-md bg-gold-soft px-2 py-0.5 text-[12px] font-semibold text-gold-strong">{q.label}</a>
                 <div className="min-w-0 flex-1">
                   {f.commentaire ? <TexteMaths texte={f.commentaire} className="leading-relaxed text-ink-soft" />
                     : <p className="text-ink-faint">{t('Pas d’explication.')}</p>}
                 </div>
-                <span dir="ltr" className="fd-nums shrink-0 text-[12.5px] font-bold text-ink">−{fmt(Math.round((q.max - (f.points ?? 0)) * 100) / 100)}</span>
+                <span dir="ltr" className="fd-nums shrink-0 text-[12.5px] font-semibold text-ink">−{fmt(Math.round((q.max - (f.points ?? 0)) * 100) / 100)}</span>
               </li>
             ))}
           </ul>
@@ -150,7 +150,7 @@ export default function CorrectionIA() {
 
       {c.points_faibles.length > 0 && (
         <section className="mb-6 rounded-2xl border border-line bg-white p-4">
-          <h2 className="inline-flex items-center gap-1.5 text-[14px] font-bold text-ink"><Target className="h-4 w-4 text-gold-strong" aria-hidden /> {t('À retravailler')}</h2>
+          <h2 className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink"><Target className="h-4 w-4 text-gold-strong" aria-hidden /> {t('À retravailler')}</h2>
           <ul className="mt-3 flex flex-col gap-3">
             {c.points_faibles.map((p) => (
               <li key={p.theoreme} className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -169,7 +169,7 @@ export default function CorrectionIA() {
         </section>
       )}
 
-      <h2 className="mb-3 text-[15px] font-bold text-ink">{t('Question par question')}</h2>
+      <h2 className="mb-3 text-[15px] font-semibold text-ink">{t('Question par question')}</h2>
       <div className="flex flex-col gap-3">
         {c.questions.map((q) => {
           const f = c.finales[q.chemin];
@@ -214,8 +214,8 @@ function QuestionComparee({ id, label, points, max, commentaire, lu, illisible, 
   return (
     <section id={id} className="scroll-mt-24 rounded-2xl border border-line bg-white p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[14px] font-bold text-ink">{t('Question {q}', { q: label })}</h3>
-        <span dir="ltr" className="fd-nums shrink-0 text-[14px] font-bold text-ink">{fmt(points)}<span className="font-medium text-ink-faint"> / {fmt(max)}</span></span>
+        <h3 className="text-[14px] font-semibold text-ink">{t('Question {q}', { q: label })}</h3>
+        <span dir="ltr" className="fd-nums shrink-0 text-[14px] font-semibold text-ink">{fmt(points)}<span className="font-medium text-ink-faint"> / {fmt(max)}</span></span>
       </div>
       <div className="fd-ltr mt-2 h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]">
         <div className={`h-full rounded-full ${barre}`} style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }} />
@@ -237,7 +237,7 @@ function QuestionComparee({ id, label, points, max, commentaire, lu, illisible, 
           <div className="text-[13.5px] text-ink-soft"><TipTapRenderer content={enonce} /></div>
           {solution && (
             <div className="rounded-xl bg-brand-soft/40 p-3">
-              <p className="text-[11px] font-bold uppercase tracking-[.08em] text-brand-hover">{t('Corrigé')}</p>
+              <p className="text-[12.5px] font-medium text-brand-hover">{t('Corrigé')}</p>
               <div className="text-[13.5px]"><TipTapRenderer content={solution} /></div>
             </div>
           )}

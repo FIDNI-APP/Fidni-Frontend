@@ -262,7 +262,7 @@ export function EditProfile() {
           <FormSection id="photo" title={t('Photo et présentation')} visibility="public"
             hint={t('Ce qui accompagne ton pseudo sur ton profil, tes publications et tes commentaires.')}>
             <div className="flex flex-wrap items-center gap-5">
-              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-ink text-3xl font-bold text-white ring-1 ring-line">
+              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-ink text-3xl font-semibold text-white ring-1 ring-line">
                 {avatarPreview && !avatarBroken
                   ? <img src={avatarPreview} alt={t('Ta photo de profil')} onError={() => setAvatarBroken(true)} className="h-full w-full object-cover" />
                   : <span className="flex h-full w-full items-center justify-center" aria-hidden>{initial}</span>}

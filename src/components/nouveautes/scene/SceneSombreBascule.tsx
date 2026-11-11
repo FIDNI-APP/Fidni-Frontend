@@ -28,7 +28,7 @@ export const MiniSite: React.FC<{ sombre: boolean }> = ({ sombre }) => (
       </span>
       <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-ink-soft"><Bell className="h-4 w-4" /></span>
     </div>
-    <p className="text-[10.5px] font-bold uppercase tracking-[.12em] text-gold-strong">{aujourdhui()} · 2ème Bac SM</p>
+    <p className="text-[12.5px] font-medium text-ink-faint">{aujourdhui()} · 2ème Bac SM</p>
     <p className="fd-display mt-0.5 text-[21px] leading-tight text-ink">{t('Bonsoir,')} <em>Yasmine</em></p>
     <div className="mt-2.5 grid grid-cols-2 gap-2.5">
       <Tuile icon={CheckCircle2} label="Questions réussies" accent={COULEUR.reussies} selected={false} onClick={rien}

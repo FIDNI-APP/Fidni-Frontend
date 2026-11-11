@@ -102,7 +102,7 @@
   "La connexion avec Google est momentanément indisponible. Réessaie dans un instant, ou utilise ton e-mail.": "تسجيل الدخول عبر Google غير متاح مؤقتا. أعد المحاولة بعد قليل أو استعمل بريدك الإلكتروني.",
   "La connexion avec Google a échoué. Réessaie.": "فشل تسجيل الدخول عبر Google. أعد المحاولة.",
   "Si un compte existe, un nouveau lien vient d'être envoyé.": "إن كان هناك حساب بهذا العنوان، فقد أُرسل رابط جديد.",
-  "Connexion réussie !": "تم تسجيل الدخول بنجاح !",
+  "Connexion réussie": "تم تسجيل الدخول بنجاح",
   "Confirme ton adresse e-mail pour te connecter.": "أكّد بريدك الإلكتروني لتتمكن من تسجيل الدخول.",
   "Échec de la connexion. Réessaie.": "فشل تسجيل الدخول. أعد المحاولة.",
   "Les mots de passe ne correspondent pas.": "كلمتا المرور غير متطابقتين.",
@@ -237,7 +237,7 @@
   "ou collez votre JSON": "أو الصق JSON الخاص بك",
   "Voir exemple": "عرض مثال",
   "Copier": "نسخ",
-  "Import réussi!": "تم الاستيراد بنجاح !",
+  "Import réussi": "تم الاستيراد بنجاح",
   "Format simplifié:": "صيغة مبسّطة :",
   "Pas besoin de spécifier les IDs.": "لا حاجة لتحديد المعرّفات.",
   "Pour les exercices structurés, utilisez": "بالنسبة إلى التمارين المهيكلة، استعمل",
@@ -487,5 +487,8 @@
   "Aussi à revoir :": "للمراجعة أيضًا:",
   "Devoir à terminer · {quand}": "فرض لإكماله · {quand}",
   "Terminer le devoir": "إكمال الفرض",
-  "Déjà ouverte": "سبق فتحها"
+  "Déjà ouverte": "سبق فتحها",
+  "Exercices, leçons et sujets du Bac, tous corrigés": "تمارين ودروس ومواضيع الباكالوريا، كلها مصحّحة",
+  "Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui.": "أنشئ حسابك المجاني وابدأ التدرّب من اليوم.",
+  "Sommaire par niveau": "الفهرس حسب المستوى"
 }

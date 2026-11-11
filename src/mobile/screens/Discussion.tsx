@@ -64,7 +64,7 @@ export function Votes({ id, api, likes, dislikes, userVote }: {
     } catch { setState(before); }
   };
   const btn = (active: boolean): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 18px', borderRadius: 22, fontWeight: 700, fontSize: 15,
+    display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 18px', borderRadius: 22, fontWeight: 600, fontSize: 15,
     background: active ? 'var(--fdm-brand-soft)' : 'var(--fdm-card)', color: active ? 'var(--ion-color-primary)' : 'var(--ion-text-color)',
     border: `1.5px solid ${active ? 'var(--ion-color-primary)' : 'var(--fdm-line)'}`,
   });
@@ -131,7 +131,7 @@ export function Discussion({ id, api, initial }: { id: string; api: ContentApi; 
       <div key={c.id} style={{ display: 'flex', gap: 10, padding: reply ? '10px 0 0 36px' : '14px 0 0' }}>
         <span style={{
           flexShrink: 0, width: reply ? 26 : 32, height: reply ? 26 : 32, borderRadius: '50%', display: 'grid', placeItems: 'center',
-          background: 'var(--fdm-brand-soft)', color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: reply ? 12 : 14,
+          background: 'var(--fdm-brand-soft)', color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: reply ? 12 : 14,
         }}>{(name || '?').slice(0, 1).toUpperCase()}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13.5 }}><strong>{name}</strong> <span className="fdm-muted">· {timeAgo(c.created_at)}</span></div>
@@ -151,7 +151,7 @@ export function Discussion({ id, api, initial }: { id: string; api: ContentApi; 
   const total = countAll(comments);
   return (
     <div className="fdm-card" style={{ margin: '22px 16px 0', padding: '16px 16px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 16 }}>
         <IonIcon icon={chatbubbleOutline} />{t('Discussion')}{total ? <span className="fdm-muted" style={{ fontWeight: 600 }}>· {total}</span> : null}
       </div>
       {!total && <p className="fdm-muted" style={{ margin: '8px 0 0', fontSize: 14 }}>{t('Une question ? Pose-la ici.')}</p>}

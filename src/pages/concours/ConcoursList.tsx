@@ -363,7 +363,7 @@ function SimulationModal({ concoursType, onClose, onStarted }: {
           <div className="mt-4 rounded-xl bg-[#fcfbf9] px-4 py-3.5 ring-1 ring-line">
             <div className="mb-2 flex items-center justify-between">
               <label htmlFor="simulation-n" className="text-[12.5px] font-semibold text-ink-soft">{t('Nombre de questions')}</label>
-              <span className="fd-nums text-[14px] font-bold text-ink">{nQuestions}</span>
+              <span className="fd-nums text-[14px] font-semibold text-ink">{nQuestions}</span>
             </div>
             <input id="simulation-n" type="range" min={5} max={200} step={5} value={nQuestions}
               onChange={(e) => setNQuestions(Number(e.target.value))} className="w-full accent-[#1a7a4a]" />

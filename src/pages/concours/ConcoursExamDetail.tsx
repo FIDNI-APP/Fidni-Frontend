@@ -228,7 +228,7 @@ export default function ConcoursExamDetailPage() {
                 >
                   {/* En-tête : numéro, points, « Révélée » */}
                   <div className="mb-4 flex items-center gap-3">
-                    <span className="fd-nums text-[11.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
+                    <span className="fd-nums text-[12.5px] font-medium text-ink-faint">
                       {t('Question {n}', { n: idx + 1 })}
                     </span>
                     <span className="h-px flex-1 bg-[#efece6]" aria-hidden />
@@ -260,7 +260,7 @@ export default function ConcoursExamDetailPage() {
                           className={`opt-row flex items-start gap-3 rounded-xl border-[1.5px] px-4 py-3 transition-colors ${
                             showCorrect ? 'is-correct border-brand-line bg-brand-soft' : 'border-[#efece6] bg-paper'}`}
                         >
-                          <span className={`fd-nums flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-[1.5px] text-[13px] font-bold ${
+                          <span className={`fd-nums flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-[1.5px] text-[13px] font-semibold ${
                             showCorrect ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink-faint'}`}>
                             {opt.key}
                           </span>
@@ -298,7 +298,7 @@ export default function ConcoursExamDetailPage() {
                     <div className="mt-4 animate-fade-up rounded-xl bg-gold-soft p-4 ring-1 ring-gold-line sm:px-5">
                       <div className="mb-2.5 flex items-center gap-2">
                         <Lightbulb className="h-4 w-4 text-gold-strong" aria-hidden />
-                        <span className="text-[13px] font-bold text-gold-strong">{t('Explication')}</span>
+                        <span className="text-[13px] font-semibold text-gold-strong">{t('Explication')}</span>
                         {correctOpt && (
                           <span className="ms-auto rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-hover ring-1 ring-brand-line">
                             {t('Réponse : {k}', { k: q.correct_key })}
@@ -332,7 +332,7 @@ export default function ConcoursExamDetailPage() {
         }}>
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="w-4 h-4 text-ink-faint" aria-hidden />
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{t('Commentaires')}</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>{t('Commentaires')}</h3>
           </div>
           <CommentsBlock examId={exam.id} currentUserId={user?.id} canModerate={isModerator(user)}
                          onLogin={isAuthenticated ? undefined : () => openModal('commentaire')} />
@@ -367,7 +367,7 @@ export default function ConcoursExamDetailPage() {
                 <button
                   onClick={() => allRevealed ? setRevealed({}) : revealAll()}
                   style={{
-                    fontSize: 11, fontWeight: 700, color: theme.from, whiteSpace: 'nowrap',
+                    fontSize: 11, fontWeight: 600, color: theme.from, whiteSpace: 'nowrap',
                     background: 'none', border: 'none', cursor: 'pointer', minHeight: 28,
                   }}
                 >
@@ -391,8 +391,7 @@ export default function ConcoursExamDetailPage() {
                 flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
                 padding: '11px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
                 background: `linear-gradient(135deg,${theme.from},${theme.to})`,
-                color: '#fff', fontSize: 14, fontWeight: 700,
-                boxShadow: `0 4px 14px ${theme.from}44`,
+                color: '#fff', fontSize: 14, fontWeight: 600,
                 opacity: starting ? .7 : 1,
               }}
             >
@@ -493,14 +492,14 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
                 : (
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: 'linear-gradient(135deg,#1a1a1a,#9a958c)', color: '#fff',
+                    background: '#1a1a1a', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700,
+                    fontSize: 12, fontWeight: 600,
                   }}>{c.author.username[0]?.toUpperCase()}</div>
                 )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.author.username}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>{c.author.username}</span>
                   <span style={{ fontSize: 10, color: '#6b6862' }}>
                     {new Date(c.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>

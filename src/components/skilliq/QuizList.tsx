@@ -22,12 +22,11 @@ const Hero: React.FC<{ f: Featured; enCours: QuizEnCours | null; onStart: () => 
   const resume = f.mode === 'reprendre';
   return (
     <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-6">
-      <span aria-hidden className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:flex ${
-        resume ? 'bg-gold-soft text-gold-strong' : 'bg-brand-soft text-brand-hover'}`}>
+      <span aria-hidden className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f2f1ee] text-ink-soft sm:flex`}>
         <Icon className="h-6 w-6" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className={`text-[11px] font-bold uppercase tracking-[.1em] ${resume ? 'text-gold-strong' : 'text-brand-hover'}`}>
+        <p className={`text-[12.5px] font-medium text-ink-faint`}>
           {resume ? t('À reprendre') : f.mode === 'refaire' ? t('À refaire') : t('Prochain quiz')}
         </p>
         <h2 id="quiz-hero-titre" className="fd-display mt-1 text-[22px] leading-tight text-ink sm:text-[24px]">{f.chapter.name}</h2>
@@ -38,7 +37,7 @@ const Hero: React.FC<{ f: Featured; enCours: QuizEnCours | null; onStart: () => 
       </div>
       <button type="button" onClick={onStart}
         className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-[14px] font-semibold text-white transition duration-150 active:scale-[.97] motion-reduce:transition-none motion-reduce:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-          resume ? 'bg-gold hover:opacity-90' : 'bg-brand hover:bg-brand-hover'}`}>
+          'bg-brand hover:bg-brand-hover'}`}>
         {resume ? (
           <><Play className="h-4 w-4" aria-hidden /> {t('Reprendre')}{enCours && <span className="fd-nums font-normal text-white/80">{enCours.repondues}/{enCours.total}</span>}</>
         ) : f.mode === 'refaire' ? <><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire')}</>
@@ -65,7 +64,7 @@ const Stats: React.FC<{ ready: QuizChapter[]; hasDeep: boolean; bordered: boolea
       {items.map((it) => (
         <div key={it.key} className="flex items-center gap-2">
           <dt className="text-[12.5px] text-ink-faint">{it.label}</dt>
-          <dd className="fd-nums inline-flex items-center gap-1 text-[14px] font-bold text-ink">
+          <dd className="fd-nums inline-flex items-center gap-1 text-[14px] font-semibold text-ink">
             {it.badge && earned > 0 && <Award className="h-3.5 w-3.5 text-gold" aria-hidden />}{it.value}
           </dd>
         </div>

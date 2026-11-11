@@ -93,7 +93,7 @@ export const RevisionLabelPicker: React.FC<{ value: RevisionLabels; onChange: (v
 
       {level && chapters.length > 0 && (
         <div className="mt-2.5">
-          <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-[.06em] text-ink-faint">{t('Chapitres')}</p>
+          <p className="mb-1.5 text-[12.5px] font-medium text-ink-faint">{t('Chapitres')}</p>
           <div className="flex max-h-[150px] flex-wrap gap-1.5 overflow-y-auto pe-1">
             {chapters.map((c) => {
               const on = value.chapterIds.includes(c.id);

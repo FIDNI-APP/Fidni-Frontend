@@ -30,7 +30,7 @@ export function ProgressRoot() {
       <Screen title={t('Progression')} back={false} large>
         <Empty icon={barChartOutline} title={t('Ta progression apparaîtra ici')} text={t('Crée un compte gratuit pour suivre tes réussites, ton temps et tes points faibles.')} />
         <div style={{ textAlign: 'center' }}>
-          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: 16 }}>{t('Créer mon compte')}</button>
+          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: 16 }}>{t('Créer mon compte')}</button>
         </div>
       </Screen>
     );
@@ -78,7 +78,7 @@ export function ProgressRoot() {
                 <div key={c.id} style={{ padding: '13px 16px', borderTop: i ? '1px solid var(--fdm-line)' : 'none' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 14.5 }}>
                     <span style={{ fontWeight: 600 }}>{c.nom}</span>
-                    <span style={{ fontWeight: 700 }}>{total ? `${pct} %` : '—'}</span>
+                    <span style={{ fontWeight: 600 }}>{total ? `${pct} %` : '—'}</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--fdm-line)', marginTop: 8, overflow: 'hidden' }}>
                     <div style={{ width: `${pct}%`, height: '100%', background: pct >= 60 ? 'var(--ion-color-primary)' : 'var(--ion-color-warning)' }} />
@@ -94,7 +94,7 @@ export function ProgressRoot() {
             )}
           </div>
 
-          <button type="button" onClick={() => openWeb('/progression')} style={{ display: 'block', margin: '18px auto 0', color: 'var(--ion-color-primary)', fontWeight: 700 }}>
+          <button type="button" onClick={() => openWeb('/progression')} style={{ display: 'block', margin: '18px auto 0', color: 'var(--ion-color-primary)', fontWeight: 600 }}>
             {t('Voir le tableau de bord complet')}
           </button>
         </>
@@ -151,7 +151,7 @@ function WeakPoints({ data }: { data: Tableau }) {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <IonIcon icon={alertCircleOutline} style={{ color: 'var(--fdm-gold-strong)', fontSize: 20 }} />
             <span style={{ flex: 1, fontWeight: 650 }}>{p.nom}</span>
-            <span style={{ fontWeight: 700 }}>{Math.round(p.taux)} %</span>
+            <span style={{ fontWeight: 600 }}>{Math.round(p.taux)} %</span>
           </div>
           {p.a_revoir.slice(0, 2).map((r) => (
             <button key={`${r.id}-${r.question}`} type="button" className="fdm-pressable" onClick={() => nav.push(() => <ContentScreen id={r.id} kind={r.url.includes('/exams/') ? 'exam' : 'exercise'} />)}

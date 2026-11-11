@@ -302,7 +302,7 @@ export const DiscussionThread: React.FC = () => {
         <aside className="space-y-4 lg:sticky lg:top-[84px]">
           {participants.length > 0 && (
             <div className="rounded-2xl border border-line bg-white p-4">
-              <p className="mb-2.5 text-[13px] font-bold text-ink">
+              <p className="mb-2.5 text-[13px] font-semibold text-ink">
                 {t('Participants')} <span className="font-medium text-ink-faint fd-nums">· {participants.length}</span>
               </p>
               <ul className="space-y-2">
@@ -321,7 +321,7 @@ export const DiscussionThread: React.FC = () => {
           )}
           {related.length > 0 && (
             <div className="rounded-2xl border border-line bg-white p-4">
-              <p className="mb-2.5 text-[13px] font-bold text-ink">{t('Sur le même contenu')}</p>
+              <p className="mb-2.5 text-[13px] font-semibold text-ink">{t('Sur le même contenu')}</p>
               <ul className="space-y-2.5">
                 {related.map((x) => (
                   <li key={x.id}>

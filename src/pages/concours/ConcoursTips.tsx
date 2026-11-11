@@ -274,7 +274,7 @@ export function ConcoursTipDetailPage() {
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${tip.user_vote === 1 ? 'bg-ink text-white' : 'text-ink-faint hover:text-ink'}`}>
                   <ThumbsUp className="h-4 w-4" />
                 </button>
-                <span className="fd-nums min-w-[30px] text-center text-[13px] font-bold text-ink">{tip.vote_count}</span>
+                <span className="fd-nums min-w-[30px] text-center text-[13px] font-semibold text-ink">{tip.vote_count}</span>
                 <button type="button" onClick={() => onVote(-1)} disabled={busyVote} aria-pressed={tip.user_vote === -1} aria-label={t('Pas utile')}
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${tip.user_vote === -1 ? 'bg-[#a23b34] text-white' : 'text-ink-faint hover:text-ink'}`}>
                   <ThumbsDown className="h-4 w-4" />
@@ -354,7 +354,7 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
             <li key={c.id} className="flex gap-3 rounded-xl border border-line bg-[#fcfbf9] p-3">
               {c.author.avatar
                 ? <img src={c.author.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full" />
-                : <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-soft text-[12px] font-bold text-white" aria-hidden>
+                : <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-soft text-[12px] font-semibold text-white" aria-hidden>
                     {c.author.username[0]?.toUpperCase()}
                   </span>}
               <div className="min-w-0 flex-1">

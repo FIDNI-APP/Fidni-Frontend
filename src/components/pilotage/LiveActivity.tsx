@@ -100,7 +100,7 @@ export const LiveActivity: React.FC<{ events: LiveEvent[] | null; status: LiveSt
         <p className="flex-1 px-5 py-10 text-center text-[13px] text-ink-faint">Aucune activité récente</p>
       ) : (
         <>
-          <div aria-hidden className="hidden border-y border-line bg-[#faf9f7] px-5 py-2 text-[11px] font-semibold uppercase tracking-[.06em] text-ink-faint sm:grid sm:grid-cols-[88px_minmax(0,130px)_120px_minmax(0,1fr)] sm:gap-x-4">
+          <div aria-hidden className="hidden border-y border-line bg-[#faf9f7] px-5 py-2 text-[12.5px] font-medium text-ink-faint sm:grid sm:grid-cols-[88px_minmax(0,130px)_120px_minmax(0,1fr)] sm:gap-x-4">
             <span>Heure</span><span>Membre</span><span>Action</span><span>Contenu</span>
           </div>
           <ol className="divide-y divide-[#f2f1ee] border-t border-line sm:border-t-0" aria-label="Dernières actions">

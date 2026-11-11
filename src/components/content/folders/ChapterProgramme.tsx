@@ -23,7 +23,7 @@ export const ChapterProgramme: React.FC<{ programme: HubProgramme; chapter: stri
   if (!lists.length) return null;
   return (
     <section className="mt-12 rounded-2xl border border-line bg-white p-5 sm:p-7" aria-labelledby="au-programme">
-      <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Au programme officiel')}</p>
+      <p className="text-[12.5px] font-medium text-ink-faint">{t('Au programme officiel')}</p>
       <h2 id="au-programme" className="fd-display mt-1.5 text-[21px] leading-snug text-ink">{chapter} – {level}</h2>
       {when && (
         <p className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-ink-faint fd-nums">

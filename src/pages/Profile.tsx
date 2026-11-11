@@ -130,7 +130,7 @@ const ChiffreTuile: React.FC<{ c: Chiffre }> = ({ c }) => {
     <div className="flex items-center gap-3 bg-[#fcfbf9] px-4 py-3.5 max-md:last:odd:col-span-2 sm:px-5">
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${def.ton}`} aria-hidden><Icon className="h-5 w-5" /></span>
       <div className="min-w-0">
-        <p className="fd-nums text-[20px] font-bold leading-none text-ink">{c.valeur.toLocaleString(dateLocale())}</p>
+        <p className="fd-nums text-[20px] font-semibold leading-none text-ink">{c.valeur.toLocaleString(dateLocale())}</p>
         <p className="mt-1 text-[12px] leading-tight text-ink-faint">
           {t(def.label)}
           {/* Le record seulement s'il dépasse la série en cours (sinon c'est le même nombre). */}
@@ -370,7 +370,7 @@ export const ProfilePage: React.FC = () => {
               <div className="-mt-12 shrink-0 sm:hidden"><AvatarOrne src={p.avatar} nom={name} taille={84} palier={orne} /></div>
               <div className="-mt-16 hidden shrink-0 sm:block"><AvatarOrne src={p.avatar} nom={name} taille={112} palier={orne} /></div>
               <div className="min-w-0 pb-1">
-                <p className="text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">{role}</p>
+                <p className="text-[12.5px] font-medium text-ink-faint">{role}</p>
                 <h1 className="fd-display flex min-w-0 items-center gap-2 text-ink" style={{ fontSize: 'clamp(26px, 3vw, 36px)', lineHeight: 1.1 }}>
                   <span className="truncate">{name}</span>
                   {pub?.verifie && <BadgeCheck className="h-6 w-6 shrink-0 text-brand" aria-label={t('Professeur vérifié')} />}
@@ -379,11 +379,11 @@ export const ProfilePage: React.FC = () => {
                   <p className="fd-nums mt-1 flex flex-wrap items-center gap-x-3 text-[13px] text-ink-soft">
                     <button type="button" onClick={() => setListe('abonnes')} disabled={!pub.listes_visibles}
                       className="rounded hover:underline disabled:no-underline disabled:cursor-default">
-                      <b className="font-bold text-ink">{pub.abonnes.toLocaleString(dateLocale())}</b> {pub.abonnes > 1 ? t('abonnés') : t('abonné')}
+                      <b className="font-semibold text-ink">{pub.abonnes.toLocaleString(dateLocale())}</b> {pub.abonnes > 1 ? t('abonnés') : t('abonné')}
                     </button>
                     <button type="button" onClick={() => setListe('abonnements')} disabled={!pub.listes_visibles}
                       className="rounded hover:underline disabled:no-underline disabled:cursor-default">
-                      <b className="font-bold text-ink">{pub.abonnements.toLocaleString(dateLocale())}</b> {pub.abonnements > 1 ? t('abonnements') : t('abonnement')}
+                      <b className="font-semibold text-ink">{pub.abonnements.toLocaleString(dateLocale())}</b> {pub.abonnements > 1 ? t('abonnements') : t('abonnement')}
                     </button>
                     {pub.relation.me_suit && <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">{t('Te suit')}</span>}
                   </p>

@@ -23,7 +23,7 @@ export function ReviseRoot() {
       <Screen title={t('Réviser')} back={false} large>
         <Empty icon={refreshOutline} title={t('Tes révisions apparaîtront ici')} text={t('Crée un compte gratuit : FIDNI garde ce que tu dois refaire et prépare tes DS.')} />
         <div style={{ textAlign: 'center' }}>
-          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: 16 }}>{t('Créer mon compte')}</button>
+          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: 16 }}>{t('Créer mon compte')}</button>
         </div>
       </Screen>
     );
@@ -57,7 +57,7 @@ function UpcomingTests() {
               <IonIcon icon={calendarOutline} style={{ fontSize: 22 }} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontWeight: 700 }}>{testTitle(x)} · {whenLabel(x.days_left)}</span>
+              <span style={{ display: 'block', fontWeight: 600 }}>{testTitle(x)} · {whenLabel(x.days_left)}</span>
               <span className="fdm-muted" style={{ fontSize: 13 }}>
                 {x.readiness != null ? t('Prêt à {pct} %', { pct: String(Math.round(x.readiness)) }) : x.chapters.map((c) => c.name).join(', ')}
               </span>
@@ -66,7 +66,7 @@ function UpcomingTests() {
           </button>
         ))}
         <button type="button" className="fdm-pressable" onClick={() => openWeb('/reviser')}
-          style={{ padding: '12px', borderRadius: 14, border: '1.5px dashed var(--fdm-line)', color: 'var(--ion-color-primary)', fontWeight: 700 }}>
+          style={{ padding: '12px', borderRadius: 14, border: '1.5px dashed var(--fdm-line)', color: 'var(--ion-color-primary)', fontWeight: 600 }}>
           {upcoming.length ? t('Gérer mes DS') : t('Programmer un DS')}
         </button>
       </div>

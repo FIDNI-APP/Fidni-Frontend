@@ -30,7 +30,7 @@ export const AdSlot: React.FC<{ className?: string }> = ({ className = '' }) => 
   if (!ADS_ENABLED || !ADSENSE_SLOT || !granted) return null;
   return (
     <div className={`fd-ad print:hidden ${className}`}>
-      <p className="text-[10px] uppercase tracking-widest text-[#9a958c] mb-1.5">{t('Publicité')}</p>
+      <p className="text-[12.5px] font-medium text-[#9a958c] mb-1.5">{t('Publicité')}</p>
       {/* Nouvelle annonce à chaque page : la clé force un nouvel emplacement. */}
       <Unit key={pathname} />
     </div>

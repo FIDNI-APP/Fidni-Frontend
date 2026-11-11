@@ -15,7 +15,7 @@ export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'very_hard';
 // voie ; facile et moyen n'apparaissent plus (trop de signes sur la feuille). Couleurs : .fd-diff-q (index.css).
 const NIVEAUX: Partial<Record<QuestionDifficulty, { level: number; label: string; tone: string }>> = {
   hard: { level: 3, label: 'Difficile', tone: 'fd-diff-q font-semibold' },
-  very_hard: { level: 4, label: 'Très difficile', tone: 'fd-diff-q fd-diff-q-fort font-bold' },
+  very_hard: { level: 4, label: 'Très difficile', tone: 'fd-diff-q fd-diff-q-fort font-semibold' },
 };
 /** La question a-t-elle un badge ? (sinon le barème reste seul). */
 export const difficulteVisible = (difficulty?: string | null) => !!difficulty && !!NIVEAUX[difficulty as QuestionDifficulty];

@@ -84,7 +84,7 @@ export function QuizChapters({ level }: { level: LevelFolder }) {
       <>
         <Empty icon={helpCircleOutline} title={t('Des quiz pour chaque chapitre')} text={t('Crée un compte gratuit pour passer les quiz et suivre tes scores.')} />
         <div style={{ textAlign: 'center' }}>
-          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: 16 }}>{t('Créer mon compte')}</button>
+          <button type="button" onClick={() => setGuest(false)} style={{ color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: 16 }}>{t('Créer mon compte')}</button>
         </div>
       </>
     );
@@ -109,7 +109,7 @@ export function QuizChapters({ level }: { level: LevelFolder }) {
               <span className="fdm-muted" style={{ fontSize: 13 }}>
                 {countLabel(Math.min(quiz.ready, 30), '{n} question', '{n} questions')}
               </span>
-              {enCours && <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--fdm-gold-strong)', marginTop: 3 }}>
+              {enCours && <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--fdm-gold-strong)', marginTop: 3 }}>
                 {t('En cours : {n}/{total}', { n: String(enCours.repondues), total: String(enCours.total) })}</span>}
             </span>
             <IonIcon flipRtl icon={chevronForward} className="fdm-muted" />
@@ -189,13 +189,13 @@ export function QuizScreen({ quiz }: { quiz: QuizRef }) {
         <div className="fdm-card" style={{ margin: '20px 16px 0', padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
           <ScoreRing value={pct(taken)} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700 }}>{t('Ton dernier résultat')}</div>
+            <div style={{ fontWeight: 600 }}>{t('Ton dernier résultat')}</div>
             <div className="fdm-muted" style={{ fontSize: 13.5 }}>
               {new Date(taken.completed_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}
               {taken.attempts && taken.attempts > 1 ? ` · ${countLabel(taken.attempts, '{n} passage', '{n} passages')}` : ''}
             </div>
             {taken.a_correction && (
-              <button type="button" onClick={showLast} style={{ marginTop: 6, color: 'var(--ion-color-primary)', fontWeight: 700, fontSize: 14 }}>{t('Voir ma correction')}</button>
+              <button type="button" onClick={showLast} style={{ marginTop: 6, color: 'var(--ion-color-primary)', fontWeight: 600, fontSize: 14 }}>{t('Voir ma correction')}</button>
             )}
           </div>
         </div>
@@ -320,7 +320,7 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
   return (
     <Screen title={quiz.name} footer={footer}>
       <div style={{ padding: '12px 16px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
           <span>{t('Question {n} sur {total}', { n: String(index + 1), total: String(total) })}</span>
           <span className="fdm-muted">{t('{n} corrigées', { n: String(total - missing.length) })}</span>
         </div>
@@ -331,7 +331,7 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
             const bg = c ? (c.is_correct ? 'var(--ion-color-primary)' : 'var(--ion-color-warning)') : 'var(--fdm-card)';
             return (
               <button key={x.id} type="button" data-i={i} onClick={() => { haptic.tap(); setIndex(i); }} style={{
-                flexShrink: 0, width: 32, height: 32, borderRadius: 16, fontSize: 13, fontWeight: 700, background: bg,
+                flexShrink: 0, width: 32, height: 32, borderRadius: 16, fontSize: 13, fontWeight: 600, background: bg,
                 color: c ? '#fff' : 'inherit', border: i === index ? '2px solid var(--ion-text-color)' : '1px solid var(--fdm-line)',
               }}>{i + 1}</button>
             );
@@ -359,7 +359,7 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
               className={correction ? undefined : 'fdm-pressable'}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px', borderRadius: 16, textAlign: 'start', color: 'inherit', background: bg, border: `2px solid ${border}` }}>
               <span style={{
-                flexShrink: 0, width: 30, height: 30, borderRadius: multi ? 8 : 15, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 14,
+                flexShrink: 0, width: 30, height: 30, borderRadius: multi ? 8 : 15, display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 14,
                 background: chosen && !correction ? 'var(--ion-text-color)' : 'rgba(120,115,105,.12)', color: chosen && !correction ? 'var(--ion-background-color)' : 'inherit',
               }}>{LETTERS[i]}</span>
               <span className="fdm-math" style={{ flex: 1, minWidth: 0, fontSize: 16 }}><MathText text={opt} /></span>
@@ -372,8 +372,8 @@ function QuizRun({ quiz, start, onDone }: { quiz: QuizRef; start: QuizStart; onD
 
       {correction && (
         <div style={{ margin: '14px 16px 0', padding: '14px 16px', borderRadius: 16, background: correction.is_correct ? 'var(--fdm-brand-soft)' : 'var(--fdm-gold-soft)' }}>
-          <div style={{ fontWeight: 800, color: correction.is_correct ? 'var(--ion-color-primary)' : 'var(--fdm-gold-strong)' }}>
-            {correction.is_correct ? t('Bonne réponse !') : t('Pas tout à fait')}
+          <div style={{ fontWeight: 600, color: correction.is_correct ? 'var(--ion-color-primary)' : 'var(--fdm-gold-strong)' }}>
+            {correction.is_correct ? t('Bonne réponse') : t('Pas tout à fait')}
           </div>
           {correction.explanation && <div className="fdm-math" style={{ fontSize: 15, marginTop: 6 }}><MathText text={correction.explanation} /></div>}
         </div>
@@ -397,7 +397,7 @@ function QuizResultView({ result }: { result: SkillAssessment }) {
       <div className="fdm-card" style={{ margin: '18px 16px 0', padding: 20, textAlign: 'center' }}>
         <ScoreRing value={score} size={110} />
         <div className="fdm-title" style={{ fontSize: 22, fontWeight: 600, marginTop: 10 }}>
-          {score >= 80 ? t('Excellent !') : score >= 50 ? t('Bien joué !') : t('Continue, tu progresses')}
+          {score >= 80 ? t('Excellent') : score >= 50 ? t('Bien joué') : t('Continue, tu progresses')}
         </div>
         <div className="fdm-muted" style={{ fontSize: 14.5, marginTop: 4 }}>
           {items.length ? t('{n} bonnes réponses sur {total}', { n: String(right), total: String(items.length) }) : null}
@@ -412,7 +412,7 @@ function QuizResultView({ result }: { result: SkillAssessment }) {
             {report.theoremes.map((th, i) => (
               <div key={th.id} style={{ padding: '10px 0', borderTop: i ? '1px solid var(--fdm-line)' : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 14 }}>
-                  <span style={{ fontWeight: 600 }}>{th.name}</span><span style={{ fontWeight: 700 }}>{th.justes}/{th.total}</span>
+                  <span style={{ fontWeight: 600 }}>{th.name}</span><span style={{ fontWeight: 600 }}>{th.justes}/{th.total}</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: 'var(--fdm-line)', marginTop: 6, overflow: 'hidden' }}>
                   <div style={{ width: `${th.pct}%`, height: '100%', background: th.pct >= 50 ? 'var(--ion-color-primary)' : 'var(--ion-color-warning)' }} />
@@ -449,7 +449,7 @@ function QuizResultView({ result }: { result: SkillAssessment }) {
                         <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 10px', borderRadius: 10, background: g ? 'var(--fdm-brand-soft)' : 'var(--fdm-gold-soft)' }}>
                           <IonIcon icon={g ? checkmarkCircle : closeCircle} color={g ? 'primary' : 'warning'} />
                           <span className="fdm-math" style={{ fontSize: 14.5, flex: 1 }}><MathText text={o} /></span>
-                          <span className="fdm-muted" style={{ fontSize: 11.5, fontWeight: 700 }}>{m ? t('Ta réponse') : t('Bonne réponse')}</span>
+                          <span className="fdm-muted" style={{ fontSize: 11.5, fontWeight: 600 }}>{m ? t('Ta réponse') : t('Bonne réponse')}</span>
                         </div>
                       );
                     })}
@@ -458,7 +458,7 @@ function QuizResultView({ result }: { result: SkillAssessment }) {
                 </div>
               );
             })}
-            {!shown.length && <Empty icon={trophyOutline} title={tab === 'erreurs' ? t('Aucune erreur, bravo !') : t('Rien ici')} />}
+            {!shown.length && <Empty icon={trophyOutline} title={tab === 'erreurs' ? t('Aucune erreur, bravo') : t('Rien ici')} />}
           </div>
         </>
       )}

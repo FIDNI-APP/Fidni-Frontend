@@ -118,7 +118,7 @@ export const CatchUpBanner: React.FC<{
   };
 
   const from = location.pathname + location.search;
-  const title = allDone ? t('C’est à jour, merci !')
+  const title = allDone ? t('C’est à jour, merci')
     : kind === 'exam' ? (count > 1 ? t('{n} examens à évaluer', { n: count }) : t('{n} examen à évaluer', { n: count }))
     : (count > 1 ? t('{n} exercices à évaluer', { n: count }) : t('{n} exercice à évaluer', { n: count }));
 

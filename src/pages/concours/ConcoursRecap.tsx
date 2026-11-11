@@ -139,7 +139,7 @@ export default function ConcoursRecapPage() {
         {/* Score hero */}
         <div
           style={{
-            background: 'linear-gradient(135deg,#1a1a1a 0%,#1a1a1a 50%,#1a1a1a 100%)',
+            background: '#1a1a1a',
             borderRadius: 24,
             position: 'relative',
             overflow: 'hidden',
@@ -152,10 +152,10 @@ export default function ConcoursRecapPage() {
           }} />
           <div className="flex items-center justify-between flex-wrap gap-4" style={{ position: 'relative' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#b8b4ac', letterSpacing: '.08em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#b8b4ac' }}>
                 {recap.concours_type.toUpperCase()} · {recap.mode === 'exam' ? t('Annale') : recap.mode === 'random_year' ? t('Année aléatoire') : t('Mix aléatoire')}
               </div>
-              <h1 style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginTop: 8 }}>
+              <h1 style={{ fontSize: 28, fontWeight: 600, color: '#fff', letterSpacing: '-0.03em', marginTop: 8 }}>
                 {t('Résultat')}
               </h1>
               <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
@@ -182,15 +182,15 @@ export default function ConcoursRecapPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexDirection: 'column',
                 }}>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: '#fff', fontFamily: 'var(--fd-mono)' }}>
+                  <div style={{ fontSize: 26, fontWeight: 600, color: '#fff', fontFamily: 'var(--fd-mono)' }}>
                     {overall}%
                   </div>
-                  <div style={{ fontSize: 9, color: '#d8d4cc', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 9, color: '#d8d4cc', fontWeight: 600 }}>
                     {t('Score')}
                   </div>
                 </div>
               </div>
-              <Trophy className="w-10 h-10" style={{ color: overall >= 75 ? '#fbbf24' : '#b8b4ac' }} />
+              <Trophy className="w-10 h-10" style={{ color: overall >= 75 ? '#c0892f' : '#b8b4ac' }} />
             </div>
           </div>
         </div>
@@ -199,7 +199,7 @@ export default function ConcoursRecapPage() {
         <div className="mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
-            <h2 style={{ fontSize: 12, color: '#b8b4ac', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 700 }}>
+            <h2 style={{ fontSize: 12, color: '#b8b4ac', fontWeight: 600 }}>
               {t('Par domaine')}
             </h2>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
@@ -248,11 +248,11 @@ export default function ConcoursRecapPage() {
                         background: '#1a1a1a',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', fontFamily: 'var(--fd-mono)' }}>{pct}%</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#fff', fontFamily: 'var(--fd-mono)' }}>{pct}%</span>
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
                         {b.subfield_name || b.subject_name || t('Sans matière')}
                       </div>
                       {b.subject_name && b.subfield_name && (
@@ -281,10 +281,10 @@ export default function ConcoursRecapPage() {
                 borderRadius: 16,
               }}
             >
-              <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: '#b8b4ac', fontWeight: 600, marginBottom: 6 }}>
                 {t('Domaine')}
               </div>
-              <h3 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+              <h3 style={{ fontSize: 22, fontWeight: 600, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                 {activeBreakdown.subfield_name || activeBreakdown.subject_name || t('Sans matière')}
               </h3>
               <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
@@ -293,7 +293,7 @@ export default function ConcoursRecapPage() {
 
               <div style={{ height: 1, background: 'rgba(255,255,255,.08)', margin: '14px 0' }} />
 
-              <div style={{ fontSize: 11, color: '#b8b4ac', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: '#b8b4ac', fontWeight: 600, marginBottom: 8 }}>
                 {t('Sélection des questions')}
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -314,7 +314,7 @@ export default function ConcoursRecapPage() {
                         border: `1.5px ${kind === 'skipped' ? 'dashed' : 'solid'} ${st.border}`,
                         // La question ouverte garde sa couleur de résultat, entourée de blanc.
                         boxShadow: isCurrent ? '0 0 0 2px #1a1a1a, 0 0 0 4px #fff' : undefined,
-                        color: st.color, fontSize: 12, fontWeight: 700, fontFamily: 'var(--fd-mono)', cursor: 'pointer',
+                        color: st.color, fontSize: 12, fontWeight: 600, fontFamily: 'var(--fd-mono)', cursor: 'pointer',
                       }}
                     >
                       {p + 1}
@@ -407,10 +407,10 @@ function QuestionReview({ recap, pos, positions, onGo }: {
       }}
     >
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{t('Question {n}', { n: pos + 1 })}</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{t('Question {n}', { n: pos + 1 })}</h3>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
-          fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase',
+          fontSize: 10, fontWeight: 600,
           color: PILL[kind].color,
           background: kind === 'skipped' ? 'rgba(255,255,255,.08)' : PILL[kind].bg,
           padding: '4px 10px', borderRadius: 99,
@@ -455,7 +455,7 @@ function QuestionReview({ recap, pos, positions, onGo }: {
                   width: 28, height: 28, borderRadius: 7,
                   background: isCorrect ? '#16a34a' : isChosen ? '#dc2626' : 'transparent',
                   color: '#fff',
-                  fontSize: 12, fontWeight: 800, fontFamily: 'var(--fd-mono)',
+                  fontSize: 12, fontWeight: 600, fontFamily: 'var(--fd-mono)',
                   border: `1.5px solid ${isCorrect ? '#16a34a' : isChosen ? '#dc2626' : 'rgba(255,255,255,.18)'}`,
                 }}
               >
@@ -480,8 +480,8 @@ function QuestionReview({ recap, pos, positions, onGo }: {
           }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Lightbulb className="w-4 h-4" style={{ color: '#fbbf24' }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#fbbf24' }}>{t('Explication')}</span>
+            <Lightbulb className="w-4 h-4" style={{ color: '#c0892f' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#c0892f' }}>{t('Explication')}</span>
           </div>
           <div className="concours-dark-prose concours-recap-explanation" style={{ fontSize: 15, color: '#fff', lineHeight: 1.7 }}>
             <ConcoursContentRenderer html={q.explanation} />

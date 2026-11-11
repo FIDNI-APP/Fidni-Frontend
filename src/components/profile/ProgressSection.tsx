@@ -189,7 +189,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
           <div className="min-w-0 flex-1">
             <p className="text-[14px] text-ink-soft">
-              <b className="fd-nums text-[22px] font-bold text-ink">{total}</b> {total > 1 ? t('exercices notés :') : t('exercice noté :')}{' '}
+              <b className="fd-nums text-[22px] font-semibold text-ink">{total}</b> {total > 1 ? t('exercices notés :') : t('exercice noté :')}{' '}
               <b className="fd-nums font-semibold text-brand-hover">{success.length}</b> {success.length > 1 ? t('réussis,') : t('réussi,')}{' '}
               <b className="fd-nums font-semibold text-gold-strong">{review.length}</b> {t('à revoir')}
             </p>
@@ -247,7 +247,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
             action={<button type="button" onClick={() => setQuery('')} className="fd-btn-ghost min-h-10"><X className="h-4 w-4" /> {t('Effacer la recherche')}</button>} />
         ) : filter === 'review' ? (
           <EmptyState compact icon={Check} title={t('Rien à revoir')}
-            text={t('Tous les exercices que tu as notés sont réussis. Bravo !')} />
+            text={t('Tous les exercices que tu as notés sont réussis. Bravo.')} />
         ) : (
           <EmptyState compact icon={RotateCcw} tone="gold" title={t('Pas encore de réussi')}
             text={t('Refais un exercice à revoir : quand tu le réussis, marque-le « Réussi ».')}

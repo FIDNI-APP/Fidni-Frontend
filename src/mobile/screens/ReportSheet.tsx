@@ -58,7 +58,7 @@ export function ReportSheet({ open, onClose, contentId, kind, questions }: {
         {state === 'sent' ? (
           <div style={{ padding: '40px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 44 }}>🙏</div>
-            <p style={{ fontSize: 17, fontWeight: 700 }}>{t('Merci, c’est noté !')}</p>
+            <p style={{ fontSize: 17, fontWeight: 600 }}>{t('Merci, c’est noté')}</p>
             <p className="fdm-muted" style={{ fontSize: 14.5 }}>{t('L’équipe va vérifier. Tu recevras la réponse dans tes notifications.')}</p>
             <IonButton shape="round" onClick={close}>{t('Fermer')}</IonButton>
           </div>

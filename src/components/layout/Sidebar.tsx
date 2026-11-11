@@ -399,21 +399,22 @@ const NavSection: React.FC<{
 /** Icône dans une tuile de 30 px : dorée sur la ligne noire de l'entrée active (couleurs d'origine). */
 const NavIcon: React.FC<{ icon: NavItem['icon']; active: boolean }> = ({ icon: Icon, active }) => (
   <span className={cx('inline-flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-lg transition-colors',
-    active ? 'bg-[#c0892f] text-ink' : 'text-ink-faint group-hover:text-ink-soft')}>
+    active ? 'text-white' : 'text-ink-faint group-hover:text-ink-soft')}>
     <Icon className="h-[18px] w-[18px]" />
   </span>
 );
 
 /** « Nouveau » des quiz : sous le libellé dans la barre (240 px : à côté, il le coupait), à droite dans le tiroir
  *  du téléphone, point doré sur l'icône quand la barre est repliée. */
-const QuizNouveau: React.FC<{ place: 'dessous' | 'droite' | 'point'; active: boolean }> = ({ place, active }) => {
+const QuizNouveau: React.FC<{ place: 'dot' | 'droite' | 'point'; active: boolean }> = ({ place, active }) => {
   const { menu } = useQuizNouveau();
   if (!menu) return null;
   if (place === 'point') return <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label={t('nouveau')} />;
+  if (place === 'dot') return <span className={cx('ms-auto me-2 h-2 w-2 shrink-0 rounded-full', active ? 'bg-white' : 'bg-gold')} role="img" aria-label={t('nouveau')} />;
   return (
-    <span className={cx('shrink-0 rounded-full px-1.5 font-bold uppercase tracking-[.06em]',
-      place === 'dessous' ? 'mt-0.5 py-px text-[9.5px] leading-[14px]' : 'ms-auto me-1 py-0.5 text-[10px]',
-      active ? 'bg-white/15 text-white' : 'bg-gold text-white')}>
+    <span className={cx('shrink-0 rounded-md px-1.5 font-medium',
+      'ms-auto me-1 py-0.5 text-[11.5px]',
+      active ? 'bg-white/15 text-white' : 'bg-[#efece6] text-ink-soft')}>
       {t('Nouveau')}
     </span>
   );
@@ -426,7 +427,7 @@ const DiscussionCount: React.FC<{ collapsed: boolean; active: boolean }> = ({ co
   if (collapsed) return <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label={t('{n} sans réponse', { n })} />;
   return (
     <span aria-label={t('{n} sans réponse', { n })}
-      className={cx('ms-auto me-1 shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-bold fd-nums', active ? 'bg-white/15 text-white' : 'bg-gold-soft text-gold-strong')}>
+      className={cx('ms-auto me-1 shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium fd-nums', active ? 'bg-white/15 text-white' : 'bg-[#efece6] text-ink-soft')}>
       {n > 99 ? '99+' : n}
     </span>
   );
@@ -444,15 +445,15 @@ const DefiPastille: React.FC<{ collapsed: boolean; active: boolean }> = ({ colla
   }
   if (!d.fait) {
     return (
-      <span className={cx('fd-nums ms-auto me-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold',
-        active ? 'bg-white/15 text-white' : 'bg-gold text-white')}
+      <span className={cx('fd-nums ms-auto me-1 inline-flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium',
+        active ? 'bg-white/15 text-white' : 'bg-[#efece6] text-ink-soft')}
         aria-label={d.serie ? t('À faire, série de {n} jours en jeu', { n: d.serie }) : t('À faire')}>
         {d.serie > 0 ? <><Flame className="h-3 w-3" aria-hidden />{d.serie}</> : t('À faire')}
       </span>
     );
   }
   return (
-    <span className={cx('fd-nums ms-auto me-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold',
+    <span className={cx('fd-nums ms-auto me-1 inline-flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium',
       active ? 'bg-white/15 text-white' : 'bg-brand-soft text-brand-hover')}
       aria-label={t('Fait aujourd’hui')}>
       <Check className="h-3 w-3" aria-hidden />{d.serie > 0 && d.serie}
@@ -498,12 +499,10 @@ const NavRow: React.FC<{
       )}
     >
       <NavIcon icon={Icon} active={active} />
-      {!collapsed && (item.nouveau && !drawer ? (
-        <span className="flex min-w-0 flex-col items-start py-1">
-          <span className="max-w-full truncate">{t(item.label)}</span>
-          <QuizNouveau place="dessous" active={active} />
-        </span>
-      ) : <span className="truncate">{t(item.label)}</span>)}
+      {/* « Nouveau » dans la barre : un point doré à droite (11/11/2026 — sous le libellé, il rendait cette ligne
+          plus haute que les autres ; à côté, le mot ne tient pas dans 240 px). Le mot reste dans le tiroir. */}
+      {!collapsed && <span className="truncate">{t(item.label)}</span>}
+      {item.nouveau && !collapsed && !drawer && <QuizNouveau place="dot" active={active} />}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
       {item.compteur && <DiscussionCount collapsed={collapsed} active={active} />}
       {item.defi && <DefiPastille collapsed={collapsed} active={active} />}
@@ -585,7 +584,7 @@ const SubLink: React.FC<{
       className={cx(
         'flex items-center rounded-lg px-2.5 transition-colors',
         drawer ? 'min-h-10 text-[14px]' : 'min-h-9 text-[13px]',
-        active ? 'bg-[#faf3e2] font-bold text-ink shadow-[inset_3px_0_0_#c0892f] rtl:shadow-[inset_-3px_0_0_#c0892f]'
+        active ? 'bg-[#efece6] font-semibold text-ink shadow-[inset_2px_0_0_currentColor] rtl:shadow-[inset_-2px_0_0_currentColor]'
           : cx(muted ? 'text-ink-faint' : 'text-ink-soft', 'hover:bg-[#f7f6f3] hover:text-[#15633c]'),
       )}
     >

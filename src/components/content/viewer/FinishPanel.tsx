@@ -209,7 +209,7 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({
       <section id="ou-en-es-tu" className="scroll-mt-24 rounded-2xl border border-line bg-white px-3 py-2.5 sm:px-5 sm:py-3.5" data-tour="detail-terminer" aria-labelledby="ou-titre">
         <div className="flex items-center gap-2.5 sm:justify-between sm:gap-6">
           <div className="hidden min-w-0 flex-1 sm:block">
-            <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Où en es-tu ?')}</p>
+            <p className="text-[12.5px] font-medium text-ink-faint">{t('Où en es-tu ?')}</p>
             <h2 id="ou-titre" className={`mt-0.5 flex items-center gap-1.5 text-[15px] font-semibold leading-snug ${tone}`}>
               {statusIcon}{title}
             </h2>

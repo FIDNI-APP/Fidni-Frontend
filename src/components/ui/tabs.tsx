@@ -63,7 +63,7 @@ export const TabsList = ({ className, children, ...props }: TabsListProps) => {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center rounded-md bg-white p-1 text-gray-500",
+        "flex flex-wrap items-center rounded-md bg-white p-1 text-ink-faint",
         className
       )}
       role="tablist"
@@ -102,10 +102,10 @@ export const TabsTrigger = ({
       data-state={isSelected ? "active" : "inactive"}
       onClick={() => setSelectedTab(value)}
       className={cn(
-        "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-50",
         isSelected
-          ? "bg-indigo-50 text-indigo-700 shadow-sm"
-          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+          ? "bg-brand-soft text-brand-hover shadow-sm"
+          : "text-ink-soft hover:bg-[#faf9f7] hover:text-ink",
         className
       )}
       {...props}

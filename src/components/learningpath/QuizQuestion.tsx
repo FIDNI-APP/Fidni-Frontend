@@ -69,7 +69,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       case 'easy': return 'text-green-600 bg-green-50';
       case 'medium': return 'text-yellow-600 bg-yellow-50';
       case 'hard': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      default: return 'text-ink-soft bg-[#faf9f7]';
     }
   };
 
@@ -78,7 +78,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
       {/* Question Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-ink-faint">
             {t('Question {n} of {total}', { n: questionNumber, total: totalQuestions })}
           </span>
           <span className={cn(
@@ -87,20 +87,20 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
           )}>
             {t(question.difficulty)}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-ink-faint">
             {question.points !== 1 ? t('{n} points', { n: question.points }) : t('{n} point', { n: question.points })}
           </span>
         </div>
       </div>
 
       {/* Question Text */}
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
+      <h3 className="text-lg font-medium text-ink mb-6">
         {question.question_text}
       </h3>
 
       {/* Instructions for multiple select */}
       {question.question_type === 'multiple_select' && (
-        <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
+        <p className="text-sm text-ink-soft mb-4 flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
           {t('Plusieurs réponses possibles')}
         </p>
@@ -133,8 +133,8 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
                   question.question_type === 'multiple_select'
                     ? (selectedAnswer as number[]).includes(index)
                     : selectedAnswer === index
-                ) && "border-indigo-500 bg-indigo-50",
-                !showResult && "hover:bg-gray-50 border-gray-200",
+                ) && "border-brand bg-brand-soft",
+                !showResult && "hover:bg-[#faf9f7] border-line",
                 showResult && "cursor-default"
               )}
             >
@@ -146,21 +146,21 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
                     ) : selected ? (
                       <XCircle className="w-5 h-5 text-red-600" />
                     ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                      <div className="w-5 h-5 rounded-full border-2 border-[#d8d4cc]" />
                     )
                   ) : question.question_type === 'multiple_select' ? (
                     <input
                       type="checkbox"
                       checked={(selectedAnswer as number[]).includes(index)}
                       onChange={() => {}}
-                      className="w-5 h-5 text-indigo-600"
+                      className="w-5 h-5 text-brand"
                     />
                   ) : (
                     <input
                       type="radio"
                       checked={selectedAnswer === index}
                       onChange={() => {}}
-                      className="w-5 h-5 text-indigo-600"
+                      className="w-5 h-5 text-brand"
                     />
                   )}
                 </div>
@@ -179,9 +179,9 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
 
       {/* Explanation (shown after answer) */}
       {showResult && question.explanation && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">{t('Explication')}</h4>
-          <p className="text-sm text-blue-800">{question.explanation}</p>
+        <div className="mt-6 p-4 bg-brand-soft border border-brand-line rounded-lg">
+          <h4 className="font-medium text-brand-hover mb-2">{t('Explication')}</h4>
+          <p className="text-sm text-brand-hover">{question.explanation}</p>
         </div>
       )}
     </div>

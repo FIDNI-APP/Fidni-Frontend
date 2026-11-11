@@ -1,7 +1,7 @@
 // Invitations à créer un compte, pour les visiteurs seulement, aux endroits où un compte change
 // vraiment quelque chose (progression, révisions, cahiers, note d'examen). Sobres, jamais bloquantes.
 import React, { useEffect, useState } from 'react';
-import { Check, Sparkles, X } from 'lucide-react';
+import { Check, LineChart, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { TABBAR_OFFSET } from '@/components/layout/nav';
@@ -29,9 +29,9 @@ export const SignupStrip: React.FC<{ className?: string; source?: string }> = ({
   const openSignup = useOpenSignup(source);
   if (isAuthenticated) return null;
   return (
-    <div className={`rounded-2xl border border-brand-line bg-brand-soft/50 px-5 py-4 flex flex-col md:flex-row md:items-center gap-4 ${className}`}>
+    <div className={`rounded-2xl border border-line bg-white px-5 py-4 flex flex-col md:flex-row md:items-center gap-4 ${className}`}>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Sparkles className="h-4 w-4 text-brand" /> {t('Travaille avec un compte, c’est gratuit')}</p>
+        <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><LineChart className="h-4 w-4 text-ink-faint" /> {t('Travaille avec un compte, c’est gratuit')}</p>
         <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
           {BENEFITS.map((b) => (
             <li key={b} className="flex items-center gap-1.5 text-[13px] text-ink-soft"><Check className="h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} /> {t(b)}</li>
@@ -54,9 +54,9 @@ export const SignupCard: React.FC<{ title?: string; text?: string; benefits?: bo
   const openSignup = useOpenSignup(source);
   if (isAuthenticated) return null;
   return (
-    <div className={`rounded-2xl border border-brand-line bg-brand-soft/50 p-5 ${className}`} data-tour={tour}>
+    <div className={`rounded-2xl border border-line bg-white p-5 ${className}`} data-tour={tour}>
       <p className="flex items-center gap-2 text-[15px] font-semibold text-ink">
-        <Sparkles className="h-4 w-4 text-brand" /> {title}
+        <LineChart className="h-4 w-4 text-ink-faint" /> {title}
       </p>
       {text && <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">{text}</p>}
       {benefits && (

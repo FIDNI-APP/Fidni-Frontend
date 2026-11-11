@@ -78,7 +78,7 @@ export function Landing() {
         canonicalUrl="/"
       />
 
-      <Hero levels={levels} />
+      <Hero />
       <TrustRow />
       <Pillars />
       <HowItWorks />
@@ -98,31 +98,28 @@ function useSignupClick(source: string) {
   return (e: React.MouseEvent) => { e.preventDefault(); openSignup(); };
 }
 
-function Hero({ levels }: { levels: Level[] | null }) {
+/**
+ * Haut de page (unslop, 11/11/2026) : un titre, une phrase, deux actions, et le corrigé à côté — l'élément qui porte
+ * la page. Plus de pastille au-dessus du titre, de mot en italique vert, ni de puces empilées sous les boutons
+ * (le choix du niveau est dans « Le programme », plus bas, et « Gratuit » dans la rangée de promesses).
+ */
+function Hero() {
   const onSignupClick = useSignupClick('hero');
   return (
-    <section className="max-w-6xl mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-10 md:pb-14">
-      <div className="grid lg:grid-cols-[1fr_1.02fr] gap-10 lg:gap-14 items-center">
+    <section className="max-w-6xl mx-auto px-4 md:px-6 pt-12 md:pt-24 pb-12 md:pb-16">
+      <div className="grid lg:grid-cols-[1fr_1.02fr] gap-10 lg:gap-16 items-center">
         {/* Copy */}
         <div>
-          <span style={eyebrowChip}>
-            <span style={{ width: 5, height: 5, borderRadius: 99, background: ACCENT }} />
-            {t('La plateforme de maths des lycéens')}
-          </span>
-
           <h1 className="fd-display" style={heroTitle}>
-            {t('Les maths, enfin')}
-            <br />
-            <span style={{ color: ACCENT, fontStyle: 'italic', fontWeight: 500 }}>{t('claires')}</span>
-            {' '}{t('étape par étape.')}
+            {t('Les maths, enfin')} {t('claires')} {t('étape par étape.').replace(/\.$/, '')}
           </h1>
 
           <p style={heroLede}>
             {t("Des exercices, des leçons et des sujets d'examen")}{' '}
-            <span style={{ color: INK, fontWeight: 600 }}>{t('corrigés en détail')}</span>{t(", du Tronc commun au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.")}
+            <span style={{ color: INK, fontWeight: 500 }}>{t('corrigés en détail')}</span>{t(", du Tronc commun au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.")}
           </p>
 
-          <div className="flex flex-wrap items-center" style={{ gap: 12, marginBottom: 26 }}>
+          <div className="flex flex-wrap items-center" style={{ gap: 12 }}>
             <Link to="/signup" onClick={onSignupClick} style={btnPrimary}>
               {t('Créer un compte gratuit')} <ArrowRight className="w-4 h-4" />
             </Link>
@@ -130,40 +127,12 @@ function Hero({ levels }: { levels: Level[] | null }) {
               {t('Parcourir les exercices')}
             </Link>
           </div>
-
-          <LevelPicker levels={levels} />
-
-          <div className="flex items-center" style={{ gap: 9, fontSize: 13, color: FAINT, marginTop: 22 }}>
-            <Check className="w-4 h-4" style={{ color: ACCENT }} />
-            <span>{t("Gratuit · inscription en moins d'une minute")}</span>
-          </div>
         </div>
 
         {/* The signature: a worked exercise that solves itself on load */}
         <WorkedExample />
       </div>
     </section>
-  );
-}
-
-/** « Tu es en : » — chaque niveau mène à sa page d'exercices, classés par chapitre. */
-function LevelPicker({ levels }: { levels: Level[] | null }) {
-  if (levels && levels.length === 0) return null; // niveaux indisponibles : on n'affiche rien
-  return (
-    <div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: SOFT, marginBottom: 9 }}>{t('Tu es en :')}</div>
-      <div className="flex flex-wrap" style={{ gap: 8 }}>
-        {levels === null
-          ? [0, 1, 2, 3].map((i) => <span key={i} className="animate-pulse" style={{ ...levelChip, width: 110, background: LINE, borderColor: LINE }} />)
-          : levels.map((l) => (
-            <Link key={l.id} to={hubPath('exercises', l.slug)} onClick={() => rememberLevel(l.slug)} style={levelChip}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = INK; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = LINE; }}>
-              {l.name}
-            </Link>
-          ))}
-      </div>
-    </div>
   );
 }
 
@@ -186,16 +155,17 @@ function WorkedExample() {
   ];
 
   return (
-    <div className="fd-card fd-ltr" style={{ overflow: 'hidden', boxShadow: '0 18px 50px rgba(20,18,16,.08)' }}>
+    <div className="fd-card fd-ltr" style={{ overflow: 'hidden', boxShadow: '0 8px 24px rgba(20,18,16,.06)' }}>
       {/* Header — looks like a real exercise sheet */}
-      <div style={{ padding: '16px 22px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <span className="fd-nums" style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.06em', color: FAINT, textTransform: 'uppercase' }}>
+      <div style={{ padding: '16px 24px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <span style={{ fontSize: 12.5, color: FAINT }}>
           Analyse · 2ème Bac
         </span>
         <span style={difficultyPill}>Moyen</span>
       </div>
 
-      <div style={{ padding: '22px 24px 24px' }}>
+      {/* Le corrigé sur une page de cahier quadrillé (l'univers de Fidni), quadrillage à peine visible. */}
+      <div style={{ padding: '24px', ...SQUARED }}>
         <p style={{ fontSize: 13.5, color: SOFT, lineHeight: 1.55, marginBottom: 4 }}>
           Étudier les variations de la fonction <M>f</M> définie sur <M>ℝ</M> par :
         </p>
@@ -203,18 +173,16 @@ function WorkedExample() {
           <M>f(x) = x³ − 3x + 1</M>
         </div>
 
-        {/* Solution steps — staggered reveal: watch the correction unfold */}
-        <div style={{ marginTop: 18, display: 'grid', gap: 14 }}>
+        {/* Solution steps — staggered reveal: watch the correction unfold. Le trait vert de marge, comme une correction
+            au stylo, est la signature de Fidni : on le retrouve à gauche de chaque énoncé des listes. */}
+        <div style={{ marginTop: 20, display: 'grid', gap: 16, paddingInlineStart: 16, borderInlineStart: `2px solid ${ACCENT}` }}>
           {steps.map((s, i) => (
             <div
               key={s.label}
               className="animate-fade-up"
               style={{ animationDelay: `${0.25 + i * 0.45}s` }}
             >
-              <div style={stepLabel}>
-                <span style={{ width: 16, height: 1, background: LINE }} />
-                {s.label}
-              </div>
+              <div style={stepLabel}>{s.label}</div>
               <p style={{ fontSize: 13.5, color: SOFT, lineHeight: 1.55, marginTop: 6 }}>{s.text}</p>
             </div>
           ))}
@@ -225,12 +193,12 @@ function WorkedExample() {
             style={{
               animationDelay: '1.15s',
               background: ACCENT_SOFT, border: `1px solid ${BRAND_LINE}`,
-              borderRadius: 12, padding: '13px 15px',
+              borderRadius: 10, padding: '12px 16px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-              <Check className="w-3.5 h-3.5" style={{ color: ACCENT_HOVER }} />
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: ACCENT_HOVER }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Check className="w-4 h-4" style={{ color: ACCENT_HOVER }} />
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: ACCENT_HOVER }}>
                 Réponse
               </span>
             </div>
@@ -263,10 +231,10 @@ function TrustRow() {
           both the 2-col (mobile) and 4-col (desktop) layouts. */}
       <div className="fd-card grid grid-cols-2 md:grid-cols-4" style={{ overflow: 'hidden', background: LINE, gap: 1 }}>
         {PROMISES.map(({ icon: Icon, title, text }) => (
-          <div key={title} style={{ padding: '18px 20px', background: SURFACE }}>
-            <Icon className="w-5 h-5" style={{ color: ACCENT, marginBottom: 10 }} />
-            <div style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{t(title)}</div>
-            <div style={{ fontSize: 12.5, color: FAINT, marginTop: 3, lineHeight: 1.45 }}>{t(text)}</div>
+          <div key={title} style={{ padding: '20px', background: SURFACE }}>
+            <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} style={{ color: FAINT, marginBottom: 12 }} />
+            <div style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>{t(title)}</div>
+            <div style={{ fontSize: 13, color: FAINT, marginTop: 4, lineHeight: 1.45 }}>{t(text)}</div>
           </div>
         ))}
       </div>
@@ -308,7 +276,7 @@ function Pillars() {
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-20">
       <SectionHead
         eyebrow={t('Trois manières de progresser')}
-        title={t("Tout ce qu'il te faut, au même endroit")}
+        title={t('Exercices, leçons et sujets du Bac, tous corrigés')}
         subtitle={t("Apprends la notion, entraîne-toi dessus, puis mets-toi à l'épreuve. Le tout corrigé.")}
       />
       <div className="grid md:grid-cols-3 gap-4 md:gap-5 mt-10">
@@ -316,8 +284,8 @@ function Pillars() {
           const Icon = p.icon;
           return (
             <Link key={p.title} to={p.link} className="fd-card group" style={pillarCard}>
-              <div style={pillarIcon}><Icon className="w-5 h-5" /></div>
-              <h3 className="fd-display" style={{ fontSize: 20, fontWeight: 600, color: INK, letterSpacing: '-0.015em', marginBottom: 8 }}>
+              <div style={pillarIcon}><Icon className="w-[18px] h-[18px]" strokeWidth={1.5} /></div>
+              <h3 className="fd-display" style={{ fontSize: 20, fontWeight: 600, color: INK, letterSpacing: '-0.01em', marginBottom: 8 }}>
                 {t(p.title)}
               </h3>
               <p style={{ fontSize: 13.5, color: FAINT, lineHeight: 1.55, marginBottom: 16, flexGrow: 1 }}>{t(p.desc)}</p>
@@ -361,10 +329,10 @@ function HowItWorks() {
         <div className="grid md:grid-cols-3 gap-8 md:gap-10 mt-12">
           {STEPS.map(s => (
             <div key={s.n}>
-              <div className="fd-nums" style={{ fontFamily: MONO, fontSize: 13, fontWeight: 500, color: ACCENT, letterSpacing: '.08em', marginBottom: 14 }}>
+              <div className="fd-nums" style={{ fontFamily: MONO, fontSize: 13, fontWeight: 500, color: FAINT, marginBottom: 12 }}>
                 {s.n}
               </div>
-              <h3 className="fd-display" style={{ fontSize: 19, fontWeight: 600, color: INK, letterSpacing: '-0.01em', marginBottom: 8, paddingTop: 14, borderTop: `1px solid ${INK}` }}>
+              <h3 className="fd-display" style={{ fontSize: 19, fontWeight: 600, color: INK, letterSpacing: '-0.01em', marginBottom: 8, paddingTop: 12, borderTop: `1px solid ${LINE}` }}>
                 {t(s.title)}
               </h3>
               <p style={{ fontSize: 13.5, color: FAINT, lineHeight: 1.6, maxWidth: 300 }}>{t(s.desc)}</p>
@@ -524,18 +492,21 @@ function FinalCTA() {
   const onSignupClick = useSignupClick('cta');
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24">
-      <div style={{ borderRadius: 20, padding: '52px 32px', color: '#fff', background: ACCENT_HOVER, textAlign: 'center' }}>
-        <h2 className="fd-display" style={{ fontSize: 'clamp(26px,3.5vw,36px)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14 }}>
-          {t('Prêt à progresser ?')}
-        </h2>
-        <p style={{ fontSize: 15.5, color: '#cfe6d8', maxWidth: 460, margin: '0 auto 28px', lineHeight: 1.6 }}>
-          {t("Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui. Aucune carte requise.")}
-        </p>
-        <div className="flex flex-wrap items-center justify-center" style={{ gap: 12 }}>
-          <Link to="/signup" onClick={onSignupClick} style={{ ...btnPrimary, background: '#fff', color: ACCENT_HOVER, border: '1px solid #fff' }}>
+      {/* Fin de page calme (unslop) : une surface claire avec un trait, plus de grand bandeau vert. */}
+      <div className="fd-card flex flex-col gap-6 md:flex-row md:items-center md:justify-between" style={{ padding: '32px' }}>
+        <div>
+          <h2 className="fd-display" style={{ fontSize: 'clamp(24px,3vw,30px)', fontWeight: 600, color: INK, letterSpacing: '-0.02em', marginBottom: 8 }}>
+            {t('Prêt à progresser ?')}
+          </h2>
+          <p style={{ fontSize: 15, color: FAINT, maxWidth: 460, lineHeight: 1.6 }}>
+            {t("Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui.")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center" style={{ gap: 12 }}>
+          <Link to="/signup" onClick={onSignupClick} style={btnPrimary}>
             {t('Créer un compte gratuit')} <ArrowRight className="w-4 h-4" />
           </Link>
-          <Link to="/exercises" style={{ ...btnSecondary, background: 'transparent', borderColor: 'rgba(255,255,255,.28)', color: '#fff' }}>
+          <Link to="/exercises" style={btnSecondary}>
             {t("Explorer d'abord")}
           </Link>
         </div>
@@ -551,10 +522,11 @@ function SectionHead({ eyebrow, title, subtitle, align = 'center' }: {
 }) {
   return (
     <div style={{ textAlign: align === 'left' ? 'start' : align, maxWidth: align === 'center' ? 580 : undefined, margin: align === 'center' ? '0 auto' : undefined }}>
-      <span style={{ fontFamily: MONO, fontSize: 11.5, color: ACCENT, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+      {/* Repère de section en casse normale (unslop : plus de majuscules espacées vertes). */}
+      <span style={{ fontSize: 13, color: FAINT, fontWeight: 500 }}>
         {eyebrow}
       </span>
-      <h2 className="fd-display" style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 600, color: INK, letterSpacing: '-0.02em', marginTop: 10 }}>
+      <h2 className="fd-display" style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 600, color: INK, letterSpacing: '-0.02em', marginTop: 8 }}>
         {title}
       </h2>
       {subtitle && <p style={{ fontSize: 14.5, color: FAINT, lineHeight: 1.6, marginTop: 12 }}>{subtitle}</p>}
@@ -579,51 +551,50 @@ const SERIF = "'KaTeX_Main', 'Latin Modern Roman', 'Times New Roman', serif";
 const MONO = 'var(--fd-mono)';
 
 const heroTitle: React.CSSProperties = {
-  fontSize: 'clamp(34px, 5vw, 54px)', fontWeight: 700, color: INK,
-  letterSpacing: '-0.025em', lineHeight: 1.04, marginBottom: 20,
+  fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 600, color: INK,
+  letterSpacing: '-0.03em', lineHeight: 1.05, marginBottom: 20, maxWidth: 560,
 };
 const heroLede: React.CSSProperties = {
-  fontSize: 16.5, color: FAINT, lineHeight: 1.6, maxWidth: 500, marginBottom: 28,
+  fontSize: 17, color: FAINT, lineHeight: 1.6, maxWidth: 520, marginBottom: 32,
 };
-const eyebrowChip: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 22,
-  padding: '6px 13px', borderRadius: 99, background: ACCENT_SOFT,
-  border: `1px solid ${BRAND_LINE}`, color: ACCENT_HOVER, fontSize: 12.5, fontWeight: 600,
+/** Page de cahier : quadrillage de 20 px à peine visible (traits neutres, pas de couleur). */
+const SQUARED: React.CSSProperties = {
+  backgroundColor: SURFACE,
+  backgroundImage: 'linear-gradient(rgba(26,26,26,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(26,26,26,.045) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
 };
 const btnPrimary: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 22px',
-  borderRadius: 11, background: ACCENT, color: '#fff', border: `1px solid ${ACCENT}`,
+  display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 48, padding: '0 20px',
+  borderRadius: 10, background: ACCENT, color: '#fff', border: `1px solid ${ACCENT}`,
   fontSize: 14.5, fontWeight: 600, textDecoration: 'none',
 };
 const btnSecondary: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 20px',
-  borderRadius: 11, background: SURFACE, border: `1px solid ${LINE}`, color: SOFT,
-  fontSize: 14.5, fontWeight: 600, textDecoration: 'none',
+  display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 48, padding: '0 20px',
+  borderRadius: 10, background: SURFACE, border: `1px solid ${LINE}`, color: INK,
+  fontSize: 14.5, fontWeight: 500, textDecoration: 'none',
 };
 const difficultyPill: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, color: '#b07a1e', background: '#fdf6e9',
-  border: '1px solid #f0e2c4', padding: '3px 10px', borderRadius: 99,
+  fontSize: 12, fontWeight: 500, color: 'rgb(var(--c-gold-strong))', background: 'rgb(var(--c-gold-soft))',
+  border: '1px solid rgb(var(--c-gold-line))', padding: '2px 8px', borderRadius: 6,
 };
 const stepLabel: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, fontFamily: MONO,
-  fontSize: 10.5, fontWeight: 500, color: '#9a958c', letterSpacing: '.08em', textTransform: 'uppercase',
+  fontSize: 12.5, fontWeight: 500, color: FAINT,
 };
 const pillarCard: React.CSSProperties = {
-  padding: '24px 22px', display: 'flex', flexDirection: 'column',
+  padding: '24px', display: 'flex', flexDirection: 'column',
   textDecoration: 'none', height: '100%',
 };
 const pillarIcon: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: 44, height: 44, borderRadius: 12, background: ACCENT_SOFT, color: ACCENT_HOVER, marginBottom: 18,
+  display: 'inline-flex', color: FAINT, marginBottom: 16,
 };
 const pillarCta: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6,
   fontSize: 13, fontWeight: 600, color: ACCENT,
 };
 const levelChip: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', minHeight: 40, padding: '0 14px',
-  borderRadius: 99, border: `1px solid ${LINE}`, background: SURFACE, color: INK,
-  fontSize: 13.5, fontWeight: 600, textDecoration: 'none', transition: 'border-color .15s, background .15s',
+  display: 'inline-flex', alignItems: 'center', minHeight: 40, padding: '0 16px',
+  borderRadius: 10, border: `1px solid ${LINE}`, background: SURFACE, color: INK,
+  fontSize: 13.5, fontWeight: 500, textDecoration: 'none', transition: 'border-color .15s, background .15s',
 };
 const chapterRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 14px',

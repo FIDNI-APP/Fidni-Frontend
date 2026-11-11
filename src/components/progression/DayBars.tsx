@@ -47,7 +47,7 @@ export const DayBars: React.FC<{
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0" aria-live="polite">
           <p className="text-[12.5px] text-ink-faint">{shown ? label(shown.date, pas, true) : t('Sur la période')}</p>
-          <p className="fd-nums mt-0.5 text-[18px] font-bold leading-tight text-ink sm:text-[20px]">{shown ? describe(shown) : headline}</p>
+          <p className="fd-nums mt-0.5 text-[18px] font-semibold leading-tight text-ink sm:text-[20px]">{shown ? describe(shown) : headline}</p>
         </div>
         {series.length > 1 && (
           <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-soft" aria-label={t('Légende')}>

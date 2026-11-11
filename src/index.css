@@ -314,11 +314,11 @@ body.mobile-menu-open {
 .fd-text-muted { color: var(--ink-muted); }
 .fd-text-faint { color: var(--ink-faint); }
 
-/* Grands titres : police du système, en gras, resserrés (les lettres paraissent trop espacées quand elles grandissent). */
+/* Grands titres : police du système, demi-gras (600 — unslop 11/11/2026 : le 700 criait), resserrés (les lettres paraissent trop espacées quand elles grandissent). */
 .fd-display {
   font-family: var(--fd-display);
   font-optical-sizing: auto;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.022em;
 }
 /* Interligne serré des grands titres (ils héritaient de 1.5, trop lâche quand un titre passe sur deux lignes).
@@ -579,3 +579,21 @@ a:active { opacity: .72; }
 .fd-comment-body.tiptap-full-renderer .ProseMirror p { margin-bottom: .45rem; }
 .fd-comment-body.tiptap-full-renderer .ProseMirror > div > :last-child { margin-bottom: 0; }
 .fd-comment-body.tiptap-full-renderer .ProseMirror a { color: #15633c; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Leçon avec sommaire (11/11/2026) : le sommaire passe dans la marge selon la place réelle de la colonne de
+   contenu (requête de conteneur), pas selon la largeur de l'écran — la barre latérale en prend 240 px et, à
+   1440 px, le sommaire débordait sur elle. Feuille : 901 px au plus ; sommaire : 184 px + 28 px d’écart. */
+.fd-lecon { container-type: inline-size; }
+.fd-lecon-aside { display: none; }
+@container (min-width: 1116px) {
+  .fd-lecon-grid { display: grid; align-items: start; gap: 28px; grid-template-columns: 184px minmax(0, 901px); justify-content: center; }
+  .fd-lecon-aside { display: block; grid-column: 1; }
+  .fd-lecon-sheet { grid-column: 2; margin-inline: 0; }
+  .fd-lecon-bar { display: none; }
+}
+/* Place des deux côtés : la feuille reste centrée, le sommaire dans la marge gauche. */
+@container (min-width: 1328px) {
+  .fd-lecon-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); justify-content: normal; }
+  .fd-lecon-aside { justify-self: end; }
+}
+@media print { .fd-lecon-aside { display: none !important; } }

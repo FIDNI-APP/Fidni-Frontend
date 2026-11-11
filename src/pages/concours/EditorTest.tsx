@@ -15,7 +15,7 @@ export default function EditorTestPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#faf9f7', padding: 40 }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a1a', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', marginBottom: 16 }}>
           Editor test (no modal, no taxonomy, no nothing)
         </h1>
 

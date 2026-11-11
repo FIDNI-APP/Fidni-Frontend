@@ -31,7 +31,7 @@ export const NotebookCover: React.FC<{
           {Array.from({ length: 6 }, (_, i) => <span key={i} className="h-1.5 w-1.5 rounded-full bg-paper/30" />)}
         </span>
         <span className="flex min-w-0 flex-1 flex-col px-4 pb-4 pt-3.5">
-          <span className="truncate pe-9 text-[10.5px] font-bold uppercase tracking-[.1em] text-gold-strong">
+          <span className="truncate pe-9 text-[12.5px] font-medium text-ink-faint">
             {notebook.subject?.name} · {notebook.class_level?.name}
           </span>
           <span className="fd-display mt-1.5 line-clamp-2 pe-6 text-[19px] leading-snug text-ink">{notebook.title}</span>

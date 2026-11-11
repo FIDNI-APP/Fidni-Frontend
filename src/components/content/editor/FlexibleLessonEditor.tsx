@@ -62,16 +62,16 @@ interface AddSectionRowProps {
 
 const AddSectionRow: React.FC<AddSectionRowProps> = ({ onAdd }) => (
   <div className="flex items-center gap-2 group/add py-1">
-    <div className="flex-1 h-px bg-slate-100 group-hover/add:bg-slate-200 transition-colors" />
+    <div className="flex-1 h-px bg-[#f2f1ee] group-hover/add:bg-line transition-colors" />
     <button
       type="button"
       onClick={onAdd}
-      className="flex items-center gap-1 px-2 py-0.5 text-xs text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors opacity-0 group-hover/add:opacity-100"
+      className="flex items-center gap-1 px-2 py-0.5 text-xs text-ink-faint hover:text-brand hover:bg-brand-soft rounded-full transition-colors opacity-0 group-hover/add:opacity-100"
     >
       <Plus className="w-3.5 h-3.5" />
       {t('Section')}
     </button>
-    <div className="flex-1 h-px bg-slate-100 group-hover/add:bg-slate-200 transition-colors" />
+    <div className="flex-1 h-px bg-[#f2f1ee] group-hover/add:bg-line transition-colors" />
   </div>
 );
 
@@ -86,7 +86,7 @@ interface SubSectionRowProps {
 }
 
 const SubSectionRow: React.FC<SubSectionRowProps> = ({ ss, onChange, onDelete }) => (
-  <div className="group/ss ps-6 border-s-2 border-indigo-100 py-2">
+  <div className="group/ss ps-6 border-s-2 border-brand-soft py-2">
     <div className="flex items-start gap-3">
       <div className="flex-1 min-w-0">
         <input
@@ -94,7 +94,7 @@ const SubSectionRow: React.FC<SubSectionRowProps> = ({ ss, onChange, onDelete })
           value={ss.title}
           onChange={(e) => onChange({ ...ss, title: e.target.value })}
           placeholder={t('Titre de la sous-section...')}
-          className="w-full text-sm font-semibold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-300 focus:outline-none mb-1.5 py-0.5"
+          className="w-full text-sm font-semibold text-ink-soft bg-transparent border-b border-transparent hover:border-line focus:border-brand-line focus:outline-none mb-1.5 py-0.5"
         />
         <TextBlockEditor
           value={ss.content}
@@ -107,7 +107,7 @@ const SubSectionRow: React.FC<SubSectionRowProps> = ({ ss, onChange, onDelete })
       <button
         type="button"
         onClick={onDelete}
-        className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover/ss:opacity-100 transition-opacity mt-0.5 shrink-0"
+        className="p-1 text-[#d8d4cc] hover:text-red-500 opacity-0 group-hover/ss:opacity-100 transition-opacity mt-0.5 shrink-0"
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>
@@ -153,18 +153,18 @@ const SectionRow: React.FC<SectionRowProps> = ({
   return (
     <div className="group/section flex gap-3">
       {/* Left accent */}
-      <div className="w-0.5 bg-indigo-400 rounded-full shrink-0 mt-2" />
+      <div className="w-0.5 bg-brand rounded-full shrink-0 mt-2" />
 
       {/* Content */}
       <div className="flex-1 min-w-0 py-2">
         <div className="flex items-center gap-2 mb-2">
-          <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <BookOpen className="w-3.5 h-3.5 text-brand shrink-0" />
           <input
             type="text"
             value={section.title}
             onChange={(e) => onChange({ ...section, title: e.target.value })}
             placeholder={t('Titre de la section...')}
-            className="flex-1 text-base font-semibold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-300 focus:outline-none py-0.5"
+            className="flex-1 text-base font-semibold text-ink bg-transparent border-b border-transparent hover:border-line focus:border-brand-line focus:outline-none py-0.5"
           />
         </div>
 
@@ -188,7 +188,7 @@ const SectionRow: React.FC<SectionRowProps> = ({
           <button
             type="button"
             onClick={addSubSection}
-            className="mt-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors ps-6"
+            className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint hover:text-brand transition-colors ps-6"
           >
             <Plus className="w-3 h-3" />
             {t('Sous-section')}
@@ -199,19 +199,19 @@ const SectionRow: React.FC<SectionRowProps> = ({
       {/* Hover actions */}
       <div className="flex flex-col items-center gap-1 pt-2 opacity-0 group-hover/section:opacity-100 transition-opacity shrink-0">
         <button type="button" onClick={onMoveUp} disabled={index === 0}
-          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed">
+          className="p-1 text-ink-faint hover:text-ink-soft disabled:opacity-20 disabled:cursor-not-allowed">
           <ArrowUp className="w-3.5 h-3.5" />
         </button>
         <button type="button" onClick={onMoveDown} disabled={index === totalSections - 1}
-          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed">
+          className="p-1 text-ink-faint hover:text-ink-soft disabled:opacity-20 disabled:cursor-not-allowed">
           <ArrowDown className="w-3.5 h-3.5" />
         </button>
         <button type="button" onClick={onDuplicate}
-          className="p-1 text-slate-400 hover:text-indigo-600">
+          className="p-1 text-ink-faint hover:text-brand">
           <Copy className="w-3.5 h-3.5" />
         </button>
         <button type="button" onClick={onDelete}
-          className="p-1 text-slate-400 hover:text-red-500">
+          className="p-1 text-ink-faint hover:text-red-500">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -312,28 +312,28 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-white border-b border-[#f2f1ee] px-6 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button type="button" onClick={onCancel}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+            className="p-1.5 text-ink-faint hover:text-ink-soft hover:bg-[#f2f1ee] rounded-lg">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">{t('Leçon')}</p>
-            <p className="text-sm text-slate-600">{structure.sections.length !== 1 ? t('{n} sections', { n: structure.sections.length }) : t('{n} section', { n: structure.sections.length })}</p>
+            <p className="text-[13px] text-ink-faint font-medium">{t('Leçon')}</p>
+            <p className="text-sm text-ink-soft">{structure.sections.length !== 1 ? t('{n} sections', { n: structure.sections.length }) : t('{n} section', { n: structure.sections.length })}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button type="button" onClick={onTogglePreview} data-tour="creer-apercu"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-              showPreview ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
+              showPreview ? 'bg-brand-soft text-brand-hover border-brand-line' : 'text-ink-faint border-line hover:bg-[#faf9f7]'
             }`}>
             <Eye className="w-4 h-4" />
             {t('Aperçu')}
           </button>
           <button type="button" onClick={handleSave} data-tour="creer-enregistrer" disabled={isSaving || isLoading || !title.trim()}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm transition-colors">
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-hover disabled:opacity-50 text-sm transition-colors">
             <Save className="w-4 h-4" />
             {isSaving ? t('Enregistrement...') : t('Enregistrer')}
           </button>
@@ -351,15 +351,15 @@ export const FlexibleLessonEditor: React.FC<FlexibleLessonEditorProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('Titre de la leçon...')}
-            className="w-full text-3xl font-bold text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 mb-6"
+            className="w-full text-3xl font-semibold text-ink bg-transparent border-none outline-none placeholder:text-[#d8d4cc] mb-6"
           />
 
           {/* Sections */}
           {structure.sections.length === 0 ? (
             <div className="py-16 text-center" data-tour="creer-blocs">
-              <p className="text-slate-400 text-sm mb-4">{t('Commencez à construire votre leçon')}</p>
+              <p className="text-ink-faint text-sm mb-4">{t('Commencez à construire votre leçon')}</p>
               <button type="button" onClick={() => addSection()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors mx-auto">
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-white text-sm hover:bg-brand-hover transition-colors mx-auto">
                 <Plus className="w-4 h-4" /> {t('Première section')}
               </button>
             </div>

@@ -46,8 +46,8 @@ export default function MaCopie() {
           <div className="flex flex-wrap items-center gap-3">
             <Link to={`/mes-copies/${c.id}/pdf`} className="fd-btn-ghost min-h-10"><Printer className="h-4 w-4" /> {t('Imprimer')}</Link>
             <div className="rounded-2xl border border-line bg-white px-5 py-3 text-center">
-              <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">{t('Ma note')}</p>
-              <p dir="ltr" className={`fd-nums text-[30px] font-bold leading-tight ${couleur}`}>
+              <p className="text-[12.5px] font-medium text-ink-faint">{t('Ma note')}</p>
+              <p dir="ltr" className={`fd-nums text-[30px] font-semibold leading-tight ${couleur}`}>
                 {fmt(c.note)}<span className="text-[15px] text-ink-faint"> / {c.note_sur}</span>
               </p>
               <p className="text-[12px] text-ink-faint">{t('{p} points sur {m}', { p: fmt(c.points), m: fmt(c.max) })}</p>
@@ -58,7 +58,7 @@ export default function MaCopie() {
 
       {(c.commentaire_prof || c.commentaire_global) && (
         <section className="mb-6 rounded-2xl border border-brand-line bg-brand-soft/50 p-4">
-          <h2 className="inline-flex items-center gap-1.5 text-[13px] font-bold text-brand-hover"><MessageSquare className="h-4 w-4" /> {t('Le mot de ton professeur')}</h2>
+          <h2 className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-hover"><MessageSquare className="h-4 w-4" /> {t('Le mot de ton professeur')}</h2>
           {c.commentaire_prof && <TexteMaths texte={c.commentaire_prof} className="mt-1.5 text-[14px] leading-relaxed text-ink" />}
           {c.commentaire_global && <TexteMaths texte={c.commentaire_global} className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft" />}
         </section>
@@ -66,7 +66,7 @@ export default function MaCopie() {
 
       {c.points_faibles.length > 0 && (
         <section className="mb-6 rounded-2xl border border-gold-line bg-white p-4">
-          <h2 className="inline-flex items-center gap-1.5 text-[14px] font-bold text-ink"><Target className="h-4 w-4 text-gold-strong" /> {t('À retravailler')}</h2>
+          <h2 className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink"><Target className="h-4 w-4 text-gold-strong" /> {t('À retravailler')}</h2>
           <p className="mt-1 text-[12.5px] text-ink-faint">{t('Les théorèmes que tu as le moins réussis dans cette évaluation.')}</p>
           <ul className="mt-3 flex flex-col gap-3">
             {c.points_faibles.map((p) => (
@@ -88,7 +88,7 @@ export default function MaCopie() {
         </section>
       )}
 
-      <h2 className="mb-3 text-[15px] font-bold text-ink">{t('Question par question')}</h2>
+      <h2 className="mb-3 text-[15px] font-semibold text-ink">{t('Question par question')}</h2>
       <div className="flex flex-col gap-3">
         {c.questions.map((q) => {
           const f = c.finales[q.chemin];
@@ -121,8 +121,8 @@ function QuestionCorrigee({ label, points, max, ratio, commentaire, enonce, solu
   return (
     <section className="rounded-2xl border border-line bg-white p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[14px] font-bold text-ink">{t('Question {q}', { q: label })}</h3>
-        <span dir="ltr" className="fd-nums shrink-0 text-[14px] font-bold text-ink">{fmt(points)}<span className="font-medium text-ink-faint"> / {fmt(max)}</span></span>
+        <h3 className="text-[14px] font-semibold text-ink">{t('Question {q}', { q: label })}</h3>
+        <span dir="ltr" className="fd-nums shrink-0 text-[14px] font-semibold text-ink">{fmt(points)}<span className="font-medium text-ink-faint"> / {fmt(max)}</span></span>
       </div>
       <div className="fd-ltr mt-2 h-1.5 overflow-hidden rounded-full bg-[#f2f1ee]">
         <div className={`h-full rounded-full ${barre}`} style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }} />
@@ -137,7 +137,7 @@ function QuestionCorrigee({ label, points, max, ratio, commentaire, enonce, solu
           <div className="text-[13.5px] text-ink-soft"><TipTapRenderer content={enonce} /></div>
           {solution && (
             <div className="rounded-xl bg-brand-soft/40 p-3">
-              <p className="text-[11px] font-bold uppercase tracking-[.08em] text-brand-hover">{t('Corrigé')}</p>
+              <p className="text-[12.5px] font-medium text-brand-hover">{t('Corrigé')}</p>
               <div className="text-[13.5px]"><TipTapRenderer content={solution} /></div>
             </div>
           )}

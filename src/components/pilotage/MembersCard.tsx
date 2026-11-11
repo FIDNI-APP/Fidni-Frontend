@@ -60,7 +60,7 @@ export const MembersCard: React.FC<{ active: number; total: number; days: number
       <div className="mt-4 flex items-center gap-5">
         <RingGauge value={share} size={124} thickness={12}
           label={share === null ? 'Aucun membre inscrit' : `${pct(active, total)} % des membres actifs sur ${days} jours (${active} sur ${total})`}>
-          <span className="fd-nums text-[26px] font-bold leading-none text-ink">{share === null ? '—' : `${pct(active, total)} %`}</span>
+          <span className="fd-nums text-[26px] font-semibold leading-none text-ink">{share === null ? '—' : `${pct(active, total)} %`}</span>
           <span className="fd-nums mt-1 text-[12px] text-ink-faint">{fmt(active)} / {fmt(total)}</span>
         </RingGauge>
         <ul className="min-w-0 space-y-2 text-[12.5px] text-ink-soft">

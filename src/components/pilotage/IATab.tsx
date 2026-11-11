@@ -303,7 +303,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
             )}
             {apercu && (
               <article className="rounded-2xl border border-line bg-white p-5 sm:p-6">
-                <p className="text-[11px] font-bold uppercase tracking-[.08em] text-ink-faint">
+                <p className="text-[12.5px] font-medium text-ink-faint">
                   {TYPE_LABEL[apercu.type ?? ''] ?? 'Fiche'} · {(apercu.niveaux ?? []).join(', ')}{apercu.difficulte ? ` · ${DIFF_LABEL[apercu.difficulte] ?? apercu.difficulte}` : ''}
                   {apercu.examen?.duree_minutes ? ` · ${apercu.examen.duree_minutes} min` : ''}
                 </p>
@@ -392,7 +392,7 @@ const JobDetail: React.FC<{ id: number; onBack: () => void; onChanged: () => voi
 
             {job.history.length > 0 && (
               <section className="px-1">
-                <h3 className="text-[12px] font-semibold uppercase tracking-[.06em] text-ink-faint">Historique</h3>
+                <h3 className="text-[12.5px] font-medium text-ink-faint">Historique</h3>
                 <ul className="mt-1.5 space-y-1 text-[12px] text-ink-soft">
                   {job.history.map((h, i) => <li key={i}><span className="text-ink-faint">{ago(h.date)} · {h.qui === 'ia' ? 'IA' : h.qui} :</span> {h.texte}</li>)}
                 </ul>
@@ -460,7 +460,7 @@ export const IATab: React.FC = () => {
               <>
                 {[{ title: 'En cours', list: active }, { title: 'Terminés', list: done }].filter((g) => g.list.length).map((g) => (
                   <div key={g.title} className="mt-3">
-                    <h3 className="text-[11.5px] font-semibold uppercase tracking-[.06em] text-ink-faint">{g.title}</h3>
+                    <h3 className="text-[12.5px] font-medium text-ink-faint">{g.title}</h3>
                     <ul className="mt-1 divide-y divide-[#f2f1ee]">
                       {g.list.map((j) => (
                         <li key={j.id}>

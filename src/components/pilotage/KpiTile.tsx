@@ -72,7 +72,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
         )}
       </span>
       <span className="mt-2.5 flex flex-wrap items-baseline gap-x-1.5">
-        <span className={`fd-nums text-[26px] font-bold leading-none tracking-tight sm:text-[30px] ${TONE[tone]}`}>
+        <span className={`fd-nums text-[26px] font-semibold leading-none tracking-tight sm:text-[30px] ${TONE[tone]}`}>
           {value === null ? '—' : format(value)}
         </span>
         {unit && value !== null && <span className="text-[12.5px] font-medium text-ink-faint">{unit}</span>}

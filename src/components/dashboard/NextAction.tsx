@@ -7,7 +7,7 @@
 // Un prof : ses classes. Le bouton porte data-tour="home-reprendre" et la mesure « accueil-reprendre ».
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, GraduationCap, PlayCircle, RotateCcw, Sparkles, Timer } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, PlayCircle, RotateCcw, Compass, Timer } from 'lucide-react';
 import type { DashboardOverview as Overview, RecommendedItem } from '@/lib/api/dashboardApi';
 import { longDate, testTitle } from '@/lib/api/devoirsApi';
 import { Countdown, DateTile, Readiness } from '@/components/devoirs/ui';
@@ -33,7 +33,7 @@ const Hero: React.FC<{
       <div className="flex min-w-0 flex-1 items-start gap-4">
         {badge}
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-bold uppercase tracking-[.08em] text-brand-hover">{eyebrow}</p>
+          <p className="text-[13px] font-medium text-ink-faint">{eyebrow}</p>
           <h2 id="action-titre" className="fd-display mt-1.5 text-[23px] leading-tight text-ink sm:text-[27px]">{title}</h2>
           {children}
         </div>
@@ -49,7 +49,7 @@ const Hero: React.FC<{
 );
 
 const IconBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; gold?: boolean }> = ({ icon: Icon, gold }) => (
-  <span className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:flex ${gold ? 'bg-gold-soft text-gold-strong ring-gold-line' : 'bg-brand-soft text-brand-hover ring-brand-line'}`} aria-hidden>
+  <span className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:flex ${gold ? 'bg-[#f2f1ee] text-gold-strong ring-line' : 'bg-[#f2f1ee] text-ink-soft ring-line'}`} aria-hidden>
     <Icon className="h-6 w-6" />
   </span>
 );
@@ -113,7 +113,7 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
             {test.chapters.map((c) => {
               const weak = test.weak_chapters?.includes(c.name);
               return (
-                <li key={c.id} className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${weak ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`}>
+                <li key={c.id} className={`rounded-md px-2 py-0.5 text-[12px] font-medium ${weak ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`}>
                   {c.name}{weak && <span className="sr-only"> {t('(à renforcer)')}</span>}
                 </li>
               );
@@ -145,8 +145,8 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
           </>
         ) : undefined}>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[12px] font-semibold text-gold-strong">{why}</span>
-          {item.chapters[0] && <span className="rounded-full bg-[#f2f1ee] px-2.5 py-0.5 text-[12px] font-medium text-ink-soft">{item.chapters[0]}</span>}
+          <span className="rounded-md bg-gold-soft px-2 py-0.5 text-[12px] font-medium text-gold-strong">{why}</span>
+          {item.chapters[0] && <span className="rounded-md bg-[#f2f1ee] px-2 py-0.5 text-[12px] font-medium text-ink-soft">{item.chapters[0]}</span>}
         </div>
       </Hero>
     );
@@ -167,8 +167,8 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
           </>
         ) : undefined}>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {item.chapter && <span className="rounded-full bg-[#f2f1ee] px-2.5 py-0.5 text-[12px] font-medium text-ink-soft">{item.chapter}</span>}
-          {forTest && <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12px] font-semibold text-brand-hover">{t('Au programme de ton DS')}</span>}
+          {item.chapter && <span className="rounded-md bg-[#f2f1ee] px-2 py-0.5 text-[12px] font-medium text-ink-soft">{item.chapter}</span>}
+          {forTest && <span className="rounded-md bg-brand-soft px-2 py-0.5 text-[12px] font-medium text-brand-hover">{t('Au programme de ton DS')}</span>}
           {item.total ? <QuestionsBar assessed={item.assessed ?? 0} total={item.total} /> : null}
         </div>
       </Hero>
@@ -190,13 +190,13 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
   const ex = choice.exercise;
   const reason = ex?.reason;
   return (
-    <Hero badge={<IconBadge icon={Sparkles} />} eyebrow={t('Pour commencer')}
+    <Hero badge={<IconBadge icon={Compass} />} eyebrow={t('Pour commencer')}
       title={ex ? ex.title : t('Un exercice de ton niveau')}
       action={<MainButton to={ex ? `/exercises/${ex.id}` : exercisesHub}>{ex ? t('Commencer') : t('Choisir un exercice')}</MainButton>}
       footer={<FootLink to={lessons} icon={BookOpen}>{t('Revoir le cours de ton niveau')}</FootLink>}>
       {ex ? (
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          {ex.chapters?.[0]?.name && <span className="rounded-full bg-[#f2f1ee] px-2.5 py-0.5 text-[12px] font-medium text-ink-soft">{ex.chapters[0].name}</span>}
+          {ex.chapters?.[0]?.name && <span className="rounded-md bg-[#f2f1ee] px-2 py-0.5 text-[12px] font-medium text-ink-soft">{ex.chapters[0].name}</span>}
           <DifficultyChip difficulty={ex.difficulty} felt={(ex as RecommendedItem & { felt?: Felt | null }).felt ?? null} />
           <span className="text-[12.5px] text-ink-faint">{reason ? `· ${reasonLabel(reason)}` : `· ${t('choisi pour toi')}`}</span>
         </div>

@@ -21,7 +21,7 @@ import { SEO } from '@/components/layout/SEO';
 import { CatchUpBanner } from '@/components/content/listing/CatchUpBanner';
 import { FolderGrid, FolderSkeleton, type FolderGroup } from '@/components/content/folders/FolderGrid';
 import {
-  getLevelFolders, getNationalYears, hubPath, profileLevel, yearPath,
+  getHub, getLevelFolders, getNationalYears, hubPath, profileLevel, yearPath,
   type HubFolder, type HubInfo, type LevelFolders, type YearFolders,
 } from '@/lib/api/hubApi';
 import { canCreateContent } from '@/lib/features';
@@ -123,6 +123,7 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
       {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data || (authLoading && !allLevels) ? <FolderSkeleton n={4} />
           : <FolderGrid groups={groups} label={t('Niveaux – {title}', { title: t(st.title) })} />}
+      {data && <LevelSommaires kind={kind} levels={data.levels.filter((lv) => lv.count > 0)} />}
       {kind === 'exam' && (
         <Link to="/exams/nationaux"
           className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line bg-white px-4 py-3 text-[13.5px] text-ink-soft transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)]">
@@ -132,6 +133,72 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
         </Link>
       )}
     </Page>
+  );
+};
+
+/**
+ * Sommaire de chaque niveau sous ses dossiers (11/11/2026 : la page des niveaux montrait quatre dossiers sur un
+ * écran vide). Comme la table des matières d'un manuel : chapitres numérotés dans l'ordre du programme, avec leur
+ * nombre de contenus ; un clic mène au chapitre. Chapitres vides omis. Données : GET /api/hubs/ par niveau.
+ */
+const LevelSommaires: React.FC<{ kind: ContentKind; levels: LevelFolders['levels'] }> = ({ kind, levels }) => {
+  const section = SECTION_OF[kind];
+  const st = SECTION_TEXT[kind];
+  const [hubs, setHubs] = useState<Record<string, HubInfo | null>>({});
+  const slugs = levels.map((lv) => lv.slug).join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    for (const lv of levels) {
+      getHub(section, lv.slug)
+        .then((h) => { if (!cancelled) setHubs((m) => ({ ...m, [lv.slug]: h })); })
+        .catch(() => { if (!cancelled) setHubs((m) => ({ ...m, [lv.slug]: null })); });
+    }
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section, slugs]);
+
+  if (levels.length === 0) return null;
+  return (
+    <section aria-labelledby="sommaires-titre" className="mt-12">
+      <h2 id="sommaires-titre" className="mb-4 text-[15px] font-semibold text-ink">{t('Sommaire par niveau')}</h2>
+      <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
+        {levels.map((lv) => {
+          const hub = hubs[lv.slug];
+          const chapters = hub?.chapters.filter((c) => c.count > 0) ?? [];
+          return (
+            <div key={lv.id} className="min-w-0">
+              <Link to={lv.url} className="group flex items-baseline justify-between gap-2 border-b border-line pb-2">
+                <span className="text-[14.5px] font-semibold text-ink group-hover:text-brand-hover">{lv.name}</span>
+                <span className="fd-nums shrink-0 text-[12.5px] text-ink-faint">{plural(lv.count, st.noun)}</span>
+              </Link>
+              {hub === undefined ? (
+                <div className="mt-3 flex flex-col gap-3" aria-hidden>
+                  {[0, 1, 2, 3].map((i) => <span key={i} className="h-3.5 animate-pulse rounded bg-[#efece6]" style={{ width: `${80 - i * 12}%` }} />)}
+                </div>
+              ) : hub === null ? (
+                <p className="mt-3 text-[13px] text-ink-faint">{t('Le sommaire n’a pas pu s’afficher.')}</p>
+              ) : (
+                <ol className="mt-1">
+                  {chapters.map((c, i) => (
+                    <li key={c.id}>
+                      <Link to={c.url}
+                        className="group flex items-baseline gap-3 rounded-md py-2 text-[13.5px] transition-colors hover:text-brand-hover">
+                        <span className="fd-nums w-5 shrink-0 text-[12px] text-ink-faint" style={{ fontFamily: 'var(--fd-mono)' }}>
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <span className="min-w-0 flex-1 text-ink-soft group-hover:text-brand-hover">{c.name}</span>
+                        <span className="fd-nums shrink-0 text-[12px] text-ink-faint">{c.count}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 };
 

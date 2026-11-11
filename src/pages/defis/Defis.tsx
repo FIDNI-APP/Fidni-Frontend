@@ -39,7 +39,7 @@ export const Defis: React.FC = () => {
         : etat === 'charge' ? <div className="h-64 animate-pulse rounded-2xl border border-line bg-white" role="status" aria-label={t('Chargement')} />
           : (
             <div className="flex flex-col gap-10">
-              {defi ? <DefiPanel defi={defi} /> : <p className="rounded-2xl border border-line bg-white p-5 text-[14.5px] text-ink-soft">{t('Pas de défi aujourd’hui. Reviens demain !')}</p>}
+              {defi ? <DefiPanel defi={defi} /> : <p className="rounded-2xl border border-line bg-white p-5 text-[14.5px] text-ink-soft">{t('Pas de défi aujourd’hui. Reviens demain.')}</p>}
               {!!archives?.length && (
                 <Section title={t('Défis précédents')} count={archives.length}>
                   <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">

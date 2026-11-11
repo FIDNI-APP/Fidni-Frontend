@@ -338,11 +338,11 @@ const InlineSolution: React.FC<{ solution?: ContentBlock; hint?: ContentBlock; i
       {/* Rendu compact (listes, DS blanc) : un seul bouton, l'indication (la méthode) en tête de la solution. */}
       {hint?.html && (
         <div className="mb-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-gold-strong mb-1">{t('Indication')}</div>
+          <div className="text-[13px] font-semibold text-gold-strong mb-1">{t('Indication')}</div>
           <RenderContent content={hint} className="prose-sm" />
         </div>
       )}
-      <div className="text-xs font-semibold uppercase tracking-wide text-brand-hover mb-1">{t('Solution')}</div>
+      <div className="text-[13px] font-semibold text-brand-hover mb-1">{t('Solution')}</div>
       <RenderContent content={solution} className="prose-sm" />
       {/* Au toucher, le drapeau de la question est ici (il n'est plus à côté de l'énoncé). */}
       {onReport && (
@@ -481,7 +481,7 @@ const ReadingHint: React.FC<{ hint: ContentBlock }> = ({ hint }) => (
   <div className="relative mt-3 overflow-hidden rounded-xl border border-gold-line bg-gold-soft/50">
     <span className="absolute inset-y-0 start-0 w-[3px] bg-gold" aria-hidden />
     <div className="fd-sol min-w-0 px-4 py-3 sm:px-5">
-      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
+      <p className="mb-1 flex items-center gap-1.5 text-[12.5px] font-medium text-ink-faint">
         <Lightbulb className="h-3.5 w-3.5" aria-hidden /> {t('Indication')}
       </p>
       <RenderContent content={hint} />
@@ -496,7 +496,7 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
     <div className="relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
       <span className="absolute inset-y-0 start-0 w-[3px] bg-brand" aria-hidden />
       <div className="fd-sol min-w-0 px-4 pb-3.5 pt-3 sm:px-5 sm:pb-4">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-[.1em] text-brand-hover">{t('Solution')}</p>
+        <p className="mb-1 text-[12.5px] font-medium text-brand-hover">{t('Solution')}</p>
         <RenderContent content={solution} />
       </div>
       {(footer || onReport) && (
@@ -793,7 +793,7 @@ const ReadingQuestion: React.FC<QuestionRendererProps> = ({
 /** Partie d'un contenu (rendu « lecture ») : titre en gras (police de LaTeX), barème, un filet. */
 const ReadingSectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ block, first }) => (
   <div className={`mb-6 flex items-baseline justify-between gap-3 border-b border-line pb-2.5 ${first ? '' : 'mt-12'}`}>
-    <div className="fd-paper min-w-0 font-bold text-ink [&_p]:m-0">
+    <div className="fd-paper min-w-0 font-semibold text-ink [&_p]:m-0">
       <TipTapRenderer content={block.content?.html || ''} />
     </div>
     {Number(block.points) > 0 && (
