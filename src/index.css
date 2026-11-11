@@ -314,11 +314,11 @@ body.mobile-menu-open {
 .fd-text-muted { color: var(--ink-muted); }
 .fd-text-faint { color: var(--ink-faint); }
 
-/* Grands titres : police du système, en gras, resserrés (les lettres paraissent trop espacées quand elles grandissent). */
+/* Grands titres : police du système, demi-gras (600 — unslop 11/11/2026 : le 700 criait), resserrés (les lettres paraissent trop espacées quand elles grandissent). */
 .fd-display {
   font-family: var(--fd-display);
   font-optical-sizing: auto;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.022em;
 }
 /* Interligne serré des grands titres (ils héritaient de 1.5, trop lâche quand un titre passe sur deux lignes).

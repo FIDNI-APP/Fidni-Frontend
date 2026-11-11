@@ -37,7 +37,7 @@ export const OuJenSuis: React.FC<{
   return (
     <section data-tour="home-stats" aria-labelledby={`oujensuis-${variant}`} className={`overflow-hidden rounded-2xl border border-line bg-white ${className}`}>
       <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5">
-        <h2 id={`oujensuis-${variant}`} className="text-[12px] font-bold uppercase tracking-[.1em] text-gold-strong">{t('Où j’en suis')}</h2>
+        <h2 id={`oujensuis-${variant}`} className="text-[15px] font-semibold text-ink">{t('Où j’en suis')}</h2>
         {variant === 'home' && (
           <Link to="/progression" onClick={() => trackAction('accueil-progression')}
             className="inline-flex min-h-9 items-center gap-0.5 text-[13px] font-semibold text-ink-soft hover:text-ink">
@@ -57,7 +57,7 @@ export const OuJenSuis: React.FC<{
             <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold text-ink">
               {o.chapitre && <EtatPill etat={o.chapitre.etat} enProgres={o.chapitre.en_progres} size="sm" />}
               {o.ds && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-[#8a6318]">
+                <span className="inline-flex items-center gap-1 rounded-md bg-gold-soft px-2 py-0.5 text-[12px] font-medium text-[#8a6318]">
                   <CalendarClock className="h-3 w-3" aria-hidden /> {t('DS {quand}', { quand: o.ds.quand })}
                 </span>
               )}
@@ -78,7 +78,7 @@ function Stat({ value, label, scope, tone }: { value: string; label: string; sco
   return (
     <div className="flex min-w-0 flex-col">
       <dt className="order-2 text-[12.5px] font-medium text-ink-soft">{label}</dt>
-      <dd className={`fd-nums order-1 text-[22px] font-bold leading-tight sm:text-[24px] ${tone === 'up' ? 'text-brand-hover' : tone === 'down' ? 'text-[#8a6318]' : 'text-ink'}`}>{value}</dd>
+      <dd className={`fd-nums order-1 text-[22px] font-semibold leading-tight sm:text-[24px] ${tone === 'up' ? 'text-brand-hover' : tone === 'down' ? 'text-[#8a6318]' : 'text-ink'}`}>{value}</dd>
       <dd className="order-3 truncate text-[11.5px] text-ink-faint">{scope}</dd>
     </div>
   );

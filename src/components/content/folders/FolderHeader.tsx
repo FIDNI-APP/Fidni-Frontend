@@ -43,7 +43,8 @@ export const FolderHeader: React.FC<{
   const parts = splitTitle(title, emphasis);
   const big = 'fd-display block text-ink';
   const bigStyle = { fontSize: 'clamp(28px, 3.4vw, 38px)', lineHeight: 1.08 } as const;
-  const small = 'mt-1.5 block font-sans text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong';
+  // Sous-titre en casse normale, gris (unslop 11/11/2026 : plus de majuscules espacées dorées).
+  const small = 'mt-1.5 block font-sans text-[14px] font-medium text-ink-faint';
   return (
     <header className="mb-5 sm:mb-7">
       {crumbs && crumbs.length > 0 && (
@@ -89,14 +90,14 @@ export const FolderHeader: React.FC<{
   );
 };
 
-/** Liens vers les autres rubriques du dossier (« Cours 1 », « Devoirs 2 ») : petites pastilles. */
+/** Liens vers les autres rubriques du dossier (« Cours 1 », « Devoirs 2 ») : le compte en simple texte gris, pas en pastille. */
 export const RelatedLinks: React.FC<{ related: { label: string; count: number; url: string }[] }> = ({ related }) => (
   <>
     {related.map((r) => (
       <Link key={r.url} to={r.url}
-        className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-[13px] font-semibold text-ink-soft transition-colors hover:border-[#cfc9bf] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+        className="inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-[13px] font-medium text-ink-soft transition-colors hover:border-[#cfc9bf] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         {r.label}
-        <span className="fd-nums rounded-full bg-[#f2f1ee] px-1.5 text-[11.5px] text-ink-faint">{r.count}</span>
+        <span className="fd-nums text-[12.5px] text-ink-faint">{r.count}</span>
       </Link>
     ))}
   </>

@@ -72,10 +72,10 @@ export const FirstSteps: React.FC<{
     <section aria-labelledby="premiers-pas-titre" data-tour="home-premiers-pas" className="overflow-hidden rounded-3xl border border-line bg-white">
       <div className="flex items-end justify-between gap-3 px-5 pb-4 pt-5 sm:px-7 sm:pt-6">
         <div className="min-w-0">
-          <p className="text-[12px] font-bold uppercase tracking-[.08em] text-brand-hover">{t('Pour bien démarrer')}</p>
+          <p className="text-[13px] font-medium text-ink-faint">{t('Pour bien démarrer')}</p>
           <h2 id="premiers-pas-titre" className="fd-display mt-1.5 text-[23px] leading-tight text-ink sm:text-[27px]">{t('Tes premiers pas')}</h2>
         </div>
-        <span className="fd-nums shrink-0 rounded-full bg-[#f2f1ee] px-2.5 py-1 text-[12.5px] font-semibold text-ink-soft">
+        <span className="fd-nums shrink-0 text-[13px] text-ink-faint">
           {done} / {steps.length}<span className="sr-only"> {t('faits')}</span>
         </span>
       </div>
@@ -86,7 +86,7 @@ export const FirstSteps: React.FC<{
           return (
             <li key={x.key}
               className={`grid grid-cols-[32px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-[32px_minmax(0,1fr)_auto] sm:px-7 ${isCurrent ? 'bg-[#fcfbf9]' : ''}`}>
-              <span aria-hidden className={`fd-nums inline-flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold ${
+              <span aria-hidden className={`fd-nums inline-flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold ${
                 x.done ? 'bg-brand-soft text-brand-hover' : isCurrent ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-soft'}`}>
                 {x.done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : i + 1}
               </span>

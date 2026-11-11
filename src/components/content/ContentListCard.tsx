@@ -12,7 +12,7 @@
 // l'adresse de la liste (state.from) pour que le retour y ramène.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Eye, ListPlus, MessageSquare, Sparkles } from 'lucide-react';
+import { ArrowRight, Eye, ListPlus, MessageSquare } from 'lucide-react';
 import type { ExamListItem } from '@/types/content';
 import type { VoteValue } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -233,7 +233,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   return (
     // Carte (refonte du 07/11/2026) : un seul cadre (l'aperçu n'est plus une carte dans la carte, juste un filet),
     // pied discret, bouton plein seulement pour « Reprendre ». Appui : la carte s'enfonce un peu (lien principal).
-    <article data-etat={state ?? undefined} className={`group relative h-full flex flex-col rounded-2xl border ${cardTone(state, true)} shadow-[0_1px_2px_rgba(20,18,16,.03)] transition-[border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(20,18,16,.04),0_14px_30px_-10px_rgba(20,18,16,.12)] has-[.fd-carte-lien:active]:translate-y-0 has-[.fd-carte-lien:active]:scale-[.985] motion-reduce:hover:translate-y-0 motion-reduce:has-[.fd-carte-lien:active]:scale-100`}>
+    <article data-etat={state ?? undefined} className={`group relative h-full flex flex-col rounded-2xl border ${cardTone(state, true)} shadow-[0_1px_2px_rgba(20,18,16,.03)] transition-[border-color,box-shadow,transform] duration-200 ease-out hover:shadow-[0_1px_2px_rgba(20,18,16,.04),0_8px_24px_rgba(20,18,16,.06)] has-[.fd-carte-lien:active]:scale-[.985] motion-reduce:has-[.fd-carte-lien:active]:scale-100`}>
       {isNew && <NewBadge />}
       <div className="px-5 pt-5 flex-1 flex flex-col">
         {/* Repères : chapitre, difficulté, état de l'élève ; favori à droite. */}
@@ -244,19 +244,18 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
             {exam?.is_national_exam && !hideNational && <NationalTag year={exam.national_year} />}
             {chapter && (chapterTo && chapterTo !== location.pathname ? (
               <Link to={chapterTo} title={contentType === 'lesson' ? t('Tous les cours de ce chapitre') : contentType === 'exam' ? t('Tous les devoirs de ce chapitre') : t('Tous les exercices de ce chapitre')}
-                className="relative z-10 inline-flex max-w-full items-center px-2 py-0.5 rounded-full bg-[#f2f1ee] text-[11.5px] font-semibold text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']">
+                className="relative z-10 inline-flex max-w-full items-center px-2 py-0.5 rounded-md bg-[#f2f1ee] text-[12px] font-medium text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']">
                 <span className="truncate">{chapter}</span>
               </Link>
             ) : (
-              <span className="inline-flex max-w-full items-center px-2 py-0.5 rounded-full bg-[#f2f1ee] text-[11.5px] font-semibold text-ink-muted">
+              <span className="inline-flex max-w-full items-center px-2 py-0.5 rounded-md bg-[#f2f1ee] text-[12px] font-medium text-ink-muted">
                 <span className="truncate">{chapter}</span>
               </span>
             ))}
             {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
             <SchoolTag school={content.school} />
             {reason && (
-              <span className="inline-flex max-w-full min-w-0 items-center gap-1 px-2 py-0.5 rounded-full bg-brand-soft text-[11.5px] font-semibold text-brand-hover">
-                <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="inline-flex max-w-full min-w-0 items-center px-1 text-[12px] text-ink-faint">
                 <span className="truncate">{reason}</span>
               </span>
             )}
@@ -296,7 +295,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
 
         {/* Aperçu : ce qu'il y a dedans, lisible, coupé en fondu. */}
         {structure && (
-          <div className={`fd-card-preview mt-4 mb-1 border-s-2 border-line ps-4 text-[14.5px] leading-[1.55] text-ink-soft transition-colors duration-200 group-hover:border-brand-line ${dim}`}>
+          <div className={`fd-card-preview mt-4 mb-1 border-s-2 border-brand-line ps-4 text-[14.5px] leading-[1.55] text-ink-soft transition-colors duration-200 group-hover:border-brand ${dim}`}>
             {/* Fondu seulement pour un énoncé (longueur libre) ; sujet et leçon montrent un nombre fixe de lignes. */}
             <div className={bounded ? 'max-h-[160px] overflow-hidden' : 'fd-card-preview-clip'}>
               {contentType === 'exam' ? <ExamPreview structure={structure} />
@@ -332,7 +331,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
               ? 'bg-brand text-white hover:bg-brand-hover'
               : opened
                 ? 'bg-line/70 text-ink-muted group-hover:bg-brand group-hover:text-white'
-                : 'bg-brand-soft text-brand-hover group-hover:bg-brand group-hover:text-white'
+                : 'bg-[#f2f1ee] text-ink group-hover:bg-brand group-hover:text-white'
           }`}
         >
           {contentType === 'lesson' ? t('Lire') : progress === 'success' ? t('Revoir') : resume ? t('Reprendre') : t('Commencer')}

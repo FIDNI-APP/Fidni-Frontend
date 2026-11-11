@@ -41,7 +41,7 @@ export const DifficultyChip: React.FC<{
   const tip = f && felt ? t('Ressenti des élèves : {level}. {detail}', { level: t(f.label), detail: feltTooltip(felt) }) : undefined;
   const chip = plain
     ? 'inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-soft'
-    : 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px] font-semibold';
+    : 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[12px] font-medium';
   const tone = plain ? undefined : { background: d.bg, color: d.text };
   const inner = (
     <>
@@ -160,7 +160,7 @@ export const cardIconBtn = 'relative z-10 inline-flex h-10 w-10 items-center jus
 
 /** État de l'élève, en tête de carte : ✓ Réussi (Lue), ↻ À revoir, ◔ En cours (part évaluée), Déjà ouvert. */
 export const StateChip: React.FC<{ state: CardState; started?: UserProgress | null; lesson?: boolean }> = ({ state, started, lesson = false }) => {
-  const chip = 'inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[11.5px] font-semibold';
+  const chip = 'inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-md text-[12px] font-medium';
   if (state === 'success') {
     return (
       <span className={`${chip} bg-brand text-white`}>

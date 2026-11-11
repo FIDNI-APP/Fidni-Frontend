@@ -36,7 +36,7 @@ const RecCard: React.FC<{ item: RecommendedItem; kind: ListKind }> = ({ item, ki
     <li className="relative">
       <Link to={`${BASE_PATH[kind]}/${item.id}`} onClick={() => trackAction('accueil-pour-toi')}
         className="group flex h-full flex-col rounded-2xl border border-line bg-white p-4 pe-12 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-        <span className="truncate text-[11.5px] font-semibold uppercase tracking-[.06em] text-ink-faint">
+        <span className="truncate text-[12.5px] font-medium text-ink-faint">
           {t(TYPE_LABEL[kind])}{chapter ? ` · ${chapter}` : ''}
         </span>
         <span className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug text-ink group-hover:underline">{item.title}</span>
@@ -50,7 +50,7 @@ const RecCard: React.FC<{ item: RecommendedItem; kind: ListKind }> = ({ item, ki
         </span>
         {item.reason && (
           <span className="mt-auto pt-3">
-            <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[12px] font-semibold ${reasonTone(item.reason)}`}>
+            <span className={`inline-flex max-w-full items-center rounded-md px-2 py-0.5 text-[12px] font-medium ${reasonTone(item.reason)}`}>
               <span className="truncate">{reasonLabel(item.reason)}</span>
             </span>
           </span>

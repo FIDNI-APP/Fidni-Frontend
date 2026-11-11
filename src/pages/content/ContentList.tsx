@@ -944,7 +944,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     </div>
   );
 
-  const chipBtn = 'inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#efece6] ps-3.5 pe-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-[#e7e3dc] hover:text-ink';
+  const chipBtn = 'inline-flex min-h-10 items-center gap-1.5 rounded-[10px] bg-[#efece6] ps-3.5 pe-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-[#e7e3dc] hover:text-ink';
 
   // Liste vide : pourquoi, et quoi faire ensuite.
   const emptyState = () => {
@@ -1020,7 +1020,7 @@ export const ContentList: React.FC<ContentListProps> = ({
           ))}
           {filterChips.length > 1 && (
             <button type="button" onClick={() => handleFilterChange(clearedFilters(fixed))}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-medium text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
               <RotateCcw className="h-3.5 w-3.5" /> {t('Tout effacer')}
             </button>
           )}
@@ -1052,7 +1052,7 @@ export const ContentList: React.FC<ContentListProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="text-[12.5px] text-ink-faint">{t('Chapitres voisins :')}</span>
               {neighbours.map((c) => (
-                <Link key={c.id} to={c.url} className="inline-flex min-h-10 items-center rounded-full border border-line bg-white px-3.5 text-[13px] text-ink-soft hover:border-[#cfc9bf] hover:text-ink">
+                <Link key={c.id} to={c.url} className="inline-flex min-h-10 items-center rounded-[10px] border border-line bg-white px-3.5 text-[13px] text-ink-soft hover:border-[#cfc9bf] hover:text-ink">
                   {c.name} <span className="fd-nums ms-1.5 text-ink-faint">{c.count}</span>
                 </Link>
               ))}

@@ -27,7 +27,7 @@ export const Page: React.FC<{ width?: Width; children: React.ReactNode; classNam
   </div>
 );
 
-/** En-tête de page : repère (or), titre serif, une phrase, actions à droite (dessous sur téléphone). */
+/** En-tête de page : repère (gris, casse normale — unslop 11/11/2026), titre, une phrase, actions à droite (dessous sur téléphone). */
 export const PageHeader: React.FC<{
   eyebrow?: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
@@ -48,7 +48,7 @@ export const PageHeader: React.FC<{
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-gold-strong">
+          <p className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint">
             {Icon && <Icon className="h-3.5 w-3.5" />}
             {eyebrow}
           </p>
@@ -131,8 +131,8 @@ export const StatTile: React.FC<{ label: string; value: React.ReactNode; hint?: 
   label, value, hint, className = '',
 }) => (
   <div className={`rounded-2xl border border-line bg-white px-4 py-3.5 ${className}`}>
-    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-ink-faint">{t(label)}</p>
-    <p className="fd-nums mt-1 text-[24px] font-bold leading-none text-ink">{value}</p>
+    <p className="text-[12.5px] font-medium text-ink-faint">{t(label)}</p>
+    <p className="fd-nums mt-1 text-[24px] font-semibold leading-none text-ink">{value}</p>
     {hint && <p className="mt-1.5 text-[12px] leading-snug text-ink-faint">{hint}</p>}
   </div>
 );

@@ -1,7 +1,7 @@
 /**
  * Accueil de l'élève connecté — « ce que tu fais maintenant » (refonte du 11/10/2026 : l'accueil empilait
  * bonjour, bandeau DS, bande de stats, Reprendre/À refaire, graphique souvent vide et grosses cartes).
- *   1. bonjour (date, niveau) ;
+ *   1. la date du jour en titre, le niveau au-dessus (unslop 11/11/2026 : plus de « Bonjour, prénom » en italique) ;
  *   (13/10/2026) bandeau « Nouveau · Quiz par chapitre » tant que la page des quiz n'a pas été ouverte (QuizAnnonce) ;
  *   2. UNE action principale (NextAction : préparer un DS proche › reprendre › commencer), ou « Tes premiers pas »
  *      pour un nouvel élève (niveau, premier exercice, premier DS annoncé) ;
@@ -96,7 +96,6 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   }, [isTeacher]);
 
   const now = new Date();
-  const hello = now.getHours() >= 18 || now.getHours() < 6 ? t('Bonsoir') : t('Bonjour');
   const today = t('{jour} {n} {mois}', { jour: t(DAYS[now.getDay()]), n: now.getDate(), mois: t(MONTHS[now.getMonth()]) });
 
   const steps = data ? firstSteps(data, ds) : [];
@@ -132,8 +131,8 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
   return (
     <>
       <PageHeader
-        eyebrow={<>{today}{data?.level ? ` · ${data.level.name}` : ''}</>}
-        title={<>{hello}{username ? <>, <span className="italic">{username}</span></> : ''}</>}
+        eyebrow={data?.level?.name}
+        title={today}
         subtitle={subtitle} />
 
       <div className="flex flex-col gap-10">

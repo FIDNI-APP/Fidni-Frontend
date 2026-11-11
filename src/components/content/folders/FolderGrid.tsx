@@ -115,9 +115,9 @@ export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string }> = ({
         return (
           <section key={g.title ?? gi} aria-labelledby={titled && g.title ? headingId : undefined} aria-label={titled && g.title ? undefined : label}>
             {titled && g.title && (
-              <h2 id={headingId} className="mb-2.5 flex items-baseline gap-2 text-[12px] font-semibold uppercase tracking-[.08em] text-ink-faint">
+              <h2 id={headingId} className="mb-3 flex items-baseline gap-2 text-[15px] font-semibold text-ink">
                 {g.title}
-                <span className="fd-nums font-medium normal-case tracking-normal">· {filled}/{g.items.length}</span>
+                <span className="fd-nums text-[13px] font-normal text-ink-faint">{filled}/{g.items.length}</span>
               </h2>
             )}
             <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4">
