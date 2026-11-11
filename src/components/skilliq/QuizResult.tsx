@@ -28,7 +28,7 @@ const Medal: React.FC<{ score: number }> = ({ score }) => {
   return (
     <div className={`flex items-center gap-4 border-t px-6 py-4 sm:px-8 ${earned ? 'border-gold-line bg-gold-soft' : 'border-line'}`}>
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
-        earned ? 'bg-gold text-white shadow-[0_0_0_5px_rgba(192,137,47,.18)]' : 'bg-paper text-ink-faint ring-1 ring-line'}`} aria-hidden>
+        earned ? 'bg-gold text-white' : 'bg-paper text-ink-faint ring-1 ring-line'}`} aria-hidden>
         <Award className="h-6 w-6" />
       </span>
       <div className="min-w-0 flex-1">

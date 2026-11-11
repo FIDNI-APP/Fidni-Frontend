@@ -37,7 +37,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
 
   const getScoreColor = () => {
     if (scorePercentage >= 90) return 'text-green-600';
-    if (scorePercentage >= 70) return 'text-blue-600';
+    if (scorePercentage >= 70) return 'text-brand';
     if (scorePercentage >= 50) return 'text-yellow-600';
     return 'text-red-600';
   };
@@ -62,7 +62,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#faf9f7]">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
@@ -112,24 +112,24 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-4 divide-x divide-gray-200">
+            <div className="grid grid-cols-4 divide-x divide-line">
               <div className="p-4 text-center">
-                <div className="text-2xl font-semibold text-gray-900">
+                <div className="text-2xl font-semibold text-ink">
                   {result.correct_answers}/{result.total_questions}
                 </div>
-                <div className="text-sm text-gray-600">{t('Bonnes réponses')}</div>
+                <div className="text-sm text-ink-soft">{t('Bonnes réponses')}</div>
               </div>
               <div className="p-4 text-center">
-                <div className="text-2xl font-semibold text-gray-900">
+                <div className="text-2xl font-semibold text-ink">
                   {quiz.passing_score}%
                 </div>
-                <div className="text-sm text-gray-600">{t('Seuil de réussite')}</div>
+                <div className="text-sm text-ink-soft">{t('Seuil de réussite')}</div>
               </div>
               <div className="p-4 text-center">
-                <div className="text-2xl font-semibold text-gray-900">
+                <div className="text-2xl font-semibold text-ink">
                   {formatTime(result.time_spent_seconds)}
                 </div>
-                <div className="text-sm text-gray-600">{t('Temps')}</div>
+                <div className="text-sm text-ink-soft">{t('Temps')}</div>
               </div>
               <div className="p-4 text-center">
                 <div className={cn(
@@ -138,7 +138,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
                 )}>
                   {isPassed ? t('RÉUSSI') : t('À RETENTER')}
                 </div>
-                <div className="text-sm text-gray-600">{t('Résultat')}</div>
+                <div className="text-sm text-ink-soft">{t('Résultat')}</div>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
               <Button
                 size="lg"
                 onClick={onContinue}
-                className="min-w-[200px] bg-indigo-600 hover:bg-indigo-700"
+                className="min-w-[200px] bg-brand hover:bg-brand-hover"
               >
                 {t('Continuer')}
                 <ChevronRight className="w-5 h-5 ms-2" />
@@ -169,7 +169,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
           {/* Review Section */}
           {result.results && (
             <div className="space-y-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-6">{t('Revoir tes réponses')}</h2>
+              <h2 className="text-2xl font-semibold text-ink mb-6">{t('Revoir tes réponses')}</h2>
               
               {questions.map((question, index) => {
                 const questionResult = result.results?.find(r => r.question_id === question.id);

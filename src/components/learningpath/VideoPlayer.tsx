@@ -276,7 +276,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </Button>
                 
                 {showSettings && (
-                  <div className="absolute bottom-full end-0 mb-2 bg-gray-900 rounded-lg p-2 min-w-[150px]">
+                  <div className="absolute bottom-full end-0 mb-2 bg-ink rounded-lg p-2 min-w-[150px]">
                     <div className="text-white text-sm mb-1">{t('Vitesse de lecture')}</div>
                     {[0.5, 0.75, 1, 1.25, 1.5, 2].map(rate => (
                       <button
@@ -287,7 +287,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         }}
                         className={cn(
                           "block w-full text-start px-2 py-1 text-sm rounded hover:bg-white/10",
-                          playbackRate === rate ? "bg-white/20 text-white" : "text-gray-300"
+                          playbackRate === rate ? "bg-white/20 text-white" : "text-[#d8d4cc]"
                         )}
                       >
                         {rate}x

@@ -41,7 +41,7 @@ const ToolbarButton: React.FC<{
     type="button"
     onMouseDown={(e) => { e.preventDefault(); onClick(); }}
     className={`p-1.5 rounded-lg transition-colors ${
-      isActive ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'
+      isActive ? 'bg-brand-soft text-brand-hover' : 'hover:bg-[#f2f1ee] text-ink-soft'
     }`}
     title={label}
   >
@@ -62,24 +62,24 @@ const TextToolbar: React.FC<{
     <ToolbarButton icon={<Bold className="w-4 h-4" />} label="Gras" onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive('bold')} />
     <ToolbarButton icon={<Italic className="w-4 h-4" />} label="Italique" onClick={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive('italic')} />
     
-    <div className="h-5 border-l border-slate-300 mx-1" />
+    <div className="h-5 border-l border-[#d8d4cc] mx-1" />
     
     <ToolbarButton icon={<Heading1 className="w-4 h-4" />} label="Titre 1" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })} />
     <ToolbarButton icon={<Heading2 className="w-4 h-4" />} label="Titre 2" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive('heading', { level: 2 })} />
     <ToolbarButton icon={<Quote className="w-4 h-4" />} label="Citation" onClick={() => editor.chain().focus().toggleBlockquote().run()} isActive={editor.isActive('blockquote')} />
     
-    <div className="h-5 border-l border-slate-300 mx-1" />
+    <div className="h-5 border-l border-[#d8d4cc] mx-1" />
     
     <ToolbarButton icon={<List className="w-4 h-4" />} label="Liste" onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive('bulletList')} />
     <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} label="Liste numérotée" onClick={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive('orderedList')} />
     
-    <div className="h-5 border-l border-slate-300 mx-1" />
+    <div className="h-5 border-l border-[#d8d4cc] mx-1" />
     
     <ToolbarButton icon={<AlignLeft className="w-4 h-4" />} label="Gauche" onClick={() => editor.chain().focus().setTextAlign('left').run()} isActive={editor.isActive({ textAlign: 'left' })} />
     <ToolbarButton icon={<AlignCenter className="w-4 h-4" />} label="Centre" onClick={() => editor.chain().focus().setTextAlign('center').run()} isActive={editor.isActive({ textAlign: 'center' })} />
     <ToolbarButton icon={<AlignRight className="w-4 h-4" />} label="Droite" onClick={() => editor.chain().focus().setTextAlign('right').run()} isActive={editor.isActive({ textAlign: 'right' })} />
     
-    <div className="h-5 border-l border-slate-300 mx-1" />
+    <div className="h-5 border-l border-[#d8d4cc] mx-1" />
     
     <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} label="Image" onClick={onImageClick} />
     <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} label="Lien" onClick={() => {
@@ -91,11 +91,11 @@ const TextToolbar: React.FC<{
     <div className="relative">
       <ToolbarButton icon={<Palette className="w-4 h-4" style={{ color: selectedColor }} />} label="Couleur" onClick={onColorClick} isActive={showColorPicker} />
       {showColorPicker && (
-        <div className="absolute z-30 mt-1 p-2 bg-white rounded-lg shadow-xl border border-slate-200 grid grid-cols-4 gap-1">
+        <div className="absolute z-30 mt-1 p-2 bg-white rounded-lg shadow-xl border border-line grid grid-cols-4 gap-1">
           {colorOptions.map((color) => (
             <button
               key={color}
-              className="w-6 h-6 rounded-full border border-slate-200 hover:scale-110 transition-transform"
+              className="w-6 h-6 rounded-full border border-line hover:scale-110 transition-transform"
               style={{ backgroundColor: color }}
               onClick={() => onColorSelect(color)}
             />
@@ -104,7 +104,7 @@ const TextToolbar: React.FC<{
       )}
     </div>
     
-    <div className="h-5 border-l border-slate-300 mx-1" />
+    <div className="h-5 border-l border-[#d8d4cc] mx-1" />
     
     <ToolbarButton icon={<Undo className="w-4 h-4" />} label="Annuler" onClick={() => editor.chain().focus().undo().run()} />
     <ToolbarButton icon={<Redo className="w-4 h-4" />} label="Rétablir" onClick={() => editor.chain().focus().redo().run()} />
@@ -122,11 +122,11 @@ const MathToolbar: React.FC<{
   return (
     <div className="space-y-3">
       {/* Quick insert */}
-      <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg">
-        <FunctionSquare className="w-4 h-4 text-indigo-600" />
-        <span className="text-sm font-medium text-slate-700">Rapide:</span>
-        <div className="flex items-center bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-1 max-w-sm">
-          <span className="text-slate-400 font-mono">$</span>
+      <div className="flex items-center gap-2 p-3 bg-brand-soft rounded-lg">
+        <FunctionSquare className="w-4 h-4 text-brand" />
+        <span className="text-sm font-medium text-ink-soft">Rapide:</span>
+        <div className="flex items-center bg-white px-3 py-1.5 rounded-lg border border-line flex-1 max-w-sm">
+          <span className="text-ink-faint font-mono">$</span>
           <input
             type="text"
             value={quickLatex}
@@ -140,7 +140,7 @@ const MathToolbar: React.FC<{
             placeholder="x^2, \frac{a}{b}..."
             className="flex-1 outline-none text-sm font-mono mx-2"
           />
-          <span className="text-slate-400 font-mono">$</span>
+          <span className="text-ink-faint font-mono">$</span>
         </div>
         <button
           onClick={() => {
@@ -150,7 +150,7 @@ const MathToolbar: React.FC<{
             }
           }}
           disabled={!quickLatex.trim()}
-          className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-indigo-700 transition-colors"
+          className="px-3 py-1.5 bg-brand text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-brand-hover transition-colors"
         >
           Insérer
         </button>
@@ -158,12 +158,12 @@ const MathToolbar: React.FC<{
 
       {/* Common symbols */}
       <div className="flex flex-wrap gap-1.5 items-center">
-        <span className="text-xs text-slate-500 font-medium mr-2">Symboles:</span>
+        <span className="text-xs text-ink-faint font-medium mr-2">Symboles:</span>
         {mathSymbols.slice(0, 12).map(({ latex, label, display }) => (
           <button
             key={latex}
             onClick={() => onInsertInline(latex)}
-            className="px-2 py-1 bg-white border border-slate-200 rounded text-sm font-semibold text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+            className="px-2 py-1 bg-white border border-line rounded text-sm font-semibold text-brand hover:bg-brand-soft hover:border-brand-line transition-colors"
             title={`${label}: ${latex}`}
           >
             {display}
@@ -177,7 +177,7 @@ const MathToolbar: React.FC<{
           <button
             key={cat.name}
             onClick={() => onOpenCategory(idx)}
-            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 bg-white border border-line rounded-lg text-sm font-medium text-ink-soft hover:bg-[#faf9f7] hover:border-[#d8d4cc] flex items-center gap-1.5 transition-colors"
           >
             <FunctionSquare className="w-3.5 h-3.5" />
             {cat.name}
@@ -241,16 +241,16 @@ const ImageModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">Insérer une image</h3>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-slate-500" />
+        <div className="flex justify-between items-center px-5 py-4 border-b border-line">
+          <h3 className="text-lg font-semibold text-ink">Insérer une image</h3>
+          <button onClick={onClose} className="p-1 hover:bg-[#f2f1ee] rounded-lg transition-colors">
+            <X className="w-5 h-5 text-ink-faint" />
           </button>
         </div>
 
         <div className="p-5 space-y-4">
           {preview && (
-            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+            <div className="border border-line rounded-xl p-3 bg-[#faf9f7]">
               <img src={preview} alt="Aperçu" className="max-w-full max-h-48 mx-auto rounded-lg" />
             </div>
           )}
@@ -262,12 +262,12 @@ const ImageModal: React.FC<{
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Légende</label>
+            <label className="block text-sm font-medium text-ink-soft mb-1.5">Légende</label>
             <input
               type="text"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-brand"
               placeholder="Description (optionnel)"
             />
           </div>
@@ -275,7 +275,7 @@ const ImageModal: React.FC<{
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#d8d4cc] rounded-xl text-sm font-medium text-ink-soft hover:bg-[#faf9f7] transition-colors"
             >
               <Upload className="w-4 h-4" />
               Télécharger
@@ -284,7 +284,7 @@ const ImageModal: React.FC<{
             
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#d8d4cc] rounded-xl text-sm font-medium text-ink-soft hover:bg-[#faf9f7] transition-colors"
             >
               <Camera className="w-4 h-4" />
               Photo
@@ -292,14 +292,14 @@ const ImageModal: React.FC<{
           </div>
         </div>
 
-        <div className="px-5 py-4 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+        <div className="px-5 py-4 bg-[#faf9f7] rounded-b-2xl flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-ink-soft hover:bg-[#f2f1ee] rounded-lg transition-colors">
             Annuler
           </button>
           <button
             onClick={handleInsert}
             disabled={!imageUrl || uploading}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             <Check className="w-4 h-4" />
             {uploading ? 'Envoi…' : 'Insérer'}
@@ -338,7 +338,7 @@ const FormulaModal: React.FC<{
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-2xl">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-line bg-gradient-to-r from-brand to-brand rounded-t-2xl">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <FunctionSquare className="w-5 h-5" />
             Éditeur de formule
@@ -352,17 +352,17 @@ const FormulaModal: React.FC<{
           {/* Editor and Preview */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Code LaTeX</label>
+              <label className="block text-sm font-medium text-ink-soft mb-2">Code LaTeX</label>
               <textarea
                 value={latex}
                 onChange={(e) => setLatex(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono text-sm h-32 resize-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg font-mono text-sm h-32 resize-none focus:ring-2 focus:ring-brand"
                 placeholder="Entrez votre code LaTeX..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Aperçu</label>
-              <div className="border border-slate-300 rounded-lg h-32 p-4 bg-slate-50 flex items-center justify-center overflow-auto">
+              <label className="block text-sm font-medium text-ink-soft mb-2">Aperçu</label>
+              <div className="border border-[#d8d4cc] rounded-lg h-32 p-4 bg-[#faf9f7] flex items-center justify-center overflow-auto">
                 {latex && (
                   <TipTapRenderer
                     content={isDisplay ? `<p style="text-align:center">$$${latex}$$</p>` : `<p>$${latex}$</p>`}
@@ -377,7 +377,7 @@ const FormulaModal: React.FC<{
             <button
               onClick={() => setIsDisplay(false)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                !isDisplay ? 'bg-indigo-100 text-indigo-700 border border-indigo-300' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+                !isDisplay ? 'bg-brand-soft text-brand-hover border border-brand-line' : 'bg-white border border-[#d8d4cc] text-ink-soft hover:bg-[#faf9f7]'
               }`}
             >
               <span className="font-mono mr-2">$x$</span>
@@ -386,7 +386,7 @@ const FormulaModal: React.FC<{
             <button
               onClick={() => setIsDisplay(true)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center ${
-                isDisplay ? 'bg-indigo-100 text-indigo-700 border border-indigo-300' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+                isDisplay ? 'bg-brand-soft text-brand-hover border border-brand-line' : 'bg-white border border-[#d8d4cc] text-ink-soft hover:bg-[#faf9f7]'
               }`}
             >
               <AlignCenter className="w-4 h-4 mr-2" />
@@ -397,28 +397,28 @@ const FormulaModal: React.FC<{
           {/* Quick formulas */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">Formules prédéfinies</label>
+              <label className="text-sm font-medium text-ink-soft">Formules prédéfinies</label>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Rechercher..."
-                  className="pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm w-48"
+                  className="pl-9 pr-3 py-1.5 border border-[#d8d4cc] rounded-lg text-sm w-48"
                 />
               </div>
             </div>
 
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="border border-line rounded-lg overflow-hidden">
               {mathFormulaCategories.map((category) => (
-                <div key={category.name} className="border-b border-slate-200 last:border-b-0">
+                <div key={category.name} className="border-b border-line last:border-b-0">
                   <button
                     onClick={() => setExpandedCategory(expandedCategory === category.name ? null : category.name)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#faf9f7] hover:bg-[#f2f1ee] transition-colors text-left"
                   >
-                    <span className="font-medium text-slate-700">{category.name}</span>
-                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${expandedCategory === category.name ? 'rotate-180' : ''}`} />
+                    <span className="font-medium text-ink-soft">{category.name}</span>
+                    <ChevronDown className={`w-4 h-4 text-ink-faint transition-transform ${expandedCategory === category.name ? 'rotate-180' : ''}`} />
                   </button>
                   
                   {expandedCategory === category.name && (
@@ -429,9 +429,9 @@ const FormulaModal: React.FC<{
                           <button
                             key={formula.name}
                             onClick={() => insertSubFormula(formula.latex)}
-                            className="p-2 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-left"
+                            className="p-2 border border-line rounded-lg hover:border-brand-line hover:bg-brand-soft transition-colors text-left"
                           >
-                            <div className="text-xs text-slate-500 mb-1 truncate">{formula.name}</div>
+                            <div className="text-xs text-ink-faint mb-1 truncate">{formula.name}</div>
                             <div className="h-8 flex items-center justify-center overflow-hidden">
                               <TipTapRenderer content={`<p>$${formula.latex}$</p>`} />
                             </div>
@@ -446,8 +446,8 @@ const FormulaModal: React.FC<{
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 bg-slate-50 rounded-b-2xl flex justify-end gap-3 border-t border-slate-200">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+        <div className="px-5 py-4 bg-[#faf9f7] rounded-b-2xl flex justify-end gap-3 border-t border-line">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-ink-soft hover:bg-[#f2f1ee] rounded-lg transition-colors">
             Annuler
           </button>
           <button
@@ -458,7 +458,7 @@ const FormulaModal: React.FC<{
               }
             }}
             disabled={!latex.trim()}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-hover disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             <Check className="w-4 h-4" />
             Insérer
@@ -519,7 +519,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       ListItem,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: 'text-indigo-600 hover:text-indigo-800 underline' },
+        HTMLAttributes: { class: 'text-brand hover:text-brand-hover underline' },
       }),
       ImageResize.configure({
         allowBase64: true,
@@ -617,14 +617,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   };
 
   return (
-    <div className="w-full border border-slate-200 rounded-xl shadow-lg bg-white overflow-hidden">
+    <div className="w-full border border-line rounded-xl shadow-lg bg-white overflow-hidden">
       {/* Tab bar */}
-      <div className="flex border-b border-slate-200 bg-slate-50 px-3 pt-2">
+      <div className="flex border-b border-line bg-[#faf9f7] px-3 pt-2">
         <button
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeTab === 'text'
-              ? 'bg-white border-t border-l border-r border-slate-200 border-b-white -mb-px text-indigo-700'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white border-t border-l border-r border-line border-b-white -mb-px text-brand-hover'
+              : 'text-ink-soft hover:bg-[#f2f1ee]'
           }`}
           onClick={() => setActiveTab('text')}
         >
@@ -633,8 +633,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         <button
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeTab === 'math'
-              ? 'bg-white border-t border-l border-r border-slate-200 border-b-white -mb-px text-indigo-700'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white border-t border-l border-r border-line border-b-white -mb-px text-brand-hover'
+              : 'text-ink-soft hover:bg-[#f2f1ee]'
           }`}
           onClick={() => setActiveTab('math')}
         >
@@ -643,7 +643,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       </div>
 
       {/* Toolbar */}
-      <div className="px-3 py-2 bg-white border-b border-slate-200">
+      <div className="px-3 py-2 bg-white border-b border-line">
         {activeTab === 'text' ? (
           <TextToolbar
             editor={editor}
@@ -668,7 +668,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
       {/* Editor */}
       <div
-        className="tiptap-editor overflow-y-auto bg-slate-50"
+        className="tiptap-editor overflow-y-auto bg-[#faf9f7]"
         style={{ maxHeight: '500px', padding: '20px' }}
         onClick={() => editor.chain().focus().run()}
       >
@@ -714,15 +714,15 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       {activeCategoryIndex !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
-            <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-slate-900">
+            <div className="px-5 py-4 border-b border-line flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-ink">
                 {mathFormulaCategories[activeCategoryIndex].name}
               </h3>
               <button
                 onClick={() => setActiveCategoryIndex(null)}
-                className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1 hover:bg-[#f2f1ee] rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-5 h-5 text-ink-faint" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-5">
@@ -735,14 +735,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                       setShowFormulaModal(true);
                       setActiveCategoryIndex(null);
                     }}
-                    className="p-3 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-left group"
+                    className="p-3 border border-line rounded-xl hover:border-brand-line hover:bg-brand-soft transition-colors text-left group"
                   >
-                    <div className="text-sm font-medium text-slate-700 mb-2">{formula.name}</div>
-                    <div className="h-12 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden">
+                    <div className="text-sm font-medium text-ink-soft mb-2">{formula.name}</div>
+                    <div className="h-12 flex items-center justify-center bg-[#faf9f7] rounded-lg overflow-hidden">
                       <TipTapRenderer content={`<p>$${formula.latex}$</p>`} />
                     </div>
                     {formula.description && (
-                      <div className="text-xs text-slate-500 mt-2 line-clamp-2">{formula.description}</div>
+                      <div className="text-xs text-ink-faint mt-2 line-clamp-2">{formula.description}</div>
                     )}
                   </button>
                 ))}

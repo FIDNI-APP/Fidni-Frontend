@@ -121,8 +121,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         onDragLeave={handleDragLeave}
         className={`
           relative border-2 border-dashed rounded-lg p-6 transition-colors
-          ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50'}
-          ${uploading ? 'pointer-events-none' : 'cursor-pointer hover:border-blue-400 hover:bg-blue-50'}
+          ${isDragging ? 'border-brand bg-brand-soft' : 'border-[#d8d4cc] bg-[#faf9f7]'}
+          ${uploading ? 'pointer-events-none' : 'cursor-pointer hover:border-brand hover:bg-brand-soft'}
         `}
       >
         <input
@@ -137,35 +137,35 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           {uploading ? (
             <>
               <div className="relative w-12 h-12">
-                <div className="absolute inset-0 border-4 border-blue-200 rounded-full" />
+                <div className="absolute inset-0 border-4 border-brand-line rounded-full" />
                 <div
-                  className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"
+                  className="absolute inset-0 border-4 border-brand rounded-full border-t-transparent animate-spin"
                   style={{ animationDuration: '1s' }}
                 />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-ink-soft">
                   {selectedFile?.name}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-ink-faint mt-1">
                   {uploadProgress}% - {formatFileSize(selectedFile?.size || 0)}
                 </p>
               </div>
-              <div className="w-full max-w-xs bg-slate-200 rounded-full h-2">
+              <div className="w-full max-w-xs bg-line rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-brand h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
             </>
           ) : (
             <>
-              <FileIcon className="w-10 h-10 text-slate-400" />
+              <FileIcon className="w-10 h-10 text-ink-faint" />
               <div className="text-center">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-ink-soft">
                   {t('Dépose un fichier ici ou clique pour parcourir')}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-ink-faint mt-1">
                   {t('Max {n}MB', { n: maxSizeMB })}
                 </p>
               </div>

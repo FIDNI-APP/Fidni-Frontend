@@ -206,10 +206,10 @@ const validateForm = (): boolean => {
 
   if (fetchingData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600">{t('Chargement du parcours…')}</p>
+          <Loader2 className="w-12 h-12 animate-spin text-brand mx-auto mb-4" />
+          <p className="text-ink-soft">{t('Chargement du parcours…')}</p>
         </div>
       </div>
     );
@@ -227,14 +227,14 @@ const validateForm = (): boolean => {
           <div className="mb-8">
             <button
               onClick={() => navigate(`/learning-path/${id}`)}
-              className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+              className="flex items-center text-ink-soft hover:text-ink mb-4 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 me-2" />
               {t('Retour au parcours')}
             </button>
-            <h1 className="text-3xl font-semibold text-gray-800">{t('Ajouter un chapitre')}</h1>
+            <h1 className="text-3xl font-semibold text-ink">{t('Ajouter un chapitre')}</h1>
             {learningPath && (
-              <p className="text-gray-600 mt-2">
+              <p className="text-ink-soft mt-2">
                 {t('Adding to:')} <span className="font-semibold">{learningPath.title}</span>
               </p>
             )}
@@ -243,8 +243,8 @@ const validateForm = (): boolean => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Chapter Info Card */}
-            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">{t('Chapitre')}</h2>
+            <div className="bg-white rounded-xl shadow-lg p-8 border border-[#f2f1ee]">
+              <h2 className="text-xl font-semibold text-ink mb-6">{t('Chapitre')}</h2>
               
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
@@ -256,7 +256,7 @@ const validateForm = (): boolean => {
               <div className="space-y-6">
                 {/* Select Chapter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Select Chapter')} <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -269,7 +269,7 @@ const validateForm = (): boolean => {
                         title: selectedChapter?.name || ''
                       });
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   >
                     <option value="">{t('Choisir un chapitre')}</option>
                     {chapters.map((chapter) => (
@@ -289,7 +289,7 @@ const validateForm = (): boolean => {
 
                 {/* Order */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Position dans le parcours')} <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -297,44 +297,44 @@ const validateForm = (): boolean => {
                     value={formData.order}
                     onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
                     min="0"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-ink-faint">
                     {t('Ordre d’apparition du chapitre dans le parcours')}
                   </p>
                 </div>
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Titre du chapitre')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                     placeholder={t('Titre affiché pour ce chapitre')}
                   />
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     {t('Description')}
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent resize-none"
                     placeholder={t('Ce que couvre ce chapitre, en quelques mots…')}
                   />
                 </div>
 
                 {/* Estimated Time */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink-soft mb-2">
                     <Clock className="w-4 h-4 inline me-1" />
                     {t('Durée estimée (minutes)')}
                   </label>
@@ -343,22 +343,22 @@ const validateForm = (): boolean => {
                     value={formData.estimated_minutes}
                     onChange={(e) => setFormData({ ...formData, estimated_minutes: parseInt(e.target.value) || 0 })}
                     min="0"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   />
                 </div>
               </div>
             </div>
 
             {/* Videos Section */}
-            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-lg p-8 border border-[#f2f1ee]">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">{t('Vidéos du chapitre')}</h2>
+                <h2 className="text-xl font-semibold text-ink">{t('Vidéos du chapitre')}</h2>
                 <Button
                   type="button"
                   onClick={addVideo}
                   variant="outline"
                   size="sm"
-                  className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
+                  className="bg-brand-soft text-brand-hover border-brand-line hover:bg-brand-soft"
                 >
                   <Plus className="w-4 h-4 me-2" />
                   {t('Ajouter une vidéo')}
@@ -371,11 +371,11 @@ const validateForm = (): boolean => {
                     key={index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="border border-gray-200 rounded-lg p-6"
+                    className="border border-line rounded-lg p-6"
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-gray-800">
-                        <PlayCircle className="w-5 h-5 inline me-2 text-indigo-600" />
+                      <h3 className="font-medium text-ink">
+                        <PlayCircle className="w-5 h-5 inline me-2 text-brand" />
                         {t('Vidéo {n}', { n: index + 1 })}
                       </h3>
                       {videos.length > 1 && (
@@ -392,27 +392,27 @@ const validateForm = (): boolean => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Video Title */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-ink-soft mb-1">
                           {t('Titre')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={video.title}
                           onChange={(e) => updateVideo(index, 'title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                           placeholder={t('Titre de la vidéo')}
                         />
                       </div>
 
                       {/* Video Type */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-ink-soft mb-1">
                           {t('Type')}
                         </label>
                         <select
                           value={video.video_type}
                           onChange={(e) => updateVideo(index, 'video_type', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                         >
                           {/* Mêmes valeurs que Video.VIDEO_TYPES côté serveur : « exercise » n'en faisait
                               pas partie et faisait échouer la création de la vidéo. */}
@@ -427,27 +427,27 @@ const validateForm = (): boolean => {
 
                       {/* Video URL */}
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-ink-soft mb-1">
                           {t('Video URL')} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <Link className="absolute start-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <Link className="absolute start-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-ink-faint" />
                           <input
                             type="url"
                             value={video.url}
                             onChange={(e) => updateVideo(index, 'url', e.target.value)}
-                            className="w-full ps-10 pe-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            className="w-full ps-10 pe-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                             placeholder={t('Lien YouTube, Vimeo ou fichier vidéo')}
                           />
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-ink-faint">
                           {t('Accepte les liens YouTube, Vimeo, S3 ou directs vers un fichier vidéo')}
                         </p>
                       </div>
 
                       {/* Duration */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-ink-soft mb-1">
                           {t('Durée (secondes)')} <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -455,14 +455,14 @@ const validateForm = (): boolean => {
                           value={video.duration_seconds}
                           onChange={(e) => updateVideo(index, 'duration_seconds', parseInt(e.target.value) || 0)}
                           min="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                           placeholder="300"
                         />
                       </div>
 
                       {/* Order */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-ink-soft mb-1">
                           {t('Ordre')}
                         </label>
                         <input
@@ -470,20 +470,20 @@ const validateForm = (): boolean => {
                           value={video.order}
                           onChange={(e) => updateVideo(index, 'order', parseInt(e.target.value) || 0)}
                           min="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                         />
                       </div>
 
                       {/* Image d’aperçu (lien) */}
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-ink-soft mb-1">
                           {t('Image d’aperçu (lien)')}
                         </label>
                         <input
                           type="url"
                           value={video.thumbnail_url}
                           onChange={(e) => updateVideo(index, 'thumbnail_url', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[#d8d4cc] rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                           placeholder={t('Facultatif : lien vers une image')}
                         />
                       </div>

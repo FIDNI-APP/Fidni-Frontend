@@ -50,7 +50,7 @@ export const Delta: React.FC<{ a: SkillAssessment; long?: boolean; className?: s
 
 /** Étiquette « Nouveau » : quiz sorti il y a moins de 14 jours, pas encore passé. */
 export const NewBadge: React.FC = () => (
-  <span className="inline-flex items-center rounded-full bg-gold px-2 py-0.5 text-[12.5px] font-medium text-white">{t('Nouveau')}</span>
+  <span className="inline-flex items-center rounded-md border border-gold-line bg-gold-soft px-2 py-0.5 text-[12px] font-medium text-gold-strong">{t('Nouveau')}</span>
 );
 
 /** Badge « Chapitre approfondi » : l'approfondissement réussi à BADGE_PCT % au moins (dernier passage). */

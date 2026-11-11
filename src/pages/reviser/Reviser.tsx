@@ -120,7 +120,7 @@ const NextTestHero: React.FC<{
 const NoTestCard: React.FC<{ onAdd: () => void; hasPast: boolean }> = ({ onAdd, hasPast }) => (
   <div className="overflow-hidden rounded-3xl border border-dashed border-[#d8d4cc] bg-white">
     <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand-hover ring-1 ring-brand-line" aria-hidden>
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f2f1ee] text-ink-soft ring-1 ring-line" aria-hidden>
         <CalendarPlus className="h-6 w-6" />
       </span>
       <div className="min-w-0 flex-1">

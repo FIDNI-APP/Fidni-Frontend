@@ -53,13 +53,13 @@ const ContentPreview: React.FC<ContentPreviewProps> = memo(({
       setProcessedHtml(sanitizeHtml(html));
     } catch (error) {
       console.error('ContentPreview error:', error);
-      setProcessedHtml('<p class="text-slate-400 italic">Aperçu non disponible</p>');
+      setProcessedHtml('<p class="text-ink-faint italic">Aperçu non disponible</p>');
     }
   }, [content]);
 
   if (!processedHtml) {
     return (
-      <div className={`text-slate-400 text-sm italic ${className}`}>
+      <div className={`text-ink-faint text-sm italic ${className}`}>
         Aucun contenu
       </div>
     );
@@ -217,7 +217,7 @@ function processLatex(html: string): string {
       });
       return `<span class="math-block">${rendered}</span>`;
     } catch {
-      return `<span class="math-block text-slate-400">[${tex.substring(0, 20)}...]</span>`;
+      return `<span class="math-block text-ink-faint">[${tex.substring(0, 20)}...]</span>`;
     }
   });
 
@@ -233,7 +233,7 @@ function processLatex(html: string): string {
       });
       return `<span class="math-inline">${rendered}</span>`;
     } catch {
-      return `<span class="math-inline text-slate-400">[${tex.substring(0, 15)}]</span>`;
+      return `<span class="math-inline text-ink-faint">[${tex.substring(0, 15)}]</span>`;
     }
   });
 

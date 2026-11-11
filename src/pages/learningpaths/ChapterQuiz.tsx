@@ -185,17 +185,17 @@ export const ChapterQuiz: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
 
   if (!quiz) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-[#faf9f7] p-8">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-gray-600">{t('Quiz introuvable')}</p>
+          <p className="text-ink-soft">{t('Quiz introuvable')}</p>
           <Button 
             onClick={() => navigate(`/learning-path/${pathId}`)}
             className="mt-4"
@@ -225,7 +225,7 @@ export const ChapterQuiz: React.FC = () => {
   // Show quiz start screen
   if (!attemptId) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#faf9f7]">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -238,19 +238,19 @@ export const ChapterQuiz: React.FC = () => {
           
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-              <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Target className="w-10 h-10 text-indigo-600" />
+              <div className="w-20 h-20 bg-brand-soft rounded-full flex items-center justify-center mx-auto mb-6">
+                <Target className="w-10 h-10 text-brand" />
               </div>
               
               <h1 className="text-3xl font-semibold mb-2">{quiz.title}</h1>
               {quiz.description && (
-                <p className="text-gray-600 mb-6">{quiz.description}</p>
+                <p className="text-ink-soft mb-6">{quiz.description}</p>
               )}
               
               <div className="grid grid-cols-2 gap-4 mb-8 text-start max-w-sm mx-auto">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">
+                  <Clock className="w-5 h-5 text-ink-faint" />
+                  <span className="text-sm text-ink-soft">
                     {quiz.time_limit_minutes 
                       ? t('{n} minutes', { n: quiz.time_limit_minutes })
                       : t('Sans limite de temps')
@@ -258,28 +258,28 @@ export const ChapterQuiz: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">
+                  <AlertCircle className="w-5 h-5 text-ink-faint" />
+                  <span className="text-sm text-ink-soft">
                     {t('{n} questions', { n: quiz.questions.length })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">
+                  <Trophy className="w-5 h-5 text-ink-faint" />
+                  <span className="text-sm text-ink-soft">
                     {t('Réussite : {n} %', { n: quiz.passing_score })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-ink-faint" />
+                  <span className="text-sm text-ink-soft">
                     {t('{n} tentative(s)', { n: currentChapter?.user_progress?.quiz_attempts || 0 })}
                   </span>
                 </div>
               </div>
               
               {currentChapter?.user_progress?.quiz_score && (
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700">
+                <div className="mb-6 p-4 bg-brand-soft rounded-lg">
+                  <p className="text-sm text-brand-hover">
                     {t('Ton meilleur score :')} <strong>{currentChapter.user_progress.quiz_score}%</strong>
                   </p>
                 </div>
@@ -288,7 +288,7 @@ export const ChapterQuiz: React.FC = () => {
               <Button
                 size="lg"
                 onClick={startQuiz}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-brand hover:bg-brand-hover"
               >
                 {t('Commencer le quiz')}
               </Button>
@@ -304,7 +304,7 @@ export const ChapterQuiz: React.FC = () => {
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#faf9f7]">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           {/* Quiz Header */}
@@ -315,7 +315,7 @@ export const ChapterQuiz: React.FC = () => {
               {timeRemaining !== null && (
                 <div className={cn(
                   "flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium",
-                  timeRemaining < 60 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+                  timeRemaining < 60 ? "bg-red-100 text-red-700" : "bg-[#f2f1ee] text-ink-soft"
                 )}>
                   <Clock className="w-4 h-4" />
                   {formatTime(timeRemaining)}
@@ -345,7 +345,7 @@ export const ChapterQuiz: React.FC = () => {
               {t('Précédent')}
             </Button>
 
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-ink-soft">
               {t('Question {n} of {total}', { n: currentQuestionIndex + 1, total: questions.length })}
             </span>
 
@@ -370,7 +370,7 @@ export const ChapterQuiz: React.FC = () => {
 
           {/* Question Navigation Grid */}
           <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">{t('Questions')}</h3>
+            <h3 className="text-sm font-medium text-ink-soft mb-3">{t('Questions')}</h3>
             <div className="grid grid-cols-10 gap-2">
               {questions.map((q, index) => (
                 <button
@@ -379,10 +379,10 @@ export const ChapterQuiz: React.FC = () => {
                   className={cn(
                     "w-10 h-10 rounded-lg text-sm font-medium transition-colors",
                     currentQuestionIndex === index 
-                      ? "bg-indigo-600 text-white" 
+                      ? "bg-brand text-white" 
                       : answers[q.id] !== undefined
                       ? "bg-green-100 text-green-700 hover:bg-green-200"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      : "bg-[#f2f1ee] text-ink-soft hover:bg-line"
                   )}
                 >
                   {index + 1}

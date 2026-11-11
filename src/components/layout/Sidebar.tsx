@@ -406,13 +406,14 @@ const NavIcon: React.FC<{ icon: NavItem['icon']; active: boolean }> = ({ icon: I
 
 /** « Nouveau » des quiz : sous le libellé dans la barre (240 px : à côté, il le coupait), à droite dans le tiroir
  *  du téléphone, point doré sur l'icône quand la barre est repliée. */
-const QuizNouveau: React.FC<{ place: 'dessous' | 'droite' | 'point'; active: boolean }> = ({ place, active }) => {
+const QuizNouveau: React.FC<{ place: 'dot' | 'droite' | 'point'; active: boolean }> = ({ place, active }) => {
   const { menu } = useQuizNouveau();
   if (!menu) return null;
   if (place === 'point') return <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-white" aria-label={t('nouveau')} />;
+  if (place === 'dot') return <span className={cx('ms-auto me-2 h-2 w-2 shrink-0 rounded-full', active ? 'bg-white' : 'bg-gold')} role="img" aria-label={t('nouveau')} />;
   return (
     <span className={cx('shrink-0 rounded-md px-1.5 font-medium',
-      place === 'dessous' ? 'mt-0.5 py-px text-[11px] leading-[14px]' : 'ms-auto me-1 py-0.5 text-[11.5px]',
+      'ms-auto me-1 py-0.5 text-[11.5px]',
       active ? 'bg-white/15 text-white' : 'bg-[#efece6] text-ink-soft')}>
       {t('Nouveau')}
     </span>
@@ -498,12 +499,10 @@ const NavRow: React.FC<{
       )}
     >
       <NavIcon icon={Icon} active={active} />
-      {!collapsed && (item.nouveau && !drawer ? (
-        <span className="flex min-w-0 flex-col items-start py-1">
-          <span className="max-w-full truncate">{t(item.label)}</span>
-          <QuizNouveau place="dessous" active={active} />
-        </span>
-      ) : <span className="truncate">{t(item.label)}</span>)}
+      {/* « Nouveau » dans la barre : un point doré à droite (11/11/2026 — sous le libellé, il rendait cette ligne
+          plus haute que les autres ; à côté, le mot ne tient pas dans 240 px). Le mot reste dans le tiroir. */}
+      {!collapsed && <span className="truncate">{t(item.label)}</span>}
+      {item.nouveau && !collapsed && !drawer && <QuizNouveau place="dot" active={active} />}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
       {item.compteur && <DiscussionCount collapsed={collapsed} active={active} />}
       {item.defi && <DefiPastille collapsed={collapsed} active={active} />}

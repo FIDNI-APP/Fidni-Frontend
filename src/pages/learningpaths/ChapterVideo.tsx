@@ -171,21 +171,21 @@ export const ChapterVideo: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
 
   if (!learningPath || !currentChapter || !currentVideo) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-[#faf9f7] p-8">
         <div className="max-w-4xl mx-auto">
           <Button onClick={() => navigate(`/learning-path/${pathId}`)}>
             <ArrowLeft className="w-4 h-4 me-2" />
             {t('Retour au parcours')}
           </Button>
-          <div className="mt-4 text-center text-gray-600">
+          <div className="mt-4 text-center text-ink-soft">
             {t('Vidéo introuvable')}
           </div>
         </div>
@@ -194,9 +194,9 @@ export const ChapterVideo: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#faf9f7] flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="bg-white border-b border-line px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -208,13 +208,13 @@ export const ChapterVideo: React.FC = () => {
               {t('Retour au parcours')}
             </Button>
             
-            <div className="h-6 w-px bg-gray-300" />
+            <div className="h-6 w-px bg-[#d8d4cc]" />
             
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-semibold text-ink">
                 {learningPath.title}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-ink-soft">
                 {t('Chapter {n}: {title}', { n: currentChapter.order, title: currentChapter.title })}
               </p>
             </div>
@@ -252,10 +252,10 @@ export const ChapterVideo: React.FC = () => {
           <div className="max-w-5xl mx-auto">
             {/* Video Title */}
             <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              <h2 className="text-2xl font-semibold text-ink mb-2">
                 {currentVideo.title}
               </h2>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-4 text-sm text-ink-soft">
                 <span>{currentVideo.video_type}</span>
                 <span>•</span>
                 <span>{currentVideo.duration}</span>
@@ -304,33 +304,33 @@ export const ChapterVideo: React.FC = () => {
                           href={resource.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                          className="flex items-center justify-between p-4 rounded-lg border border-line hover:bg-[#faf9f7] transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <div className="w-10 h-10 bg-brand-soft rounded-lg flex items-center justify-center">
                               {resource.resource_type === 'pdf' ? (
-                                <FileText className="w-5 h-5 text-indigo-600" />
+                                <FileText className="w-5 h-5 text-brand" />
                               ) : (
-                                <ExternalLink className="w-5 h-5 text-indigo-600" />
+                                <ExternalLink className="w-5 h-5 text-brand" />
                               )}
                             </div>
                             <div>
-                              <h4 className="font-medium text-gray-900">
+                              <h4 className="font-medium text-ink">
                                 {resource.title}
                               </h4>
                               {resource.description && (
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-ink-soft">
                                   {resource.description}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <Download className="w-5 h-5 text-gray-400" />
+                          <Download className="w-5 h-5 text-ink-faint" />
                         </a>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-600">{t('Aucune ressource pour cette vidéo.')}</p>
+                    <p className="text-ink-soft">{t('Aucune ressource pour cette vidéo.')}</p>
                   )}
                 </div>
               </TabsContent>
@@ -340,7 +340,7 @@ export const ChapterVideo: React.FC = () => {
                 <div className="bg-white rounded-lg p-6">
                   <h3 className="text-lg font-semibold mb-4">{t('Tes notes')}</h3>
                   <textarea
-                    className="w-full h-64 p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full h-64 p-4 border border-line rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
                     placeholder={t('Prends des notes pendant la vidéo…')}
                     defaultValue={currentVideo.user_progress?.notes || ''}
                     onBlur={async (e) => {
@@ -367,7 +367,7 @@ export const ChapterVideo: React.FC = () => {
           {/* Collapse Toggle */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="absolute start-0 top-1/2 -translate-y-1/2 -translate-x-full rtl:translate-x-full bg-white border border-gray-200 rounded-s-lg p-2 hover:bg-gray-50"
+            className="absolute start-0 top-1/2 -translate-y-1/2 -translate-x-full rtl:translate-x-full bg-white border border-line rounded-s-lg p-2 hover:bg-[#faf9f7]"
           >
             {sidebarCollapsed ? (
               <ChevronLeft className="w-4 h-4" />

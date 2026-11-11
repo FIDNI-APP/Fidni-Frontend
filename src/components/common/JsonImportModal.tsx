@@ -331,21 +331,21 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-line">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-ink">
               {t('Importer {type} via JSON', { type: t(CONTENT_TYPE_LABELS[contentType]) })}
             </h2>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-faint">
               {t('Les IDs sont générés automatiquement')}
             </p>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-[#f2f1ee] rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-ink-faint" />
           </button>
         </div>
 
@@ -370,10 +370,10 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="flex-1 p-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 p-3 border-2 border-dashed border-[#d8d4cc] rounded-lg hover:border-brand hover:bg-brand-soft transition-colors flex items-center justify-center gap-2"
             >
-              <Upload className="w-4 h-4 text-slate-400" />
-              <span className="text-sm text-slate-600">{t('Charger un .json')}</span>
+              <Upload className="w-4 h-4 text-ink-faint" />
+              <span className="text-sm text-ink-soft">{t('Charger un .json')}</span>
             </button>
             <button
               type="button"
@@ -394,27 +394,27 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
 
           {/* Or divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 border-t border-slate-200" />
-            <span className="text-xs text-slate-400">{t('ou collez votre JSON')}</span>
-            <div className="flex-1 border-t border-slate-200" />
+            <div className="flex-1 border-t border-line" />
+            <span className="text-xs text-ink-faint">{t('ou collez votre JSON')}</span>
+            <div className="flex-1 border-t border-line" />
           </div>
 
           {/* JSON textarea */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">JSON</label>
+              <label className="text-sm font-medium text-ink-soft">JSON</label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={loadExample}
-                  className="text-xs px-2 py-1 bg-indigo-100 hover:bg-indigo-200 rounded text-indigo-700"
+                  className="text-xs px-2 py-1 bg-brand-soft hover:bg-brand-line rounded text-brand-hover"
                 >
                   {t('Voir exemple')}
                 </button>
                 <button
                   type="button"
                   onClick={copyExample}
-                  className="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
+                  className="text-xs px-2 py-1 bg-[#f2f1ee] hover:bg-line rounded text-ink-soft flex items-center gap-1"
                 >
                   <Copy className="w-3 h-3" />
                   {t('Copier')}
@@ -428,7 +428,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                 setError(null);
               }}
               placeholder={`{\n  "title": "Titre...",\n  "blocks": [...]\n}`}
-              className="w-full h-52 p-3 border border-slate-200 rounded-lg font-mono text-sm resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full h-52 p-3 border border-line rounded-lg font-mono text-sm resize-none focus:ring-2 focus:ring-brand focus:border-transparent"
               spellCheck={false}
             />
           </div>
@@ -449,23 +449,23 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           )}
 
           {/* Help */}
-          <div className="p-3 bg-blue-50 rounded-lg">
+          <div className="p-3 bg-brand-soft rounded-lg">
             <div className="flex items-start gap-2">
-              <FileJson className="w-4 h-4 text-blue-500 mt-0.5" />
-              <div className="text-xs text-blue-700">
+              <FileJson className="w-4 h-4 text-brand mt-0.5" />
+              <div className="text-xs text-brand-hover">
                 <strong>{t('Format simplifié:')}</strong> {t('Pas besoin de spécifier les IDs.')}<br/>
-                {t('Pour les exercices structurés, utilisez')} <code className="bg-blue-100 px-1 rounded">blocks</code> {t('avec')} <code className="bg-blue-100 px-1 rounded">type</code> {t('("context" ou "question"),')} <code className="bg-blue-100 px-1 rounded">label</code>, <code className="bg-blue-100 px-1 rounded">content</code> {t('et')} <code className="bg-blue-100 px-1 rounded">solution</code>.
+                {t('Pour les exercices structurés, utilisez')} <code className="bg-brand-soft px-1 rounded">blocks</code> {t('avec')} <code className="bg-brand-soft px-1 rounded">type</code> {t('("context" ou "question"),')} <code className="bg-brand-soft px-1 rounded">label</code>, <code className="bg-brand-soft px-1 rounded">content</code> {t('et')} <code className="bg-brand-soft px-1 rounded">solution</code>.
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 bg-slate-50 rounded-b-xl flex justify-end gap-3 border-t border-slate-200">
+        <div className="px-5 py-4 bg-[#faf9f7] rounded-b-xl flex justify-end gap-3 border-t border-line">
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm text-ink-soft hover:bg-line rounded-lg transition-colors"
           >
             {t('Annuler')}
           </button>
@@ -473,7 +473,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             type="button"
             onClick={validateAndImport}
             disabled={!jsonInput.trim()}
-            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             <Upload className="w-4 h-4" />
             {t('Importer')}

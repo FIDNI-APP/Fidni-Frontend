@@ -137,14 +137,14 @@ export const CreateLearningPath: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#faf9f7] py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -158,10 +158,10 @@ export const CreateLearningPath: React.FC = () => {
               {t('Retour aux parcours')}
             </Button>
             
-            <h1 className="text-3xl font-semibold text-gray-900">
+            <h1 className="text-3xl font-semibold text-ink">
               {isEditMode ? t('Modifier le parcours') : t('Nouveau parcours')}
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-ink-soft mt-2">
               {isEditMode 
                 ? t('Modifie les informations du parcours.') 
                 : t('Un parcours guidé, chapitre par chapitre, pour les élèves.')
@@ -227,7 +227,7 @@ export const CreateLearningPath: React.FC = () => {
               {/* Class Levels */}
               <div>
                 <Label>{t('Niveaux *')}</Label>
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-ink-soft mb-3">
                   {t('Les niveaux concernés par ce parcours')}
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -237,8 +237,8 @@ export const CreateLearningPath: React.FC = () => {
                       className={cn(
                         "flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-colors",
                         formData.class_level.includes(level.id)
-                          ? "bg-indigo-50 border-indigo-500 text-indigo-700"
-                          : "bg-white border-gray-300 hover:bg-gray-50"
+                          ? "bg-brand-soft border-brand text-brand-hover"
+                          : "bg-white border-[#d8d4cc] hover:bg-[#faf9f7]"
                       )}
                     >
                       <input
@@ -268,7 +268,7 @@ export const CreateLearningPath: React.FC = () => {
                   })}
                   className="mt-1"
                 />
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-ink-soft mt-1">
                   {t('Temps total estimé pour terminer le parcours')}
                 </p>
               </div>
@@ -277,7 +277,7 @@ export const CreateLearningPath: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="active">{t('Parcours visible')}</Label>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-ink-soft">
                     {t('Un parcours désactivé n’apparaît pas aux élèves')}
                   </p>
                 </div>
@@ -301,7 +301,7 @@ export const CreateLearningPath: React.FC = () => {
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-brand hover:bg-brand-hover"
               >
                 {saving ? (
                   <>
@@ -320,14 +320,14 @@ export const CreateLearningPath: React.FC = () => {
 
           {/* Ensuite Info */}
           {!isEditMode && (
-            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">
+            <div className="mt-8 bg-brand-soft border border-brand-line rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-brand-hover mb-2">
                 {t('Ensuite')}
               </h3>
-              <p className="text-blue-800">
+              <p className="text-brand-hover">
                 {t('Une fois le parcours créé, tu pourras :')}
               </p>
-              <ul className="mt-2 space-y-1 text-blue-800">
+              <ul className="mt-2 space-y-1 text-brand-hover">
                 <li>• {t('ajouter des chapitres avec leurs vidéos')}</li>
                 <li>• {t('créer un quiz par chapitre')}</li>
                 <li>• {t('joindre des ressources')}</li>

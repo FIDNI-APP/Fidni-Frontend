@@ -49,7 +49,7 @@ const Hero: React.FC<{
 );
 
 const IconBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; gold?: boolean }> = ({ icon: Icon, gold }) => (
-  <span className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:flex ${gold ? 'bg-gold-soft text-gold-strong ring-gold-line' : 'bg-brand-soft text-brand-hover ring-brand-line'}`} aria-hidden>
+  <span className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:flex ${gold ? 'bg-[#f2f1ee] text-gold-strong ring-line' : 'bg-[#f2f1ee] text-ink-soft ring-line'}`} aria-hidden>
     <Icon className="h-6 w-6" />
   </span>
 );
