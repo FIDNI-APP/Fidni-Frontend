@@ -172,21 +172,23 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
 
   if (isLesson) {
     return (
-      <div className={withOutline ? 'min-[1440px]:grid min-[1440px]:items-start min-[1440px]:gap-8 min-[1440px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : ''}>
+      <div className={withOutline ? "fd-lecon" : ""}><div className={withOutline ? "fd-lecon-grid" : ""}>
         <ReadingStyles />
-        {/* Grand écran (≥ 1440 px) : sommaire collant dans la marge GAUCHE ; la feuille reste centrée. */}
+        {/* Assez de place à côté de la feuille (requête de conteneur .fd-lecon, index.css — pas la largeur de
+            l'écran : la barre latérale prend 240 px, et à 1440 px le sommaire débordait sur elle) : sommaire collant
+            dans la marge gauche ; la feuille reste centrée quand la place le permet. */}
         {withOutline && (
-          <aside className="sticky top-[84px] hidden max-h-[calc(100vh-104px)] w-[200px] overflow-y-auto pb-4 pe-1 min-[1440px]:col-start-1 min-[1440px]:block min-[1440px]:justify-self-end print:!hidden" data-tour="lecon-sommaire"
+          <aside className="fd-lecon-aside sticky top-[84px] max-h-[calc(100vh-104px)] w-[184px] overflow-y-auto pb-4 pe-1 print:!hidden" data-tour="lecon-sommaire"
             onClickCapture={trackOutline}>
             <LessonOutlinePanel outline={outline} storageKey={`lecon-${content.id}`} syncHash />
           </aside>
         )}
         {/* La feuille garde la largeur du PDF et reste CENTRÉE à l'écran (mx-auto), sommaire ou non. */}
-        <div className="mx-auto flex min-w-0 flex-col gap-8 sm:gap-10 min-[1440px]:col-start-2 min-[1440px]:mx-0" style={{ maxWidth: SHEET_TEXT_PX + 2 * 48 + 2 }}>
+        <div className="fd-lecon-sheet mx-auto flex min-w-0 flex-col gap-8 sm:gap-10" style={{ maxWidth: SHEET_TEXT_PX + 2 * 48 + 2 }}>
           <div>
-            {/* Sous 1440 px : sommaire repliable, collé sous la barre du site. */}
+            {/* Pas assez de place à côté : sommaire repliable, collé sous la barre du site. */}
             {withOutline && (
-              <div className="sticky top-[68px] z-20 mb-3 min-[1440px]:hidden print:hidden" onClickCapture={trackOutline}>
+              <div className="fd-lecon-bar sticky top-[68px] z-20 mb-3 print:hidden" onClickCapture={trackOutline}>
                 <LessonOutlineBar outline={outline} storageKey={`lecon-${content.id}`} tourId="lecon-sommaire-barre" />
               </div>
             )}
@@ -201,7 +203,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
           {/* Impression (Ctrl + P) : la leçon seule. */}
           <div className="flex flex-col gap-8 sm:gap-10 print:hidden">{children}</div>
         </div>
-      </div>
+      </div></div>
     );
   }
 

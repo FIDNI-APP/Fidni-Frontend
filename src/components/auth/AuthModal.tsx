@@ -1,4 +1,6 @@
 // src/components/AuthModal.tsx
+import LogoFidni from '@/assets/logo-fidni.svg';
+import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import React, { useState, useEffect } from 'react';
 import { X, LogIn, UserPlus, Loader2, Mail, Lock, User, CheckCircle, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -299,20 +301,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         role="dialog" aria-modal="true" aria-labelledby="auth-modal-title"
         className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-line"
       >
-        {/* Header — flat ink band (no gradient) */}
-        <div className="bg-ink p-6 text-white relative">
+        {/* En-tête clair (11/11/2026) : le lion et le titre sur la feuille blanche, plus de bandeau noir. */}
+        <div className="relative px-6 pb-4 pt-6">
+          <img src={LogoFidni} alt="" className="fd-logo-clair mb-4 h-8 w-auto" />
+          <img src={LogoFidniSombre} alt="" className="fd-logo-sombre mb-4 h-8 w-auto" />
           <button
             onClick={onClose}
-            className="absolute top-4 end-4 text-white/70 hover:text-white transition-colors"
+            className="absolute top-3 end-3 inline-flex h-10 w-10 items-center justify-center rounded-lg text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink"
             aria-label={t('Fermer')}
           >
             <X className="w-5 h-5" />
           </button>
-          <h2 id="auth-modal-title" className="fd-display text-2xl" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
+          <h2 id="auth-modal-title" className="fd-display text-[24px] text-ink" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
             {googleConsent ? t('Encore une chose')
               : activeTab === 'signup' ? t('Rejoindre Fidni') : forgot ? t('Mot de passe oublié') : t('Content de te revoir')}
           </h2>
-          <p className="mt-1 text-[#b8b4ac] text-sm">
+          <p className="mt-1 text-[14px] text-ink-faint">
             {googleConsent
               ? t('Deux cases à cocher, et c’est parti.')
               : activeTab === 'signup'
@@ -529,8 +533,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
               ) : (
                 <motion.form key="signup"
                   initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-                  transition={{ duration: 0.25 }} onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
+                  transition={{ duration: 0.25 }} onSubmit={handleSignup} className="space-y-3">
+                  <div className="space-y-1.5">
                     <label htmlFor="username" className="block text-sm font-medium text-ink-soft">{t("Nom d'utilisateur")}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
@@ -542,7 +546,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label htmlFor="email" className="block text-sm font-medium text-ink-soft">{t('Email')}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
@@ -554,7 +558,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label htmlFor="signupPassword" className="block text-sm font-medium text-ink-soft">{t('Mot de passe')}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
@@ -569,7 +573,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                     </p>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink-soft">{t('Confirme le mot de passe')}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
