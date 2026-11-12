@@ -2,6 +2,7 @@
 import React from 'react';
 import { ChevronRight, CheckCircle, Lock, FileText, Video as VideoIcon } from 'lucide-react';
 import { PathChapter } from '@/types/index';
+import { computeProgress, sameId } from '@/components/parcours/progression';
 import { cn } from '@/lib/utils';
 import { t } from '@/i18n';
 
@@ -20,22 +21,21 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
   onVideoSelect,
   onQuizSelect
 }) => {
-  const isVideoAccessible = (_chapterIndex: number, _videoIndex: number) => {
-    // Logic to determine if video is accessible based on progress
-    // For now, we'll make all videos accessible
-    return true;
+  const progress = computeProgress({ path_chapters: chapters });
+  const isVideoAccessible = (chapterIndex: number, videoIndex: number) => {
+    const step = progress.steps.find((s) => sameId(s.chapter.id, chapters[chapterIndex].id));
+    const video = step?.videos.find((v) => sameId(v.video.id, chapters[chapterIndex].videos[videoIndex].id));
+    return !!video && video.state !== 'locked';
   };
-
   const isQuizAccessible = (chapter: PathChapter) => {
-    // Quiz is accessible if all required videos in the chapter are completed
-    const requiredVideos = chapter.videos;
-    return requiredVideos.every(v => v.user_progress?.is_completed);
+    const step = progress.steps.find((s) => sameId(s.chapter.id, chapter.id));
+    return !!step && (step.quizDue || step.quizPassed);
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-line h-full overflow-hidden flex flex-col">
       <div className="p-4 border-b border-line">
-        <h3 className="font-semibold text-ink">{t('Course Content')}</h3>
+        <h3 className="font-semibold text-ink">{t('Vidéos du chapitre')}</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -48,7 +48,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                   "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold",
                   chapter.user_progress?.is_completed 
                     ? "bg-green-100 text-green-700"
-                    : chapter.id === currentChapterId
+                    : sameId(chapter.id, currentChapterId)
                     ? "bg-brand-soft text-brand-hover"
                     : "bg-line text-ink-soft"
                 )}>
@@ -73,7 +73,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
             <div className="p-2">
               {chapter.videos.map((video, videoIndex) => {
                 const isAccessible = isVideoAccessible(chapterIndex, videoIndex);
-                const isCurrent = video.id === currentVideoId;
+                const isCurrent = sameId(video.id, currentVideoId);
                 const isCompleted = video.user_progress?.is_completed || false;
 
                 return (

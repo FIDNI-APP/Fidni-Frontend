@@ -4,12 +4,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, AlertCircle, CheckCircle, ChevronRight, Trophy, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { computeProgress, sameId } from '@/components/parcours/progression';
 import { t } from '@/i18n';
 import { QuizQuestion } from '@/components/learningpath/QuizQuestion';
 import { QuizResult } from '@/components/learningpath/QuizResult';
 import { Progress } from '@/components/ui/progress';
 import {
   getLearningPath,
+  startChapter,
   startQuizAttempt,
   submitQuizAttempt,
 } from '@/lib/api/LearningPathApi';
@@ -22,6 +24,11 @@ import {
 } from '@/types/index';
 
 export const ChapterQuiz: React.FC = () => {
+  const { pathId, chapterId, videoId } = useParams();
+  return <ChapterQuizContent key={[pathId, chapterId, videoId].join('/')} />;
+};
+
+const ChapterQuizContent: React.FC = () => {
   const { pathId, chapterId } = useParams<{ pathId: string; chapterId: string }>();
   const navigate = useNavigate();
   
@@ -29,6 +36,8 @@ export const ChapterQuiz: React.FC = () => {
   const [currentChapter, setCurrentChapter] = useState<PathChapter | null>(null);
   const [quiz, setQuiz] = useState<ChapterQuizType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [starting, setStarting] = useState(false);
   
   // Quiz state
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -70,15 +79,23 @@ export const ChapterQuiz: React.FC = () => {
   const fetchQuizData = async () => {
     try {
       setLoading(true);
+      setError(false);
       const pathData = await getLearningPath(pathId!);
+      pathData.path_chapters.sort((a, b) => a.order - b.order);
+      const step = computeProgress(pathData).steps.find((s) => sameId(s.chapter.id, chapterId));
+      if (!step || !step.quizDue && !step.quizPassed) {
+        navigate(`/parcours?parcours=${pathId}&chapitre=${chapterId}`, { replace: true });
+        return;
+      }
       setLearningPath(pathData);
       
-      const chapter = pathData.path_chapters.find(ch => ch.id === chapterId);
+      const chapter = pathData.path_chapters.find(ch => String(ch.id) === chapterId);
       if (chapter && chapter.quiz) {
         setCurrentChapter(chapter);
         setQuiz(chapter.quiz);
       }
     } catch (err) {
+      setError(true);
       console.error('Failed to fetch quiz data:', err);
     } finally {
       setLoading(false);
@@ -86,9 +103,11 @@ export const ChapterQuiz: React.FC = () => {
   };
 
   const startQuiz = async () => {
-    if (!quiz) return;
-    
+    if (!quiz || starting) return;
+    setStarting(true);
+    setError(false);
     try {
+      await startChapter(chapterId!);
       const response = await startQuizAttempt(quiz.id);
       setAttemptId(response.attempt_id);
       setQuestions(response.questions);
@@ -98,8 +117,9 @@ export const ChapterQuiz: React.FC = () => {
         setTimeRemaining(response.time_limit_minutes * 60);
       }
     } catch (err) {
+      setError(true);
       console.error('Failed to start quiz:', err);
-    }
+    } finally { setStarting(false); }
   };
 
   const handleAnswerQuestion = (questionId: string, answer: number | number[]) => {
@@ -144,6 +164,7 @@ export const ChapterQuiz: React.FC = () => {
       setQuizResult(result);
       setShowResults(true);
     } catch (err) {
+      setError(true);
       console.error('Failed to submit quiz:', err);
       submittingRef.current = false;
     }
@@ -166,14 +187,14 @@ export const ChapterQuiz: React.FC = () => {
   const handleNextChapter = () => {
     if (!learningPath) return;
     
-    const currentChapterIndex = learningPath.path_chapters.findIndex(ch => ch.id === chapterId);
+    const currentChapterIndex = learningPath.path_chapters.findIndex(ch => String(ch.id) === chapterId);
     if (currentChapterIndex < learningPath.path_chapters.length - 1) {
       const nextChapter = learningPath.path_chapters[currentChapterIndex + 1];
       if (nextChapter.videos.length > 0) {
         navigate(`/learning-path/${pathId}/chapters/${nextChapter.id}/videos/${nextChapter.videos[0].id}`);
       }
     } else {
-      navigate(`/learning-path/${pathId}`);
+      navigate(`/parcours?parcours=${pathId}&chapitre=${chapterId}`);
     }
   };
 
@@ -183,6 +204,9 @@ export const ChapterQuiz: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  if (error && !quiz) {
+    return <div role="alert" className="mx-auto max-w-xl p-6"><p>{t('Le parcours n’a pas pu se charger. Vérifie ta connexion.')}</p><Button onClick={fetchQuizData}>{t('Réessayer')}</Button></div>;
+  }
   if (loading) {
     return (
       <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
@@ -197,7 +221,7 @@ export const ChapterQuiz: React.FC = () => {
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-ink-soft">{t('Quiz introuvable')}</p>
           <Button 
-            onClick={() => navigate(`/learning-path/${pathId}`)}
+            onClick={() => navigate(`/parcours?parcours=${pathId}&chapitre=${chapterId}`)}
             className="mt-4"
           >
             {t('Retour au parcours')}
@@ -229,7 +253,7 @@ export const ChapterQuiz: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/learning-path/${pathId}`)}
+            onClick={() => navigate(`/parcours?parcours=${pathId}&chapitre=${chapterId}`)}
             className="mb-6"
           >
             <ArrowLeft className="w-4 h-4 me-2" />
@@ -285,9 +309,11 @@ export const ChapterQuiz: React.FC = () => {
                 </div>
               )}
               
+              {error && <p role="alert" className="mb-4 text-sm text-red-700">{t('Le quiz n’a pas pu être enregistré. Réessaie.')}</p>}
               <Button
                 size="lg"
                 onClick={startQuiz}
+                disabled={starting}
                 className="bg-brand hover:bg-brand-hover"
               >
                 {t('Commencer le quiz')}
@@ -325,6 +351,7 @@ export const ChapterQuiz: React.FC = () => {
             <Progress value={progress} className="h-2" />
           </div>
 
+          {error && <p role="alert" className="mb-4 text-sm text-red-700">{t('Le quiz n’a pas pu être enregistré. Réessaie.')}</p>}
           {/* Question */}
           <QuizQuestion
             question={currentQuestion}
@@ -371,7 +398,7 @@ export const ChapterQuiz: React.FC = () => {
           {/* Question Navigation Grid */}
           <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-sm font-medium text-ink-soft mb-3">{t('Questions')}</h3>
-            <div className="grid grid-cols-10 gap-2">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(40px,1fr))] gap-2">
               {questions.map((q, index) => (
                 <button
                   key={q.id}
