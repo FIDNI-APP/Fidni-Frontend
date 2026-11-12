@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { getTaxonomy, type TaxonomyLevel } from './api';
-import { ChapterTable, type StageProps } from './ChapterRows';
+import { ChapterCatalogue, type StageProps } from './ChapterRows';
 import { t } from '@/i18n';
 import { isFresh, quizKey, takenOn, type ActiveQuiz, type QuizEnCours, type QuizType, type SkillAssessment } from './types';
 
@@ -117,15 +117,13 @@ export const LevelQuizzes: React.FC<Omit<Props, 'standalone'>> = ({
           })}
         </div>
       )}
-      {level.subjects.map((s) => (
-        <div key={s.id}>
-          {level.subjects.length > 1 && <h3 className="mb-3 text-[12.5px] font-medium text-ink-faint">{s.name}</h3>}
-          <ChapterTable deep={level.hasDeep} lines={s.chapters.map((c) => ({
-            id: c.id, name: c.name, cours: stage(c, s.name, 'cours'),
-            deep: level.hasDeep ? stage(c, s.name, 'approfondissement') : undefined,
-          }))} />
-        </div>
-      ))}
+      <ChapterCatalogue key={level.id} deep={level.hasDeep} groups={level.subjects.map((subject) => ({
+        id: subject.id, name: level.subjects.length > 1 ? subject.name : undefined,
+        lines: subject.chapters.map((c) => ({
+          id: c.id, name: c.name, cours: stage(c, subject.name, 'cours'),
+          deep: level.hasDeep ? stage(c, subject.name, 'approfondissement') : undefined,
+        })),
+      }))} />
     </div>
   );
 };
