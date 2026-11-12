@@ -34,7 +34,7 @@ export const VideoCheckpoint: React.FC<{
     <li className="relative flex gap-3 pb-5 last:pb-0">
       {/* Trait vers la vidéo suivante. */}
       {!last && (
-        <span aria-hidden className={`absolute start-[13px] top-8 bottom-0 w-0.5 rounded-full ${state === 'completed' ? 'bg-gold' : 'bg-[#e3dfd7]'}`} />
+        <span aria-hidden className={`absolute start-[13px] top-8 bottom-0 w-0.5 rounded-full ${state === 'completed' ? 'bg-gold' : 'bg-line'}`} />
       )}
       <span aria-hidden className={`relative z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-semibold fd-nums ${NODE[state]} ${justDone ? 'fd-parcours-valide' : ''}`}>
         {state === 'completed' ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : state === 'locked' ? <Lock className="h-3 w-3" /> : index + 1}
