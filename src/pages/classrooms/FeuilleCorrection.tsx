@@ -51,6 +51,7 @@ export default function FeuilleCorrection({ source }: Props) {
   const [data, setData] = useState<Impression | null>(null);
   const [err, setErr] = useState('');
   const [preparation, setPreparation] = useState(false);
+  const [optionsOuvertes, setOptionsOuvertes] = useState(false);
   const [options, setOptionsState] = useState<Options>(() => ({
     enonce: false, corrige: false, reponse: false, valideesSeules: true, ...lireOptions(),
   }));
@@ -154,21 +155,25 @@ export default function FeuilleCorrection({ source }: Props) {
             {toutes ? t('Toutes les corrections ({n})', { n: copies.length }) : t('Feuille de correction')}
           </div>
           <div className="fc-toolbar-actions">
+            <button type="button" className="fc-btn" aria-expanded={optionsOuvertes} aria-controls="fc-options"
+              onClick={() => setOptionsOuvertes((open) => !open)}>{t('Options')}</button>
+            <button type="button" className="fd-btn-primary" onClick={imprimer} disabled={preparation || !copies.length}>
+              {preparation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} {t('Imprimer')}
+            </button>
+          </div>
+        </div>
+        <div id="fc-options" hidden={!optionsOuvertes}>
+          <div className="fc-options-list">
             <label className="fc-check"><input type="checkbox" checked={options.enonce} onChange={(e) => setOptions({ enonce: e.target.checked })} /> {t('Inclure l’énoncé')}</label>
             {aCorrige && <label className="fc-check"><input type="checkbox" checked={options.corrige} onChange={(e) => setOptions({ corrige: e.target.checked })} /> {t('Inclure le corrigé')}</label>}
             {aReponse && <label className="fc-check"><input type="checkbox" checked={options.reponse} onChange={(e) => setOptions({ reponse: e.target.checked })} /> {t('Inclure la réponse de l’élève (transcription)')}</label>}
             {toutes && nonValidees > 0 && nonValidees < data.copies.length && (
               <label className="fc-check"><input type="checkbox" checked={options.valideesSeules} onChange={(e) => setOptions({ valideesSeules: e.target.checked })} /> {t('Copies validées seulement')}</label>
             )}
-            <button type="button" className="fd-btn-primary" onClick={imprimer} disabled={preparation || !copies.length}>
-              {preparation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} {t('Imprimer')}
-            </button>
           </div>
+          <p className="fc-hint">{t('Ce que tu vois est exactement ce qui sera imprimé. Choisis « Enregistrer au format PDF » dans la fenêtre d’impression pour obtenir un fichier.')}</p>
         </div>
-        <p className="fc-hint">
-          {source === 'prof' && copies.some((c) => !c.validee) && <b>{t('Attention : certaines corrections ne sont pas encore validées.')} </b>}
-          {t('Ce que tu vois est exactement ce qui sera imprimé. Choisis « Enregistrer au format PDF » dans la fenêtre d’impression pour obtenir un fichier.')}
-        </p>
+        {source === 'prof' && copies.some((c) => !c.validee) && <p className="fc-hint"><b>{t('Attention : certaines corrections ne sont pas encore validées.')}</b></p>}
       </div>
 
       {copies.length === 0 ? (
@@ -301,6 +306,7 @@ const STYLES = `
   .fc-toolbar-inner { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .fc-toolbar-title { font-weight: 700; font-size: 14px; color: #1a1a1a; }
   .fc-toolbar-actions { margin-inline-start: auto; display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; }
+  .fc-options-list { max-width: 1040px; margin: 10px auto 0; padding-top: 8px; border-top: 1px solid #e7e3dc; display: flex; flex-wrap: wrap; gap: 4px 18px; }
   .fc-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #6b6862;
     padding: 7px 10px; border-radius: 10px; border: 1px solid #e7e3dc; background: #fff; min-height: 36px; }
   .fc-btn:hover { color: #1a1a1a; }

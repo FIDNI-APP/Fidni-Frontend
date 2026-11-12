@@ -388,18 +388,15 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
             title={t('Du Tronc commun au Bac, ton sommaire de maths')}
             subtitle={t('Choisis ton niveau, puis un chapitre : tu tombes directement sur ses exercices corrigés.')}
           />
-          <Link to={levelUrl} style={{ ...btnSecondary, marginTop: 22 }}>
-            {level ? t('Tous les exercices · {level}', { level: level.name }) : t('Tout explorer')} <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
 
         <div>
           {levels && levels.length > 0 && (
-            <div role="tablist" aria-label={t('Niveau')} className="flex flex-wrap" style={{ gap: 8, marginBottom: 14 }}>
+            <div role="group" aria-label={t('Niveau')} className="flex flex-wrap" style={{ gap: 8, marginBottom: 14 }}>
               {levels.map((l) => {
                 const on = l.slug === slug;
                 return (
-                  <button key={l.id} type="button" role="tab" aria-selected={on} onClick={() => choose(l.slug)}
+                  <button key={l.id} type="button" aria-pressed={on} onClick={() => choose(l.slug)}
                     style={{ ...levelChip, cursor: 'pointer', background: on ? INK : SURFACE, color: on ? '#fff' : SOFT, borderColor: on ? INK : LINE }}>
                     {l.name}
                   </button>
@@ -417,7 +414,7 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
             </div>
           ) : chapters.length === 0 ? (
             <p style={{ fontSize: 14, color: FAINT, padding: '14px' }}>
-              {unavailable ? t('Le sommaire n’a pas pu s’afficher.') : t('Choisis un niveau pour voir ses chapitres.')}{' '}
+              {unavailable ? t('Le sommaire n’a pas pu s’afficher.') : t('Aucun chapitre pour l’instant')}{' '}
               <Link to="/exercises" style={{ color: ACCENT, fontWeight: 600 }}>{t('Voir tous les exercices')}</Link>
             </p>
           ) : (
@@ -437,16 +434,16 @@ function Curriculum({ levels }: { levels: Level[] | null }) {
                     <span className="fd-nums" style={{ fontSize: 12.5, color: FAINT, whiteSpace: 'nowrap' }}>
                       {c.count > 1 ? t('{n} exercices', { n: c.count }) : t('{n} exercice', { n: c.count })}
                     </span>
-                    <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: ACCENT, flexShrink: 0 }} />
+                    <ArrowUpRight className="w-4 h-4 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-visible:opacity-100 transition-opacity" style={{ color: ACCENT, flexShrink: 0 }} />
                   </Link>
                   {i < shown.length - 1 && <div style={{ height: 1, background: LINE }} />}
                 </li>
               ))}
             </ol>
           )}
-          {chapters.length > MAX_CHAPTERS && (
+          {chapters.length > 0 && (
             <Link to={levelUrl} className="fd-btn-ghost" style={{ marginTop: 12 }}>
-              {t('Les {n} chapitres', { n: chapters.length })} <ArrowRight className="w-3.5 h-3.5" />
+              {chapters.length > MAX_CHAPTERS ? t('Les {n} chapitres', { n: chapters.length }) : t('Tous les exercices · {level}', { level: level?.name ?? hub?.level.name ?? '' })} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           )}
         </div>

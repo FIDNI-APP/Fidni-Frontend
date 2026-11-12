@@ -191,7 +191,7 @@ export const DocumentEditor: React.FC = () => {
 
   const titleBar = (
     <>
-      <Link to="/documents" onClick={() => { void flush(); }} title={t('Mes documents')}
+      <Link to="/documents" onClick={() => { void flush(); }} aria-label={t('Mes documents')} title={t('Mes documents')}
         className="inline-flex h-8 items-center gap-1 rounded-lg ps-1 pe-2 text-[13px] font-semibold text-white/90 hover:bg-white/10">
         <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">{t('Mes documents')}</span>
       </Link>
@@ -201,12 +201,12 @@ export const DocumentEditor: React.FC = () => {
         className="min-w-0 max-w-[min(420px,50vw)] flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-center text-[14px] font-semibold text-white placeholder:text-white/60 hover:border-white/30 focus:border-white/60 focus:bg-white/10 focus:outline-none sm:flex-none sm:text-start" />
       {canPublish && (
         <button type="button" onClick={() => setPublishing(true)} title={t('Publier ce document comme exercice, devoir ou leçon')}
-          className="ms-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
-          <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('Publier sur FIDNI')}</span>
+          className="ms-auto inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-white/15 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/25">
+          <Send className="h-3.5 w-3.5" /> <span className="sm:hidden">{t('Publier')}</span><span className="hidden sm:inline">{t('Publier sur FIDNI')}</span>
         </button>
       )}
-      <span className={`${canPublish ? 'ms-3' : 'ms-auto'} inline-flex items-center gap-1.5 text-[12px] text-white/85`} role="status">
-        {status.icon} {status.text}
+      <span className={`${canPublish ? 'ms-3' : 'ms-auto'} inline-flex items-center gap-1.5 text-[12px] text-white/85`} role="status" title={status.text}>
+        {status.icon} <span className={save === 'error' ? undefined : 'sr-only sm:not-sr-only'}>{status.text}</span>
         {save === 'error' && (
           <button type="button" onClick={() => { void flush(); }} className="ms-1 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-0.5 font-semibold hover:bg-white/25">
             <AlertTriangle className="h-3 w-3" /> {t('Réessayer')}

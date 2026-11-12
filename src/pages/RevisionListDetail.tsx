@@ -2,7 +2,7 @@
  * Une liste de révision (/profile/revision-lists/:id), deux vues (10/10/2026 ; refonte du 11/10/2026) :
  *  - Mode révision (par défaut) : un exercice à la fois, interactif comme le DS blanc (pages/devoirs/MockExamPage) :
  *    Réussi / À revoir sous chaque question, « Tout réussi », puis « Exercice suivant ». La page s'ouvre sur le premier
- *    exercice pas encore réussi ; une pastille par exercice dit où l'élève en est (statistics.statuses).
+ *    exercice pas encore réussi ; le sélecteur rappelle le titre et l’état de chaque exercice (statistics.statuses).
  *  - Feuille à imprimer : tous les énoncés à la suite, solutions masquées ou affichées, export PDF.
  * Chaque exercice a son lien « Ouvrir l'exercice » (commentaires, solutions des élèves, ressenti).
  * On y arrive depuis Réviser (« Mes listes ») : mêmes briques (components/space/Page), mêmes couleurs
@@ -46,10 +46,10 @@ type Progress = Record<string, { status: AssessmentStatus; assessed_at?: string 
 type Done = Exclude<ItemStatus, null>;
 
 // Les libellés sont des clés de traduction : t(ui.label) à l'affichage.
-const STATUS_UI: Record<'success' | 'review' | 'todo', { label: string; pill: string; dot: string }> = {
-  success: { label: 'Réussi', pill: 'bg-brand-soft text-brand-hover', dot: 'border-brand bg-brand text-white' },
-  review: { label: 'À revoir', pill: 'bg-gold-soft text-gold-strong', dot: 'border-gold bg-gold-soft text-gold-strong' },
-  todo: { label: 'Pas encore fait', pill: 'bg-[#f2f1ee] text-ink-faint', dot: 'border-line bg-white text-ink-soft hover:border-ink-faint' },
+const STATUS_UI: Record<'success' | 'review' | 'todo', { label: string; pill: string }> = {
+  success: { label: 'Réussi', pill: 'bg-brand-soft text-brand-hover' },
+  review: { label: 'À revoir', pill: 'bg-gold-soft text-gold-strong' },
+  todo: { label: 'Pas encore fait', pill: 'bg-[#f2f1ee] text-ink-faint' },
 };
 const statusKey = (s: ItemStatus | undefined) => (s === 'success' || s === 'review' ? s : 'todo');
 
@@ -426,25 +426,18 @@ export const RevisionListDetail: React.FC = () => {
       ) : view === 'revision' ? (
         /* ───────────── Mode révision : un exercice à la fois ───────────── */
         <div className="revision-print-hide">
-          <nav aria-label={t('Exercices de la liste')} className="mb-4">
-            <ol className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5 scrollbar-hide sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0.5">
-              {items.map((it, i) => {
-                const s = statuses[String(it.object_id)];
-                const ui = STATUS_UI[statusKey(s)];
-                const on = current === i;
-                return (
-                  <li key={it.id} className="shrink-0">
-                    <button type="button" onClick={() => goTo(i)} aria-current={on ? 'step' : undefined}
-                      aria-label={t('{kind} {n} : {status}', { kind: kindLabel(it.content_object), n: i + 1, status: t(ui.label).toLowerCase() })} title={it.content_object.title}
-                      className={`fd-nums inline-flex h-10 w-10 items-center justify-center rounded-full border-2 text-[13px] font-semibold transition-[box-shadow,border-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${ui.dot} ${
-                        on ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper' : ''}`}>
-                      {s === 'success' ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
+          <label className="mb-4 flex min-w-0 flex-col gap-1.5 text-[13px] font-semibold text-ink-soft sm:max-w-xl">
+            {t('Exercices de la liste')}
+            <select value={current ?? ''} onChange={(e) => goTo(Number(e.target.value))}
+              className="h-11 w-full min-w-0 truncate rounded-xl border border-line bg-white px-3 text-[14px] text-ink focus-visible:outline-brand">
+              {current === null && <option value="" disabled>{t('Bilan')}</option>}
+              {items.map((entry, i) => (
+                <option key={entry.id} value={i}>
+                  {i + 1}. {entry.content_object.title} · {t(STATUS_UI[statusKey(statuses[String(entry.object_id)])].label)}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {item ? (
             <article ref={cardRef} aria-labelledby="exercice-titre" className="scroll-mt-24 rounded-2xl border border-line bg-white">

@@ -399,6 +399,9 @@ export const ProfilePage: React.FC = () => {
                       {pub.reglages.demandes > 1 ? t('{n} demandes', { n: pub.reglages.demandes }) : t('1 demande')}
                     </button>
                   )}
+                  {userType === 'student' && !p.class_level && !p.class_level_name && (
+                    <Link to={editUrl + '#scolarite'} className="fd-btn-primary min-h-10">{t('Indiquer ma classe')}</Link>
+                  )}
                   <Link to={editUrl} className="fd-btn-ghost min-h-10" data-tour="profil-modifier">
                     <Pencil className="h-4 w-4" /> {t('Modifier mon profil')}
                   </Link>

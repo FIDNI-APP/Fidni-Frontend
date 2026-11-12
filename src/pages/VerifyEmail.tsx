@@ -7,7 +7,7 @@ import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { SEO } from '@/components/layout/SEO';
 import { t } from '@/i18n';
 
-type State = 'verifying' | 'success' | 'already' | 'expired' | 'invalid' | 'new-email';
+type State = 'verifying' | 'success' | 'already' | 'expired' | 'invalid' | 'unavailable' | 'new-email';
 
 /**
  * Target of the confirmation link emailed on signup: /verify-email?token=...
@@ -18,32 +18,39 @@ export const VerifyEmail: React.FC = () => {
   const [params] = useSearchParams();
   const token = params.get('token');
   const [state, setState] = useState<State>('verifying');
-  const ran = useRef(false);
+  const verification = useRef<{ token: string; request: ReturnType<typeof verifyEmail> } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const openLogin = useOpenSignup();
 
   useEffect(() => {
-    if (ran.current) return;      // guard against double-run (StrictMode)
-    ran.current = true;
-
     if (!token) { setState('invalid'); return; }
-
-    verifyEmail(token)
+    let active = true;
+    if (verification.current?.token !== token) {
+      verification.current = { token, request: verifyEmail(token) };
+    }
+    setState('verifying');
+    verification.current.request
       .then(async (data) => {
+        if (!active) return;
         // Nouvelle adresse d'un compte existant (changée dans les réglages) : confirmée, sans ouvrir de session.
         if (data?.detail === 'new_email_verified') { setState('new-email'); await refreshUser().catch(() => {}); return; }
         if (!data?.access) { setState('already'); return; }
         setState('success');
         await refreshUser();
         const done = data.user?.profile?.onboarding_completed;
-        navigate(done ? '/' : '/complete-profile', { replace: true });
+        if (active) navigate(done ? '/' : '/complete-profile', { replace: true });
       })
       .catch((err) => {
-        const code = err?.response?.data?.code;
-        setState(code === 'token_expired' ? 'expired' : 'invalid');
+        if (!active) return;
+        const { status, data } = err?.response ?? {};
+        if (data?.code === 'token_expired') setState('expired');
+        else if (!status || status === 429 || status >= 500) setState('unavailable');
+        else setState('invalid');
       });
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { active = false; };
+  }, [token, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goLogin = () => {
     if (user) { navigate('/'); return; }
@@ -51,9 +58,9 @@ export const VerifyEmail: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16 sm:py-24 text-center">
+    <div className="max-w-md mx-auto px-4 py-8 sm:py-16 text-center">
       <SEO title="Confirmer mon adresse – Fidni" description="Confirmation de l’adresse e-mail d’un compte Fidni." noindex />
-      <div className="fd-card p-8">
+      <div className="fd-card p-6 sm:p-8" aria-live="polite">
         {state === 'verifying' && (
           <>
             <Loader2 className="w-9 h-9 mx-auto mb-4 animate-spin text-brand" />
@@ -95,6 +102,17 @@ export const VerifyEmail: React.FC = () => {
                 </button>
               </>
             )}
+          </>
+        )}
+
+        {state === 'unavailable' && (
+          <>
+            <h1 className="fd-display text-[23px] text-ink">{t('Confirmation de l’e-mail')}</h1>
+            <p className="my-4 text-sm text-ink-soft">{t('Vérifie ta connexion, puis réessaie.')}</p>
+            <button type="button" className="fd-btn-primary" onClick={() => {
+              verification.current = null;
+              setAttempt((value) => value + 1);
+            }}>{t('Réessayer')}</button>
           </>
         )}
 

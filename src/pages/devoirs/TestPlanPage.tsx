@@ -152,15 +152,15 @@ export default function TestPlanPage() {
             </div>
           </section>
         ) : (
-          <section aria-labelledby="blanc-titre" className="overflow-hidden rounded-3xl bg-[#14583a] text-white shadow-[0_18px_40px_-18px_rgba(20,88,58,.6)]">
-            <div className="p-6 sm:p-8">
-              <p className="flex items-center gap-2 text-[12.5px] font-medium text-white/70">
+          <section aria-labelledby="blanc-titre" className="overflow-hidden rounded-2xl border border-line border-s-4 border-s-brand bg-white text-ink">
+            <div className="p-5 sm:p-7">
+              <p className="flex items-center gap-2 text-[12.5px] font-semibold text-brand-hover">
                 <Timer className="h-4 w-4" aria-hidden /> {t('DS blanc')}
               </p>
               <h2 id="blanc-titre" className="fd-display mt-2 text-[26px] leading-tight sm:text-[30px]">
                 {mock?.done_at ? t('DS blanc terminé') : mock?.started_at ? t('Ton DS blanc t’attend') : t('Entraîne-toi en conditions réelles')}
               </h2>
-              <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-white/80">
+              <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-ink-soft">
                 {mock?.done_at
                   ? (mock.seconds !== null
                     ? t('Fait le {date} en {time}. Corrige-toi question par question, puis tente un autre sujet.', { date: new Date(mock.done_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' }), time: minutesLabel(mock.seconds) })
@@ -174,41 +174,41 @@ export default function TestPlanPage() {
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     {mock.done_at ? (
                       <>
-                        <Link to={blancUrl} className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-6 text-[15px] font-semibold text-[#14583a] hover:bg-[#eef6f1]">
+                        <Link to={blancUrl} className="fd-btn-primary min-h-11">
                           <ClipboardCheck className="h-5 w-5" /> {t('Ma correction')}
                         </Link>
                         <button type="button" onClick={() => run(() => devoirsApi.mockAction(test.id, 'new'))} disabled={busy}
-                          className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-white/30 px-5 text-[14.5px] font-semibold text-white hover:bg-white/10 disabled:opacity-60">
+                          className="fd-btn-ghost min-h-11 disabled:opacity-60">
                           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} {t('Un autre DS blanc')}
                         </button>
                       </>
                     ) : (
-                      <Link to={blancUrl} className="inline-flex min-h-14 items-center gap-2.5 rounded-2xl bg-white px-7 text-[16px] font-semibold text-[#14583a] shadow-sm hover:bg-[#eef6f1]">
+                      <Link to={blancUrl} className="fd-btn-primary min-h-12">
                         {mock.started_at ? t('Reprendre') : t('Lancer le DS blanc')}
-                        <span className="fd-nums rounded-lg bg-[#14583a]/10 px-2 py-0.5 text-[13px]">{durationLabel(mock.minutes)}</span>
+                        <span className="fd-nums rounded-md bg-white/20 px-2 py-0.5 text-[13px]">{durationLabel(mock.minutes)}</span>
                         <ArrowRight className="h-5 w-5" />
                       </Link>
                     )}
                   </div>
-                  <p className="mt-4 text-[13px] text-white/70">
+                  <p className="mt-4 text-[13px] text-ink-soft">
                     {t('{count} de 3 questions au moins', { count: exercisesCount(mock.exercises.length) })}
                     {chapterNames.length > 0 && <> · {chapterNames.join(' · ')}</>}
                   </p>
                   {uncovered.length > 0 && (
-                    <p className="mt-1 text-[12.5px] text-[#f3dca9]">
+                    <p className="mt-1 text-[12.5px] text-gold-strong">
                       {uncovered.length > 1
                         ? t('Pas d’exercice long pour {list} : révise ces chapitres avec « S’entraîner » ci-dessous.', { list: uncovered.join(', ') })
                         : t('Pas d’exercice long pour {list} : révise ce chapitre avec « S’entraîner » ci-dessous.', { list: uncovered.join(', ') })}
                     </p>
                   )}
                   {mock.settings && mock.minutes < mock.settings.minutes - 10 && (
-                    <p className="mt-1 text-[12.5px] text-[#f3dca9]">
+                    <p className="mt-1 text-[12.5px] text-gold-strong">
                       {t('Sujet plus court que {time} : il n’y a pas encore assez d’exercices longs dans ces chapitres.', { time: durationLabel(mock.settings.minutes) })}
                     </p>
                   )}
                 </>
               ) : (
-                <p className="mt-5 rounded-2xl bg-white/10 px-4 py-3 text-[13.5px] text-white/90">
+                <p className="mt-5 rounded-2xl bg-gold-soft px-4 py-3 text-[13.5px] text-gold-strong">
                   {mock?.settings?.difficulty
                     ? t('Pas d’exercice long (3 questions au moins) de cette difficulté dans ces chapitres : essaie « Mélangée ».')
                     : t('Pas encore assez d’exercices longs (3 questions au moins) dans ces chapitres pour composer un sujet.')}
@@ -218,12 +218,12 @@ export default function TestPlanPage() {
 
             {/* Réglages : discrets, repliés ; un changement tire un nouveau sujet. */}
             {mock?.settings && (
-              <div className="border-t border-white/15 bg-black/10 px-6 py-3 sm:px-8">
+              <div className="border-t border-line bg-paper px-5 py-2 sm:px-7">
                 <button type="button" onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}
-                  className="inline-flex min-h-10 items-center gap-2 text-[13.5px] font-medium text-white/85 hover:text-white">
+                  className="inline-flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 text-start text-[13.5px] font-medium text-ink-soft hover:text-ink">
                   <SlidersHorizontal className="h-4 w-4" />
-                  {t('Durée :')} <b className="font-semibold text-white">{durationLabel(mock.settings.minutes)}</b> · {t('Difficulté :')}{' '}
-                  <b className="font-semibold text-white">{t(MOCK_DIFFICULTIES.find((d) => d.key === mock.settings!.difficulty)?.label ?? '')}</b>
+                  {t('Durée :')} <b className="font-semibold text-ink">{durationLabel(mock.settings.minutes)}</b> · {t('Difficulté :')}{' '}
+                  <b className="font-semibold text-ink">{t(MOCK_DIFFICULTIES.find((d) => d.key === mock.settings!.difficulty)?.label ?? '')}</b>
                   <ChevronDown className={`h-4 w-4 transition-transform ${showSettings ? 'rotate-180' : ''}`} />
                 </button>
                 {showSettings && (
@@ -231,10 +231,10 @@ export default function TestPlanPage() {
                     onChange={(minutes, difficulty) => run(() => devoirsApi.mockSettings(test.id, minutes, difficulty))} />
                 )}
                 {actionFailed && (
-                  <p role="alert" className="pb-1 text-[12.5px] font-semibold text-[#f3dca9]">{t('Ça n’a pas marché : vérifie ta connexion et réessaie.')}</p>
+                  <p role="alert" className="pb-1 text-[12.5px] font-semibold text-gold-strong">{t('Ça n’a pas marché : vérifie ta connexion et réessaie.')}</p>
                 )}
                 {mock.difficulty_respected === false && (
-                  <p className="pb-1 text-[12.5px] text-[#f3dca9]">{t('Pas assez d’exercices longs de cette difficulté : d’autres complètent le sujet.')}</p>
+                  <p className="pb-1 text-[12.5px] text-gold-strong">{t('Pas assez d’exercices longs de cette difficulté : d’autres complètent le sujet.')}</p>
                 )}
               </div>
             )}
@@ -276,7 +276,7 @@ export default function TestPlanPage() {
   );
 }
 
-/** Réglages du DS blanc (sur fond vert) : durée et difficulté ; un changement tire un nouveau sujet. */
+/** Réglages du DS blanc : durée et difficulté ; un changement tire un nouveau sujet. */
 function MockSettings({ settings, busy, started, onChange }: {
   settings: NonNullable<NonNullable<TestPlan['mock']>['settings']>; busy: boolean; started: boolean;
   onChange: (minutes: number, difficulty: MockDifficulty) => void;
@@ -286,13 +286,13 @@ function MockSettings({ settings, busy, started, onChange }: {
     if (started && !await confirmer(t('Ton DS blanc est commencé : le changer en tire un nouveau. Continuer ?'), { action: t('Continuer') })) return;
     onChange(minutes, difficulty);
   };
-  const seg = (on: boolean) => `min-h-9 rounded-lg px-3 text-[13px] font-medium transition-colors disabled:opacity-60 ${
-    on ? 'bg-white text-[#14583a] shadow-sm' : 'text-white/80 hover:text-white'}`;
+  const seg = (on: boolean) => `min-h-10 rounded-lg px-3 text-[13px] font-medium transition-colors disabled:opacity-60 ${
+    on ? 'bg-brand-soft text-brand-hover ring-1 ring-inset ring-brand/30' : 'text-ink-soft hover:text-ink'}`;
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pb-2 pt-1">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12.5px] font-semibold text-white/80">{t('Durée')}</span>
-        <div className="inline-flex flex-wrap rounded-xl bg-white/10 p-1" role="group" aria-label={t('Durée du DS blanc')}>
+        <span className="text-[12.5px] font-semibold text-ink/80">{t('Durée')}</span>
+        <div className="inline-flex flex-wrap rounded-xl border border-line bg-white p-1" role="group" aria-label={t('Durée du DS blanc')}>
           {settings.choices.map((m) => (
             <button key={m} type="button" aria-pressed={settings.minutes === m} disabled={busy} onClick={() => pick(m, settings.difficulty)}
               className={seg(settings.minutes === m)}>{durationLabel(m)}</button>
@@ -300,15 +300,15 @@ function MockSettings({ settings, busy, started, onChange }: {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12.5px] font-semibold text-white/80">{t('Difficulté')}</span>
-        <div className="inline-flex flex-wrap rounded-xl bg-white/10 p-1" role="group" aria-label={t('Difficulté du DS blanc')}>
+        <span className="text-[12.5px] font-semibold text-ink/80">{t('Difficulté')}</span>
+        <div className="inline-flex flex-wrap rounded-xl border border-line bg-white p-1" role="group" aria-label={t('Difficulté du DS blanc')}>
           {MOCK_DIFFICULTIES.map((d) => (
             <button key={d.key || 'mix'} type="button" aria-pressed={settings.difficulty === d.key} disabled={busy}
               onClick={() => pick(settings.minutes, d.key)} className={seg(settings.difficulty === d.key)}>{t(d.label, { _sens: 'difficulte' })}</button>
           ))}
         </div>
       </div>
-      {busy && <Loader2 className="h-4 w-4 animate-spin text-white/80" aria-label={t('Nouveau sujet…')} />}
+      {busy && <Loader2 className="h-4 w-4 animate-spin text-ink-soft" aria-label={t('Nouveau sujet…')} />}
     </div>
   );
 }
@@ -324,7 +324,7 @@ function ChapterRow({ chapter: c, testId, quizDone }: { chapter: PlanChapter; te
         <Icon className={`h-[18px] w-[18px] shrink-0 ${st.text}`} aria-hidden />
         {/* basis : sur téléphone, les boutons passent à la ligne au lieu d'écraser le texte en une colonne étroite. */}
         <div className="min-w-0 flex-1 basis-[200px]">
-          <p className="truncate text-[14.5px] font-semibold text-ink">{c.name}</p>
+          <p className="break-words text-[14.5px] font-semibold text-ink">{c.name}</p>
           <p className="text-[12px] text-ink-faint">
             {/* État de Ma progression (13/10/2026) ; « pas encore évalué » : l'ancien état, plus parlant ici. */}
             <span className={c.status === 'weak' ? st.text : ''}>{t(c.etat && c.etat !== 'non_evalue' ? ETAT[c.etat].label : st.label)}</span>
