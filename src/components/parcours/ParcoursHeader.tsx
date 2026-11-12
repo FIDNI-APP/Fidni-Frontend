@@ -44,7 +44,7 @@ export const ParcoursHeader: React.FC<{
         <Link to="/learning-path/create" className="fd-btn-ghost">{t('Créer un parcours')}</Link>
         {parcours && <>
           <Link to={`/learning-path/${parcours.id}/edit`} className="fd-btn-ghost">{t('Modifier le parcours')}</Link>
-          <Link to={`/learning-path/${parcours.id}/chapters/create`} className="fd-btn-ghost">{t('Ajouter un chapitre')}</Link>
+          <Link to={`/parcours/${parcours.id}/contenu`} className="fd-btn-primary">{t('Gérer les chapitres et vidéos')}</Link>
         </>}
       </div>}
 

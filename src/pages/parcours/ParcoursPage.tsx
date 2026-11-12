@@ -5,6 +5,8 @@
  * Ordinateur : la carte à gauche, le chapitre choisi à droite (collant). Téléphone : la carte, puis le chapitre ;
  * choisir un chapitre fait défiler jusqu'à lui.
  */
+import { Link } from 'react-router-dom';
+import { isModerator } from '@/lib/features';
 import React, { useRef } from 'react';
 import { Route, RotateCcw } from 'lucide-react';
 import { EmptyState, Page } from '@/components/space/Page';
@@ -20,6 +22,7 @@ import type { Id } from '@/lib/api/parcoursApi';
 import { t } from '@/i18n';
 
 const ParcoursContent: React.FC = () => {
+  const { user } = useAuth();
   const p = useParcours(true);
   const detailsRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +55,8 @@ const ParcoursContent: React.FC = () => {
     );
   }
   if (p.list.length === 0) {
-    return <EmptyState icon={Route} title={t('Aucun parcours pour l’instant')} text={t('Les premiers parcours en vidéo arrivent bientôt.')} />;
+    return <EmptyState icon={Route} title={t('Aucun parcours pour l’instant')} text={t('Les premiers parcours en vidéo arrivent bientôt.')}
+      action={isModerator(user) ? <Link to="/learning-path/create" className="fd-btn-primary">{t('Créer un parcours')}</Link> : undefined} />;
   }
 
   return (

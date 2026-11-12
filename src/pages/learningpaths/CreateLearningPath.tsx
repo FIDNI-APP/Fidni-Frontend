@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, AlertCircle } from 'lucide-react';
+import { isModerator } from '@/lib/features';
 import { cn } from '@/lib/utils';
 import { t } from '@/i18n';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,7 @@ interface FormData {
 export const CreateLearningPath: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const isEditMode = !!id;
 
   const [formData, setFormData] = useState<FormData>({
@@ -48,17 +49,19 @@ export const CreateLearningPath: React.FC = () => {
 
   // Check if user is superuser
   useEffect(() => {
-    if (!user?.is_superuser) {
+    if (isLoading) return;
+    if (!isModerator(user)) {
       navigate('/learning-path');
     }
-  }, [user, navigate]);
+  }, [user, isLoading, navigate]);
 
   useEffect(() => {
+    if (isLoading || !isModerator(user)) return;
     fetchInitialData();
     if (isEditMode) {
       fetchLearningPath();
     }
-  }, [id]);
+  }, [id, user, isLoading]);
 
   const fetchInitialData = async () => {
     try {
@@ -67,8 +70,8 @@ export const CreateLearningPath: React.FC = () => {
         getSubjects(),
         getClassLevels()
       ]);
-      setSubjects(subjectsData);
-      setClassLevels(classLevelsData);
+      setSubjects(subjectsData.map((s) => ({ ...s, id: String(s.id) })));
+      setClassLevels(classLevelsData.map((l) => ({ ...l, id: String(l.id) })));
     } catch (err) {
       console.error('Failed to fetch data:', err);
       setError(t('Impossible de charger le formulaire.'));
@@ -85,8 +88,8 @@ export const CreateLearningPath: React.FC = () => {
       setFormData({
         title: data.title,
         description: data.description,
-        subject: data.subject.id,
-        class_level: data.class_level.map(cl => cl.id),
+        subject: String(data.subject.id),
+        class_level: data.class_level.map(cl => String(cl.id)),
         estimated_hours: data.estimated_hours,
         is_active: data.is_active
       });
@@ -117,7 +120,7 @@ export const CreateLearningPath: React.FC = () => {
         return;
       }
       
-      navigate('/learning-path');
+      navigate(`/parcours?parcours=${id}`);
     } catch (err) {
       console.error('Failed to save learning path:', err);
       setError(t('Impossible d’enregistrer le parcours. Réessaie.'));
@@ -135,13 +138,15 @@ export const CreateLearningPath: React.FC = () => {
     }));
   };
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
+
+  if (!isModerator(user)) return null;
 
   return (
     <div className="min-h-screen bg-[#faf9f7] py-8">
