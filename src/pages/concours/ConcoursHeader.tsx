@@ -1,37 +1,25 @@
-/**
- * En-tête commun des trois onglets Concours (Examens, Mon historique, Astuces), refonte du 11/10/2026 :
- * le même titre partout (il ne saute plus d'un onglet à l'autre) et des onglets en segments, comme
- * le reste de l'espace élève. Remplace ConcoursHero + ConcoursNavTabs.
- */
-import { useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, History, Lightbulb, type LucideIcon } from 'lucide-react';
-import { PageHeader, Segmented } from '@/components/space/Page';
+/** Navigation commune au catalogue, à l’historique et aux astuces des concours. */
+import { NavLink } from 'react-router-dom';
+import { PageHeader } from '@/components/space/Page';
 import { t } from '@/i18n';
 
-type TabPath = '/concours' | '/concours/sessions' | '/concours/tips';
-
-/** Pictogramme d'onglet masqué sur téléphone : les trois onglets tiennent alors sur la largeur de l'écran. */
-const wideOnly = (I: LucideIcon) => {
-  const Wide = ({ className = '' }: { className?: string }) => <I className={`hidden sm:block ${className}`} aria-hidden />;
-  return Wide;
-};
-
-const TABS: { key: TabPath; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: '/concours', label: 'Examens', icon: wideOnly(BookOpen) },
-  { key: '/concours/sessions', label: 'Mon historique', icon: wideOnly(History) },
-  { key: '/concours/tips', label: 'Astuces', icon: wideOnly(Lightbulb) },
+const TABS = [
+  { path: '/concours', label: 'Examens' },
+  { path: '/concours/sessions', label: 'Mon historique' },
+  { path: '/concours/tips', label: 'Astuces' },
 ];
 
 export function ConcoursHeader() {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const value = TABS.find((tab) => tab.key !== '/concours' && pathname.startsWith(tab.key))?.key ?? '/concours';
-
   return (
     <PageHeader title={t('Concours')} subtitle={t('Prépare l’ENSA, l’ENSAM et la médecine.')}>
-      <div className="mt-5" data-tour="concours-onglets">
-        <Segmented label={t('Rubriques des concours')} value={value} onChange={(v) => navigate(v)} options={TABS.map((o) => ({ ...o, label: t(o.label) }))} />
-      </div>
+      <nav aria-label={t('Rubriques des concours')} className="mt-4 flex gap-4 overflow-x-auto border-b border-line sm:gap-6" data-tour="concours-onglets">
+        {TABS.map(({ path, label }) => (
+          <NavLink key={path} to={path} end={path === '/concours'} className={({ isActive }) =>
+            `inline-flex min-h-11 shrink-0 items-center border-b-2 px-1 text-sm font-semibold focus-visible:outline-brand ${isActive ? 'border-brand text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
+            {t(label)}
+          </NavLink>
+        ))}
+      </nav>
     </PageHeader>
   );
 }

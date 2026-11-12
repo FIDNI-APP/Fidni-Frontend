@@ -257,6 +257,16 @@ export function EditProfile() {
           )}
         />
 
+        <nav aria-label={t('Modifier mon profil')} className="mb-5 flex flex-wrap gap-x-4 gap-y-1 border-y border-line">
+          {[
+            ['photo', 'Photo et présentation'], ['identite', 'Identité'],
+            ...(!isTeacher ? [['scolarite', 'Scolarité'], ['objectifs', 'Objectifs de notes']] : []),
+          ].map(([id, label]) => (
+            <a key={id} href={'#' + id} className="inline-flex min-h-10 items-center text-sm font-medium text-ink-soft underline decoration-line underline-offset-4 hover:text-brand-hover">
+              {t(label)}
+            </a>
+          ))}
+        </nav>
         <div className="flex flex-col gap-4">
           {/* ── Photo et présentation ── */}
           <FormSection id="photo" title={t('Photo et présentation')} visibility="public"

@@ -7,9 +7,10 @@
 // Titres et textes des pages de niveau et de chapitre : backend (apps/caracteristics/hubs.py), identiques à la
 // page pré-remplie que lisent les moteurs de recherche (config/seo.py).
 import React, { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ContentList } from './ContentList';
-import { ContentFolders } from './ContentFolders';
+import { ContentFolders, FolderLoadError } from './ContentFolders';
 import { NotFound } from '@/pages/NotFound';
 import { Page, CardsSkeleton } from '@/components/space/Page';
 import { FolderSkeleton } from '@/components/content/folders/FolderGrid';
@@ -47,12 +48,12 @@ export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType
   const viewer = folders ? user?.id ?? null : null;
   const cacheKey = `${section}|${level}|${chapter ?? ''}|${viewer ?? ''}`;
   const [hub, setHub] = useState<HubInfo | null>(() => hubCache.get(cacheKey) ?? null);
-  const [missing, setMissing] = useState(false);
+  const [error, setError] = useState<'missing' | 'unavailable' | null>(null);
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setMissing(false);
+    setError(null);
     const cached = hubCache.get(cacheKey);
     if (cached) setHub(cached);
     getHub(section, level, chapter)
@@ -68,16 +69,19 @@ export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType
         if (hubCache.size > HUB_CACHE_MAX) hubCache.delete(hubCache.keys().next().value as string);
         setHub(data);
       })
-      .catch(() => { if (!cancelled) setMissing(true); });
+      .catch((err: unknown) => {
+        if (!cancelled) setError(isAxiosError(err) && err.response?.status === 404 ? 'missing' : 'unavailable');
+      });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section, level, chapter, cacheKey, reload]);
 
-  if (missing) return <NotFound />;
+  if (error === 'missing') return <NotFound />;
   // Autre rubrique, niveau ou chapitre : rien de l'ancien pendant le chargement (la même instance sert aux
   // trois rubriques : /exercises/niveau/… → /lessons/niveau/… garderait sinon la page des exercices).
   const current = hub && hub.section === section && hub.level.slug === level
     && (hub.chapter?.slug ?? undefined) === (chapter || undefined) ? hub : null;
+  if (!current && error === 'unavailable') return <Page width="wide"><FolderLoadError onRetry={() => setReload((n) => n + 1)} /></Page>;
   if (!current) return <Loading folders={folders} />;
   if (folders) {
     return <ContentFolders key={current.url} view="chapters" contentType={contentType} hub={current}

@@ -30,7 +30,7 @@ interface ErrorLog {
   count: number;
   first_seen: string;
   last_seen: string;
-  request_data: any;
+  request_data: unknown;
 }
 
 interface ErrorStats {
@@ -191,14 +191,14 @@ export const LogsConsole: React.FC = () => {
         <>
           {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-2 mb-5 md:grid-cols-4 md:gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Total Errors</p>
                 <p className="text-2xl font-semibold text-slate-900">{stats.total_errors}</p>
               </div>
-              <AlertCircle className="w-10 h-10 text-slate-400" />
+              <AlertCircle className="hidden h-8 w-8 shrink-0 lg:block text-slate-400" />
             </div>
           </div>
 
@@ -208,7 +208,7 @@ export const LogsConsole: React.FC = () => {
                 <p className="text-sm text-slate-600 mb-1">New Errors</p>
                 <p className="text-2xl font-semibold text-red-600">{stats.new_errors}</p>
               </div>
-              <AlertTriangle className="w-10 h-10 text-red-400" />
+              <AlertTriangle className="hidden h-8 w-8 shrink-0 lg:block text-red-400" />
             </div>
           </div>
 
@@ -218,7 +218,7 @@ export const LogsConsole: React.FC = () => {
                 <p className="text-sm text-slate-600 mb-1">Critical</p>
                 <p className="text-2xl font-semibold text-orange-600">{stats.critical_errors}</p>
               </div>
-              <AlertOctagon className="w-10 h-10 text-orange-400" />
+              <AlertOctagon className="hidden h-8 w-8 shrink-0 lg:block text-orange-400" />
             </div>
           </div>
 
@@ -228,7 +228,7 @@ export const LogsConsole: React.FC = () => {
                 <p className="text-sm text-slate-600 mb-1">Today</p>
                 <p className="text-2xl font-semibold text-blue-600">{stats.errors_today}</p>
               </div>
-              <TrendingUp className="w-10 h-10 text-blue-400" />
+              <TrendingUp className="hidden h-8 w-8 shrink-0 lg:block text-blue-400" />
             </div>
           </div>
         </div>
@@ -240,6 +240,7 @@ export const LogsConsole: React.FC = () => {
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-slate-500" />
             <select
+              aria-label="Severity"
               value={filterSeverity}
               onChange={(e) => setFilterSeverity(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
@@ -253,6 +254,7 @@ export const LogsConsole: React.FC = () => {
           </div>
 
           <select
+            aria-label="Status"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
@@ -264,14 +266,15 @@ export const LogsConsole: React.FC = () => {
             <option value="ignored">Ignored</option>
           </select>
 
-          <div className="flex-1 flex items-center gap-2 max-w-md">
+          <div className="flex min-w-0 basis-48 flex-1 items-center gap-2 max-w-md">
             <Search className="w-4 h-4 text-slate-400" />
             <input
               type="text"
+              aria-label="Search errors"
               placeholder="Search errors..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              className="min-w-0 flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
             />
           </div>
 
@@ -287,7 +290,7 @@ export const LogsConsole: React.FC = () => {
 
       {/* Error List */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div tabIndex={0} role="region" aria-label="Error logs" className="overflow-x-auto focus-visible:outline-brand">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -338,6 +341,7 @@ export const LogsConsole: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <button
+                        aria-label={`View error: ${error.exception_type}`}
                         onClick={() => setSelectedError(error)}
                         className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
                       >
@@ -360,9 +364,10 @@ export const LogsConsole: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900 mb-2">{selectedError.exception_type}</h2>
-                  <p className="text-slate-600">{selectedError.message}</p>
+                  <p className="break-words text-slate-600">{selectedError.message}</p>
                 </div>
                 <button
+                  aria-label="Close error details"
                   onClick={() => setSelectedError(null)}
                   className="p-2 hover:bg-slate-100 rounded-lg"
                 >
@@ -374,7 +379,7 @@ export const LogsConsole: React.FC = () => {
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-2">Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <span className="text-slate-600">Endpoint:</span>
                     <span className="ms-2 font-mono">{selectedError.method} {selectedError.endpoint}</span>
@@ -403,7 +408,7 @@ export const LogsConsole: React.FC = () => {
                 </div>
               )}
 
-              {selectedError.request_data && (
+              {selectedError.request_data != null && (
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 mb-2">Request Data</h3>
                   <pre className="bg-slate-50 p-4 rounded-lg text-xs overflow-x-auto">

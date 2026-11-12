@@ -17,6 +17,8 @@ import { documentsAPI, type DocumentSummary } from '@/lib/api/documentsApi';
 import { useDocxImport } from './useDocxImport';
 import { Excerpt } from './Excerpt';
 
+const searchText = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
 const when = (iso: string) => {
   const d = new Date(iso);
   const days = Math.floor((Date.now() - d.getTime()) / 86400000);
@@ -43,8 +45,8 @@ export const MesDocuments: React.FC = () => {
   useEffect(() => { if (isAuthenticated && teacherTools) load(); }, [isAuthenticated, teacherTools]);
 
   const shown = useMemo(() => {
-    const f = q.trim().toLowerCase();
-    return (docs ?? []).filter((d) => !f || d.title.toLowerCase().includes(f) || d.excerpt.toLowerCase().includes(f));
+    const f = searchText(q.trim());
+    return (docs ?? []).filter((d) => !f || searchText(d.title).includes(f) || searchText(d.excerpt).includes(f));
   }, [docs, q]);
 
   const create = async () => {
@@ -98,7 +100,7 @@ export const MesDocuments: React.FC = () => {
       <Page>
         {header}
         <EmptyState icon={Sigma} title={t('Un éditeur de documents avec équations')}
-          text={t('Crée un compte gratuit pour rédiger et enregistrer tes documents, puis les imprimer ou les garder en PDF.')}
+          text={t('L’éditeur de documents avec équations est ouvert aux professeurs. Il le sera bientôt pour tout le monde.')}
           action={<button type="button" onClick={() => openSignup('signup')} className="fd-btn-primary min-h-10">{t('Créer un compte')}</button>}
           secondary={<button type="button" onClick={() => openSignup('login')} className="fd-btn-ghost min-h-10">{t('Se connecter')}</button>} />
       </Page>
@@ -136,35 +138,31 @@ export const MesDocuments: React.FC = () => {
         <>
           <label className="mb-5 flex max-w-md items-center gap-2 rounded-xl border border-line bg-white px-3 focus-within:border-brand">
             <Search className="h-4 w-4 text-ink-faint" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Rechercher un document')} aria-label={t('Rechercher un document')}
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Rechercher un document')} aria-label={t('Rechercher un document')}
               className="min-h-10 flex-1 bg-transparent text-[14px] outline-none" />
           </label>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <li>
-              <button type="button" onClick={create} disabled={creating}
-                className="flex h-full min-h-[190px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-white/60 text-ink-faint transition-colors hover:border-brand hover:text-brand-hover">
-                <FilePlus2 className="h-7 w-7" />
-                <span className="text-[14px] font-semibold">{t('Nouveau document')}</span>
-              </button>
-            </li>
+          {shown.length > 0 && <ul className="divide-y divide-line rounded-xl border border-line bg-white">
             {shown.map((d) => (
-              <li key={d.id} className="group relative">
-                <Link to={`/documents/${d.id}`} className="flex h-full min-h-[190px] flex-col rounded-2xl border border-line bg-white p-4 transition-shadow hover:shadow-[0_10px_30px_-14px_rgba(20,18,16,.28)]">
-                  <div className="mb-3 h-20 overflow-hidden rounded-lg border border-[#efece6] bg-[#fbfaf8] px-3 py-2 text-[10.5px] leading-snug text-ink-faint">
-                    {d.excerpt ? <Excerpt text={d.excerpt} /> : <span className="italic">{t('Document vide')}</span>}
-                  </div>
-                  <h2 className="line-clamp-2 text-[15px] font-semibold text-ink">{d.title}</h2>
-                  <p className="mt-auto pt-2 text-[12.5px] text-ink-faint">{t('Modifié {when}', { when: when(d.updated_at) })}</p>
+              <li key={d.id} className="flex flex-wrap items-center gap-x-4 px-4 py-2 sm:px-5">
+                <Link to={`/documents/${d.id}`} className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg py-2 text-start focus-visible:outline-brand">
+                  <span className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-md bg-paper text-ink-soft sm:flex" aria-hidden>
+                    <FileText size={20} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words text-base font-semibold text-ink group-hover:text-brand-hover">{d.title}</span>
+                    <span className="mt-1 line-clamp-1 text-sm text-ink-soft">{d.excerpt ? <Excerpt text={d.excerpt} /> : t('Document vide')}</span>
+                    <span className="mt-1 block text-xs text-ink-soft">{t('Modifié {when}', { when: when(d.updated_at) })}</span>
+                  </span>
                 </Link>
-                <div className="absolute end-3 top-3 flex gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                <div className="flex items-center">
                   <button type="button" onClick={() => duplicate(d)} title={t('Dupliquer')} aria-label={t('Dupliquer {title}', { title: d.title })}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-white text-ink-soft hover:text-ink"><Copy className="h-4 w-4" /></button>
+                    className="grid h-10 w-10 place-items-center rounded-lg text-ink-soft hover:bg-paper focus-visible:outline-brand"><Copy size={16} /></button>
                   <button type="button" onClick={() => remove(d)} title={t('Supprimer')} aria-label={t('Supprimer {title}', { title: d.title })}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-white text-[#a23b34] hover:bg-[#fbecea]"><Trash2 className="h-4 w-4" /></button>
+                    className="grid h-10 w-10 place-items-center rounded-lg text-ink-soft hover:bg-paper hover:text-[#a23b34] focus-visible:outline-brand"><Trash2 size={16} /></button>
                 </div>
               </li>
             ))}
-          </ul>
+          </ul>}
           {!shown.length && <p className="mt-6 text-center text-[13.5px] text-ink-faint">{t('Aucun document ne correspond à « {q} ».', { q })}</p>}
         </>
       )}

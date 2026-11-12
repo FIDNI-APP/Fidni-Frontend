@@ -2,12 +2,10 @@
 // les chapitres sans leçon, une ligne chacun qui mène aux leçons de ce chapitre (la consigne est dite une fois).
 // Ordinateur : colonne à gauche. Téléphone : un sélecteur pleine largeur qui ouvre une feuille du bas,
 // pour laisser toute la largeur à la leçon.
-import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, ChevronRight, Printer, X } from 'lucide-react';
-import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
+import { ChevronDown, ChevronRight, Printer } from 'lucide-react';
+import { Sheet } from '@/components/space/Sheet';
 import { t } from '@/i18n';
 import { chapterLessonsPath, plural, sameId, splitSections, type Id, type NbNotebook } from './notebookModel';
 
@@ -21,6 +19,8 @@ interface Props {
 
 const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, activeId, onSelect, onPicked }) => {
   const { filled, empty } = splitSections(notebook);
+  const [showEmpty, setShowEmpty] = useState<boolean | null>(null);
+  const expanded = showEmpty ?? filled.length === 0;
   return (
     <div>
       {filled.length > 0 && (
@@ -35,7 +35,7 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
                     onClick={() => { onSelect(s.id); onPicked?.(); }}
                     className={`flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-start text-[13.5px] transition-colors ${
                       on ? 'bg-brand-soft font-semibold text-brand-hover' : 'font-medium text-ink-soft hover:bg-[#f7f6f3] hover:text-ink'}`}>
-                    <span className="min-w-0 flex-1 truncate">{s.chapter?.name}</span>
+                    <span className="min-w-0 flex-1 break-words py-1.5 leading-snug">{s.chapter?.name}</span>
                     <span className={`fd-nums shrink-0 rounded-full px-1.5 text-[11px] font-semibold ${on ? 'bg-white/80' : 'bg-[#f2f1ee] text-ink-faint'}`}
                       aria-label={plural(s.lesson_entries.length, 'leçon')}>
                       {s.lesson_entries.length}
@@ -49,26 +49,31 @@ const ChapterList: React.FC<Props & { onPicked?: () => void }> = ({ notebook, ac
       )}
 
       {empty.length > 0 && (
-        <details className={`group ${filled.length ? 'mt-3 border-t border-line pt-2' : ''}`} open={filled.length === 0}>
-          <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-lg px-3 text-[12.5px] font-semibold text-ink-faint hover:text-ink [&::-webkit-details-marker]:hidden">
-            <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" aria-hidden />
+        <div className={filled.length ? 'mt-3 border-t border-line pt-2' : undefined}>
+          <button type="button" onClick={() => setShowEmpty(!expanded)} aria-expanded={expanded}
+            className="flex min-h-10 w-full items-center gap-1.5 rounded-lg px-3 text-start text-[12.5px] font-semibold text-ink-faint hover:text-ink">
+            <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? 'rotate-90' : ''}`} aria-hidden />
             {t('Chapitres sans leçon ({n})', { n: empty.length })}
-          </summary>
-          <p className="px-3 pb-1 text-[12px] leading-snug text-ink-faint">{t('Touche un chapitre pour trouver ses leçons.')}</p>
-          <ul className="flex flex-col gap-0.5">
-            {empty.map((s) => (
-              <li key={s.id}>
-                <Link to={chapterLessonsPath(notebook, s.chapter)} onClick={onPicked}
-                  aria-label={t('{name} : trouver une leçon', { name: s.chapter?.name })}
-                  className="group/ch flex min-h-10 items-center gap-2 rounded-xl px-3 text-[13px] text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink focus-visible:bg-[#f7f6f3] focus-visible:text-ink">
-                  <span className="min-w-0 flex-1 truncate">{s.chapter?.name}</span>
-                  <span className="hidden shrink-0 text-[12px] font-semibold text-brand-hover group-hover/ch:inline group-focus-visible/ch:inline">{t('Trouver une leçon')}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[#cfcdc8] group-hover/ch:text-brand-hover group-focus-visible/ch:text-brand-hover" aria-hidden />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </details>
+          </button>
+          {expanded && (
+            <>
+              <p className="px-3 pb-1 text-[12px] leading-snug text-ink-faint">{t('Touche un chapitre pour trouver ses leçons.')}</p>
+              <ul className="flex flex-col gap-0.5">
+                {empty.map((s) => (
+                  <li key={s.id}>
+                    <Link to={chapterLessonsPath(notebook, s.chapter)} onClick={onPicked}
+                      aria-label={t('{name} : trouver une leçon', { name: s.chapter?.name })}
+                      className="group/ch flex min-h-10 items-center gap-2 rounded-xl px-3 text-[13px] text-ink-faint transition-colors hover:bg-[#f7f6f3] hover:text-ink focus-visible:bg-[#f7f6f3] focus-visible:text-ink">
+                      <span className="min-w-0 flex-1 break-words py-1.5 leading-snug">{s.chapter?.name}</span>
+                      <span className="hidden shrink-0 text-[12px] font-semibold text-brand-hover group-hover/ch:inline group-focus-visible/ch:inline">{t('Trouver une leçon')}</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-[#cfcdc8] group-hover/ch:text-brand-hover group-focus-visible/ch:text-brand-hover" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       )}
     </div>
   );
@@ -80,14 +85,12 @@ const NotebookSections: React.FC<Props> = (props) => {
   const { filled, empty } = splitSections(notebook);
   const active = filled.find((s) => sameId(s.id, activeId)) ?? null;
   const position = active ? filled.indexOf(active) + 1 : 0;
-  const feuille = useRef<HTMLDivElement>(null);
-  const glisser = useGlisserPourFermer({ onClose: () => setOpen(false), refPanneau: feuille, ouvert: open });
-
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = () => { if (desktop.matches) setOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
   }, [open]);
 
   return (
@@ -100,7 +103,7 @@ const NotebookSections: React.FC<Props> = (props) => {
           <span className="block text-[12.5px] font-medium text-ink-faint">
             {active ? t('Chapitre {position} sur {total}', { position, total: filled.length }) : t('Chapitres du programme')}
           </span>
-          <span className="block truncate text-[14px] font-semibold text-ink">
+          <span className="block break-words text-[14px] font-semibold text-ink">
             {active ? active.chapter?.name : t('{count} à remplir', { count: plural(empty.length, 'chapitre') })}
           </span>
         </span>
@@ -120,36 +123,10 @@ const NotebookSections: React.FC<Props> = (props) => {
         <ChapterList {...props} />
       </nav>
 
-      {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {open && (
-            <div className="fixed inset-0 z-[80] flex flex-col justify-end md:hidden">
-              <motion.div aria-hidden className="absolute inset-0" onClick={() => setOpen(false)}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
-                <motion.div className="absolute inset-0 bg-[rgba(20,18,16,.4)]" style={{ opacity: glisser.opaciteVoile }} />
-              </motion.div>
-              <motion.div ref={feuille} role="dialog" aria-modal="true" aria-label={t('Chapitres du cahier')} {...glisser.panneau}
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%', transition: SORTIE_FEUILLE }} transition={RESSORT_FEUILLE}
-                className="fd-feuille relative flex max-h-[80dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-12px_40px_rgba(20,18,16,.18)]">
-                <div aria-hidden {...glisser.poignee} className="flex shrink-0 justify-center pb-1 pt-2">
-                  <span className="h-1 w-10 rounded-full bg-[#dcd8d0]" />
-                </div>
-                <div {...glisser.poignee} className="flex shrink-0 items-center gap-2 border-b border-line pb-2 ps-5 pe-2">
-                  <p className="fd-display min-w-0 flex-1 truncate text-[19px] text-ink">{notebook.title}</p>
-                  <button type="button" onClick={() => setOpen(false)} aria-label={t('Fermer')}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                <div className="overflow-y-auto overscroll-contain px-2 pb-5 pt-3">
-                  <ChapterList {...props} onPicked={() => setOpen(false)} />
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
+      <Sheet open={open} onClose={() => setOpen(false)} title={notebook.title}
+        subtitle={t('Chapitres du cahier')} labelId="chapitres-cahier-mobile">
+        <ChapterList {...props} onPicked={() => setOpen(false)} />
+      </Sheet>
     </>
   );
 };

@@ -76,7 +76,6 @@ export function ClassroomsPage() {
 
   const header = (actions?: React.ReactNode) => (
     <PageHeader
-      eyebrow={t('Classes')}
       title={t('Mes classes')}
       subtitle={isTeacher
         ? t('Crée une classe, donne son code à tes élèves et suis leur travail.')
@@ -154,16 +153,16 @@ export function ClassroomsPage() {
               </div>
             )} />
         ) : (
-          <EmptyState icon={KeyRound} title={t('Ton prof te donne un code de classe')}
-            text={t('Entre-le ici pour rejoindre sa classe : tu y retrouveras les TD qu’il te donne et ton avancement.')}
-            action={(
-              <div className="flex w-full max-w-sm flex-col items-center gap-4" data-tour="classes-actions">
-                <JoinForm onJoined={joined} />
-                <Link to="/reviser" className="inline-flex min-h-10 items-center gap-1 text-[13px] font-medium text-ink-faint hover:text-ink">
-                  {t('Pas encore de code ? Révise seul en attendant')} <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            )} />
+          <section aria-labelledby="rejoindre-titre" data-tour="classes-actions" className="max-w-2xl overflow-hidden rounded-xl border border-line border-t-[3px] border-t-brand bg-white">
+            <div className="px-5 py-5 sm:px-7 sm:py-6">
+              <h2 id="rejoindre-titre" className="fd-display text-2xl leading-tight text-ink">{t('Rejoindre une classe')}</h2>
+              <p className="mb-4 mt-1 text-sm text-ink-soft">{t('Entre le code que t’a donné le prof de la classe.')}</p>
+              <JoinForm onJoined={joined} />
+            </div>
+            <Link to="/reviser" className="flex min-h-11 items-center justify-between gap-2 border-t border-line px-5 text-[13px] font-medium text-ink-soft hover:bg-paper focus-visible:outline-brand sm:px-7">
+              {t('Pas encore de code ? Révise seul en attendant')} <ArrowRight size={15} className="shrink-0 rtl:rotate-180" aria-hidden />
+            </Link>
+          </section>
         )
       ) : isTeacher ? (
         <div className="flex flex-col gap-10">
