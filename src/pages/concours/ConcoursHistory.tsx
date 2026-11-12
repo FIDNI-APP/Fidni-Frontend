@@ -2,16 +2,17 @@
  * Concours › Mon historique (/concours/sessions), refonte du 11/10/2026 : mes simulations chronométrées,
  * score en tête de ligne (vert réussi, or moyen, rouge sobre à retravailler), celles à reprendre en or.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { ChevronRight, Clock, History, RotateCcw } from 'lucide-react';
 import {
   listMySessions, CONCOURS_TYPES,
   type SimulationSessionListItem, type ConcoursType,
 } from '@/lib/api/concoursApi';
+import { useAuth } from '@/contexts/AuthContext';
+import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { SEO } from '@/components/layout/SEO';
-import { Page, Section, EmptyState, StatTile, CardsSkeleton } from '@/components/space/Page';
-import { ConcoursHeader } from './ConcoursHeader';
+import { Page, PageHeader, Section, EmptyState, StatTile, CardsSkeleton } from '@/components/space/Page';
 import { t, dateLocale } from '@/i18n';
 
 /** Couleur du score : vert ≥ 75 %, or ≥ 50 %, rouge sobre en dessous ; simulation non rendue : encre pâle. */
@@ -24,7 +25,7 @@ const scoreTone = (pct: number, submitted: boolean) => {
 
 const SessionRow: React.FC<{ s: SimulationSessionListItem }> = ({ s }) => {
   const pct = Math.round(s.score_percentage);
-  const submitted = s.status === 'submitted';
+  const submitted = s.status !== 'in_progress';
   return (
     <li>
       <Link to={submitted ? `/concours/sessions/${s.id}/recap` : `/concours/simulate/${s.id}`}
@@ -38,6 +39,7 @@ const SessionRow: React.FC<{ s: SimulationSessionListItem }> = ({ s }) => {
             <span className="flex flex-wrap items-center gap-1.5">
               <span className="text-[14.5px] font-semibold text-ink">{s.concours_type_display}</span>
               <span className="rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] font-medium text-ink-soft">{s.mode_display}</span>
+              {s.status === 'expired' && <span className="text-xs font-medium text-ink-soft">{t('Temps écoulé')}</span>}
               {!submitted && (
                 <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11.5px] font-semibold text-gold-strong">{t('À reprendre')}</span>
               )}
@@ -57,11 +59,42 @@ const SessionRow: React.FC<{ s: SimulationSessionListItem }> = ({ s }) => {
 };
 
 export default function ConcoursHistoryPage() {
+  const { user, isLoading } = useAuth();
+  const openSignup = useOpenSignup('concours');
+  return (
+    <Page>
+      <SEO title={t('Historique de simulations - Fidni')} description={t('Historique des simulations de concours')} />
+      <PageHeader title={t('Concours')} subtitle={t('Prépare l’ENSA, l’ENSAM et la médecine.')}>
+        <nav aria-label={t('Rubriques des concours')} className="mt-4 flex gap-4 overflow-x-auto border-b border-line sm:gap-6" data-tour="concours-onglets">
+          {[
+            { path: '/concours', label: 'Examens' },
+            { path: '/concours/sessions', label: 'Mon historique' },
+            { path: '/concours/tips', label: 'Astuces' },
+          ].map(({ path, label }) => (
+            <NavLink key={path} to={path} end={path === '/concours'} className={({ isActive }) =>
+              `inline-flex min-h-11 shrink-0 items-center border-b-2 px-1 text-sm font-semibold focus-visible:outline-brand ${isActive ? 'border-brand text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
+              {t(label)}
+            </NavLink>
+          ))}
+        </nav>
+      </PageHeader>
+
+      {isLoading ? <CardsSkeleton n={3} /> : !user ? (
+        <EmptyState icon={History} tone="ink" title={t('Connecte-toi pour suivre tes simulations')}
+          text={t('Tes simulations chronométrées s’afficheront ici, avec ton score et la correction.')}
+          action={<button type="button" className="fd-btn-primary min-h-11" onClick={() => openSignup('login')}>{t('Se connecter')}</button>} />
+      ) : <SessionHistory key={user.id} />}
+    </Page>
+  );
+}
+
+function SessionHistory() {
+  const [attempt, setAttempt] = useState(0);
   const [sessions, setSessions] = useState<SimulationSessionListItem[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [filterType, setFilterType] = useState<ConcoursType | null>(null);
 
-  const load = useCallback(() => {
+  useEffect(() => {
     let alive = true;
     setFailed(false);
     setSessions(null);
@@ -69,8 +102,7 @@ export default function ConcoursHistoryPage() {
       .then((data) => { if (alive) setSessions(data); })
       .catch((e) => { console.error(e); if (alive) { setSessions([]); setFailed(true); } });
     return () => { alive = false; };
-  }, [filterType]);
-  useEffect(() => load(), [load]);
+  }, [filterType, attempt]);
 
   const stats = useMemo(() => {
     const done = (sessions ?? []).filter((s) => s.status === 'submitted');
@@ -84,55 +116,50 @@ export default function ConcoursHistoryPage() {
   const chip = (active: boolean) => `inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
     active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-faint hover:border-[#cfc9bf] hover:text-ink'}`;
 
-  return (
-    <Page>
-      <SEO title={t('Historique de simulations - Fidni')} description={t('Historique des simulations de concours')} />
-      <ConcoursHeader />
+  if (failed) return (
+    <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
+      <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ton historique n’a pas pu se charger. Vérifie ta connexion.')}</p>
+      <button type="button" onClick={() => setAttempt((n) => n + 1)} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
+    </div>
+  );
 
-      {failed && (
-        <div role="alert" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
-          <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Ton historique n’a pas pu se charger. Vérifie ta connexion.')}</p>
-          <button type="button" onClick={load} className="fd-btn-ghost min-h-9"><RotateCcw className="h-4 w-4" /> {t('Réessayer')}</button>
+  return (
+    <Section id="simulations" title={t('Mes simulations')} count={list.length}
+      hint={list.length ? t('Ouvre une simulation pour revoir ta copie et la correction.') : undefined}>
+      {stats.count > 0 && (
+        <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
+          <StatTile label={t('Simulations')} value={stats.count} />
+          <StatTile label={t('Moyenne')} value={`${stats.avg} %`} />
+          <StatTile label={t('Meilleur')} value={`${stats.best} %`} />
         </div>
       )}
 
-      <Section id="simulations" title={t('Mes simulations')} count={list.length}
-        hint={list.length ? t('Ouvre une simulation pour revoir ta copie et la correction.') : undefined}>
-        {stats.count > 0 && (
-          <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
-            <StatTile label={t('Simulations')} value={stats.count} />
-            <StatTile label={t('Moyenne')} value={`${stats.avg} %`} />
-            <StatTile label={t('Meilleur')} value={`${stats.best} %`} />
-          </div>
-        )}
+      {(list.length > 0 || filterType) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label={t('Filtrer par concours')}>
+          <button type="button" aria-pressed={!filterType} className={chip(!filterType)} onClick={() => setFilterType(null)}>{t('Tous')}</button>
+          {CONCOURS_TYPES.map((c) => (
+            <button key={c.id} type="button" aria-pressed={filterType === c.id} className={chip(filterType === c.id)} onClick={() => setFilterType(c.id)}>
+              {t(c.label)}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {(list.length > 0 || filterType) && (
-          <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label={t('Filtrer par concours')}>
-            <button type="button" aria-pressed={!filterType} className={chip(!filterType)} onClick={() => setFilterType(null)}>{t('Tous')}</button>
-            {CONCOURS_TYPES.map((c) => (
-              <button key={c.id} type="button" aria-pressed={filterType === c.id} className={chip(filterType === c.id)} onClick={() => setFilterType(c.id)}>
-                {t(c.label)}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {sessions === null ? <CardsSkeleton n={3} />
-          : list.length === 0 ? (
-            filterType ? (
-              <EmptyState compact icon={History} tone="ink" title={t('Aucune simulation pour ce concours')}
-                action={<button type="button" className="fd-btn-ghost min-h-10" onClick={() => setFilterType(null)}>{t('Tout afficher')}</button>} />
-            ) : !failed && (
-              <EmptyState icon={History} tone="ink" title={t('Pas encore de simulation')}
-                text={t('Tes simulations chronométrées s’afficheront ici, avec ton score et la correction.')}
-                action={<Link to="/concours" className="fd-btn-ghost min-h-10">{t('Voir les concours')}</Link>} />
-            )
+      {sessions === null ? <CardsSkeleton n={3} />
+        : list.length === 0 ? (
+          filterType ? (
+            <EmptyState compact icon={History} tone="ink" title={t('Aucune simulation pour ce concours')}
+              action={<button type="button" className="fd-btn-ghost min-h-10" onClick={() => setFilterType(null)}>{t('Tout afficher')}</button>} />
           ) : (
-            <ul className="flex flex-col gap-3">
-              {list.map((s) => <SessionRow key={s.id} s={s} />)}
-            </ul>
-          )}
-      </Section>
-    </Page>
+            <EmptyState icon={History} tone="ink" title={t('Pas encore de simulation')}
+              text={t('Tes simulations chronométrées s’afficheront ici, avec ton score et la correction.')}
+              action={<Link to="/concours" className="fd-btn-ghost min-h-10">{t('Voir les concours')}</Link>} />
+          )
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {list.map((s) => <SessionRow key={s.id} s={s} />)}
+          </ul>
+        )}
+    </Section>
   );
 }

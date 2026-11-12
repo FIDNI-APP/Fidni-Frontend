@@ -2,10 +2,11 @@
 // Onglet « Paramètres » du profil (refonte du 11/10/2026) : une seule colonne, trois sections, et chaque
 // réglage s'enregistre lui-même (avant : cinq sous-onglets et un bouton « Enregistrer » global, facile à oublier
 // pour les notifications). Photo, présentation, identité, niveau et objectifs vivent sur « Modifier mon profil ».
+import { PasswordField } from '@/components/auth/PasswordField';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, ChevronRight, Eye, EyeOff, KeyRound, Loader2, LogOut, MailCheck, Monitor, Moon, Sun, Trash2, UserPen, X,
+  Check, ChevronRight, KeyRound, Loader2, LogOut, MailCheck, Monitor, Moon, Sun, Trash2, UserPen, X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -85,17 +86,12 @@ const Dialog: React.FC<{ id: string; title: string; onClose: () => void; childre
 const PasswordInput: React.FC<{ id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string; autoFocus?: boolean }> = ({
   id, label, value, onChange, autoComplete, autoFocus,
 }) => {
-  const [shown, setShown] = useState(false);
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-ink-soft">{label}</label>
       <div className="relative">
-        <input id={id} type={shown ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)}
-          autoComplete={autoComplete} autoFocus={autoFocus} className={`${inputCls} pe-12`} />
-        <button type="button" onClick={() => setShown((v) => !v)} aria-label={shown ? t('Masquer le mot de passe') : t('Afficher le mot de passe')}
-          className="absolute end-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
-          {shown ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
+        <PasswordField id={id} value={value} onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete} autoFocus={autoFocus} className={inputCls} />
       </div>
     </div>
   );

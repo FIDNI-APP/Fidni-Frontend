@@ -245,8 +245,8 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
       {lot && <LotPanneau classeId={id} evId={ev.id} lot={lot} onLot={setLot} onFini={() => { setLot(null); charger(); }} />}
 
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
-        <table className="w-full text-[13.5px]">
-          <thead className="bg-[#faf9f7] text-[12.5px] font-medium text-ink-faint">
+        <table className="block w-full text-[13.5px] sm:table">
+          <thead className="sr-only bg-[#faf9f7] sm:not-sr-only text-[12.5px] font-medium text-ink-faint">
             <tr>
               <th className="px-4 py-2.5 text-start font-semibold">{t('Élève')}</th>
               <th className="px-3 py-2.5 text-start font-semibold">{t('Copie')}</th>
@@ -254,14 +254,14 @@ function OngletCopies({ ev }: { ev: EvaluationDetail }) {
               <th className="px-3 py-2.5 text-end font-semibold"><span className="sr-only">{t('Actions')}</span></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block sm:table-row-group">
             {lignes.map((l) => {
               const cible = cibleDe(l);
               return <LigneEleve key={cleCible(cible)} l={l} evId={ev.id} classeId={id} envoi={envois[cleCible(cible)]}
                 onDeposer={(f) => deposer(cible, f)} onSupprimer={supprimer} />;
             })}
             {lignes.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-[13.5px] text-ink-faint">
+              <tr className="block sm:table-row"><td colSpan={4} className="block px-4 py-8 sm:table-cell text-center text-[13.5px] text-ink-faint">
                 {t('Aucune copie pour l’instant. Clique sur « Déposer une copie » (ou lâche un fichier sur la page) : tu peux taper le nom d’un élève qui n’a pas de compte Fidni.')}
               </td></tr>
             )}
@@ -297,16 +297,16 @@ function LigneEleve({ l, evId, classeId, envoi, onDeposer, onSupprimer }: {
   const statut: StatutCopie = c?.statut ?? 'vide';
   const ouverte = c && c.nb_pages > 0;
   return (
-    <tr className={`border-t border-line ${survol ? 'bg-brand-soft/50' : ''}`}
+    <tr className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-t border-line px-4 py-3 first:border-t-0 sm:table-row sm:first:border-t ${survol ? 'bg-brand-soft/50' : ''}`}
       onDragOver={(e) => { e.preventDefault(); setSurvol(true); }} onDragLeave={() => setSurvol(false)}
       onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setSurvol(false); if (e.dataTransfer.files.length && peutDeposer) onDeposer(e.dataTransfer.files); }}>
-      <td className="px-4 py-2.5">
+      <td className="col-start-1 row-start-1 break-words sm:px-4 sm:py-2.5">
         <span className="font-semibold text-ink">{l.eleve.username}</span>
         {l.sans_compte
           ? <span className="ms-2 rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11px] font-semibold text-ink-faint">{t('sans compte')}</span>
           : !l.membre && <span className="ms-2 text-[11.5px] text-ink-faint">{t('a quitté la classe')}</span>}
       </td>
-      <td className="px-3 py-2.5">
+      <td className="col-span-2 row-start-2 sm:px-3 sm:py-2.5">
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${STATUT_CLS[statut]}`}>
           {statut === 'en_cours' && <Loader2 className="h-3 w-3 animate-spin" />}
           {t(STATUT_LABEL[statut])}
@@ -316,20 +316,21 @@ function LigneEleve({ l, evId, classeId, envoi, onDeposer, onSupprimer }: {
         {c && c.nb_pages > 0 && <span className="ms-1.5 text-[12px] text-ink-faint">{c.nb_pages > 1 ? t('{n} pages', { n: c.nb_pages }) : t('1 page')}</span>}
         {statut === 'erreur' && c?.error && <p className="mt-1 text-[12px] text-[#a23b34]">{c.error}</p>}
       </td>
-      <td className="hidden px-3 py-2.5 text-end sm:table-cell">
+      <td className="col-start-2 row-start-1 text-end sm:px-3 sm:py-2.5">
+        <span className="sr-only">{t('Note')} </span>
         {c?.note !== null && c?.note !== undefined
           ? <span dir="ltr" className="fd-nums font-semibold text-ink">{fmt(c.note)}<span className="text-ink-faint"> / {c.note_sur}</span></span>
           : <span className="text-ink-faint">—</span>}
       </td>
-      <td className="px-3 py-2 text-end">
-        <div className="flex items-center justify-end gap-1">
+      <td className="col-span-2 pt-1 sm:px-3 sm:py-2 sm:text-end">
+        <div className="flex flex-wrap items-center gap-1 sm:justify-end">
           {envoi ? <span className="inline-flex items-center gap-1 text-[12px] text-ink-faint"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {envoi}</span> : peutDeposer && (
             <>
               <input ref={input} type="file" multiple hidden accept="image/jpeg,image/png,image/webp,application/pdf"
                 onChange={(e) => { if (e.target.files?.length) onDeposer(e.target.files); e.target.value = ''; }} />
               <button type="button" onClick={() => input.current?.click()} title={t('Ajouter des pages')}
                 className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-[12.5px] font-semibold text-ink-soft hover:bg-[#f2f1ee]">
-                <Upload className="h-4 w-4" /> <span className="hidden md:inline">{c?.nb_pages ? t('Ajouter') : t('Déposer')}</span>
+                <Upload className="h-4 w-4" /> <span className="sm:hidden md:inline">{c?.nb_pages ? t('Ajouter') : t('Déposer')}</span>
               </button>
             </>
           )}
