@@ -693,6 +693,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       )}
       {/* Rappel en fin de feuille (le bandeau « Où en es-tu ? » est en haut). */}
       {isAuthenticated && !examRunning && <FinishPanel key={`${content.id}-bas`} {...finishProps('bottom')} onCollect={openCollect} />}
+      {!examRunning && id && <SimilarContents key={id} contentId={id} />}
       {/* Visiteur : ce qu'un compte apporterait, au moment où l'élève finit (l'examen le dit dans « Ta copie »). */}
       {!isAuthenticated && contentType !== 'exam' && (
         <SignupCard title={isLesson ? t('Garde tes leçons') : t('Suis ta progression')} tour="detail-inscription" benefits={false}
@@ -700,9 +701,6 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             ? t('Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.')
             : t('Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.')} />
       )}
-      {/* Pendant l'épreuve : rien qui mène ailleurs ni qui dévoile une solution. Les commentaires ne sont plus en bas de
-          page (08/11/2026) : ils sont dans l'onglet « Commentaires ». */}
-      {!examRunning && id && <SimilarContents contentId={id} />}
     </>
   );
 
