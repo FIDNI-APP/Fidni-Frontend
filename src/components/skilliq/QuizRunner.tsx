@@ -1,15 +1,12 @@
 // Passage d'un quiz, en plein écran (« focus », refait le 31/10/2026) : le site disparaît, il reste la question.
-//  - En haut : quitter (le passage est gardé sur le serveur), une barre d'un segment par question (vert : juste, or :
-//    faux, encre : la question en cours ; un clic y va) et le numéro.
-//  - Au centre : l'énoncé (texte courant pour un long problème), les réponses en grandes cases, puis l'explication.
-//  - En bas : « Valider » ; après la correction, la barre prend la couleur du résultat et propose « Continuer ».
+// L’en-tête donne accès aux questions numérotées. Les choix se lisent sur une même feuille et l’action reste en bas.
 // Corrigé question par question (POST /skill-assessments/verifier/<id>/), réponse verrouillée ; pas de chronomètre
 // (le temps est seulement mesuré, hors correction, pour les statistiques) ; reprise d'un passage commencé (`initial`,
 // `left`). Plusieurs bonnes réponses (`nb_bonnes` > 1) : cases à cocher, juste seulement si ce sont exactement les
 // bonnes. Clavier : 1 à 6 (ou A à F) pour répondre, Entrée pour valider puis continuer, ← → pour changer de question.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Check, ChevronLeft, Loader2, RotateCcw, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronLeft, Loader2, RotateCcw, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { useHideMobileTabBar } from '@/components/layout/nav';
 import { checkAnswer, submitQuiz } from './api';
@@ -93,6 +90,8 @@ export const QuizRunner: React.FC<{
   const [answers, setAnswers] = useState<Record<number, Answer>>(() =>
     Object.fromEntries(initial.filter((c) => picked(c.your_answer).length > 0).map((c) => [c.id, c.your_answer as Answer])));
   const [checked, setChecked] = useState<Record<number, CorrectionItem>>(known);
+  const [showQuestions, setShowQuestions] = useState(false);
+  const questionsButton = useRef<HTMLButtonElement>(null);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -117,10 +116,17 @@ export const QuizRunner: React.FC<{
   const TypeIcon = QUIZ_TYPE[type].icon;
   const long = q.question.length > LONG_STATEMENT;
 
-  const go = (i: number) => { setCheckError(false); setIndex(Math.max(0, Math.min(total - 1, i))); };
+  const go = (i: number) => {
+    setCheckError(false);
+    setIndex(Math.max(0, Math.min(total - 1, i)));
+    if (showQuestions) {
+      setShowQuestions(false);
+      questionsButton.current?.focus();
+    }
+  };
   /** Une réponse : la choisir ; plusieurs : cocher / décocher (pas plus que le nombre de bonnes réponses). */
   const choose = (i: number) => {
-    if (correction) return;
+    if (checking || correction) return;
     if (!multi) { setAnswers((a) => ({ ...a, [q.id]: i })); return; }
     const next = sel.includes(i) ? sel.filter((x) => x !== i) : sel.length < need ? [...sel, i].sort((a, b) => a - b) : sel;
     setAnswers((a) => ({ ...a, [q.id]: next }));
@@ -189,6 +195,13 @@ export const QuizRunner: React.FC<{
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || submitting) return;
+      if (showQuestions) {
+        if (e.key === 'Escape') {
+          setShowQuestions(false);
+          questionsButton.current?.focus();
+        }
+        return;
+      }
       const el = e.target as HTMLElement | null;
       if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
       const pick = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : /^[a-f]$/i.test(e.key) ? e.key.toLowerCase().charCodeAt(0) - 97 : -1;
@@ -232,38 +245,45 @@ export const QuizRunner: React.FC<{
   return (
     <Focus label={`${t(QUIZ_TYPE[type].label)} · ${quiz.name}`}>
       <Top onQuit={onQuit} count={(
-        <span className="fd-nums shrink-0 text-[13px] font-semibold text-ink" aria-live="polite">
-          {index + 1}<span className="font-normal text-ink-faint">/{total}</span>
-        </span>
+        <button type="button" ref={questionsButton} aria-expanded={showQuestions} aria-controls="quiz-navigation"
+          onClick={() => setShowQuestions((shown) => !shown)}
+          className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold text-ink hover:bg-white focus-visible:outline-brand">
+          {t('Question {n} sur {total}', { n: index + 1, total })}
+          <ChevronDown size={15} aria-hidden className={showQuestions ? 'rotate-180' : ''} />
+        </button>
       )}>
-        {/* Un segment par question : vert juste, or faux, encre la question en cours ; un clic y va. */}
-        <div className="flex w-full items-center gap-[3px]" role="group" aria-label={t('Questions du quiz')}>
-          {questions.map((x, i) => {
-            const c = checked[x.id];
-            const tone = c ? (c.is_correct ? 'bg-brand' : 'bg-gold') : i === index ? 'bg-ink' : 'bg-line';
+        <span className="truncate text-sm font-medium text-ink-soft">{quiz.name}</span>
+      </Top>
+      <div className="h-1 shrink-0 bg-line" aria-hidden>
+        <div className="h-full bg-brand" style={{ width: ((total - missing.length) / total) * 100 + '%' }} />
+      </div>
+      <div id="quiz-navigation" hidden={!showQuestions} className="max-h-[30dvh] shrink-0 overflow-y-auto border-b border-line bg-white">
+        <div role="group" aria-label={t('Questions du quiz')} className="mx-auto flex max-w-2xl flex-wrap gap-2 px-4 py-3">
+          {questions.map((question, i) => {
+            const c = checked[question.id];
+            const status = c ? (c.is_correct ? 'Question {n}, juste' : 'Question {n}, fausse') : 'Question {n}, pas encore corrigée';
             return (
-              <button key={x.id} type="button" onClick={() => go(i)} aria-current={i === index ? 'step' : undefined}
-                aria-label={c ? (c.is_correct ? t('Question {n}, juste', { n: i + 1 }) : t('Question {n}, fausse', { n: i + 1 }))
-                  : t('Question {n}, pas encore corrigée', { n: i + 1 })}
-                className="group flex h-8 min-w-0 flex-1 items-center focus:outline-none">
-                <span className={`h-1.5 w-full rounded-full transition-colors group-focus-visible:ring-2 group-focus-visible:ring-brand/40 ${tone} ${
-                  i === index ? '' : 'group-hover:opacity-70'}`} />
+              <button type="button" key={question.id} onClick={() => go(i)} aria-current={i === index ? 'step' : undefined}
+                aria-label={t(status, { n: i + 1 })}
+                className={`inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border px-2 text-sm focus-visible:outline-brand ${i === index ? 'border-ink font-bold text-ink' : 'border-line text-ink-soft'}`}>
+                {i + 1}
+                {c && (c.is_correct ? <Check size={14} className="text-brand-hover" aria-hidden /> : <X size={14} className="text-gold-strong" aria-hidden />)}
               </button>
             );
           })}
         </div>
-      </Top>
+      </div>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-2xl px-4 pb-10 pt-6 sm:pt-10">
           <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-faint">
             <TypeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{t(QUIZ_TYPE[type].label)} · {quiz.name}</span>
+            <span className="truncate">{t(QUIZ_TYPE[type].label)}</span>
           </p>
           <h2 id="quiz-question" className={`mt-3 text-ink ${long
             ? 'text-[16.5px] font-normal leading-[1.75]'
-            : 'text-[19px] font-semibold leading-relaxed sm:text-[21px]'}`}>
-            <MathText text={q.question} className="fd-latex" />
+            : 'text-[22px] font-medium leading-snug sm:text-[27px]'}`}>
+            <MathText text={q.question} />
           </h2>
           {multi && (
             <p id="quiz-consigne" className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[13px] font-semibold text-ink-soft ring-1 ring-line">
@@ -273,26 +293,25 @@ export const QuizRunner: React.FC<{
           )}
 
           <div role={multi ? 'group' : 'radiogroup'} aria-labelledby="quiz-question" aria-describedby={multi ? 'quiz-consigne' : undefined}
-            className="mt-6 flex flex-col gap-3">
+            className="mt-6 divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
             {q.options.map((opt, i) => {
               const selected = sel.includes(i);
               const right = !!correction && rightSet.includes(i);
               const wrong = !!correction && selected && !right;
-              const box = right ? 'border-brand bg-brand-soft'
-                : wrong ? 'border-gold bg-gold-soft'
-                  : correction ? 'border-line bg-white opacity-50'
-                    : selected ? 'border-ink bg-white shadow-[0_4px_14px_rgba(20,18,16,.08)]'
-                      : 'border-line bg-white hover:border-[#cfc9bf]';
-              const dot = right ? 'bg-brand text-white' : wrong ? 'bg-gold text-white'
-                : selected && !correction ? 'bg-ink text-white' : 'bg-paper text-ink-soft ring-1 ring-line';
+              const box = right ? 'bg-brand-soft' : wrong ? 'bg-gold-soft'
+                : selected ? 'bg-paper' : correction ? '' : 'hover:bg-paper';
+              const dot = selected || right ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft';
               return (
                 <button key={i} type="button" role={multi ? 'checkbox' : 'radio'} aria-checked={selected} onClick={() => choose(i)}
-                  aria-disabled={!!correction}
-                  className={`flex min-h-[64px] w-full items-center gap-4 rounded-2xl border-2 px-4 py-3 text-start transition-[border-color,background-color,box-shadow] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${box} ${correction ? 'cursor-default' : ''}`}>
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center text-[14px] font-semibold ${multi ? 'rounded-lg' : 'rounded-full'} ${dot}`} aria-hidden>
-                    {right ? <Check className="h-4 w-4" /> : wrong ? <X className="h-4 w-4" /> : multi && selected ? <Check className="h-4 w-4" /> : letter(i)}
+                  aria-disabled={checking || !!correction}
+                  className={`flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${box} ${correction ? 'cursor-default' : ''}`}>
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center border text-[13px] font-semibold ${multi ? 'rounded-lg' : 'rounded-full'} ${dot}`} aria-hidden>
+                    {letter(i)}
                   </span>
-                  <MathText text={opt} className={`fd-latex min-w-0 flex-1 text-[16px] leading-snug ${selected || right ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
+                  <MathText text={opt} className="min-w-0 flex-1 text-[16px] leading-relaxed text-ink" />
+                  {right ? <Check size={18} className="shrink-0 text-brand-hover" aria-label={t('Bonne réponse')} />
+                    : wrong ? <X size={18} className="shrink-0 text-gold-strong" aria-label={t('Mauvaise réponse')} />
+                      : selected && <Check size={18} className="shrink-0 text-ink" aria-hidden />}
                   {multi && right && !selected && <span className="shrink-0 text-[12px] font-semibold text-ink-faint">{t('oubliée')}</span>}
                   {i < 9 && !correction && <span className="hidden sm:inline-flex" aria-hidden><Kbd>{i + 1}</Kbd></span>}
                 </button>
@@ -301,8 +320,8 @@ export const QuizRunner: React.FC<{
           </div>
 
           {correction && (
-            <ExplanationBox id="quiz-explication" ok={correct} text={correction.explanation} theoremes={correction.theoremes}
-              className="mt-6 scroll-mb-4 sm:p-5" />
+            <ExplanationBox id="quiz-explication" text={correction.explanation} theoremes={correction.theoremes}
+              className="mt-6 scroll-mb-4" />
           )}
           {checkError && (
             <p role="alert" className="mt-5 rounded-xl border border-gold-line bg-gold-soft px-4 py-3 text-[13.5px] text-gold-strong">
@@ -312,8 +331,7 @@ export const QuizRunner: React.FC<{
         </div>
       </div>
 
-      <footer className={`shrink-0 border-t pb-[max(12px,env(safe-area-inset-bottom))] pt-3 transition-colors ${
-        !correction ? 'border-line bg-white' : correct ? 'border-brand-line bg-brand-soft' : 'border-gold-line bg-gold-soft'}`}>
+      <footer className="shrink-0 border-t border-line bg-white pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
         {error && (
           <div role="alert" className="mx-auto mb-3 flex w-full max-w-2xl flex-wrap items-center gap-3 px-4">
             <p className="flex-1 text-[13.5px] text-gold-strong">
@@ -327,7 +345,7 @@ export const QuizRunner: React.FC<{
         <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-4">
           {correction ? (
             <p role="status" className="flex min-w-0 flex-1 items-center gap-3">
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ${correct ? 'bg-brand' : 'bg-gold'}`} aria-hidden>
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${correct ? 'bg-brand' : 'bg-gold'}`} aria-hidden>
                 {correct ? <Check className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </span>
               <span className="min-w-0">

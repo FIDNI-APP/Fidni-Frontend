@@ -3,7 +3,7 @@
 // de réponse en bas. Une notification ouvre « #reponse-<id> » : la réponse est mise en valeur. À droite : contenus
 // tagués, participants, autres discussions sur le même contenu. Un commentaire n'a pas de page : ses anciens liens mènent à
 // l'onglet de son contenu.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Bell, BellOff, ChevronLeft, CornerDownRight, FileIcon, Loader2, Pencil, Share2, Trash2 } from 'lucide-react';
 import { Page } from '@/components/space/Page';
@@ -38,12 +38,12 @@ const Files: React.FC<{ files: FileAttachment[] }> = ({ files }) => (
         const href = f.download_url || f.url;
         return f.file_type === 'image' ? (
           <a key={f.id} href={href} target="_blank" rel="noopener noreferrer" title={f.file_name}
-            className="block overflow-hidden rounded-xl border border-line bg-[#faf9f7] hover:border-[#d8d4cc]">
-            <img src={href} alt={f.file_name} loading="lazy" className="block max-h-64 max-w-[280px] object-contain" />
+            className="block max-w-full overflow-hidden rounded-xl border border-line bg-[#faf9f7] hover:border-[#d8d4cc]">
+            <img src={href} alt={f.file_name} loading="lazy" className="block max-h-64 max-w-[min(280px,100%)] object-contain" />
           </a>
         ) : (
           <a key={f.id} href={href} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg border border-line bg-[#faf9f7] px-3 py-2 text-[13px] text-ink-soft hover:bg-[#f2f1ee]">
+            className="flex max-w-full items-center gap-2 break-all rounded-lg border border-line bg-[#faf9f7] px-3 py-2 text-[13px] text-ink-soft hover:bg-[#f2f1ee]">
             <FileIcon className="h-4 w-4 text-ink-faint" /> {f.file_name}
           </a>
         );
@@ -61,6 +61,8 @@ export const DiscussionThread: React.FC = () => {
   const [d, setD] = useState<DiscussionDetail | null>(null);
   const [error, setError] = useState<'404' | 'erreur' | null>(null);
   const [replyTo, setReplyTo] = useState<DiscussionReply | null>(null);
+  const [composeRequested, setComposeRequested] = useState(false);
+  const composer = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [highlight, setHighlight] = useState<number | null>(null);
   const [related, setRelated] = useState<DiscussionCardData[]>([]);
@@ -70,7 +72,13 @@ export const DiscussionThread: React.FC = () => {
     .then((x) => { setD(x); setError(null); })
     .catch((e) => setError(e?.response?.status === 404 ? '404' : 'erreur'));
 
-  useEffect(() => { setD(null); load(); }, [id]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setD(null);
+    setReplyTo(null);
+    setEditing(null);
+    setComposeRequested(false);
+    load();
+  }, [id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autres discussions du forum sur le premier contenu tagué.
   useEffect(() => {
@@ -116,8 +124,8 @@ export const DiscussionThread: React.FC = () => {
     return <Navigate to={/^#reponse-\d+$/.test(hash) ? `${d.url}${hash}` : d.url} replace />;
   }
 
-  const own =!!user && String(user.id) === String(d.author.id);
-  const action = 'inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[12.5px] font-semibold text-ink-faint transition-colors hover:bg-[#f2f1ee] hover:text-ink';
+  const own = !!user && String(user.id) === String(d.author.id);
+  const action = 'inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-ink-soft transition-colors hover:bg-[#f2f1ee] hover:text-ink';
 
   const follow = async () => {
     if (!isAuthenticated) { openModal('discussion'); return; }
@@ -138,7 +146,9 @@ export const DiscussionThread: React.FC = () => {
   const startReply = (r: DiscussionReply | null) => {
     if (!isAuthenticated) { openModal('discussion'); return; }
     setReplyTo(r);
-    window.setTimeout(() => document.getElementById('repondre')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    setComposeRequested(true);
+    composer.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus({ preventScroll: true });
+    composer.current?.scrollIntoView({ block: 'center' });
   };
   const removeReply = async (r: DiscussionReply) => {
     if (!await confirmer(t('Supprimer cette réponse ?'), { action: t('Supprimer'), danger: true })) return;
@@ -155,15 +165,15 @@ export const DiscussionThread: React.FC = () => {
         <ChevronLeft className="h-4 w-4 rtl:rotate-180" /> {t('Discussions')}
       </Link>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-8">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_230px] xl:gap-10">
         <div className="min-w-0">
           {/* Message d'origine */}
-          <article className="rounded-2xl border border-line bg-white p-4 sm:p-6">
+          <article className="border-t-2 border-ink pt-4 sm:pt-6">
             <div className="flex flex-wrap items-center gap-1.5">
               <SalonChip salon={d.salon} to={`/discussions?salon=${d.salon}`} />
               {d.class_level && <span className="text-[12.5px] text-ink-faint">{d.class_level.name}</span>}
             </div>
-            <h1 dir="auto" className="fd-display mt-2 text-ink" style={{ fontSize: 'clamp(22px, 2.8vw, 30px)', lineHeight: 1.15 }}>
+            <h1 dir="auto" className="fd-display mt-3 max-w-[34ch] break-words text-balance text-[27px] leading-tight text-ink sm:text-4xl">
               <MathText text={d.title} />
             </h1>
             <div className="mt-3 flex items-center gap-2.5">
@@ -175,24 +185,26 @@ export const DiscussionThread: React.FC = () => {
                 </time>
               </div>
             </div>
-            {d.body && <div dir="auto"><TipTapRenderer content={asHtml(d.body)} className="fd-comment-body mt-4 text-[15.5px] leading-relaxed text-ink" /></div>}
+            {d.body && <div dir="auto"><TipTapRenderer content={asHtml(d.body)} className="fd-comment-body mt-5 max-w-[68ch] break-words text-base leading-relaxed text-ink" /></div>}
             <Files files={d.files} />
             {d.tags.length > 0 && (
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {d.tags.map((tag) => <ContentTagCard key={tag.id} tag={tag} />)}
               </div>
             )}
-            <div className="-ms-2 mt-4 flex flex-wrap items-center gap-1 border-t border-line pt-3">
-              <UtileButton kind="discussion" id={d.id} count={d.utile} active={d.user_utile} own={own} />
-              <button type="button" onClick={() => startReply(null)} className={action}>
+            <div className="mt-4 flex flex-wrap items-center gap-x-1 gap-y-2 border-y border-line py-2.5">
+              <button type="button" onClick={() => startReply(null)} className="fd-btn-primary me-1 inline-flex min-h-10 items-center gap-1.5 px-3 text-sm">
                 <CornerDownRight className="h-3.5 w-3.5" /> {t('Répondre')}
               </button>
+              <UtileButton kind="discussion" id={d.id} count={d.utile} active={d.user_utile} own={own} />
               <button type="button" onClick={follow} aria-pressed={d.followed} className={`${action} ${d.followed ? '!text-brand-hover' : ''}`}>
                 {d.followed ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
                 {d.followed ? t('Ne plus suivre') : t('Suivre')}
               </button>
-              <button type="button" onClick={share} className={action}>
-                <Share2 className="h-3.5 w-3.5" /> {shared ? t('Lien copié') : t('Partager')}
+              <button type="button" onClick={share} className={action} aria-label={shared ? t('Lien copié') : t('Partager')}
+                title={shared ? t('Lien copié') : t('Partager')}>
+                <Share2 className="h-4 w-4" aria-hidden />
+                <span className={shared ? '' : 'hidden sm:inline'}>{shared ? t('Lien copié') : t('Partager')}</span>
               </button>
               {d.can_edit && (
                 <span className="ms-auto flex items-center gap-1">
@@ -210,16 +222,16 @@ export const DiscussionThread: React.FC = () => {
             {d.replies.length > 1 ? t('{n} réponses', { n: d.replies.length }) : d.replies.length === 1 ? t('1 réponse') : t('Réponses')}
           </h2>
           {d.replies.length === 0 && (
-            <p className="mb-4 rounded-2xl border border-dashed border-line bg-white px-4 py-6 text-center text-[14px] text-ink-faint">
+            <p className="mb-4 border-s-2 border-line py-2 ps-4 text-sm text-ink-soft">
               {t('Personne n’a encore répondu.')}
             </p>
           )}
-          <ol className="space-y-2.5">
+          <ol className="divide-y divide-line">
             {d.replies.map((r) => {
               const mine = !!user && String(user.id) === String(r.author.id);
               return (
                 <li key={r.id} id={`reponse-${r.id}`}
-                  className={`scroll-mt-24 rounded-2xl border bg-white p-4 transition-colors duration-700 ${highlight === r.id ? 'border-brand ring-2 ring-brand/30' : 'border-line'}`}>
+                  className={`scroll-mt-24 border-s-2 py-4 ps-3 pe-1 transition-colors motion-reduce:transition-none sm:ps-4 ${highlight === r.id ? 'border-s-brand bg-brand-soft' : 'border-s-line'}`}>
                   <div className="flex gap-3">
                     <Avatar user={r.author} size={32} />
                     <div className="min-w-0 flex-1">
@@ -242,7 +254,7 @@ export const DiscussionThread: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          <div dir="auto"><TipTapRenderer content={asHtml(r.body)} className="fd-comment-body mt-1 text-[15px] leading-relaxed text-ink-soft" /></div>
+                          <div dir="auto"><TipTapRenderer content={asHtml(r.body)} className="fd-comment-body mt-1.5 max-w-[65ch] break-words text-[15.5px] leading-relaxed text-ink" /></div>
                           <Files files={r.attachments} />
                           <div className="-ms-2 mt-1.5 flex flex-wrap items-center gap-0.5">
                             <UtileButton kind="reponse" id={r.id} count={r.utile} active={r.user_utile} own={mine} />
@@ -273,7 +285,7 @@ export const DiscussionThread: React.FC = () => {
           </ol>
 
           {/* Répondre */}
-          <div id="repondre" className="mt-5 scroll-mt-24 rounded-2xl border border-line bg-white p-4">
+          <div ref={composer} id="repondre" className="mt-5 scroll-mt-24 rounded-2xl border border-line bg-white p-4">
             {isAuthenticated ? (
               <>
                 {replyTo && (
@@ -282,7 +294,7 @@ export const DiscussionThread: React.FC = () => {
                     <button type="button" onClick={() => setReplyTo(null)} className="ms-1 font-semibold text-brand-hover hover:underline">{t('Annuler')}</button>
                   </p>
                 )}
-                <MessageComposer deferred placeholder={t('Ta réponse… (@pseudo pour mentionner quelqu’un)')} submitLabel={t('Répondre')}
+                <MessageComposer deferred={!composeRequested} autoFocus={composeRequested} placeholder={t('Ta réponse… (@pseudo pour mentionner quelqu’un)')} submitLabel={t('Répondre')}
                   onSubmit={async (html, fileIds) => {
                     await replyToDiscussion(d.id, html, replyTo?.id, fileIds);
                     setReplyTo(null);
