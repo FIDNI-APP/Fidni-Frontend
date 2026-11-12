@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, CalendarCheck, CalendarPlus, Check, ChevronRight, ClipboardCheck, ListChecks, ListPlus, Loader2,
-  Pencil, Plus, RotateCcw, Sparkles, Target, Timer, Trash2,
+  Pencil, Plus, RotateCcw, Target, Timer, Trash2,
 } from 'lucide-react';
 import { t, dateLocale } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
@@ -192,26 +192,24 @@ const PastTests: React.FC<{ tests: UpcomingTest[]; onChange: (t: UpcomingTest) =
 
 /* ───────────────────────── 2. À refaire ───────────────────────── */
 
-const RedoCard: React.FC<{ item: ToRedoItem }> = ({ item }) => {
-  const path = `/${item.type === 'exam' ? 'exams' : 'exercises'}/${item.id}`;
+const RedoCard: React.FC<{ item: ToRedoItem; first: boolean }> = ({ item, first }) => {
+  const exam = item.type === 'exam';
   const why = item.failed ? t('Marqué à revoir')
     : item.weak_questions > 1 ? t('{n} questions à reprendre', { n: item.weak_questions }) : t('{n} question à reprendre', { n: item.weak_questions });
   return (
-    <li>
-      <Link to={path} className="group flex h-full items-start gap-3 rounded-2xl border border-line bg-white p-4 transition-[border-color,box-shadow] hover:border-[#cfc9bf] hover:shadow-[0_6px_16px_rgba(20,18,16,.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-soft text-gold-strong" aria-hidden>
-          <RotateCcw className="h-4 w-4" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-semibold leading-snug text-ink line-clamp-2">{item.title}</span>
-          <span className="mt-1 block text-[12.5px] text-ink-faint">
-            {why}{item.days_ago !== null && <> · <span className="text-gold-strong">{ago(item.days_ago)}</span></>}
+    <li className={first ? 'border-s-[3px] border-s-brand bg-paper' : undefined}>
+      <Link to={`/${exam ? 'exams' : 'exercises'}/${item.id}`}
+        className="group flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-4 text-start hover:bg-paper focus-visible:outline-brand focus-visible:-outline-offset-2 sm:px-5">
+        <span className="min-w-0 flex-1 basis-56">
+          <span className="flex flex-wrap items-baseline gap-x-2 text-xs text-ink-soft">
+            <span className="font-semibold">{exam ? t('Examen') : t('Exercice')}</span>
+            {item.chapters[0] && <span>· {item.chapters[0]}</span>}
           </span>
-          {item.chapters[0] && <span className="mt-2 inline-block rounded-full bg-[#f2f1ee] px-2 py-0.5 text-[11.5px] text-ink-soft">{item.chapters[0]}</span>}
+          <span className={`mt-1 block break-words leading-snug text-ink group-hover:text-brand-hover ${first ? 'fd-display text-xl sm:text-2xl' : 'text-base font-semibold'}`}>{item.title}</span>
+          <span className="mt-1.5 block text-[13px] text-ink-soft">{why}{item.days_ago !== null && <> · {ago(item.days_ago)}</>}</span>
         </span>
-        <span className="hidden shrink-0 items-center gap-1 self-center text-[12.5px] font-semibold text-brand-hover group-hover:underline sm:inline-flex">
-          {t('Refaire')} <ArrowRight className="h-3.5 w-3.5" />
-        </span>
+        {first ? <span className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-semibold text-white">{t('Refaire')} <ArrowRight size={16} className="rtl:rotate-180" aria-hidden /></span>
+          : <ArrowRight size={16} className="shrink-0 text-ink-faint rtl:rotate-180" aria-hidden />}
       </Link>
     </li>
   );
@@ -277,7 +275,7 @@ export const Reviser: React.FC = () => {
   const load = useCallback(() => {
     setFailed(false);
     devoirsApi.list().then(setTests).catch(() => { setTests((t) => t ?? []); setFailed(true); });
-    getToRedo().then(setRedo).catch(() => setRedo((r) => r ?? { count: 0, results: [] }));
+    getToRedo().then(setRedo).catch(() => setFailed(true));
     getRevisionLists().then((l) => setLists(l || [])).catch(() => { setLists((l) => l ?? []); setFailed(true); });
   }, []);
 
@@ -355,8 +353,11 @@ export const Reviser: React.FC = () => {
       <PageHeader
         eyebrow={t('Mon suivi')}
         title={t('Réviser')}
-        subtitle={t('Ton prochain DS, ce que tu as raté, et les exercices que tu as mis de côté.')}
-        actions={(
+        actions={tab === 'a-refaire' ? (notInList.length > 1 && (
+          <button type="button" onClick={rangeAll} disabled={ranging} className="fd-btn-ghost inline-flex min-h-10 items-center gap-1.5 disabled:opacity-50">
+            {ranging ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />} {t('En faire une liste')}
+          </button>
+        )) : (
           <>
             <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setTestModal({ test: null })}>
               <CalendarPlus className="h-4 w-4" /> {t('Annoncer un DS')}
@@ -408,32 +409,27 @@ export const Reviser: React.FC = () => {
         )}
 
         {tab === 'a-refaire' && (
-        <Section id="a-refaire" title={t('À refaire')} count={redo?.count}
-          hint={redoItems.length ? t('Ce que tu as raté, le plus ancien d’abord : c’est le bon moment pour le refaire.') : undefined}
-          action={notInList.length > 1 ? (
-            <button type="button" onClick={rangeAll} disabled={ranging} className="inline-flex min-h-10 items-center gap-1.5 font-semibold text-brand-hover hover:underline disabled:opacity-50">
-              {ranging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {t('En faire une liste')}
-            </button>
-          ) : undefined}>
+        <section id="a-refaire" aria-labelledby="onglet-a-refaire">
+          {redoItems.length > 0 && <p className="mb-3 text-sm text-ink-soft">{t('Du plus ancien au plus récent')}</p>}
           <div data-tour="revisions-suggestions">
-            {redo === null ? <CardsSkeleton n={2} className="sm:grid-cols-2" />
+            {redo === null ? (failed ? null : <CardsSkeleton n={2} />)
               : redoItems.length === 0 ? (
                 <EmptyState compact icon={Check} title={t('Rien à refaire pour l’instant')}
                   text={t('Quand tu marques un exercice « À revoir » ou que tu rates une question, il t’attend ici quelques jours plus tard.')} />
               ) : (
                 <>
-                  <ul className="grid gap-3 sm:grid-cols-2">
-                    {shownRedo.map((x) => <RedoCard key={x.id} item={x} />)}
-                  </ul>
+                  <ol className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+                    {shownRedo.map((item, index) => <RedoCard key={item.id} item={item} first={index === 0} />)}
+                  </ol>
                   {redoItems.length > REDO_SHOWN && (
-                    <button type="button" onClick={() => setAllRedo((v) => !v)} className="mt-3 min-h-10 text-[13px] font-semibold text-brand-hover hover:underline">
-                      {allRedo ? t('Voir moins') : t('Voir les {n} exercices', { n: redoItems.length })}
+                    <button type="button" onClick={() => setAllRedo((v) => !v)} aria-expanded={allRedo} className="mt-3 min-h-10 text-[13px] font-semibold text-brand-hover hover:underline">
+                      {allRedo ? t('Voir moins') : t('Tout afficher')}
                     </button>
                   )}
                 </>
               )}
           </div>
-        </Section>
+        </section>
 
         )}
 

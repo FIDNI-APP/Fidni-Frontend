@@ -126,13 +126,25 @@ export const Chapitres: React.FC<{ chapitres: TableauChapitre[]; onOpen: (id: nu
         </tbody>
       </table>
 
+      {chapitres.length > 1 && (
+        <label className="flex items-center justify-between gap-3 border-b border-line px-4 py-1 md:hidden">
+          <span className="text-sm text-ink-soft">{t('Trier')}</span>
+          <select value={tri} onChange={(e) => setTri(e.target.value as Tri)}
+            className="min-h-10 max-w-[70%] bg-transparent text-sm font-semibold text-ink">
+            <option value="programme">{t('Dans l’ordre du programme')}</option>
+            <option value="note">{t('Note moy.')}</option>
+            <option value="questions">{t('Questions')}</option>
+            <option value="temps">{t('Temps')}</option>
+          </select>
+        </label>
+      )}
       {/* Téléphone : cartes */}
       <ul className="divide-y divide-line md:hidden">
         {shown.map((c) => (
           <li key={c.id}>
             <button type="button" onClick={() => onOpen(c.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-start active:bg-[#faf9f7]">
               <span className="min-w-0 flex-1">
-                <span className={`block truncate text-[14px] font-semibold ${c.actif ? 'text-ink' : 'text-ink-faint'}`}>{c.nom}</span>
+                <span className={`block break-words text-[15px] font-semibold ${c.actif ? 'text-ink' : 'text-ink-faint'}`}>{c.nom}</span>
                 <span className="mt-1.5 flex items-center gap-2">
                   <span className="fd-nums w-[54px] shrink-0 text-[13px]">
                     {c.note.moyenne !== null ? <><b className="text-ink">{noteTexte(c.note.moyenne)}</b><span className="text-ink-faint">/20</span></> : <span className="text-ink-faint">—</span>}

@@ -31,7 +31,7 @@ import { DayPanel } from '@/components/progression/DayPanel';
 import { Chapitres } from '@/components/progression/Chapitres';
 import { ChapitrePanel } from '@/components/progression/ChapitrePanel';
 import { MonTemps } from '@/components/progression/MonTemps';
-import { PointsFaibles } from '@/components/progression/PointsFaibles';
+import { PointsFaibles, RevisionPrioritaire } from '@/components/progression/PointsFaibles';
 import { decimal, duration } from './format';
 import { useTableau } from './useTableau';
 import { t, dateLocale } from '@/i18n';
@@ -99,6 +99,7 @@ export function ProgressionPage() {
 
   if (!authLoading && !isAuthenticated) return <Navigate to="/" replace />;
 
+  const priorite = data?.points_faibles.find((point) => point.a_revoir.length > 0) ?? data?.points_faibles[0];
   const isTeacher = user?.profile?.user_type === 'teacher';
   const levelLink = user ? `/profile/${user.username}/edit#scolarite` : '/complete-profile';
   const rien = !!data && !data.kpis.questions.reussies && !data.kpis.questions.partielles && !data.kpis.questions.ratees
@@ -169,12 +170,15 @@ export function ProgressionPage() {
           <div role="tabpanel" id={`panneau-${onglet}`} aria-labelledby={`onglet-${onglet}`}>
             {onglet === 'apercu' && (
               <div className="flex flex-col gap-5">
-                <Tuiles data={data} vue={vue} onVue={choisir} />
-                <section aria-label={t('Graphique')} data-tour="prog-graphique" className="rounded-2xl border border-line bg-white p-4 sm:p-6">
-                  <Graphique data={data} vue={vue} jour={jour} onJour={ouvrirJour} />
-                  {jour && (vue === 'questions' || vue === 'temps' || vue === 'jours') && <DayPanel date={jour} onClose={() => setJour(null)} eleve={eleve} />}
-                  <p className="mt-4 text-[12px] leading-relaxed text-ink-faint">{t(AIDE[vue])}</p>
-                </section>
+                {!eleve && priorite && <RevisionPrioritaire point={priorite} />}
+                <div className="overflow-hidden rounded-xl border border-line bg-white">
+                  <Tuiles data={data} vue={vue} onVue={choisir} />
+                  <section aria-label={t('Graphique')} data-tour="prog-graphique" className="border-t border-line p-4 sm:p-6">
+                    <Graphique data={data} vue={vue} jour={jour} onJour={ouvrirJour} />
+                    {jour && (vue === 'questions' || vue === 'temps' || vue === 'jours') && <DayPanel date={jour} onClose={() => setJour(null)} eleve={eleve} />}
+                    <p className="mt-4 text-[12px] leading-relaxed text-ink-faint">{t(AIDE[vue])}</p>
+                  </section>
+                </div>
               </div>
             )}
             {onglet === 'faibles' && (
@@ -212,22 +216,22 @@ function Tuiles({ data, vue, onVue }: { data: Tableau; vue: Vue; onVue: (v: Vue)
   const taux = evaluees ? Math.round((q.reussies + q.partielles / 2) * 100 / evaluees) : null;
   const dates = data.jours.map((j) => j.date);
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="prog-tuiles">
-      <Tuile icon={CheckCircle2} label={t('Questions réussies')} accent={COULEUR.reussies} selected={vue === 'questions'} onClick={() => onVue('questions')}
+    <div className="grid grid-cols-2 gap-px bg-line lg:grid-cols-4" data-tour="prog-tuiles">
+      <Tuile integrated icon={CheckCircle2} label={t('Questions réussies')} accent={COULEUR.reussies} selected={vue === 'questions'} onClick={() => onVue('questions')}
         value={q.reussies.toLocaleString(dateLocale())} ecart={ecart(q.reussies, q.avant ? q.avant.reussies : null)} jours={avantJours}
         sub={evaluees ? (evaluees > 1 ? t('sur {n} évaluées · {taux} %', { n: evaluees, taux }) : t('sur {n} évaluée · {taux} %', { n: evaluees, taux })) : t('aucune évaluée')}
         spark={{ values: data.jours.map((j) => j.reussies), dates, color: COULEUR.reussies, label: t('Questions réussies par jour'), format: (v) => (v > 1 ? t('{n} réussies', { n: v }) : t('{n} réussie', { n: v })) }} />
-      <Tuile icon={Trophy} label={t('Note moyenne aux examens')} accent={COULEUR.note} selected={vue === 'note'} onClick={() => onVue('note')}
+      <Tuile integrated icon={Trophy} label={t('Note moyenne aux examens')} accent={COULEUR.note} selected={vue === 'note'} onClick={() => onVue('note')}
         value={k.note.moyenne !== null ? decimal(k.note.moyenne) : '—'} unit={k.note.moyenne !== null ? '/ 20' : undefined}
         ecart={k.note.moyenne !== null ? ecart(k.note.moyenne, k.note.avant, 'abs', (n) => decimal(n)) : undefined} jours={avantJours}
         sub={k.note.n ? (k.note.n > 1 ? t('{n} examens notés', { n: k.note.n }) : t('{n} examen noté', { n: k.note.n })) : t('pas d’examen corrigé')}
         spark={data.notes.length > 1 ? { values: data.notes.map((n) => n.note), dates: data.notes.map((n) => n.date), color: COULEUR.note, label: t('Notes aux examens'), format: (v) => `${decimal(v)} / 20` } : undefined}
         footer={data.notes.length <= 1 ? <span className="text-[12px] text-ink-faint">{data.notes.length ? '' : t('Corrige un DS pour avoir une note')}</span> : undefined} />
-      <Tuile icon={Clock} label={t('Temps de travail')} accent={COULEUR.temps} selected={vue === 'temps'} onClick={() => onVue('temps')}
+      <Tuile integrated icon={Clock} label={t('Temps de travail')} accent={COULEUR.temps} selected={vue === 'temps'} onClick={() => onVue('temps')}
         value={duration(k.secondes.total)} ecart={ecart(k.secondes.total, k.secondes.avant)} jours={avantJours}
         sub={data.periode.nb_jours > 1 ? t('{duree} par jour en moyenne', { duree: duration(Math.round(k.secondes.total / data.periode.nb_jours)) }) : undefined}
         spark={{ values: data.jours.map((j) => Math.round(j.secondes / 60)), dates, color: COULEUR.temps, label: t('Minutes par jour'), format: (v) => t('{m} min', { m: v }) }} />
-      <Tuile icon={CalendarDays} label={t('Jours actifs')} accent="#4f9f72" selected={vue === 'jours'} onClick={() => onVue('jours')}
+      <Tuile integrated icon={CalendarDays} label={t('Jours actifs')} accent="#4f9f72" selected={vue === 'jours'} onClick={() => onVue('jours')}
         value={k.jours_actifs.n} unit={`/ ${k.jours_actifs.sur}`} ecart={ecart(k.jours_actifs.n, k.jours_actifs.avant, 'abs')} jours={avantJours}
         footer={(
           <span className="flex w-full items-end gap-[2px]" aria-hidden>

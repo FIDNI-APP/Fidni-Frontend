@@ -30,13 +30,15 @@ export const Tuile: React.FC<{
   spark?: SparklineProps;
   footer?: React.ReactNode;
   accent: string;
+  integrated?: boolean;
   selected: boolean;
   onClick: () => void;
   tour?: string;
-}> = ({ icon: Icon, label, value, unit, ecart: e, jours = null, sub, spark, footer, accent, selected, onClick, tour }) => (
+}> = ({ icon: Icon, label, value, unit, ecart: e, jours = null, sub, spark, footer, accent, integrated = false, selected, onClick, tour }) => (
   <button type="button" onClick={onClick} aria-pressed={selected} data-tour={tour}
-    className={`group relative flex h-full w-full min-w-0 flex-col rounded-2xl border bg-white p-4 text-start transition-[border-color,box-shadow] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-      selected ? 'border-ink shadow-[0_0_0_1px_#1a1a1a]' : 'border-line hover:border-[#d8d4cc] hover:shadow-card-hover'}`}>
+    className={`group relative flex h-full w-full min-w-0 flex-col text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${integrated
+      ? `border-b-2 px-3 py-3 sm:p-4 ${selected ? 'border-brand bg-brand-soft' : 'border-transparent bg-white hover:bg-paper'}`
+      : `rounded-2xl border bg-white p-4 ${selected ? 'border-ink shadow-[0_0_0_1px_#1a1a1a]' : 'border-line hover:border-[#d8d4cc] hover:shadow-card-hover'}`}`}>
     <span className="flex items-start gap-1.5 text-[12.5px] font-medium leading-tight text-ink-soft">
       <Icon className="mt-px h-3.5 w-3.5 shrink-0" style={{ color: accent }} aria-hidden />
       <span className="min-w-0 flex-1">{label}</span>
@@ -47,7 +49,7 @@ export const Tuile: React.FC<{
     </span>
     {e && <span className="mt-1.5"><Ecart {...e} jours={jours} /></span>}
     {sub && <span className="mt-1 block text-[12px] leading-snug text-ink-faint">{sub}</span>}
-    <span className="mt-auto block pt-3">
+    <span className={integrated ? "mt-auto hidden pt-3 sm:block" : "mt-auto block pt-3"}>
       {spark ? <Sparkline {...spark} /> : <span className="flex h-9 items-end">{footer}</span>}
     </span>
   </button>

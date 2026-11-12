@@ -3,8 +3,8 @@
 // porte l'action : commencer, reprendre, rouvrir son dernier résultat, refaire. Les colonnes n'apparaissent que sur
 // un grand écran (xl : la barre latérale prend déjà sa place) ; en dessous, les deux quiz passent sous le nom du
 // chapitre, avec leur nom : côte à côte si la place le permet (lg), sinon l’un sous l’autre.
-import React from 'react';
-import { Award, ChevronRight, Play, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Award, ChevronRight, Play, RotateCcw, Search } from 'lucide-react';
 import { t } from '@/i18n';
 import { NewBadge } from './QuizRow';
 import { QUIZ_TYPE } from './quizTypes';
@@ -140,3 +140,37 @@ export const ChapterTable: React.FC<{ lines: ChapterLine[]; deep: boolean }> = (
     </div>
   );
 };
+
+const searchable = (name: string) => name.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+
+/** Une recherche pour tout le niveau, y compris quand les chapitres sont groupés par matière. */
+export function ChapterCatalogue({ groups, deep }: {
+  groups: { id: number; name?: string; lines: ChapterLine[] }[];
+  deep: boolean;
+}) {
+  const [query, setQuery] = useState('');
+  const term = searchable(query);
+  const matches = groups.map((group) => ({
+    ...group, lines: group.lines.filter((line) => searchable(line.name).includes(term)),
+  })).filter((group) => group.lines.length > 0);
+
+  return (
+    <div className="space-y-3">
+      <label className="flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm text-ink-soft focus-within:border-brand sm:max-w-sm">
+        <Search size={16} aria-hidden />
+        <input type="search" aria-label={t('Chercher un chapitre')} placeholder={t('Chercher un chapitre…')}
+          value={query} onChange={(e) => setQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent py-2 text-ink outline-none" />
+      </label>
+      {matches.map((group) => (
+        <div key={group.id}>
+          {group.name && <h3 className="mb-2 text-sm font-medium text-ink-soft">{group.name}</h3>}
+          <ChapterTable lines={group.lines} deep={deep} />
+        </div>
+      ))}
+      {!matches.length && <div role="status" className="flex flex-wrap items-center gap-3 border-y border-line py-3 text-sm text-ink-soft">
+        {t('Aucun chapitre trouvé.')}
+        {query && <button type="button" onClick={() => setQuery('')} className="min-h-10 font-semibold text-brand-hover">{t('Effacer la recherche')}</button>}
+      </div>}
+    </div>
+  );
+}

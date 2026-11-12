@@ -25,6 +25,32 @@ const entrainer = (p: PointFaible) => {
   return p.id ? `${base}${base.includes('?') ? '&' : '?'}theorems=${p.id}` : base;
 };
 
+/** Notion à retravailler sur la période et sujet d’origine, quand une question reste à reprendre. */
+export function RevisionPrioritaire({ point }: { point: PointFaible }) {
+  const question = point.a_revoir[0];
+  return (
+    <section aria-labelledby="notion-a-revoir" className="rounded-xl border border-line border-s-4 border-s-gold bg-white px-4 py-4 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0 flex-1 basis-56">
+          <p className="text-xs font-semibold text-gold-strong">{t('À retravailler')}{point.chapitre && <span className="font-normal text-ink-soft"> · {point.chapitre.nom}</span>}</p>
+          <h2 id="notion-a-revoir" className="fd-display mt-1 text-xl leading-tight text-ink sm:text-2xl">{point.nom}</h2>
+        </div>
+        <Link to={entrainer(point)} onClick={() => trackAction('prog-entrainer')} className="fd-btn-primary inline-flex min-h-10 items-center gap-2 text-sm">
+          <Dumbbell size={16} aria-hidden />{t('S’entraîner')}
+        </Link>
+      </div>
+      {question && (
+        <Link to={question.url} onClick={() => trackAction('prog-point-faible')}
+          className="mt-3 flex min-h-10 items-center gap-2 border-t border-line pt-3 text-start text-sm text-ink-soft hover:text-brand-hover">
+          <RotateCcw size={15} className="shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1 break-words"><b>{t('À refaire')} · {question.question}</b> · {question.titre}</span>
+          <ArrowRight size={16} className="shrink-0 rtl:rotate-180" aria-hidden />
+        </Link>
+      )}
+    </section>
+  );
+}
+
 /** « 3 questions : 1 ratée, 1 en partie, 1 réussie ». */
 const bilan = (p: PointFaible) => {
   const vars = {
