@@ -316,6 +316,24 @@ export default function MockExamPage() {
         </>
       )}
 
+      {data.exercises.length > 1 && (
+        <label className="mb-4 flex flex-col gap-1.5 text-[13px] font-semibold text-ink-soft sm:max-w-lg">
+          {t('Au programme')}
+          <select value="" onChange={(event) => {
+            const heading = document.getElementById(event.target.value);
+            heading?.focus({ preventScroll: true });
+            heading?.scrollIntoView({ block: 'start' });
+          }} className="h-11 w-full min-w-0 truncate rounded-xl border border-line bg-white px-3 text-[14px] text-ink focus-visible:outline-brand">
+            <option value="" disabled>{t('Choisir un exercice')}</option>
+            {data.exercises.map((exercise, i) => (
+              <option key={exercise.id} value={'exercice-' + exercise.id}>
+                {t('Exercice {n}', { n: i + 1 })} · {exercise.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="flex flex-col gap-5">
         {data.exercises.map((e, i) => {
           const leaves = phase === 'review' ? assessablePaths(e.structure) : [];
@@ -323,7 +341,7 @@ export default function MockExamPage() {
           return (
             <section key={e.id} aria-labelledby={`exercice-${e.id}`} className="rounded-2xl border border-line bg-white">
               <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line px-5 py-3.5 sm:px-6">
-                <h2 id={`exercice-${e.id}`} className="fd-display text-[19px] text-ink">{t('Exercice {n}', { n: i + 1 })}</h2>
+                <h2 id={`exercice-${e.id}`} tabIndex={-1} className="fd-display scroll-mt-36 text-[19px] text-ink">{t('Exercice {n}', { n: i + 1 })}</h2>
                 {e.chapter && <span className="text-[12.5px] text-ink-faint">{e.chapter}</span>}
                 <span className="ms-auto inline-flex items-center gap-2">
                   {phase === 'review' && leaves.length > 0 && (

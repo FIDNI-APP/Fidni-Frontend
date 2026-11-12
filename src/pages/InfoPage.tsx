@@ -14,40 +14,44 @@ import { t } from '@/i18n';
 const LinkItem: React.FC<{ link: InfoPageLink }> = ({ link }) => {
   const cls = 'inline-flex min-h-10 items-center gap-1.5 text-[14px] font-semibold text-brand-hover hover:text-brand';
   if (link.href.startsWith('mailto:')) {
-    return <a href={link.href} className={cls}><Mail className="h-4 w-4" aria-hidden /> {link.label}</a>;
+    return <a href={link.href} className="fd-btn-primary inline-flex min-h-10 items-center gap-2 break-all"><Mail className="h-4 w-4" aria-hidden /> {link.label}</a>;
   }
-  return <Link to={link.href} className={cls}>{link.label} <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>;
+  return <Link to={link.href} className={cls}>{link.label} <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden /></Link>;
 };
 
 export const InfoPage: React.FC<{ slug: 'a-propos' | 'contact' }> = ({ slug }) => {
   const [data, setData] = useState<InfoPageData | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
     setData(null);
     setFailed(false);
     getInfoPage(slug).then((d) => { if (alive) setData(d); }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, [slug]);
+  }, [slug, attempt]);
 
   return (
     <Page width="narrow">
       {data && <SEO title={data.title} description={data.description} canonicalUrl={`/${slug}`} />}
       {!data && !failed && <CardsSkeleton n={3} />}
       {failed && (
-        <p className="py-10 text-[14.5px] text-ink-faint">
-          {t('La page n’a pas pu s’afficher. Tu peux nous écrire à')}{' '}
-          <a href="mailto:contact@fidni.fr" className="font-semibold text-brand-hover underline">contact@fidni.fr</a>.
-        </p>
+        <div role="alert" className="space-y-3 py-8 text-sm text-ink-soft">
+          <p>
+            {t('La page n’a pas pu s’afficher. Tu peux nous écrire à')}{' '}
+            <a href="mailto:contact@fidni.fr" className="font-semibold text-brand-hover underline">contact@fidni.fr</a>.
+          </p>
+          <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setAttempt((n) => n + 1)}>{t('Réessayer')}</button>
+        </div>
       )}
       {data && (
         <>
           <PageHeader eyebrow="Fidni" title={data.h1} subtitle={data.intro} />
-          <div className="flex flex-col gap-4">
+          <div className="divide-y divide-line border-t-2 border-ink">
             {data.sections.map((sec) => (
-              <section key={sec.title} className="rounded-2xl border border-line bg-white p-5 sm:p-7">
+              <section key={sec.title} className="py-5 sm:py-6">
                 <h2 className="fd-display text-[21px] leading-snug text-ink">{sec.title}</h2>
-                <div className="mt-2.5 space-y-2.5 text-[15px] leading-relaxed text-ink-soft">
+                <div className="mt-2.5 max-w-[68ch] space-y-2.5 text-[15px] leading-relaxed text-ink-soft">
                   {sec.paragraphs.map((p) => <p key={p}>{p}</p>)}
                 </div>
                 {sec.links && sec.links.length > 0 && (
