@@ -6,17 +6,17 @@ import { t } from '@/i18n';
 import { MathText } from './MathText';
 import { pct, previousPct, type SkillAssessment } from './types';
 
-/** Explication d'une question corrigée : verte si la réponse est juste, orange sinon (sans réponse compris). */
-export const ExplanationBox: React.FC<{ ok: boolean; text?: string; theoremes?: string[]; id?: string; className?: string }> = ({
-  ok, text, theoremes = [], id, className = '',
+/** Explication et notions associées à une question corrigée. */
+export const ExplanationBox: React.FC<{ text?: string; theoremes?: string[]; id?: string; className?: string }> = ({
+  text, theoremes = [], id, className = '',
 }) => {
   if (!text && !theoremes.length) return null;
   return (
     <section id={id} aria-label={t('Explication')}
-      className={`rounded-2xl border p-4 ${ok ? 'border-brand-line bg-brand-soft' : 'border-gold-line bg-gold-soft'} ${className}`}>
+      className={`border-s-2 border-line ps-4 ${className}`}>
       {text && (
         <>
-          <h3 className={`text-[12.5px] font-medium ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>{t('Explication')}</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('Explication')}</h3>
           <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft"><MathText text={text} className="fd-latex" /></p>
         </>
       )}

@@ -78,7 +78,7 @@ export const MessageComposer: React.FC<{
     fileAPI.delete(id).catch(() => {});
   };
 
-  if (!active) return <FakeField placeholder={placeholder} onActivate={() => setActive(true)} minHeight={minHeight} />;
+  if (deferred && !active) return <FakeField placeholder={placeholder} onActivate={() => setActive(true)} minHeight={minHeight} />;
 
   return (
     <div>
