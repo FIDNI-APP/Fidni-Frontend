@@ -12,7 +12,7 @@
  */
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigationType } from 'react-router-dom';
-import { ArrowRight, Landmark, Plus, RotateCcw, Search } from 'lucide-react';
+import { ArrowRight, Landmark, Plus, RotateCcw } from 'lucide-react';
 import { Page, EmptyState } from '@/components/space/Page';
 import { FolderAbout, FolderHeader, RelatedLinks } from '@/components/content/folders/FolderHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,7 +46,7 @@ function useScrollMemory(ready: boolean) {
   }, [key]);
 }
 
-export const FolderLoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
+const ErrorBox: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
   <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3">
     <p className="flex-1 text-[13.5px] font-medium text-[#a23b34]">{t('Les dossiers n’ont pas pu se charger. Vérifie ta connexion.')}</p>
     <button type="button" onClick={onRetry} className="fd-btn-ghost min-h-10">
@@ -120,7 +120,7 @@ const LevelsView: React.FC<{ kind: ContentKind }> = ({ kind }) => {
       <FolderHeader title={t(st.title)} count={data ? total : null}
         summary={<p>{t(st.intro)}</p>}
         actions={<CreateButton kind={kind} />} />
-      {error ? <FolderLoadError onRetry={() => setAttempt((n) => n + 1)} />
+      {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data || (authLoading && !allLevels) ? <FolderSkeleton n={4} />
           : <FolderGrid groups={groups} label={t('Niveaux – {title}', { title: t(st.title) })} />}
       {data && <LevelSommaires kind={kind} levels={data.levels.filter((lv) => lv.count > 0)} />}
@@ -237,7 +237,6 @@ function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
 }
 
 const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () => void }> = ({ kind, hub, onProgress }) => {
-  const [query, setQuery] = useState('');
   const st = SECTION_TEXT[kind];
   const section = SECTION_OF[kind];
   const location = useLocation();
@@ -280,11 +279,6 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
     }
     return g;
   }, [folders, kind, hub.unfiled, hub.level.id, st.noun, st.basePath]);
-  const normalize = (value: string) => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-  const term = normalize(query.trim());
-  const shown = !term ? groups : groups.map((g) => ({
-    ...g, items: g.items.filter((item) => [item.name, ...(item.aussi ?? [])].some((name) => normalize(name).includes(term))),
-  })).filter((g) => g.items.length > 0);
   const filled = folders.filter((f) => f.count > 0).length;
   // Où en est l'élève dans ce niveau (contenus terminés, tous chapitres confondus).
   const done = folders.reduce((n, f) => n + (f.mine?.done ?? 0), 0);
@@ -318,24 +312,11 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
       {isAuthenticated && kind !== 'lesson' && (
         <CatchUpBanner kind={kind} level={hub.level.id} onEvaluated={onProgress} />
       )}
-      {groups.length > 0 && (
-        <label className="mb-4 flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm text-ink-soft focus-within:border-brand sm:max-w-sm">
-          <Search size={16} aria-hidden />
-          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)}
-            aria-label={t('Chercher un chapitre')} placeholder={t('Chercher un chapitre…')}
-            className="min-w-0 flex-1 bg-transparent py-2 text-base text-ink outline-none" />
-        </label>
-      )}
-      {term && !shown.length ? (
-        <div role="status" className="flex flex-wrap items-center gap-3 border-y border-line py-3 text-sm text-ink-soft">
-          {t('Aucun chapitre trouvé.')}
-          <button type="button" onClick={() => setQuery('')} className="min-h-10 font-semibold text-brand-hover">{t('Effacer la recherche')}</button>
-        </div>
-      ) : !groups.length ? (
+      {folders.length === 0 ? (
         <EmptyState icon={Landmark} tone="ink" compact title={t('Aucun chapitre pour l’instant')}
           text={t('Aucun chapitre n’est encore rattaché à ce niveau.')} />
       ) : (
-        <FolderGrid groups={shown} label={t('Chapitres – {level}', { level: hub.level.name })} />
+        <FolderGrid groups={groups} label={t('Chapitres – {level}', { level: hub.level.name })} />
       )}
       {section === 'exams' && (
         <p className="mt-6 text-[13px] text-ink-faint">
@@ -365,6 +346,18 @@ const YearsView: React.FC = () => {
   }, [attempt]);
   useScrollMemory(!!data);
 
+  const groups: FolderGroup[] = data ? [{
+    title: null,
+    items: data.years.map((y) => ({
+      key: y.year ?? 'aucune',
+      name: y.year ? t('Bac {year}', { year: y.year }) : t('Année non précisée'),
+      to: yearPath(y.year),
+      count: y.count,
+      countLabel: plural(y.count, ['sujet', 'sujets']),
+      sub: y.levels.length ? y.levels.join(' · ') : undefined,
+      onOpen: () => trackAction('dossier-annee'),
+    })),
+  }] : [];
   const total = data ? data.years.reduce((n, y) => n + y.count, 0) : 0;
 
   return (
@@ -374,29 +367,13 @@ const YearsView: React.FC = () => {
       <FolderHeader title={t(NATIONAL.title)} count={data ? total : null}
         summary={<p>{t(NATIONAL.subtitle)} {t('Un dossier par année.')}</p>}
         actions={<CreateButton kind="exam" />} />
-      {error ? <FolderLoadError onRetry={() => setAttempt((n) => n + 1)} />
+      {error ? <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />
         : !data ? <FolderSkeleton n={6} />
           : data.years.length === 0 ? (
             <EmptyState icon={Landmark} tone="gold" title={t('Les sujets nationaux arrivent bientôt')}
               text={t('Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.')}
               action={<Link to="/exams" className="fd-btn-primary min-h-10">{t('Voir les devoirs surveillés')}</Link>} />
-          ) : (
-            <ul aria-label={t('Années du Bac national')} className="divide-y divide-line rounded-xl border border-line bg-white px-4 sm:px-6">
-              {data.years.map((entry) => (
-                <li key={entry.year ?? 'aucune'}>
-                  <Link to={yearPath(entry.year)} onClick={() => trackAction('dossier-annee')}
-                    className="group flex min-h-16 items-center gap-3 py-3 focus-visible:outline-brand">
-                    <span className="min-w-0 flex-1">
-                      <span className="fd-display block text-lg leading-tight text-ink group-hover:text-brand-hover">{entry.year ? t('Bac {year}', { year: entry.year }) : t('Année non précisée')}</span>
-                      {entry.levels.length > 0 && <span className="mt-1 block text-xs text-ink-soft">{entry.levels.join(' · ')}</span>}
-                    </span>
-                    <span className="fd-nums text-sm text-ink-soft">{plural(entry.count, ['sujet', 'sujets'])}</span>
-                    <ArrowRight size={16} className="shrink-0 text-brand-hover rtl:rotate-180" aria-hidden />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          ) : <FolderGrid groups={groups} label={t('Années du Bac national')} />}
     </Page>
   );
 };

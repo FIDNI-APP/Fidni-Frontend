@@ -215,18 +215,21 @@ const OnboardingProfile: React.FC = () => {
           {classLevels.map((level) => {
             const selected = isTeacher ? teachingLevels.includes(level.id) : classLevel === level.id;
             return (
-              <label key={level.id}
-                className={`relative flex min-h-[52px] cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 text-start text-[15px] font-semibold transition-colors focus-within:ring-2 focus-within:ring-brand/40 ${
-                  selected ? 'border-brand bg-brand-soft text-ink' : 'border-line bg-white text-ink-soft hover:border-ink'
-                }`}>
-                <input type={isTeacher ? 'checkbox' : 'radio'} name={isTeacher ? 'teaching-levels' : 'class-level'}
-                  value={level.id} checked={selected} className="sr-only"
-                  onChange={() => isTeacher ? toggleTeachingLevel(level.id) : pickLevel(level.id)} />
+              <button
+                key={level.id}
+                type="button"
+                role={isTeacher ? 'checkbox' : 'radio'}
+                aria-checked={selected}
+                onClick={() => (isTeacher ? toggleTeachingLevel(level.id) : pickLevel(level.id))}
+                className={`relative flex items-center justify-between gap-3 min-h-[52px] px-4 rounded-xl border font-semibold text-[15px] text-start transition-colors ${
+                  selected ? 'border-brand bg-brand-soft text-ink' : 'border-line hover:border-ink text-ink-soft bg-white'
+                }`}
+              >
                 {level.name}
                 <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'border-brand bg-brand' : 'border-[#cfcdc8]'}`}>
                   {selected && <Check className="w-3.5 h-3.5 text-white" />}
                 </span>
-              </label>
+              </button>
             );
           })}
         </div>
@@ -292,6 +295,19 @@ const OnboardingProfile: React.FC = () => {
     <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
       <Stepper current={currentStep} />
 
+      {/* Error */}
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            role="alert"
+            className="mt-5 p-4 bg-[#fdeceb] border border-[#f3c9c5] rounded-xl flex items-center gap-3">
+            <span className="w-7 h-7 bg-[#f8d7d3] rounded-full flex items-center justify-center flex-shrink-0 text-[#a23b34] text-sm font-semibold">!</span>
+            <p className="text-[#a23b34] text-sm flex-1">{error}</p>
+            <button type="button" onClick={() => setError(null)} aria-label={t('Fermer')} className="w-8 h-8 text-[#c2564f] hover:text-[#a23b34] text-lg leading-none">×</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Card */}
       <div className="fd-card mt-5 overflow-hidden">
         <div className="p-5 sm:p-8">
@@ -303,19 +319,6 @@ const OnboardingProfile: React.FC = () => {
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Error */}
-        <AnimatePresence>
-          {error && (
-            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              role="alert"
-              className="mx-5 mb-4 p-3 sm:mx-8 bg-[#fdeceb] border border-[#f3c9c5] rounded-xl flex items-center gap-3">
-              <span className="w-7 h-7 bg-[#f8d7d3] rounded-full flex items-center justify-center flex-shrink-0 text-[#a23b34] text-sm font-semibold">!</span>
-              <p className="text-[#a23b34] text-sm flex-1">{error}</p>
-              <button type="button" onClick={() => setError(null)} aria-label={t('Fermer')} className="w-8 h-8 text-[#c2564f] hover:text-[#a23b34] text-lg leading-none">×</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Navigation — in-flow, always reachable */}
         <div className="px-5 sm:px-8 py-4 border-t border-line flex items-center justify-between gap-3">
@@ -359,7 +362,7 @@ const Stepper: React.FC<{ current: number }> = ({ current }) => (
       <span className="text-sm font-medium text-ink fd-nums">{t('Étape {i} sur {n}', { i: current + 1, n: STEPS.length })}</span>
       <span className="text-sm text-ink-faint">{t(STEPS[current].title)}</span>
     </div>
-    <div className="h-1.5 bg-[#f2f1ee] rounded-full overflow-hidden" role="progressbar" aria-label={t(STEPS[current].title)} aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={current + 1}>
+    <div className="h-1.5 bg-[#f2f1ee] rounded-full overflow-hidden" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={current + 1}>
       <motion.div className="h-full bg-brand rounded-full"
         initial={{ width: 0 }}
         animate={{ width: `${((current + 1) / STEPS.length) * 100}%` }}
@@ -371,7 +374,7 @@ const Stepper: React.FC<{ current: number }> = ({ current }) => (
 // Shared step heading — title + muted subtitle.
 const StepHeading: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
   <div className="text-center">
-    <h1 className="fd-display text-ink mb-2" style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h1>
+    <h2 className="fd-display text-ink mb-2" style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h2>
     <p className="text-ink-faint text-sm">{subtitle}</p>
   </div>
 );

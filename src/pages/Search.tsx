@@ -1,7 +1,7 @@
 // Recherche (/search?q=…) : exercices, leçons et examens. Le serveur compare le texte sans accents,
 // mot par mot (titre, puis chapitre, puis texte). L'élève cherche d'abord dans son niveau (?niveau=tous
 // pour tous les niveaux) ; sans résultat, on lui propose les chapitres de son niveau.
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon, BookOpen, Loader2, RotateCcw, X } from 'lucide-react';
 import { APlusIcon } from '@/components/icons/APlusIcon';
@@ -34,7 +34,6 @@ export function Search() {
   const allLevels = searchParams.get('niveau') === 'tous';
   const levelId = myLevel && !allLevels ? myLevel.id : null;
 
-  const input = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState(submitted);
   useEffect(() => { setSearchTerm(submitted); }, [submitted]);
 
@@ -129,7 +128,6 @@ export function Search() {
 
   const clearSearch = () => {
     setSearchTerm('');
-    input.current?.focus();
     const next = new URLSearchParams(searchParams);
     next.delete('q');
     navigate(`/search${next.toString() ? `?${next}` : ''}`);
@@ -166,7 +164,7 @@ export function Search() {
   );
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO
         title={submitted ? `Recherche : ${submitted} - Fidni` : 'Recherche - Fidni'}
         description={submitted ? `Résultats de recherche pour « ${submitted} »` : 'Trouve un exercice, une leçon ou un examen.'}
@@ -174,19 +172,35 @@ export function Search() {
       />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-        <header className="mb-5 border-t-2 border-ink pt-4 sm:pt-6">
-          <h1 className="fd-display text-3xl leading-tight text-ink sm:text-4xl">{t('Recherche')}</h1>
-          <p className="mt-2 text-sm text-ink-soft">{t('Trouve un exercice, une leçon ou un examen. Pas besoin des accents : « derivee » trouve « dérivée ».')}</p>
-        </header>
+        {/* Header */}
+        <div className="mb-5">
+          <span
+            className="inline-flex items-center gap-1.5"
+            style={{
+              background: '#f2f1ee', color: '#000000',
+              padding: '4px 12px', borderRadius: 99,
+              fontSize: 11, fontWeight: 600, letterSpacing: '.04em',
+            }}
+          >
+            <SearchIcon className="w-3 h-3" /> {t('RECHERCHE')}
+          </span>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', marginTop: 10 }}>
+            {t('Recherche')}
+          </h1>
+          <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
+            {t('Trouve un exercice, une leçon ou un examen. Pas besoin des accents : « derivee » trouve « dérivée ».')}
+          </p>
+        </div>
+
         {/* Search bar */}
         <form
           onSubmit={handleSearch}
           data-tour="recherche-barre"
           role="search"
-          className="mb-4 flex items-center rounded-xl border border-line bg-white focus-within:border-brand"
+          className="fd-card flex items-center mb-4"
           style={{ padding: 6, paddingInlineStart: 14, gap: 8 }}
         >
-          <SearchIcon className="w-4 h-4 shrink-0 text-ink-soft" />
+          <SearchIcon className="w-4 h-4 shrink-0" style={{ color: '#6b6862' }} />
           <input
             type="search"
             enterKeyHint="search"
@@ -195,8 +209,12 @@ export function Search() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus={!submitted}
-            ref={input}
-            className="min-w-0 flex-1 bg-transparent py-2.5 text-[16px] text-ink outline-none"
+            className="min-w-0 flex-1"
+            style={{
+              border: 'none', outline: 'none',
+              background: 'transparent', fontSize: 15, fontFamily: 'var(--fd-sans)',
+              color: '#1a1a1a', padding: '10px 0',
+            }}
           />
           {searchTerm && (
             <button
@@ -238,10 +256,8 @@ export function Search() {
                     <button
                       key={tab.id}
                       type="button"
-                      aria-pressed={activeTab === tab.id}
-                      disabled={tab.count === 0}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`fd-pill disabled:opacity-50 ${activeTab === tab.id ? 'is-active' : ''}`}
+                      className={`fd-pill ${activeTab === tab.id ? 'is-active' : ''}`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
                         padding: '8px 14px', fontSize: 12, minHeight: 38,
@@ -261,8 +277,8 @@ export function Search() {
             {/* Loading */}
             {loading && (
               <div className="flex flex-col items-center justify-center" style={{ padding: '60px 0' }} role="status">
-                <Loader2 className="w-8 h-8 animate-spin mb-3 text-ink" />
-                <p className="text-[13px] text-ink-soft">{t('Recherche en cours…')}</p>
+                <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#1a1a1a' }} />
+                <p style={{ fontSize: 13, color: '#6b6862' }}>{t('Recherche en cours…')}</p>
               </div>
             )}
 
@@ -282,17 +298,17 @@ export function Search() {
               filteredResults.length > 0 ? (
                 <>
                   <div className="mb-4">
-                    <p className="text-[12.5px] text-ink-soft">
-                      <span className="fd-nums font-semibold text-ink">
+                    <p style={{ fontSize: 12.5, color: '#6b6862' }}>
+                      <span style={{ fontFamily: 'var(--fd-mono)', color: '#1a1a1a', fontWeight: 600 }}>
                         {filteredResults.length}
                       </span>{' '}
                       {filteredResults.length > 1 ? t('résultats pour «') : t('résultat pour «')}&nbsp;
-                      <span className="font-semibold text-ink">{submitted}</span>&nbsp;»{scope}
+                      <span style={{ color: '#000000', fontWeight: 600 }}>{submitted}</span>&nbsp;»{scope}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredResults.map(({ kind, content }) => (
-                      <div key={`${kind}-${content.id}`}>
+                    {filteredResults.map(({ kind, content }, idx) => (
+                      <div key={`${kind}-${content.id}`} className="animate-fade-up" style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}>
                         <ContentListCard content={content as unknown as ListItem} contentType={kind} />
                       </div>
                     ))}
@@ -300,10 +316,19 @@ export function Search() {
                 </>
               ) : (
                 <div className="fd-card text-center" style={{ padding: '40px 20px' }}>
-                  <h3 className="fd-display text-xl text-ink">
+                  <div
+                    className="inline-flex items-center justify-center mx-auto mb-4"
+                    style={{
+                      width: 64, height: 64, borderRadius: 16,
+                      background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)', color: '#6b6862',
+                    }}
+                  >
+                    <SearchIcon className="w-7 h-7" />
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
                     {t('Aucun résultat pour « {q} »', { q: submitted })}{scope}
                   </h3>
-                  <p className="mx-auto mt-1.5 max-w-md text-[13px] text-ink-soft">
+                  <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
                     {t('Essaie un mot plus court ou plus général (« limites », « suites »), ou parcours les chapitres.')}
                   </p>
                   {levelId && (
@@ -317,7 +342,26 @@ export function Search() {
             )}
           </>
         ) : (
-          suggestionBlock
+          <div className="fd-card" style={{ padding: '32px 20px' }}>
+            <div className="text-center">
+              <div
+                className="inline-flex items-center justify-center mx-auto mb-4"
+                style={{
+                  width: 64, height: 64, borderRadius: 16,
+                  background: 'linear-gradient(135deg,#f2f1ee,#faf9f7)', color: '#6b6862',
+                }}
+              >
+                <SearchIcon className="w-7 h-7" />
+              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
+                {t('Commence ta recherche')}
+              </h3>
+              <p style={{ fontSize: 13, color: '#6b6862', marginTop: 6 }}>
+                {t('Entre un mot-clé pour trouver des exercices, leçons ou examens.')}
+              </p>
+            </div>
+            <div className="max-w-2xl mx-auto">{suggestionBlock}</div>
+          </div>
         )}
       </div>
     </div>

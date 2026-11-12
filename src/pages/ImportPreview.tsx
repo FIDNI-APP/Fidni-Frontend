@@ -2,7 +2,6 @@
 // composants du site, solutions ouvertes. Aucune requête à l'API : la structure est injectée par le
 // script d'aperçu (window.__FIDNI_APERCU), ou lue dans le stockage local (clé « fidni:apercu »).
 import React from 'react';
-import { t } from '@/i18n';
 import ExerciseRenderer from '@/components/content/viewer/ExerciseRenderer';
 import { LessonRenderer } from '@/components/content/viewer/LessonRenderer';
 import type { FlexibleExerciseStructure } from '@/components/content/editor/FlexibleExerciseEditor';
@@ -19,14 +18,14 @@ const read = (): Preview | null => {
 export const ImportPreview: React.FC = () => {
   const data = read();
   if (!data) {
-    return <p className="p-10 text-center text-ink-faint">{t('Aucun aperçu chargé.')}</p>;
+    return <p className="p-10 text-center text-ink-faint">Aucun aperçu chargé.</p>;
   }
   return (
-    <div className="bg-paper min-h-screen text-ink py-8 px-4">
+    <div className="bg-[#faf9f7] min-h-screen py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <p className="text-[13px] font-medium text-ink-soft mb-2">{t('Aperçu avant import')} · {t({ lesson: 'Leçon', exam: 'Devoir', exercise: 'Exercice' }[data.type])}</p>
+        <p className="text-[13px] font-medium text-[#9a958c] mb-2">Aperçu avant import · {data.type}</p>
         <h1 className="fd-display text-3xl mb-6">{data.title}</h1>
-        <div className="bg-white rounded-2xl border border-line p-4 sm:p-7" id="apercu-contenu">
+        <div className="bg-white rounded-2xl border border-line p-6 sm:p-7" id="apercu-contenu">
           {data.type === 'lesson' ? (
             <LessonRenderer structure={data.structure as FlexibleLessonStructure} />
           ) : (

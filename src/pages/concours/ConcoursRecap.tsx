@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Loader2, Check, X, Lightbulb, ArrowLeft, Zap, ChevronLeft, ChevronRight, MinusCircle,
+  Loader2, Trophy, Check, X, Lightbulb, ArrowLeft, Zap, ChevronLeft, ChevronRight, MinusCircle,
 } from 'lucide-react';
 import { ConcoursContentRenderer } from './ConcoursContentRenderer';
 import {
@@ -105,6 +105,7 @@ export default function ConcoursRecapPage() {
   };
 
   const overall = Math.round(recap.score_percentage);
+  const overallColor = overall >= 75 ? '#16a34a' : overall >= 50 ? '#f59e0b' : '#dc2626';
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', paddingBottom: 60 }}>
@@ -135,43 +136,138 @@ export default function ConcoursRecapPage() {
           <ArrowLeft className="w-3.5 h-3.5" /> {t('Mon historique')}
         </button>
 
-        <section className="mb-6 border-y border-white/20 py-5 sm:py-7" aria-labelledby="recap-titre">
-          <p className="text-sm text-stone-300">{recap.concours_type.toUpperCase()} · {recap.mode === 'exam' ? t('Annale') : recap.mode === 'random_year' ? t('Année aléatoire') : t('Mix aléatoire')}</p>
-          <h1 id="recap-titre" className="fd-display mt-1 text-3xl text-white">{t('Résultat')}</h1>
-          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+        {/* Score hero */}
+        <div
+          style={{
+            background: '#1a1a1a',
+            borderRadius: 24,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+          className="mb-6 px-5 py-6 sm:px-9 sm:py-8"
+        >
+          <div aria-hidden style={{
+            position: 'absolute', insetInlineEnd: -40, bottom: -60, width: 240, height: 240,
+            borderRadius: '50%', background: 'rgba(167,139,250,.15)',
+          }} />
+          <div className="flex items-center justify-between flex-wrap gap-4" style={{ position: 'relative' }}>
             <div>
-              <p className="text-4xl font-semibold tabular-nums text-white"><span className="sr-only">{t('Score')} </span>{overall} %</p>
-              <p className="mt-1 text-sm text-stone-300">{recap.correct_count > 1 ? t('{n} bonnes réponses sur {total}', { n: recap.correct_count, total: recap.total_questions }) : t('{n} bonne réponse sur {total}', { n: recap.correct_count, total: recap.total_questions })}</p>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#b8b4ac' }}>
+                {recap.concours_type.toUpperCase()} · {recap.mode === 'exam' ? t('Annale') : recap.mode === 'random_year' ? t('Année aléatoire') : t('Mix aléatoire')}
+              </div>
+              <h1 style={{ fontSize: 28, fontWeight: 600, color: '#fff', letterSpacing: '-0.03em', marginTop: 8 }}>
+                {t('Résultat')}
+              </h1>
+              <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
+                {recap.correct_count > 1 ? t('{n} bonnes réponses sur {total}', { n: recap.correct_count, total: recap.total_questions }) : t('{n} bonne réponse sur {total}', { n: recap.correct_count, total: recap.total_questions })}
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <button onClick={() => navigate('/concours')} className="fd-btn-ghost"
+                        style={{ background: 'rgba(255,255,255,.14)', color: '#fff', border: '1px solid rgba(255,255,255,.22)' }}>
+                  <Zap className="w-3.5 h-3.5" /> {t('Nouvelle simulation')}
+                </button>
+              </div>
             </div>
-            <button type="button" onClick={() => navigate('/concours')} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/30 px-3 text-sm font-semibold text-white hover:bg-white/10">
-              <Zap className="h-4 w-4" aria-hidden /> {t('Nouvelle simulation')}
-            </button>
+            <div className="flex items-center gap-3">
+              <div
+                style={{
+                  width: 110, height: 110, borderRadius: '50%',
+                  background: `conic-gradient(${overallColor} ${overall * 3.6}deg, rgba(255,255,255,.1) 0)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <div style={{
+                  width: 92, height: 92, borderRadius: '50%',
+                  background: '#1a1a1a',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexDirection: 'column',
+                }}>
+                  <div style={{ fontSize: 26, fontWeight: 600, color: '#fff', fontFamily: 'var(--fd-mono)' }}>
+                    {overall}%
+                  </div>
+                  <div style={{ fontSize: 9, color: '#d8d4cc', fontWeight: 600 }}>
+                    {t('Score')}
+                  </div>
+                </div>
+              </div>
+              <Trophy className="w-10 h-10" style={{ color: overall >= 75 ? '#c0892f' : '#b8b4ac' }} />
+            </div>
           </div>
-        </section>
+        </div>
 
-        {recap.breakdown.length > 0 && (
-          <section className="mb-6" aria-labelledby="recap-domaines">
-            <h2 id="recap-domaines" className="mb-3 text-lg font-semibold text-white">{t('Par domaine')}</h2>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {recap.breakdown.map((b) => {
+        {/* Breakdown by domain */}
+        <div className="mb-6">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
+            <h2 style={{ fontSize: 12, color: '#b8b4ac', fontWeight: 600 }}>
+              {t('Par domaine')}
+            </h2>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)', maxWidth: 120 }} />
+          </div>
+
+          <div
+            className="p-3 sm:p-[22px]"
+            style={{
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid rgba(255,255,255,.08)',
+              borderRadius: 16,
+            }}
+          >
+            <div className="grid gap-x-6 gap-y-2 sm:gap-y-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))' }}>
+              {recap.breakdown.map((b, i) => {
                 const key = `${b.subject_id || ''}-${b.subfield_id || ''}`;
+                const pct = b.total ? Math.round((b.correct * 100) / b.total) : 0;
+                const ringColor = pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#1a1a1a';
                 const isActive = key === activeDomainKey;
                 return (
-                  <button type="button" key={key} aria-pressed={isActive}
-                    onClick={() => { setActiveDomainKey(key); setActivePos(b.positions[0] ?? null); }}
-                    className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-start focus-visible:outline-white ${isActive ? 'border-stone-300 bg-white/10' : 'border-white/20 hover:bg-white/5'}`}>
-                    <span className="min-w-0">
-                      <span className="block break-words font-semibold text-white">{b.subfield_name || b.subject_name || t('Sans matière')}</span>
-                      {b.subject_name && b.subfield_name && <span className="block text-xs text-stone-300">{b.subject_name}</span>}
-                      <span className="mt-1 block text-sm text-stone-300">{b.correct > 1 ? t('{n} sur {total} correctes', { n: b.correct, total: b.total }) : t('{n} sur {total} correcte', { n: b.correct, total: b.total })}</span>
-                    </span>
-                    <span className="shrink-0 text-base font-semibold tabular-nums text-white">{b.total ? Math.round(b.correct * 100 / b.total) : 0} %</span>
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setActiveDomainKey(key);
+                      setActivePos(b.positions[0] ?? null);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '12px 14px', borderRadius: 12,
+                      background: isActive ? 'rgba(180,176,168,.15)' : 'transparent',
+                      border: `1px solid ${isActive ? '#9a958c' : 'transparent'}`,
+                      cursor: 'pointer', textAlign: 'start',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 56, height: 56, borderRadius: '50%',
+                        background: `conic-gradient(${ringColor} ${pct * 3.6}deg, rgba(255,255,255,.1) 0)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        width: 46, height: 46, borderRadius: '50%',
+                        background: '#1a1a1a',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#fff', fontFamily: 'var(--fd-mono)' }}>{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
+                        {b.subfield_name || b.subject_name || t('Sans matière')}
+                      </div>
+                      {b.subject_name && b.subfield_name && (
+                        <div style={{ fontSize: 11, color: '#b8b4ac', marginTop: 1 }}>{b.subject_name}</div>
+                      )}
+                      <div style={{ fontSize: 11, color: '#d8d4cc', marginTop: 2 }}>
+                        {b.correct > 1 ? t('{n} sur {total} correctes', { n: b.correct, total: b.total }) : t('{n} sur {total} correcte', { n: b.correct, total: b.total })}
+                      </div>
+                    </div>
                   </button>
                 );
               })}
             </div>
-          </section>
-        )}
+          </div>
+        </div>
 
         {/* Domain detail */}
         {activeBreakdown && (
@@ -185,10 +281,21 @@ export default function ConcoursRecapPage() {
                 borderRadius: 16,
               }}
             >
-              <p className="text-xs font-medium text-stone-300">{t('Sélection des questions')}</p>
-              <h3 className="mb-4 mt-1 break-words text-lg font-semibold leading-tight text-white">
+              <div style={{ fontSize: 11, color: '#b8b4ac', fontWeight: 600, marginBottom: 6 }}>
+                {t('Domaine')}
+              </div>
+              <h3 style={{ fontSize: 22, fontWeight: 600, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                 {activeBreakdown.subfield_name || activeBreakdown.subject_name || t('Sans matière')}
               </h3>
+              <p style={{ fontSize: 13, color: '#d8d4cc', marginTop: 6 }}>
+                {activeBreakdown.correct > 1 ? t('{n} sur {total} correctes', { n: activeBreakdown.correct, total: activeBreakdown.total }) : t('{n} sur {total} correcte', { n: activeBreakdown.correct, total: activeBreakdown.total })}
+              </p>
+
+              <div style={{ height: 1, background: 'rgba(255,255,255,.08)', margin: '14px 0' }} />
+
+              <div style={{ fontSize: 11, color: '#b8b4ac', fontWeight: 600, marginBottom: 8 }}>
+                {t('Sélection des questions')}
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {activeBreakdown.positions.map(p => {
                   const ans = recap.answers[p];

@@ -9,7 +9,7 @@ import { confirmer } from '@/lib/confirmer';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Plus, Edit, Trash2, Loader2, Check, X, ListChecks, Lightbulb, Upload,
+  ArrowLeft, Plus, Edit, Trash2, Loader2, Check, X, ListChecks, Lightbulb, Upload, BarChart3,
 } from 'lucide-react';
 import {
   CONCOURS_TYPES,
@@ -18,7 +18,6 @@ import {
   type ConcoursType, type ConcoursExamListItem, type ConcoursTip,
 } from '@/lib/api/concoursApi';
 import { useAuth } from '@/contexts/AuthContext';
-import { CardsSkeleton, Page, PageHeader, Segmented } from '@/components/space/Page';
 import { SEO } from '@/components/layout/SEO';
 import { FileUpload } from '@/components/common/FileUpload';
 import CompactTipTapEditor from '@/components/editor/CompactTipTapEditor';
@@ -27,10 +26,10 @@ import StatsAdmin from './ConcoursStatsAdmin';
 import { t } from '@/i18n';
 
 export default function ConcoursAdminPage() {
-  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [tab, setTab] = useState<'exams' | 'tips' | 'stats'>('exams');
 
-  if (isLoading) return <Page width="wide"><CardsSkeleton n={2} /></Page>;
   if (!user?.is_superuser) {
     return (
       <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
@@ -43,17 +42,45 @@ export default function ConcoursAdminPage() {
   }
 
   return (
-    <Page width="wide">
+    <div style={{ minHeight: '100vh', background: '#faf9f7' }}>
       <SEO title={t('Admin Concours - Fidni')} description="" />
-      <PageHeader back={{ to: '/concours', label: t('Concours') }} title={t('Administration des concours')}
-        subtitle={t('Gère les annales, les questions, et les astuces.')}>
-        <div className="mt-4">
-          <Segmented value={tab} onChange={setTab} label={t('Rubriques des concours')}
-            options={[{ key: 'exams', label: t('Examens') }, { key: 'tips', label: t('Astuces') }, { key: 'stats', label: t('Statistiques') }]} />
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        <button onClick={() => navigate('/concours')} className="fd-btn-ghost mb-3"
+                style={{ padding: '5px 10px', fontSize: 12 }}>
+          <ArrowLeft className="w-3 h-3" /> {t('Concours')}
+        </button>
+
+        <div className="mb-5">
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
+            {t('Administration des concours')}
+          </h1>
+          <p style={{ fontSize: 13, color: '#6b6862', marginTop: 4 }}>
+            {t('Gère les annales, les questions, et les astuces.')}
+          </p>
         </div>
-      </PageHeader>
-      {tab === 'exams' ? <ExamsAdmin /> : tab === 'tips' ? <TipsAdmin /> : <StatsAdmin />}
-    </Page>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-2 mb-5">
+          <button onClick={() => setTab('exams')}
+                  className={`fd-pill ${tab === 'exams' ? 'is-active' : ''}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ListChecks className="w-3 h-3" /> {t('Examens')}
+          </button>
+          <button onClick={() => setTab('tips')}
+                  className={`fd-pill ${tab === 'tips' ? 'is-active' : ''}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Lightbulb className="w-3 h-3" /> {t('Astuces')}
+          </button>
+          <button onClick={() => setTab('stats')}
+                  className={`fd-pill ${tab === 'stats' ? 'is-active' : ''}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <BarChart3 className="w-3 h-3" /> {t('Statistiques')}
+          </button>
+        </div>
+
+        {tab === 'exams' ? <ExamsAdmin /> : tab === 'tips' ? <TipsAdmin /> : <StatsAdmin />}
+      </div>
+    </div>
   );
 }
 
@@ -99,8 +126,8 @@ function ExamsAdmin() {
       ) : (
         <div className="flex flex-col gap-2">
           {exams.map(e => (
-            <div key={e.id} className="fd-card flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3" style={{ padding: '12px 16px' }}>
-              <div className="min-w-0 basis-full sm:flex-1">
+            <div key={e.id} className="fd-card flex items-center gap-3" style={{ padding: '12px 16px' }}>
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span style={{
                     background: '#f2f1ee', color: '#000000',
@@ -125,7 +152,7 @@ function ExamsAdmin() {
               <button className="fd-btn-ghost" onClick={() => setEditingMeta(e)}>
                 <Edit className="w-3.5 h-3.5" /> {t('Modifier')}
               </button>
-              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(e)} aria-label={t('Supprimer {title}', { title: e.title })}>
+              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(e)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -259,10 +286,10 @@ function TipsAdmin() {
                   {(tp.video_url || tp.video_file) && <span style={{ fontSize: 10, color: '#9a6e1c', background: '#faf3e2', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>{t('VIDÉO')}</span>}
                 </div>
               </div>
-              <button className="fd-btn-ghost" onClick={() => setEditing(tp)} aria-label={t('Modifier')}>
+              <button className="fd-btn-ghost" onClick={() => setEditing(tp)}>
                 <Edit className="w-3.5 h-3.5" />
               </button>
-              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(tp)} aria-label={t('Supprimer {title}', { title: tp.title })}>
+              <button className="fd-btn-ghost" style={{ color: '#a23b34' }} onClick={() => onDelete(tp)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
