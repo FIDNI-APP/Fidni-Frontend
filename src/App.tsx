@@ -97,6 +97,7 @@ const ConcoursAdminPage = page(() => import('./pages/concours/ConcoursAdmin'), '
 const PilotagePage = page(() => import('./pages/Pilotage'), 'default');
 const ConcoursExamQuestionsPage = page(() => import('./pages/concours/ConcoursExamQuestions'), 'default');
 const EditorTestPage = page(() => import('./pages/concours/EditorTest'), 'default');
+const ParcoursContentEditor = page(() => import('./pages/parcours/ParcoursContentEditor'), 'ParcoursContentEditor');
 const ParcoursPage = page(() => import('./pages/parcours/ParcoursPage'), 'ParcoursPage');
 const ChapterVideo = page(() => import('./pages/learningpaths/ChapterVideo'), 'ChapterVideo');
 const ChapterQuiz = page(() => import('./pages/learningpaths/ChapterQuiz'), 'ChapterQuiz');
@@ -649,6 +650,9 @@ function App() {
                     ================================ */}
                     {/* Parcours (12/11/2026) : la carte de progression remplace l'ancienne liste et l'ancienne page
                         d'un parcours ; leurs adresses y mènent. Le lecteur vidéo et le quiz restent sous /learning-path. */}
+                    <Route path="/parcours/:id/contenu" element={
+                      <NavbarWrapper><ParcoursGate><ParcoursContentEditor /></ParcoursGate></NavbarWrapper>
+                    } />
                     <Route path="/parcours" element={
                       <NavbarWrapper>
                         <ParcoursGate><ParcoursPage /></ParcoursGate>

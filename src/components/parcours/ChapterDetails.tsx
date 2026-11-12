@@ -6,6 +6,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ClipboardCheck, Lock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { isModerator } from '@/lib/features';
 import { t } from '@/i18n';
 import { quizUrl, type Id } from '@/lib/api/parcoursApi';
 import { type ChapterStep, chapterSeconds, formatDuration } from './progression';
@@ -18,6 +20,7 @@ export const ChapterDetails: React.FC<{
   previous: ChapterStep | null;
   justDone: ReadonlySet<string>;
 }> = ({ step, pathId, previous, justDone }) => {
+  const { user } = useAuth();
   const { chapter, state, index, empty } = step;
   const seconds = chapterSeconds(chapter);
   const quiz = chapter.quiz;
@@ -36,6 +39,9 @@ export const ChapterDetails: React.FC<{
           {quiz && <> · {t('un quiz')}</>}
         </p>
       )}
+      {isModerator(user) && <Link to={`/parcours/${pathId}/contenu?chapitre=${chapter.id}`} className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-brand-hover">
+        {t('Gérer les vidéos de ce chapitre')}
+      </Link>}
       {chapter.description && <p dir="auto" className="mt-3 text-[14px] leading-relaxed text-ink-soft">{chapter.description}</p>}
 
       {!empty && state !== 'locked' && (
