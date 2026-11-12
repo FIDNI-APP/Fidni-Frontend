@@ -428,7 +428,9 @@ const ReadingResult: React.FC<{ current: AssessmentStatus; options: AssessmentSt
 /** Pied de la solution ouverte : « Tu avais trouvé ? » (une demande à l'élève, tant qu'il n'a pas répondu). */
 const ReadingFound: React.FC<{
   current?: AssessmentStatus; options?: AssessmentStatus[]; openedHere: boolean; onAssess: (s: AssessmentStatus, source: AssessSource) => void;
-}> = ({ current, options = DEFAULT_OPTIONS, openedHere, onAssess }) => {
+  /** « Une erreur ? » : au bout de la même ligne (13/11/2026 — seul sur sa ligne sous les boutons, il cassait le pied). */
+  extra?: React.ReactNode;
+}> = ({ current, options = DEFAULT_OPTIONS, openedHere, onAssess, extra }) => {
   useRegisterPrompt(!current);
   // Audit d'usage (07/11/2026) : la moitié des auto-évaluations viennent d'ici. Tant que l'élève n'a pas répondu, la
   // question prend toute la largeur, en vert pâle, au-dessus de la solution qu'il vient de lire ; ensuite, une ligne calme.
@@ -438,7 +440,8 @@ const ReadingFound: React.FC<{
       className={attend
         ? 'fd-trouve -mx-4 -my-2.5 flex w-[calc(100%+2rem)] flex-wrap items-center gap-x-4 gap-y-2.5 bg-brand-soft px-4 py-3.5 sm:-mx-5 sm:w-[calc(100%+2.5rem)] sm:px-5'
         : 'flex flex-wrap items-center gap-x-2.5 gap-y-2'}>
-      <span className={attend ? 'text-[15px] font-semibold text-ink' : 'text-[13px] font-medium text-ink-soft'}>{t('Tu avais trouvé ?')}</span>
+      {/* Téléphone : « Tu avais trouvé ? » et le drapeau sur une ligne, les boutons (pleine largeur) dessous. */}
+      <span className={`max-sm:order-[-2] max-sm:flex-1 ${attend ? 'text-[15px] font-semibold text-ink' : 'text-[13px] font-medium text-ink-soft'}`}>{t('Tu avais trouvé ?')}</span>
       <ReadingAssess current={current} options={options} fill onPick={(s) => {
         // Première réponse après avoir ouvert la solution soi-même : c'est « Tu avais trouvé ? ».
         if (openedHere && !current) {
@@ -446,9 +449,20 @@ const ReadingFound: React.FC<{
           onAssess(s, 'apres_solution');
         } else onAssess(s, 'question');
       }} />
+      {extra && <span className="-my-2 ms-auto flex max-sm:order-[-1]">{extra}</span>}
     </div>
   );
 };
+
+/** « Une erreur ? » au pied d'une solution : au toucher seulement (sur ordinateur, le drapeau est à côté de l'énoncé),
+ *  au bout de la ligne « Tu avais trouvé ? » ; l'icône seule sur un petit écran. */
+const ReportLink: React.FC<{ onReport: () => void }> = ({ onReport }) => (
+  <button type="button" onClick={(e) => { e.stopPropagation(); onReport(); }} title={t('Signaler une erreur')}
+    className="ms-auto hidden min-h-10 items-center gap-1.5 rounded-lg px-2 text-[12.5px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [@media(pointer:coarse)]:inline-flex">
+    <Flag className="h-3.5 w-3.5" aria-hidden />
+    <span className="sr-only sm:not-sr-only">{t('Une erreur ?')}</span>
+  </button>
+);
 
 /** Bouton « Voir la solution » en toutes lettres (le seul geste principal d'une question). */
 const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
@@ -499,17 +513,11 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
         <p className="mb-1 text-[12.5px] font-medium text-brand-hover">{t('Solution')}</p>
         <RenderContent content={solution} />
       </div>
-      {(footer || onReport) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-line px-4 py-2.5 sm:px-5">
-          {footer}
-          {/* Le signalement reste accessible au pied de la correction. */}
-          {onReport && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); onReport(); }}
-              className="ms-auto inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-[12.5px] font-medium text-ink-soft hover:bg-paper hover:text-ink focus-visible:outline-brand">
-              <Flag className="h-3.5 w-3.5" aria-hidden /> {t('Une erreur ?')}
-            </button>
-          )}
-        </div>
+      {footer ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-line px-4 py-2.5 sm:px-5">{footer}</div>
+      ) : onReport && (
+        // Sans auto-évaluation (visiteur) : une ligne pour le signalement seul, au toucher seulement.
+        <div className="hidden justify-end border-t border-line px-2 py-1 [@media(pointer:coarse)]:flex"><ReportLink onReport={onReport} /></div>
       )}
     </div>
   );
@@ -557,7 +565,8 @@ const ReadingQuestionBody: React.FC<{
       {hintShown && <ReadingHint hint={hint!} />}
       {hasSolution && shown && (
         <ReadingSolution solution={solution} onReport={report}
-          footer={canAssess ? <ReadingFound current={current} options={assessOptions} openedHere={openedHere} onAssess={assess} /> : undefined} />
+          footer={canAssess ? <ReadingFound current={current} options={assessOptions} openedHere={openedHere} onAssess={assess}
+            extra={report ? <ReportLink onReport={report} /> : undefined} /> : undefined} />
       )}
       {/* Fermées : dans la page sans être affichées (moteurs de recherche). */}
       {hasHint && !hintShown && <FoldedSolution html={hint?.html} />}
