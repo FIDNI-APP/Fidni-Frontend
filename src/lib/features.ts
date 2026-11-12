@@ -13,6 +13,16 @@ export function canSeeParcours(user: { is_superuser?: boolean; is_staff?: boolea
 }
 
 /**
+ * Parcours = fonctionnalité Premium (12/11/2026). Aucune offre Premium n'existe encore côté serveur : quand elle
+ * existera, l'utilisateur renvoyé par /api/auth/user/ portera `is_premium` (à ajouter au serializer), et seul ce
+ * test change. D'ici là : l'équipe, ou un compte marqué `is_premium`. La page s'affiche (menu, /parcours) dès que
+ * canSeeParcours est vrai ; ce test décide si son contenu est ouvert ou réservé (PremiumGate).
+ */
+export function hasParcoursAccess(user: { is_superuser?: boolean; is_staff?: boolean; is_premium?: boolean } | null | undefined): boolean {
+  return !!(user?.is_superuser || user?.is_staff || user?.is_premium);
+}
+
+/**
  * Page Membres (/membres : découvrir des membres, fil des abonnements) : fermée à tous depuis le 09/11/2026, gardée
  * pour plus tard. Fermée, elle n'est plus dans le menu et son adresse mène aux discussions (pages/communaute/MembresFerme) ;
  * abonnés et demandes d'abonnement se règlent depuis la fenêtre des abonnés du profil. Pour la rouvrir : true.

@@ -25,6 +25,7 @@ const SECTION_LABELS: Record<string, string> = {
   nationaux: 'Bac national',
   lessons: 'Leçons',
   'learning-path': 'Parcours',
+  parcours: 'Parcours',
   classrooms: 'Classes',
   concours: 'Concours',
   profile: 'Profil',

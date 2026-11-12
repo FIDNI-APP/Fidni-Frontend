@@ -597,3 +597,19 @@ a:active { opacity: .72; }
   .fd-lecon-aside { justify-self: end; }
 }
 @media print { .fd-lecon-aside { display: none !important; } }
+
+/* Parcours (12/11/2026) : animations discrètes, désactivées avec prefers-reduced-motion.
+   - le chemin parcouru (or) se trace à l'ouverture ; - un checkpoint tout juste validé « se pose » ;
+   - le chapitre choisi apparaît en fondu ; - la barre d'avancement glisse jusqu'à sa valeur. */
+.fd-parcours-trace { stroke-dashoffset: 1; animation: fd-parcours-trace 900ms cubic-bezier(0.22, 1, 0.36, 1) 150ms forwards; }
+@keyframes fd-parcours-trace { to { stroke-dashoffset: 0; } }
+.fd-parcours-valide { animation: fd-parcours-valide 520ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both; }
+@keyframes fd-parcours-valide { 0% { transform: scale(0.82); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.fd-parcours-panneau { animation: fd-parcours-panneau 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fd-parcours-panneau { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.fd-parcours-barre { transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .fd-parcours-trace { animation: none; stroke-dashoffset: 0; }
+  .fd-parcours-valide, .fd-parcours-panneau { animation: none; }
+  .fd-parcours-barre { transition: none; }
+}

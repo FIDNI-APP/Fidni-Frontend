@@ -78,7 +78,7 @@ const WORK_GROUP: NavGroup = {
   tour: 'nav-travailler',
   items: [
     { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], exclude: NEW_CONTENT, levels: '/lessons' },
-    { to: '/learning-path', label: 'Parcours', icon: Route, match: ['/learning-path'] },
+    { to: '/parcours', label: 'Parcours', icon: Route, match: ['/parcours', '/learning-path'] },
     { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], exclude: NEW_CONTENT, levels: '/exercises' },
     { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux', ...NEW_CONTENT], levels: '/exams' },
     { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
@@ -273,7 +273,7 @@ const SidebarInner: React.FC<{
 
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
-    const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/learning-path') };
+    const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/parcours') };
     if (!isAuthenticated) return [HOME_GROUP, work, { ...COMMUNITY_GROUP, items: COMMUNITY_GROUP.items.filter((it) => !it.membres) }];
     if (teacherTools) {
       // « Ajouter un contenu » : l'équipe seulement pour l'instant (12/10/2026).

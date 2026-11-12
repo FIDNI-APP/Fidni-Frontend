@@ -97,8 +97,7 @@ const ConcoursAdminPage = page(() => import('./pages/concours/ConcoursAdmin'), '
 const PilotagePage = page(() => import('./pages/Pilotage'), 'default');
 const ConcoursExamQuestionsPage = page(() => import('./pages/concours/ConcoursExamQuestions'), 'default');
 const EditorTestPage = page(() => import('./pages/concours/EditorTest'), 'default');
-const LearningPathList = page(() => import('./pages/learningpaths/LearningPathList'), 'LearningPathList');
-const LearningPathDetail = page(() => import('./pages/learningpaths/LearningPathDetail'), 'LearningPathDetail');
+const ParcoursPage = page(() => import('./pages/parcours/ParcoursPage'), 'ParcoursPage');
 const ChapterVideo = page(() => import('./pages/learningpaths/ChapterVideo'), 'ChapterVideo');
 const ChapterQuiz = page(() => import('./pages/learningpaths/ChapterQuiz'), 'ChapterQuiz');
 const CreatePathChapter = page(() => import('./pages/learningpaths/CreatePathChapter'), 'CreatePathChapter');
@@ -218,6 +217,15 @@ const ParcoursGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { user, isLoading } = useAuth();
   if (isLoading) return <PageLoader />;
   return canSeeParcours(user) ? <>{children}</> : <NotFound />;
+};
+
+/** Conserve le parcours et les filtres des anciennes adresses partagées. */
+const RedirectParcours = () => {
+  const { id } = useParams();
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  if (id) params.set('parcours', id);
+  return <Navigate to={`/parcours${params.size ? '?' + params : ''}`} replace />;
 };
 
 /** /learning-paths/… → /learning-path/… (liens déjà partagés ou en favoris). */
@@ -639,16 +647,15 @@ function App() {
                     {/* ================================
                         LEARNING PATHS
                     ================================ */}
-                    <Route path="/learning-path" element={
+                    {/* Parcours (12/11/2026) : la carte de progression remplace l'ancienne liste et l'ancienne page
+                        d'un parcours ; leurs adresses y mènent. Le lecteur vidéo et le quiz restent sous /learning-path. */}
+                    <Route path="/parcours" element={
                       <NavbarWrapper>
-                        <ParcoursGate><LearningPathList /></ParcoursGate>
+                        <ParcoursGate><ParcoursPage /></ParcoursGate>
                       </NavbarWrapper>
                     } />
-                    <Route path="/learning-path/:id" element={
-                      <NavbarWrapper>
-                        <ParcoursGate><LearningPathDetail /></ParcoursGate>
-                      </NavbarWrapper>
-                    } />
+                    <Route path="/learning-path" element={<RedirectParcours />} />
+                    <Route path="/learning-path/:id" element={<RedirectParcours />} />
                     <Route path="/learning-path/:pathId/chapters/:chapterId/videos/:videoId" element={
                       <NavbarWrapper showFooter={false}>
                         <ParcoursGate><ChapterVideo /></ParcoursGate>

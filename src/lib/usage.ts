@@ -57,6 +57,7 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/complete-profile', label: 'Compléter son profil', group: 'Profil' },
   { pattern: '/classrooms', label: 'Classes', group: 'Classes' },
   { pattern: '/classrooms/:id', label: 'Une classe', group: 'Classes' },
+  { pattern: '/parcours', label: 'Parcours', group: 'Parcours' },
   { pattern: '/learning-path', label: 'Parcours', group: 'Parcours' },
   { pattern: '/learning-path/:id', label: 'Un parcours', group: 'Parcours' },
   { pattern: '/learning-path/:pathId/chapters/:chapterId/videos/:videoId', label: 'Vidéo d’un parcours', group: 'Parcours' },
