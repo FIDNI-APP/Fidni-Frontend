@@ -100,17 +100,13 @@ export const FavorisPanel: React.FC<{
 }> = ({ state, inNotebooks, exercisesTo, lessonsTo, hasLevel, onNotebookChanged }) => {
   const { items, remove } = state;
   const [query, setQuery] = useState('');
-  const [kind, setKind] = useState<ListKind | 'all'>('all');
   const [ranging, setRanging] = useState<SavedItem | null>(null);
 
-  const available = GROUPS.filter((group) => items?.some((item) => item.kind === group.kind));
-  const activeKind = available.some((group) => group.kind === kind) ? kind : 'all';
   const shown = useMemo(() => {
     const q = fold(query.trim());
-    const selected = activeKind === 'all' ? items : items?.filter((x) => x.kind === activeKind);
-    if (!q || !selected) return selected;
-    return selected.filter((x) => fold(`${x.title ?? ''} ${(x.chapters ?? []).map((c) => c.name).join(' ')}`).includes(q));
-  }, [items, query, activeKind]);
+    if (!q || !items) return items;
+    return items.filter((x) => fold(`${x.title ?? ''} ${(x.chapters ?? []).map((c) => c.name).join(' ')}`).includes(q));
+  }, [items, query]);
 
   if (items === null) return <CardsSkeleton n={4} className="sm:grid-cols-2" />;
 
@@ -125,19 +121,7 @@ export const FavorisPanel: React.FC<{
 
   return (
     <div className="flex flex-col gap-10" data-tour="favoris-liste">
-      {available.length > 1 && (
-        <div role="group" aria-label={t('Type de contenu')} className="-mb-5 flex flex-wrap gap-1.5">
-          {[{ kind: 'all' as const, title: 'Tout' }, ...available].map((group) => (
-            <button key={group.kind} type="button" aria-pressed={activeKind === group.kind} onClick={() => setKind(group.kind)}
-              className={activeKind === group.kind
-                ? 'min-h-10 rounded-lg bg-brand-soft px-3 text-sm font-semibold text-brand-hover'
-                : 'min-h-10 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-white'}>
-              {t(group.title)}
-            </button>
-          ))}
-        </div>
-      )}
-      {(items.length >= SEARCH_FROM || query.length > 0) && (
+      {items.length >= SEARCH_FROM && (
         <div className="relative -mb-4" data-tour="favoris-recherche">
           <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}

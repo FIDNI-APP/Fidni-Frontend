@@ -367,14 +367,10 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
       {/* Barre d'outils (écran seulement) */}
       <div className="fp-toolbar">
         <div className="fp-toolbar-inner">
-          <button className="fp-back fp-return" onClick={goBack} aria-label="Retour">
-            <ArrowLeft className="w-4 h-4" /> <span>Retour</span>
+          <button className="fp-back" onClick={goBack}>
+            <ArrowLeft className="w-4 h-4" /> Retour
           </button>
           <div className="fp-toolbar-title">Aperçu du PDF</div>
-          <button className="fd-btn-primary fp-download" onClick={handleDownload} disabled={preparing} data-tour="pdf-telecharger">
-            {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Télécharger le PDF
-          </button>
           <div className="fp-toolbar-actions">
             <button className={`fp-back ${showCustomize ? 'is-on' : ''}`} onClick={() => (guest ? openSignup('signup') : setShowCustomize((v) => !v))} data-tour="pdf-personnaliser"
               aria-expanded={showCustomize}>
@@ -386,17 +382,21 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
               </label>
             )}
             <div className="fp-seg" role="group" aria-label="Mise en page" title="Tenir sur une page : texte, interlignes et marges se resserrent (jamais sous 9 pt)">
-              <button aria-pressed={!fitOnePage} className={!fitOnePage ? 'is-active' : ''} onClick={() => setCustom({ onePage: false })}>Normale</button>
-              <button aria-pressed={fitOnePage} className={fitOnePage ? 'is-active' : ''} onClick={() => setCustom({ onePage: true })}>Tenir sur 1 page</button>
+              <button className={!fitOnePage ? 'is-active' : ''} onClick={() => setCustom({ onePage: false })}>Normale</button>
+              <button className={fitOnePage ? 'is-active' : ''} onClick={() => setCustom({ onePage: true })}>Tenir sur 1 page</button>
             </div>
             {anySolution && (
               <div className="fp-seg" role="group" aria-label="Solutions" data-tour="pdf-corrige">
                 {([['none', 'Sans corrigé'], ['end', 'Corrigé à la fin'], ['inline', 'Sous chaque question']] as const).map(([m, label]) => (
-                  <button key={m} aria-pressed={effectiveMode === m} className={effectiveMode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{label}</button>
+                  <button key={m} className={effectiveMode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{label}</button>
                 ))}
               </div>
             )}
             <TourHelpButton style={{ width: 34, height: 34 }} />
+            <button className="fd-btn-primary" onClick={handleDownload} disabled={preparing} data-tour="pdf-telecharger">
+              {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Télécharger le PDF
+            </button>
           </div>
         </div>
         <p className="fp-hint">
@@ -493,24 +493,14 @@ const styles = () => `
     background: rgba(250, 249, 247, .96); border-bottom: 1px solid #e7e3dc; backdrop-filter: blur(6px); }
   .fp-toolbar-inner { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .fp-toolbar-title { font-weight: 700; font-size: 14px; color: #1a1a1a; }
-  .fp-download { margin-inline-start: auto; }
-  .fp-toolbar-actions { width: 100%; padding-top: 9px; border-top: 1px solid #e7e3dc; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .fp-toolbar-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .fp-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #6b6862;
     padding: 7px 10px; border-radius: 10px; border: 1px solid #e7e3dc; background: #fff; }
   .fp-back:hover { color: #1a1a1a; }
   .fp-seg { display: inline-flex; background: #f2f1ee; border-radius: 10px; padding: 3px; }
   .fp-seg button { font-size: 12.5px; padding: 6px 10px; border-radius: 8px; color: #6b6862; }
   .fp-seg button.is-active { background: #fff; color: #1a1a1a; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
-  @media screen and (max-width: 640px) {
-    .fp-toolbar { position: static; margin-bottom: 16px; }
-    .fp-toolbar-inner, .fp-toolbar-actions { gap: 6px; }
-    .fp-toolbar-title { flex: 1; }
-    .fp-return { width: 40px; justify-content: center; }
-    .fp-return span { display: none; }
-    .fp-seg { max-width: 100%; flex-wrap: wrap; }
-    .fp-back, .fp-seg button { min-height: 38px; }
-  }
-  .fp-hint { max-width: 1040px; margin: 6px auto 0; font-size: 12px; color: #706c65; }
+  .fp-hint { max-width: 1040px; margin: 6px auto 0; font-size: 12px; color: #9a958c; }
   .fp-back.is-on { border-color: #1a7a4a; color: #15633c; }
   .fp-pagecount { font-weight: 600; color: #15633c; }
   .fp-pagecount.is-warn { color: #9a6e1c; }

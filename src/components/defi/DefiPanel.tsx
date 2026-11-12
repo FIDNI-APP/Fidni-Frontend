@@ -36,7 +36,7 @@ const Texte: React.FC<{ texte: string; className?: string }> = ({ texte, classNa
   </div>
 );
 
-export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean; showArchivesLink?: boolean }> = ({ defi: initial, compact = false, showArchivesLink = true }) => {
+export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean }> = ({ defi: initial, compact = false }) => {
   const { isAuthenticated } = useAuth();
   const openSignup = useOpenSignup('defi');
   const [defi, setDefi] = useState<Defi>(initial);
@@ -143,7 +143,7 @@ export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean; showArchivesLi
   }
 
   return (
-    <section aria-label={t(defi.du_jour ? 'Défi du jour' : 'Défi précédent')} data-tour="home-defi" className="rounded-xl border border-line border-t-[3px] border-t-gold bg-white p-4 sm:p-6">
+    <section aria-label={t('Défi du jour')} data-tour="home-defi" className="rounded-2xl border border-line bg-white p-4 sm:p-6">
       <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <p className="text-[12.5px] font-semibold text-gold-strong">
           {compact ? t('Défi du jour') : dateDefi(defi.date)}
@@ -155,7 +155,7 @@ export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean; showArchivesLi
           </p>
         )}
       </header>
-      <h2 dir="auto" lang="fr" className="fd-display mt-2 text-balance text-2xl leading-tight text-ink sm:text-[28px]">{defi.titre}</h2>
+      <h2 dir="auto" lang="fr" className="fd-display mt-1 text-[20px] leading-tight text-ink [text-wrap:balance]">{defi.titre}</h2>
       <p className="mt-1.5 inline-flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-ink-faint">
         <span className="sr-only">{t('Difficulté :')} </span>
         <DifficultyBars level={niveau.level} total={4} size="0.85em" />
@@ -178,10 +178,7 @@ export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean; showArchivesLi
 
       {!fini ? (
         <>
-          <form onSubmit={repondre} className="mt-5 border-t border-line pt-4">
-            <p className="fd-nums mb-2 text-xs font-medium text-ink-soft">
-              {defi.essais_restants === 1 ? t('1 essai restant') : t('{n} essais restants', { n: defi.essais_restants })}
-            </p>
+          <form onSubmit={repondre} className="mt-5">
             <label htmlFor={`defi-${defi.date}`} dir="auto" lang="fr" className="block text-[13px] font-medium text-ink-soft">{defi.consigne}</label>
             <div className="mt-1.5 flex gap-2">
               <input id={`defi-${defi.date}`} ref={champ} value={saisie} onChange={(e) => { setSaisie(e.target.value); setMessage(null); }}
@@ -237,7 +234,7 @@ export const DefiPanel: React.FC<{ defi: Defi; compact?: boolean; showArchivesLi
         </div>
       )}
 
-      {showArchivesLink && defi.du_jour && (
+      {defi.du_jour && (
         <div className="mt-3 border-t border-line pt-2">
           <Link to="/defis" onClick={() => trackAction('defi-archives')} className="inline-flex min-h-10 items-center gap-0.5 rounded-lg text-[13.5px] font-medium text-ink-soft hover:text-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
             {t('Défis précédents')} <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden />

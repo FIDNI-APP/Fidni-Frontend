@@ -58,7 +58,8 @@ const SchoolHead: React.FC<{ id: ConcoursType; label: string; status: React.Reac
 const SchoolCard: React.FC<{
   id: ConcoursType;
   label: string;
-  count: number;
+  /** null : pas encore chargé (ou chargement raté). */
+  count: number | null;
   active: boolean;
   onFilter: () => void;
   onSimulate: () => void;
@@ -67,11 +68,11 @@ const SchoolCard: React.FC<{
 
   // Pas (encore) d'annale : une carte calme, sans bouton qui ne mène nulle part.
   if (!count) {
-    const status = (
+    const status = count === 0 ? (
       <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-semibold text-gold-strong ring-1 ring-gold-line">
         <Hourglass className="h-3.5 w-3.5" aria-hidden /> {t('Bientôt')}<span className="sr-only"> {t(': annales en préparation')}</span>
       </span>
-    );
+    ) : null;
     return (
       <li className={`rounded-2xl border border-line bg-white ${layout}`}>
         <SchoolHead id={id} label={label} status={status} />
@@ -208,6 +209,7 @@ export default function ConcoursListPage() {
       )}
 
       <div className="flex flex-col gap-10">
+        {/* Aucune annale en ligne : le message d'abord (avec une vraie piste), les écoles ensuite. */}
         {empty && (
           <EmptyState icon={Hourglass} tone="gold" title={t('Les annales arrivent bientôt')}
             text={t('On prépare les sujets de l’ENSA, de l’ENSAM et de médecine, avec leurs corrigés et des simulations chronométrées. En attendant, le Bac national est le meilleur entraînement.')}
@@ -223,17 +225,17 @@ export default function ConcoursListPage() {
             ) : undefined} />
         )}
 
-        {exams && exams.length > 0 && <Section id="ecoles" title={t('Les écoles')}>
+        <Section id="ecoles" title={t('Les écoles')}>
           <ul className="grid gap-3 md:grid-cols-3" data-tour="concours-types">
             {CONCOURS_TYPES.map((c) => (
               <SchoolCard key={c.id} id={c.id} label={t(c.label)}
-                count={counts[c.id] ?? 0}
+                count={exams === null ? null : counts[c.id] ?? 0}
                 active={school === c.id}
                 onFilter={() => setFilter({ concours: school === c.id ? null : c.id })}
                 onSimulate={() => (isAuthenticated ? setShowSimModal(c.id) : navigate('/login'))} />
             ))}
           </ul>
-        </Section>}
+        </Section>
 
         {exams === null ? (
           !failed && <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />

@@ -26,10 +26,6 @@ const levelId = (cl: unknown): number | null => {
 
 export const DiscussionForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  return <DiscussionEditor key={id ?? 'new'} id={id} />;
-};
-
-const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
   const editing = !!id;
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -44,7 +40,6 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
   const [initialBody, setInitialBody] = useState<string | null>(editing ? null : '');
   const [fileIds, setFileIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,10 +47,10 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
   }, []);
   // Niveau de l'auteur par défaut.
   useEffect(() => {
-    if (editing || level || !user) return;
+    if (editing || level) return;
     const own = levelId(user?.profile?.class_level);
     setLevel(own ? String(own) : 'tous');
-  }, [user, editing, level]);
+  }, [user, editing]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Contenu déjà tagué (« ?contenu= »).
   useEffect(() => {
@@ -69,17 +64,13 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
 
   // Modifier : la discussion telle qu'elle est.
   useEffect(() => {
-    if (!id || !isAuthenticated) return;
-    let alive = true;
-    setError(null);
-    getDiscussion(id).then((d) => {
-      if (!alive) return;
+    if (!editing) return;
+    getDiscussion(id!).then((d) => {
       if (d.genre === 'commentaire') { navigate(d.url, { replace: true }); return; }
       setTitle(d.title); setSalon(d.salon); setTags(d.tags); setBody(d.body); setInitialBody(d.body);
       setLevel(d.class_level ? String(d.class_level.id) : 'tous');
-    }).catch(() => { if (alive) setError(t('La discussion n’a pas pu être chargée.')); });
-    return () => { alive = false; };
-  }, [id, isAuthenticated, loadAttempt, navigate]);
+    }).catch(() => setError(t('La discussion n’a pas pu être chargée.')));
+  }, [id, editing, navigate]);
 
   if (!isLoading && !isAuthenticated) {
     return (
@@ -92,19 +83,6 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
     );
   }
 
-  if (isLoading || (editing && initialBody === null)) {
-    return (
-      <Page width="narrow">
-        {error ? (
-          <div role="alert" className="space-y-3 border-t-2 border-ink py-4">
-            <p className="font-semibold text-ink">{error}</p>
-            <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setLoadAttempt((n) => n + 1)}>{t('Réessayer')}</button>
-            <Link to="/discussions" className="ms-3 text-sm text-brand-hover">{t('Discussions')}</Link>
-          </div>
-        ) : <div role="status" aria-label={t('Chargement')} className="h-32 animate-pulse rounded-xl bg-white" />}
-      </Page>
-    );
-  }
   const cleanTitle = title.replace(/\s+/g, ' ').trim();
   const ready = cleanTitle.length >= TITLE_MIN && cleanTitle.length <= TITLE_MAX && !busy;
 
@@ -140,36 +118,27 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
         {editing ? t('Modifier la discussion') : t('Nouvelle discussion')}
       </h1>
 
-      <div className="space-y-5 border-t-2 border-ink pt-5">
+      <div className="space-y-6 rounded-2xl border border-line bg-white p-4 sm:p-6">
         <div>
           <label htmlFor="disc-titre" className={label}>{t('Titre')}</label>
-          <input id="disc-titre" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TITLE_MAX} minLength={TITLE_MIN} aria-describedby="disc-aide-titre"
+          <input id="disc-titre" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TITLE_MAX}
             placeholder={t('Ex. : Limite en +∞ : comment lever la forme ∞ − ∞ ?')}
             className="h-12 w-full rounded-xl border border-line bg-white px-3.5 text-[15px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20" />
-          <p id="disc-aide-titre" className="fd-nums mt-1 flex justify-between gap-2 text-xs text-ink-soft">
-            <span>{t('{n} caractères minimum', { n: TITLE_MIN })}</span><span>{cleanTitle.length} / {TITLE_MAX}</span>
-          </p>
-        </div>
-
-        <div>
-          <p className={label}>{t('Message')}</p>
-          <MessageComposer initial={initialBody ?? ''} attachments={!editing} minHeight="140px"
-            placeholder={t('Ton message… (formules entre $ $, @pseudo pour mentionner)')}
-            submitLabel="" onChange={setBody} onFilesChange={setFileIds} />
+          <p className="mt-1 text-end text-[12px] text-ink-faint fd-nums">{cleanTitle.length} / {TITLE_MAX}</p>
         </div>
 
         <fieldset>
           <legend className={label}>{t('Salon')}</legend>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {SALONS.map((s) => {
               const Ico = s.icon;
               const active = salon === s.key;
               return (
                 <label key={s.key}
-                  className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 focus-within:ring-2 focus-within:ring-brand transition-colors ${
-                    active ? 'border-brand bg-brand-soft' : 'border-line bg-white hover:border-ink-soft'}`}>
+                  className={`flex cursor-pointer flex-col items-start gap-1.5 rounded-xl border px-3 py-2.5 transition-colors ${
+                    active ? 'border-ink bg-[#faf9f7]' : 'border-line hover:border-[#cfc9bf]'}`}>
                   <input type="radio" name="salon" value={s.key} checked={active} onChange={() => setSalon(s.key)} className="sr-only" />
-                  <span className={`flex h-5 w-5 items-center justify-center rounded ${s.tone}`}><Ico className="h-4 w-4" /></span>
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${s.tone}`}><Ico className="h-4 w-4" /></span>
                   <span className={`text-[13.5px] font-semibold ${active ? 'text-ink' : 'text-ink-soft'}`}>{t(s.label)}</span>
                 </label>
               );
@@ -192,6 +161,17 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
         <div>
           <p className={label}>{t('Leçons, exercices ou examens concernés')}</p>
           <ContentTagPicker value={tags} onChange={setTags} />
+        </div>
+
+        <div>
+          <p className={label}>{t('Message')}</p>
+          {initialBody === null ? (
+            <div className="h-24 animate-pulse rounded-xl border border-line bg-[#faf9f7]" />
+          ) : (
+            <MessageComposer initial={initialBody} attachments={!editing} minHeight="140px"
+              placeholder={t('Ton message… (formules entre $ $, @pseudo pour mentionner)')}
+              submitLabel="" onChange={setBody} onFilesChange={setFileIds} />
+          )}
         </div>
 
         {error && <p role="alert" className="rounded-xl border border-[#f0d4cf] bg-[#fbf1ef] px-3 py-2.5 text-[13px] text-[#9c3b2e]">{error}</p>}

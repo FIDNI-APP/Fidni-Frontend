@@ -1,5 +1,4 @@
 // src/components/AuthModal.tsx
-import { PasswordField } from '@/components/auth/PasswordField';
 import LogoFidni from '@/assets/logo-fidni.svg';
 import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import React, { useState, useEffect } from 'react';
@@ -330,7 +329,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
 
         {/* Tabs (masqués pendant l'étape « Encore une chose » de Google) */}
         <div className={`flex border-b border-line ${googleConsent ? 'hidden' : ''}`}>
-          <button type="button" onClick={() => switchTab('login')} className={tabClass(activeTab === 'login')}>
+          <button onClick={() => switchTab('login')} className={tabClass(activeTab === 'login')}>
             <span className="flex items-center justify-center">
               <LogIn className="w-4 h-4 me-2" />
               {t('Connexion')}
@@ -339,7 +338,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
               <motion.div layoutId="authActiveTab" className="absolute bottom-0 start-0 end-0 h-0.5 bg-brand" />
             )}
           </button>
-          <button type="button" onClick={() => switchTab('signup')} className={tabClass(activeTab === 'signup')}>
+          <button onClick={() => switchTab('signup')} className={tabClass(activeTab === 'signup')}>
             <span className="flex items-center justify-center">
               <UserPlus className="w-4 h-4 me-2" />
               {t('Inscription')}
@@ -355,7 +354,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
           <AnimatePresence>
             {error && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                role="alert" className="mb-4 p-3 bg-[#fdeceb] border border-[#f3c9c5] text-[#a23b34] rounded-lg flex items-start">
+                className="mb-4 p-3 bg-[#fdeceb] border border-[#f3c9c5] text-[#a23b34] rounded-lg flex items-start">
                 <AlertCircle className="w-5 h-5 mt-0.5 me-2 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </motion.div>
@@ -512,7 +511,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-ink-faint" />
                       </div>
-                      <PasswordField id="password" name="password" value={formValues.password}
+                      <input type="password" id="password" name="password" value={formValues.password}
                         onChange={handleInputChange} required autoComplete="current-password"
                         placeholder="••••••••" className={inputClass} />
                     </div>
@@ -565,7 +564,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-ink-faint" />
                       </div>
-                      <PasswordField id="signupPassword" name="password" value={formValues.password}
+                      <input type="password" id="signupPassword" name="password" value={formValues.password}
                         onChange={handleInputChange} required autoComplete="new-password" minLength={8}
                         placeholder="••••••••" className={inputClass} aria-describedby="signupPasswordHint" />
                     </div>
@@ -580,7 +579,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                       <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-ink-faint" />
                       </div>
-                      <PasswordField id="confirmPassword" name="confirmPassword" value={formValues.confirmPassword}
+                      <input type="password" id="confirmPassword" name="confirmPassword" value={formValues.confirmPassword}
                         onChange={handleInputChange} required autoComplete="new-password"
                         placeholder="••••••••" className={inputClass} />
                     </div>

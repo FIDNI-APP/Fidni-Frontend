@@ -1,5 +1,3 @@
-import { PasswordField } from '@/components/auth/PasswordField';
-import { isAxiosError } from 'axios';
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, CheckCircle2, XCircle, ArrowRight, Lock, KeyRound } from 'lucide-react';
@@ -38,11 +36,10 @@ export const ResetPassword: React.FC = () => {
     try {
       await confirmPasswordReset(uid, token, password);
       setState('success');
-    } catch (err) {
-      const response = isAxiosError<{ code?: string; error?: string }>(err) ? err.response : undefined;
-      const data = response?.data;
+    } catch (err: any) {
+      const data = err?.response?.data;
       if (data?.code === 'token_invalid') setState('invalid');
-      else if (response?.status === 429) setError(t('Trop de tentatives. Patiente quelques minutes.'));
+      else if (err?.response?.status === 429) setError(t('Trop de tentatives. Patiente quelques minutes.'));
       else setError(data?.error || t('Impossible de changer le mot de passe. Réessaie.'));
     } finally {
       setSubmitting(false);
@@ -50,9 +47,9 @@ export const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8 sm:py-16">
+    <div className="max-w-md mx-auto px-4 py-16 sm:py-24">
       <SEO title="Nouveau mot de passe – Fidni" description="Choisir un nouveau mot de passe pour un compte Fidni." noindex />
-      <div className="fd-card border-t-[3px] border-t-brand p-5 sm:p-8">
+      <div className="fd-card p-8">
         {state === 'form' && (
           <>
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-soft flex items-center justify-center">
@@ -69,7 +66,7 @@ export const ResetPassword: React.FC = () => {
                   <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-ink-faint" />
                   </div>
-                  <PasswordField id="newPassword" value={password} onChange={(e) => setPassword(e.target.value)}
+                  <input type="password" id="newPassword" value={password} onChange={(e) => setPassword(e.target.value)}
                     required minLength={8} autoComplete="new-password" autoFocus placeholder="••••••••"
                     className={inputClass} aria-describedby="newPasswordHint" />
                 </div>
@@ -83,7 +80,7 @@ export const ResetPassword: React.FC = () => {
                   <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-ink-faint" />
                   </div>
-                  <PasswordField id="confirmNewPassword" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+                  <input type="password" id="confirmNewPassword" value={confirm} onChange={(e) => setConfirm(e.target.value)}
                     required autoComplete="new-password" placeholder="••••••••" className={inputClass} />
                 </div>
               </div>

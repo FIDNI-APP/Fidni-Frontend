@@ -1002,13 +1002,7 @@ export default function Pilotage() {
         </div>
       </header>
 
-      <label className="mb-5 flex items-center justify-between gap-3 border-y border-line py-2 sm:hidden">
-        <span className="text-sm font-medium text-ink-soft">Section du pilotage</span>
-        <select value={tab} onChange={(e) => setParam('onglet', e.target.value)} className="min-h-10 min-w-0 max-w-[60%] rounded-lg border border-line bg-white px-2 text-sm font-semibold text-ink">
-          {tabs.map((item) => <option key={item.key} value={item.key}>{item.label}{item.badge ? ' (' + item.badge + ')' : ''}</option>)}
-        </select>
-      </label>
-      <nav role="tablist" aria-label="Sections du pilotage" className="mb-5 hidden gap-1 sm:flex overflow-x-auto border-b border-line">
+      <nav role="tablist" aria-label="Sections du pilotage" className="mb-5 flex gap-1 overflow-x-auto border-b border-line">
         {tabs.map((t) => (
           <button key={t.key} role="tab" type="button" aria-selected={tab === t.key} onClick={() => setParam('onglet', t.key)}
             className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[14px] font-medium transition-colors ${tab === t.key ? 'border-brand text-ink' : 'border-transparent text-ink-faint hover:text-ink'}`}>

@@ -58,8 +58,6 @@ const TipCard: React.FC<{ tip: ConcoursTip }> = ({ tip }) => (
 export function ConcoursTipsListPage() {
   const [tips, setTips] = useState<ConcoursTip[] | null>(null);
   /** Nombre d'astuces sans filtre (premier chargement) : sans astuce, pas de filtres à montrer. */
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
   const [total, setTotal] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -80,7 +78,6 @@ export function ConcoursTipsListPage() {
   useEffect(() => {
     let alive = true;
     setTips(null);
-    setFailed(false);
     const params: { concours_type?: ConcoursType; subject?: number; search?: string } = {};
     if (filterType) params.concours_type = filterType;
     if (filterSubjectId) params.subject = filterSubjectId;
@@ -91,9 +88,9 @@ export function ConcoursTipsListPage() {
         setTips(data);
         if (!filterType && !filterSubjectId && !query) setTotal(data.length);
       })
-      .catch((e) => { console.error(e); if (alive) setFailed(true); });
+      .catch((e) => { console.error(e); if (alive) setTips([]); });
     return () => { alive = false; };
-  }, [filterType, filterSubjectId, query, attempt]);
+  }, [filterType, filterSubjectId, query]);
 
   const filtered = !!(filterType || filterSubjectId || query);
   const clear = () => { setSearch(''); setQuery(''); setFilterType(null); setFilterSubjectId(null); };
@@ -134,12 +131,7 @@ export function ConcoursTipsListPage() {
           </div>
         )}
 
-        {failed ? (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3">
-            <p className="text-sm text-ink-soft">{t('Une partie de la page n’a pas pu se charger. Vérifie ta connexion.')}</p>
-            <button type="button" className="fd-btn-ghost min-h-10" onClick={() => setAttempt((n) => n + 1)}>{t('Réessayer')}</button>
-          </div>
-        ) : tips === null ? <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+        {tips === null ? <CardsSkeleton n={3} className="sm:grid-cols-2 lg:grid-cols-3" />
           : tips.length === 0 ? (
             filtered ? (
               <EmptyState compact icon={SearchX} tone="ink" title={t('Aucune astuce ne correspond')}

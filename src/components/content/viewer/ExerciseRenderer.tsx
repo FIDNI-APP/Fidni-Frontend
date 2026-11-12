@@ -452,7 +452,7 @@ const ReadingFound: React.FC<{
 
 /** Bouton « Voir la solution » en toutes lettres (le seul geste principal d'une question). */
 const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
-  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} aria-label={isOpen ? t('Masquer la solution') : t('Voir la solution')} data-tour="solution"
+  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} data-tour="solution"
     className={`inline-flex h-10 items-center gap-1.5 rounded-full ps-3 pe-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
       isOpen ? 'bg-[#f2f1ee] text-ink-soft hover:bg-line' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
     {isOpen ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
@@ -502,10 +502,10 @@ const ReadingSolution: React.FC<{ solution?: ContentBlock; footer?: React.ReactN
       {(footer || onReport) && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-line px-4 py-2.5 sm:px-5">
           {footer}
-          {/* Le signalement reste accessible au pied de la correction. */}
+          {/* Au toucher, le drapeau de la question est ici (pas à côté de l'énoncé). */}
           {onReport && (
             <button type="button" onClick={(e) => { e.stopPropagation(); onReport(); }}
-              className="ms-auto inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-[12.5px] font-medium text-ink-soft hover:bg-paper hover:text-ink focus-visible:outline-brand">
+              className="ms-auto hidden h-10 items-center gap-1.5 rounded-lg px-1 text-[12.5px] font-medium text-ink-faint hover:text-[#a23b34] [@media(pointer:coarse)]:inline-flex">
               <Flag className="h-3.5 w-3.5" aria-hidden /> {t('Une erreur ?')}
             </button>
           )}

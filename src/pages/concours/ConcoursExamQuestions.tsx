@@ -114,7 +114,6 @@ const OptionsEditor = memo(function OptionsEditor({
       {options.map((opt, oi) => (
         <div key={`${activeIdx}-${oi}`} className="flex items-start gap-2 mb-3">
           <input
-            aria-label={t('Option {k}…', { k: opt.key })}
             value={opt.key}
             maxLength={3}
             onChange={(e) => {
@@ -134,7 +133,7 @@ const OptionsEditor = memo(function OptionsEditor({
               minHeight="48px"
             />
           </div>
-          <button type="button" aria-label={t('Supprimer {title}', { title: opt.key })}
+          <button
             onClick={() => {
               const newOpts = options.filter((_, i) => i !== oi);
               updateQuestion(activeIdx, { options: newOpts });
@@ -158,8 +157,7 @@ const OptionsEditor = memo(function OptionsEditor({
 export default function ConcoursExamQuestionsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useAuth();
-  const canEdit = !!user?.is_superuser;
+  const { user } = useAuth();
 
   const [exam, setExam] = useState<ConcoursExam | null>(null);
   const [structure, setStructure] = useState<ConcoursStructure>({ version: '1.0', questions: [] });
@@ -171,8 +169,7 @@ export default function ConcoursExamQuestionsPage() {
   const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
-    if (!id || !canEdit) return;
-    let alive = true;
+    if (!id) return;
     (async () => {
       try {
         setLoading(true);
@@ -180,17 +177,14 @@ export default function ConcoursExamQuestionsPage() {
           getConcoursExam(id),
           getConcoursStructure(id),
         ]);
-        if (!alive) return;
         setExam(e);
         setStructure(s && s.questions ? s : { version: '1.0', questions: [] });
       } catch (ex) {
-        if (!alive) return;
         console.error(ex);
         setErr(t("Impossible de charger l'examen."));
-      } finally { if (alive) setLoading(false); }
+      } finally { setLoading(false); }
     })();
-    return () => { alive = false; };
-  }, [id, canEdit]);
+  }, [id]);
 
   // ──────────────────────────────────────────────────────────────────────
   // ALL HOOKS GO BEFORE ANY EARLY RETURN — Rules of Hooks.
@@ -233,21 +227,21 @@ export default function ConcoursExamQuestionsPage() {
   // After this line, early returns are safe — no more hooks below.
   // ──────────────────────────────────────────────────────────────────────
 
-  if (authLoading || (canEdit && loading)) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
-      </div>
-    );
-  }
-
-  if (!canEdit) {
+  if (!user?.is_superuser) {
     return (
       <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
         <div className="fd-card p-8 text-center max-w-md">
           <p style={{ color: '#6b6862' }}>{t('Accès réservé aux administrateurs.')}</p>
           <Link to="/concours" className="fd-btn-primary mt-4 inline-flex">{t('Retour')}</Link>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#faf9f7' }} className="flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1a1a1a' }} />
       </div>
     );
   }
@@ -350,7 +344,7 @@ export default function ConcoursExamQuestionsPage() {
               {structure.questions.length > 1 ? t('{n} questions', { n: structure.questions.length }) : t('{n} question', { n: structure.questions.length })}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {savedFlash && (
               <span style={{ fontSize: 12, color: '#1a7a4a', fontWeight: 600 }}>✓ {t('Enregistré')}</span>
             )}
@@ -381,19 +375,12 @@ export default function ConcoursExamQuestionsPage() {
           />
         )}
 
-        <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <div className="grid gap-4" style={{ gridTemplateColumns: '200px 1fr' }}>
           {/* Sidebar */}
-          <div className="fd-card flex h-fit min-w-0 flex-wrap items-center gap-2 p-3 lg:sticky lg:top-5 lg:max-h-[80vh] lg:flex-col lg:flex-nowrap lg:items-stretch lg:overflow-y-auto">
-            {structure.questions.length > 0 && (
-              <select value={activeIdx} onChange={(e) => setActiveIdx(Number(e.target.value))} aria-label={t('Sélection des questions')}
-                className="min-h-10 min-w-0 flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink lg:hidden">
-                {structure.questions.map((_, i) => <option key={i} value={i}>{t('Question {n}', { n: i + 1 })}</option>)}
-              </select>
-            )}
+          <div className="fd-card p-3 flex flex-col gap-1" style={{ height: 'fit-content', position: 'sticky', top: 20 }}>
             {structure.questions.map((_, i) => (
               <button
                 key={i}
-                type="button" className="hidden lg:block" aria-pressed={i === activeIdx}
                 onClick={() => setActiveIdx(i)}
                 style={{
                   padding: '8px 12px', borderRadius: 8,
@@ -407,13 +394,13 @@ export default function ConcoursExamQuestionsPage() {
                 {t('Question {n}', { n: i + 1 })}
               </button>
             ))}
-            <button onClick={addQuestion} className="fd-btn-ghost min-h-10 justify-center">
+            <button onClick={addQuestion} className="fd-btn-ghost" style={{ marginTop: 6, justifyContent: 'center' }}>
               <Plus className="w-3.5 h-3.5" /> {t('Ajouter')}
             </button>
           </div>
 
           {/* Editor */}
-          <div className="fd-card min-w-0 p-3 sm:p-5">
+          <div className="fd-card p-5">
             {!active ? (
               <p style={{ color: '#6b6862', fontSize: 13, padding: 24, textAlign: 'center' }}>
                 {t('Aucune question. Clique sur "Ajouter" pour créer la première.')}

@@ -262,7 +262,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
     if (n > step && step === 1 && step2Missing.length) { setTried(true); return; }
     setTried(false);
     setStep(n);
-    topRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const publish = async () => {
@@ -371,13 +371,13 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
             {brouillonId ? t('Modifier le brouillon') : editing ? (d.type === 'lesson' ? t('Modifier la leçon') : d.type === 'exam' ? t('Modifier le devoir') : t('Modifier l’exercice')) : t('Ajouter un contenu')}
           </h1>
         </div>
-        <ol className="mt-4 grid max-w-2xl grid-cols-3 gap-1 rounded-2xl border border-line bg-white p-1" aria-label={t('Étapes')}>
+        <ol className="mt-4 flex flex-wrap gap-2" aria-label={t('Étapes')}>
           {STEPS.map((label, i) => (
             <li key={label}>
               <button type="button" onClick={() => go(i)} aria-current={step === i ? 'step' : undefined}
-                className={`flex h-full min-h-11 w-full flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-center text-[12px] font-semibold leading-tight transition-colors sm:flex-row sm:gap-2 sm:px-3 sm:text-[13px] ${
-                  step === i ? 'bg-brand-soft text-brand-hover' : i < step ? 'text-ink hover:bg-paper' : 'text-ink-soft hover:bg-paper'}`}>
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11.5px] font-semibold ${step === i ? 'bg-brand text-white' : i < step ? 'bg-brand-soft text-brand-hover' : 'bg-paper text-ink-soft'}`}>
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                  step === i ? 'border-ink bg-ink text-white' : i < step ? 'border-brand-line bg-brand-soft text-brand-hover' : 'border-line bg-white text-ink-faint hover:text-ink'}`}>
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11.5px] font-semibold ${step === i ? 'bg-white text-ink' : i < step ? 'bg-brand text-white' : 'bg-[#f2f1ee] text-ink-faint'}`}>
                   {i < step ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
                 {t(label)}
@@ -757,7 +757,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
       {step < 2 && (
         <div className="sticky bottom-[calc(var(--fd-tabbar-h,0px)+12px)] z-30 mx-auto mt-8 max-w-[1180px] px-4 md:px-8">
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(20,18,16,.06)] backdrop-blur">
-            <span aria-live="polite" className="min-w-0 text-[12.5px] leading-snug text-[#9c3b2e]">
+            <span className="min-w-0 truncate text-[12.5px] text-[#9c3b2e]">
               {tried && (step === 0 ? step1Missing : step2Missing).length > 0 ? t('Il manque {list}.', { list: (step === 0 ? step1Missing : step2Missing).join(t(', ')) }) : ''}
             </span>
             <span className="flex shrink-0 gap-2">
