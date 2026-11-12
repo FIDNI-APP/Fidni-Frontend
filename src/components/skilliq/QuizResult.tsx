@@ -1,21 +1,13 @@
-// Résultat d'un quiz (refait le 31/10/2026) : le score en grand avec justes, fausses, sans réponse et temps, l'écart
-// avec le passage précédent ; pour l'approfondissement, la médaille « Chapitre approfondi » (BADGE_PCT %) ou ce qu'il
-// manque ; une action principale (s'entraîner, l'approfondissement après un bon quiz du cours, « Retour à mon DS »
-// depuis un plan de DS : ?retour=). 01/11/2026 : puis le récapitulatif par théorème, les théorèmes à revoir d'abord ;
-// chaque théorème montre une pastille par question (verte juste, orange fausse, grise sans réponse) et se déplie sur
-// ses questions corrigées, explication en vert ou en orange selon la réponse. Le même écran rouvre le dernier passage
-// (`dernier`), corrigé tel qu'il était (correction figée côté serveur : énoncé et réponses de ce passage-là).
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Award, BookOpen, Check, ChevronDown, ChevronLeft, Dumbbell, LineChart, Minus, Mountain, RotateCcw, X } from 'lucide-react';
-import { ProgressRing } from '@/components/ui/ProgressRing';
 import { lessonsUrl, practiceUrl } from '@/pages/progression/links';
-import { Delta, ExplanationBox } from './QuizRow';
+import { Delta } from './QuizRow';
 import { QUIZ_TYPE } from './quizTypes';
 import { t } from '@/i18n';
 import { MathText } from './MathText';
 import {
-  BADGE_PCT, RING, answered, frDate, goodAnswers, hasReport, pct, picked, typeOf,
+  BADGE_PCT, answered, frDate, goodAnswers, hasReport, pct, picked, typeOf,
   type ActiveQuiz, type CorrectionItem, type QuizQuestion, type SkillAssessment, type TheoremReport,
 } from './types';
 
@@ -26,8 +18,8 @@ const duree = (s: number) => (s < 60 ? t('{n} s', { n: Math.max(1, Math.round(s)
 const Medal: React.FC<{ score: number }> = ({ score }) => {
   const earned = score >= BADGE_PCT;
   return (
-    <div className={`flex items-center gap-4 border-t px-6 py-4 sm:px-8 ${earned ? 'border-gold-line bg-gold-soft' : 'border-line'}`}>
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+    <div className="flex items-center gap-4 border-t border-line px-6 py-4 sm:px-8">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
         earned ? 'bg-gold text-white' : 'bg-paper text-ink-faint ring-1 ring-line'}`} aria-hidden>
         <Award className="h-6 w-6" />
       </span>
@@ -50,24 +42,27 @@ const Medal: React.FC<{ score: number }> = ({ score }) => {
 
 type Item = CorrectionItem & { n: number; question: string; options: string[] };
 
-/** Une question corrigée, dans son théorème : statut, énoncé, réponses (la bonne en vert, la sienne en orange si elle
- *  est fausse) et l'explication, verte ou orange selon la réponse. */
-const QuestionDetail: React.FC<{ c: Item }> = ({ c }) => {
+/** Dans la liste à revoir, l’élève peut ouvrir les corrections une par une. */
+const QuestionDetail: React.FC<{ c: Item; initialOpen?: boolean }> = ({ c, initialOpen }) => {
   const skipped = !answered(c);
   const goods = goodAnswers(c);
   const mines = picked(c.your_answer);
   const multi = goods.length > 1;
-  return (
-    <li className="rounded-xl border border-line bg-white p-4">
-      <p className="flex flex-wrap items-center gap-2 text-[12px] font-semibold">
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${
-          c.is_correct ? 'bg-brand-soft text-brand-hover' : skipped ? 'bg-[#f2f1ee] text-ink-soft' : 'bg-gold-soft text-gold-strong'}`}>
+  const heading = (
+    <>
+      <span className="flex flex-wrap items-center gap-2 text-[12px] font-semibold">
+        <span className={`inline-flex items-center gap-1 px-0.5 py-0.5 ${
+          c.is_correct ? 'text-brand-hover' : skipped ? 'text-ink-soft' : 'text-gold-strong'}`}>
           {c.is_correct ? <Check className="h-3.5 w-3.5" aria-hidden /> : skipped ? <Minus className="h-3.5 w-3.5" aria-hidden /> : <X className="h-3.5 w-3.5" aria-hidden />}
           {t('Question {n}', { n: c.n })} · {c.is_correct ? t('juste') : skipped ? t('sans réponse') : t('fausse')}
         </span>
         {multi && <span className="font-normal text-ink-faint">{t('{n} bonnes réponses', { n: goods.length })}</span>}
-      </p>
-      <p className="mt-2.5 text-[14.5px] font-medium leading-relaxed text-ink"><MathText text={c.question} className="fd-latex" /></p>
+      </span>
+      <span className="mt-1.5 block text-[14.5px] font-medium leading-relaxed text-ink"><MathText text={c.question} className="fd-latex" /></span>
+    </>
+  );
+  const answers = (
+    <>
       <ul className="mt-3 flex flex-col gap-1.5">
         {c.options.map((opt, i) => {
           const good = goods.includes(i);
@@ -80,13 +75,32 @@ const QuestionDetail: React.FC<{ c: Item }> = ({ c }) => {
                 {good ? <Check className="h-3.5 w-3.5" /> : mine ? <X className="h-3.5 w-3.5" /> : String.fromCharCode(65 + i)}
               </span>
               <MathText text={opt} className={`fd-latex min-w-0 flex-1 ${good ? 'font-semibold text-ink' : 'text-ink-soft'}`} />
+              {good && <span className="sr-only">{t('Bonne réponse')}</span>}
               {mine ? <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('ta réponse')}</span>
                 : multi && good && !skipped && <span className="shrink-0 text-[11.5px] font-semibold text-ink-faint">{t('oubliée')}</span>}
             </li>
           );
         })}
       </ul>
-      <ExplanationBox ok={c.is_correct} text={c.explanation} className="mt-3" />
+      {c.explanation && (
+        <div className="mt-4 border-s-2 border-line ps-4">
+          <h4 className="text-xs font-semibold text-ink-soft">{t('Explication')}</h4>
+          <p className="mt-1 text-sm leading-relaxed text-ink"><MathText text={c.explanation} className="fd-latex" /></p>
+        </div>
+      )}
+    </>
+  );
+  return (
+    <li className="min-w-0 bg-white py-4">
+      {initialOpen === undefined ? <>{heading}{answers}</> : (
+        <details open={initialOpen} className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0">{heading}</span>
+            <ChevronDown size={16} className="shrink-0 text-ink-soft group-open:rotate-180" aria-hidden />
+          </summary>
+          {answers}
+        </details>
+      )}
     </li>
   );
 };
@@ -119,7 +133,7 @@ function byTheorem(items: Item[], report: TheoremReport | null): Group[] {
   return out;
 }
 
-/** Une ligne de théorème : statut, nom, une pastille par question, score ; un clic déplie ses questions. */
+/** Une ligne de théorème : statut, nom et score ; un clic déplie ses questions. */
 const TheoremRow: React.FC<{ g: Group; open: boolean; onToggle: () => void }> = ({ g, open, onToggle }) => {
   const ok = g.justes === g.total;
   const can = g.items.length > 0;
@@ -130,13 +144,6 @@ const TheoremRow: React.FC<{ g: Group; open: boolean; onToggle: () => void }> = 
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[14.5px] font-semibold leading-snug text-ink">{g.name}</span>
-        {can && (
-          <span className="mt-2 flex flex-wrap gap-1" aria-hidden>
-            {g.items.map((c) => (
-              <span key={c.id} className={`h-1.5 w-6 rounded-full ${c.is_correct ? 'bg-brand' : answered(c) ? 'bg-gold' : 'bg-line'}`} />
-            ))}
-          </span>
-        )}
       </span>
       <span className={`fd-nums shrink-0 text-[15px] font-semibold ${ok ? 'text-brand-hover' : 'text-gold-strong'}`}>
         {g.justes}/{g.total}<span className="sr-only"> {t('justes')}</span>
@@ -153,7 +160,7 @@ const TheoremRow: React.FC<{ g: Group; open: boolean; onToggle: () => void }> = 
         </button>
       ) : <div className="flex items-center gap-3 px-4 py-3.5">{body}</div>}
       {open && (
-        <ol className="flex flex-col gap-3 border-t border-line bg-paper/60 p-3 sm:p-4">
+        <ol className="divide-y divide-line border-t border-line bg-white px-4 sm:px-6">
           {g.items.map((c) => <QuestionDetail key={c.id} c={c} />)}
         </ol>
       )}
@@ -217,6 +224,7 @@ export const QuizResult: React.FC<{
   /** Lancer l'approfondissement du chapitre (quiz du cours terminé, approfondissement prêt). */
   onDeep?: () => void;
 }> = ({ quiz, result, questions, retour, dernier = false, onRedo, onBack, onDeep }) => {
+  const [review, setReview] = useState<'missed' | 'theorems'>('missed');
   const score = pct(result);
   const type = typeOf(quiz);
   const deep = type === 'approfondissement';
@@ -234,6 +242,7 @@ export const QuizResult: React.FC<{
     const options = c.options ?? q?.options;
     return question && options ? [{ ...c, n: i + 1, question, options }] : [];
   });
+  const missed = items.filter((c) => !c.is_correct);
   const wrong = items.filter((c) => !c.is_correct && answered(c));
   const skipped = items.filter((c) => !answered(c));
   const right = items.filter((c) => c.is_correct);
@@ -243,7 +252,7 @@ export const QuizResult: React.FC<{
   const report = hasReport(result.par_theoreme) ? result.par_theoreme : null;
   const groups = byTheorem(items, report);
 
-  const ghost = 'fd-btn-ghost min-h-11 justify-center text-[13.5px]';
+  const ghost = 'inline-flex min-h-10 items-center justify-center gap-1.5 rounded px-2 text-sm font-medium text-ink-soft hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand';
   const practice = (primary: boolean) => (
     <Link to={practiceUrl(hub, quiz.id)} className={primary ? 'fd-btn-primary min-h-11 justify-center text-[14px]' : ghost}>
       <Dumbbell className="h-4 w-4" aria-hidden /> {t('S’entraîner sur ce chapitre')} {primary && <ArrowRight className="h-4 w-4" aria-hidden />}
@@ -262,63 +271,79 @@ export const QuizResult: React.FC<{
   ) : practice(true);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4 sm:gap-5">
       <button type="button" onClick={onBack}
         className="-ms-1 inline-flex min-h-10 items-center gap-1 self-start rounded-lg px-1 pe-2 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
         <ChevronLeft className="h-4 w-4" aria-hidden /> {t('Quiz par chapitre')}
       </button>
 
-      <section className="overflow-hidden rounded-3xl border border-line bg-white" aria-labelledby="quiz-result-title">
-        <div className="p-6 sm:p-8">
-          <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-semibold text-ink-faint">
-            <TypeIcon className="h-3.5 w-3.5" aria-hidden /> {t(QUIZ_TYPE[type].label)}{subject ? ` · ${t(subject)}` : ''}
+      <section className="overflow-hidden rounded-xl border border-line border-t-[3px] border-t-brand bg-white" aria-labelledby="quiz-result-title">
+        <div className="px-5 py-5 sm:px-8 sm:py-7">
+          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-ink-soft">
+            <TypeIcon className="h-4 w-4" aria-hidden /> {t(QUIZ_TYPE[type].label)}{subject ? ` · ${t(subject)}` : ''}
             {dernier && <span>· {t('dernier passage, le {date}', { date: frDate(result.completed_at) })}</span>}
           </p>
-          <h1 id="quiz-result-title" className="fd-display mt-2 text-[28px] leading-[1.12] text-ink sm:text-[34px]">{quiz.name}</h1>
-          <div className="mt-7 flex flex-col items-center gap-7 sm:flex-row sm:gap-10">
-            <ProgressRing percentage={score} size={136} strokeWidth={10} trackColor={RING.track} progressColor={score >= 50 ? RING.good : RING.low}>
-              <span className="fd-nums text-[34px] font-semibold leading-none text-ink">{score}<span className="text-[16px]"> %</span></span>
-            </ProgressRing>
-            <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-5 sm:w-auto sm:grid-cols-4 sm:gap-x-9">
-              {[
-                { key: 'justes', label: t('Justes'), value: String(right.length), tone: 'text-brand-hover' },
-                { key: 'fausses', label: t('Fausses'), value: String(wrong.length), tone: wrong.length ? 'text-gold-strong' : 'text-ink' },
-                { key: 'sans', label: t('Sans réponse'), value: String(skipped.length), tone: 'text-ink' },
-                ...(result.time_spent ? [{ key: 'temps', label: t('Temps'), value: duree(result.time_spent), tone: 'text-ink' }] : []),
-              ].map((it) => (
-                <div key={it.key}>
-                  <dt className="text-[12.5px] text-ink-faint">{it.label}</dt>
-                  <dd className={`fd-nums mt-1 text-[26px] font-semibold leading-none ${it.tone}`}>{it.value}</dd>
-                </div>
+          <h1 id="quiz-result-title" className="fd-display mt-2 text-[28px] leading-tight text-ink sm:text-4xl">{quiz.name}</h1>
+          <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-3 border-y border-line py-4">
+            <div className="flex items-baseline gap-2">
+              <span className="sr-only">{t('Score')}</span>
+              <strong className="fd-nums text-[52px] font-semibold leading-none tracking-tight text-ink">{score}<span className="ms-1 text-2xl font-normal">%</span></strong>
+            </div>
+            <div className="flex flex-col items-start gap-1.5 text-sm text-ink-soft">
+              <div className="flex flex-wrap gap-x-3">
+                {total > 0 && <span>{t('{n} questions', { n: total })}</span>}
+                {!!result.time_spent && <span>{t('Temps')} · {duree(result.time_spent)}</span>}
+              </div>
+              <Delta a={result} long />
+              {weighted && <span className="text-xs">{t('Score pondéré par la difficulté des questions')}</span>}
+            </div>
+          </div>
+          {items.length > 0 && (
+            <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              {[[t('Justes'), right.length], [t('Fausses'), wrong.length], [t('Sans réponse'), skipped.length]].map(([label, count]) => (
+                <div key={label} className="flex items-baseline gap-1.5"><dt className="text-ink-soft">{label}</dt><dd className="fd-nums font-semibold text-ink">{count}</dd></div>
               ))}
             </dl>
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-ink-faint">
-            <span className="fd-nums">{t('{n} questions', { n: total })}</span>
-            <Delta a={result} long />
-            {weighted && <span>{t('Score pondéré par la difficulté des questions')}</span>}
-          </div>
+          )}
         </div>
 
         {deep && <Medal score={score} />}
 
-        <div className="flex flex-col gap-2 border-t border-line bg-paper/60 px-6 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-8">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line px-5 py-3 sm:px-8">
           {main}
-          {!dernier && <button type="button" onClick={onRedo} className={ghost}><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
-          {(dernier || retour || goDeeper) && practice(false)}
-          <Link to={lessonsUrl(hub, quiz.id)} className={ghost}><BookOpen className="h-4 w-4" aria-hidden /> {t('Le cours')}</Link>
-          {/* L'approfondissement ne compte pas dans la maîtrise : pas de lien vers Ma progression. */}
-          {!deep && <Link to={`/progression?chapitre=${quiz.id}`} className={ghost}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>}
         </div>
       </section>
 
-      {groups.length > 0 && <TheoremRecap groups={groups} nonEvalues={(report?.non_evalues ?? []).map((x) => x.name)} />}
+      {missed.length > 0 && (
+        <div role="group" aria-label={t('Voir le corrigé')} className="flex flex-wrap gap-x-5 border-b border-line">
+          {([{ key: 'missed', label: t('Questions à revoir') }, { key: 'theorems', label: t('Par théorème') }] as const).map(({ key, label }) => (
+            <button key={key} type="button" aria-pressed={review === key} onClick={() => setReview(key)}
+              className={`min-h-11 border-b-2 text-sm font-semibold ${review === key ? 'border-brand text-ink' : 'border-transparent text-ink-soft'}`}>
+              {label}{key === 'missed' && <span className="ms-2 font-normal">{missed.length}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {missed.length > 0 && review === 'missed' ? (
+        <ol aria-label={t('Questions à revoir')} className="divide-y divide-line rounded-xl border border-line bg-white px-4 sm:px-6">
+          {missed.map((item, index) => <QuestionDetail key={item.id} c={item} initialOpen={index === 0} />)}
+        </ol>
+      ) : groups.length > 0 && (
+        <TheoremRecap groups={groups} nonEvalues={(report?.non_evalues ?? []).map((x) => x.name)} />
+      )}
 
       {items.length === 0 && dernier && (
         <p className="rounded-2xl border border-line bg-white px-5 py-4 text-[13.5px] text-ink-faint">
           {t('La correction de ce passage n’a pas été gardée (passage d’avant la mise à jour des quiz).')}
         </p>
       )}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2">
+        {!dernier && <button type="button" onClick={onRedo} className={ghost}><RotateCcw className="h-4 w-4" aria-hidden /> {t('Refaire le quiz')}</button>}
+        {(dernier || retour || goDeeper) && practice(false)}
+        <Link to={lessonsUrl(hub, quiz.id)} className={ghost}><BookOpen className="h-4 w-4" aria-hidden /> {t('Le cours')}</Link>
+        {/* L'approfondissement ne compte pas dans la maîtrise : pas de lien vers Ma progression. */}
+        {!deep && <Link to={`/progression?chapitre=${quiz.id}`} className={ghost}><LineChart className="h-4 w-4" aria-hidden /> {t('Ma progression')}</Link>}
+      </div>
     </div>
   );
 };
