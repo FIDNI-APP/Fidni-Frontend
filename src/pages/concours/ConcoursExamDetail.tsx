@@ -26,6 +26,7 @@ import { ConcoursContentRenderer } from './ConcoursContentRenderer';
 import { ConcoursExamStatsTab } from './ConcoursExamStatsTab';
 import { ConcoursExamActivityTab } from './ConcoursExamActivityTab';
 import { t, dateLocale } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type ExamTab = 'navigation' | 'stats' | 'activity';
 
@@ -495,11 +496,11 @@ function CommentsBlock({ examId, currentUserId, canModerate = false, onLogin }: 
                     background: '#1a1a1a', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 600,
-                  }}>{c.author.username[0]?.toUpperCase()}</div>
+                  }}>{nomAffiche(c.author)[0]?.toUpperCase()}</div>
                 )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>{c.author.username}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>{nomAffiche(c.author)}</span>
                   <span style={{ fontSize: 10, color: '#6b6862' }}>
                     {new Date(c.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>

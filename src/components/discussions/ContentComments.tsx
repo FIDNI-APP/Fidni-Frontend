@@ -20,6 +20,7 @@ import type { FileAttachment } from '@/types/fileAttachment';
 import { MessageComposer } from './MessageComposer';
 import { AuthorName, Avatar, RoleBadge, UtileButton, fullDate, timeAgo } from './parts';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type Sort = 'utiles' | 'recents' | 'anciens';
 const SORTS: { key: Sort; label: string }[] = [
@@ -211,7 +212,7 @@ export const ContentComments: React.FC<{
   const replyForm = (d: DiscussionDetail, target: DiscussionReply | null) => (
     <div className="pb-3 pt-1">
       <p className="mb-1.5 flex items-center gap-1 text-[12.5px] text-ink-faint">
-        <CornerDownRight className="h-3.5 w-3.5" /> {t('Réponse à')} <b className="font-semibold text-ink-soft">@{(target ?? d).author.username}</b>
+        <CornerDownRight className="h-3.5 w-3.5" /> {t('Réponse à')} <b className="font-semibold text-ink-soft">{nomAffiche((target ?? d).author)}</b>
       </p>
       <MessageComposer autoFocus placeholder={t('Ta réponse…')} submitLabel={t('Répondre')}
         onCancel={() => setReplyingTo(null)}
@@ -244,7 +245,7 @@ export const ContentComments: React.FC<{
               <RoleBadge author={author} />
               {r?.reply_to && (
                 <span className="inline-flex items-center gap-0.5 text-[12px] text-ink-faint">
-                  <CornerDownRight className="h-3 w-3" /> {t('à @{nom}', { nom: r.reply_to.username })}
+                  <CornerDownRight className="h-3 w-3" /> {t('à {nom}', { nom: nomAffiche(r.reply_to) })}
                 </span>
               )}
               <time dateTime={r ? r.created_at : d.created_at} title={fullDate(r ? r.created_at : d.created_at)} className="text-[12px] text-ink-faint">

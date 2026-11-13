@@ -7,6 +7,7 @@ import { Avatar } from '@/components/discussions/parts';
 import { MathText } from '@/components/skilliq/MathText';
 import { messagerieApi, type Conversation, type Membre, type Message } from '@/lib/api/messagerieApi';
 import { dateLocale, t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 export const heure = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
 
@@ -37,7 +38,7 @@ export function dureeAppel(s?: number) {
 export function apercu(m: Message | null, moi: number, membres: Membre[]): string {
   if (!m) return t('Pas encore de message');
   if (m.supprime) return t('Message supprimé');
-  const auteur = m.auteur === moi ? t('Toi') : membres.find((x) => x.id === m.auteur)?.username ?? '';
+  const auteur = m.auteur === moi ? t('Toi') : nomAffiche(membres.find((x) => x.id === m.auteur));
   if (m.type === 'appel') return m.donnees.manque ? t('Appel manqué') : (m.donnees.video ? t('Appel vidéo') : t('Appel'));
   if (m.type === 'invitation') return t('{name} propose : {titre}', { name: auteur, titre: m.donnees.contenu?.title ?? '' });
   if (m.type === 'systeme') return m.donnees.code === 'ajout' ? t('{name} a rejoint le groupe', { name: m.donnees.membre ?? '' })
@@ -50,7 +51,7 @@ export const AvatarConversation: React.FC<{ c: Conversation; moi: number; taille
   const autres = c.membres.filter((m) => m.id !== moi);
   if (c.type === 'directe' || autres.length <= 1) {
     const u = autres[0];
-    return <Avatar user={{ username: u?.username ?? '?', avatar: u?.avatar ?? null }} size={taille} />;
+    return <Avatar user={{ username: u?.username ?? '?', display_name: u?.display_name, avatar: u?.avatar ?? null }} size={taille} />;
   }
   const p = Math.round(taille * 0.72);
   return (
@@ -62,7 +63,7 @@ export const AvatarConversation: React.FC<{ c: Conversation; moi: number; taille
 };
 
 export const LigneSysteme: React.FC<{ m: Message; membres: Membre[]; moi: number }> = ({ m, membres, moi }) => {
-  const auteur = m.auteur === moi ? t('Tu') : membres.find((x) => x.id === m.auteur)?.username ?? t('Quelqu’un');
+  const auteur = m.auteur === moi ? t('Tu') : (nomAffiche(membres.find((x) => x.id === m.auteur)) || t('Quelqu’un'));
   let texte = '';
   let Icone: React.ComponentType<{ className?: string }> | null = null;
   if (m.type === 'appel') {
@@ -118,10 +119,10 @@ export const Bulle: React.FC<{
       )}
       <div className={`flex max-w-[min(78%,560px)] flex-col ${moi ? 'items-end' : 'items-start'}`}>
         {!moi && groupe && debutGroupe && auteur && (
-          <Link to={`/profile/${auteur.username}`} className="mb-0.5 px-1 text-[12px] font-medium text-ink-faint hover:underline">{auteur.username}</Link>
+          <Link to={`/profile/${auteur.username}`} className="mb-0.5 px-1 text-[12px] font-medium text-ink-faint hover:underline">{nomAffiche(auteur)}</Link>
         )}
         {m.type === 'invitation' ? (
-          <CarteInvitation m={m} conversation={m.conversation} de={auteur?.username ?? ''} moi={moi} />
+          <CarteInvitation m={m} conversation={m.conversation} de={nomAffiche(auteur)} moi={moi} />
         ) : (
           <div dir="auto" title={heure(m.created_at)}
             className={`whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[14.5px] leading-relaxed ${
@@ -180,7 +181,7 @@ export const ChoixContacts: React.FC<{
     messagerieApi.contacts().then(setContacts).catch(() => setContacts([]));
   }, [open]);
   const visibles = useMemo(() => (contacts ?? []).filter((c) => !exclure.includes(c.id)
-    && (!q || c.username.toLowerCase().includes(q.trim().toLowerCase()))), [contacts, exclure, q]);
+    && (!q || `${c.username} ${c.display_name ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()))), [contacts, exclure, q]);
   const basculer = (u: string) => setChoix((c) => (c.includes(u) ? c.filter((x) => x !== u) : c.length >= max ? c : [...c, u]));
   const valider = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +194,7 @@ export const ChoixContacts: React.FC<{
       subtitle={t('Tu peux écrire aux membres que tu suis et qui te suivent.')}>
       <label className="relative block">
         <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Rechercher un pseudo')} aria-label={t('Rechercher un pseudo')}
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Rechercher un nom ou un pseudo')} aria-label={t('Rechercher un nom ou un pseudo')}
           className="h-11 w-full rounded-xl border border-line bg-white ps-9 pe-3 text-[14px] focus:border-brand focus:outline-none" />
       </label>
       <div className="mt-3 max-h-[46vh] min-h-[120px] overflow-y-auto rounded-xl border border-line">
@@ -218,7 +219,7 @@ export const ChoixContacts: React.FC<{
                     className={`flex min-h-12 w-full items-center gap-3 px-3 py-2 text-start transition-colors hover:bg-[#f7f6f3] ${pris ? 'bg-brand-soft/60' : ''}`}>
                     <Avatar user={{ username: c.username, avatar: c.avatar ?? null }} size={34} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-medium text-ink">{c.username}</span>
+                      <span className="block truncate text-[14px] font-medium text-ink">{nomAffiche(c)}</span>
                       {c.level && <span className="block truncate text-[12px] text-ink-faint">{c.level}</span>}
                     </span>
                     <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${pris ? 'border-brand bg-brand text-white' : 'border-line bg-white'}`} aria-hidden>

@@ -7,6 +7,7 @@ import { api } from './apiClient';
 export interface Membre {
   id: number;
   username: string;
+  display_name?: string;
   avatar?: string | null;
   is_deleted?: boolean;
   role?: 'eleve' | 'prof' | 'equipe';

@@ -23,6 +23,7 @@ import { tempsReel } from '@/lib/tempsReel';
 import { messagerieApi, raisonRefus, type Conversation, type EtatAppel, type Message } from '@/lib/api/messagerieApi';
 import { AvatarConversation, Bulle, ChoixContacts, LigneSysteme, apercu, jour, quand } from '@/components/messages/parts';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 const Liste: React.FC<{
   convs: Conversation[] | null; moi: number; active: number | null; onNouveau: () => void; echec: boolean; onReessayer: () => void;
@@ -302,7 +303,7 @@ const Fil: React.FC<{ id: number; moi: number; onConversation: (c: Conversation)
   // « Vu » : sous mon dernier message, quand l'autre l'a lu (conversation à deux).
   const monDernier = [...msgs].reverse().find((x) => x.auteur === moi && x.id > 0 && x.type === 'texte');
   const vuPar = !groupe && monDernier && autres[0]?.lu_jusqu_a && Date.parse(autres[0].lu_jusqu_a) >= Date.parse(monDernier.created_at);
-  const quiEcrit = Object.keys(ecrit).map(Number).filter((u) => u !== moi).map((u) => parId[u]?.username).filter(Boolean);
+  const quiEcrit = Object.keys(ecrit).map(Number).filter((u) => u !== moi).map((u) => nomAffiche(parId[u])).filter(Boolean);
   const sousTitre = groupe
     ? t('{n} personnes', { n: conv.membres.length })
     : autres[0]?.level || (autres[0]?.role === 'prof' ? t('Professeur') : '');

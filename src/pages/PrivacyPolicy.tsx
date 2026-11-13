@@ -41,7 +41,7 @@ const sections: LegalSection[] = [
               'Relier le compte Google au compte Fidni pour la connexion, sans mot de passe. Fidni ne reçoit jamais le mot de passe Google',
               'Exécution du contrat', 'Jusqu’à la suppression du compte'],
             ['Prénom, nom, établissement, niveau, profil élève ou enseignant',
-              'Personnaliser les feuilles d’exercices en PDF, les classes et le suivi. Visibles de vous seul, sauf des enseignants de vos classes',
+              'Vous présenter aux autres membres connectés (votre prénom et votre nom remplacent le nom d’utilisateur sur votre profil et vos publications), personnaliser les feuilles d’exercices en PDF, les classes et le suivi. L’établissement est visible de vous seul, sauf des enseignants de vos classes',
               'Exécution du contrat', 'Jusqu’à la suppression du compte'],
             ['Civilité, Monsieur ou Madame (réponse facultative : « Je préfère ne pas le dire »)',
               'Uniquement la civilité (M. / Mme) sur les feuilles en PDF',
@@ -122,8 +122,9 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          <strong>Les autres membres</strong> voient uniquement votre profil public : nom d’utilisateur, photo,
-          biographie, publications et, si vous l’activez, vos statistiques. Vos prénom, nom, établissement, civilité,
+          <strong>Les autres membres connectés</strong> voient votre profil : prénom et nom, nom d’utilisateur, photo,
+          biographie, publications et, si vous l’activez, vos statistiques. Un visiteur non connecté (et donc un moteur de
+          recherche) ne voit que votre nom d’utilisateur, jamais votre prénom ni votre nom. Vos établissement, civilité,
           date de naissance et e-mail ne sont jamais publics. Les enseignants des classes que vous rejoignez voient votre nom et votre
           progression sur les travaux de la classe.
         </p>

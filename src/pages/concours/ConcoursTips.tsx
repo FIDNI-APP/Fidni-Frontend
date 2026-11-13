@@ -26,6 +26,7 @@ import { Page, PageHeader, Section, EmptyState, CardLink, CardsSkeleton } from '
 import type { SubjectModel } from '@/types';
 import { ConcoursHeader } from './ConcoursHeader';
 import { t, dateLocale } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 /* ───────────────── Liste ───────────────── */
 
@@ -355,11 +356,11 @@ function TipCommentsBlock({ tipId, currentUserId, canModerate = false }: { tipId
               {c.author.avatar
                 ? <img src={c.author.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full" />
                 : <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-soft text-[12px] font-semibold text-white" aria-hidden>
-                    {c.author.username[0]?.toUpperCase()}
+                    {nomAffiche(c.author)[0]?.toUpperCase()}
                   </span>}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[12.5px] font-semibold text-ink">{c.author.username}</span>
+                  <span className="text-[12.5px] font-semibold text-ink">{nomAffiche(c.author)}</span>
                   <span className="text-[11px] text-ink-faint">{new Date(c.created_at).toLocaleString(dateLocale())}</span>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-[13.5px] text-ink-soft">{c.content}</p>

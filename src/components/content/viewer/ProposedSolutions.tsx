@@ -18,6 +18,7 @@ import {
   type ProposedSolution, type SolutionAttachment,
 } from '@/lib/api/proposedSolutionsApi';
 import { t, dateLocale } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 // Éditeur chargé à la demande (survol ou clic sur « Proposer ma solution »).
 const loadEditor = () => import('@/components/editor/CompactTipTapEditor');
@@ -215,7 +216,7 @@ const SolutionCard: React.FC<{
   const remove = async () => {
     if (!await confirmer(solution.is_mine
       ? t('Supprimer ta solution ? Ses photos seront supprimées aussi.')
-      : t('Supprimer la solution de {nom} ? Ses photos seront supprimées aussi.', { nom: solution.author.username }), { action: t('Supprimer'), danger: true })) return;
+      : t('Supprimer la solution de {nom} ? Ses photos seront supprimées aussi.', { nom: nomAffiche(solution.author) }), { action: t('Supprimer'), danger: true })) return;
     setDeleting(true);
     try { await deleteProposedSolution(solution.id); onDeleted(); } finally { setDeleting(false); }
   };
@@ -229,11 +230,11 @@ const SolutionCard: React.FC<{
           {solution.author.avatar
             ? <img src={solution.author.avatar} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
             : <span className="w-8 h-8 rounded-full bg-[#f2f1ee] text-ink-soft flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                {solution.author.username.slice(0, 1).toUpperCase()}
+                {nomAffiche(solution.author).slice(0, 1).toUpperCase()}
               </span>}
           <span className="min-w-0">
             <span className={`block text-sm font-semibold truncate ${solution.author.is_deleted ? 'text-ink-faint italic' : 'text-ink group-hover:underline'}`}>
-              {solution.author.username}{solution.is_mine && <span className="text-ink-faint font-normal"> {t('(toi)')}</span>}
+              {nomAffiche(solution.author)}{solution.is_mine && <span className="text-ink-faint font-normal"> {t('(toi)')}</span>}
             </span>
             <span className="block text-xs text-ink-faint">{timeAgo(solution.created_at)}{edited ? t(' · modifiée') : ''}</span>
           </span>

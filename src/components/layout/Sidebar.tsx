@@ -26,6 +26,7 @@ import { sectionHome, useHasClassroom, useDiscussionCount, useDefiMenu } from '.
 import LogoFidni from '@/assets/logo-fidni.svg';
 import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import { t, useLang } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type IconType = React.ComponentType<{ className?: string }>;
 type LevelBase = '/exercises' | '/lessons' | '/exams';
@@ -626,7 +627,7 @@ const Avatar: React.FC<{ user: User; size?: number }> = ({ user, size = 32 }) =>
       className="inline-flex flex-shrink-0 items-center justify-center rounded-full bg-gold-soft font-semibold uppercase text-gold-strong ring-1 ring-gold-line"
       style={{ width: size, height: size, fontSize: size * 0.42 }}
     >
-      {user.username?.[0] ?? '?'}
+      {nomAffiche(user)[0] || '?'}
     </span>
   );
 };
@@ -720,8 +721,8 @@ const RailAccount: React.FC<{ collapsed: boolean; canJoinClass?: boolean }> = ({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={t('Compte de {name}', { name: user.username })}
-        title={collapsed ? user.username : undefined}
+        aria-label={t('Compte de {name}', { name: nomAffiche(user) })}
+        title={collapsed ? nomAffiche(user) : undefined}
         className={cx(
           'flex items-center rounded-xl transition-colors hover:bg-[#f7f6f3]',
           open && 'bg-[#f7f6f3]',
@@ -732,7 +733,7 @@ const RailAccount: React.FC<{ collapsed: boolean; canJoinClass?: boolean }> = ({
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-[13.5px] font-semibold text-ink">{user.username}</span>
+              <span className="block truncate text-[13.5px] font-semibold text-ink">{nomAffiche(user)}</span>
               <span className="mt-0.5 block truncate text-[12px] text-ink-faint">{accountHint(user)}</span>
             </span>
             <ChevronsUpDown className="h-4 w-4 flex-shrink-0 text-ink-faint" />
@@ -746,7 +747,7 @@ const RailAccount: React.FC<{ collapsed: boolean; canJoinClass?: boolean }> = ({
         className="w-[232px] rounded-2xl border border-line bg-white p-1.5 shadow-[0_14px_40px_rgba(20,18,16,.16)]"
       >
         <div className="px-3 pb-2 pt-1.5">
-          <p className="truncate text-[13px] font-semibold text-ink">{user.username}</p>
+          <p className="truncate text-[13px] font-semibold text-ink">{nomAffiche(user)}</p>
           {user.email && <p className="truncate text-[12px] text-ink-faint">{user.email}</p>}
         </div>
         <div className="flex flex-col gap-0.5 border-t border-[#f2f1ee] pt-1.5">
@@ -801,7 +802,7 @@ const DrawerAccount: React.FC<{ onNavigate?: () => void; canJoinClass?: boolean 
             <Avatar user={user} size={30} />
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block truncate text-[15px] font-medium text-ink">{t('Mon profil')}</span>
-              <span className="block truncate text-[12px] text-ink-faint">{user.username} · {accountHint(user)}</span>
+              <span className="block truncate text-[12px] text-ink-faint">@{user.username} · {accountHint(user)}</span>
             </span>
           </Link>
         </li>

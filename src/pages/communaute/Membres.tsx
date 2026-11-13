@@ -28,6 +28,7 @@ import { MathText } from '@/components/skilliq/MathText';
 import { Avatar, timeAgo } from '@/components/discussions/parts';
 import { confirmer } from '@/lib/confirmer';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type Onglet = 'decouvrir' | 'abonnements' | 'abonnes';
 const ONGLETS: Onglet[] = ['decouvrir', 'abonnements', 'abonnes'];
@@ -156,7 +157,7 @@ const OngletDecouvrir: React.FC = () => {
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex h-11 min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f2f1ee] pe-1 ps-3.5 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-brand/25">
           <Search className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
-          <input value={saisie} onChange={(e) => setSaisie(e.target.value)} placeholder={t('Chercher un membre par son pseudo')}
+          <input value={saisie} onChange={(e) => setSaisie(e.target.value)} placeholder={t('Chercher un membre par son nom ou son pseudo')}
             aria-label={t('Chercher un membre')} className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint" />
           {saisie && (
             <button type="button" onClick={() => setSaisie('')} aria-label={t('Effacer')}
@@ -325,7 +326,7 @@ const OngletAbonnes: React.FC<{ username: string; onDemandes: (n: number) => voi
   useEffect(() => { if (demandes) onDemandes(demandes.length); }, [demandes, onDemandes]);
 
   const retirer = async (m: Membre) => {
-    if (!await confirmer(t('Retirer {name} de tes abonnés ?', { name: m.username }), { action: t('Retirer') })) return;
+    if (!await confirmer(t('Retirer {name} de tes abonnés ?', { name: nomAffiche(m) }), { action: t('Retirer') })) return;
     try { await communauteApi.retirer(m.username); relireAbonnes(); } catch { toast.error(t('Action impossible pour le moment.')); }
   };
 

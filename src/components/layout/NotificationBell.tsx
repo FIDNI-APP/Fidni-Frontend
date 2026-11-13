@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { trackAction } from '@/lib/usage';
 import { extraitMath } from '@/lib/texteMath';
 import { t, dateLocale } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 /** Notifications de la communauté (abonnements, badges) : pas d'extrait de message à citer. */
 const COMMUNAUTE = new Set(['abonne', 'demande', 'accepte', 'badge']);
@@ -44,7 +45,7 @@ interface Notif {
   /** Réponse complète de l'équipe à un signalement. */
   message?: string;
   count: number;
-  actor: { username: string; avatar: string | null } | null;
+  actor: { username: string; display_name?: string; avatar: string | null } | null;
   updated_at: string;
   read: boolean;
 }
@@ -68,7 +69,7 @@ const Avatar: React.FC<{ actor: Notif['actor'] }> = ({ actor }) => {
     ? <img src={actor.avatar} alt="" onError={() => setBroken(true)} className="h-9 w-9 shrink-0 rounded-full object-cover" />
     : (
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] text-[13px] font-medium text-ink-soft">
-        {actor?.username?.[0] ?? <MessageCircle className="h-4 w-4" />}
+        {nomAffiche(actor)[0] || <MessageCircle className="h-4 w-4" />}
       </span>
     );
 };
@@ -87,7 +88,7 @@ function Message({ n }: { n: Notif }) {
     // « Série du défi · Argent » : chaque partie traduite (nom du badge, palier).
     return <><b className="font-semibold text-ink">{t('Nouveau badge')}</b> : <span className="font-semibold text-ink">{n.title.split(' · ').map((x) => t(x)).join(' · ')}</span></>;
   }
-  const who = <b className="font-semibold text-ink">{n.actor?.username ?? t('Quelqu’un')}</b>;
+  const who = <b className="font-semibold text-ink">{nomAffiche(n.actor) || t('Quelqu’un')}</b>;
   if (n.kind === 'abonne') {
     return n.count > 1 ? <>{who} {t('et {n} autres te suivent', { n: n.count - 1 })}</> : <>{who} {t('te suit')}</>;
   }

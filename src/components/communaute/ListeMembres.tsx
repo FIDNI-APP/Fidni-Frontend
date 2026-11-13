@@ -12,6 +12,7 @@ import { BoutonSuivre } from './BoutonSuivre';
 import { LigneMembre } from './CarteMembre';
 import { useDemandes } from './useDemandes';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 export type ChangementAbonnes = 'retire' | 'accepte' | 'refuse';
 
@@ -49,7 +50,7 @@ export const ListeMembres: React.FC<{
   useEffect(() => { if (!sens) { setMembres(null); setPage(1); } }, [sens]);
 
   const retirer = async (m: CarteMembre) => {
-    if (!await confirmer(t('Retirer {name} de tes abonnés ?', { name: m.username }), { action: t('Retirer') })) return;
+    if (!await confirmer(t('Retirer {name} de tes abonnés ?', { name: nomAffiche(m) }), { action: t('Retirer') })) return;
     try {
       await communauteApi.retirer(m.username);
       setMembres((l) => (l ?? []).filter((x) => x.id !== m.id));

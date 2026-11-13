@@ -23,6 +23,7 @@ import { trackAction } from '@/lib/usage';
 import { publicUrl, shareLink } from '@/lib/native';
 import { t } from '@/i18n';
 import { contentHub, levelFromState } from './pageHelpers';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -205,7 +206,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
               className="w-max min-w-[240px] max-w-[300px] overflow-hidden rounded-2xl border border-line bg-white py-1.5 shadow-[0_16px_40px_rgba(20,18,16,.14)]">
               <p className="mb-1 border-b border-line px-4 pb-2.5 pt-1.5 text-[12.5px] leading-relaxed text-ink-faint fd-nums">
                 {content.author?.username && !content.author.is_deleted ? (
-                  <>{t('Par')} <Link to={`/profile/${content.author.username}`} onClick={() => setMenuOpen(false)} className="font-medium text-ink-soft hover:underline">{content.author.username}</Link> · </>
+                  <>{t('Par')} <Link to={`/profile/${content.author.username}`} onClick={() => setMenuOpen(false)} className="font-medium text-ink-soft hover:underline">{nomAffiche(content.author)}</Link> · </>
                 ) : null}
                 {[
                   content.created_at ? t('publié {quand}', { quand: timeAgo(content.created_at) }) : null,
@@ -268,7 +269,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
           ? <span>{t('Proposé par {nom}', { nom: credit })}</span>
           : content.author?.is_deleted ? <span className="italic">{t('Compte supprimé')}</span>
             : content.author?.username && (
-              <span className="hidden sm:inline">{t('par')} <Link to={`/profile/${content.author.username}`} className="text-ink-soft hover:text-ink hover:underline">{content.author.username}</Link></span>
+              <span className="hidden sm:inline">{t('par')} <Link to={`/profile/${content.author.username}`} className="text-ink-soft hover:text-ink hover:underline">{nomAffiche(content.author)}</Link></span>
             )}
         {/* Établissement d'origine (champ facultatif de l'assistant « Ajouter un contenu »). */}
         {school?.name && (

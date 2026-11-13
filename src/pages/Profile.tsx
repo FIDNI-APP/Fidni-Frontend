@@ -42,6 +42,7 @@ import { ListeMembres } from '@/components/communaute/ListeMembres';
 import { Personnaliser } from '@/components/communaute/Personnaliser';
 import { roleTexte } from '@/components/communaute/CarteMembre';
 import { t, dateLocale } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type TabId = 'overview' | 'progress' | 'students' | 'messages' | 'settings';
 
@@ -312,10 +313,8 @@ export const ProfilePage: React.FC = () => {
   // Prénom, nom, établissement : le propriétaire se relit, les visiteurs ne reçoivent même pas ces champs.
   const privateLine = useMemo(() => {
     if (!isOwner || !currentUser) return '';
-    const id = identityFromUser(currentUser);
-    const civ = id.gender === 'M' ? `${t('M.')} ` : id.gender === 'F' ? `${t('Mme')} ` : '';
-    const name = `${id.firstName} ${id.lastName}`.trim();
-    return [name && `${civ}${name}`, id.school.name].filter(Boolean).join(' · ');
+    // Le prénom et le nom sont le titre du profil (13/11/2026) ; seul l'établissement reste privé.
+    return identityFromUser(currentUser).school.name || '';
   }, [isOwner, currentUser]);
 
   const majPub = (f: (p: Pub) => Pub) => setData((d) => (d && d.pub ? { ...d, pub: f(d.pub) } : d));
@@ -354,6 +353,8 @@ export const ProfilePage: React.FC = () => {
   const p = shown.profile.profile ?? {};
   const pub = shown.pub;
   const name = shown.profile.username || username;
+  // 13/11/2026 : prénom et nom pour un membre connecté (le serveur décide, lib/nomAffiche), pseudo sinon.
+  const nom = nomAffiche(pub) || nomAffiche(shown.profile) || name;
   const joined = pub?.depuis ?? p.joined_at ?? shown.profile.date_joined;
   const since = joined ? new Date(joined).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }) : null;
   const ville = pub ? pub.ville : p.location;
@@ -398,14 +399,15 @@ export const ProfilePage: React.FC = () => {
         <div className="px-5 pb-5 sm:px-8 sm:pb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex min-w-0 items-end gap-4" data-tour="profil-identite">
-              <div className="-mt-12 shrink-0 sm:hidden"><AvatarOrne src={p.avatar} nom={name} taille={84} palier={orne} /></div>
-              <div className="-mt-16 hidden shrink-0 sm:block"><AvatarOrne src={p.avatar} nom={name} taille={112} palier={orne} /></div>
+              <div className="-mt-12 shrink-0 sm:hidden"><AvatarOrne src={p.avatar} nom={nom} taille={84} palier={orne} /></div>
+              <div className="-mt-16 hidden shrink-0 sm:block"><AvatarOrne src={p.avatar} nom={nom} taille={112} palier={orne} /></div>
               <div className="min-w-0 pb-1">
                 <p className="text-[12.5px] font-medium text-ink-faint">{role}</p>
                 <h1 className="fd-display flex min-w-0 items-center gap-2 text-ink" style={{ fontSize: 'clamp(26px, 3vw, 36px)', lineHeight: 1.1 }}>
-                  <span className="truncate">{name}</span>
+                  <span className="truncate">{nom}</span>
                   {pub?.verifie && <BadgeCheck className="h-6 w-6 shrink-0 text-brand" aria-label={t('Professeur vérifié')} />}
                 </h1>
+                {nom !== name && <p className="mt-0.5 truncate text-[13px] text-ink-faint" dir="ltr">@{name}</p>}
                 {pub && (
                   <p className="fd-nums mt-1 flex flex-wrap items-center gap-x-3 text-[13px] text-ink-soft">
                     <button type="button" onClick={() => setListe('abonnes')} disabled={!pub.listes_visibles}
@@ -479,10 +481,10 @@ export const ProfilePage: React.FC = () => {
 
           {(pub?.bio || p.bio) && <p dir="auto" className="mt-3 max-w-2xl whitespace-pre-line text-start text-[14px] leading-relaxed text-ink-soft">{pub?.bio || p.bio}</p>}
 
-          {/* Identité réelle : rappelée au propriétaire seulement, jamais montrée aux visiteurs. */}
+          {/* Établissement : rappelé au propriétaire seulement, jamais montré aux autres. */}
           {isOwner && privateLine && (
             <p className="mt-3 inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-lg bg-[#f2f1ee] px-2.5 py-1.5 text-[12.5px] text-ink-soft"
-              title={t('Visible de toi seul : ton pseudo reste ton nom public')}>
+              title={t('Visible de toi seul')}>
               <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span className="min-w-0">{privateLine}</span>
               <span className="text-ink-faint">· {t('visible de toi seul')}</span>

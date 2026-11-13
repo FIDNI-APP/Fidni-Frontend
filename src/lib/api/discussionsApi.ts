@@ -10,6 +10,7 @@ export type DiscussionGenre = 'forum' | 'commentaire';
 export interface DiscussionAuthor {
   id: number;
   username: string;
+  display_name?: string;
   avatar: string | null;
   is_deleted?: boolean;
   /** Repère public : élève (avec son niveau), professeur, équipe Fidni. */
@@ -50,7 +51,7 @@ export interface DiscussionCardData {
   user_utile: boolean;
   followed: boolean;
   tags: ContentTag[];
-  repliers: { username: string; avatar: string | null }[];
+  repliers: { username: string; display_name?: string; avatar: string | null }[];
   attachments: number;
 }
 
@@ -60,7 +61,7 @@ export interface DiscussionReply {
   body: string;
   created_at: string;
   edited_at: string | null;
-  reply_to: { id: number; username: string } | null;
+  reply_to: { id: number; username: string; display_name?: string } | null;
   utile: number;
   user_utile: boolean;
   attachments: FileAttachment[];
