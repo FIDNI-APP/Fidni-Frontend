@@ -5,6 +5,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { LegalLayout, LegalTable, type LegalSection } from '@/components/legal/LegalLayout';
 import { LEGAL } from '@/lib/legal';
+import { MESSAGERIE_ACTIVE } from '@/lib/features';
 
 const ul = 'list-disc pl-5 space-y-1.5';
 const Mail = () => <a href={`mailto:${LEGAL.contactEmail}`} className="text-[#1a7a4a] underline">{LEGAL.contactEmail}</a>;
@@ -58,6 +59,15 @@ const sections: LegalSection[] = [
             ['Publications : exercices, commentaires, solutions, photos jointes',
               'Les partager avec les autres membres', 'Exécution du contrat',
               'Voir « Suppression du compte » ci-dessous'],
+            // Messagerie : seulement quand elle est ouverte (lib/features.ts, MESSAGERIE_ACTIVE).
+            ...(MESSAGERIE_ACTIVE ? [
+              ['Messages privés et invitations à travailler ensemble, entre membres qui se suivent mutuellement',
+                'Vous permettre d’échanger et de travailler à plusieurs ; traiter les messages signalés',
+                'Exécution du contrat', '12 mois, puis suppression automatique (un message signalé : jusqu’à son traitement)'],
+              ['Appels audio et vidéo : seulement qui a appelé, qui a rejoint, l’heure et la durée',
+                'Afficher l’appel dans la conversation. Ni le son, ni l’image, ni l’écran partagé ne sont enregistrés',
+                'Exécution du contrat', '12 mois, puis suppression automatique'],
+            ] : []),
             ['Journaux techniques : adresse IP, pages et requêtes, navigateur, erreurs',
               'Sécurité, lutte contre les abus, correction des bugs', 'Intérêt légitime', '6 mois, puis suppression automatique'],
             ['Adresses IP du compte : à l’inscription, à la dernière connexion et celles des 30 derniers jours',
@@ -161,6 +171,39 @@ const sections: LegalSection[] = [
       </p>
     ),
   },
+  ...(MESSAGERIE_ACTIVE ? [{
+    id: 'messages',
+    title: 'Messages et appels',
+    body: (
+      <>
+        <p>
+          On ne peut écrire, appeler ou inviter à travailler ensemble que <strong>des membres qui se suivent
+          mutuellement</strong> (chacun a accepté l’autre). Bloquer quelqu’un l’empêche aussitôt de vous écrire ou de
+          vous appeler, et le retire des groupes que vous partagez.
+        </p>
+        <ul className={ul}>
+          <li>
+            <strong>Messages :</strong> conservés sur nos serveurs en France, lisibles par les membres de la
+            conversation. L’administrateur ne lit un message que s’il lui est signalé (avec les quelques messages qui
+            le précèdent, pour comprendre). Vous pouvez supprimer vos messages à tout moment.
+          </li>
+          <li>
+            <strong>Appels audio et vidéo, partage d’écran :</strong> le son et l’image passent directement d’un
+            navigateur à l’autre, chiffrés (WebRTC). Quand un réseau empêche cette connexion directe, ils transitent,
+            toujours chiffrés, par un relais de Fidni sur le même serveur, sans être lus ni enregistrés. Votre navigateur
+            vous demande l’accès au micro et à la caméra : vous pouvez le refuser ou le retirer à tout moment.
+          </li>
+          <li>
+            <strong>Ce qui est gardé d’un appel :</strong> qui l’a lancé, qui l’a rejoint, l’heure et la durée, affichés
+            dans la conversation.
+          </li>
+        </ul>
+        <p>
+          Aucun service de Google ou d’un autre tiers n’est utilisé pour les messages ni pour les appels.
+        </p>
+      </>
+    ),
+  }] : []),
   {
     id: 'cookies',
     title: 'Cookies et stockage local',

@@ -28,8 +28,11 @@ import { assessQuestions, saveSessionScore, type AssessSource, type TimerSession
 import type { VoteValue } from '@/types';
 import type { ContentExercise, ContentExam, ContentLesson, AssessmentStatus, Felt } from '@/types/content';
 import { useAuth } from '@/contexts/AuthContext';
+import { ChoixContacts } from '@/components/messages/parts';
+import { SalleTravail } from '@/components/messages/SalleTravail';
+import { messagerieApi, raisonRefus } from '@/lib/api/messagerieApi';
 import { useAuthModal } from '@/components/auth/AuthController';
-import { isModerator } from '@/lib/features';
+import { MESSAGERIE_ACTIVE, isModerator } from '@/lib/features';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { ContentHeader } from '@/components/content/viewer/ContentHeader';
 import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
@@ -59,6 +62,7 @@ import { contentHub, DETAIL_MAX_WIDTH, levelFromState } from '@/components/conte
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
 import { t } from '@/i18n';
+import toast from 'react-hot-toast';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
 
@@ -224,8 +228,12 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   // Ancien lien de notification « ?commentaire=<id> » : ouvre l'onglet « Discussions » (voir tabFromUrl).
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusCommentId = searchParams.get('commentaire');
+  // Salle de travail (13/11/2026) : « ?salle=<conversation> » ouvre le panneau du groupe à côté de la feuille.
+  const salleParam = searchParams.get('salle');
+  const salle = salleParam && /^\d+$/.test(salleParam) ? Number(salleParam) : null;
+  const [choixGroupe, setChoixGroupe] = useState(false);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { openModal, setInitialTab } = useAuthModal();
   const [showReport, setShowReport] = useState(false);
@@ -739,6 +747,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
           onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
           hideTabs={examRunning}
+          onTogether={MESSAGERIE_ACTIVE && isAuthenticated && !salle ? () => setChoixGroupe(true) : undefined}
         />
 
         {/* « Où en es-tu ? » : en haut, au-dessus de la feuille (pas pendant l'épreuve). */}
@@ -814,6 +823,28 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       </div>
 
       <SignupBanner contentId={id} />
+
+      {/* Travailler à plusieurs : choisir des abonnés mutuels, puis la salle s'ouvre ici. */}
+      {MESSAGERIE_ACTIVE && isAuthenticated && (
+        <ChoixContacts open={choixGroupe} onClose={() => setChoixGroupe(false)} titre={t('Travailler à plusieurs')} action={t('Inviter')}
+          onValider={async (noms) => {
+            try {
+              const c = await messagerieApi.creer(noms, { contenu: content.id, groupe: true });
+              setChoixGroupe(false);
+              const next = new URLSearchParams(searchParams);
+              next.set('salle', String(c.id));
+              setSearchParams(next);
+              toast.success(t('Invitation envoyée. Le groupe peut te rejoindre ici.'));
+            } catch (e) { toast.error(raisonRefus(e, t('Invitation impossible pour le moment.'))); }
+          }} />
+      )}
+      {MESSAGERIE_ACTIVE && isAuthenticated && salle && user && (
+        <SalleTravail conversation={salle} contenu={content.id} moi={Number(user.id)} onFermer={() => {
+          const next = new URLSearchParams(searchParams);
+          next.delete('salle');
+          setSearchParams(next, { replace: true });
+        }} />
+      )}
 
       <ReportContentModal
         isOpen={showReport}

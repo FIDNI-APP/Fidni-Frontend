@@ -45,7 +45,8 @@ export interface CarteMembre extends Identite {
   relation: { abonne: StatutAbonnement; me_suit: boolean; moi: boolean };
 }
 
-export interface Relation { moi: boolean; abonne: StatutAbonnement; me_suit: boolean; bloque: boolean; connecte: boolean }
+/** peut_ecrire : abonnés mutuels, sans blocage (messages, appels, travail à plusieurs ; 13/11/2026). */
+export interface Relation { moi: boolean; abonne: StatutAbonnement; me_suit: boolean; bloque: boolean; connecte: boolean; peut_ecrire?: boolean }
 
 export interface Chiffre { id: string; valeur: number; record?: number }
 

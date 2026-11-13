@@ -6,7 +6,7 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText, FilePlus2, Moon, Sun, MessagesSquare, MessageSquareText, Flame, Check, Users,
+  FileText, FilePlus2, Moon, Sun, MessagesSquare, MessageSquareText, MessageCircle, Flame, Check, Users,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
@@ -15,10 +15,11 @@ import { trackAction } from '@/lib/usage';
 import { APlusIcon } from '@/components/icons/APlusIcon';
 import { LessonIcon } from '@/components/icons/LessonIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMessagerieFacultative } from '@/contexts/MessagerieContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
-import { MEMBRES_OUVERT, canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
+import { MEMBRES_OUVERT, MESSAGERIE_ACTIVE, canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom, useDiscussionCount, useDefiMenu } from './nav';
@@ -46,6 +47,8 @@ interface NavItem {
   defi?: boolean;
   /** Membres connectés seulement. */
   membres?: boolean;
+  /** Messages : nombre de conversations non lues (MessagerieContext). */
+  nonLus?: boolean;
   /** Entrée liée à une vue de /discussions (forum ou commentaires), distinguée par ?vue. */
   vue?: 'forum' | 'commentaires';
 }
@@ -95,6 +98,7 @@ const COMMUNITY_GROUP: NavGroup = {
     { to: '/discussions', label: 'Forum', icon: MessagesSquare, match: ['/discussions'], compteur: true, vue: 'forum' },
     { to: '/discussions?vue=commentaires', label: 'Commentaires', icon: MessageSquareText, match: ['/discussions'], vue: 'commentaires' },
     ...(MEMBRES_OUVERT ? [{ to: '/membres', label: 'Membres', icon: Users, match: ['/membres'], membres: true }] : []),
+    ...(MESSAGERIE_ACTIVE ? [{ to: '/messages', label: 'Messages', icon: MessageCircle, match: ['/messages'], membres: true, nonLus: true }] : []),
   ],
 };
 
@@ -433,6 +437,20 @@ const DiscussionCount: React.FC<{ collapsed: boolean; active: boolean }> = ({ co
   );
 };
 
+/** Messages : conversations non lues, en vert (le seul accent de l'interface). */
+const NonLusPastille: React.FC<{ collapsed: boolean; active: boolean }> = ({ collapsed, active }) => {
+  const n = useMessagerieFacultative()?.nonLus ?? 0;
+  if (!n) return null;
+  const label = n > 1 ? t('{n} conversations non lues', { n }) : t('1 conversation non lue');
+  if (collapsed) return <span className="absolute end-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-brand ring-2 ring-white" aria-label={label} />;
+  return (
+    <span aria-label={label}
+      className={cx('fd-nums ms-auto me-1 shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold', active ? 'bg-white/15 text-white' : 'bg-brand text-white')}>
+      {n > 99 ? '99+' : n}
+    </span>
+  );
+};
+
 /**
  * Défi du jour : pastille dorée tant qu'il n'est pas fait (avec la série en jeu), coche verte et série une fois fait ;
  * point doré quand la barre est repliée. Rien les jours sans défi.
@@ -505,6 +523,7 @@ const NavRow: React.FC<{
       {item.nouveau && !collapsed && !drawer && <QuizNouveau place="dot" active={active} />}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
       {item.compteur && <DiscussionCount collapsed={collapsed} active={active} />}
+      {item.nonLus && <NonLusPastille collapsed={collapsed} active={active} />}
       {item.defi && <DefiPastille collapsed={collapsed} active={active} />}
     </Link>
   );
