@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useParams, generatePath, useLocation, useNavig
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { useAuth } from './contexts/AuthContext';
-import { MEMBRES_OUVERT, canSeeParcours } from './lib/features';
+import { MEMBRES_OUVERT, MESSAGERIE_ACTIVE, canSeeParcours } from './lib/features';
 import { MembresFerme } from './pages/communaute/MembresFerme';
 import { trackPage } from './lib/usage';
 import { AppShell } from './components/layout/AppShell';
@@ -482,8 +482,8 @@ function App() {
                     <Route path="/discussions/nouvelle" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
                     <Route path="/discussions/:id" element={<NavbarWrapper><DiscussionThread /></NavbarWrapper>} />
                     <Route path="/discussions/:id/modifier" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
-                    <Route path="/messages" element={<NavbarWrapper><MessagesPage /></NavbarWrapper>} />
-                    <Route path="/messages/:id" element={<NavbarWrapper><MessagesPage /></NavbarWrapper>} />
+                    <Route path="/messages" element={MESSAGERIE_ACTIVE ? <NavbarWrapper><MessagesPage /></NavbarWrapper> : <Navigate to="/" replace />} />
+                    <Route path="/messages/:id" element={MESSAGERIE_ACTIVE ? <NavbarWrapper><MessagesPage /></NavbarWrapper> : <Navigate to="/" replace />} />
                     <Route path="/membres" element={MEMBRES_OUVERT ? <NavbarWrapper><Membres /></NavbarWrapper> : <MembresFerme />} />
                     <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
                     <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />

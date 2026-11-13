@@ -19,7 +19,7 @@ import { useMessagerieFacultative } from '@/contexts/MessagerieContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
-import { MEMBRES_OUVERT, canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
+import { MEMBRES_OUVERT, MESSAGERIE_ACTIVE, canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom, useDiscussionCount, useDefiMenu } from './nav';
@@ -98,7 +98,7 @@ const COMMUNITY_GROUP: NavGroup = {
     { to: '/discussions', label: 'Forum', icon: MessagesSquare, match: ['/discussions'], compteur: true, vue: 'forum' },
     { to: '/discussions?vue=commentaires', label: 'Commentaires', icon: MessageSquareText, match: ['/discussions'], vue: 'commentaires' },
     ...(MEMBRES_OUVERT ? [{ to: '/membres', label: 'Membres', icon: Users, match: ['/membres'], membres: true }] : []),
-    { to: '/messages', label: 'Messages', icon: MessageCircle, match: ['/messages'], membres: true, nonLus: true },
+    ...(MESSAGERIE_ACTIVE ? [{ to: '/messages', label: 'Messages', icon: MessageCircle, match: ['/messages'], membres: true, nonLus: true }] : []),
   ],
 };
 

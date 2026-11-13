@@ -32,7 +32,7 @@ import { ChoixContacts } from '@/components/messages/parts';
 import { SalleTravail } from '@/components/messages/SalleTravail';
 import { messagerieApi, raisonRefus } from '@/lib/api/messagerieApi';
 import { useAuthModal } from '@/components/auth/AuthController';
-import { isModerator } from '@/lib/features';
+import { MESSAGERIE_ACTIVE, isModerator } from '@/lib/features';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { ContentHeader } from '@/components/content/viewer/ContentHeader';
 import { ContentMainCard } from '@/components/content/viewer/ContentMainCard';
@@ -747,7 +747,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
           sessionCount={isLesson ? 0 : timerHook.getSessionCount()}
           onOpenHistory={isLesson ? undefined : timerHook.loadHistory}
           hideTabs={examRunning}
-          onTogether={isAuthenticated && !salle ? () => setChoixGroupe(true) : undefined}
+          onTogether={MESSAGERIE_ACTIVE && isAuthenticated && !salle ? () => setChoixGroupe(true) : undefined}
         />
 
         {/* « Où en es-tu ? » : en haut, au-dessus de la feuille (pas pendant l'épreuve). */}
@@ -825,7 +825,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
       <SignupBanner contentId={id} />
 
       {/* Travailler à plusieurs : choisir des abonnés mutuels, puis la salle s'ouvre ici. */}
-      {isAuthenticated && (
+      {MESSAGERIE_ACTIVE && isAuthenticated && (
         <ChoixContacts open={choixGroupe} onClose={() => setChoixGroupe(false)} titre={t('Travailler à plusieurs')} action={t('Inviter')}
           onValider={async (noms) => {
             try {
@@ -838,7 +838,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
             } catch (e) { toast.error(raisonRefus(e, t('Invitation impossible pour le moment.'))); }
           }} />
       )}
-      {isAuthenticated && salle && user && (
+      {MESSAGERIE_ACTIVE && isAuthenticated && salle && user && (
         <SalleTravail conversation={salle} contenu={content.id} moi={Number(user.id)} onFermer={() => {
           const next = new URLSearchParams(searchParams);
           next.delete('salle');

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { MESSAGERIE_ACTIVE } from '@/lib/features';
 import { useMessagerieFacultative } from '@/contexts/MessagerieContext';
 import { messagerieApi, raisonRefus } from '@/lib/api/messagerieApi';
 import { SEO } from '@/components/layout/SEO';
@@ -48,13 +49,13 @@ const TABS: Record<'student' | 'teacher', { key: TabId; label: string }[]> = {
   student: [
     { key: 'overview', label: 'Profil' },
     { key: 'progress', label: 'Réussis / à revoir' },
-    { key: 'messages', label: 'Messages de l’équipe' },
+    { key: 'messages', label: MESSAGERIE_ACTIVE ? 'Messages de l’équipe' : 'Messages' },
     { key: 'settings', label: 'Paramètres' },
   ],
   teacher: [
     { key: 'overview', label: 'Profil' },
     { key: 'students', label: 'Mes élèves' },
-    { key: 'messages', label: 'Messages de l’équipe' },
+    { key: 'messages', label: MESSAGERIE_ACTIVE ? 'Messages de l’équipe' : 'Messages' },
     { key: 'settings', label: 'Paramètres' },
   ],
 };
@@ -445,7 +446,7 @@ export const ProfilePage: React.FC = () => {
                         abonnes: x.abonnes + (s === 'accepte' ? 1 : x.relation.abonne === 'accepte' && !s ? -1 : 0),
                       }))} />
                   )}
-                  {pub?.relation.peut_ecrire && <ActionsContact username={name} />}
+                  {MESSAGERIE_ACTIVE && pub?.relation.peut_ecrire && <ActionsContact username={name} />}
                   {pub?.relation.connecte && (
                     <MenuMembre username={name} bloque={pub.relation.bloque}
                       onChange={(b) => majPub((x) => ({ ...x, relation: { ...x.relation, bloque: b, abonne: b ? null : x.relation.abonne } }))} />
@@ -456,7 +457,7 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {!isOwner && pub?.relation.connecte && !pub.relation.bloque && !pub.relation.peut_ecrire && (
+          {MESSAGERIE_ACTIVE && !isOwner && pub?.relation.connecte && !pub.relation.bloque && !pub.relation.peut_ecrire && (
             <p className="mt-3 text-[12.5px] text-ink-faint">
               {pub.relation.abonne === 'accepte'
                 ? t('Quand {name} te suivra aussi, vous pourrez vous écrire et vous appeler.', { name })

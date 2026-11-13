@@ -23,11 +23,20 @@ export function hasParcoursAccess(user: { is_superuser?: boolean; is_staff?: boo
 }
 
 /**
- * Page Membres (/membres : chercher des membres, fil des abonnements) : fermée du 09/11 au 13/11/2026, rouverte avec la
- * messagerie (Natsu : « que les membres puissent se chercher, se suivre, s'écrire »). Fermée (false), elle sort du menu
- * et son adresse mène aux discussions (pages/communaute/MembresFerme).
+ * Messagerie, appels, visio et travail à plusieurs (13/11/2026) : en développement SEULEMENT (Natsu : le site a deux mois,
+ * pas trop de fonctionnalités d'un coup ; on la sortira une fois finie et étudiée). Le serveur est en ligne, mais le
+ * site en production n'en montre rien et n'ouvre aucune connexion temps réel. Visible avec `npm run dev`, ou dans une
+ * construction lancée avec VITE_MESSAGERIE=1 (préproduction). Le jour de la sortie : true, puis
+ * security-headers.conf (camera/microphone=(self)) — voir le commentaire là-bas.
  */
-export const MEMBRES_OUVERT: boolean = true;
+export const MESSAGERIE_ACTIVE: boolean = import.meta.env.DEV || import.meta.env.VITE_MESSAGERIE === '1';
+
+/**
+ * Page Membres (/membres : chercher des membres, fil des abonnements) : fermée depuis le 09/11/2026 ; elle revient avec
+ * la messagerie (même interrupteur). Fermée, elle sort du menu et son adresse mène aux discussions
+ * (pages/communaute/MembresFerme).
+ */
+export const MEMBRES_OUVERT: boolean = MESSAGERIE_ACTIVE;
 
 /** Administrateur ou modérateur : peut modifier ou supprimer tout contenu publié par les membres
  *  (le serveur l'autorise pour le staff : config/permissions.py, IsAuthorOrStaffOrReadOnly). */

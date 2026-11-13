@@ -13,6 +13,7 @@ import { messagerieApi, type EtatAppel, type Membre } from '@/lib/api/messagerie
 import { Maillage, type EtatMedia, type Pair } from '@/lib/appels/maillage';
 import { arreterSonnerie, sonner } from '@/lib/appels/sonnerie';
 import { t } from '@/i18n';
+import { MESSAGERIE_ACTIVE } from '@/lib/features';
 
 export interface AppelActif {
   conversation: number;
@@ -91,7 +92,11 @@ function titreDe(c: { titre: string }) { return c.titre; }
 /** Cet onglet : une reconnexion remplace sa présence dans l'appel au lieu d'en ajouter une (serveur). */
 const APPAREIL = `o${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
-export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+/** Messagerie en sommeil (production, lib/features.ts) : aucune connexion temps réel, aucun contexte. */
+export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+  MESSAGERIE_ACTIVE ? <MessagerieProviderActif>{children}</MessagerieProviderActif> : <>{children}</>;
+
+const MessagerieProviderActif: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
   const moiUser = user ? Number(user.id) : null;
   const [nonLus, setNonLus] = useState(0);
