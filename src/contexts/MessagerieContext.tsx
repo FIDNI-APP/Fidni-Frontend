@@ -88,6 +88,9 @@ async function ouvrirMedia(video: boolean): Promise<MediaStream> {
 
 function titreDe(c: { titre: string }) { return c.titre; }
 
+/** Cet onglet : une reconnexion remplace sa présence dans l'appel au lieu d'en ajouter une (serveur). */
+const APPAREIL = `o${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
 export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
   const moiUser = user ? Number(user.id) : null;
@@ -164,7 +167,7 @@ export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const offA = tempsReel.on('appel.rejoint', (e) => { if (e.conversation === conversation) { fin(); ok(e); } });
       const offB = tempsReel.on('appel.erreur', (e) => { if (e.conversation === conversation) { fin(); ko(new Error(String(e.detail))); } });
       const minut = window.setTimeout(() => { fin(); ko(new Error(t('Connexion impossible. Vérifie ta connexion.'))); }, 15000);
-      tempsReel.envoyer({ type: 'appel.rejoindre', conversation, video });
+      tempsReel.envoyer({ type: 'appel.rejoindre', conversation, video, appareil: APPAREIL });
     });
     const appelId = r.appel as number;
     const moi = r.moi as number;
@@ -177,6 +180,25 @@ export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     maj((a) => ({ ...a, appel: appelId, moi, etat: 'en-cours' }));
     for (const p of (r.pairs as { id: number; user: number }[])) m.ajouter(p.id, p.user);
   }, [maj]);
+
+  // Reprise après une coupure : une seule à la fois, trois au plus par minute (au-delà, l'appel s'arrête proprement
+  // au lieu de rejoindre en boucle).
+  const reprises = useRef<number[]>([]);
+  const enReprise = useRef(false);
+  const reprendre = useCallback((conversation: number, video: boolean) => {
+    if (enReprise.current) return;
+    const now = Date.now();
+    reprises.current = reprises.current.filter((x) => now - x < 60000);
+    if (reprises.current.length >= 3) {
+      const a = appelRef.current;
+      if (a?.appel) tempsReel.envoyer({ type: 'appel.quitter', appel: a.appel });
+      terminer(t('Connexion instable : appel coupé.'));
+      return;
+    }
+    reprises.current.push(now);
+    enReprise.current = true;
+    rejoindre(conversation, video).catch(() => terminer(t('Appel interrompu.'))).finally(() => { enReprise.current = false; });
+  }, [rejoindre, terminer]);
 
   const demarrer = useCallback(async (conversation: number, video: boolean) => {
     if (appelRef.current) {
@@ -331,7 +353,8 @@ export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (a && a.conversation === conv && a.appel) {
           if (!etat || etat.id !== a.appel) { terminer(t('Appel terminé.')); return; }
           const ids = etat.presences.map((p) => p.id);
-          if (a.moi && !ids.includes(a.moi)) { void rejoindre(conv, a.media.camera).catch(() => terminer(t('Appel interrompu.'))); return; }
+          // Ma présence a disparu (connexion perdue) : on revient, sans boucler. Pendant une reprise, rien.
+          if (a.moi && !ids.includes(a.moi)) { if (!enReprise.current) reprendre(conv, a.media.camera); return; }
           maillage.current?.garder(ids.filter((i) => i !== a.moi));
         }
         // Sonnerie : un appel commence dans une de mes conversations, sans moi.
@@ -353,11 +376,11 @@ export const MessagerieProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }),
       tempsReel.on('reconnecte', () => {
         const a = appelRef.current;
-        if (a?.appel) void rejoindre(a.conversation, a.media.camera).catch(() => terminer(t('Appel interrompu.')));
+        if (a?.appel) reprendre(a.conversation, a.media.camera);
       }),
     ];
     return () => { offs.forEach((o) => o()); };
-  }, [isAuthenticated, moiUser, rejoindre, terminer]);
+  }, [isAuthenticated, moiUser, reprendre, terminer]);
 
   // Sonnerie sans réponse : 45 s, puis on arrête de sonner (l'appel reste visible dans la conversation).
   useEffect(() => {

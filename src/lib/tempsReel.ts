@@ -31,16 +31,21 @@ class TempsReel {
   private minuterie: number | null = null;
   private ping: number | null = null;
   private file: Evenement[] = [];
+  /** Numéro de la connexion voulue : une ouverture commencée avant un arrêt/redémarrage est abandonnée (sinon deux
+   *  sockets par onglet, et une reconnexion fantôme qui faisait rejoindre l'appel une fois de plus). */
+  private generation = 0;
   connecte = false;
 
   demarrer() {
     if (this.actif) return;
     this.actif = true;
-    void this.ouvrir();
+    this.generation += 1;
+    void this.ouvrir(this.generation);
   }
 
   arreter() {
     this.actif = false;
+    this.generation += 1;
     if (this.minuterie) window.clearTimeout(this.minuterie);
     if (this.ping) window.clearInterval(this.ping);
     this.minuterie = this.ping = null;
@@ -69,23 +74,26 @@ class TempsReel {
     this.ecouteurs.get('*')?.forEach((f) => { try { f(e); } catch { /* idem */ } });
   }
 
-  private async ouvrir() {
-    if (!this.actif) return;
+  private async ouvrir(gen: number) {
+    if (!this.actif || gen !== this.generation || this.ws) return;
     let ticket: string;
     try {
       ticket = await messagerieApi.ticket();
     } catch {
-      this.relancer();
+      this.relancer(gen);
       return;
     }
-    if (!this.actif) return;
+    if (!this.actif || gen !== this.generation || this.ws) return;
     const ws = new WebSocket(`${adresseWs()}?ticket=${encodeURIComponent(ticket)}`);
     this.ws = ws;
     ws.onopen = () => {
+      if (this.ws !== ws) { ws.close(1000); return; }
       const reprise = this.essais > 0;
       this.essais = 0;
       this.connecte = true;
-      this.ping = window.setInterval(() => this.envoyer({ type: 'ping' }), 25000);
+      if (this.ping) window.clearInterval(this.ping);
+      // Signe de vie : le serveur garde ainsi la présence dans un appel (retirée après 75 s de silence).
+      this.ping = window.setInterval(() => this.envoyer({ type: 'ping' }), 20000);
       const file = this.file.splice(0);
       file.forEach((e) => ws.send(JSON.stringify(e)));
       this.emettre({ type: reprise ? 'reconnecte' : 'connecte' });
@@ -94,22 +102,25 @@ class TempsReel {
       try { this.emettre(JSON.parse(m.data)); } catch { /* message illisible : ignoré */ }
     };
     ws.onclose = (ev) => {
+      // Une ancienne socket qui se ferme ne touche pas à la connexion en cours.
+      if (this.ws !== ws) return;
       if (this.ping) window.clearInterval(this.ping);
       this.ping = null;
       const etait = this.connecte;
       this.connecte = false;
-      if (this.ws === ws) this.ws = null;
+      this.ws = null;
       if (etait) this.emettre({ type: 'deconnecte' });
       // 4401 : ticket refusé (session expirée) ; on retente quand même, le ticket suivant passera par le renouvellement.
-      if (this.actif && ev.code !== 1000) this.relancer();
+      if (this.actif && ev.code !== 1000) this.relancer(gen);
     };
   }
 
-  private relancer() {
-    if (!this.actif) return;
+  private relancer(gen: number) {
+    if (!this.actif || gen !== this.generation || this.minuterie) return;
     this.essais += 1;
-    const delai = Math.min(30000, 1000 * 2 ** Math.min(this.essais - 1, 5)) * (0.75 + Math.random() * 0.5);
-    this.minuterie = window.setTimeout(() => { this.minuterie = null; void this.ouvrir(); }, delai);
+    // Au moins 2 s entre deux essais, même juste après une ouverture réussie qui s'est refermée aussitôt.
+    const delai = Math.min(30000, 2000 * 2 ** Math.min(this.essais - 1, 4)) * (0.75 + Math.random() * 0.5);
+    this.minuterie = window.setTimeout(() => { this.minuterie = null; void this.ouvrir(gen); }, delai);
   }
 }
 
