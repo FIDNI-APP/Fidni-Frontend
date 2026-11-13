@@ -24,7 +24,7 @@ const numero = (ancre: string) => {
 };
 
 /** La question en haut de l'écran, envoyée aux autres quand elle change (au plus toutes les 1,5 s). */
-function usePosition(conversation: number, actif: boolean) {
+function usePosition(conversation: number, actif: boolean, onPosition: (ancre: string) => void) {
   const derniere = useRef('');
   useEffect(() => {
     if (!actif) return;
@@ -36,6 +36,7 @@ function usePosition(conversation: number, actif: boolean) {
       const id = haut?.id ?? '';
       if (id && id !== derniere.current) {
         derniere.current = id;
+        onPosition(id);
         tempsReel.envoyer({ type: 'salle.question', conversation, question: id });
       }
     };
@@ -43,7 +44,7 @@ function usePosition(conversation: number, actif: boolean) {
     window.addEventListener('scroll', onScroll, { passive: true });
     const debut = window.setTimeout(envoyer, 1200);
     return () => { window.removeEventListener('scroll', onScroll); window.clearTimeout(debut); if (minut) window.clearTimeout(minut); };
-  }, [conversation, actif]);
+  }, [conversation, actif]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 export const SalleTravail: React.FC<{ conversation: number; contenu: number; moi: number; onFermer: () => void }> = ({ conversation, contenu, moi, onFermer }) => {
@@ -65,7 +66,8 @@ export const SalleTravail: React.FC<{ conversation: number; contenu: number; moi
   useEffect(() => { charger(); }, [charger]);
 
   const bonSujet = !!conv && conv.contenu?.id === contenu;
-  usePosition(conversation, bonSujet);
+  usePosition(conversation, bonSujet, (ancre) =>
+    setConv((c) => c && { ...c, membres: c.membres.map((x) => (x.id === moi ? { ...x, question: ancre } : x)) }));
 
   useEffect(() => {
     const offs = [

@@ -424,7 +424,7 @@ const Fil: React.FC<{ id: number; moi: number; onConversation: (c: Conversation)
                 e.preventDefault(); soumettre();
               }
             }}
-            placeholder={t('Écris un message… (formules entre $ $)')} aria-label={t('Message')} dir="auto"
+            placeholder={t('Écris un message…')} title={t('Formules entre $ $, par exemple $x^2$')} aria-label={t('Message')} dir="auto"
             className="max-h-[150px] min-h-11 flex-1 resize-none rounded-2xl border border-line bg-paper px-3.5 py-2.5 text-[14.5px] leading-snug focus:border-brand focus:bg-white focus:outline-none" />
           <button type="submit" disabled={!texte.trim()} aria-label={t('Envoyer')}
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-white transition-colors hover:bg-brand-hover disabled:bg-[#e7e3dc] disabled:text-ink-faint">
