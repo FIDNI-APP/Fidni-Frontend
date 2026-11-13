@@ -345,6 +345,25 @@ body.mobile-menu-open {
   .fd-trouve { animation: fd-trouve .32s cubic-bezier(.34, 1.3, .64, 1) both; }
 }
 
+/* Boutons « Indication » et « Solution » repliés (13/11/2026) : l'icône seule, le libellé se déplie à la souris ou au
+   clavier (colonne de grille 0fr → 1fr, courbe façon iOS). Au toucher, pas de survol : le libellé reste affiché. */
+.fd-replie-texte { display: grid; grid-template-columns: 0fr; opacity: 0; filter: blur(3px); }
+.fd-replie-texte > span { min-width: 0; overflow: hidden; }
+.fd-replie-texte > span > span { display: inline-flex; align-items: center; gap: .375rem; white-space: nowrap; padding-inline-start: .375rem; }
+@media (hover: hover) {
+  .fd-replie:hover .fd-replie-texte, .fd-replie:focus-visible .fd-replie-texte { grid-template-columns: 1fr; opacity: 1; filter: none; }
+}
+@media (hover: none) {
+  .fd-replie-texte { grid-template-columns: 1fr; opacity: 1; filter: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fd-replie-texte { transition: grid-template-columns .42s cubic-bezier(.32, .72, 0, 1), opacity .18s ease, filter .25s ease; }
+  .fd-replie:hover .fd-replie-texte, .fd-replie:focus-visible .fd-replie-texte {
+    transition: grid-template-columns .42s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .06s, filter .3s ease .06s; }
+  .fd-replie svg:first-child { transition: transform .3s cubic-bezier(.32, .72, 0, 1); }
+  .fd-replie:active svg:first-child { transform: scale(.88); }
+}
+
 /* Contenus vus depuis une carte : même police de LaTeX que sur la page de l'exercice (07/11/2026). Mêmes caractères de
    secours que lib/paperFont.ts. */
 @font-face { font-family: 'FidniPaperGlyphs'; src: local('Times New Roman'), local('Georgia'), local('Noto Serif'), local('DejaVu Serif');
