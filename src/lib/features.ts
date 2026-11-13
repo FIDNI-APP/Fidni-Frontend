@@ -25,11 +25,12 @@ export function hasParcoursAccess(user: { is_superuser?: boolean; is_staff?: boo
 /**
  * Messagerie, appels, visio et travail à plusieurs (13/11/2026) : en développement SEULEMENT (Natsu : le site a deux mois,
  * pas trop de fonctionnalités d'un coup ; on la sortira une fois finie et étudiée). Le serveur est en ligne, mais le
- * site en production n'en montre rien et n'ouvre aucune connexion temps réel. Visible avec `npm run dev`, ou dans une
- * construction lancée avec VITE_MESSAGERIE=1 (préproduction). Le jour de la sortie : true, puis
+ * site en production n'en montre rien et n'ouvre aucune connexion temps réel. Visible seulement sur localhost (`npm run dev`)
+ * (pas d'import.meta.env.DEV : l'obfuscation le casse, voir lib/usage.ts). Le jour de la sortie : true, puis
  * security-headers.conf (camera/microphone=(self)) — voir le commentaire là-bas.
  */
-export const MESSAGERIE_ACTIVE: boolean = import.meta.env.DEV || import.meta.env.VITE_MESSAGERIE === '1';
+export const MESSAGERIE_ACTIVE: boolean = typeof window !== 'undefined'
+  && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 /**
  * Page Membres (/membres : chercher des membres, fil des abonnements) : fermée depuis le 09/11/2026 ; elle revient avec
