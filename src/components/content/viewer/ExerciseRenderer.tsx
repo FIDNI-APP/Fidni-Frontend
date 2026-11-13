@@ -464,30 +464,44 @@ const ReportLink: React.FC<{ onReport: () => void }> = ({ onReport }) => (
   </button>
 );
 
-/** Bouton « Voir la solution » en toutes lettres (le seul geste principal d'une question). */
+/**
+ * Bouton replié (Natsu, 13/11/2026 : « juste l'icône ») : une pastille ronde ; à la souris ou au clavier, le libellé se
+ * déplie en glissant (.fd-replie dans index.css). Au toucher, pas de survol possible : le libellé reste visible.
+ */
+const ReadingIconToggle: React.FC<{
+  isOpen: boolean; onToggle: () => void; icon: React.ReactNode; label: string; tour: string; className: string; children?: React.ReactNode;
+}> = ({ isOpen, onToggle, icon, label, tour, className, children }) => (
+  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} aria-label={label} data-tour={tour}
+    className={`fd-replie inline-flex h-10 items-center rounded-full border px-[11px] text-[13.5px] transition-colors focus:outline-none focus-visible:ring-2 sm:h-9 sm:px-[9px] [@media(pointer:coarse)]:h-10 [@media(hover:none)]:ps-2.5 [@media(hover:none)]:pe-3 ${className}`}>
+    {icon}
+    <span className="fd-replie-texte" aria-hidden><span><span className="pe-1 [@media(hover:none)]:pe-0">{children ?? label}</span></span></span>
+  </button>
+);
+
+/** « Voir la solution » : le geste principal d'une question, en vert. */
 const ReadingSolutionToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
-  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} aria-label={isOpen ? t('Masquer la solution') : t('Voir la solution')} data-tour="solution"
-    className={`inline-flex h-10 items-center gap-1.5 rounded-full ps-3 pe-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
-      isOpen ? 'bg-[#f2f1ee] text-ink-soft hover:bg-line' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
-    {isOpen ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+  <ReadingIconToggle isOpen={isOpen} onToggle={onToggle} tour="solution"
+    label={isOpen ? t('Masquer la solution') : t('Voir la solution')}
+    icon={isOpen ? <EyeOff className="h-4 w-4 shrink-0" aria-hidden /> : <Eye className="h-4 w-4 shrink-0" aria-hidden />}
+    className={`font-semibold focus-visible:ring-brand/40 ${
+      isOpen ? 'border-transparent bg-[#f2f1ee] text-ink-soft hover:bg-line' : 'border-transparent bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
     {isOpen
       ? <><span className="sm:hidden">{t('Masquer')}</span><span className="hidden sm:inline">{t('Masquer la solution')}</span></>
       : <><span className="sm:hidden">{t('Solution')}</span><span className="hidden sm:inline">{t('Voir la solution')}</span></>}
     <ChevronDown className={`h-3.5 w-3.5 opacity-70 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
-  </button>
+  </ReadingIconToggle>
 );
 
 /**
  * « Indication » : la méthode de la solution, sans le raisonnement — un coup de pouce avant de regarder la
- * solution. Bouton discret (contour, ampoule) placé AVANT « Voir la solution », qui reste le geste principal.
+ * solution. Pastille discrète (contour, ampoule) placée AVANT « Voir la solution », qui reste le geste principal.
  */
 const ReadingHintToggle: React.FC<{ isOpen: boolean; onToggle: () => void }> = ({ isOpen, onToggle }) => (
-  <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }} aria-expanded={isOpen} data-tour="indication"
-    className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[13.5px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 sm:h-9 [@media(pointer:coarse)]:h-10 ${
-      isOpen ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-gold-line hover:text-gold-strong'}`}>
-    <Lightbulb className="h-4 w-4" aria-hidden />
-    {t('Indication')}
-  </button>
+  <ReadingIconToggle isOpen={isOpen} onToggle={onToggle} tour="indication"
+    label={isOpen ? t('Masquer l’indication') : t('Indication')}
+    icon={<Lightbulb className="h-4 w-4 shrink-0" aria-hidden />}
+    className={`font-medium focus-visible:ring-gold/40 ${
+      isOpen ? 'border-gold-line bg-gold-soft text-gold-strong' : 'border-line bg-white text-ink-soft hover:border-gold-line hover:bg-gold-soft/60 hover:text-gold-strong'}`} />
 );
 
 /** Indication ouverte : encadré léger, filet doré (la solution, elle, a le filet vert). */
