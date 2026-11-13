@@ -14,10 +14,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   BadgeCheck, Ban, CalendarDays, Eye, FileText, Flame, GraduationCap, HandHeart, Lock, MapPin, Mountain, MoreHorizontal,
-  Palette, Pencil, PenLine, RotateCcw, Target, ThumbsUp, UserX, Users,
+  MessageCircle, Palette, Pencil, PenLine, Phone, RotateCcw, Target, ThumbsUp, UserX, Users, Video,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMessagerieFacultative } from '@/contexts/MessagerieContext';
+import { messagerieApi, raisonRefus } from '@/lib/api/messagerieApi';
 import { SEO } from '@/components/layout/SEO';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import { api } from '@/lib/api/apiClient';
@@ -46,13 +48,13 @@ const TABS: Record<'student' | 'teacher', { key: TabId; label: string }[]> = {
   student: [
     { key: 'overview', label: 'Profil' },
     { key: 'progress', label: 'Réussis / à revoir' },
-    { key: 'messages', label: 'Messages' },
+    { key: 'messages', label: 'Messages de l’équipe' },
     { key: 'settings', label: 'Paramètres' },
   ],
   teacher: [
     { key: 'overview', label: 'Profil' },
     { key: 'students', label: 'Mes élèves' },
-    { key: 'messages', label: 'Messages' },
+    { key: 'messages', label: 'Messages de l’équipe' },
     { key: 'settings', label: 'Paramètres' },
   ],
 };
@@ -138,6 +140,34 @@ const ChiffreTuile: React.FC<{ c: Chiffre }> = ({ c }) => {
         </p>
       </div>
     </div>
+  );
+};
+
+/** Abonnés mutuels : écrire, appeler, visio (apps/messagerie, 13/11/2026). */
+const ActionsContact: React.FC<{ username: string }> = ({ username }) => {
+  const navigate = useNavigate();
+  const m = useMessagerieFacultative();
+  const appeler = async (video: boolean) => {
+    try {
+      const c = await messagerieApi.creer([username]);
+      await m?.lancer(c.id, video);
+    } catch (e) {
+      toast.error(raisonRefus(e, t('Appel impossible pour le moment.')));
+    }
+  };
+  const icone = 'inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-white text-ink-soft transition-colors hover:text-ink disabled:opacity-40';
+  return (
+    <>
+      <button type="button" onClick={() => navigate(`/messages?avec=${encodeURIComponent(username)}`)} className="fd-btn-ghost min-h-10">
+        <MessageCircle className="h-4 w-4" /> {t('Écrire')}
+      </button>
+      <button type="button" onClick={() => void appeler(false)} disabled={!!m?.appel} aria-label={t('Appeler {name}', { name: username })} title={t('Appel audio')} className={icone}>
+        <Phone className="h-[18px] w-[18px]" />
+      </button>
+      <button type="button" onClick={() => void appeler(true)} disabled={!!m?.appel} aria-label={t('Appel vidéo avec {name}', { name: username })} title={t('Appel vidéo')} className={icone}>
+        <Video className="h-5 w-5" />
+      </button>
+    </>
   );
 };
 
@@ -415,6 +445,7 @@ export const ProfilePage: React.FC = () => {
                         abonnes: x.abonnes + (s === 'accepte' ? 1 : x.relation.abonne === 'accepte' && !s ? -1 : 0),
                       }))} />
                   )}
+                  {pub?.relation.peut_ecrire && <ActionsContact username={name} />}
                   {pub?.relation.connecte && (
                     <MenuMembre username={name} bloque={pub.relation.bloque}
                       onChange={(b) => majPub((x) => ({ ...x, relation: { ...x.relation, bloque: b, abonne: b ? null : x.relation.abonne } }))} />
@@ -424,6 +455,16 @@ export const ProfilePage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {!isOwner && pub?.relation.connecte && !pub.relation.bloque && !pub.relation.peut_ecrire && (
+            <p className="mt-3 text-[12.5px] text-ink-faint">
+              {pub.relation.abonne === 'accepte'
+                ? t('Quand {name} te suivra aussi, vous pourrez vous écrire et vous appeler.', { name })
+                : pub.relation.abonne === 'en_attente'
+                  ? t('Ta demande est en attente. Une fois acceptée, et si {name} te suit, vous pourrez vous écrire.', { name })
+                  : t('Suivez-vous tous les deux pour pouvoir vous écrire et vous appeler.')}
+            </p>
+          )}
 
           {meta.length > 0 && (
             <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-ink-soft" aria-label={t('En bref')}>

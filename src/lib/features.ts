@@ -23,11 +23,11 @@ export function hasParcoursAccess(user: { is_superuser?: boolean; is_staff?: boo
 }
 
 /**
- * Page Membres (/membres : découvrir des membres, fil des abonnements) : fermée à tous depuis le 09/11/2026, gardée
- * pour plus tard. Fermée, elle n'est plus dans le menu et son adresse mène aux discussions (pages/communaute/MembresFerme) ;
- * abonnés et demandes d'abonnement se règlent depuis la fenêtre des abonnés du profil. Pour la rouvrir : true.
+ * Page Membres (/membres : chercher des membres, fil des abonnements) : fermée du 09/11 au 13/11/2026, rouverte avec la
+ * messagerie (Natsu : « que les membres puissent se chercher, se suivre, s'écrire »). Fermée (false), elle sort du menu
+ * et son adresse mène aux discussions (pages/communaute/MembresFerme).
  */
-export const MEMBRES_OUVERT: boolean = false;
+export const MEMBRES_OUVERT: boolean = true;
 
 /** Administrateur ou modérateur : peut modifier ou supprimer tout contenu publié par les membres
  *  (le serveur l'autorise pour le staff : config/permissions.py, IsAuthorOrStaffOrReadOnly). */

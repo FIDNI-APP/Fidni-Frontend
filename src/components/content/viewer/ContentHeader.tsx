@@ -11,7 +11,7 @@ import React, { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookMarked, Bookmark, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
-  School, Share2, Trash2,
+  School, Share2, Trash2, Users,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
 import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
@@ -56,6 +56,8 @@ interface ContentHeaderProps {
   onOpenHistory?: () => void;
   /** Épreuve en cours : pas d'onglets (les solutions des élèves dévoileraient le corrigé). */
   hideTabs?: boolean;
+  /** « À plusieurs » : inviter des abonnés mutuels à travailler ce sujet ensemble (13/11/2026). */
+  onTogether?: () => void;
 }
 
 const timeAgo = (iso?: string) => {
@@ -90,7 +92,7 @@ const MenuItem: React.FC<{ icon: React.ElementType; onClick: () => void; childre
 
 export const ContentHeader: React.FC<ContentHeaderProps> = ({
   content, contentType, isSaved, isSaving, onToggleSave, isAuthor, onDelete, onPrint, onReport,
-  activeTab, onTabChange, basePath, solutionCount = 0, commentCount = 0, onCollect, sessionCount = 0,
+  activeTab, onTabChange, basePath, solutionCount = 0, commentCount = 0, onCollect, sessionCount = 0, onTogether,
   onOpenHistory, hideTabs = false,
 }) => {
   const navigate = useNavigate();
@@ -183,6 +185,11 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />}
             <span className="hidden sm:inline">{isSaved ? t('Enregistré') : t('Enregistrer')}</span>
           </button>
+          {onTogether && (
+            <button type="button" onClick={onTogether} data-tour="detail-plusieurs" aria-label={t('Travailler à plusieurs')} title={t('Travailler à plusieurs')} className={headBtn}>
+              <Users className="h-4 w-4" /> <span className="hidden sm:inline">{t('À plusieurs')}</span>
+            </button>
+          )}
           {onPrint && (
             <button type="button" onClick={onPrint} data-tour={isLesson ? 'lecon-imprimer' : 'detail-imprimer'}
               aria-label={isLesson ? t('Imprimer la leçon') : t('Imprimer ou télécharger en PDF')} className={headBtn}>

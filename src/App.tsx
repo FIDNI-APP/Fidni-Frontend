@@ -8,6 +8,9 @@ import { MembresFerme } from './pages/communaute/MembresFerme';
 import { trackPage } from './lib/usage';
 import { AppShell } from './components/layout/AppShell';
 import { AuthProvider } from './contexts/AuthContext';
+import { MessagerieProvider } from './contexts/MessagerieContext';
+import { FenetreAppel } from './components/appels/FenetreAppel';
+import { AppelEntrant } from './components/appels/AppelEntrant';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LangProvider, t } from './i18n';
 import { Suspense, lazy, useEffect, useLayoutEffect } from 'react';
@@ -114,6 +117,8 @@ const DiscussionThread = page(() => import('./pages/discussions/DiscussionThread
 const DiscussionForm = page(() => import('./pages/discussions/DiscussionForm'), 'DiscussionForm');
 const Defis = page(() => import('./pages/defis/Defis'), 'Defis');
 const Membres = page(() => import('./pages/communaute/Membres'), 'Membres');
+// Messages, appels, travail à plusieurs entre abonnés mutuels (13/11/2026).
+const MessagesPage = page(() => import('./pages/messages/Messages'), 'MessagesPage');
 const DefiPasse = page(() => import('./pages/defis/Defis'), 'DefiPasse');
 // Éditeur de documents « façon Word » avec équations (12/10/2026), inspiré de wordcraft.
 const MesDocuments = page(() => import('./pages/documents/MesDocuments'), 'MesDocuments');
@@ -302,6 +307,10 @@ function App() {
         <ThemeProvider>
           <NativeBridge />
           <AuthProvider>
+            <MessagerieProvider>
+            {/* Appel en cours et appel entrant : au-dessus de toutes les pages, l'appel continue d'une page à l'autre. */}
+            <FenetreAppel />
+            <AppelEntrant />
             <AuthModalProvider>
               <FilterProvider>
                 <TourProvider>
@@ -473,6 +482,8 @@ function App() {
                     <Route path="/discussions/nouvelle" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
                     <Route path="/discussions/:id" element={<NavbarWrapper><DiscussionThread /></NavbarWrapper>} />
                     <Route path="/discussions/:id/modifier" element={<NavbarWrapper><DiscussionForm /></NavbarWrapper>} />
+                    <Route path="/messages" element={<NavbarWrapper><MessagesPage /></NavbarWrapper>} />
+                    <Route path="/messages/:id" element={<NavbarWrapper><MessagesPage /></NavbarWrapper>} />
                     <Route path="/membres" element={MEMBRES_OUVERT ? <NavbarWrapper><Membres /></NavbarWrapper> : <MembresFerme />} />
                     <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
                     <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />
@@ -709,6 +720,7 @@ function App() {
                 </TourProvider>
               </FilterProvider>
             </AuthModalProvider>
+            </MessagerieProvider>
           </AuthProvider>
         </ThemeProvider>
         </LangProvider>
