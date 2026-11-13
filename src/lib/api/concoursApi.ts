@@ -52,7 +52,7 @@ export interface ConcoursExamListItem {
 export interface ConcoursExam extends ConcoursExamListItem {
   raw_title?: string;
   structure: ConcoursStructure;
-  created_by: { id: number; username: string; avatar?: string | null };
+  created_by: { id: number; username: string; display_name?: string; avatar?: string | null };
   updated_at: string;
 }
 
@@ -141,7 +141,7 @@ export interface ConcoursTip {
   user_vote: number;
   vote_count: number;
   comment_count: number;
-  created_by: { id: number; username: string; avatar?: string | null };
+  created_by: { id: number; username: string; display_name?: string; avatar?: string | null };
   created_at: string;
   updated_at: string;
 }
@@ -194,7 +194,7 @@ export interface ConcoursComment {
   id: number;
   target_type: 'exam' | 'tip';
   target_id: number;
-  author: { id: number; username: string; avatar?: string | null };
+  author: { id: number; username: string; display_name?: string; avatar?: string | null };
   content: string;
   parent: number | null;
   created_at: string;

@@ -24,6 +24,7 @@ import {
   AuthorName, Avatar, ContentTagCard, RoleBadge, SalonChip, UtileButton, fullDate, timeAgo,
 } from '@/components/discussions/parts';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /** Messages repris des anciens commentaires : parfois du texte brut ; les autres sont déjà en HTML. */
@@ -239,7 +240,7 @@ export const DiscussionThread: React.FC = () => {
                         <AuthorName author={r.author} /> <RoleBadge author={r.author} />
                         {r.reply_to && (
                           <a href={`#reponse-${r.reply_to.id}`} className="inline-flex items-center gap-0.5 text-[12px] text-ink-faint hover:text-ink">
-                            <CornerDownRight className="h-3 w-3" /> {t('à @{nom}', { nom: r.reply_to.username })}
+                            <CornerDownRight className="h-3 w-3" /> {t('à {nom}', { nom: nomAffiche(r.reply_to) })}
                           </a>
                         )}
                         <time dateTime={r.created_at} title={fullDate(r.created_at)} className="text-[12px] text-ink-faint">
@@ -290,7 +291,7 @@ export const DiscussionThread: React.FC = () => {
               <>
                 {replyTo && (
                   <p className="mb-2 flex items-center gap-1 text-[12.5px] text-ink-faint">
-                    <CornerDownRight className="h-3.5 w-3.5" /> {t('Réponse à')} <b className="font-semibold text-ink-soft">@{replyTo.author.username}</b>
+                    <CornerDownRight className="h-3.5 w-3.5" /> {t('Réponse à')} <b className="font-semibold text-ink-soft">{nomAffiche(replyTo.author)}</b>
                     <button type="button" onClick={() => setReplyTo(null)} className="ms-1 font-semibold text-brand-hover hover:underline">{t('Annuler')}</button>
                   </p>
                 )}

@@ -223,7 +223,6 @@
   "Scolarité": "الدراسة",
   "Se déconnecter": "تسجيل الخروج",
   "Se déconnecter ?": "تسجيل الخروج؟",
-  "Sert à tes feuilles d’exercices en PDF et à tes classes. Ton pseudo reste ton seul nom public.": "يُستعمل في أوراق التمارين بصيغة PDF وفي أقسامك. يبقى اسمك المستعار اسمك العلني الوحيد.",
   "Ses exercices, leçons et examens apparaîtront ici.": "ستظهر هنا تمارينه ودروسه وامتحاناته.",
   "Solutions": "الحلول",
   "Sombre": "داكن",
@@ -258,7 +257,6 @@
   "Ton mot de passe :": "كلمة مرورك:",
   "Ton mot de passe actuel": "كلمة مرورك الحالية",
   "Ton niveau règle les contenus proposés sur l’accueil et dans les listes.": "يحدّد مستواك المحتويات المقترحة في الرئيسية وفي اللوائح.",
-  "Ton nom public sur Fidni : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).": "اسمك العلني في Fidni: من 3 إلى 30 حرفا (حروف وأرقام و« . » و« _ » و« - »).",
   "Ton profil": "ملفك الشخصي",
   "Ton pseudo n’a pas pu être changé. Réessaie.": "تعذّر تغيير اسمك المستعار. أعد المحاولة.",
   "Ton établissement": "مؤسستك",
@@ -274,8 +272,6 @@
   "Une partie de la page n’a pas pu se charger. Vérifie ta connexion.": "تعذّر تحميل جزء من الصفحة. تحقق من اتصالك.",
   "Ville": "المدينة",
   "Visible de toi seul": "ظاهر لك وحدك",
-  "Visible de toi seul : ton pseudo reste ton nom public": "ظاهر لك وحدك: يبقى اسمك المستعار هو اسمك العلني",
-  "Visible par toi seul : ton pseudo reste ton nom public sur Fidni.": "ظاهر لك وحدك: يبقى اسمك المستعار هو اسمك العلني في Fidni.",
   "Visible sur ton profil": "ظاهر في ملفك الشخصي",
   "Voir les leçons de {level}": "عرض دروس {level}",
   "Voir les {n} exercices": "عرض التمارين ({n})",
@@ -335,5 +331,9 @@
   "Ton signalement": "بلاغك",
   "Réponse de l’équipe Fidni": "ردّ فريق Fidni",
   "Les messages de l’équipe Fidni et ses réponses à tes signalements d’erreur.": "رسائل فريق Fidni وردوده على تبليغاتك عن الأخطاء.",
-  "Message de l’équipe Fidni": "رسالة من فريق Fidni"
+  "Message de l’équipe Fidni": "رسالة من فريق Fidni",
+  "Ton prénom et ton nom sont affichés aux membres connectés (les visiteurs voient ton pseudo). Civilité, date de naissance et établissement restent visibles par toi seul.": "يظهر اسمك الشخصي واسمك العائلي للأعضاء المتصلين (يرى الزوار اسمك المستعار). أما اللقب وتاريخ الازدياد والمؤسسة فتبقى ظاهرة لك وحدك.",
+  "Ton prénom et ton nom s’affichent aux membres connectés à la place de ton pseudo. Le reste sert à tes feuilles d’exercices en PDF et à tes classes.": "يظهر اسمك الشخصي واسمك العائلي للأعضاء المتصلين بدل اسمك المستعار. وما تبقى يُستعمل في أوراق التمارين بصيغة PDF وفي أقسامك.",
+  "Nom visible des membres": "الاسم ظاهر للأعضاء",
+  "Ton identifiant sur Fidni (adresse de ton profil, @mentions) : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).": "معرّفك في Fidni (عنوان ملفك الشخصي والإشارات @): من 3 إلى 30 حرفا (حروف وأرقام و« . » و« _ » و« - »)."
 }

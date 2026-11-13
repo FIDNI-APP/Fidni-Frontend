@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthModal } from '@/components/auth/AuthController';
 import { toggleUtile, type ContentTag, type DiscussionAuthor, type Salon } from '@/lib/api/discussionsApi';
 import { t, dateLocale } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type Icon = React.ComponentType<{ className?: string }>;
 
@@ -42,7 +43,7 @@ export const timeAgo = (iso: string) => {
 };
 export const fullDate = (iso: string) => new Date(iso).toLocaleString(dateLocale(), { dateStyle: 'long', timeStyle: 'short' });
 
-export const Avatar: React.FC<{ user: { username: string; avatar: string | null }; size?: number; ring?: boolean }> = ({
+export const Avatar: React.FC<{ user: { username: string; display_name?: string; avatar: string | null }; size?: number; ring?: boolean }> = ({
   user, size = 36, ring = false,
 }) => {
   const [broken, setBroken] = useState(false);
@@ -53,7 +54,7 @@ export const Avatar: React.FC<{ user: { username: string; avatar: string | null 
     : (
       <span aria-hidden style={style}
         className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[#f2f1ee] font-semibold uppercase text-ink-soft ${ringCls}`}>
-        {user.username?.[0] ?? '?'}
+        {nomAffiche(user)[0] || '?'}
       </span>
     );
 };
@@ -72,7 +73,7 @@ export const RoleBadge: React.FC<{ author: DiscussionAuthor }> = ({ author }) =>
 export const AuthorName: React.FC<{ author: DiscussionAuthor; className?: string }> = ({ author, className = '' }) => (
   author.is_deleted
     ? <span className={`italic text-ink-faint ${className}`}>{t('Compte supprimé')}</span>
-    : <Link to={`/profile/${author.username}`} className={`font-semibold text-ink hover:underline ${className}`}>{author.username}</Link>
+    : <Link to={`/profile/${author.username}`} className={`font-semibold text-ink hover:underline ${className}`}>{nomAffiche(author)}</Link>
 );
 
 const TYPE: Record<ContentTag['type'], { label: string; icon: Icon; tone: string }> = {
@@ -180,7 +181,7 @@ export const UtileButton: React.FC<{
 };
 
 /** Les derniers membres qui ont répondu, en pile. */
-export const RepliersStack: React.FC<{ users: { username: string; avatar: string | null }[] }> = ({ users }) => (
+export const RepliersStack: React.FC<{ users: { username: string; display_name?: string; avatar: string | null }[] }> = ({ users }) => (
   users.length ? (
     <span className="flex -space-x-1.5" aria-hidden>
       {users.map((u) => <Avatar key={u.username} user={u} size={20} ring />)}

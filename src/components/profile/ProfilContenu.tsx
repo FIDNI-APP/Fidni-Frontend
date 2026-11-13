@@ -22,6 +22,7 @@ import { Medaille, nomPalier } from '@/components/communaute/art';
 import { CalendrierDefi } from '@/components/communaute/CalendrierDefi';
 import { GoalsList, PublicationsList, type Goal, type PublishedItem } from './ProfileBilanSection';
 import { dateLocale, t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 type LevelProfile = {
   user_type?: string;
@@ -246,7 +247,7 @@ export const ProfilContenu: React.FC<{
                 {pub.apercu_abonnes.slice(0, 6).map((a) => (
                   <span key={a.username} className="inline-flex h-9 w-9 overflow-hidden rounded-full bg-ink text-[13px] font-semibold text-white ring-2 ring-white">
                     {a.avatar ? <img src={a.avatar} alt="" className="h-full w-full object-cover" />
-                      : <span className="m-auto">{a.username.charAt(0).toUpperCase()}</span>}
+                      : <span className="m-auto">{nomAffiche(a).charAt(0).toUpperCase()}</span>}
                   </span>
                 ))}
               </span>

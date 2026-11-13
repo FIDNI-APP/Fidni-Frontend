@@ -328,7 +328,7 @@ export const SettingsSection: React.FC = () => {
       {/* ── Compte et sécurité ── */}
       <Section id="compte" title={t('Compte et sécurité')}>
         <Card>
-          <Row title={t('Pseudo')} hint={t('Ton nom public sur Fidni : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).')}>
+          <Row title={t('Pseudo')} hint={t('Ton identifiant sur Fidni (adresse de ton profil, @mentions) : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).')}>
             <form onSubmit={saveName} className="mt-3 flex flex-col gap-3">
               <label htmlFor="settings-username" className="sr-only">{t('Pseudo')}</label>
               <input id="settings-username" value={name} autoComplete="username" maxLength={30}

@@ -10,6 +10,7 @@ import type { CarteMembre as Membre, Role } from '@/lib/api/communauteApi';
 import { Avatar } from '@/components/discussions/parts';
 import { BoutonSuivre } from './BoutonSuivre';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 export const roleTexte = (role: Role, level: string | null) =>
   role === 'equipe' ? t('Équipe Fidni') : role === 'prof' ? t('Professeur') : level || t('Élève');
@@ -27,7 +28,7 @@ export const CarteMembre: React.FC<{ membre: Membre }> = ({ membre: m }) => (
       <Avatar user={m} size={88} />
     </Link>
     <Link to={profilUrl(m.username)} className="mt-3 flex max-w-full items-center gap-1 rounded text-[16px] font-semibold tracking-[-0.008em] text-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-      <span className="truncate">{m.username}</span>{m.verifie && <Verifie />}
+      <span className="truncate">{nomAffiche(m)}</span>{m.verifie && <Verifie />}
     </Link>
     <p className="mt-0.5 max-w-full text-[13px] leading-snug text-ink-faint">
       <span className="block truncate">{roleTexte(m.role, m.level)}</span>
@@ -43,7 +44,7 @@ export const CarteMembre: React.FC<{ membre: Membre }> = ({ membre: m }) => (
 
 /** Membre en une ligne : photo, pseudo, rôle ; à droite ce qu'on veut (bouton, chiffre). */
 export const LigneMembre: React.FC<{
-  membre: Pick<Membre, 'username' | 'avatar' | 'role' | 'level' | 'verifie'>;
+  membre: Pick<Membre, 'username' | 'display_name' | 'avatar' | 'role' | 'level' | 'verifie'>;
   droite?: React.ReactNode;
   sousTitre?: React.ReactNode;
   onClick?: () => void;
@@ -54,7 +55,7 @@ export const LigneMembre: React.FC<{
       <Avatar user={m} size={taille} />
       <span className="min-w-0">
         <span className="flex items-center gap-1 text-[14px] font-semibold text-ink">
-          <span className="truncate">{m.username}</span>{m.verifie && <Verifie />}
+          <span className="truncate">{nomAffiche(m)}</span>{m.verifie && <Verifie />}
         </span>
         <span className="block truncate text-[13px] text-ink-faint">{sousTitre ?? roleTexte(m.role, m.level)}</span>
       </span>

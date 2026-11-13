@@ -31,6 +31,8 @@ export interface Badge {
 export interface Identite {
   id: number;
   username: string;
+  /** « Prénom Nom » pour un membre connecté, sinon le pseudo (lib/nomAffiche). */
+  display_name?: string;
   avatar: string | null;
   role: Role;
   level: string | null;
@@ -77,7 +79,7 @@ export interface ProfilPublic extends Identite {
   depuis: string | null;
   abonnes: number;
   abonnements: number;
-  apercu_abonnes: { username: string; avatar: string | null }[];
+  apercu_abonnes: { username: string; display_name?: string; avatar: string | null }[];
   listes_visibles: boolean;
   relation: Relation;
   vitrine: Badge[];
@@ -100,7 +102,7 @@ export interface Decouvrir {
   series: { membre: CarteMembre; n: number }[];
 }
 
-export interface Auteur { id: number; username: string; avatar: string | null; role: Role; level: string | null }
+export interface Auteur { id: number; username: string; display_name?: string; avatar: string | null; role: Role; level: string | null }
 
 interface ObjetEcrit { id: number; titre: string; url: string; salon: string; reponses: number }
 

@@ -15,6 +15,7 @@ import { Avatar } from '@/components/discussions/parts';
 import { MathText } from '@/components/skilliq/MathText';
 import { heure } from './parts';
 import { t } from '@/i18n';
+import { nomAffiche } from '@/lib/nomAffiche';
 
 /** Questions de la feuille, dans l'ordre de la page (ExerciseRenderer : id « question-<chemin> »). */
 const ancres = () => Array.from(document.querySelectorAll<HTMLElement>('[id^="question-"]'));
@@ -185,7 +186,7 @@ export const SalleTravail: React.FC<{ conversation: number; contenu: number; moi
                       <Avatar user={{ username: x.username, avatar: x.avatar ?? null }} size={34} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-1.5 truncate text-[14px] font-medium text-ink">
-                          {x.id === moi ? t('Toi') : x.username}
+                          {x.id === moi ? t('Toi') : nomAffiche(x)}
                           {dansAppel.has(x.id) && <Phone className="h-3.5 w-3.5 text-brand" aria-label={t('dans l’appel')} />}
                         </span>
                         <span className="block text-[12.5px] text-ink-faint">{n ? t('Question {n}', { n }) : t('Pas encore sur la feuille')}</span>
@@ -223,7 +224,7 @@ export const SalleTravail: React.FC<{ conversation: number; contenu: number; moi
                   const moiAuteur = x.auteur === moi;
                   return (
                     <div key={x.id} className={`flex flex-col ${moiAuteur ? 'items-end' : 'items-start'}`}>
-                      {!moiAuteur && <span className="px-1 text-[11.5px] font-medium text-ink-faint">{a?.username}</span>}
+                      {!moiAuteur && <span className="px-1 text-[11.5px] font-medium text-ink-faint">{nomAffiche(a)}</span>}
                       <div dir="auto" title={heure(x.created_at)}
                         className={`max-w-[90%] whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-[13.5px] leading-relaxed ${moiAuteur ? 'bg-brand-soft' : 'border border-line bg-white'} ${x.supprime ? 'italic text-ink-faint' : 'text-ink'}`}>
                         {x.supprime ? t('Message supprimé') : <MathText text={x.texte} />}

@@ -43,7 +43,7 @@ const FormSection: React.FC<{
   id: string;
   title: string;
   hint: string;
-  visibility: 'public' | 'private';
+  visibility: 'public' | 'private' | 'membres';
   children: React.ReactNode;
 }> = ({ id, title, hint, visibility, children }) => (
   <section id={id} aria-labelledby={`${id}-titre`} className="scroll-mt-24 rounded-2xl border border-line bg-white p-5 md:p-6">
@@ -58,7 +58,9 @@ const FormSection: React.FC<{
         >
           {visibility === 'public'
             ? <><Eye className="h-3 w-3" aria-hidden /> {t('Visible sur ton profil')}</>
-            : <><Lock className="h-3 w-3" aria-hidden /> {t('Visible de toi seul')}</>}
+            : visibility === 'membres'
+              ? <><Eye className="h-3 w-3" aria-hidden /> {t('Nom visible des membres')}</>
+              : <><Lock className="h-3 w-3" aria-hidden /> {t('Visible de toi seul')}</>}
         </span>
       </div>
       <div className="min-w-0">{children}</div>
@@ -340,8 +342,8 @@ export function EditProfile() {
           </FormSection>
 
           {/* ── Identité ── */}
-          <FormSection id="identite" title={t('Identité')} visibility="private"
-            hint={t('Sert à tes feuilles d’exercices en PDF et à tes classes. Ton pseudo reste ton seul nom public.')}>
+          <FormSection id="identite" title={t('Identité')} visibility="membres"
+            hint={t('Ton prénom et ton nom s’affichent aux membres connectés à la place de ton pseudo. Le reste sert à tes feuilles d’exercices en PDF et à tes classes.')}>
             <IdentityFields value={identity} onChange={(v) => { setIdentity(v); setError(null); }} isTeacher={isTeacher} />
             {errorFor('identite')}
           </FormSection>

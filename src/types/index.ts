@@ -113,6 +113,8 @@ export interface UserProfile {
 export interface User {
   id: string;
   username: string;
+  /** « Prénom Nom » pour un membre connecté, sinon le pseudo (lib/nomAffiche). */
+  display_name?: string;
   email: string;
   /** Auteur d'une contribution dont le compte a été supprimé (« Compte supprimé »). */
   is_deleted?: boolean;

@@ -59,7 +59,7 @@ export const IdentityFields: React.FC<{
     </div>
     <p className="flex items-start gap-2 text-xs text-ink-faint leading-relaxed">
       <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-      {t('Visible par toi seul : ton pseudo reste ton nom public sur Fidni.')}
+      {t('Ton prénom et ton nom sont affichés aux membres connectés (les visiteurs voient ton pseudo). Civilité, date de naissance et établissement restent visibles par toi seul.')}
     </p>
   </div>
 );
