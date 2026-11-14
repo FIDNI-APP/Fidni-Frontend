@@ -178,7 +178,7 @@ export const TOURS: Tour[] = [
       INDICATION,
       SOLUTION,
       AUTO_EVAL,
-      { target: 'reussite', title: 'Question par question', body: 'À droite (sous l’exercice sur téléphone) : la part d’élèves qui réussissent chaque question ; la pastille au bout, c’est toi. Clique une ligne pour le détail, et pour dire si tu l’as réussie sans ouvrir la solution.' },
+      { target: 'reussite', title: 'Réussite des élèves par question', body: 'À droite (sous l’exercice sur téléphone) : la part d’élèves qui réussissent chaque question ; la pastille au bout, c’est toi. Clique une ligne pour le détail, et pour dire si tu l’as réussie sans ouvrir la solution.' },
       { target: 'detail-chrono', title: 'Chronomètre', body: 'Lance le chrono quand tu commences ; en pause, ✓ enregistre ton temps. Tes temps sont dans le menu ⋯.' },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-le à tes favoris.' },
       { target: 'detail-liste', title: 'Liste de révision', body: 'En bas de la page (ou dans le menu ⋯) : range-le dans une liste pour le réviser plus tard ou l’imprimer.' },

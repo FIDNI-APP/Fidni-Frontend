@@ -40,6 +40,7 @@ import { BansCard } from '@/components/pilotage/BansCard';
 import type { Funnel } from '@/components/pilotage/FunnelCard';
 import { DifficultyGapsPanel, type DifficultyGap } from '@/components/pilotage/DifficultyGapsPanel';
 import { AuthDoorsCard, type AuthDoor } from '@/components/pilotage/AuthDoorsCard';
+import { AppareilsCard, type AppareilKey, type AppareilsStats } from '@/components/pilotage/AppareilsCard';
 import { AvisDiagnosticsCard, type AvisDiagnostic } from '@/components/pilotage/AvisDiagnosticsCard';
 import { NouveautesCard, type NouveauteStat } from '@/components/pilotage/NouveautesCard';
 import { KpiTile } from '@/components/pilotage/KpiTile';
@@ -76,6 +77,8 @@ interface Overview {
   auth_doors?: AuthDoor[];
   avis_diagnostics?: AvisDiagnostic[];
   nouveautes?: NouveauteStat[];
+  /** Téléphone, tablette, ordinateur (14/11/2026). */
+  appareils?: AppareilsStats;
 }
 interface FilterValue { filter: string; type: 'exercise' | 'exam' | 'lesson'; value: string; label: string; count: number; visits: number; anon: number }
 interface UserRow {
@@ -105,6 +108,12 @@ const totals = (v: unknown) => {
   const t = obj(v);
   return { visits: num(t.visits), member_visits: num(t.member_visits), pages: num(t.pages), contents: num(t.contents), contents_all: num(t.contents_all) };
 };
+
+const APPAREIL_KEYS: AppareilKey[] = ['telephone', 'tablette', 'ordinateur'];
+const appareilsTotaux = (v: unknown) => Object.fromEntries(APPAREIL_KEYS.map((k) => {
+  const t = obj(obj(v)[k]);
+  return [k, { visits: num(t.visits), members: num(t.members), anon: num(t.anon), pages: num(t.pages) }];
+})) as AppareilsStats['current'];
 
 function normalizeOverview(raw: unknown, requestedDays: number): Overview {
   if (!isObj(raw)) throw new Error('Réponse inattendue du serveur.');
@@ -157,6 +166,11 @@ function normalizeOverview(raw: unknown, requestedDays: number): Overview {
       top_contents: list(anon.top_contents, (c) => ({ ...contentRef(c), views: num(c.views), total: num(c.total) })),
       actions: list(anon.actions, (a) => ({ key: str(a.key), label: str(a.label, str(a.key)), count: num(a.count), total: num(a.total), visits: num(a.visits) })),
     },
+    appareils: isObj(raw.appareils) ? {
+      since: str(raw.appareils.since, '2026-11-14'),
+      current: appareilsTotaux(raw.appareils.current),
+      previous: isObj(raw.appareils.previous) ? appareilsTotaux(raw.appareils.previous) : null,
+    } : undefined,
     funnel: isObj(raw.funnel) ? {
       signups: num(raw.funnel.signups), verified: num(raw.funnel.verified), onboarded: num(raw.funnel.onboarded),
       first_view: num(raw.funnel.first_view), first_work: num(raw.funnel.first_work), back_d7: num(raw.funnel.back_d7),
@@ -545,6 +559,7 @@ const UsageTab: React.FC<{ data: Overview }> = ({ data }) => {
       </div>
 
       <div className="flex min-w-0 flex-col gap-4">
+      {data.appareils && <ErrorBoundary variant="block" label="Appareils" resetKey={data.generated_at}><AppareilsCard data={data.appareils} days={data.days} /></ErrorBoundary>}
       <section className="fd-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
