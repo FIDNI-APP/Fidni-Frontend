@@ -1,5 +1,6 @@
 /**
- * « Question par question » (15/10/2026) : l'histogramme de l'ancien onglet « Activité », remis dans la page, en
+ * « Réussite des élèves par question » (titre « Question par question » jusqu'au 14/11/2026, jugé pas assez
+ * parlant par Natsu) (15/10/2026) : l'histogramme de l'ancien onglet « Activité », remis dans la page, en
  * vertical dans la colonne de droite (examen : à la place de « Ta copie », dont il garde la note). Une ligne par
  * question : la part d'élèves qui la réussissent (barre verte, or sous 50 %) et le résultat de l'élève (pastille). Un clic sur
  * une ligne la déplie (le détail, « Aller à la question ») ; au bout de chaque ligne, les boutons rapides Réussi /
@@ -62,7 +63,7 @@ export const QuestionChart: React.FC<{
     <div className="rounded-2xl border border-line bg-white p-5" data-tour={tour}>
       {header}
       <div className={header ? 'mt-4 border-t border-line pt-4' : ''}>
-        <p className="text-[12.5px] font-medium text-ink-faint">{t('Question par question')}</p>
+        <p className="text-[12.5px] font-medium text-ink-faint">{t('Réussite des élèves par question')}</p>
         <ol className="mt-3 flex flex-col">
           {rows.map((r, i) => {
             const p = rate(r.path);
