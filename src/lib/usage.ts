@@ -82,6 +82,7 @@ export type UsageAction =
   | 'voir-solution' | 'voir-indication' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'rattrapage-liste' | 'imprimer'
   | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions' | 'mode-sombre' | 'langue-ar' | 'langue-fr'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
+  | 'filtre-enseignant' | 'enseignant-carte' | 'enseignant-page'
   | 'filtre-difficulte' | 'filtre-statut' | 'filtre-national' | 'filtre-date' | 'filtre-effacer' | 'tri'
   // Audit du 10/10/2026 (même liste fermée que apps/users/usage.py ACTIONS)
   | 'partager' | 'chrono-demarre' | 'epreuve-demarree' | 'epreuve-terminee' | 'similaire' | 'suivant-apres-resultat'
@@ -131,7 +132,7 @@ type Filters = Record<string, unknown>;
 const FILTER_ACTIONS: [string, UsageAction][] = [
   ['classLevels', 'filtre-niveau'], ['subjects', 'filtre-matiere'], ['subfields', 'filtre-sous-domaine'],
   ['chapters', 'filtre-chapitre'], ['theorems', 'filtre-theoreme'], ['difficulties', 'filtre-difficulte'],
-  ['showViewed', 'filtre-statut'], ['hideViewed', 'filtre-statut'], ['showCompleted', 'filtre-statut'],
+  ['enseignants', 'filtre-enseignant'], ['showViewed', 'filtre-statut'], ['hideViewed', 'filtre-statut'], ['showCompleted', 'filtre-statut'],
   ['showFailed', 'filtre-statut'], ['todo', 'filtre-statut'], ['isNationalExam', 'filtre-national'],
   ['dateStart', 'filtre-date'],
 ];
@@ -146,6 +147,7 @@ export type ListKind = 'exercise' | 'exam' | 'lesson';
 const VALUE_KEYS: [string, string][] = [
   ['classLevels', 'niveau'], ['subjects', 'matiere'], ['subfields', 'sous-domaine'], ['chapters', 'chapitre'],
   ['theorems', 'theoreme'], ['difficulties', 'difficulte'], ['dateStart', 'date'], ['isNationalExam', 'national'],
+  ['enseignants', 'enseignant'],
 ];
 const STATUS_KEYS = ['showViewed', 'hideViewed', 'showCompleted', 'showFailed', 'todo'];
 const VALUE_RE = /^[A-Za-z0-9_-]{1,40}$/;
@@ -182,6 +184,13 @@ export function trackFilterChange(before: Filters, after: Filters, kind?: ListKi
     else if (isSet(a) && a !== b) sendValue(kind, name, a);
   }
   for (const key of STATUS_KEYS) if (after[key] === true && before[key] !== true) sendValue(kind, 'statut', key);
+}
+
+/** Clic sur le nom d'un enseignant (14/11/2026) : sur une carte ou sur la page d'un contenu. Il ouvre la liste filtrée
+ *  par cet enseignant : compté comme le geste et comme une valeur du filtre « Enseignant » (« exam:enseignant:3 »). */
+export function trackEnseignantClick(kind: ListKind, id: number, where: 'carte' | 'page') {
+  trackAction(where === 'carte' ? 'enseignant-carte' : 'enseignant-page');
+  sendValue(kind, 'enseignant', id);
 }
 
 /** Porte d'entrée de la fenêtre de connexion / inscription (10/10/2026) : « vote », « bandeau », « barre-haut »…
