@@ -61,6 +61,7 @@ function buildQueryParams(filters: ContentFilters | ContentExamFilters): URLSear
   filters.chapters?.forEach(id => params.append('chapters[]', id));
   filters.theorems?.forEach(id => params.append('theorems[]', id));
   filters.difficulties?.forEach(d => params.append('difficulties[]', d));
+  filters.enseignants?.forEach(id => params.append('enseignants[]', id));
 
   if (filters.showViewed) params.append('showViewed', 'true');
   if (filters.hideViewed) params.append('hideViewed', 'true');

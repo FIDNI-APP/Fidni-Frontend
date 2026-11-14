@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import type { ListSort } from '@/types/content';
 import { getClassLevels, getSubjects, getChapters, getTheorems, getDifficultyCounts } from '@/lib/api';
+import { getEnseignantCounts } from '@/lib/api/hierarchyApi';
 import { slugify } from '@/lib/api/hubApi';
 import { SortDropdown } from './SortDropdown';
 import { api } from '@/lib/api/apiClient';
@@ -109,6 +110,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   // liste des chapitres du niveau soit chargée.
   const [chapterInfo, setChapterInfo] = useState<Record<string, { name: string; slug?: string }>>({});
   const [theorems, setTheorems] = useState<Option[]>([]);
+  // Enseignants qui ont des contenus avec les filtres en cours (14/11/2026) ; noms gardés pour les étiquettes.
+  const [enseignants, setEnseignants] = useState<Option[]>([]);
+  const [enseignantNames, setEnseignantNames] = useState<Record<string, string>>({});
   // null : pas encore chargés (le serveur n'envoie que les difficultés qui ont des contenus).
   const [difficultyCounts, setDifficultyCounts] = useState<Record<string, number> | null>(null);
 
@@ -170,7 +174,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     let cancelled = false;
     getDifficultyCounts(contentType, {
       classLevels: filters.classLevels, subjects: filters.subjects, subfields: filters.subfields,
-      chapters: filters.chapters, theorems: filters.theorems,
+      chapters: filters.chapters, theorems: filters.theorems, enseignants: filters.enseignants,
       isNationalExam: contentType === 'exam' ? nationalSection : undefined,
       nationalYear,
     })
@@ -178,7 +182,27 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       .catch((e) => console.error('Compteurs de difficulté', e));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentType, nationalSection, nationalYear, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(',')]);
+  }, [contentType, nationalSection, nationalYear, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(','), filters.enseignants.join(',')]);
+
+  // Enseignants : mêmes filtres que la liste (sans le leur), difficulté comprise.
+  const difficultiesKey = filters.difficulties.join(',');
+  useEffect(() => {
+    let cancelled = false;
+    getEnseignantCounts(contentType, {
+      classLevels: filters.classLevels, subjects: filters.subjects, subfields: filters.subfields,
+      chapters: filters.chapters, theorems: filters.theorems, difficulties: filters.difficulties,
+      isNationalExam: contentType === 'exam' ? nationalSection : undefined,
+      nationalYear,
+    })
+      .then((rows) => {
+        if (cancelled) return;
+        setEnseignants(rows.map((r) => ({ id: r.id, name: r.nom, content_count: r.count })));
+        setEnseignantNames((prev) => ({ ...prev, ...Object.fromEntries(rows.map((r) => [String(r.id), r.nom])) }));
+      })
+      .catch((e) => console.error('Enseignants', e));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentType, nationalSection, nationalYear, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(','), difficultiesKey]);
 
   // Chapitres de l'adresse absents de la liste chargée : leur nom pour l'étiquette, leur slug pour leur page.
   useEffect(() => {
@@ -232,6 +256,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     filters.chapters.filter((id) => !fixedChapters.includes(id)).forEach((id) => out.push({ key: `chapters:${id}`, label: chapterInfo[id]?.name ?? t('Chapitre') }));
     filters.theorems.forEach((id) => out.push({ key: `theorems:${id}`, label: nameOf(theorems, id) }));
     filters.difficulties.forEach((d) => out.push({ key: `difficulties:${d}`, label: t(DIFF_LABEL[d] ?? d) }));
+    filters.enseignants.forEach((id) => out.push({ key: `enseignants:${id}`, label: enseignantNames[id] ?? t('Enseignant') }));
     if (isAuthenticated) STATUS_KEYS.forEach((k) => { if (filters[k]) out.push({ key: k, label: t(STATUS_LABEL[k]) }); });
     if (filters.isNationalExam === true) out.push({ key: 'isNationalExam', label: t('National') });
     if (filters.isNationalExam === false) out.push({ key: 'isNationalExam', label: t('Autres examens') });
@@ -239,7 +264,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     if (filters.dateEnd) out.push({ key: 'dateEnd', label: t('Jusqu’à {d}', { d: filters.dateEnd }) });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, classLevels, subjects, chapters, theorems, chapterInfo, isAuthenticated, singleSubject, fixedLevels.join(','), fixedChapters.join(',')]);
+  }, [filters, classLevels, subjects, chapters, theorems, enseignantNames, chapterInfo, isAuthenticated, singleSubject, fixedLevels.join(','), fixedChapters.join(',')]);
 
   const chipsKey = chips.map((c) => `${c.key}=${c.label}`).join('|');
   useEffect(() => { onChipsChange?.(chips); }, [chipsKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -379,6 +404,20 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
         </FilterRow>
       )}
 
+      {/* Enseignant (14/11/2026) : ceux qui ont des contenus ici, les plus fournis d'abord. */}
+      {(enseignants.length > 0 || filters.enseignants.length > 0) && (
+        <FilterRow title={t('Enseignant')}>
+          {[
+            ...enseignants,
+            ...filters.enseignants.filter((id) => !enseignants.some((o) => String(o.id) === id))
+              .map((id) => ({ id, name: enseignantNames[id] ?? t('Enseignant'), content_count: 0 })),
+          ].map((o) => (
+            <OptionButton key={o.id} option={o} selected={filters.enseignants.includes(String(o.id))} className={pill(filters.enseignants.includes(String(o.id)))}
+              onClick={() => toggle('enseignants', String(o.id))} />
+          ))}
+        </FilterRow>
+      )}
+
       {/* Statut — élève : les onglets de la barre ; un visiteur n'a rien de fait, on l'invite à se connecter. */}
       {contentType !== 'lesson' && !isAuthenticated && (
         <FilterRow title={t('Statut')}>
@@ -394,7 +433,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   // Une ligne au moins dans le panneau ? Dans le dossier d'un chapitre de leçons, il ne reste parfois que le
   // théorème : sans lui, le bouton « Filtres » ouvrirait un panneau vide.
-  const hasRows = inFolder !== 'chapter' || contentType !== 'lesson'
+  const hasRows = inFolder !== 'chapter' || contentType !== 'lesson' || enseignants.length > 0
     || (filters.chapters.length > 0 && visible(theorems, filters.theorems).length > 0);
   // Onglets du statut en vue : élève connecté, exercices et examens.
   const quickStatus = isAuthenticated && contentType !== 'lesson';

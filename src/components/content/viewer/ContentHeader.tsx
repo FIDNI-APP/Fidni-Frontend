@@ -7,14 +7,16 @@
  *  - onglets soulignés (Exercice · Solutions des élèves · Activité) au lieu de trois gros boutons.
  * Le reste (partager, ranger dans une liste ou un cahier, mes temps, signaler, modération) est dans « ⋯ ».
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookMarked, Bookmark, ChevronLeft, Flag, History, ListPlus, Loader2, MoreHorizontal, Pencil, Printer,
-  School, Share2, Trash2, Users,
+  School, Share2, Trash2, UserRound, Users,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import type { ContentExercise, ContentExam, ContentLesson } from '@/types/content';
+import type { ContentEnseignant, ContentExercise, ContentExam, ContentLesson } from '@/types/content';
+import { enseignantHref } from '@/components/content/listing/CardDetails';
+import { EnseignantsPicker } from './EnseignantsPicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
@@ -133,9 +135,12 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
       .catch((err) => console.error('Error copying link:', err));
   };
   const pick = (fn?: () => void) => () => { setMenuOpen(false); fn?.(); };
+  // Enseignants (14/11/2026) : modifiables ici par l'équipe (EnseignantsPicker), sans recharger la page.
+  const [enseignants, setEnseignants] = useState<ContentEnseignant[]>((content as { enseignants?: ContentEnseignant[] }).enseignants ?? []);
+  useEffect(() => { setEnseignants((content as { enseignants?: ContentEnseignant[] }).enseignants ?? []); }, [content]);
 
   // ── Repère : nature · chapitre · niveau (liens vers la page du chapitre et du niveau, même rubrique).
-  const c = content as ContentItem & { structure?: { credit?: string }; school?: { name: string; city?: string } | null };
+  const c = content as ContentItem & { structure?: { credit?: string }; school?: { name: string; city?: string } | null; enseignants?: ContentEnseignant[] };
   const credit = c.structure?.credit;
   const school = c.school;
   const level = (hub.level ?? content.class_levels?.[0]) as { name: string; slug?: string } | undefined;
@@ -265,12 +270,32 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
         {/* Ressenti des élèves : dans la pastille de difficulté quand il diffère (l'examen le redit dans sa fiche). */}
         {!isLesson && content.difficulty && <DifficultyChip difficulty={content.difficulty} felt={contentType === 'exercise' ? content.felt : null} />}
         {facts && <span className="fd-nums">{facts}</span>}
-        {credit
+        {enseignants.length > 0 ? (
+          <span>
+            {t('Proposé par')}{' '}
+            {enseignants.map((e, i) => (
+              <React.Fragment key={e.id}>
+                {i > 0 && (i === enseignants.length - 1 ? ` ${t('et')} ` : ', ')}
+                <Link to={enseignantHref(contentType, e.id)} className="font-medium text-ink-soft hover:text-ink hover:underline"
+                  title={contentType === 'exam' ? t('Tous les devoirs de {nom}', { nom: e.nom }) : contentType === 'lesson' ? t('Tous les cours de {nom}', { nom: e.nom }) : t('Tous les exercices de {nom}', { nom: e.nom })}>
+                  {e.nom}
+                </Link>
+                {e.profil && (
+                  <Link to={`/profile/${e.profil}`} title={t('Voir le profil de {nom}', { nom: e.nom })} aria-label={t('Voir le profil de {nom}', { nom: e.nom })}
+                    className="ms-1 inline-flex h-5 w-5 items-center justify-center rounded-full align-[-3px] text-ink-faint hover:bg-[#f2f1ee] hover:text-ink">
+                    <UserRound className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </React.Fragment>
+            ))}
+          </span>
+        ) : credit
           ? <span>{t('Proposé par {nom}', { nom: credit })}</span>
           : content.author?.is_deleted ? <span className="italic">{t('Compte supprimé')}</span>
             : content.author?.username && (
               <span className="hidden sm:inline">{t('par')} <Link to={`/profile/${content.author.username}`} className="text-ink-soft hover:text-ink hover:underline">{nomAffiche(content.author)}</Link></span>
             )}
+        {user?.is_superuser && <EnseignantsPicker contentId={content.id} value={enseignants} onChange={setEnseignants} />}
         {/* Établissement d'origine (champ facultatif de l'assistant « Ajouter un contenu »). */}
         {school?.name && (
           <span className="inline-flex items-center gap-1"><School className="h-3.5 w-3.5" aria-hidden />

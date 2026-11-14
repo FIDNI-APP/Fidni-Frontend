@@ -117,6 +117,7 @@ export const getDifficultyCounts = async (
     subfields?: string[];
     chapters?: string[];
     theorems?: string[];
+    enseignants?: string[];
     /** Examens : nationaux (true) ou devoirs (false), comme la liste affichée. */
     isNationalExam?: boolean;
     /** Dossier d'une année du Bac national (« aucune » : sujets sans année). */
@@ -130,8 +131,31 @@ export const getDifficultyCounts = async (
   filters.subfields?.forEach(id => params.append('subfields[]', id));
   filters.chapters?.forEach(id => params.append('chapters[]', id));
   filters.theorems?.forEach(id => params.append('theorems[]', id));
+  filters.enseignants?.forEach(id => params.append('enseignants[]', id));
   if (filters.isNationalExam !== undefined) params.append('is_national_exam', String(filters.isNationalExam));
   if (filters.nationalYear) params.append('national_year', filters.nationalYear);
   const response = await api.get(`/difficulty-counts/?${params}`);
+  return response.data;
+};
+
+/** Filtre « Enseignant » (14/11/2026) : enseignants qui ont des contenus avec les filtres en cours, et leur nombre. */
+export const getEnseignantCounts = async (
+  contentType: string,
+  filters: {
+    classLevels?: string[]; subjects?: string[]; subfields?: string[]; chapters?: string[]; theorems?: string[];
+    difficulties?: string[]; isNationalExam?: boolean; nationalYear?: string;
+  },
+): Promise<{ id: number; nom: string; count: number }[]> => {
+  const params = new URLSearchParams();
+  params.append('content_type', contentType);
+  filters.classLevels?.forEach(id => params.append('class_levels[]', id));
+  filters.subjects?.forEach(id => params.append('subjects[]', id));
+  filters.subfields?.forEach(id => params.append('subfields[]', id));
+  filters.chapters?.forEach(id => params.append('chapters[]', id));
+  filters.theorems?.forEach(id => params.append('theorems[]', id));
+  filters.difficulties?.forEach(d => params.append('difficulties[]', d));
+  if (filters.isNationalExam !== undefined) params.append('is_national_exam', String(filters.isNationalExam));
+  if (filters.nationalYear) params.append('national_year', filters.nationalYear);
+  const response = await api.get(`/enseignants/?${params}`);
   return response.data;
 };

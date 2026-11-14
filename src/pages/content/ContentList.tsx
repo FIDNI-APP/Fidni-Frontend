@@ -261,6 +261,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       chapters: list('chapters') ?? hubChapters,
       theorems: list('theorems') ?? [],
       difficulties: (list('difficulties') ?? []) as Difficulty[],
+      enseignants: list('enseignants') ?? [],
       showViewed: searchParams.get('showViewed') === 'true',
       hideViewed: searchParams.get('hideViewed') === 'true',
       showCompleted: searchParams.get('showCompleted') === 'true',
@@ -328,6 +329,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (filters.chapters.length > 0) params.chapters = filters.chapters;
     if (filters.theorems.length > 0) params.theorems = filters.theorems;
     if (filters.difficulties.length > 0) params.difficulties = filters.difficulties;
+    if (filters.enseignants.length > 0) params.enseignants = filters.enseignants;
     if (sortBy) params.sort = sortBy;
 
     // Status filters
@@ -582,6 +584,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     setList('chapters', newFilters.chapters);
     setList('theorems', newFilters.theorems);
     setList('difficulties', newFilters.difficulties);
+    setList('enseignants', newFilters.enseignants);
     if (newFilters.showViewed) params.set('showViewed', 'true');
     if (newFilters.hideViewed) params.set('hideViewed', 'true');
     if (newFilters.showCompleted) params.set('showCompleted', 'true');

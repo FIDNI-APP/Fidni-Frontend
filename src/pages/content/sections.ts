@@ -53,7 +53,7 @@ export const plural = (n: number, [one, many]: [string, string]) => `${n.toLocal
 /** Paramètres que la liste lit (ContentList : getInitialFilters, tri, dossier « Sans chapitre »). Les autres
  *  (fbclid, utm_*, gclid… ajoutés par les réseaux sociaux et la publicité) n'empêchent pas les dossiers. */
 export const LIST_KEYS = new Set([
-  'classLevels', 'subjects', 'subfields', 'chapters', 'theorems', 'difficulties', 'showViewed', 'hideViewed',
+  'classLevels', 'subjects', 'subfields', 'chapters', 'theorems', 'difficulties', 'enseignants', 'showViewed', 'hideViewed',
   'showCompleted', 'showFailed', 'todo', 'isNationalExam', 'dateStart', 'dateEnd', 'sort', 'sansChapitre',
 ]);
 
