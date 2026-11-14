@@ -25,7 +25,7 @@ import {
 } from '@/lib/api/LearningPathApi';
 import { LearningPath, Video, PathChapter, UserVideoProgress } from '@/types/index';
 import { useLearningPathStore } from '@/stores/LearningPathStore';
-import { computeProgress, sameId } from '@/components/parcours/progression';
+import { computeProgress, formatDuration, sameId, videoTypeLabel } from '@/components/parcours/progression';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const ChapterVideo: React.FC = () => {
@@ -267,7 +267,7 @@ const ChapterVideoContent: React.FC = () => {
                 {learningPath.title}
               </h1>
               <p className="text-sm text-ink-soft">
-                {t('Chapter {n}: {title}', { n: currentChapter.order, title: currentChapter.title })}
+                {t('Chapitre {n} : {title}', { n: currentChapter.order, title: currentChapter.title })}
               </p>
             </div>
           </div>
@@ -308,9 +308,11 @@ const ChapterVideoContent: React.FC = () => {
                 {currentVideo.title}
               </h2>
               <div className="flex items-center gap-4 text-sm text-ink-soft">
-                <span>{currentVideo.video_type}</span>
-                <span>•</span>
-                <span>{currentVideo.duration}</span>
+                {videoTypeLabel(currentVideo.video_type) && <>
+                  <span>{t(videoTypeLabel(currentVideo.video_type))}</span>
+                  <span>•</span>
+                </>}
+                <span>{formatDuration(currentVideo.duration_seconds)}</span>
                 {currentVideo.user_progress?.is_completed && (
                   <>
                     <span>•</span>

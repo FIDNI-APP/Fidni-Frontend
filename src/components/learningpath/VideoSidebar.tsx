@@ -2,7 +2,7 @@
 import React from 'react';
 import { ChevronRight, CheckCircle, Lock, FileText, Video as VideoIcon } from 'lucide-react';
 import { PathChapter } from '@/types/index';
-import { computeProgress, sameId } from '@/components/parcours/progression';
+import { computeProgress, formatDuration, sameId, videoTypeLabel } from '@/components/parcours/progression';
 import { cn } from '@/lib/utils';
 import { t } from '@/i18n';
 
@@ -60,10 +60,11 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-ink text-sm">
-                    {t('Chapter {n}: {title}', { n: chapterIndex + 1, title: chapter.title })}
+                    {t('Chapitre {n} : {title}', { n: chapterIndex + 1, title: chapter.title })}
                   </h4>
                   <p className="text-xs text-ink-faint">
-                    {t('{p}% complete', { p: chapter.user_progress?.progress_percentage || 0 })}
+                    {/* Même avancement que la carte du parcours (vidéos et quiz), pas l'ancien calcul du serveur. */}
+                    {t('{p} % terminé', { p: progress.steps.find((s) => sameId(s.chapter.id, chapter.id))?.percent ?? 0 })}
                   </p>
                 </div>
               </div>
@@ -111,7 +112,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                         </span>
                       </div>
                       <div className="text-xs text-ink-faint">
-                        {video.duration} • {video.video_type}
+                        {formatDuration(video.duration_seconds)}{videoTypeLabel(video.video_type) && ` • ${t(videoTypeLabel(video.video_type))}`}
                       </div>
                     </div>
 
@@ -153,7 +154,7 @@ export const VideoSidebar: React.FC<VideoSidebarProps> = ({
                       {t('{n} questions', { n: chapter.quiz.questions.length })}
                       {chapter.user_progress?.quiz_score && (
                         <span className="ms-2">
-                          {t('• Last score: {s}%', { s: chapter.user_progress.quiz_score })}
+                          {t('• Dernier score : {s} %', { s: chapter.user_progress.quiz_score })}
                         </span>
                       )}
                     </div>
