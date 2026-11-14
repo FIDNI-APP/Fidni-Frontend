@@ -4,6 +4,7 @@ import { ModalShell, FormError, fieldCls } from '@/components/enregistrements/Mo
 import { beginVideoUpload, finishVideoUpload, saveParcoursVideo, sendVideoChunk,
   type ParcoursChapter, type ParcoursVideo, type VideoUploadSession } from '@/lib/api/parcoursApi';
 import { t } from '@/i18n';
+import { VIDEO_TYPES } from '@/components/parcours/progression';
 
 export const ParcoursVideoForm: React.FC<{
   chapter: ParcoursChapter; video?: ParcoursVideo; onClose: () => void; onSaved: () => Promise<void>;
@@ -133,7 +134,7 @@ export const ParcoursVideoForm: React.FC<{
       </fieldset>
       <label className="block text-sm font-medium text-ink">{t('Type de vidéo')}
         <select className={fieldCls + ' mt-1.5'} value={videoType} onChange={(e) => setVideoType(e.target.value)}>
-          {[['lesson', 'Cours'], ['introduction', 'Introduction'], ['explanation', 'Explication'], ['demo', 'Exercice corrigé'], ['tips', 'Méthodes et astuces'], ['summary', 'Résumé']].map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+          {VIDEO_TYPES.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
         </select>
       </label>
     </fieldset>

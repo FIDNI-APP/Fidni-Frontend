@@ -129,6 +129,13 @@ export function formatDuration(seconds: number): string {
   return `${seconds} s`;
 }
 
+/** Types de vidéo (serveur `Video.VIDEO_TYPES`) et leur nom en français : formulaire et lecteur. */
+export const VIDEO_TYPES: [string, string][] = [
+  ['lesson', 'Cours'], ['introduction', 'Introduction'], ['explanation', 'Explication'],
+  ['demo', 'Exercice corrigé'], ['tips', 'Méthodes et astuces'], ['summary', 'Résumé'],
+];
+export const videoTypeLabel = (type: string | null | undefined) => VIDEO_TYPES.find(([k]) => k === type)?.[1] ?? '';
+
 export const chapterSeconds = (c: ParcoursChapter) => c.videos.reduce((n, v) => n + (v.duration_seconds || 0), 0);
 
 /** Clés des checkpoints terminés, pour animer ceux qui viennent de l'être (retour du lecteur). */
