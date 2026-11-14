@@ -94,7 +94,9 @@ export type UsageAction =
   | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee'
   // Ma progression refondue (13/10/2026) et bloc « Où j'en suis » de l'accueil
   | 'prog-objectif' | 'prog-objectif-exercice' | 'prog-fiche' | 'prog-chapitre' | 'prog-chapitre-action' | 'prog-calcul'
-  | 'prog-activite-detail' | 'accueil-objectif' | 'accueil-progression';
+  | 'prog-activite-detail' | 'accueil-objectif' | 'accueil-progression'
+  // 15/11/2026 : séries d'exercices, bouton « Progression » des listes, graphique de l'accueil
+  | 'serie-ordre' | 'serie-existante' | 'liste-progression' | 'accueil-courbe';
 
 function send(kind: 'page' | 'action' | 'filtre', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.

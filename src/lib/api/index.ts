@@ -189,6 +189,7 @@ export {
   deleteRevisionList,
   addItemToRevisionList,
   removeItemFromRevisionList,
+  reorderRevisionList,
   getRevisionListStatistics,
   type RevisionList,
   type RevisionListItem,

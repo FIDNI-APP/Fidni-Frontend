@@ -185,6 +185,11 @@ export async function removeItemFromRevisionList(listId: number, itemId: number)
   }
 }
 
+/** Nouvel ordre des exercices d'une série (15/11/2026) : TOUS ses éléments (identifiants d'éléments), dans l'ordre. */
+export async function reorderRevisionList(listId: number, itemIds: number[]): Promise<void> {
+  await api.post(`/revision-lists/${listId}/reorder/`, { item_ids: itemIds });
+}
+
 /**
  * Get statistics for a revision list
  */

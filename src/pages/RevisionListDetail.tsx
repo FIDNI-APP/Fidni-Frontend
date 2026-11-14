@@ -14,6 +14,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import {
   getRevisionList,
   removeItemFromRevisionList,
+  reorderRevisionList,
   updateRevisionList,
   getRevisionListStatistics,
   type RevisionList,
@@ -40,6 +41,7 @@ import { recordHelp } from '@/lib/helpTracking';
 import { assessablePaths } from '@/lib/utils/contentHelpers';
 import type { AssessmentStatus } from '@/types/content';
 import { trackAction } from '@/lib/usage';
+import { OrdreSerie } from '@/components/revision/OrdreSerie';
 
 type View = 'revision' | 'feuille';
 type Progress = Record<string, { status: AssessmentStatus; assessed_at?: string }>;
@@ -106,6 +108,9 @@ export const RevisionListDetail: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  // « Modifier » : l'ordre des exercices (identifiants d'éléments), enregistré avec le nom (15/11/2026).
+  const [editOrder, setEditOrder] = useState<number[]>([]);
+  const [saveError, setSaveError] = useState(false);
   const [showAllSolutions, setShowAllSolutions] = useState(false);
   // Mode révision : l'exercice affiché (index dans la liste) ; null = récapitulatif de fin.
   const [current, setCurrent] = useState<number | null>(0);
@@ -280,15 +285,30 @@ export const RevisionListDetail: React.FC = () => {
     }
   };
 
+  const startEditing = () => {
+    setEditOrder(items.map((i) => i.id));
+    setSaveError(false);
+    setIsEditing(true);
+  };
+
   const handleUpdateList = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!id || !editName.trim()) return;
+    setSaveError(false);
     try {
       await updateRevisionList(parseInt(id), { name: editName, description: editDescription });
+      // Ordre changé : tous les éléments de la liste (même ceux d'un contenu retiré de Fidni, gardés à la fin).
+      const all = (list?.items || []).map((i) => i.id);
+      const order = [...editOrder, ...all.filter((x) => !editOrder.includes(x))];
+      if (order.join(',') !== all.join(',')) {
+        await reorderRevisionList(parseInt(id), order);
+        trackAction('serie-ordre');
+      }
       setIsEditing(false);
       await load(true);
     } catch (error) {
       console.error('Failed to update list:', error);
+      setSaveError(true);
     }
   };
 
@@ -340,7 +360,7 @@ export const RevisionListDetail: React.FC = () => {
       <div className="revision-print-hide">
         {isEditing ? (
           <>
-            <PageHeader back={BACK} eyebrow={t('Liste de révision')} icon={ListChecks} title={t('Modifier la liste')} />
+            <PageHeader back={BACK} eyebrow={t('Liste de révision')} icon={ListChecks} title={t('Modifier la série')} />
             <form onSubmit={handleUpdateList} className="mb-8 rounded-2xl border border-line bg-white p-5 sm:p-6">
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-ink-soft">{t('Nom')}</span>
@@ -356,6 +376,11 @@ export const RevisionListDetail: React.FC = () => {
                   className="w-full resize-none rounded-xl border border-line bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                   placeholder={t('Pour le devoir du 12 novembre…')} />
               </label>
+              {items.length > 1 && (
+                <OrdreSerie order={editOrder} onChange={setEditOrder}
+                  items={items.map((i) => ({ id: i.id, title: i.content_object.title, kind: kindLabel(i.content_object) }))} />
+              )}
+              {saveError && <p role="alert" className="mt-4 text-[13px] text-[#a23b34]">{t('Échec de l’enregistrement. Réessaie.')}</p>}
               <div className="mt-5 flex flex-wrap justify-end gap-2">
                 <button type="button" className="fd-btn-ghost min-h-10" onClick={() => { setIsEditing(false); setEditName(list.name); setEditDescription(list.description); }}>
                   {t('Annuler')}
@@ -371,7 +396,7 @@ export const RevisionListDetail: React.FC = () => {
             subtitle={list.description || undefined}
             actions={(
               <>
-                <button type="button" onClick={() => setIsEditing(true)} className="fd-btn-ghost min-h-10" title={t('Renommer la liste')} data-tour="revision-modifier">
+                <button type="button" onClick={startEditing} className="fd-btn-ghost min-h-10" title={t('Renommer ou changer l’ordre')} data-tour="revision-modifier">
                   <Pencil className="h-4 w-4" /> {t('Modifier')}
                 </button>
                 <button type="button" onClick={() => navigate(pdfPath)} disabled={!items.length} data-tour="revision-pdf"

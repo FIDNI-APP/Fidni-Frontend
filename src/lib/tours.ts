@@ -148,7 +148,7 @@ export const TOURS: Tour[] = [
       { target: 'liste-ouvrir', title: 'Page complète', body: (c) => c.kind === 'lesson'
         ? 'Ouvre la leçon pour la lire en entier et la commenter.'
         : 'Ouvre-le pour travailler : solutions question par question, chrono, commentaires et statistiques.' },
-      { target: 'liste-fiche', title: 'Fiche TD', body: 'Regroupe les exercices de ton choix (glisse-les, ou « + Fiche » sur une carte) en une fiche à imprimer ; elle est rangée dans Réviser.' },
+      { target: 'liste-fiche', title: 'Série d’exercices', body: 'Choisis des exercices avec « + Série » pour en faire une série à imprimer.' },
       { target: 'liste-creer', title: 'Publier', body: (c) => parType(c,
         'Tu peux aussi partager une leçon que tu as rédigé.',
         'Tu peux aussi partager un examen que tu as rédigé.',

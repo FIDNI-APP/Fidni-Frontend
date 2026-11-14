@@ -669,6 +669,21 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
   }, [loadingMore, hasMore, load, page]);
 
+  // La suite se charge toute seule en défilant (15/11/2026, Natsu : plus de bouton « Voir la suite » à toucher) :
+  // un repère sous les cartes, observé 800 px avant qu'il n'arrive à l'écran. Après chaque page, l'observateur est
+  // recréé : si le repère est encore en vue (écran haut, filtres très sélectifs), la page suivante vient aussi.
+  const suiteRef = useRef<HTMLDivElement>(null);
+  const canObserve = typeof window !== 'undefined' && 'IntersectionObserver' in window;
+  useEffect(() => {
+    const el = suiteRef.current;
+    if (!el || !canObserve || !hasMore || isLoading || loadingMore || error?.more) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) handleLoadMore();
+    }, { rootMargin: '0px 0px 800px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [canObserve, hasMore, isLoading, loadingMore, error, handleLoadMore, items.length]);
+
   const handleNewContentClick = useCallback(() => {
     if (!isAuthenticated) {
       openModal('publier');
@@ -1273,10 +1288,12 @@ export const ContentList: React.FC<ContentListProps> = ({
 
         {/* La suite de la liste. */}
         {hasMore && !isLoading && items.length > 0 && !error?.more && (
-          <div className="mt-8 flex flex-col items-center gap-2">
-            <button type="button" onClick={handleLoadMore} disabled={loadingMore} className="fd-btn-ghost min-h-11 px-5 text-[13.5px]">
-              {loadingMore ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('Chargement…')}</> : <>{t('Voir la suite')}</>}
-            </button>
+          <div ref={suiteRef} className="mt-8 flex min-h-11 flex-col items-center justify-center gap-2" aria-live="polite">
+            {loadingMore ? (
+              <p className="inline-flex min-h-11 items-center gap-2 text-[13.5px] font-medium text-ink-faint"><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('Chargement de la suite…')}</p>
+            ) : !canObserve && (
+              <button type="button" onClick={handleLoadMore} className="fd-btn-ghost min-h-11 px-5 text-[13.5px]">{t('Voir la suite')}</button>
+            )}
             <p className="fd-nums text-[12px] text-ink-faint">{t('{n} sur {total} {noun}', { n: items.length, total: totalCount, noun: t(totalCount > 1 ? many : one) })}</p>
           </div>
         )}

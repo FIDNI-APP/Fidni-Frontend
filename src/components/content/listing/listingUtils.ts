@@ -52,6 +52,20 @@ function chaptersFor(item: ListItem, levelSlug?: string | null) {
   return i > 0 ? [ch[i], ...ch.slice(0, i), ...ch.slice(i + 1)] : ch;
 }
 
+/**
+ * Numéro du contenu dans le niveau et le chapitre affichés sur la carte (15/11/2026) : chaque chapitre de chaque niveau
+ * a sa numérotation (backend things/numeros.py). null : pas encore numéroté, ou sujet du Bac national.
+ */
+export function numeroOf(item: ListItem, levelSlug?: string | null): number | null {
+  const nums = item.numeros ?? [];
+  if (!nums.length) return null;
+  const level = cardLevel(item, levelSlug);
+  const lv = level ? Number(level.id) : null;
+  const ch = chaptersFor(item, levelSlug)[0];
+  const chId = ch ? Number(ch.id) : null;
+  return (nums.find((n) => n.niveau === lv && n.chapitre === chId) ?? nums.find((n) => n.niveau === lv) ?? nums[0]).numero;
+}
+
 export function chapterLabel(item: ListItem, levelSlug?: string | null): string | null {
   const ch = chaptersFor(item, levelSlug);
   if (!ch.length) return null;

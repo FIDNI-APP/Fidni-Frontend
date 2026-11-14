@@ -311,5 +311,12 @@
   "examen blanc": "امتحان تجريبي",
   "Synthèse": "فرض تركيبي",
   "Sur table": "فرض في القسم",
-  "DM": "واجب منزلي"
+  "DM": "واجب منزلي",
+  "Chargement de la suite…": "جارٍ تحميل البقية…",
+  "n° {n}": "رقم {n}",
+  "Exercice {n} de ce chapitre": "التمرين {n} من هذا الفصل",
+  "Devoir {n} de ce chapitre": "الفرض {n} من هذا الفصل",
+  "Leçon {n} de ce chapitre": "الدرس {n} من هذا الفصل",
+  "Devoir {n}": "الفرض {n}",
+  "Leçon {n}": "الدرس {n}"
 }
