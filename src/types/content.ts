@@ -25,7 +25,21 @@ export interface Felt {
 export interface UserProgress {
   assessed: number;
   success: number;
+  /** En partie / à revoir (ou ratées) : « 4 réussies, 1 à revoir » sur les cartes (14/11/2026). */
+  partial?: number;
+  review?: number;
   total: number;
+}
+
+/** Enseignant d'un contenu (« M. Khalid Haddar ») ; `profil` : pseudo de son compte, membres connectés seulement. */
+export interface ContentEnseignant { id: number; nom: string; profil?: string | null }
+
+/** Type d'un devoir lu dans son titre (backend things/devoir.py). */
+export interface DevoirInfo {
+  genre: 'ds' | 'controle' | 'synthese' | 'dm' | 'table' | 'blanc' | null;
+  numero: number | null;
+  rattrapage: boolean;
+  annee_scolaire: string | null;
 }
 
 /** Tris des listes : ceux de SortOption + « Du plus facile au plus difficile ». */
@@ -51,6 +65,9 @@ interface ListExtras {
   recommendation_reason?: string | null;
   /** Établissement d'origine (étiquette des cartes). */
   school?: { id: number; name: string; city?: string | null } | null;
+  enseignants?: ContentEnseignant[];
+  /** Devoirs seulement : « DS n° 2 · 2024-2025 ». */
+  devoir?: DevoirInfo | null;
 }
 
 // =====================
@@ -426,6 +443,7 @@ export interface ContentFilters {
   chapters?: string[];
   theorems?: string[];
   difficulties?: Difficulty[];
+  enseignants?: string[];
   showViewed?: boolean;
   hideViewed?: boolean;
   showCompleted?: boolean;

@@ -291,5 +291,22 @@
   "Énoncés": "نصوص التمارين",
   "Exercice": "تمرين",
   "Leçon": "درس",
-  "Examen": "امتحان"
+  "Examen": "امتحان",
+  "{genre} n° {n}": "{genre} رقم {n}",
+  "rattrapage": "استدراكي",
+  "Année scolaire {an}": "الموسم الدراسي {an}",
+  "Tous les devoirs de {nom}": "كل فروض {nom}",
+  "Tous les cours de {nom}": "كل دروس {nom}",
+  "Tous les exercices de {nom}": "كل تمارين {nom}",
+  "{n} à faire": "{n} للإنجاز",
+  "Utile pour ton {quoi} d’aujourd’hui": "مفيد لـ{quoi} اليوم",
+  "Utile pour ton {quoi} de demain": "مفيد لـ{quoi} الغد",
+  "Utile pour ton {quoi} du {date}": "مفيد لـ{quoi} يوم {date}",
+  "Proposé par": "اقترحه",
+  "Voir le profil de {nom}": "عرض الملف الشخصي لـ{nom}",
+  "contrôle": "فرض كتابي",
+  "examen blanc": "امتحان تجريبي",
+  "Synthèse": "فرض تركيبي",
+  "Sur table": "فرض في القسم",
+  "DM": "واجب منزلي"
 }

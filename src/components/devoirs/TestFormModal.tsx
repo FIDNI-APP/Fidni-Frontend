@@ -9,6 +9,7 @@ import { t } from '@/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaxonomyState } from '@/components/revision/RevisionLabelPicker';
 import { devoirsApi, type TestKind, type UpcomingTest } from '@/lib/api/devoirsApi';
+import { oublierProchainsDS } from '@/lib/useProchainsDS';
 import { kindLabel } from './ui';
 
 const KINDS: TestKind[] = ['ds', 'controle', 'blanc'];
@@ -102,6 +103,7 @@ export const TestFormModal: React.FC<{
     try {
       const payload = { kind, subject_id: subjectId, class_level_id: levelId, chapter_ids: chapterIds, date };
       const saved = editing && test ? await devoirsApi.update(test.id, payload) : await devoirsApi.create(payload);
+      oublierProchainsDS();
       onSaved(saved);
     } catch (err) {
       const data = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
@@ -117,6 +119,7 @@ export const TestFormModal: React.FC<{
     setSaving(true);
     try {
       await devoirsApi.remove(test.id);
+      oublierProchainsDS();
       onDeleted?.(test.id);
     } catch {
       setError(t('Le DS n’a pas pu être supprimé.'));

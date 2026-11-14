@@ -4,8 +4,10 @@
 //   - exercice : le début de l'énoncé, rendu comme sur sa page (formules comprises) ;
 //   - examen   : la liste de ses exercices avec leur barème ;
 //   - leçon    : son sommaire.
-// Repères : difficulté et ressenti des élèves, état de l'élève, questions déjà évaluées (« 3/6 questions »),
-// durée attendue (« ≈ 25 min »). On arrive dans une liste par Maths › niveau › chapitre (dossiers) : matière,
+// Repères : difficulté et ressenti des élèves, état de l'élève, durée attendue (« ≈ 25 min »). Depuis le 14/11/2026
+// (Natsu : « plus stylées et plus informatives ») : type du devoir et année scolaire, enseignants (lien vers tous
+// leurs contenus), théorèmes utilisés, résultat de l'élève (« 4 réussies · 1 à revoir ») et DS à venir qui porte
+// sur ce chapitre (listing/CardDetails.tsx). On arrive dans une liste par Maths › niveau › chapitre (dossiers) : matière,
 // niveau et chapitre n'y sont plus répétés sur chaque carte ; le chapitre reste (lien) dans une liste qui en
 // mélange plusieurs (recherche, anciens liens filtrés).
 // En bas : votes, discussions, vues, et le bouton pour ouvrir. Toute la carte est un lien ; elle transmet
@@ -23,10 +25,12 @@ import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api'
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import {
-  BASE_PATH, cardState, cardTone, chapterHref, chapterLabel, dateLongue, facts, ilYa, levelLabel, progressOf, questionProgress, structureOf, useBookmark,
+  BASE_PATH, cardState, cardTone, chapterHref, chapterLabel, dateLongue, facts, levelLabel, progressOf, questionProgress, structureOf, useBookmark,
   type ListItem, type ListKind, type PreviewStructure,
 } from './listing/listingUtils';
-import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, QuestionProgressBar, QuietVotes, SchoolTag, StateChip } from './listing/ListingParts';
+import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, QuietVotes, StateChip } from './listing/ListingParts';
+import { DevoirTag, DsChip, MetaLine, ResultatEleve, TheoremChips } from './listing/CardDetails';
+import { dsPourContenu, useProchainsDS } from '@/lib/useProchainsDS';
 import { NewBadge, isNewContent } from './NewBadge';
 import { t } from '@/i18n';
 
@@ -169,16 +173,20 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const chapterTo = chapterHref(content, contentType, levelSlug);
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
   const structure = structureOf(content);
-  // Tri « Pour toi » : pourquoi ce contenu est proposé (« À retravailler », « Suite de ton travail · … »).
-  // Dans le dossier d'un chapitre, « Suite de ton travail · Suites numériques » ne répète pas le chapitre.
+  // Tri « Pour toi » : pourquoi ce contenu est proposé (« À retravailler », « Apprécié des élèves »). « Suite de ton
+  // travail · … » est retiré (Natsu, 14/11/2026 : « ne sert à rien » ; le serveur ne l'envoie plus).
   const reason = useMemo(() => {
     const r = content.recommendation_reason;
+    if (r?.startsWith('Suite de ton travail')) return null;
     if (!r || !hideChapter) return r;
     const names = new Set((content.chapters ?? []).map((c) => c.name));
     return r.split(' · ').filter((part) => !names.has(part)).join(' · ') || null;
   }, [content.recommendation_reason, content.chapters, hideChapter]);
   const felt = content.felt ?? null;
   const comments = content.comment_count ?? 0;
+  // DS à venir qui porte sur un chapitre de ce contenu (une requête pour toute la liste, lib/useProchainsDS).
+  const prochainsDS = useProchainsDS();
+  const ds = useMemo(() => (contentType === 'lesson' ? null : dsPourContenu(prochainsDS, content)), [prochainsDS, content, contentType]);
 
   const [counts, setCounts] = useState({ likes: content.like_count ?? 0, dislikes: content.dislike_count ?? 0 });
   const [myVote, setMyVote] = useState<1 | -1 | 0>((content.user_vote as 1 | -1 | 0) ?? 0);
@@ -213,13 +221,15 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
     showSubject && content.subject?.name ? content.subject.name : null,
     hideLevel ? null : levelLabel(content),
     ...facts(content, contentType),
-    // Date de rajout : dans cette ligne (au pied de la carte, elle poussait « Commencer » hors du cadre).
-    ilYa(content.created_at) ? t('ajouté {quand}', { quand: ilYa(content.created_at) }) : null,
   ].filter(Boolean) as string[], [content, contentType, showSubject, hideLevel]);
 
   // « Nouveau » : calculé une fois (lit le stockage du navigateur).
   const isNew = useMemo(() => isNewContent(content as { id: string | number; created_at?: string }), [content]);
   const more = structure ? moreLabel(contentType, structure, exam?.section_count) : null;
+  // Théorèmes du contenu : étiquettes au bas de la carte, au-dessus des « j'aime ».
+  const hasTheorems = contentType !== 'lesson' && (content.theorems?.length ?? 0) > 0;
+  // Devoir : son étiquette (« DS n° 3 · 2025-2026 ») prend de la place en haut ; le chapitre s'abrège (nom entier au survol).
+  const chapterMax = exam && !exam.is_national_exam && content.devoir ? 'max-w-[7.5rem]' : 'max-w-full';
   // Sujet découpé en exercices, leçon avec sommaire : nombre fixe de lignes, pas besoin de fondu.
   const bounded = !!structure && (contentType === 'exam' ? examParts(structure).length > 0 : contentType === 'lesson' ? lessonSections(structure).length > 0 : false);
   // Travail en cours (à revoir, ou commencé sans être réussi) : le bouton passe en plein, c'est l'action attendue.
@@ -242,18 +252,19 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
             {/* L'état d'abord : toujours au même endroit, il se lit en descendant une colonne de cartes. */}
             <StateChip state={state} started={started} lesson={contentType === 'lesson'} />
             {exam?.is_national_exam && !hideNational && <NationalTag year={exam.national_year} />}
+            {exam && !exam.is_national_exam && <DevoirTag devoir={content.devoir} />}
             {chapter && (chapterTo && chapterTo !== location.pathname ? (
               <Link to={chapterTo} title={contentType === 'lesson' ? t('Tous les cours de ce chapitre') : contentType === 'exam' ? t('Tous les devoirs de ce chapitre') : t('Tous les exercices de ce chapitre')}
-                className="relative z-10 inline-flex max-w-full items-center px-2 py-0.5 rounded-md bg-[#f2f1ee] text-[12px] font-medium text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']">
+                className={`relative z-10 inline-flex ${chapterMax} items-center px-2 py-0.5 rounded-md bg-[#f2f1ee] text-[12px] font-medium text-ink-muted hover:bg-[#e9e6e0] hover:text-ink transition-colors before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']`}>
                 <span className="truncate">{chapter}</span>
               </Link>
             ) : (
-              <span className="inline-flex max-w-full items-center px-2 py-0.5 rounded-md bg-[#f2f1ee] text-[12px] font-medium text-ink-muted">
+              <span className={`inline-flex ${chapterMax} items-center px-2 py-0.5 rounded-md bg-[#f2f1ee] text-[12px] font-medium text-ink-muted`}>
                 <span className="truncate">{chapter}</span>
               </span>
             ))}
             {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
-            <SchoolTag school={content.school} />
+            {ds && <DsChip test={ds} />}
             {reason && (
               <span className="inline-flex max-w-full min-w-0 items-center px-1 text-[12px] text-ink-faint">
                 <span className="truncate">{reason}</span>
@@ -285,19 +296,18 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
         >
           {content.title}
         </Link>
-        {infos.length > 0 && (
-          <p className="mt-1 text-[12.5px] text-ink-faint fd-nums" title={content.created_at ? t('Ajouté le {date}', { date: dateLongue(content.created_at) }) : undefined}>{infos.join(' · ')}</p>
-        )}
-        {/* Travail commencé : où il en est. */}
-        {started && progress !== 'success' && (
-          <div className="mt-2"><QuestionProgressBar progress={started} /></div>
-        )}
+        {/* Signature et faits : enseignants, établissement, questions, durée (date d'ajout en infobulle). */}
+        <MetaLine enseignants={content.enseignants} school={content.school} kind={contentType} infos={infos} dim={dim}
+          title={content.created_at ? t('Ajouté le {date}', { date: dateLongue(content.created_at) }) : undefined} />
+        {/* Résultat de l'élève : « 3 réussies · 1 à revoir » (à la place de l'ancienne barre « 3/6 questions »). */}
+        {started && <div className="mt-2"><ResultatEleve progress={started} /></div>}
 
         {/* Aperçu : ce qu'il y a dedans, lisible, coupé en fondu. */}
         {structure && (
           <div className={`fd-card-preview mt-4 mb-1 border-s-2 border-brand-line ps-4 text-[14.5px] leading-[1.55] text-ink-soft transition-colors duration-200 group-hover:border-brand ${dim}`}>
             {/* Fondu seulement pour un énoncé (longueur libre) ; sujet et leçon montrent un nombre fixe de lignes. */}
-            <div className={bounded ? 'max-h-[160px] overflow-hidden' : 'fd-card-preview-clip'}>
+            {/* Avec la rangée des théorèmes en bas, l'aperçu raccourcit d'autant : la carte garde sa hauteur. */}
+            <div className={bounded ? 'max-h-[160px] overflow-hidden' : 'fd-card-preview-clip'} style={hasTheorems ? { maxHeight: bounded ? 128 : 104 } : undefined}>
               {contentType === 'exam' ? <ExamPreview structure={structure} />
                 : contentType === 'lesson' ? <LessonPreview structure={structure} />
                 : <ExercisePreview structure={structure} />}
@@ -306,6 +316,9 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Théorèmes utilisés : au bas de la carte, juste au-dessus des « j'aime ». */}
+      {hasTheorems && <div className="px-5 pt-3"><TheoremChips theorems={content.theorems} dim={dim} /></div>}
 
       {/* Pied : votes, discussions, vues ; bouton d'ouverture. */}
       <div className="relative z-10 flex items-center gap-1 ps-3 pe-4 pt-2 pb-4">

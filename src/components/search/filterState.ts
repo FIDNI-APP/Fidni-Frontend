@@ -9,6 +9,8 @@ export interface ListFilters {
   chapters: string[];
   theorems: string[];
   difficulties: Difficulty[];
+  /** Enseignants (« M. Khalid Haddar ») : ids, 14/11/2026. */
+  enseignants: string[];
   showViewed?: boolean;
   hideViewed?: boolean;
   showCompleted?: boolean;
@@ -33,13 +35,13 @@ export interface FixedFilters { classLevels?: string[]; chapters?: string[] }
 export function clearedFilters(fixed?: FixedFilters): ListFilters {
   return {
     classLevels: [...(fixed?.classLevels ?? [])], subjects: [], subfields: [], chapters: [...(fixed?.chapters ?? [])],
-    theorems: [], difficulties: [], showViewed: false, hideViewed: false, showCompleted: false, showFailed: false,
+    theorems: [], difficulties: [], enseignants: [], showViewed: false, hideViewed: false, showCompleted: false, showFailed: false,
     todo: false, isNationalExam: undefined, dateStart: null, dateEnd: null,
   };
 }
 
 /** Bascule une valeur d'un filtre à choix multiple ; un niveau ou un chapitre retire ce qui en dépend. */
-export function toggled(filters: ListFilters, field: 'classLevels' | 'subjects' | 'subfields' | 'chapters' | 'theorems' | 'difficulties', value: string): ListFilters {
+export function toggled(filters: ListFilters, field: 'classLevels' | 'subjects' | 'subfields' | 'chapters' | 'theorems' | 'difficulties' | 'enseignants', value: string): ListFilters {
   const current = filters[field] as string[];
   const values = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
   const next = { ...filters, [field]: values } as ListFilters;
@@ -52,7 +54,7 @@ export function toggled(filters: ListFilters, field: 'classLevels' | 'subjects' 
 /** Filtres sans l'étiquette `key` (« Retirer … × »). */
 export function withoutChip(filters: ListFilters, key: string): ListFilters {
   const [field, value] = key.split(':');
-  if (value !== undefined && ['classLevels', 'subjects', 'subfields', 'chapters', 'theorems', 'difficulties'].includes(field)) {
+  if (value !== undefined && ['classLevels', 'subjects', 'subfields', 'chapters', 'theorems', 'difficulties', 'enseignants'].includes(field)) {
     return toggled(filters, field as 'classLevels', value);
   }
   if (field === 'isNationalExam') return { ...filters, isNationalExam: undefined };
