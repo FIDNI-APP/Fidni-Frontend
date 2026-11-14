@@ -8,6 +8,7 @@ import type { ContentEnseignant, DevoirInfo, UserProgress } from '@/types/conten
 import type { UpcomingTest } from '@/lib/api/devoirsApi';
 import { BASE_PATH, type ListKind } from './listingUtils';
 import { dateLocale, t } from '@/i18n';
+import { trackEnseignantClick } from '@/lib/usage';
 
 // Libellés courts : l'étiquette tient sur une ligne même dans une carte étroite (le titre dit le reste).
 const GENRE: Record<NonNullable<DevoirInfo['genre']>, string> = {
@@ -71,7 +72,7 @@ export const MetaLine: React.FC<{
           {enseignants.map((e, i) => (
             <React.Fragment key={e.id}>
               {i > 0 && (i === enseignants.length - 1 ? ` ${t('et')} ` : ', ')}
-              <Link to={enseignantHref(kind, e.id)}
+              <Link to={enseignantHref(kind, e.id)} onClick={() => trackEnseignantClick(kind, e.id, 'carte')}
                 title={kind === 'exam' ? t('Tous les devoirs de {nom}', { nom: e.nom }) : kind === 'lesson' ? t('Tous les cours de {nom}', { nom: e.nom }) : t('Tous les exercices de {nom}', { nom: e.nom })}
                 className="relative z-10 font-medium text-ink-muted underline-offset-[3px] transition-colors hover:text-ink hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                 {e.nom}

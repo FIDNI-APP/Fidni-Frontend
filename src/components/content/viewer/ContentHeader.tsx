@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hubPath } from '@/lib/api/hubApi';
 import { studentLevelSlug } from '@/components/layout/nav';
 import { DifficultyChip } from '@/components/content/listing/ListingParts';
-import { trackAction } from '@/lib/usage';
+import { trackAction, trackEnseignantClick } from '@/lib/usage';
 import { publicUrl, shareLink } from '@/lib/native';
 import { t } from '@/i18n';
 import { contentHub, levelFromState } from './pageHelpers';
@@ -276,7 +276,8 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
             {enseignants.map((e, i) => (
               <React.Fragment key={e.id}>
                 {i > 0 && (i === enseignants.length - 1 ? ` ${t('et')} ` : ', ')}
-                <Link to={enseignantHref(contentType, e.id)} className="font-medium text-ink-soft hover:text-ink hover:underline"
+                <Link to={enseignantHref(contentType, e.id)} onClick={() => trackEnseignantClick(contentType, e.id, 'page')}
+                  className="font-medium text-ink-soft hover:text-ink hover:underline"
                   title={contentType === 'exam' ? t('Tous les devoirs de {nom}', { nom: e.nom }) : contentType === 'lesson' ? t('Tous les cours de {nom}', { nom: e.nom }) : t('Tous les exercices de {nom}', { nom: e.nom })}>
                   {e.nom}
                 </Link>

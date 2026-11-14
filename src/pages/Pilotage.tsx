@@ -617,6 +617,7 @@ const FAMILLES: { key: string; label: string; cles: string[] }[] = [
   { key: 'famille-connexion', label: 'Connexion', cles: ['auth-ouverte', 'connexion-google'] },
   { key: 'famille-accueil', label: 'Accueil', cles: ['accueil-reprendre', 'accueil-pour-toi', 'accueil-objectif', 'accueil-progression'] },
   { key: 'famille-dossiers', label: 'Dossiers des listes', cles: ['dossier-chapitre', 'dossier-niveau', 'dossier-annee'] },
+  { key: 'famille-enseignants', label: 'Noms d’enseignants cliqués', cles: ['enseignant-carte', 'enseignant-page'] },
 ];
 
 type GestureRow = Feature & { details?: Feature[] };
@@ -645,7 +646,8 @@ const FILTER_GROUPS: { key: string; label: string }[] = [
   { key: 'filtre-niveau', label: 'Niveau' }, { key: 'filtre-chapitre', label: 'Chapitre' },
   { key: 'filtre-difficulte', label: 'Difficulté' }, { key: 'filtre-statut', label: 'Statut (vus, réussis, à revoir)' },
   { key: 'filtre-matiere', label: 'Matière' }, { key: 'filtre-sous-domaine', label: 'Sous-domaine' },
-  { key: 'filtre-theoreme', label: 'Théorème' }, { key: 'filtre-national', label: 'Examen national' },
+  { key: 'filtre-theoreme', label: 'Théorème' }, { key: 'filtre-enseignant', label: 'Enseignant' },
+  { key: 'filtre-national', label: 'Examen national' },
   { key: 'filtre-date', label: 'Année' }, { key: 'tri', label: 'Tri' },
 ];
 const VALUES_SHOWN = 5;
