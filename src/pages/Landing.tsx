@@ -116,7 +116,7 @@ function Hero() {
 
           <p style={heroLede}>
             {t("Des exercices, des leçons et des sujets d'examen")}{' '}
-            <span style={{ color: INK, fontWeight: 500 }}>{t('corrigés en détail')}</span>{t(", du Tronc commun au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.")}
+            <span style={{ color: INK, fontWeight: 500 }}>{t('corrigés en détail')}</span>{t(", du Tronc commun au 2ème Bac, programme marocain.")}
           </p>
 
           <div className="flex flex-wrap items-center" style={{ gap: 12 }}>

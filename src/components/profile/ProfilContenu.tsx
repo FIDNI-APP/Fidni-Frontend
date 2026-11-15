@@ -38,7 +38,7 @@ const ProgressSummary: React.FC<{ viewerId: string | null; profile: LevelProfile
   if (data && !data.level) {
     return (
       <EmptyState compact icon={GraduationCap} tone="gold" title={t('Indique ton niveau')}
-        text={t('Fidni te montre alors ton programme chapitre par chapitre, ce que tu maîtrises et quoi travailler ensuite.')}
+        text={t('Fidni te montre alors ton programme et quoi travailler ensuite.')}
         action={<Link to={`${editUrl}#scolarite`} className="fd-btn-primary min-h-10">{t('Indiquer mon niveau')}</Link>} />
     );
   }

@@ -1015,7 +1015,7 @@ export const ContentList: React.FC<ContentListProps> = ({
       actions = <Link to="/exams/nationaux" className="fd-btn-primary min-h-10">{t('Toutes les années')}</Link>;
     } else if (isNationalSection) {
       title = t('Les sujets nationaux arrivent bientôt');
-      text = t('Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.');
+      text = t('Bientôt ici : les sujets du Bac national corrigés.');
       actions = <Link to="/exams" className="fd-btn-primary min-h-10">{t('Voir les devoirs surveillés')}</Link>;
     } else {
       title = t('Rien de publié ici pour le moment');

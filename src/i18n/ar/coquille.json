@@ -87,7 +87,6 @@
   "Notifications : {n} non lue": "الإشعارات : {n} غير مقروء",
   "Notifications": "الإشعارات",
   "Tout marquer comme lu": "تعليم الكل كمقروء",
-  "Rien de neuf pour l’instant. Quand quelqu’un commente un contenu sur lequel tu as travaillé, te répond, quand l’équipe traite un de tes signalements ou qu’un nouveau quiz sort pour ton niveau, tu le verras ici.": "لا جديد حاليا. عندما يعلّق أحد على محتوى اشتغلت عليه، أو يردّ عليك، أو يعالج الفريق أحد إبلاغاتك، أو يصدر اختبار جديد لمستواك، ستجد ذلك هنا.",
   "Voir le contenu": "عرض المحتوى",
   "Passer le quiz": "اجتياز الاختبار",
   "Répondre": "رد",
@@ -401,7 +400,6 @@
   "étape par étape.": "خطوة بخطوة.",
   "Des exercices, des leçons et des sujets d'examen": "تمارين ودروس وامتحانات",
   "corrigés en détail": "مصحَّحة بالتفصيل",
-  ", du Tronc commun au 2ème Bac, pour le programme marocain — avec un suivi qui te garde motivé jusqu'au jour J.": "، من الجذع المشترك إلى الثانية باكالوريا، للبرنامج المغربي — مع متابعة تبقيك متحمسا حتى يوم الامتحان.",
   "Créer un compte gratuit": "إنشاء حساب مجاني",
   "Parcourir les exercices": "تصفّح التمارين",
   "Gratuit · inscription en moins d'une minute": "مجاني · التسجيل في أقل من دقيقة",
@@ -490,5 +488,7 @@
   "Déjà ouverte": "سبق فتحها",
   "Exercices, leçons et sujets du Bac, tous corrigés": "تمارين ودروس ومواضيع الباكالوريا، كلها مصحّحة",
   "Crée ton compte gratuit et commence à t'entraîner dès aujourd'hui.": "أنشئ حسابك المجاني وابدأ التدرّب من اليوم.",
-  "Sommaire par niveau": "الفهرس حسب المستوى"
+  "Sommaire par niveau": "الفهرس حسب المستوى",
+  "Rien de neuf pour l’instant.": "لا جديد حاليًا.",
+  ", du Tronc commun au 2ème Bac, programme marocain.": "، من الجذع المشترك إلى الثانية باكالوريا، البرنامج المغربي."
 }

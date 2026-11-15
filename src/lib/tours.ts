@@ -104,18 +104,18 @@ export const TOURS: Tour[] = [
         title: 'Bienvenue sur Fidni',
         body: 'Un tour d’une minute pour trouver tes repères. Tu pourras le revoir à tout moment avec le bouton ?.',
       },
-      { target: 'home-premiers-pas', title: 'Tes premiers pas', body: 'Pour bien démarrer : indique ton niveau, ouvre ton premier exercice, puis annonce ton prochain DS. Chaque pas se coche tout seul.' },
-      { target: 'home-reprendre', title: 'Ton prochain pas', body: 'Ton prochain pas, en un clic : reprendre ce que tu as commencé, préparer ton DS quand il approche, ou commencer l’exercice proposé.' },
+      { target: 'home-premiers-pas', title: 'Tes premiers pas', body: 'Trois étapes pour bien démarrer. Elles se cochent toutes seules.' },
+      { target: 'home-reprendre', title: 'Ton prochain pas', body: 'Ce que tu peux faire maintenant, en un clic.' },
       { target: 'nav-travailler', title: 'Travailler', body: 'Leçons, exercices, devoirs (DS), sujets du Bac national et concours, rangés par niveau et par chapitre.' },
-      { target: 'nav-suivi', title: 'Mon suivi', body: 'Ta progression, Réviser (ton prochain DS, ce que tu as raté et tes listes), les quiz par chapitre et tes enregistrements (favoris et cahiers).' },
+      { target: 'nav-suivi', title: 'Mon suivi', body: 'Ta progression, Réviser, les quiz et tes enregistrements.' },
       { target: 'nav-classe', title: 'Ta classe', body: (c) => (c.isTeacher ? 'Tes classes, leurs élèves et les TD que tu leur donnes.' : 'Les TD donnés par ton prof, dans sa classe.') },
-      { target: 'barre-mobile', title: 'La barre du bas', body: 'Accueil, tes exercices, tes devoirs (DS) et Réviser, à portée de pouce. « Menu » ouvre tout le reste, dont ta progression.' },
+      { target: 'barre-mobile', title: 'La barre du bas', body: 'Les pages principales. « Menu » ouvre le reste.' },
       { target: 'menu-mobile', title: 'Le menu', body: 'Toutes les rubriques : leçons, exercices, devoirs, Bac national, concours, ton suivi et ton compte.' },
       { target: 'recherche', title: 'Rechercher', body: 'Un mot-clé, un chapitre ou un théorème (ex. « TVI ») pour trouver un contenu.' },
-      { target: 'notifications', title: 'Notifications', body: 'Quand quelqu’un commente un contenu sur lequel tu as travaillé, ou répond à ton commentaire, la cloche te prévient. Un clic et tu peux lui répondre.' },
-      { target: 'home-defi', title: 'Le défi du jour', body: 'Chaque jour, un nouveau problème, le même pour tous les niveaux. Bloqué ? Les indices t’expliquent l’outil à utiliser.' },
-      { target: 'home-stats', title: 'Où j’en suis', body: 'Ta maîtrise, ton évolution sur 30 jours et ta priorité du moment, en bref. Le détail et le « pourquoi » sont dans Ma progression.' },
-      { target: 'home-reco', title: 'Pour toi', body: 'Des contenus choisis d’après ton niveau et ton travail : la suite de tes chapitres en cours, ce qui est à retravailler, des nouveautés. Ouvre une carte pour commencer.' },
+      { target: 'notifications', title: 'Notifications', body: 'La cloche te prévient quand quelqu’un te répond.' },
+      { target: 'home-defi', title: 'Le défi du jour', body: 'Un problème par jour. Bloqué ? Prends un indice.' },
+      { target: 'home-stats', title: 'Où j’en suis', body: 'Ton niveau et ton évolution sur 30 jours. Le détail est dans Ma progression.' },
+      { target: 'home-reco', title: 'Pour toi', body: 'Des exercices choisis pour toi, d’après ton niveau et ton travail.' },
       { target: 'nav-compte', title: 'Ton compte', body: 'Ton profil et tes paramètres.' },
       { target: 'aide', title: 'Un doute ?', body: 'Chaque page a son guide : touche ? pour le revoir en entier.' },
     ],
@@ -133,8 +133,8 @@ export const TOURS: Tour[] = [
     steps: [
       { target: 'liste-statut', title: 'Où tu en es', body: 'Tout, à faire, à revoir ou réussis : un toucher et la liste ne garde que ceux-là.' },
       { target: 'liste-filtres', title: 'Filtrer', body: 'Difficulté, théorème (et niveau ou chapitre hors d’un dossier) : ne garde que ce qui t’intéresse.' },
-      { target: 'liste-tri', title: 'Trier', body: '« Pour toi » met en tête ce qui te fera progresser. Tu peux aussi trier du plus facile au plus difficile, ou par nouveauté.' },
-      { target: 'liste-vue', title: 'Deux affichages', body: 'Cartes : un aperçu de chaque contenu (le début de l’énoncé, les exercices d’un sujet, le sommaire d’une leçon). Énoncés : le texte complet, avec chrono et auto-évaluation.' },
+      { target: 'liste-tri', title: 'Trier', body: '« Pour toi » met en tête ce qui t’aide le plus.' },
+      { target: 'liste-vue', title: 'Deux affichages', body: 'Cartes : un aperçu. Énoncés : le texte complet.' },
       { target: 'liste-chrono', title: 'Chronomètre', body: 'Lance-le avant de commencer, puis enregistre ton temps pour suivre tes progrès.' },
       { target: 'liste-terminer', title: 'Terminé ?', body: (c) => parType(c,
         'Marque la leçon « Réussi » ou « À revoir » : ça alimente ta progression.',
@@ -173,12 +173,12 @@ export const TOURS: Tour[] = [
         'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque la leçon « À revoir ».',
         'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque l’examen « À revoir ».',
         'En haut de la page (et rappelé en bas) : « Tout réussi » coche toutes les questions d’un coup ; décoche ensuite celles que tu as ratées. Ou marque l’exercice « À revoir ».') },
-      { target: 'detail-progression', title: 'Ta progression', body: 'Elle se remplit à mesure que tu dis si tu avais trouvé : en vert les questions réussies, en or celles à revoir.' },
+      { target: 'detail-progression', title: 'Ta progression', body: 'En vert tes questions réussies, en or celles à revoir.' },
       { target: 'detail-solutions', title: 'Toutes les solutions', body: 'Affiche ou masque d’un coup la solution de chaque question.' },
       INDICATION,
       SOLUTION,
       AUTO_EVAL,
-      { target: 'reussite', title: 'Réussite des élèves par question', body: 'À droite (sous l’exercice sur téléphone) : la part d’élèves qui réussissent chaque question ; la pastille au bout, c’est toi. Clique une ligne pour le détail, et pour dire si tu l’as réussie sans ouvrir la solution.' },
+      { target: 'reussite', title: 'Réussite des élèves par question', body: 'La part d’élèves qui réussissent chaque question. La pastille, c’est toi.' },
       { target: 'detail-chrono', title: 'Chronomètre', body: 'Lance le chrono quand tu commences ; en pause, ✓ enregistre ton temps. Tes temps sont dans le menu ⋯.' },
       { target: 'detail-enregistrer', title: 'Enregistrer', body: 'Ajoute-le à tes favoris.' },
       { target: 'detail-liste', title: 'Liste de révision', body: 'En bas de la page (ou dans le menu ⋯) : range-le dans une liste pour le réviser plus tard ou l’imprimer.' },
@@ -197,13 +197,13 @@ export const TOURS: Tour[] = [
     autoSteps: ['examen-epreuve', 'indication', 'solution', 'examen-copie'],
     steps: [
       { target: 'examen-fiche', title: 'Le sujet', body: 'Durée, barème, nombre d’exercices : comme la copie distribuée en classe.' },
-      { target: 'examen-epreuve', title: 'L’épreuve', body: 'Lance le compte à rebours et compose sur une feuille : les solutions restent cachées jusqu’à la fin, et ton temps est enregistré.' },
+      { target: 'examen-epreuve', title: 'L’épreuve', body: 'Lance le chrono et compose sur une feuille. Les solutions restent cachées jusqu’à la fin.' },
       INDICATION,
       SOLUTION,
       AUTO_EVAL,
-      { target: 'examen-copie', title: 'Ta copie', body: 'Après l’épreuve, dis pour chaque question si tu l’as réussie (ici ou sous sa solution) : ta note estimée se calcule avec le barème. Chaque ligne montre aussi la part d’élèves qui réussissent la question.' },
+      { target: 'examen-copie', title: 'Ta copie', body: 'Après l’épreuve, coche tes questions réussies : ta note se calcule toute seule.' },
       { target: 'detail-onglets', title: 'Les onglets', body: 'Solutions des élèves pour comparer ta démarche. Commentaires pour écrire sous le sujet.' },
-      { target: 'detail-terminer', title: 'Où en es-tu ?', body: 'Après l’épreuve, en haut du sujet (et rappelé en bas) : « Tout réussi » coche toutes les questions, puis décoche celles que tu as ratées. Ta note se calcule avec le barème.' },
+      { target: 'detail-terminer', title: 'Où en es-tu ?', body: '« Tout réussi » coche tout : décoche ensuite ce que tu as raté.' },
       { target: 'detail-imprimer', title: 'Imprimer / PDF', body: 'Télécharge le sujet en PDF pour le faire sur papier.' },
       { target: 'detail-plus', title: 'Plus d’options', body: 'Partager, ranger dans une liste de révision, revoir tes passages, ou signaler une erreur.' },
       VOTE,
@@ -219,9 +219,9 @@ export const TOURS: Tour[] = [
     version: 3, // 11/10/2026 : police et encadrés de la leçon imprimée, « Marquer comme lue » en haut
     autoSteps: ['lecon-sommaire', 'detail-cahier', 'detail-discussion'],
     steps: [
-      { target: ['lecon-sommaire', 'lecon-sommaire-barre'], title: 'Le sommaire', body: 'Toutes les parties de la leçon : clique pour y aller. La partie en cours est surlignée et Fidni retient où tu t’es arrêté.' },
+      { target: ['lecon-sommaire', 'lecon-sommaire-barre'], title: 'Le sommaire', body: 'Clique sur une partie pour y aller.' },
       { target: 'detail-terminer', title: 'Leçon lue', body: 'En haut de la page (et rappelé en bas) : marque-la comme lue, elle compte dans ta progression.' },
-      { target: 'lecon-contenu', title: 'La leçon', body: 'Mise en page comme la leçon imprimée. Définitions, théorèmes, propriétés : chaque encadré annonce sa nature en en-tête.' },
+      { target: 'lecon-contenu', title: 'La leçon', body: 'Définitions, théorèmes et propriétés sont encadrés.' },
       { target: 'detail-discussion', title: 'Une question ?', body: 'Pose tes questions sur la leçon ici, en bas de la page.' },
       { target: 'lecon-imprimer', title: 'Imprimer', body: 'Télécharge la leçon en PDF, mise en page comme un polycopié, pour la lire ou l’annoter sur papier.' },
       { target: 'detail-cahier', title: 'Cahier', body: 'En bas de la leçon (ou dans le menu ⋯) : ajoute-la à ton cahier de cours, directement dans son chapitre.' },
@@ -260,9 +260,9 @@ export const TOURS: Tour[] = [
     match: /^\/profile\/[^/]+\/?$/,
     requires: 'profil-modifier',
     steps: [
-      { target: 'profil-identite', title: 'Ton profil public', body: 'Ce que les autres voient : ton pseudo, tes badges, ta présentation et ton activité. Ton nom, ta date de naissance et ton établissement restent privés.' },
+      { target: 'profil-identite', title: 'Ton profil public', body: 'Ce que les autres membres voient de toi. Ta date de naissance et ton établissement restent privés.' },
       { target: 'profil-modifier', title: 'Modifier', body: 'Photo, présentation, identité, niveau et objectifs de notes.' },
-      { target: 'profil-onglets', title: 'Les onglets', body: 'Profil pour la vue d’ensemble, Réussis / à revoir pour tes exercices, Paramètres pour ton compte et tes données.' },
+      { target: 'profil-onglets', title: 'Les onglets', body: 'Ton profil, tes exercices et tes paramètres.' },
     ],
   },
 
@@ -273,7 +273,7 @@ export const TOURS: Tour[] = [
     requires: 'cahiers-nouveau',
     version: 2, // onglet Cahiers de Mes enregistrements (11/10/2026)
     steps: [
-      { target: 'cahiers-nouveau', title: 'Nouveau cahier', body: 'Un cahier par matière et par niveau, prêt en un clic. Il se remplit avec les leçons que tu y ranges depuis leur page.' },
+      { target: 'cahiers-nouveau', title: 'Nouveau cahier', body: 'Un cahier par matière et par niveau, avec tes leçons.' },
       { target: 'cahiers-liste', title: 'Tes cahiers', body: 'Ouvre-en un pour relire tes leçons, classées par chapitre. Le menu ⋯ : renommer, imprimer, supprimer.' },
     ],
   },
@@ -283,8 +283,8 @@ export const TOURS: Tour[] = [
     requires: 'cahier-sections',
     version: 2,
     steps: [
-      { target: 'cahier-sections', title: 'Les chapitres', body: 'Ceux qui ont des leçons d’abord. Un chapitre vide ? Touche-le pour trouver ses leçons ; sur sa page, « Ajouter à mon cahier ».' },
-      { target: 'cahier-contenu', title: 'La lecture', body: 'Tes leçons s’affichent ici, comme dans un vrai cahier. Le menu ⋯ d’une leçon : ouvrir sa page ou la retirer du cahier.' },
+      { target: 'cahier-sections', title: 'Les chapitres', body: 'Touche un chapitre pour trouver ses leçons.' },
+      { target: 'cahier-contenu', title: 'La lecture', body: 'Tes leçons, comme dans un vrai cahier.' },
       { target: 'cahier-annoter', title: 'Annoter', body: 'Surligne, écris une note ou dessine sur la feuille : c’est enregistré tout seul.' },
       { target: 'cahier-imprimer', title: 'Imprimer le cahier', body: 'Tout ton cahier en PDF, un chapitre par page.' },
     ],
@@ -308,10 +308,10 @@ export const TOURS: Tour[] = [
     version: 4, // page « Réviser » du 11/10/2026 : prochain DS, à refaire, mes listes
     autoSteps: ['revisions-ds', 'revisions-suggestions', 'revisions-nouvelle'],
     steps: [
-      { target: 'revisions-ds', title: 'Ton prochain DS', body: 'Annonce ton prochain DS (date, chapitres) : Fidni te compose un DS blanc chronométré sur ces chapitres (durée et difficulté réglables), et t’aide à réviser chapitre par chapitre. Après le DS, note ta note.' },
-      { target: 'revisions-suggestions', title: 'À refaire', body: 'Les exercices que tu as ratés ou marqués « À revoir », les plus anciens d’abord. Refais-en un, ou range-les tous dans une liste en un clic.' },
-      { target: 'revisions-liste', title: 'Mes listes', body: 'Ouvre une liste pour refaire ses exercices à la suite ; la barre montre ce qui est réussi (vert) et ce qui reste à revoir (or).' },
-      { target: 'revisions-nouvelle', title: 'Nouvelle liste', body: 'Regroupe des exercices à retravailler (ex. « Limites – DS 1 »). On en ajoute depuis leur page ou leur carte, bouton « Liste ».' },
+      { target: 'revisions-ds', title: 'Ton prochain DS', body: 'Indique la date et les chapitres de ton DS : Fidni te prépare un DS blanc.' },
+      { target: 'revisions-suggestions', title: 'À refaire', body: 'Les exercices ratés ou marqués « À revoir ». Refais-en un.' },
+      { target: 'revisions-liste', title: 'Mes listes', body: 'Ouvre une liste pour refaire ses exercices à la suite.' },
+      { target: 'revisions-nouvelle', title: 'Nouvelle liste', body: 'Regroupe des exercices à refaire, avec le bouton « Liste ».' },
     ],
   },
   {
@@ -322,7 +322,7 @@ export const TOURS: Tour[] = [
     steps: [
       {
         target: 'revision-mode', title: 'Deux façons de réviser',
-        body: 'Mode révision : un exercice à la fois, tu dis « Réussi » ou « À revoir », puis « Exercice suivant ». Feuille à imprimer : tous les énoncés, les solutions et le PDF.',
+        body: 'Mode révision : un exercice à la fois. Feuille à imprimer : tout en PDF.',
       },
       { target: 'revision-solutions', title: 'Solutions', body: 'Affiche ou masque toutes les solutions de la liste.' },
       { target: 'revision-pdf', title: 'Feuille de TD', body: 'Exporte la liste en PDF, avec ou sans corrigé, prête à imprimer.' },
@@ -336,7 +336,7 @@ export const TOURS: Tour[] = [
     version: 2, // onglet Favoris de Mes enregistrements (11/10/2026)
     steps: [
       { target: 'enregistrements-onglets', title: 'Favoris et cahiers', body: 'Ce que tu as mis de côté : tes favoris (le signet) et tes cahiers de cours.' },
-      { target: 'favoris-liste', title: 'Tes favoris', body: 'Rangés par type, avec où tu en es. Le signet vert les retire (tu peux annuler) ; une leçon se range dans ton cahier d’un clic.' },
+      { target: 'favoris-liste', title: 'Tes favoris', body: 'Rangés par type. Le signet vert les retire.' },
       { target: 'favoris-recherche', title: 'Chercher', body: 'Retrouve un favori par son titre ou son chapitre.' },
     ],
   },
@@ -346,9 +346,9 @@ export const TOURS: Tour[] = [
     requires: 'skilliq-niveaux',
     version: 5, // 10/11/2026 : chapitres en liste, dans l’ordre du programme (avant : cartes rangées par thème)
     steps: [
-      { target: 'skilliq-hero', title: 'Quiz par chapitre', body: 'Les questions d’un chapitre, chronométrées comme en concours. Chaque réponse est corrigée tout de suite, et la fin du quiz te dit, théorème par théorème, ce que tu maîtrises.' },
-      { target: 'skilliq-choix-niveau', title: 'Ton niveau, ou un autre', body: 'Tes quiz s’affichent d’abord. Tu peux aussi passer ceux d’un autre niveau, pour revoir l’année d’avant par exemple.' },
-      { target: 'skilliq-niveaux', title: 'Tous tes quiz', body: 'Les chapitres dans l’ordre du programme, avec leurs quiz. Ton dernier score s’affiche sur la ligne : clique dessus pour revoir ta correction, ou refais le quiz pour voir ta progression.' },
+      { target: 'skilliq-hero', title: 'Quiz par chapitre', body: 'Des questions chronométrées, corrigées tout de suite.' },
+      { target: 'skilliq-choix-niveau', title: 'Ton niveau, ou un autre', body: 'Tu peux aussi faire les quiz d’un autre niveau.' },
+      { target: 'skilliq-niveaux', title: 'Tous tes quiz', body: 'Un quiz par chapitre. Clique sur ton score pour revoir ta correction.' },
     ],
   },
 
@@ -359,7 +359,7 @@ export const TOURS: Tour[] = [
     requires: 'concours-types',
     autoSteps: ['concours-types', 'concours-simulation', 'concours-annales'],
     steps: [
-      { target: 'concours-types', title: 'Les écoles', body: 'L’ENSA, l’ENSAM et la médecine. Quand leurs annales sont en ligne, clique sur une école pour n’afficher que ses sujets.' },
+      { target: 'concours-types', title: 'Les écoles', body: 'Clique sur une école pour voir ses sujets.' },
       { target: 'concours-simulation', title: 'Simulation', body: 'Un sujet en conditions réelles, chronométré : une annale ou un mix de questions de plusieurs années.' },
       { target: 'concours-filtres', title: 'Les années', body: 'Limite les annales à une période.' },
       { target: 'concours-annales', title: 'Les annales', body: 'Ouvre un sujet pour le réviser question par question, avec la correction.' },

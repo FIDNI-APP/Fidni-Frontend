@@ -134,7 +134,7 @@ export function ProgressionPage() {
           action={<Link to="/classrooms" className="fd-btn-primary min-h-10">{t('Voir mes classes')}</Link>} />
       ) : rien && jours === 0 ? (
         <EmptyState icon={TrendingUp} title={t('Ta progression commence ici')}
-          text={t('Fais un exercice, puis dis pour chaque question si tu l’as réussie : tes réussites, tes notes et ton temps s’afficheront ici.')}
+          text={t('Fais un exercice et coche tes questions réussies : elles s’afficheront ici.')}
           action={<Link to={exercisesHome(user)} className="fd-btn-primary min-h-10">{t('Commencer un exercice')}</Link>} />
       ) : (
         <div className="flex flex-col gap-6">
@@ -184,13 +184,13 @@ export function ProgressionPage() {
             )}
             {onglet === 'faibles' && (
               <div className="flex flex-col gap-3">
-                <p className="text-[13px] text-ink-faint">{t('Les théorèmes de tes questions ratées sur la période, les moins réussis d’abord : c’est là qu’il faut te concentrer.')}</p>
+                <p className="text-[13px] text-ink-faint">{t('Les théorèmes de tes questions ratées, les plus ratés d’abord.')}</p>
                 <PointsFaibles points={data.points_faibles} />
               </div>
             )}
             {onglet === 'chapitres' && (
               <div className="flex flex-col gap-3">
-                <p className="text-[13px] text-ink-faint">{t('Ta note aux examens, tes questions et ton temps, chapitre par chapitre. Touche un chapitre pour le détail.')}</p>
+                <p className="text-[13px] text-ink-faint">{t('Tes résultats chapitre par chapitre. Touche un chapitre pour le détail.')}</p>
                 <Chapitres chapitres={data.chapitres} onOpen={ouvrir} />
               </div>
             )}

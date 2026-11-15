@@ -220,7 +220,7 @@ export const NotificationBell: React.FC = () => {
               <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-ink-faint" /></div>
             ) : !items?.length ? (
               <p className="px-5 py-8 text-center text-[13px] leading-relaxed text-ink-faint">
-                {t('Rien de neuf pour l’instant. Quand quelqu’un commente un contenu sur lequel tu as travaillé, te répond, quand l’équipe traite un de tes signalements ou qu’un nouveau quiz sort pour ton niveau, tu le verras ici.')}
+                {t('Rien de neuf pour l’instant.')}
               </p>
             ) : (
               <ul className="divide-y divide-line">

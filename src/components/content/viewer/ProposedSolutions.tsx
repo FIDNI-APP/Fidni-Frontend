@@ -351,7 +351,7 @@ export const ProposedSolutions: React.FC<{
         !composing && (
           <EmptyState icon={Lightbulb} tone="ink" compact
             title={t('Aucune solution proposée pour l’instant')}
-            text={t('Sois le premier à partager ta méthode : rédige-la avec l’éditeur, ou prends simplement ta copie en photo.')}
+            text={t('Partage ta méthode : écris-la, ou prends ta copie en photo.')}
             action={<button onClick={start} onPointerEnter={() => { if (isAuthenticated) loadEditor().catch(() => {}); }} className="fd-btn-primary min-h-10"><PenLine className="w-4 h-4" /> {t('Rédiger ma solution')}</button>}
             secondary={<button onClick={start} className="fd-btn-ghost min-h-10"><Camera className="w-4 h-4" /> {t('Envoyer une photo')}</button>} />
         )

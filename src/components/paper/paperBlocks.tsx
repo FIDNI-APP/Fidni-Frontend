@@ -88,8 +88,25 @@ export const formatDuration = (minutes: number) => {
 export const uniq = (values: (string | undefined)[]) => [...new Set(values.filter(Boolean))] as string[];
 
 
+/**
+ * Rendu (KaTeX + filtrage) gardé en mémoire : la feuille est reconstruite à chaque réglage, et un bloc qui
+ * change de page est recréé. Sans ce cache, une série longue refaisait toutes ses formules à chaque frappe.
+ */
+const CACHE_MAX = 4000;
+const rendered = new Map<string, string>();
+const parts = new Map<string, string[]>();
+const remember = <T,>(map: Map<string, T>, key: string, make: () => T): T => {
+  const hit = map.get(key);
+  if (hit !== undefined) return hit;
+  const value = make();
+  if (map.size >= CACHE_MAX) map.delete(map.keys().next().value as string);
+  map.set(key, value);
+  return value;
+};
+const renderCached = (html: string) => (html ? remember(rendered, html, () => renderContentHtml(html)) : '');
+
 export const Rich: React.FC<{ content?: RichText; className?: string }> = ({ content, className }) => {
-  const html = useMemo(() => renderContentHtml(content?.html || ''), [content?.html]);
+  const html = useMemo(() => renderCached(content?.html || ''), [content?.html]);
   if (!html) return null;
   // Déjà filtré par sanitizeHtml dans renderContentHtml.
   return <div className={`fp-rich ${className || ''}`} dangerouslySetInnerHTML={{ __html: html }} />;
@@ -99,8 +116,8 @@ export const Rich: React.FC<{ content?: RichText; className?: string }> = ({ con
  * Contenu riche découpé en ses paragraphes (et encadrés, listes, formules centrées) : une leçon longue
  * peut changer de page entre deux paragraphes. HTML déjà rendu et filtré (renderContentHtml).
  */
-export const richParts = (html?: string): string[] => {
-  const rendered = renderContentHtml(html || '');
+const splitParts = (html: string): string[] => {
+  const rendered = renderCached(html);
   if (!rendered || typeof DOMParser === 'undefined') return rendered ? [rendered] : [];
   const doc = new DOMParser().parseFromString(`<div>${rendered}</div>`, 'text/html');
   const root = doc.body.firstElementChild;
@@ -112,6 +129,7 @@ export const richParts = (html?: string): string[] => {
   });
   return out.length ? out : [rendered];
 };
+export const richParts = (html?: string): string[] => (html ? remember(parts, html, () => splitParts(html)) : []);
 export const RichPart: React.FC<{ html: string; className?: string }> = ({ html, className }) => (
   <div className={`fp-rich ${className || ''}`} dangerouslySetInnerHTML={{ __html: html }} />
 );

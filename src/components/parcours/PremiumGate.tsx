@@ -27,7 +27,7 @@ export const PremiumGate: React.FC<{ children: React.ReactNode }> = ({ children 
   if (!isAuthenticated) {
     return (
       <Card title={t('Connecte-toi pour suivre ton parcours')}
-        text={t('Le Parcours enchaîne les chapitres de ton niveau en vidéos, et garde ta progression d’un checkpoint à l’autre.')}
+        text={t('Les chapitres de ton niveau en vidéos.')}
         action={(
           <button type="button" onClick={() => openSignup('login')} className="fd-btn-primary inline-flex min-h-11 items-center gap-2">
             <LogIn className="h-4 w-4" /> {t('Se connecter')}
@@ -38,7 +38,7 @@ export const PremiumGate: React.FC<{ children: React.ReactNode }> = ({ children 
   if (!hasParcoursAccess(user)) {
     return (
       <Card title={t('Le Parcours fait partie de Fidni Premium')}
-        text={t('Les chapitres de ton niveau en vidéos, dans l’ordre du programme, avec ta progression d’un checkpoint à l’autre. L’offre Premium n’est pas encore ouverte.')} />
+        text={t('Les chapitres de ton niveau en vidéos. L’offre Premium n’est pas encore ouverte.')} />
     );
   }
   return <>{children}</>;

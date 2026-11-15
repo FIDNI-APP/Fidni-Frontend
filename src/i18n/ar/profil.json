@@ -11,7 +11,6 @@
   "Lionceau {n}": "الشبل {n}",
   "Annuler": "إلغاء",
   "Annuler l’invitation": "إلغاء الدعوة",
-  "Après un exercice, dis si tu l’as réussi ou s’il est à revoir : il apparaîtra ici, et ceux à revoir t’attendront dans Réviser.": "بعد كل تمرين، حدّد هل نجحت فيه أم هو للمراجعة: سيظهر هنا، والتمارين المخصصة للمراجعة تنتظرك في قسم المراجعة.",
   "Au moins 8 caractères. Tes autres appareils seront déconnectés.": "8 أحرف على الأقل. سيتم تسجيل خروج أجهزتك الأخرى.",
   "Aucun exercice ne correspond": "لا يوجد أي تمرين مطابق",
   "Aucun objectif pour l’instant.": "لا يوجد أي هدف حاليا.",
@@ -70,7 +69,6 @@
   "Envoi…": "جارٍ الإرسال…",
   "Fais un exercice et dis pour chaque question si tu l’as réussie : tu verras ici où tu en es.": "حلّ تمرينا وحدّد لكل سؤال هل نجحت فيه: سترى هنا أين وصلت.",
   "Fermer le message": "إغلاق الرسالة",
-  "Fidni te montre alors ton programme chapitre par chapitre, ce que tu maîtrises et quoi travailler ensuite.": "حينها تعرض لك Fidni برنامجك فصلا فصلا، وما تتقنه وما عليك العمل عليه بعد ذلك.",
   "Fixe-toi un objectif": "حدّد لنفسك هدفا",
   "Fixer un objectif": "تحديد هدف",
   "Format non pris en charge : JPEG, PNG, GIF ou WebP.": "صيغة غير مدعومة: JPEG أو PNG أو GIF أو WebP.",
@@ -335,5 +333,7 @@
   "Ton prénom et ton nom sont affichés aux membres connectés (les visiteurs voient ton pseudo). Civilité, date de naissance et établissement restent visibles par toi seul.": "يظهر اسمك الشخصي واسمك العائلي للأعضاء المتصلين (يرى الزوار اسمك المستعار). أما اللقب وتاريخ الازدياد والمؤسسة فتبقى ظاهرة لك وحدك.",
   "Ton prénom et ton nom s’affichent aux membres connectés à la place de ton pseudo. Le reste sert à tes feuilles d’exercices en PDF et à tes classes.": "يظهر اسمك الشخصي واسمك العائلي للأعضاء المتصلين بدل اسمك المستعار. وما تبقى يُستعمل في أوراق التمارين بصيغة PDF وفي أقسامك.",
   "Nom visible des membres": "الاسم ظاهر للأعضاء",
-  "Ton identifiant sur Fidni (adresse de ton profil, @mentions) : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).": "معرّفك في Fidni (عنوان ملفك الشخصي والإشارات @): من 3 إلى 30 حرفا (حروف وأرقام و« . » و« _ » و« - »)."
+  "Ton identifiant sur Fidni (adresse de ton profil, @mentions) : 3 à 30 caractères (lettres, chiffres, « . », « _ » ou « - »).": "معرّفك في Fidni (عنوان ملفك الشخصي والإشارات @): من 3 إلى 30 حرفا (حروف وأرقام و« . » و« _ » و« - »).",
+  "Après un exercice, dis si tu l’as réussi : il apparaîtra ici.": "بعد تمرين، قل إن نجحت فيه: سيظهر هنا.",
+  "Fidni te montre alors ton programme et quoi travailler ensuite.": "تعرض لك Fidni حينها برنامجك وما تعمل عليه بعد ذلك."
 }

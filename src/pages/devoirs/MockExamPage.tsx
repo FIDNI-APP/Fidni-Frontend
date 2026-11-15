@@ -210,7 +210,7 @@ export default function MockExamPage() {
       <Page width="narrow">
         <PageHeader back={BACK} eyebrow={t('DS blanc · {title}', { title })} icon={Timer}
           title={<>{exercisesCount(data.exercises.length)} · <span className="fd-nums">{t('{n} min', { n: data.minutes })}</span></>}
-          subtitle={t('Un sujet tiré des chapitres de ton DS, le plus fragile d’abord. Comme en classe : pas de solution avant la fin.')} />
+          subtitle={t('Un sujet sur les chapitres de ton DS. Pas de solution avant la fin.')} />
         {actAlert}
         <section aria-labelledby="sujet-titre" className="overflow-hidden rounded-3xl border border-line bg-white">
           <div className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6">

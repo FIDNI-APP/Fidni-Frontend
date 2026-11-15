@@ -319,7 +319,7 @@ const WizardPage: React.FC<{ contentType?: WizardContentType }> = ({ contentType
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <p className="fd-display mb-2 text-[22px] text-ink">{t('Création réservée à l’équipe')}</p>
         <p className="mb-5 text-[14.5px] leading-relaxed text-ink-soft">
-          {t('Pour l’instant, seule l’équipe Fidni publie des exercices, des leçons et des devoirs. Tu peux toujours préparer tes fiches TD à partir des exercices du site.')}
+          {t('Pour l’instant, seule l’équipe Fidni publie des contenus. Tu peux faire des séries avec les exercices du site.')}
         </p>
         <Link to="/exercises" className="fd-btn-primary">{t('Voir les exercices')}</Link>
       </div>

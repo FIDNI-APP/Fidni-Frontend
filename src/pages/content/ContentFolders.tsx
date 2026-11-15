@@ -371,7 +371,7 @@ const YearsView: React.FC = () => {
         : !data ? <FolderSkeleton n={6} />
           : data.years.length === 0 ? (
             <EmptyState icon={Landmark} tone="gold" title={t('Les sujets nationaux arrivent bientôt')}
-              text={t('Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.')}
+              text={t('Bientôt ici : les sujets du Bac national corrigés.')}
               action={<Link to="/exams" className="fd-btn-primary min-h-10">{t('Voir les devoirs surveillés')}</Link>} />
           ) : <FolderGrid groups={groups} label={t('Années du Bac national')} />}
     </Page>

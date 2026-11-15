@@ -64,7 +64,7 @@ const NextTestHero: React.FC<{
                 const weak = test.weak_chapters?.includes(c.name);
                 return (
                   <li key={c.id} className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${weak ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`}>
-                    {c.name}{weak && <span className="sr-only"> {t('(à renforcer)')}</span>}
+                    {c.name}{weak && <span className="sr-only"> {t('(à revoir)')}</span>}
                   </li>
                 );
               })}
@@ -126,7 +126,7 @@ const NoTestCard: React.FC<{ onAdd: () => void; hasPast: boolean }> = ({ onAdd, 
       <div className="min-w-0 flex-1">
         <h3 className="text-[16px] font-semibold text-ink">{hasPast ? t('Un nouveau DS bientôt ?') : t('Un DS bientôt ?')}</h3>
         <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-ink-faint">
-          {t('Indique sa date et ses chapitres : Fidni te dit où tu en es, te propose les bons exercices et un DS blanc chronométré.')}
+          {t('Indique sa date et ses chapitres : Fidni te prépare un DS blanc.')}
         </p>
       </div>
       <button type="button" onClick={onAdd} className="fd-btn-primary min-h-11 justify-center" data-tour="reviser-annoncer">
@@ -415,7 +415,7 @@ export const Reviser: React.FC = () => {
             {redo === null ? (failed ? null : <CardsSkeleton n={2} />)
               : redoItems.length === 0 ? (
                 <EmptyState compact icon={Check} title={t('Rien à refaire pour l’instant')}
-                  text={t('Quand tu marques un exercice « À revoir » ou que tu rates une question, il t’attend ici quelques jours plus tard.')} />
+                  text={t('Les exercices à revoir t’attendent ici.')} />
               ) : (
                 <>
                   <ol className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
@@ -439,7 +439,7 @@ export const Reviser: React.FC = () => {
           {lists === null ? <CardsSkeleton n={2} className="sm:grid-cols-2" />
             : lists.length === 0 ? (
               <EmptyState icon={ListChecks} tone="ink" title={t('Pas encore de liste')}
-                text={t('Range ensemble les exercices à refaire : bouton « Liste » sur un exercice, ou « En faire une liste » depuis À refaire.')}
+                text={t('Range les exercices à refaire avec le bouton « Liste ».')}
                 action={<button type="button" className="fd-btn-primary min-h-10" onClick={() => setNewList(true)}><Plus className="h-4 w-4" /> {t('Créer une liste')}</button>} />
             ) : (
               <ul className="grid gap-3 sm:grid-cols-2" data-tour="revisions-liste">
