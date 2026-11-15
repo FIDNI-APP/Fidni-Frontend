@@ -114,7 +114,7 @@ export const NextAction: React.FC<{ choice: NextChoice; data: Overview }> = ({ c
               const weak = test.weak_chapters?.includes(c.name);
               return (
                 <li key={c.id} className={`rounded-md px-2 py-0.5 text-[12px] font-medium ${weak ? 'bg-gold-soft text-gold-strong' : 'bg-[#f2f1ee] text-ink-soft'}`}>
-                  {c.name}{weak && <span className="sr-only"> {t('(à renforcer)')}</span>}
+                  {c.name}{weak && <span className="sr-only"> {t('(à revoir)')}</span>}
                 </li>
               );
             })}

@@ -235,6 +235,70 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
       : source === 'ia-draft' ? '/pilotage?onglet=ia' : '/');
   };
 
+  // Exercices, leçons et corrigé : construits une seule fois (pas à chaque lettre tapée dans « Personnaliser ») ;
+  // la feuille ne retouche alors que l'en-tête.
+  const showDifficulty = custom?.showDifficulty ?? false;
+  const bodyBlocks = useMemo<SheetBlock[]>(() => {
+    if (!data) return [];
+    const { items } = data;
+    const subjects = uniq(items.map((i) => i.subject));
+    const effectiveMode: SolutionsMode = items.some(hasSolutions) ? mode : 'none';
+    const soloHead = items.length === 1 && items[0].kind !== 'lesson' && !items[0].nationalYear;
+    const out: SheetBlock[] = [];
+    if (items.length === 0) {
+      out.push({ key: 'empty', node: <p className="fp-empty">{data.isNotebook ? 'Ce cahier ne contient encore aucune leçon.' : 'Cette liste ne contient encore aucun exercice.'}</p> });
+    }
+    items.forEach((item, idx) => {
+      if (item.kind === 'lesson') {
+        // Leçon seule : le titre du document suffit. Cahier : un chapitre par page, puis ses leçons.
+        const single = !data.isNotebook;
+        const chapterIndex = items.slice(0, idx + 1).filter((i) => i.chapterHeading).length;
+        if (item.chapterHeading) {
+          out.push({ key: `${item.key}:chap`, keepWithNext: true, breakBefore: chapterIndex > 1, node: (
+            <div className="fp-chap"><span>Chapitre {chapterIndex}</span> {item.chapterHeading}</div>
+          ) });
+        }
+        if (!single) {
+          out.push({ key: `${item.key}:head`, keepWithNext: true, node: (
+            <header className="fp-ex-head"><span className="fp-ex-label">Leçon</span><span className="fp-ex-title">{item.title}</span></header>
+          ) });
+        }
+        if (item.sections?.length) out.push(...lessonBlocks(item));
+        else out.push({ key: `${item.key}:empty`, node: <p className="fp-empty">Leçon vide.</p> });
+        // Notes de l'élève sur le chapitre : après sa dernière leçon.
+        if (withNotes && data.isNotebook && (idx === items.length - 1 || items[idx + 1]?.chapterHeading)) {
+          const owner = [...items.slice(0, idx + 1)].reverse().find((i) => i.chapterHeading);
+          if (owner?.chapterNotes?.trim()) {
+            out.push({ key: `${item.key}:notes`, node: (
+              <div className="fp-notes"><span className="fp-sol-label">Mes notes</span><Rich content={{ html: owner.chapterNotes }} /></div>
+            ) });
+          }
+        }
+        return;
+      }
+      const pts = itemPoints(item);
+      const meta = [
+        item.nationalYear ? `Examen national ${item.nationalYear}` : null,
+        items.length > 1 && subjects.length > 1 ? item.subject : null,
+        showDifficulty && item.difficulty ? getDifficultyLabel(item.difficulty as Difficulty) : null,
+      ].filter(Boolean);
+      if (!soloHead) out.push({ key: `${item.key}:head`, keepWithNext: true, node: (
+        <>
+          <header className="fp-ex-head">
+            <span className="fp-ex-label">{item.kind === 'exam' ? 'Examen' : 'Exercice'} {idx + 1}</span>
+            <span className="fp-ex-title">{item.title}</span>
+            {pts > 0 && <span className="fp-ex-pts">{formatPoints(pts)}</span>}
+          </header>
+          {meta.length > 0 && <p className="fp-ex-meta">{meta.join(' · ')}</p>}
+        </>
+      ) });
+      if (item.blocks.length) out.push(...exerciseBlocks(item, effectiveMode === 'inline'));
+      else out.push({ key: `${item.key}:empty`, node: <p className="fp-empty">Énoncé indisponible.</p> });
+    });
+    if (effectiveMode === 'end') out.push(...answerKeyBlocks(items));
+    return out;
+  }, [data, mode, withNotes, showDifficulty]);
+
   // Cahiers et listes de révision sont privés : un visiteur voit directement l'invitation.
   if (guest && source !== 'content') {
     return (
@@ -306,57 +370,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
   blocks.push(...sheetHeaderBlocks({
     ...custom, kindLabel: data.kindLabel, subjects, levels, title: paperTitle, description: data.description, facts,
   }));
-  if (items.length === 0) {
-    blocks.push({ key: 'empty', node: <p className="fp-empty">{data.isNotebook ? 'Ce cahier ne contient encore aucune leçon.' : 'Cette liste ne contient encore aucun exercice.'}</p> });
-  }
-  items.forEach((item, idx) => {
-    if (item.kind === 'lesson') {
-      // Leçon seule : le titre du document suffit. Cahier : un chapitre par page, puis ses leçons.
-      const single = !data.isNotebook;
-      const chapterIndex = items.slice(0, idx + 1).filter((i) => i.chapterHeading).length;
-      if (item.chapterHeading) {
-        blocks.push({ key: `${item.key}:chap`, keepWithNext: true, breakBefore: chapterIndex > 1, node: (
-          <div className="fp-chap"><span>Chapitre {chapterIndex}</span> {item.chapterHeading}</div>
-        ) });
-      }
-      if (!single) {
-        blocks.push({ key: `${item.key}:head`, keepWithNext: true, node: (
-          <header className="fp-ex-head"><span className="fp-ex-label">Leçon</span><span className="fp-ex-title">{item.title}</span></header>
-        ) });
-      }
-      if (item.sections?.length) blocks.push(...lessonBlocks(item));
-      else blocks.push({ key: `${item.key}:empty`, node: <p className="fp-empty">Leçon vide.</p> });
-      // Notes de l'élève sur le chapitre : après sa dernière leçon.
-      if (withNotes && data.isNotebook && (idx === items.length - 1 || items[idx + 1]?.chapterHeading)) {
-        const owner = [...items.slice(0, idx + 1)].reverse().find((i) => i.chapterHeading);
-        if (owner?.chapterNotes?.trim()) {
-          blocks.push({ key: `${item.key}:notes`, node: (
-            <div className="fp-notes"><span className="fp-sol-label">Mes notes</span><Rich content={{ html: owner.chapterNotes }} /></div>
-          ) });
-        }
-      }
-      return;
-    }
-    const pts = itemPoints(item);
-    const meta = [
-      item.nationalYear ? `Examen national ${item.nationalYear}` : null,
-      items.length > 1 && subjects.length > 1 ? item.subject : null,
-      custom.showDifficulty && item.difficulty ? getDifficultyLabel(item.difficulty as Difficulty) : null,
-    ].filter(Boolean);
-    if (!soloHead) blocks.push({ key: `${item.key}:head`, keepWithNext: true, node: (
-      <>
-        <header className="fp-ex-head">
-          <span className="fp-ex-label">{item.kind === 'exam' ? 'Examen' : 'Exercice'} {idx + 1}</span>
-          <span className="fp-ex-title">{item.title}</span>
-          {pts > 0 && <span className="fp-ex-pts">{formatPoints(pts)}</span>}
-        </header>
-        {meta.length > 0 && <p className="fp-ex-meta">{meta.join(' · ')}</p>}
-      </>
-    ) });
-    if (item.blocks.length) blocks.push(...exerciseBlocks(item, effectiveMode === 'inline'));
-    else blocks.push({ key: `${item.key}:empty`, node: <p className="fp-empty">Énoncé indisponible.</p> });
-  });
-  if (effectiveMode === 'end') blocks.push(...answerKeyBlocks(items));
+  blocks.push(...bodyBlocks);
   // Ce qui change la mise en page (re-mesure) : tout ce qui est affiché sur la feuille.
   const blocksVersion = JSON.stringify([custom, effectiveMode, withNotes, paperTitle, items.map((i) => i.key), data.title]);
 

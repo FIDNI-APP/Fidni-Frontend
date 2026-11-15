@@ -140,7 +140,7 @@ export function ConcoursTipsListPage() {
                 action={<button type="button" className="fd-btn-ghost min-h-10" onClick={clear}>{t('Effacer les filtres')}</button>} />
             ) : (
               <EmptyState icon={Lightbulb} tone="gold" title={t('Les astuces arrivent bientôt')}
-                text={t('Des techniques courtes, souvent en vidéo, pour gagner du temps le jour du concours. En attendant, entraîne-toi sur le Bac national.')}
+                text={t('Des astuces pour gagner du temps le jour du concours. Bientôt ici.')}
                 action={(
                   <Link to="/exams/nationaux" className="fd-btn-primary min-h-11">
                     <Landmark className="h-4 w-4" /> {t('Réviser le Bac national')}

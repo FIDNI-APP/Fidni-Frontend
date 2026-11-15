@@ -98,7 +98,7 @@ export const CorrectionIAButton: React.FC<{ contentId: number | string; enabled:
               <div className="min-w-0 flex-1">
                 <h2 className="text-[16px] font-semibold text-ink">{t('Faire corriger ma copie')}</h2>
                 <p className="mt-0.5 text-[12.5px] leading-snug text-ink-faint">
-                  {t('Photographie ta copie de ce sujet : l’IA lit ce que tu as écrit, le compare au corrigé de Fidni et te montre où tu as perdu des points.')}
+                  {t('Prends ta copie en photo : l’IA la corrige et te montre où tu as perdu des points.')}
                 </p>
               </div>
               <button type="button" onClick={() => !envoi && setOuvert(false)} aria-label={t('Fermer')}

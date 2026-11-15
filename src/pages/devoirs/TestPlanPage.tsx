@@ -166,7 +166,7 @@ export default function TestPlanPage() {
                     ? t('Fait le {date} en {time}. Corrige-toi question par question, puis tente un autre sujet.', { date: new Date(mock.done_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' }), time: minutesLabel(mock.seconds) })
                     : t('Fait le {date}. Corrige-toi question par question, puis tente un autre sujet.', { date: new Date(mock.done_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' }) }))
                   : mock?.started_at ? t('Le chronomètre tourne toujours : reprends là où tu en étais.')
-                    : t('Un vrai sujet sur les chapitres de ton DS, chronométré, sans solution avant la fin. Puis tu te corriges.')}
+                    : t('Un sujet chronométré sur les chapitres de ton DS.')}
               </p>
 
               {mock?.exercises.length ? (

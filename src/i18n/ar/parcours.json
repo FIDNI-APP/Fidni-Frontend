@@ -9,11 +9,9 @@
   "Connecte-toi pour suivre ton parcours": "سجّل الدخول لمتابعة مسارك",
   "En cours · {n} %": "قيد الإنجاز · {n} %",
   "La progression n’a pas pu être enregistrée. Vérifie ta connexion.": "تعذّر حفظ تقدمك. تحقق من اتصالك.",
-  "Le Parcours enchaîne les chapitres de ton niveau en vidéos, et garde ta progression d’un checkpoint à l’autre.": "يجمع المسار دروس مستواك في فيديوهات متتابعة ويحفظ تقدمك من مرحلة إلى أخرى.",
   "Le Parcours fait partie de Fidni Premium": "المسار متاح ضمن فيدني بريميوم",
   "Le parcours n’a pas pu se charger. Vérifie ta connexion.": "تعذّر تحميل المسار. تحقق من اتصالك.",
   "Le quiz n’a pas pu être enregistré. Réessaie.": "تعذّر تسجيل الاختبار. حاول مجددًا.",
-  "Les chapitres de ton niveau en vidéos, dans l’ordre du programme, avec ta progression d’un checkpoint à l’autre. L’offre Premium n’est pas encore ouverte.": "دروس مستواك في فيديوهات بترتيب المقرر، مع حفظ تقدمك بين المراحل. عرض بريميوم غير متاح بعد.",
   "Les premiers parcours en vidéo arrivent bientôt.": "المسارات الأولى بالفيديو متاحة قريبًا.",
   "Les vidéos de ce chapitre arrivent bientôt.": "فيديوهات هذا الدرس متاحة قريبًا.",
   "Parcours terminé : tous les chapitres sont validés.": "اكتمل المسار وأُنجزت جميع دروسه.",
@@ -78,5 +76,7 @@
   "YouTube, Vimeo ou lien direct vers une vidéo.": "يوتيوب أو فيميو أو رابط مباشر إلى فيديو.",
   "Choisir un fichier": "اختيار ملف",
   "Vidéo déjà enregistrée": "الفيديو محفوظ بالفعل",
-  "Remplacer le fichier": "استبدال الملف"
+  "Remplacer le fichier": "استبدال الملف",
+  "Les chapitres de ton niveau en vidéos.": "فصول مستواك بالفيديو.",
+  "Les chapitres de ton niveau en vidéos. L’offre Premium n’est pas encore ouverte.": "فصول مستواك بالفيديو. عرض Premium غير متاح بعد."
 }

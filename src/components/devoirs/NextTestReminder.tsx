@@ -16,7 +16,7 @@ const ChapterLine: React.FC<{ names: string[]; weak: string[] }> = ({ names, wea
     {names.slice(0, 3).map((n, i) => (
       <React.Fragment key={n}>
         {i > 0 && t(', ')}
-        {weak.includes(n) ? <span className="text-gold-strong">{n}<span className="sr-only"> {t('(à renforcer)')}</span></span> : n}
+        {weak.includes(n) ? <span className="text-gold-strong">{n}<span className="sr-only"> {t('(à revoir)')}</span></span> : n}
       </React.Fragment>
     ))}
     {names.length > 3 && <>{' '}{names.length > 4 ? t('et {n} autres', { n: names.length - 3 }) : t('et {n} autre', { n: names.length - 3 })}</>}

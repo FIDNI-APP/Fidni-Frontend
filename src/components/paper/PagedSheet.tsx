@@ -43,8 +43,6 @@ interface Props {
   measureOnly?: boolean;
 }
 
-interface Measure { heights: number[] }
-
 export const PagedSheet: React.FC<Props> = ({ blocks, version, density, footer, landscape, onLayout, className = '', measureOnly = false }) => {
   const measureRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<{ level: number; pageOf: number[]; pages: number; subjectPages: number } | null>(null);
@@ -59,38 +57,95 @@ export const PagedSheet: React.FC<Props> = ({ blocks, version, density, footer, 
     return i < 0 ? blocks.length : i;
   }, [blocks]);
 
-  /** Mesure des blocs au palier donné (réglages posés directement sur la zone de mesure). */
-  const measureAt = useCallback((d: Density): Measure | null => {
+  /**
+   * Réglages du palier posés sur la zone de mesure. Changer de palier fait recalculer TOUTE la zone (long pour
+   * une série de 20 pages) ; rester au même palier ne recalcule que ce qui a changé. On évite donc d'en changer.
+   */
+  const boxLevel = useRef(-1);
+  const applyLevel = useCallback((level: number) => {
+    const box = measureRef.current;
+    if (!box || boxLevel.current === level) return;
+    const d = DENSITIES[level];
+    box.style.width = `${(W - d.margins.left - d.margins.right) * MM}px`;
+    Object.entries(densityVars(d) as Record<string, string>).forEach(([k, v]) => box.style.setProperty(k, v));
+    boxLevel.current = level;
+  }, [W]);
+  useLayoutEffect(() => { boxLevel.current = -1; }, [W]);
+
+  type Result = { level: number; pageOf: number[]; pages: number; subjectPages: number };
+  /** Mesure et pagination au palier donné. */
+  const layoutAt = useCallback((level: number): Result | null => {
     const box = measureRef.current;
     if (!box) return null;
-    box.style.width = `${(W - d.margins.left - d.margins.right) * MM}px`;
-    const vars = densityVars(d) as Record<string, string>;
-    Object.entries(vars).forEach(([k, v]) => box.style.setProperty(k, v));
-    const els = Array.from(box.children) as HTMLElement[];
-    return { heights: els.map((el) => el.getBoundingClientRect().height) };
-  }, [W]);
+    applyLevel(level);
+    const d = DENSITIES[level];
+    const heights = Array.from(box.children).map((el) => el.getBoundingClientRect().height);
+    const measured: MeasuredBlock[] = blocks.map((b, i) => ({ height: heights[i] ?? 0, keepWithNext: b.keepWithNext, breakBefore: b.breakBefore }));
+    const pageH = contentHeight({ width: W, height: H, ...d.margins }) - 2; // marge de sécurité (arrondis)
+    const { pageOf, pages } = paginate(measured, pageH);
+    const subjectPages = subjectEnd > 0 ? (pageOf[subjectEnd - 1] ?? 0) + 1 : 1;
+    return { level, pageOf, pages, subjectPages };
+  }, [blocks, applyLevel, W, H, subjectEnd]);
 
+  const last = DENSITIES.length - 1;
+  /** « Tenir sur une page » : le palier le plus aéré qui tient, sinon le plus serré. Plus serré = jamais plus long. */
+  const fitLayout = useCallback((): Result | null => {
+    // On part du palier où est déjà la zone de mesure (souvent le bon) : une seule mesure, sans tout recalculer.
+    const start = boxLevel.current >= 0 ? boxLevel.current : 0;
+    const r = layoutAt(start);
+    if (!r) return null;
+    const fits = (x: Result | null) => !!x && x.subjectPages <= 1;
+    if (!fits(r)) {
+      if (start === last) return r; // même le plus serré ne suffit pas
+      const tight = layoutAt(last);
+      if (!fits(tight)) return tight && tight.subjectPages < r.subjectPages ? tight : r;
+      let lo = start + 1;
+      let hi = last;
+      let best = tight as Result;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        const m = layoutAt(mid);
+        if (fits(m)) { hi = mid; best = m as Result; } else lo = mid + 1;
+      }
+      return best;
+    }
+    // Ça tient : un palier plus aéré tiendrait-il aussi ?
+    let best = r;
+    let lo = 0;
+    let hi = start - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const m = layoutAt(mid);
+      if (fits(m)) { best = m as Result; hi = mid - 1; } else lo = mid + 1;
+    }
+    return best;
+  }, [layoutAt, last]);
+
+  const lastRun = useRef('');
+  const runKey = `${version}|${density}|${landscape}|${tick}|${blocks.length}`;
+  const runLayout = useCallback(() => {
+    lastRun.current = runKey;
+    const best = density === 'fit' ? fitLayout() : layoutAt(Math.max(0, Math.min(last, density)));
+    if (!best) return;
+    // Zone de mesure laissée au palier retenu : la prochaine mesure partira de là.
+    applyLevel(best.level);
+    const b = best;
+    setState((prev) => (prev && prev.level === b.level && prev.pages === b.pages && prev.subjectPages === b.subjectPages
+      && prev.pageOf.length === b.pageOf.length && prev.pageOf.every((p, i) => p === b.pageOf[i]) ? prev : b));
+    onLayoutRef.current?.({ pages: b.pages, subjectPages: b.subjectPages, density: DENSITIES[b.level], densityIndex: b.level });
+  }, [density, fitLayout, layoutAt, applyLevel, last, runKey]);
+  const runRef = useRef(runLayout);
+  runRef.current = runLayout;
+
+  // Première mise en page, changement de palier, d'orientation ou de blocs : tout de suite.
+  useLayoutEffect(() => { runRef.current(); }, [density, landscape, subjectEnd, blocks.length]);
+  // Texte modifié (frappe dans « Personnaliser »), police ou image chargée : on attend que ça se calme,
+  // pour ne pas remesurer une longue feuille à chaque lettre (rien à faire si c'est déjà mesuré).
   useLayoutEffect(() => {
-    const levels = density === 'fit' ? DENSITIES.map((_, i) => i) : [Math.max(0, Math.min(DENSITIES.length - 1, density))];
-    let best: { level: number; pageOf: number[]; pages: number; subjectPages: number } | null = null;
-    for (const level of levels) {
-      const d = DENSITIES[level];
-      const m = measureAt(d);
-      if (!m) return;
-      const measured: MeasuredBlock[] = blocks.map((b, i) => ({ height: m.heights[i] ?? 0, keepWithNext: b.keepWithNext, breakBefore: b.breakBefore }));
-      const pageH = contentHeight({ width: W, height: H, ...d.margins }) - 2; // marge de sécurité (arrondis)
-      const { pageOf, pages } = paginate(measured, pageH);
-      const subjectPages = subjectEnd > 0 ? (pageOf[subjectEnd - 1] ?? 0) + 1 : 1;
-      const candidate = { level, pageOf, pages, subjectPages };
-      if (!best || subjectPages < best.subjectPages) best = candidate;
-      if (subjectPages <= 1) break;
-    }
-    if (best) {
-      setState(best);
-      onLayoutRef.current?.({ pages: best.pages, subjectPages: best.subjectPages, density: DENSITIES[best.level], densityIndex: best.level });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [version, density, landscape, tick, subjectEnd, blocks.length]);
+    if (lastRun.current === runKey) return undefined;
+    const t = window.setTimeout(() => { if (lastRun.current !== runKey) runRef.current(); }, 250);
+    return () => window.clearTimeout(t);
+  }, [runKey]);
 
   // Polices et images chargées plus tard : les hauteurs changent, on re-mesure.
   useLayoutEffect(() => {

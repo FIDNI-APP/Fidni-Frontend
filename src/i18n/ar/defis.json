@@ -29,7 +29,6 @@
   "{n} élèves sur {total} ont trouvé ce défi.": "{n} تلميذًا من أصل {total} حلّوا هذا التحدي.",
   "Avec un compte gratuit, FIDNI retient ta série jour après jour.": "بحساب مجاني، يحفظ FIDNI سلسلتك يومًا بعد يوم.",
   "Un nouveau défi t’attend demain.": "تحدٍّ جديد في انتظارك غدًا.",
-  "Un problème par jour, le même pour tous les niveaux. Les indices t’expliquent les outils à utiliser.": "مسألة كل يوم، هي نفسها لجميع المستويات. تشرح لك التلميحات الأدوات التي ينبغي استعمالها.",
   "Les défis n’ont pas pu se charger. Vérifie ta connexion.": "تعذر تحميل التحديات. تحقق من اتصالك.",
   "Ce défi n’a pas pu se charger. Vérifie ta connexion.": "تعذر تحميل هذا التحدي. تحقق من اتصالك.",
   "Pas de défi aujourd’hui. Reviens demain.": "لا يوجد تحدٍّ اليوم. عد غدًا.",
@@ -43,5 +42,6 @@
   "Logique": "المنطق",
   "Géométrie": "الهندسة",
   "Dénombrement": "التعداد",
-  "Chaque jour, un nouveau problème, le même pour tous les niveaux. Bloqué ? Les indices t’expliquent l’outil à utiliser.": "كل يوم مسألة جديدة، هي نفسها لجميع المستويات. هل توقفت؟ تشرح لك التلميحات الأداة التي ينبغي استعمالها."
+  "Un problème par jour. Bloqué ? Prends un indice.": "مسألة كل يوم. علقت؟ خذ تلميحًا.",
+  "Un problème par jour, le même pour tous. Bloqué ? Prends un indice.": "مسألة كل يوم، نفسها للجميع. علقت؟ خذ تلميحًا."
 }

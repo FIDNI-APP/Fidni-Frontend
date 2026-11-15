@@ -169,7 +169,9 @@ export const SHEET_CONTENT_CSS = `
 export const SHEET_PAGES_CSS = `
   .fp-pages { display: flex; flex-direction: column; align-items: center; gap: 18px; }
   .fp-page { position: relative; box-sizing: border-box; flex-shrink: 0; background: #fff; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06); }
+    box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+    /* Feuilles hors de l'écran : pas dessinées (une longue série reste fluide). */
+    content-visibility: auto; contain-intrinsic-size: auto 210mm auto 297mm; }
   .fp-page-foot { position: absolute; display: flex; justify-content: space-between; gap: 12px;
     font-family: 'DM Sans', sans-serif; font-size: 8pt; color: #9a958c; white-space: nowrap; }
   .fp-page-foot span:first-child { overflow: hidden; text-overflow: ellipsis; }
@@ -177,7 +179,7 @@ export const SHEET_PAGES_CSS = `
   @page { size: A4; margin: 0; }
   @media print {
     .fp-pages { display: block; zoom: 1 !important; }
-    .fp-page { box-shadow: none; margin: 0; break-after: page; page-break-after: always; }
+    .fp-page { box-shadow: none; margin: 0; break-after: page; page-break-after: always; content-visibility: visible; }
     .fp-page:last-child { break-after: auto; page-break-after: auto; }
     .fp-measure { display: none; }
     .fp-rich .math-display { overflow: visible; }

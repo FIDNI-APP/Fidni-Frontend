@@ -73,7 +73,6 @@
   "Connecte-toi pour ajouter un contenu.": "سجّل الدخول لإضافة محتوى.",
   "Se connecter": "تسجيل الدخول",
   "Création réservée à l’équipe": "الإنشاء مخصص للفريق",
-  "Pour l’instant, seule l’équipe Fidni publie des exercices, des leçons et des devoirs. Tu peux toujours préparer tes fiches TD à partir des exercices du site.": "حاليا، فريق Fidni وحده ينشر التمارين والدروس والفروض. ويمكنك دائما إعداد أوراق التمارين التطبيقية انطلاقا من تمارين الموقع.",
   "Voir les exercices": "عرض التمارين",
   "Aperçu": "معاينة",
   "Sans titre": "بدون عنوان",
@@ -533,7 +532,6 @@
   "Préparation aux concours d'entrée de l'ENSA, de l'ENSAM et de médecine.": "التحضير لمباريات ولوج ENSA وENSAM والطب.",
   "Les annales n’ont pas pu se charger. Vérifie ta connexion.": "تعذر تحميل الامتحانات السابقة. تحقق من اتصالك.",
   "Les annales arrivent bientôt": "الامتحانات السابقة قريبا",
-  "On prépare les sujets de l’ENSA, de l’ENSAM et de médecine, avec leurs corrigés et des simulations chronométrées. En attendant, le Bac national est le meilleur entraînement.": "نحضر مواضيع ENSA وENSAM والطب مع تصحيحاتها ومحاكاة مؤقتة. وفي انتظار ذلك، الامتحان الوطني هو أفضل تدريب.",
   "Réviser le Bac national": "مراجعة الامتحان الوطني",
   "En attendant : les astuces": "في الانتظار : النصائح",
   "Les écoles": "المدارس",
@@ -624,7 +622,6 @@
   "Aucune astuce ne correspond": "لا توجد نصيحة مطابقة",
   "Essaie un autre mot ou retire un filtre.": "جرّب كلمة أخرى أو أزل تصفية.",
   "Les astuces arrivent bientôt": "النصائح قريبا",
-  "Des techniques courtes, souvent en vidéo, pour gagner du temps le jour du concours. En attendant, entraîne-toi sur le Bac national.": "تقنيات قصيرة، غالبا بالفيديو، لربح الوقت يوم المباراة. وفي انتظار ذلك، تدرّب على الامتحان الوطني.",
   "Astuce introuvable": "النصيحة غير موجودة",
   "Cette astuce n’existe plus": "هذه النصيحة لم تعد موجودة",
   "Elle a peut-être été retirée. Les autres t’attendent dans la liste.": "ربما تم حذفها. النصائح الأخرى في انتظارك في اللائحة.",
@@ -780,5 +777,8 @@
   "Showing": "عرض",
   "learning paths": "مسارات تعلّم",
   "Aucun parcours trouvé": "لم يتم العثور على أي مسار",
-  "Modifie tes filtres ou ta recherche.": "عدّل التصفية أو البحث."
+  "Modifie tes filtres ou ta recherche.": "عدّل التصفية أو البحث.",
+  "Pour l’instant, seule l’équipe Fidni publie des contenus. Tu peux faire des séries avec les exercices du site.": "حاليًا، فريق Fidni وحده ينشر المحتويات. يمكنك صنع سلاسل من تمارين الموقع.",
+  "Les sujets de l’ENSA, de l’ENSAM et de médecine arrivent bientôt.": "مواضيع ENSA وENSAM والطب قادمة قريبًا.",
+  "Des astuces pour gagner du temps le jour du concours. Bientôt ici.": "حيل لربح الوقت يوم المباراة. قريبًا هنا."
 }

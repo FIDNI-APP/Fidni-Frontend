@@ -407,7 +407,7 @@ export const Membres: React.FC = () => {
         {seo}
         <PageHeader title={t('Membres')} />
         <Vide>
-          {t('Connecte-toi pour chercher des membres, suivre des professeurs et des élèves, et voir leur activité.')}
+          {t('Connecte-toi pour voir les membres et les suivre.')}
           <button type="button" onClick={() => openSignup('login')} className="fd-btn-primary mx-auto mt-5 flex min-h-10 items-center">{t('Connexion')}</button>
         </Vide>
       </Page>

@@ -105,9 +105,7 @@
   ", sur {n} points corrigés": "، على {n} نقط مصححة",
   " · {a} / {b} questions corrigées": " · {a} / {b} أسئلة مصححة",
   "Corrige ce passage question par question : ta note s’affiche ici.": "صحح هذه المحاولة سؤالا بسؤال : ستظهر نقطتك هنا.",
-  "Coche tes questions réussies : ta note s’affiche ici, tu te situes face aux autres élèves et tu enrichis leurs statistiques.": "حدّد الأسئلة التي نجحت فيها : ستظهر نقطتك هنا، وتقارن نفسك بباقي التلاميذ، وتساهم في إحصائياتهم.",
   "Obtiens ta note": "احصل على نقطتك",
-  "Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice.": "بحساب شخصي تقيّم نفسك سؤالا بسؤال، وتُحتسب نقطتك التقديرية حسب سلم التنقيط، تمرينا بتمرين.",
   "Durée": "المدة",
   "Barème": "سلم التنقيط",
   "{n} points": "{n} نقط",
@@ -208,7 +206,6 @@
   "Proposer une autre solution": "اقتراح حل آخر",
   "Proposer ma solution": "اقتراح حلي",
   "Aucune solution proposée pour l’instant": "لم يُقترح أي حل بعد",
-  "Sois le premier à partager ta méthode : rédige-la avec l’éditeur, ou prends simplement ta copie en photo.": "كن أول من يشارك طريقته : اكتبها بالمحرر، أو صوّر ورقتك فقط.",
   "Rédiger ma solution": "كتابة حلي",
   "Envoyer une photo": "إرسال صورة",
   "{p} % des élèves réussissent la question {num}": "{p} % من التلاميذ ينجحون في السؤال {num}",
@@ -358,5 +355,8 @@
   "1 annotation sur cette leçon": "تعليق واحد على هذا الدرس",
   "{r} élève(s) sur {n} réussissent la question {num}": "{r} من أصل {n} تلاميذ ينجحون في السؤال {num}",
   "Personne ne s’est encore évalué sur cette question.": "لم يقيّم أحد نفسه في هذا السؤال بعد.",
-  "élèves la réussissent pour l’instant": "تلاميذ ينجحون فيه حتى الآن"
+  "élèves la réussissent pour l’instant": "تلاميذ ينجحون فيه حتى الآن",
+  "Coche tes questions réussies : ta note s’affiche ici.": "ضع علامة على الأسئلة التي نجحت فيها: تظهر نقطتك هنا.",
+  "Avec un compte, coche tes questions réussies : ta note se calcule toute seule.": "بحساب، ضع علامة على الأسئلة التي نجحت فيها: تُحسب نقطتك تلقائيًا.",
+  "Partage ta méthode : écris-la, ou prends ta copie en photo.": "شارك طريقتك: اكتبها، أو صوّر ورقتك."
 }

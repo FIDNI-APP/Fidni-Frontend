@@ -140,7 +140,6 @@
   "Les autres années du Bac national sont dans leurs dossiers.": "باقي سنوات الامتحان الوطني في مجلداتها.",
   "Toutes les années": "كل السنوات",
   "Les sujets nationaux arrivent bientôt": "المواضيع الوطنية قادمة قريبا",
-  "Les sujets du Bac national corrigés seront publiés ici. En attendant, entraîne-toi sur les devoirs surveillés.": "ستُنشر هنا مواضيع الامتحان الوطني مع التصحيح. في الانتظار، تدرّب على الفروض المحروسة.",
   "Voir les devoirs surveillés": "عرض الفروض المحروسة",
   "Rien de publié ici pour le moment": "لا شيء منشور هنا حاليا",
   "Les premiers contenus arrivent bientôt.": "ستصل المحتويات الأولى قريبا.",
@@ -190,7 +189,6 @@
   "Garde tes leçons": "احتفظ بدروسك",
   "Suis ta progression": "تابع تقدّمك",
   "Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.": "بحساب شخصي، تضع علامة على الدروس التي قرأتها وترتبها في دفتر دروسك.",
-  "Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.": "بحساب شخصي، يُحتسب كل سؤال تقيّمه : ترى ما تتقنه وما يجب مراجعته.",
   "Chargement": "جارٍ التحميل",
   "{s} réussis, {r} à revoir, sur {total}": "{s} ناجحة، {r} للمراجعة، من أصل {total}",
   "{s} réussi, {r} à revoir, sur {total}": "{s} ناجح، {r} للمراجعة، من أصل {total}",
@@ -318,5 +316,7 @@
   "Devoir {n} de ce chapitre": "الفرض {n} من هذا الفصل",
   "Leçon {n} de ce chapitre": "الدرس {n} من هذا الفصل",
   "Devoir {n}": "الفرض {n}",
-  "Leçon {n}": "الدرس {n}"
+  "Leçon {n}": "الدرس {n}",
+  "Avec un compte, tu vois ce que tu réussis et ce qu’il faut revoir.": "بحساب، ترى ما تنجح فيه وما يجب مراجعته.",
+  "Bientôt ici : les sujets du Bac national corrigés.": "قريبًا هنا: مواضيع الباكالوريا الوطنية مصحّحة."
 }

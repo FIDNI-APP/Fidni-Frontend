@@ -169,7 +169,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({
   if (total === 0) {
     return (
       <EmptyState icon={Target} title={t('Rien de noté pour l’instant')}
-        text={t('Après un exercice, dis si tu l’as réussi ou s’il est à revoir : il apparaîtra ici, et ceux à revoir t’attendront dans Réviser.')}
+        text={t('Après un exercice, dis si tu l’as réussi : il apparaîtra ici.')}
         action={<Link to={startUrl} className="fd-btn-primary min-h-10"><Dumbbell className="h-4 w-4" /> {t('S’entraîner')}</Link>} />
     );
   }

@@ -64,7 +64,7 @@ export default function CorrectionIA() {
         <div role="status" className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white px-6 py-12 text-center">
           <Loader2 className="h-7 w-7 animate-spin text-brand" aria-hidden />
           <p className="text-[15px] font-semibold text-ink">{c.etape || t('Correction en cours')}</p>
-          <p className="max-w-sm text-[13px] text-ink-faint">{t('L’IA lit ta copie puis la compare au corrigé. Environ une minute : tu peux rester sur cette page, elle se met à jour toute seule.')}</p>
+          <p className="max-w-sm text-[13px] text-ink-faint">{t('Correction en cours, environ une minute. La page se met à jour toute seule.')}</p>
         </div>
       </Page>
     );
@@ -75,7 +75,7 @@ export default function CorrectionIA() {
       <Page>
         <PageHeader back={{ to: lien, label: t('Retour au sujet') }} eyebrow={t('Correction par l’IA')} title={titre} />
         <EmptyState icon={AlertTriangle} tone="ink" title={t('La correction a échoué')}
-          text={c.error || t('Vérifie que les photos sont nettes, bien orientées et lisibles, puis recommence : cette tentative ne compte pas dans ta limite.')}
+          text={c.error || t('Reprends des photos nettes et droites. Cet essai ne compte pas dans ta limite.')}
           action={<div className="flex gap-3"><Link to={lien} className="fd-btn-primary min-h-10">{t('Réessayer')}</Link>
             <button type="button" onClick={supprimer} disabled={suppr} className="fd-btn-ghost min-h-10">{t('Supprimer')}</button></div>} />
       </Page>
@@ -111,11 +111,11 @@ export default function CorrectionIA() {
 
       <p className="mb-5 flex items-start gap-2 rounded-xl bg-[#f7f6f2] px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-soft">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
-        {t('Correction automatique par l’IA, d’après le corrigé de Fidni : elle peut se tromper ou mal lire un symbole. Vérifie « Ce que l’IA a lu » avant de t’inquiéter d’une note.')}
+        {t('Corrigé par l’IA : elle peut mal lire un symbole. En cas de doute, regarde « Ce que l’IA a lu ».')}
       </p>
 
       <p className="mb-5 text-[12.5px] text-ink-soft">
-        {t('Ton auto-évaluation de ce sujet a été mise à jour : réussi, partiel ou à revoir, question par question.')}{' '}
+        {t('Tes questions réussies et à revoir ont été mises à jour.')}{' '}
         <Link to={lien} className="font-semibold text-brand-hover hover:underline">{t('Voir le sujet')}</Link>
       </p>
 

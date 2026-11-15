@@ -444,7 +444,7 @@ export const ExamView: React.FC<Props> = ({
         <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">
           {attemptStart
             ? t('Corrige ce passage question par question : ta note s’affiche ici.')
-            : t('Coche tes questions réussies : ta note s’affiche ici, tu te situes face aux autres élèves et tu enrichis leurs statistiques.')}
+            : t('Coche tes questions réussies : ta note s’affiche ici.')}
         </p>
       )}
     </>
@@ -456,7 +456,7 @@ export const ExamView: React.FC<Props> = ({
         onAssess={(path, st) => assessOne(path, st, 'question')} partScore={partScore} header={copieHeader} />
       {!isAuthenticated && (
         <SignupCard title={t('Obtiens ta note')} benefits={false}
-          text={t('Avec un compte, tu t’évalues question par question et ta note estimée se calcule avec le barème, exercice par exercice.')} />
+          text={t('Avec un compte, coche tes questions réussies : ta note se calcule toute seule.')} />
       )}
     </div>
   );

@@ -34,7 +34,6 @@
   "Élèves de ton niveau": "تلاميذ مستواك",
   "Ta classe": "قسمك",
   "Enseigne": "يدرّس",
-
   "Badges": "الشارات",
   "Nouveau badge": "شارة جديدة",
   "Vitrine": "الواجهة",
@@ -82,7 +81,6 @@
   "Voir ›": "عرض ‹",
   "Chapitres": "الفصول",
   "Aucun chapitre maîtrisé pour l’instant.": "لا فصل متقَن حتى الآن.",
-
   "Dans les discussions": "في النقاشات",
   "Aucune discussion pour l’instant.": "لا نقاش حتى الآن.",
   "A lancé une discussion": "بدأ نقاشًا",
@@ -101,14 +99,11 @@
   "Tu ne suis personne pour l’instant": "لا تتابع أحدًا حتى الآن",
   "Découvrir des membres": "اكتشاف الأعضاء",
   "Meilleures séries du défi": "أفضل سلاسل التحدي",
-
   "Chercher un membre par son nom ou son pseudo": "ابحث عن عضو باسمه أو باسمه المستعار",
   "Chercher un membre": "البحث عن عضو",
   "Aucun membre trouvé": "لم يُعثر على أي عضو",
   "La page n’a pas pu se charger. Vérifie ta connexion.": "تعذّر تحميل الصفحة. تحقّق من اتصالك.",
   "Les membres de Fidni : professeurs et élèves.": "أعضاء فدني: أساتذة وتلاميذ.",
-  "Connecte-toi pour chercher des membres, suivre des professeurs et des élèves, et voir leur activité.": "سجّل الدخول للبحث عن الأعضاء ومتابعة الأساتذة والتلاميذ ورؤية نشاطهم.",
-
   "Personnaliser mon profil": "تخصيص ملفي الشخصي",
   "Profil mis à jour": "تم تحديث الملف الشخصي",
   "Enregistrement impossible pour le moment.": "تعذّر الحفظ حاليًا.",
@@ -128,7 +123,6 @@
   "Activé par défaut pour les moins de 18 ans.": "مفعَّل تلقائيًا لمن هم دون 18 سنة.",
   "Apparaître dans la recherche de membres": "الظهور في البحث عن الأعضاء",
   "Ce membre valide ses abonnés : sa liste est privée.": "هذا العضو يوافق على متابِعيه: قائمته خاصة.",
-
   "te suit": "يتابعك",
   "et {n} autres te suivent": "و{n} آخرون يتابعونك",
   "demande à te suivre": "يطلب متابعتك",
@@ -137,8 +131,8 @@
   "Voir mes badges": "عرض شاراتي",
   "Voir la demande": "عرض الطلب",
   "Voir le profil": "عرض الملف الشخصي",
-
   "Défi du jour à faire": "تحدي اليوم لم يُحلّ بعد",
   "À faire, série de {n} jours en jeu": "لم يُحلّ بعد، سلسلة {n} أيام على المحك",
-  "Fait aujourd’hui": "حُلّ اليوم"
+  "Fait aujourd’hui": "حُلّ اليوم",
+  "Connecte-toi pour voir les membres et les suivre.": "سجّل الدخول لترى الأعضاء وتتابعهم."
 }

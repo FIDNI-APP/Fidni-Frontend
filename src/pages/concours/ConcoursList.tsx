@@ -212,7 +212,7 @@ export default function ConcoursListPage() {
         {/* Aucune annale en ligne : le message d'abord (avec une vraie piste), les écoles ensuite. */}
         {empty && (
           <EmptyState icon={Hourglass} tone="gold" title={t('Les annales arrivent bientôt')}
-            text={t('On prépare les sujets de l’ENSA, de l’ENSAM et de médecine, avec leurs corrigés et des simulations chronométrées. En attendant, le Bac national est le meilleur entraînement.')}
+            text={t('Les sujets de l’ENSA, de l’ENSAM et de médecine arrivent bientôt.')}
             action={(
               <Link to="/exams/nationaux" className="fd-btn-primary min-h-11">
                 <Landmark className="h-4 w-4" /> {t('Réviser le Bac national')}

@@ -1,7 +1,6 @@
 {
   "(avant : {n} %)": "(قبل: {n} %)",
   "(fait)": "(تم)",
-  "(à renforcer)": "(للتقوية)",
   "/ 20 en moyenne · {n} examen": "/ 20 في المعدل · {n} امتحان",
   "/ 20 en moyenne · {n} examens": "/ 20 في المعدل · {n} امتحانات",
   "/ 20 en moyenne": "/ 20 في المعدل",
@@ -51,7 +50,6 @@
   "Essayer": "جرّب",
   "Examens notés": "امتحانات منقَّطة",
   "Faire un DS": "اجتياز فرض",
-  "Fais un exercice, puis dis pour chaque question si tu l’as réussie : tes réussites, tes notes et ton temps s’afficheront ici.": "أنجز تمرينا، ثم حدّد لكل سؤال هل نجحت فيه: ستظهر هنا نتائجك ونقطك ووقتك.",
   "Fait le {date}": "أُنجز يوم {date}",
   "Fermer le détail du jour": "إغلاق تفاصيل اليوم",
   "Graphique": "الرسم البياني",
@@ -69,7 +67,6 @@
   "Les nouveaux contenus de ton niveau arriveront ici, choisis d’après ton travail.": "ستظهر هنا المحتويات الجديدة لمستواك، مختارة حسب عملك.",
   "Les questions difficiles comptent un peu plus dans le score.": "الأسئلة الصعبة تُحتسب بوزن أكبر قليلا في النقطة.",
   "Les quiz par chapitre arrivent bientôt": "الاختبارات حسب الفصل قادمة قريبا",
-  "Les théorèmes de tes questions ratées sur la période, les moins réussis d’abord : c’est là qu’il faut te concentrer.": "مبرهنات الأسئلة التي أخطأت فيها خلال الفترة، الأقل نجاحا أولا: هنا ينبغي أن تركّز.",
   "Les {n} autres chapitres du programme": "الفصول الـ{n} الأخرى من البرنامج",
   "Légende": "دليل الألوان",
   "Ma note aux examens": "نقطتي في الامتحانات",
@@ -164,7 +161,6 @@
   "S’entraîner sur mon chapitre le plus fragile": "التدرّب على فصلي الأضعف",
   "S’entraîner sur mon niveau": "التدرّب على مستواي",
   "S’y mettre": "ابدأ الآن",
-  "Ta note aux examens, tes questions et ton temps, chapitre par chapitre. Touche un chapitre pour le détail.": "نقطتك في الامتحانات وأسئلتك ووقتك، فصلا فصلا. المس فصلا لعرض التفاصيل.",
   "Ta progression commence ici": "يبدأ تقدّمك من هنا",
   "Ta progression n’a pas pu se charger. Vérifie ta connexion.": "تعذّر تحميل تقدّمك. تحقق من اتصالك.",
   "Ta progression n’a pas pu se charger.": "تعذّر تحميل تقدّمك.",
@@ -458,5 +454,9 @@
   "Maîtrisés": "متقَنة",
   "30 derniers jours": "آخر 30 يومًا",
   "Bases à revoir": "الأساسيات للمراجعة",
-  "Aucune question ces 30 derniers jours.": "لا أسئلة في آخر 30 يومًا."
+  "Aucune question ces 30 derniers jours.": "لا أسئلة في آخر 30 يومًا.",
+  "Fais un exercice et coche tes questions réussies : elles s’afficheront ici.": "أنجز تمرينًا وضع علامة على الأسئلة التي نجحت فيها: ستظهر هنا.",
+  "Les théorèmes de tes questions ratées, les plus ratés d’abord.": "مبرهنات أسئلتك الخاطئة، الأكثر خطأً أولًا.",
+  "Tes résultats chapitre par chapitre. Touche un chapitre pour le détail.": "نتائجك فصلًا بفصل. المس فصلًا للتفاصيل.",
+  "(à revoir)": "(للمراجعة)"
 }

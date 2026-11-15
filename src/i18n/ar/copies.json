@@ -217,7 +217,6 @@
   "Corrigée par l’IA, comparée au corrigé": "يصحّحها الذكاء الاصطناعي ويقارنها بالتصحيح",
   "{n} correction(s) restante(s)": "تبقّى {n} تصحيح",
   "Faire corriger ma copie": "تصحيح ورقتي",
-  "Photographie ta copie de ce sujet : l’IA lit ce que tu as écrit, le compare au corrigé de Fidni et te montre où tu as perdu des points.": "صوّر ورقتك لهذا الموضوع: يقرأ الذكاء الاصطناعي ما كتبته، ويقارنه بتصحيح Fidni، ويُريك أين فقدت النقاط.",
   "Corrections illimitées (administrateur).": "تصحيحات غير محدودة (مشرف).",
   "Il te reste {n} correction(s) sur {m}.": "تبقّى لك {n} تصحيح من أصل {m}.",
   "Ajouter les photos ou le PDF de ma copie": "أضف صور ورقتي أو ملف PDF",
@@ -233,10 +232,7 @@
   "Retour au sujet": "العودة إلى الموضوع",
   "Correction par l’IA": "التصحيح بالذكاء الاصطناعي",
   "Correction en cours": "التصحيح جارٍ",
-  "L’IA lit ta copie puis la compare au corrigé. Environ une minute : tu peux rester sur cette page, elle se met à jour toute seule.": "يقرأ الذكاء الاصطناعي ورقتك ثم يقارنها بالتصحيح. حوالي دقيقة: يمكنك البقاء في هذه الصفحة فهي تتحدّث تلقائيًا.",
   "La correction a échoué": "فشل التصحيح",
-  "Vérifie que les photos sont nettes, bien orientées et lisibles, puis recommence : cette tentative ne compte pas dans ta limite.": "تأكد أن الصور واضحة وصحيحة الاتجاه ومقروءة ثم أعد المحاولة: هذه المحاولة لا تُحتسب من حدّك.",
-  "Correction automatique par l’IA, d’après le corrigé de Fidni : elle peut se tromper ou mal lire un symbole. Vérifie « Ce que l’IA a lu » avant de t’inquiéter d’une note.": "تصحيح آلي بالذكاء الاصطناعي اعتمادًا على تصحيح Fidni: قد يخطئ أو يقرأ رمزًا خطأً. تحقق من « ما قرأه الذكاء الاصطناعي » قبل أن تقلق من نقطة.",
   "Où tu as perdu des points ({p} pts)": "أين فقدت النقاط ({p} ن)",
   "Aucun point perdu": "لم تفقد أي نقطة",
   "Bravo : l’IA n’a relevé aucune erreur sur cette copie.": "أحسنت: لم يرصد الذكاء الاصطناعي أي خطأ في هذه الورقة.",
@@ -244,8 +240,11 @@
   "Supprimer cette correction et mes photos": "حذف هذا التصحيح وصوري",
   "Ce que l’IA a lu sur ma copie": "ما قرأه الذكاء الاصطناعي في ورقتي",
   "Réponse illisible.": "الجواب غير مقروء.",
-  "Aucune réponse trouvée pour cette question.": "لم يُعثر على جواب لهذا السؤال."
-,
-  "Ton auto-évaluation de ce sujet a été mise à jour : réussi, partiel ou à revoir, question par question.": "تم تحديث تقييمك الذاتي لهذا الموضوع: ناجح أو جزئي أو للمراجعة، سؤالًا بسؤال.",
-  "Voir le sujet": "عرض الموضوع"
+  "Aucune réponse trouvée pour cette question.": "لم يُعثر على جواب لهذا السؤال.",
+  "Voir le sujet": "عرض الموضوع",
+  "Prends ta copie en photo : l’IA la corrige et te montre où tu as perdu des points.": "صوّر ورقتك: يصحّحها الذكاء الاصطناعي ويريك أين فقدت النقاط.",
+  "Correction en cours, environ une minute. La page se met à jour toute seule.": "التصحيح جارٍ، حوالي دقيقة. تتحدّث الصفحة تلقائيًا.",
+  "Reprends des photos nettes et droites. Cet essai ne compte pas dans ta limite.": "أعد التقاط صور واضحة ومستقيمة. هذه المحاولة لا تُحسب ضمن حدّك.",
+  "Corrigé par l’IA : elle peut mal lire un symbole. En cas de doute, regarde « Ce que l’IA a lu ».": "صحّحه الذكاء الاصطناعي: قد يخطئ في قراءة رمز. عند الشك، انظر « ما قرأه الذكاء الاصطناعي ».",
+  "Tes questions réussies et à revoir ont été mises à jour.": "تم تحديث أسئلتك الناجحة والتي تحتاج مراجعة."
 }

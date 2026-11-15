@@ -46,7 +46,7 @@ export const Defis: React.FC = () => {
   return (
     <Page>
       <SEO title="Défi du jour de maths | Fidni" description="Un problème de maths par jour, le même pour tous les niveaux du lycée, avec des indices et la solution." canonicalUrl="/defis" />
-      <PageHeader title={t('Défi du jour')} subtitle={t('Un problème par jour, le même pour tous les niveaux. Les indices t’expliquent les outils à utiliser.')} />
+      <PageHeader title={t('Défi du jour')} subtitle={t('Un problème par jour, le même pour tous. Bloqué ? Prends un indice.')} />
       <div className="flex flex-col gap-8">
         {etat === 'erreur' ? <Erreur onRetry={() => retryDay((n) => n + 1)} texte={t('Ce défi n’a pas pu se charger. Vérifie ta connexion.')} />
           : etat === 'charge' ? <div className="h-64 animate-pulse rounded-2xl border border-line bg-white" role="status" aria-label={t('Chargement')} />

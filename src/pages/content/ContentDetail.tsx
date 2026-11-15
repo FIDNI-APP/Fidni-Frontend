@@ -707,7 +707,7 @@ export const ContentDetail: React.FC<ContentDetailProps> = ({
         <SignupCard title={isLesson ? t('Garde tes leçons') : t('Suis ta progression')} tour="detail-inscription" benefits={false}
           text={isLesson
             ? t('Avec un compte, tu marques les leçons lues et tu les ranges dans ton cahier de cours.')
-            : t('Avec un compte, chaque question que tu évalues compte : tu vois ce que tu maîtrises et ce qu’il faut revoir.')} />
+            : t('Avec un compte, tu vois ce que tu réussis et ce qu’il faut revoir.')} />
       )}
     </>
   );
