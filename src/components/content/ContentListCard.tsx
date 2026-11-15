@@ -25,7 +25,7 @@ import { exerciseContentAPI, examContentAPI, lessonContentAPI } from '@/lib/api'
 import { AddToRevisionListModal } from '@/components/revision/AddToRevisionListModal';
 import { labelsFromContent } from '@/components/revision/RevisionLabelPicker';
 import {
-  BASE_PATH, cardState, cardTone, chapterHref, chapterLabel, dateLongue, facts, levelLabel, progressOf, questionProgress, structureOf, useBookmark,
+  BASE_PATH, cardState, cardTone, chapterHref, chapterLabel, dateLongue, facts, levelLabel, numeroOf, progressOf, questionProgress, structureOf, useBookmark,
   type ListItem, type ListKind, type PreviewStructure,
 } from './listing/listingUtils';
 import { BookmarkButton, DifficultyChip, NationalTag, OwnerButtons, QuietVotes, StateChip } from './listing/ListingParts';
@@ -170,6 +170,8 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const started = contentType === 'lesson' ? null : questionProgress(content);
   const canManage = user?.id === content.author?.id || isModerator(user);
   const chapter = hideChapter ? null : chapterLabel(content, levelSlug);
+  // Numéro dans le chapitre (15/11/2026) : « n° 12 », juste avant le chapitre (même hauteur de carte).
+  const numero = numeroOf(content, levelSlug);
   const chapterTo = chapterHref(content, contentType, levelSlug);
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
   const structure = structureOf(content);
@@ -263,6 +265,14 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
                 <span className="truncate">{chapter}</span>
               </span>
             ))}
+            {/* Numéro dans le chapitre (15/11/2026), juste après lui : sur téléphone, il passe avec la difficulté
+                plutôt que d'ajouter une ligne. */}
+            {numero !== null && (
+              <span className="fd-nums inline-flex shrink-0 items-center px-1 text-[12px] font-semibold text-ink-faint"
+                title={contentType === 'lesson' ? t('Leçon {n} de ce chapitre', { n: numero }) : contentType === 'exam' ? t('Devoir {n} de ce chapitre', { n: numero }) : t('Exercice {n} de ce chapitre', { n: numero })}>
+                {t('n° {n}', { n: numero })}
+              </span>
+            )}
             {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
             {ds && <DsChip test={ds} />}
             {reason && (

@@ -40,7 +40,7 @@ export const ComingSoon: React.FC<{
             <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] ring-1 ${
               weak ? 'bg-gold-soft text-gold-strong ring-gold-line' : 'bg-[#f7f6f3] text-ink-soft ring-line'}`}>
               {weak ? <Target className="h-3.5 w-3.5 shrink-0" aria-hidden /> : <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-              <span className="truncate">{weak ? t('À renforcer') : t('Commencé')} : <b className="font-semibold">{fragile.name}</b></span>
+              <span className="truncate">{weak ? t('Bases à revoir') : t('Commencé')} : <b className="font-semibold">{fragile.name}</b></span>
             </span>
           </span>
         ) : undefined}

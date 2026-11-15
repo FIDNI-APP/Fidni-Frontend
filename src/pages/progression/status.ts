@@ -24,7 +24,7 @@ export const STATUS: Record<ChapterStatus, {
     fill: 'bg-brand/60', track: 'bg-brand/10',
   },
   weak: {
-    label: 'À renforcer', icon: Target,
+    label: 'Bases à revoir', icon: Target,
     // Texte un cran plus foncé que gold-strong : 4,9:1 sur le fond doré clair (gold-strong : 4,1:1).
     tile: 'border-gold-line bg-gold-soft hover:border-gold', text: 'text-[#8a6318]',
     fill: 'bg-gold', track: 'bg-gold/20',

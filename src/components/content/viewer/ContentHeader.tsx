@@ -14,7 +14,7 @@ import {
   School, Share2, Trash2, UserRound, Users,
 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/FloatingPanel';
-import type { ContentEnseignant, ContentExercise, ContentExam, ContentLesson } from '@/types/content';
+import type { ContentEnseignant, ContentExercise, ContentExam, ContentLesson, NumeroContenu } from '@/types/content';
 import { enseignantHref } from '@/components/content/listing/CardDetails';
 import { EnseignantsPicker } from './EnseignantsPicker';
 import { useAuth } from '@/contexts/AuthContext';
@@ -148,7 +148,15 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const levelUrl = levelSlug ? `${basePath}/niveau/${levelSlug}` : null;
   const chapters = (content.chapters || []) as { id: number | string; name: string; slug?: string; class_levels?: { slug?: string }[] }[];
   const chapterAtLevel = (ch: (typeof chapters)[number]) => !ch.class_levels?.length || ch.class_levels.some((l) => l.slug === levelSlug);
-  const kind = isLesson ? t('Leçon') : exam ? (isNational ? `${t('Bac national')}${exam.national_year ? ` ${exam.national_year}` : ''}` : t('Devoir (DS)')) : t('Exercice');
+  // Numéro dans le niveau et le chapitre affichés (15/11/2026, backend things/numeros.py) : « Exercice 12 ».
+  const levelId = Number((hub.level as { id?: number } | null | undefined)?.id ?? content.class_levels?.[0]?.id) || null;
+  const numeros = (content as { numeros?: NumeroContenu[] }).numeros ?? [];
+  const shownChapter = chapters.find(chapterAtLevel) ?? chapters[0];
+  const numero = (numeros.find((n) => n.niveau === levelId && n.chapitre === (shownChapter ? Number(shownChapter.id) : null))
+    ?? numeros.find((n) => n.niveau === levelId) ?? numeros[0])?.numero ?? null;
+  const kind = isLesson ? (numero ? t('Leçon {n}', { n: numero }) : t('Leçon'))
+    : exam ? (isNational ? `${t('Bac national')}${exam.national_year ? ` ${exam.national_year}` : ''}` : numero ? t('Devoir {n}', { n: numero }) : t('Devoir (DS)'))
+      : numero ? t('Exercice {n}', { n: numero }) : t('Exercice');
   const eyebrowLink = 'underline-offset-4 transition-colors hover:text-gold hover:underline';
 
   // ── Infos : questions et durée (estimée pour un exercice, celle du sujet pour un examen).

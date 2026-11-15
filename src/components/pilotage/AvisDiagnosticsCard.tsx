@@ -9,9 +9,9 @@ import { MessageSquareHeart } from 'lucide-react';
 export interface AvisDiagnostic { sujet: string; oui: number; non: number; total: number; accord: number | null }
 
 const SUJET: Record<string, string> = {
-  maitrise: 'Chapitre « Maîtrisé »', bonne_voie: 'Chapitre « En bonne voie »', a_consolider: 'Chapitre « À consolider »',
-  a_renforcer: 'Chapitre « À renforcer »', non_evalue: 'Chapitre « Pas encore évalué »',
-  'objectif-consolider': 'Objectif « Consolider »', 'objectif-renforcer': 'Objectif « Reprendre les bases »',
+  maitrise: 'Chapitre « Maîtrisé »', bonne_voie: 'Chapitre « En bonne voie »', a_consolider: 'Chapitre « À retravailler »',
+  a_renforcer: 'Chapitre « Bases à revoir »', non_evalue: 'Chapitre « Pas encore évalué »',
+  'objectif-consolider': 'Objectif « Retravailler »', 'objectif-renforcer': 'Objectif « Reprendre les bases »',
   'objectif-verifier': 'Objectif « Vérifier »', 'objectif-continuer': 'Objectif « Continuer »',
   'objectif-evaluer': 'Objectif « S’évaluer »', 'objectif-approfondir': 'Objectif « Aller plus loin »',
   'objectif-ds_blanc': 'Objectif « DS blanc »', 'objectif-decouvrir': 'Objectif « Découvrir »',

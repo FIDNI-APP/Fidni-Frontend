@@ -52,6 +52,8 @@ export type ListClassLevel = ClassLevelModel & { slug?: string };
  *  de plusieurs niveaux peut porter le chapitre de chacun (« Calcul trigonométrique » au Tronc commun,
  *  « Trigonométrie (formules de transformation) » en 1ère). */
 export interface ListChapter { id: number; name: string; slug?: string; levels?: number[] }
+/** Numéro d'un contenu dans un niveau et un chapitre (15/11/2026, backend things/numeros.py) : « Exercice 12 ». */
+export interface NumeroContenu { niveau: number; chapitre: number | null; numero: number }
 
 /** Champs ajoutés à chaque ligne des listes (et au détail pour `felt`). */
 interface ListExtras {
@@ -68,6 +70,7 @@ interface ListExtras {
   enseignants?: ContentEnseignant[];
   /** Devoirs seulement : « DS n° 2 · 2024-2025 ». */
   devoir?: DevoirInfo | null;
+  numeros?: NumeroContenu[];
 }
 
 // =====================

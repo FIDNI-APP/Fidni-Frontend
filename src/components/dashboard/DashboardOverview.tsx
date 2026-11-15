@@ -27,6 +27,7 @@ import { t } from '@/i18n';
 import { NextAction } from './NextAction';
 import { FirstSteps } from './FirstSteps';
 import { OuJenSuis } from './OuJenSuis';
+import { MesQuestions } from './MesQuestions';
 import { useApercu } from './useApercu';
 import { RedoBlock } from './RedoBlock';
 import { ForYou } from './ForYou';
@@ -163,6 +164,9 @@ export const DashboardOverview: React.FC<{ username?: string }> = ({ username })
           <OuJenSuis data={apercu.data} failed={apercu.failed} onRetry={apercu.reload}
             sameAsHero={!!choice && sameTarget(choice, apercu.data?.objectif ?? null)} />
         )}
+
+        {/* Le graphique de Ma progression (15/11/2026) : réussies et à revoir, jour par jour, sur 30 jours. */}
+        {!isTeacher && !newcomer && !failed && <MesQuestions />}
 
         {((showDs && !promoDs) || showRedo) && (
           <div className="flex flex-wrap items-start gap-x-6 gap-y-10">

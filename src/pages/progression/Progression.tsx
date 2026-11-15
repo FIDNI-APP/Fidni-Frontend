@@ -22,9 +22,10 @@ import { exercisesHome } from '@/components/layout/nav';
 import { Page, PageHeader, EmptyState, Segmented } from '@/components/space/Page';
 import { trackAction } from '@/lib/usage';
 import type { Periode, Tableau } from '@/lib/api/tableauApi';
-import { COULEUR, SERIES_QUESTIONS, ecart } from '@/components/progression/chart';
+import { COULEUR, ecart } from '@/components/progression/chart';
 import { Tuile } from '@/components/progression/Tuile';
 import { DayBars } from '@/components/progression/DayBars';
+import { QuestionsChart } from '@/components/progression/Questions';
 import { NotesChart } from '@/components/progression/NotesChart';
 import { ActiveCalendar } from '@/components/progression/ActiveCalendar';
 import { DayPanel } from '@/components/progression/DayPanel';
@@ -279,28 +280,12 @@ function Graphique({ data, vue, jour, onJour }: { data: Tableau; vue: Vue; jour:
       </>
     );
   }
-  const q = data.kpis.questions;
   return (
     <>
       <h2 className="mb-3 text-[15px] font-semibold text-ink">{t('Mes questions, réussies et à revoir')}</h2>
-      <DayBars rows={data.jours} series={SERIES_QUESTIONS} pas={p.pas} selected={jour} onPick={parJour ? onJour : undefined}
-        describe={(r) => {
-          const tot = Number(r.reussies) + Number(r.partielles) + Number(r.ratees);
-          if (!tot) return t('Aucune question');
-          return [Number(r.reussies) > 1 ? t('{n} réussies', { n: r.reussies }) : t('{n} réussie', { n: r.reussies }), Number(r.partielles) ? t('{n} en partie', { n: r.partielles }) : '', t('{n} à revoir', { n: r.ratees })].filter(Boolean).join(' · ');
-        }}
-        headline={q.reussies + q.partielles + q.ratees ? <Total r={q} /> : t('Aucune question évaluée')}
-        emptyText={t('Aucune question évaluée sur cette période.')} />
+      {/* Même graphique sur l'accueil (components/dashboard/MesQuestions). */}
+      <QuestionsChart data={data} selected={jour} onPick={parJour ? onJour : undefined} />
     </>
-  );
-}
-
-/** « 20 réussies · 1 en partie · 7 à revoir », le premier chiffre en grand. */
-export function Total({ r }: { r: { reussies: number; partielles: number; ratees: number } }) {
-  return (
-    <>{r.reussies} <span className="text-[14px] font-semibold text-ink-faint">
-      {r.reussies > 1 ? t('réussies') : t('réussie')}{r.partielles ? ` · ${t('{n} en partie', { n: r.partielles })}` : ''} · {t('{n} à revoir', { n: r.ratees })}
-    </span></>
   );
 }
 

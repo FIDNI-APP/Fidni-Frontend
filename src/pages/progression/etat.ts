@@ -16,9 +16,9 @@ export const ETAT: Record<Etat, {
 }> = {
   maitrise: { label: 'Maîtrisé', icon: CheckCircle2, pill: 'border-brand/30 bg-brand-soft text-brand-hover', fill: 'bg-brand', track: 'bg-brand/15', hex: '#1a7a4a' },
   bonne_voie: { label: 'En bonne voie', icon: TrendingUp, pill: 'border-brand-line bg-white text-brand-hover', fill: 'bg-brand/60', track: 'bg-brand/10', hex: '#5fa47f' },
-  a_consolider: { label: 'À consolider', icon: RefreshCw, pill: 'border-gold-line bg-gold-soft text-[#8a6318]', fill: 'bg-gold', track: 'bg-gold/20', hex: '#c0892f' },
+  a_consolider: { label: 'À retravailler', icon: RefreshCw, pill: 'border-gold-line bg-gold-soft text-[#8a6318]', fill: 'bg-gold', track: 'bg-gold/20', hex: '#c0892f' },
   // Or foncé (pas de rouge) : texte à 4,9:1 sur le fond doré clair.
-  a_renforcer: { label: 'À renforcer', icon: Target, pill: 'border-[#e2c58f] bg-[#f6ead2] text-[#7a560f]', fill: 'bg-[#8a6318]', track: 'bg-[#8a6318]/15', hex: '#8a6318' },
+  a_renforcer: { label: 'Bases à revoir', icon: Target, pill: 'border-[#e2c58f] bg-[#f6ead2] text-[#7a560f]', fill: 'bg-[#8a6318]', track: 'bg-[#8a6318]/15', hex: '#8a6318' },
   non_evalue: { label: 'Pas encore évalué', icon: CircleDashed, pill: 'border-line bg-[#f7f6f3] text-ink-faint', fill: 'bg-ink-faint', track: 'bg-[#f2f1ee]', hex: '#cfcdc8' },
 };
 

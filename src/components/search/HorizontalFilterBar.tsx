@@ -12,7 +12,9 @@
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { ChevronDown, X, SlidersHorizontal, RotateCcw, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { trackAction } from '@/lib/usage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
 import type { ListSort } from '@/types/content';
@@ -72,6 +74,16 @@ const STATUS_KEYS = ['todo', 'showCompleted', 'showFailed', 'showViewed', 'hideV
 const STATUS_LABEL: Record<(typeof STATUS_KEYS)[number], string> = {
   todo: 'À faire', showCompleted: 'Réussis', showFailed: 'À revoir', showViewed: 'Déjà ouverts', hideViewed: 'Jamais ouverts',
 };
+/** « Ma progression » à côté des onglets du statut (15/11/2026) ; téléphone : icône seule, à côté de « Filtres ». */
+const ProgressionLink: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <Link to="/progression" onClick={() => trackAction('liste-progression')}
+    title={t('Ma progression')} aria-label={t('Ma progression')}
+    className={`${className} h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-brand-line bg-brand-soft px-2.5 text-[13.5px] font-semibold text-brand-hover transition-colors hover:border-brand hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:h-auto sm:rounded-2xl sm:px-3.5`}>
+    <TrendingUp className="h-4 w-4" aria-hidden />
+    <span className="hidden sm:inline">{t('Ma progression')}</span>
+  </Link>
+);
+
 const STATUS_OPTIONS: { id: Status; label: string }[] = [
   { id: 'all', label: 'Tous' }, { id: 'todo', label: 'À faire' }, { id: 'review', label: 'À revoir' }, { id: 'success', label: 'Réussis' },
 ];
@@ -449,10 +461,13 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   return (
     <div className="mb-5 sm:mb-6">
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-        {/* Le statut de l'élève, en onglets (choix unique). */}
+        {/* Le statut de l'élève, en onglets (choix unique), et « Ma progression » juste à côté (15/11/2026, Natsu :
+            peu d'élèves trouvaient la page). Téléphone : les onglets gardent toute la largeur, le bouton (icône seule)
+            passe à côté de « Filtres ». */}
         {quickStatus && (
+          <div className="flex items-stretch gap-2">
           <div role="radiogroup" aria-label={t('Statut')} data-tour="liste-statut"
-            className="grid grid-cols-4 gap-1 rounded-2xl border border-line bg-white p-1 sm:inline-flex sm:grid-cols-none">
+            className="grid min-w-0 flex-1 grid-cols-4 gap-1 rounded-2xl border border-line bg-white p-1 sm:inline-flex sm:flex-none sm:grid-cols-none">
             {STATUS_OPTIONS.map((o) => {
               const on = status === o.id;
               return (
@@ -465,6 +480,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 </button>
               );
             })}
+          </div>
+          <ProgressionLink className="hidden sm:inline-flex" />
           </div>
         )}
 
@@ -494,6 +511,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
               <ChevronDown className={`hidden h-4 w-4 transition-transform duration-200 sm:block ${isPanelOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
+          {quickStatus && <ProgressionLink className="inline-flex sm:hidden" />}
           {trailing && <div className="flex-shrink-0">{trailing}</div>}
         </div>
       </div>
