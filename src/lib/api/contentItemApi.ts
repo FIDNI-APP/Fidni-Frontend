@@ -81,6 +81,7 @@ function buildQueryParams(filters: ContentFilters | ContentExamFilters): URLSear
     params.append('national_year', String(filters.national_year));
   }
   if (filters.sans_chapitre) params.append('sans_chapitre', 'true');
+  if (filters.devoir) params.append('devoir', filters.devoir);
 
   return params;
 }

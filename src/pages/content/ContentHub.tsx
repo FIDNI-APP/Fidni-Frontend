@@ -77,7 +77,7 @@ export const ContentHub: React.FC<{ contentType: ContentKind }> = ({ contentType
   // Autre rubrique, niveau ou chapitre : rien de l'ancien pendant le chargement (la même instance sert aux
   // trois rubriques : /exercises/niveau/… → /lessons/niveau/… garderait sinon la page des exercices).
   const current = hub && hub.section === section && hub.level.slug === level
-    && (hub.chapter?.slug ?? undefined) === (chapter || undefined) ? hub : null;
+    && (hub.chapter?.slug ?? hub.devoir?.slug ?? undefined) === (chapter || undefined) ? hub : null;
   if (!current) return <Loading folders={folders} />;
   if (folders) {
     return <ContentFolders key={current.url} view="chapters" contentType={contentType} hub={current}

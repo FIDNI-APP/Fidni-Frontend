@@ -33,6 +33,8 @@ export interface FolderItem {
 export interface FolderGroup {
   title: string | null;
   items: FolderItem[];
+  /** Groupe encore sans dossier : ce texte à la place de la grille (« À venir » pour le semestre 2). */
+  emptyNote?: string;
 }
 
 /**
@@ -104,9 +106,10 @@ const FolderCard: React.FC<{ item: FolderItem }> = ({ item }) => {
   );
 };
 
-/** Dossiers, en groupes titrés (sous-domaines : Analyse, Algèbre…) quand il y en a plusieurs. */
-export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string }> = ({ groups, label }) => {
-  const titled = groups.length > 1;
+/** Dossiers, en groupes titrés (sous-domaines : Analyse, Algèbre…) quand il y en a plusieurs. `alwaysTitled` : titre
+ *  même pour un seul groupe, sans le compte « 3/4 » des dossiers remplis (devoirs : « Semestre 1 »). */
+export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string; alwaysTitled?: boolean }> = ({ groups, label, alwaysTitled = false }) => {
+  const titled = alwaysTitled || groups.length > 1;
   return (
     <div className="flex flex-col gap-6">
       {groups.map((g, gi) => {
@@ -117,12 +120,16 @@ export const FolderGrid: React.FC<{ groups: FolderGroup[]; label: string }> = ({
             {titled && g.title && (
               <h2 id={headingId} className="mb-3 flex items-baseline gap-2 text-[15px] font-semibold text-ink">
                 {g.title}
-                <span className="fd-nums text-[13px] font-normal text-ink-faint">{filled}/{g.items.length}</span>
+                {!alwaysTitled && <span className="fd-nums text-[13px] font-normal text-ink-faint">{filled}/{g.items.length}</span>}
               </h2>
             )}
-            <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4">
-              {g.items.map((item) => <li key={item.key}><FolderCard item={item} /></li>)}
-            </ul>
+            {g.items.length === 0 && g.emptyNote ? (
+              <p className="rounded-xl border border-dashed border-line px-4 py-3 text-[13.5px] text-ink-faint">{g.emptyNote}</p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 xl:grid-cols-4">
+                {g.items.map((item) => <li key={item.key}><FolderCard item={item} /></li>)}
+              </ul>
+            )}
           </section>
         );
       })}

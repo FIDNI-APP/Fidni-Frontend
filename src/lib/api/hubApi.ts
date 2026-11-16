@@ -37,6 +37,34 @@ export interface HubInfo {
   related: { section: string; label: string; count: number; url: string }[];
   /** Page d'un chapitre : ce que dit le programme officiel (hubs.programme_public) ; null sinon. */
   programme?: HubProgramme | null;
+  /** Devoirs d'un niveau rangés par semestre puis par numéro (16/11/2026) ; null hors de la page d'un niveau des devoirs. */
+  devoirs?: HubDevoirGroup[] | null;
+  /** Dossier « Devoir surveillé n° 2 du semestre 1 » ouvert ; null sinon. */
+  devoir?: HubDevoir | null;
+}
+
+export interface HubDevoirFolder {
+  slug: string;
+  url: string;
+  /** « Devoir surveillé n° 2 », « Autres devoirs ». */
+  name: string;
+  numero: number | null;
+  count: number;
+  mine?: { done: number; success: number };
+}
+
+export interface HubDevoirGroup {
+  semestre: number;
+  folders: HubDevoirFolder[];
+}
+
+export interface HubDevoir {
+  slug: string;
+  semestre: number;
+  numero: number | null;
+  name: string;
+  /** Chapitres des devoirs du dossier (filtre Chapitre), dans l'ordre du programme. */
+  chapters: { id: number; name: string; slug: string; count: number; subfield: string | null }[];
 }
 
 /** Programme d'un chapitre ; `reperes` (1ère Bac SM) : repères indicatifs, le document officiel ne donnant que les titres. */

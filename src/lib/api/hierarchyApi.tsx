@@ -122,6 +122,8 @@ export const getDifficultyCounts = async (
     isNationalExam?: boolean;
     /** Dossier d'une année du Bac national (« aucune » : sujets sans année). */
     nationalYear?: string;
+    /** Dossier « Devoir surveillé n° 2 du semestre 1 » (« devoir-2-semestre-1 »). */
+    devoir?: string;
   }
 ): Promise<Record<string, number>> => {
   const params = new URLSearchParams();
@@ -134,6 +136,7 @@ export const getDifficultyCounts = async (
   filters.enseignants?.forEach(id => params.append('enseignants[]', id));
   if (filters.isNationalExam !== undefined) params.append('is_national_exam', String(filters.isNationalExam));
   if (filters.nationalYear) params.append('national_year', filters.nationalYear);
+  if (filters.devoir) params.append('devoir', filters.devoir);
   const response = await api.get(`/difficulty-counts/?${params}`);
   return response.data;
 };
@@ -143,7 +146,7 @@ export const getEnseignantCounts = async (
   contentType: string,
   filters: {
     classLevels?: string[]; subjects?: string[]; subfields?: string[]; chapters?: string[]; theorems?: string[];
-    difficulties?: string[]; isNationalExam?: boolean; nationalYear?: string;
+    difficulties?: string[]; isNationalExam?: boolean; nationalYear?: string; devoir?: string;
   },
 ): Promise<{ id: number; nom: string; count: number }[]> => {
   const params = new URLSearchParams();
@@ -156,6 +159,7 @@ export const getEnseignantCounts = async (
   filters.difficulties?.forEach(d => params.append('difficulties[]', d));
   if (filters.isNationalExam !== undefined) params.append('is_national_exam', String(filters.isNationalExam));
   if (filters.nationalYear) params.append('national_year', filters.nationalYear);
+  if (filters.devoir) params.append('devoir', filters.devoir);
   const response = await api.get(`/enseignants/?${params}`);
   return response.data;
 };

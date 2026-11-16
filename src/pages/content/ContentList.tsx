@@ -237,6 +237,12 @@ export const ContentList: React.FC<ContentListProps> = ({
   const [searchParams, setSearchParams] = useSearchParams();
   // Dossier « Sans chapitre » d'un niveau (contenus rangés dans aucun de ses chapitres, hubs.py `unfiled`).
   const unfiledOnly = searchParams.get('sansChapitre') === 'true';
+  // Dossier « Devoir surveillé n° 2 du semestre 1 » d'un niveau (16/11/2026) : le filtre Chapitre y reste dans le dossier.
+  const devoir = hub?.devoir ?? null;
+  const devoirSlug = devoir?.slug;
+  const devoirLabel = devoir
+    ? t('{nom}, semestre {n}', { nom: devoir.numero ? t('Devoir surveillé n° {n}', { n: devoir.numero }) : t('Autres devoirs'), n: devoir.semestre })
+    : null;
   const { isAuthenticated, user } = useAuth();
   const fiche = useFicheTD(user?.id); // Fiche TD en cours (voir plus bas)
   const { openModal } = useAuthModal();
@@ -339,6 +345,8 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (filters.showFailed) params.showFailed = true;
     if (filters.todo) params.todo = true;
     if (unfiledOnly) params.sans_chapitre = true;
+    // Dossier « Devoir surveillé n° 2 du semestre 1 » (hubs.py) : seulement ses devoirs.
+    if (devoirSlug) params.devoir = devoirSlug;
 
     // Mode Cartes : sans solutions ni énoncé complet (les leçons gardent leur texte : durée de lecture, sommaire).
     if (viewMode === 'card' && contentType !== 'lesson') params.view = 'card';
@@ -355,7 +363,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
 
     return params;
-  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder, unfiledOnly]);
+  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder, unfiledOnly, devoirSlug]);
   // Mêmes paramètres = même objet : des filtres relus de l'adresse à l'identique ne rechargent pas la liste.
   const queryJson = JSON.stringify(rawQuery);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -399,11 +407,12 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
     if (!hub) return;
     const root = { label: t(config.title), to: allLevelsPath };
-    setCrumbs(hub.chapter
-      ? [root, { label: hub.level.name, to: hub.level.url }, { label: hub.chapter.name }]
+    const folder = hub.chapter?.name ?? devoirLabel;
+    setCrumbs(folder
+      ? [root, { label: hub.level.name, to: hub.level.url }, { label: folder }]
       : [root, { label: hub.level.name }], config.basePath);
     return () => setCrumbs(null);
-  }, [hub, config.title, config.basePath, allLevelsPath, setCrumbs, yearFolder, yearLabel]);
+  }, [hub, config.title, config.basePath, allLevelsPath, setCrumbs, yearFolder, yearLabel, devoirLabel]);
 
   const [showAllSolutions] = useState(false);
   const [itemProgress, setItemProgress] = useState<Record<string, Record<string, AssessmentStatus>>>({});
@@ -596,6 +605,15 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (sortBy !== DEFAULT_SORT) params.set('sort', sortBy);
     if (unfiledOnly) params.set('sansChapitre', 'true');
 
+    // Dossier d'un devoir : on y reste, chapitre compris (le niveau est celui du dossier).
+    if (devoirSlug) {
+      params.delete('classLevels');
+      setFilters(newFilters);
+      setSearchParams(params, { replace: true });
+      scrollToList();
+      return;
+    }
+
     // Un seul niveau (± un chapitre) : la page de ce niveau ou de ce chapitre (pastilles des chapitres,
     // lien vers le cours, vraie adresse). Pas pour les examens nationaux (pas de page par niveau).
     const lv = newFilters.classLevels;
@@ -642,7 +660,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
     setSearchParams(params, { replace: true });
     scrollToList();
-  }, [sortBy, setSearchParams, searchParams, hub, location.pathname, navigate, config.basePath, contentType, isNationalSection, scrollToList, unfiledOnly]);
+  }, [sortBy, setSearchParams, searchParams, hub, location.pathname, navigate, config.basePath, contentType, isNationalSection, scrollToList, unfiledOnly, devoirSlug]);
 
   const handleSortChange = useCallback((newSortOption: ListSort) => {
     trackAction('tri');
@@ -1091,7 +1109,7 @@ export const ContentList: React.FC<ContentListProps> = ({
 
   // En-tête : les dossiers parents (chaque cran remonte d'un dossier), le titre, une ligne.
   const crumbs: Crumb[] = hub
-    ? [{ label: t(config.title), to: allLevelsPath }, ...(hub.chapter ? [{ label: hub.level.name, to: hub.level.url }] : [])]
+    ? [{ label: t(config.title), to: allLevelsPath }, ...(hub.chapter || devoir ? [{ label: hub.level.name, to: hub.level.url }] : [])]
     : isNationalSection
       ? (yearFolder ? [{ label: t(NATIONAL.title), to: '/exams/nationaux' }] : [{ label: t('Toutes les années'), to: '/exams/nationaux' }])
       : [{ label: t('Tous les niveaux'), to: allLevelsPath }];
@@ -1130,7 +1148,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     levelIds: hub ? [hub.level.id] : filters.classLevels.map(Number),
     chapterIds: hub?.chapter ? [hub.chapter.id] : filters.chapters.map(Number),
     subjectIds: filters.subjects.map(Number),
-    label: hub?.chapter?.name ?? null,
+    label: hub?.chapter?.name ?? devoirLabel,
   };
   const ficheItem = (item: { id: number | string; title: string }) =>
     ({ id: Number(item.id), title: item.title, type: contentType === 'exam' ? 'exam' as const : 'exercise' as const });
@@ -1167,7 +1185,8 @@ export const ContentList: React.FC<ContentListProps> = ({
       <FolderHeader
         crumbs={crumbs}
         title={pageTitle}
-        emphasis={hub ? (hub.chapter?.name ?? hub.level.name) : null}
+        // Dossier d'un devoir : « Devoir surveillé n° 2 du semestre 1 » en grand, le niveau en petit.
+        emphasis={hub ? (hub.chapter?.name ?? (devoir ? hub.h1.split(' – ')[0] : hub.level.name)) : null}
         summary={summary}
         actions={headerActions}
       />
@@ -1180,8 +1199,10 @@ export const ContentList: React.FC<ContentListProps> = ({
         sortBy={sortBy}
         onSortChange={handleSortChange}
         nationalSection={isNationalSection}
-        inFolder={hub?.chapter ? 'chapter' : yearFolder ? 'year' : undefined}
+        inFolder={hub?.chapter ? 'chapter' : devoir ? 'devoir' : yearFolder ? 'year' : undefined}
         nationalYear={yearFolder ?? undefined}
+        devoir={devoirSlug}
+        chapterChoices={devoir?.chapters}
         fixed={fixed}
         resultCount={totalCount}
         resultLoading={isLoading}

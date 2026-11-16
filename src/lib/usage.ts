@@ -92,6 +92,7 @@ export type UsageAction =
   | 'signaler-ouvert' | 'auth-ouverte' | 'connexion-google'
   // Dossiers des listes (10/10/2026)
   | 'dossier-niveau' | 'dossier-chapitre' | 'dossier-annee'
+  | 'dossier-devoir' | 'devoirs-par-numero' | 'devoirs-par-chapitre'
   // Ma progression refondue (13/10/2026) et bloc « Où j'en suis » de l'accueil
   | 'prog-objectif' | 'prog-objectif-exercice' | 'prog-fiche' | 'prog-chapitre' | 'prog-chapitre-action' | 'prog-calcul'
   | 'prog-activite-detail' | 'accueil-objectif' | 'accueil-progression'
