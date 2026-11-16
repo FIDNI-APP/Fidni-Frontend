@@ -50,9 +50,13 @@ interface HorizontalFilterBarProps {
   nationalSection?: boolean;
   /** Liste ouverte depuis un dossier (10/10/2026) : « chapter » = le dossier fixe niveau et chapitre (lignes
    *  Niveau, Matière, Chapitre masquées) ; « year » = une année du Bac (ligne « Année du Bac » masquée). */
-  inFolder?: 'chapter' | 'year';
+  inFolder?: 'chapter' | 'year' | 'devoir';
   /** Dossier d'une année du Bac : compteurs de difficulté de cette année. */
   nationalYear?: string;
+  /** Dossier « Devoir surveillé n° 2 du semestre 1 » (inFolder « devoir », 16/11/2026) : compteurs de ce dossier ;
+   *  ligne Niveau masquée, ligne Chapitre limitée aux chapitres de ses devoirs (`chapterChoices`). */
+  devoir?: string;
+  chapterChoices?: { id: number; name: string; slug: string; count: number; subfield: string | null }[];
   /** Filtres imposés par la page (niveau, chapitre d'une page de niveau) : ni étiquette ni compteur. */
   fixed?: FixedFilters;
   /** Nombre de résultats (bouton « Voir les N exercices » du tiroir sur téléphone). */
@@ -104,6 +108,8 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   nationalSection = false,
   inFolder,
   nationalYear,
+  devoir,
+  chapterChoices,
   fixed,
   resultCount,
   resultLoading = false,
@@ -157,6 +163,15 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   useEffect(() => {
     // Dossier d'un chapitre : pas de ligne Chapitre, rien à charger.
     if (!filters.classLevels.length || inFolder === 'chapter') { setChapters([]); return; }
+    // Dossier d'un devoir : les chapitres de ses devoirs, donnés par la page (rien à charger).
+    if (chapterChoices) {
+      const opts: Option[] = chapterChoices.map((c) => ({
+        id: c.id, name: c.name, slug: c.slug, content_count: c.count, subfield: c.subfield ? { id: c.subfield, name: c.subfield } : null,
+      }));
+      setChapters(opts);
+      setChapterInfo((prev) => ({ ...prev, ...Object.fromEntries(opts.map((c) => [String(c.id), { name: c.name, slug: c.slug }])) }));
+      return;
+    }
     let cancelled = false;
     // Chapitres du niveau directement (le serveur n'exige ni matière ni sous-domaine).
     getChapters(filters.subjects[0] ?? '', filters.classLevels, filters.subfields, contentType)
@@ -168,7 +183,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       .catch((e) => console.error('Chapitres', e));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [levelsKey, subfieldsKey, contentType, inFolder]);
+  }, [levelsKey, subfieldsKey, contentType, inFolder, chapterChoices]);
 
   useEffect(() => {
     if (!filters.chapters.length || !filters.classLevels.length || !subjectId) { setTheorems([]); return; }
@@ -188,13 +203,13 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       classLevels: filters.classLevels, subjects: filters.subjects, subfields: filters.subfields,
       chapters: filters.chapters, theorems: filters.theorems, enseignants: filters.enseignants,
       isNationalExam: contentType === 'exam' ? nationalSection : undefined,
-      nationalYear,
+      nationalYear, devoir,
     })
       .then((d) => { if (!cancelled) setDifficultyCounts(d); })
       .catch((e) => console.error('Compteurs de difficulté', e));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentType, nationalSection, nationalYear, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(','), filters.enseignants.join(',')]);
+  }, [contentType, nationalSection, nationalYear, devoir, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(','), filters.enseignants.join(',')]);
 
   // Enseignants : mêmes filtres que la liste (sans le leur), difficulté comprise.
   const difficultiesKey = filters.difficulties.join(',');
@@ -204,7 +219,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       classLevels: filters.classLevels, subjects: filters.subjects, subfields: filters.subfields,
       chapters: filters.chapters, theorems: filters.theorems, difficulties: filters.difficulties,
       isNationalExam: contentType === 'exam' ? nationalSection : undefined,
-      nationalYear,
+      nationalYear, devoir,
     })
       .then((rows) => {
         if (cancelled) return;
@@ -214,7 +229,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
       .catch((e) => console.error('Enseignants', e));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentType, nationalSection, nationalYear, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(','), difficultiesKey]);
+  }, [contentType, nationalSection, nationalYear, devoir, levelsKey, subjectsKey, subfieldsKey, chaptersKey, filters.theorems.join(','), difficultiesKey]);
 
   // Chapitres de l'adresse absents de la liste chargée : leur nom pour l'étiquette, leur slug pour leur page.
   useEffect(() => {
@@ -347,7 +362,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     // La dernière ligne n'a pas de trait sous elle.
     <div className="[&>*:last-child]:mb-0 [&>*:last-child]:border-b-0 [&>*:last-child]:pb-1">
       {/* Dans le dossier d'un chapitre, niveau et chapitre sont ceux du dossier : pas de ligne pour les changer. */}
-      {inFolder !== 'chapter' && (
+      {inFolder !== 'chapter' && inFolder !== 'devoir' && (
         <FilterRow title={t('Niveau')}>
           {visible(classLevels, filters.classLevels).map((o) => (
             <OptionButton key={o.id} option={o} selected={filters.classLevels.includes(String(o.id))} className={pill(filters.classLevels.includes(String(o.id)))}

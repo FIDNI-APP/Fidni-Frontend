@@ -465,6 +465,8 @@ export interface ContentFilters {
   national_year?: number | 'aucune';
   /** Dossier « Sans chapitre » d'un niveau : contenus rangés dans aucun de ses chapitres. */
   sans_chapitre?: boolean;
+  /** Dossier « Devoir surveillé n° 2 du semestre 1 » d'un niveau (« devoir-2-semestre-1 », hubs.py). */
+  devoir?: string;
 }
 
 export interface ContentExamFilters extends ContentFilters {

@@ -22,7 +22,7 @@ import { CatchUpBanner } from '@/components/content/listing/CatchUpBanner';
 import { FolderGrid, FolderSkeleton, type FolderGroup } from '@/components/content/folders/FolderGrid';
 import {
   getHub, getLevelFolders, getNationalYears, hubPath, profileLevel, yearPath,
-  type HubFolder, type HubInfo, type LevelFolders, type YearFolders,
+  type HubDevoirGroup, type HubFolder, type HubInfo, type LevelFolders, type YearFolders,
 } from '@/lib/api/hubApi';
 import { canCreateContent } from '@/lib/features';
 import { t } from '@/i18n';
@@ -236,6 +236,58 @@ function groupFolders(folders: HubFolder[], kind: ContentKind): FolderGroup[] {
   return groups;
 }
 
+/* ───────────────────────── Devoirs : par numéro ou par chapitre ───────────────────────── */
+
+// Devoirs d'un niveau (Natsu, 16/11/2026, retours d'élèves) : rangés d'abord par semestre puis par numéro
+// (« Devoir surveillé n° 2 » du semestre 1), les chapitres en second choix. Choix gardé sur cet appareil.
+type Rangement = 'numero' | 'chapitre';
+const RANGEMENT_KEY = 'fidni:devoirs:rangement';
+
+function useRangement(): [Rangement, (r: Rangement) => void] {
+  const [value, setValue] = useState<Rangement>(() => {
+    try { return localStorage.getItem(RANGEMENT_KEY) === 'chapitre' ? 'chapitre' : 'numero'; } catch { return 'numero'; }
+  });
+  const choose = (r: Rangement) => {
+    setValue(r);
+    try { localStorage.setItem(RANGEMENT_KEY, r); } catch { /* stockage indisponible */ }
+  };
+  return [value, choose];
+}
+
+const RangementToggle: React.FC<{ value: Rangement; onChange: (r: Rangement) => void }> = ({ value, onChange }) => (
+  <div role="radiogroup" aria-label={t('Ranger les devoirs')} className="mb-4 inline-flex rounded-xl border border-line bg-white p-0.5">
+    {([['numero', 'Par numéro'], ['chapitre', 'Par chapitre']] as const).map(([r, label]) => (
+      <button key={r} type="button" role="radio" aria-checked={value === r}
+        onClick={() => { if (value !== r) { onChange(r); trackAction(r === 'numero' ? 'devoirs-par-numero' : 'devoirs-par-chapitre'); } }}
+        className={`inline-flex h-9 items-center rounded-[10px] px-3.5 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+          value === r ? 'bg-[#f2f1ee] text-ink' : 'text-ink-faint hover:text-ink'}`}>
+        {t(label)}
+      </button>
+    ))}
+  </div>
+);
+
+/** Dossiers « Devoir surveillé n° 1, n° 2… » de chaque semestre (hubs.py `devoirs`). */
+function devoirGroups(groups: HubDevoirGroup[]): FolderGroup[] {
+  const st = SECTION_TEXT.exam;
+  // Les deux semestres toujours affichés : un semestre sans devoir encore est « À venir » (Natsu, 16/11/2026).
+  const all = [1, 2].map((n) => groups.find((g) => g.semestre === n) ?? { semestre: n, folders: [] });
+  return all.map((g) => ({
+    title: t('Semestre {n}', { n: g.semestre }),
+    emptyNote: t('À venir'),
+    items: g.folders.map((f) => ({
+      key: f.slug,
+      name: f.numero ? t('Devoir surveillé n° {n}', { n: f.numero }) : t('Autres devoirs'),
+      to: f.url,
+      count: f.count,
+      countLabel: plural(f.count, st.noun),
+      progress: f.mine ?? null,
+      doneWord: st.doneWord,
+      onOpen: () => trackAction('dossier-devoir'),
+    })),
+  }));
+}
+
 const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () => void }> = ({ kind, hub, onProgress }) => {
   const st = SECTION_TEXT[kind];
   const section = SECTION_OF[kind];
@@ -280,6 +332,11 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
     return g;
   }, [folders, kind, hub.unfiled, hub.level.id, st.noun, st.basePath]);
   const filled = folders.filter((f) => f.count > 0).length;
+  // Devoirs : par numéro (défaut) ou par chapitre.
+  const [rangement, setRangement] = useRangement();
+  const devoirs = kind === 'exam' && hub.devoirs?.length ? hub.devoirs : null;
+  const parNumero = !!devoirs && rangement === 'numero';
+  const numeroGroups = useMemo(() => (devoirs ? devoirGroups(devoirs) : []), [devoirs]);
   // Où en est l'élève dans ce niveau (contenus terminés, tous chapitres confondus).
   const done = folders.reduce((n, f) => n + (f.mine?.done ?? 0), 0);
   const success = folders.reduce((n, f) => n + (f.mine?.success ?? 0), 0);
@@ -294,7 +351,8 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
         summary={(
           <p className="fd-nums">
             <span className="font-medium text-ink-soft">{plural(hub.count, st.noun)}</span>
-            {' '}{member
+            {/* Par numéro : le nombre de chapitres ne dit rien des dossiers affichés. */}
+            {!parNumero && ' '}{parNumero ? null : member
               ? (filled > 1 ? t('dans {n} chapitres sur {total}', { n: filled, total: folders.length }) : t('dans {n} chapitre sur {total}', { n: filled, total: folders.length }))
               : (filled > 1 ? t('dans {n} chapitres', { n: filled }) : t('dans {n} chapitre', { n: filled }))}
             {isAuthenticated && done > 0 && (
@@ -312,7 +370,10 @@ const ChaptersView: React.FC<{ kind: ContentKind; hub: HubInfo; onProgress?: () 
       {isAuthenticated && kind !== 'lesson' && (
         <CatchUpBanner kind={kind} level={hub.level.id} onEvaluated={onProgress} />
       )}
-      {folders.length === 0 ? (
+      {devoirs && <RangementToggle value={rangement} onChange={setRangement} />}
+      {parNumero ? (
+        <FolderGrid alwaysTitled groups={numeroGroups} label={t('Devoirs par numéro – {level}', { level: hub.level.name })} />
+      ) : folders.length === 0 ? (
         <EmptyState icon={Landmark} tone="ink" compact title={t('Aucun chapitre pour l’instant')}
           text={t('Aucun chapitre n’est encore rattaché à ce niveau.')} />
       ) : (

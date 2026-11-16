@@ -318,5 +318,13 @@
   "Devoir {n}": "الفرض {n}",
   "Leçon {n}": "الدرس {n}",
   "Avec un compte, tu vois ce que tu réussis et ce qu’il faut revoir.": "بحساب، ترى ما تنجح فيه وما يجب مراجعته.",
-  "Bientôt ici : les sujets du Bac national corrigés.": "قريبًا هنا: مواضيع الباكالوريا الوطنية مصحّحة."
+  "Bientôt ici : les sujets du Bac national corrigés.": "قريبًا هنا: مواضيع الباكالوريا الوطنية مصحّحة.",
+  "Ranger les devoirs": "ترتيب الفروض",
+  "Par numéro": "حسب الرقم",
+  "Semestre {n}": "الدورة {n}",
+  "Devoir surveillé n° {n}": "الفرض المحروس رقم {n}",
+  "Autres devoirs": "فروض أخرى",
+  "Devoirs par numéro – {level}": "الفروض حسب الرقم – {level}",
+  "{nom}, semestre {n}": "{nom}، الدورة {n}",
+  "À venir": "قريبًا"
 }
