@@ -99,7 +99,7 @@ export type UsageAction =
   // 15/11/2026 : séries d'exercices, bouton « Progression » des listes, graphique de l'accueil
   | 'serie-ordre' | 'serie-existante' | 'liste-progression' | 'accueil-courbe';
 
-function send(kind: 'page' | 'action' | 'filtre', name: string) {
+function send(kind: 'page' | 'action' | 'filtre' | 'recherche', name: string) {
   // Jamais bloquant ni bruyant : une mesure perdue n'a aucune importance.
   try {
     api.post('/usage/', { kind, name }).catch(() => {});
@@ -215,4 +215,12 @@ export function trackNouveaute(id: string, geste: 'vue' | 'finie' | 'cta' | 'pas
 
 export function trackDiagnosticFeedback(sujet: string, juste: boolean) {
   if (/^[a-z_-]{1,30}$/.test(sujet)) send('filtre', `prog:avis:${sujet}:${juste ? 'oui' : 'non'}`);
+}
+
+/** Recherche tapée (18/11/2026) : les mots seuls, normalisés et comptés par jour côté serveur (apps/users/usage.py
+ *  nom_recherche), pour le « top des recherches » du Pilotage. `liste` : champ « Numéro ou mot » d'une liste ;
+ *  `site` : page de recherche. `vide` : aucun résultat. */
+export function trackSearch(lieu: 'liste' | 'site', mots: string, vide: boolean) {
+  const q = mots.trim().slice(0, 100);
+  if (q) send('recherche', `${lieu}${vide ? '-vide' : ''}:${q}`);
 }

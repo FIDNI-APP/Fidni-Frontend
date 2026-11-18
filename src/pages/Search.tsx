@@ -13,7 +13,7 @@ import { getHub, hubPath, profileLevel, slugify } from '@/lib/api/hubApi';
 import { Content } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { SEO } from '@/components/layout/SEO';
-import { trackAction } from '@/lib/usage';
+import { trackAction, trackSearch } from '@/lib/usage';
 import { t } from '@/i18n';
 
 type Tab = 'all' | 'exercise' | 'lesson' | 'exam';
@@ -36,6 +36,7 @@ export function Search() {
 
   const input = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState(submitted);
+  const trackedRef = useRef<string | null>(null);
   useEffect(() => { setSearchTerm(submitted); }, [submitted]);
 
   const [activeTab, setActiveTab] = useState<Tab>('all');
@@ -71,7 +72,10 @@ export function Search() {
         setExercises(ex.results);
         setLessons(le.results);
         setExams(exa.results);
-        if (!ex.results.length && !le.results.length && !exa.results.length) trackAction('recherche-vide');
+        const vide = !ex.results.length && !le.results.length && !exa.results.length;
+        if (vide) trackAction('recherche-vide');
+        // Top des recherches du Pilotage : une fois par recherche (pas à chaque changement de niveau).
+        if (trackedRef.current !== submitted) { trackedRef.current = submitted; trackSearch('site', submitted, vide); }
       })
       .catch((err) => {
         if (cancelled) return;
