@@ -60,7 +60,7 @@ import type {
 } from '@/types/content';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { SEO } from '@/components/layout/SEO';
-import { trackAction, trackFilterChange, trackHubChoice, trackSortValue } from '@/lib/usage';
+import { trackAction, trackFilterChange, trackHubChoice, trackSearch, trackSortValue } from '@/lib/usage';
 import { LIST_SEO, NATIONAL, hasListParams, plural } from './sections';
 import { FicheButton, FichePanel, FicheSlot, useFicheTD, type FicheContext } from '@/components/revision/FicheTD';
 import { t } from '@/i18n';
@@ -509,6 +509,18 @@ export const ContentList: React.FC<ContentListProps> = ({
     skipKey.current = null;
     load(1);
   }, [load, listKey]);
+
+  // Top des recherches du Pilotage (18/11/2026) : la recherche qui reste affichée 1,5 s (pas chaque lettre tapée),
+  // une fois, avec « sans résultat ».
+  const searchTracked = useRef('');
+  useEffect(() => {
+    if (!listSearch || isLoading || searchTracked.current === listSearch) return;
+    const timer = window.setTimeout(() => {
+      searchTracked.current = listSearch;
+      trackSearch('liste', listSearch, totalCount === 0);
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [listSearch, isLoading, totalCount]);
 
   // Liste restaurée : ses statuts ont pu changer pendant que l'élève était sur un contenu (réussi,
   // à revoir, questions évaluées) ; une requête rafraîchit ces champs, sans toucher à l'ordre.
