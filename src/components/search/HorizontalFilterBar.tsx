@@ -46,6 +46,8 @@ interface HorizontalFilterBarProps {
   accentColor?: string;
   /** Contrôle affiché à droite du tri (choix de l'affichage de la liste). */
   trailing?: React.ReactNode;
+  /** Champ de recherche de la liste (numéro ou mot, 17/11/2026) : avant le tri ; sous xl, sa propre ligne. */
+  search?: React.ReactNode;
   /** Section « Examens nationaux » : filtre par année du Bac. */
   nationalSection?: boolean;
   /** Liste ouverte depuis un dossier (10/10/2026) : « chapter » = le dossier fixe niveau et chapitre (lignes
@@ -105,6 +107,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   sortBy,
   onSortChange,
   trailing,
+  search,
   nationalSection = false,
   inFolder,
   nationalYear,
@@ -500,8 +503,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
           </div>
         )}
 
-        {/* Tri, filtres, affichage. */}
-        <div className="flex items-center gap-2 sm:ms-auto">
+        {/* Recherche, tri, filtres, affichage. */}
+        <div className="flex flex-wrap items-center gap-2 sm:ms-auto xl:flex-nowrap">
+          {search && <div className="w-full xl:w-56">{search}</div>}
           <div data-tour="liste-tri" className="min-w-0 flex-1 sm:flex-none">
             <SortDropdown value={sortBy} onChange={onSortChange} easiest={contentType !== 'lesson'} className="w-full sm:w-auto" />
           </div>

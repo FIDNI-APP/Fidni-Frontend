@@ -170,7 +170,7 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
   const started = contentType === 'lesson' ? null : questionProgress(content);
   const canManage = user?.id === content.author?.id || isModerator(user);
   const chapter = hideChapter ? null : chapterLabel(content, levelSlug);
-  // Numéro dans le chapitre (15/11/2026) : « n° 12 », juste avant le chapitre (même hauteur de carte).
+  // Numéro dans le chapitre (15/11/2026) : « #12 » devant le titre depuis le 17/11/2026.
   const numero = numeroOf(content, levelSlug);
   const chapterTo = chapterHref(content, contentType, levelSlug);
   const exam = contentType === 'exam' ? (content as ExamListItem) : null;
@@ -265,14 +265,6 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
                 <span className="truncate">{chapter}</span>
               </span>
             ))}
-            {/* Numéro dans le chapitre (15/11/2026), juste après lui : sur téléphone, il passe avec la difficulté
-                plutôt que d'ajouter une ligne. */}
-            {numero !== null && (
-              <span className="fd-nums inline-flex shrink-0 items-center px-1 text-[12px] font-semibold text-ink-faint"
-                title={contentType === 'lesson' ? t('Leçon {n} de ce chapitre', { n: numero }) : contentType === 'exam' ? t('Devoir {n} de ce chapitre', { n: numero }) : t('Exercice {n} de ce chapitre', { n: numero })}>
-                {t('n° {n}', { n: numero })}
-              </span>
-            )}
             {'difficulty' in content && <DifficultyChip difficulty={content.difficulty} felt={felt} interactive />}
             {ds && <DsChip test={ds} />}
             {reason && (
@@ -304,6 +296,14 @@ export const ContentListCard: React.FC<ContentListCardProps> = ({
           state={{ from, niveau: levelSlug || undefined }}
           className={`fd-carte-lien fd-display mt-3 text-[18px] leading-[1.25] font-semibold ${opened ? 'text-ink-faint' : 'text-ink'} line-clamp-2 transition-colors group-hover:text-brand-hover after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand`}
         >
+          {/* Numéro dans le chapitre devant le titre (17/11/2026, Natsu : « l'identité de l'exercice », les élèves
+              s'y retrouvent ; la recherche « 48 » d'un chapitre le retrouve). */}
+          {numero !== null && (
+            <span className="fd-nums me-1.5 font-semibold text-ink-faint"
+              title={contentType === 'lesson' ? t('Leçon {n} de ce chapitre', { n: numero }) : contentType === 'exam' ? t('Devoir {n} de ce chapitre', { n: numero }) : t('Exercice {n} de ce chapitre', { n: numero })}>
+              #{numero}
+            </span>
+          )}
           {content.title}
         </Link>
         {/* Signature et faits : enseignants, établissement, questions, durée (date d'ajout en infobulle). */}

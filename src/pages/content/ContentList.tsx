@@ -42,6 +42,7 @@ import { usePhone } from '@/components/content/listing/listingUtils';
 import { FolderAbout, FolderHeader, RelatedLinks, type Crumb } from '@/components/content/folders/FolderHeader';
 import { ChapterProgramme } from '@/components/content/folders/ChapterProgramme';
 import { HorizontalFilterBar } from '@/components/search/HorizontalFilterBar';
+import { ListSearch } from '@/components/search/ListSearch';
 import {
   clearedFilters, withoutChip, type ActiveChip, type FilterSlugs, type ListFilters,
 } from '@/components/search/filterState';
@@ -237,6 +238,8 @@ export const ContentList: React.FC<ContentListProps> = ({
   const [searchParams, setSearchParams] = useSearchParams();
   // Dossier « Sans chapitre » d'un niveau (contenus rangés dans aucun de ses chapitres, hubs.py `unfiled`).
   const unfiledOnly = searchParams.get('sansChapitre') === 'true';
+  // Recherche dans la liste (17/11/2026) : « 48 » ou « exercice 48 » donne le n° 48 du chapitre (things/numeros.py).
+  const listSearch = (searchParams.get('q') ?? '').trim();
   // Dossier « Devoir surveillé n° 2 du semestre 1 » d'un niveau (16/11/2026) : le filtre Chapitre y reste dans le dossier.
   const devoir = hub?.devoir ?? null;
   const devoirSlug = devoir?.slug;
@@ -347,6 +350,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (unfiledOnly) params.sans_chapitre = true;
     // Dossier « Devoir surveillé n° 2 du semestre 1 » (hubs.py) : seulement ses devoirs.
     if (devoirSlug) params.devoir = devoirSlug;
+    if (listSearch) params.search = listSearch;
 
     // Mode Cartes : sans solutions ni énoncé complet (les leçons gardent leur texte : durée de lecture, sommaire).
     if (viewMode === 'card' && contentType !== 'lesson') params.view = 'card';
@@ -363,7 +367,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
 
     return params;
-  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder, unfiledOnly, devoirSlug]);
+  }, [filters, sortBy, contentType, isNationalSection, viewMode, yearFolder, unfiledOnly, devoirSlug, listSearch]);
   // Mêmes paramètres = même objet : des filtres relus de l'adresse à l'identique ne rechargent pas la liste.
   const queryJson = JSON.stringify(rawQuery);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -604,6 +608,7 @@ export const ContentList: React.FC<ContentListProps> = ({
     if (newFilters.dateEnd) params.set('dateEnd', newFilters.dateEnd);
     if (sortBy !== DEFAULT_SORT) params.set('sort', sortBy);
     if (unfiledOnly) params.set('sansChapitre', 'true');
+    if (listSearch) params.set('q', listSearch);
 
     // Dossier d'un devoir : on y reste, chapitre compris (le niveau est celui du dossier).
     if (devoirSlug) {
@@ -660,7 +665,20 @@ export const ContentList: React.FC<ContentListProps> = ({
     }
     setSearchParams(params, { replace: true });
     scrollToList();
-  }, [sortBy, setSearchParams, searchParams, hub, location.pathname, navigate, config.basePath, contentType, isNationalSection, scrollToList, unfiledOnly, devoirSlug]);
+  }, [sortBy, setSearchParams, searchParams, hub, location.pathname, navigate, config.basePath, contentType, isNationalSection, scrollToList, unfiledOnly, devoirSlug, listSearch]);
+
+  const handleSearch = useCallback((q: string) => {
+    if (q === listSearch) return;
+    if (q) trackAction('recherche-liste');
+    const params = new URLSearchParams(searchParams);
+    if (q) params.set('q', q);
+    else {
+      params.delete('q');
+      // Liste générale sans plus aucun paramètre : dossiers de tous les niveaux (voir handleFilterChange).
+      if (!hub && !hasListParams(`?${params}`)) params.set('niveau', 'tous');
+    }
+    setSearchParams(params, { replace: true });
+  }, [listSearch, searchParams, setSearchParams, hub]);
 
   const handleSortChange = useCallback((newSortOption: ListSort) => {
     trackAction('tri');
@@ -995,6 +1013,14 @@ export const ContentList: React.FC<ContentListProps> = ({
     let icon: React.ComponentType<{ className?: string }> = config.icon;
     let tone: 'brand' | 'gold' | 'ink' = 'ink';
     let actions: React.ReactNode = null;
+    // Recherche sans résultat : la dire, et l'effacer d'un geste.
+    if (listSearch && !nothingHere) {
+      return (
+        <EmptyState icon={SearchX} tone="ink" title={t('Rien pour « {q} »', { q: listSearch })}
+          text={hub?.chapter ? t('Essaie un autre numéro ou un autre mot.') : t('Essaie un autre mot.')}
+          action={<button type="button" onClick={() => handleSearch('')} className="fd-btn-primary min-h-10">{t('Effacer la recherche')}</button>} />
+      );
+    }
     if (onlyTodo) {
       title = t('Tout est réussi ici, bravo.');
       text = t('Tu as réussi tous les {nouns} de cette liste. Choisis « Tout » pour les revoir.', { nouns: t(many) });
@@ -1208,6 +1234,7 @@ export const ContentList: React.FC<ContentListProps> = ({
         resultLoading={isLoading}
         onChipsChange={setChips}
         trailing={<div className="hidden sm:block">{viewToggle}</div>}
+        search={<ListSearch value={listSearch} onChange={handleSearch} placeholder={t('Numéro ou mot')} />}
       />}
 
       <div ref={listRef}>
