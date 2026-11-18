@@ -154,9 +154,10 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
   const shownChapter = chapters.find(chapterAtLevel) ?? chapters[0];
   const numero = (numeros.find((n) => n.niveau === levelId && n.chapitre === (shownChapter ? Number(shownChapter.id) : null))
     ?? numeros.find((n) => n.niveau === levelId) ?? numeros[0])?.numero ?? null;
-  const kind = isLesson ? (numero ? t('Leçon {n}', { n: numero }) : t('Leçon'))
-    : exam ? (isNational ? `${t('Bac national')}${exam.national_year ? ` ${exam.national_year}` : ''}` : numero ? t('Devoir {n}', { n: numero }) : t('Devoir (DS)'))
-      : numero ? t('Exercice {n}', { n: numero }) : t('Exercice');
+  // Le numéro est devant le titre (« #12 », 17/11/2026) : le repère dit seulement la nature.
+  const kind = isLesson ? t('Leçon')
+    : exam ? (isNational ? `${t('Bac national')}${exam.national_year ? ` ${exam.national_year}` : ''}` : t('Devoir (DS)'))
+      : t('Exercice');
   const eyebrowLink = 'underline-offset-4 transition-colors hover:text-gold hover:underline';
 
   // ── Infos : questions et durée (estimée pour un exercice, celle du sujet pour un examen).
@@ -271,6 +272,7 @@ export const ContentHeader: React.FC<ContentHeaderProps> = ({
         )}
       </p>
       <h1 className="fd-display mt-2 text-ink" style={{ fontSize: 'clamp(26px, 3.4vw, 36px)', lineHeight: 1.12 }}>
+        {numero !== null && !isNational && <span className="fd-nums me-2 text-ink-faint">#{numero}</span>}
         {content.title}
       </h1>
 

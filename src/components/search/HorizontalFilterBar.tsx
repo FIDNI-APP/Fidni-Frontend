@@ -46,6 +46,8 @@ interface HorizontalFilterBarProps {
   accentColor?: string;
   /** Contrôle affiché à droite du tri (choix de l'affichage de la liste). */
   trailing?: React.ReactNode;
+  /** Champ de recherche de la liste (numéro ou mot, 17/11/2026) : avant le tri ; sous xl, sa propre ligne. */
+  search?: React.ReactNode;
   /** Section « Examens nationaux » : filtre par année du Bac. */
   nationalSection?: boolean;
   /** Liste ouverte depuis un dossier (10/10/2026) : « chapter » = le dossier fixe niveau et chapitre (lignes
@@ -76,7 +78,7 @@ interface Option {
 
 const STATUS_KEYS = ['todo', 'showCompleted', 'showFailed', 'showViewed', 'hideViewed'] as const;
 const STATUS_LABEL: Record<(typeof STATUS_KEYS)[number], string> = {
-  todo: 'À faire', showCompleted: 'Réussis', showFailed: 'À revoir', showViewed: 'Déjà ouverts', hideViewed: 'Jamais ouverts',
+  todo: 'À faire', showCompleted: 'Réussis', showFailed: 'À revoir', showViewed: 'Vus', hideViewed: 'Pas encore vus',
 };
 /** « Ma progression » à côté des onglets du statut (15/11/2026) ; téléphone : icône seule, à côté de « Filtres ». */
 const ProgressionLink: React.FC<{ className?: string }> = ({ className = '' }) => (
@@ -105,6 +107,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
   sortBy,
   onSortChange,
   trailing,
+  search,
   nationalSection = false,
   inFolder,
   nationalYear,
@@ -264,7 +267,7 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     : filters.showFailed && !filters.showCompleted ? 'review'
       : filters.showCompleted && !filters.showFailed ? 'success' : 'all';
   const setStatus = (s: Status) => emit({
-    ...filters, todo: s === 'todo', showFailed: s === 'review', showCompleted: s === 'success', showViewed: false, hideViewed: false,
+    ...filters, todo: s === 'todo', showFailed: s === 'review', showCompleted: s === 'success',
   });
 
   const nameOf = (options: Option[], id: string) => options.find((o) => String(o.id) === id)?.name ?? id;
@@ -445,6 +448,22 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
         </FilterRow>
       )}
 
+      {/* Vu ou pas (18/11/2026, Natsu) : ce que l'élève a déjà ouvert ; se combine avec le statut (« À faire » et
+          « Pas encore vus »). Leçons comprises. */}
+      {isAuthenticated && (
+        <FilterRow title={t('Déjà vu')}>
+          {([['tous', 'Tous'], ['vus', 'Vus'], ['non-vus', 'Pas encore vus']] as const).map(([id, label]) => {
+            const on = id === 'vus' ? !!filters.showViewed : id === 'non-vus' ? !!filters.hideViewed : !filters.showViewed && !filters.hideViewed;
+            return (
+              <button key={id} type="button" aria-pressed={on} className={pill(on)}
+                onClick={() => emit({ ...filters, showViewed: id === 'vus', hideViewed: id === 'non-vus' })}>
+                {t(label)}
+              </button>
+            );
+          })}
+        </FilterRow>
+      )}
+
       {/* Statut — élève : les onglets de la barre ; un visiteur n'a rien de fait, on l'invite à se connecter. */}
       {contentType !== 'lesson' && !isAuthenticated && (
         <FilterRow title={t('Statut')}>
@@ -460,12 +479,15 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
 
   // Une ligne au moins dans le panneau ? Dans le dossier d'un chapitre de leçons, il ne reste parfois que le
   // théorème : sans lui, le bouton « Filtres » ouvrirait un panneau vide.
-  const hasRows = inFolder !== 'chapter' || contentType !== 'lesson' || enseignants.length > 0
+  // « Déjà vu » (membres) est toujours là.
+  const hasRows = inFolder !== 'chapter' || contentType !== 'lesson' || isAuthenticated || enseignants.length > 0
     || (filters.chapters.length > 0 && visible(theorems, filters.theorems).length > 0);
   // Onglets du statut en vue : élève connecté, exercices et examens.
   const quickStatus = isAuthenticated && contentType !== 'lesson';
-  // Étiquettes sous la barre : pas celles du statut quand les onglets le montrent déjà.
-  const shownChips = quickStatus ? chips.filter((c) => !(STATUS_KEYS as readonly string[]).includes(c.key)) : chips;
+  // Étiquettes sous la barre : pas celles du statut quand les onglets le montrent déjà (« Vus » et « Pas encore
+  // vus » se choisissent dans le panneau : elles restent).
+  const TAB_KEYS = ['todo', 'showCompleted', 'showFailed'];
+  const shownChips = quickStatus ? chips.filter((c) => !TAB_KEYS.includes(c.key)) : chips;
   // Pastille de « Filtres » : ce qui se choisit dans le panneau (le statut a ses onglets).
   const panelCount = shownChips.length;
 
@@ -500,8 +522,9 @@ export const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
           </div>
         )}
 
-        {/* Tri, filtres, affichage. */}
-        <div className="flex items-center gap-2 sm:ms-auto">
+        {/* Recherche, tri, filtres, affichage. */}
+        <div className="flex flex-wrap items-center gap-2 sm:ms-auto xl:flex-nowrap">
+          {search && <div className="w-full xl:w-56">{search}</div>}
           <div data-tour="liste-tri" className="min-w-0 flex-1 sm:flex-none">
             <SortDropdown value={sortBy} onChange={onSortChange} easiest={contentType !== 'lesson'} className="w-full sm:w-auto" />
           </div>

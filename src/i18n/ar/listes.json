@@ -326,5 +326,12 @@
   "Autres devoirs": "فروض أخرى",
   "Devoirs par numéro – {level}": "الفروض حسب الرقم – {level}",
   "{nom}, semestre {n}": "{nom}، الدورة {n}",
-  "À venir": "قريبًا"
+  "À venir": "قريبًا",
+  "Numéro ou mot": "رقم أو كلمة",
+  "Rien pour « {q} »": "لا شيء لـ « {q} »",
+  "Essaie un autre numéro ou un autre mot.": "جرّب رقمًا آخر أو كلمة أخرى.",
+  "Essaie un autre mot.": "جرّب كلمة أخرى.",
+  "Déjà vu": "سبقت مشاهدته",
+  "Vus": "تمت مشاهدتها",
+  "Pas encore vus": "لم تُشاهَد بعد"
 }
