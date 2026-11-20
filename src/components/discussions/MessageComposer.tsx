@@ -6,6 +6,7 @@ import { FileUpload } from '@/components/common/FileUpload';
 import { fileAPI } from '@/lib/api/contentItemApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 import { t } from '@/i18n';
+import { messageCompteRecent } from '@/lib/compteRecent';
 
 const loadEditor = () => import('@/components/editor/CompactTipTapEditor');
 const CompactTipTapEditor = lazy(loadEditor);
@@ -65,9 +66,9 @@ export const MessageComposer: React.FC<{
       setShowUpload(false);
     } catch (e) {
       const status = (e as { response?: { status?: number } })?.response?.status;
-      setError(status === 429
-        ? t('Beaucoup de messages d’un coup : réessaie dans un moment (ton texte est gardé).')
-        : t('Ça n’est pas parti : vérifie ta connexion et réessaie (ton texte est gardé).'));
+      setError(messageCompteRecent(e) ?? (status === 429
+          ? t('Beaucoup de messages d’un coup : réessaie dans un moment (ton texte est gardé).')
+          : t('Ça n’est pas parti : vérifie ta connexion et réessaie (ton texte est gardé).')));
     } finally {
       setBusy(false);
     }

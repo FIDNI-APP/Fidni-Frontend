@@ -53,6 +53,8 @@ export interface DiscussionCardData {
   tags: ContentTag[];
   repliers: { username: string; display_name?: string; avatar: string | null }[];
   attachments: number;
+  /** Premier message d'un nouveau compte, pas encore validé par l'équipe (20/11/2026) : visible de son auteur seul. */
+  en_attente?: boolean;
 }
 
 export interface DiscussionReply {
@@ -66,6 +68,8 @@ export interface DiscussionReply {
   user_utile: boolean;
   attachments: FileAttachment[];
   can_edit: boolean;
+  /** Pas encore validée par l'équipe : visible de son auteur seul (20/11/2026). */
+  en_attente?: boolean;
 }
 
 export interface DiscussionDetail extends DiscussionCardData {

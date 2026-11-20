@@ -18,6 +18,7 @@ import {
   type ProposedSolution, type SolutionAttachment,
 } from '@/lib/api/proposedSolutionsApi';
 import { t, dateLocale } from '@/i18n';
+import { messageCompteRecent } from '@/lib/compteRecent';
 import { nomAffiche } from '@/lib/nomAffiche';
 
 // Éditeur chargé à la demande (survol ou clic sur « Proposer ma solution »).
@@ -100,9 +101,9 @@ const Composer: React.FC<{
       const message = data && typeof data === 'object'
         ? (data.detail || data.non_field_errors?.[0] || data.body?.[0] || data.file?.[0] || Object.values(data)[0])
         : null;
-      setError(err?.response?.status === 429
+      setError(messageCompteRecent(caught) ?? (err?.response?.status === 429
         ? t('Tu as publié beaucoup de solutions : réessaie dans un moment.')
-        : (typeof message === 'string' ? message : t('La publication a échoué. Réessaie.')));
+        : (typeof message === 'string' ? message : t('La publication a échoué. Réessaie.'))));
     } finally {
       setStatus(null);
     }
