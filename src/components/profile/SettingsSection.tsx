@@ -37,7 +37,7 @@ const Note: React.FC<{ msg: Msg; onClose?: () => void }> = ({ msg, onClose }) =>
   return (
     <div role={msg.kind === 'error' ? 'alert' : 'status'} className={`mt-3 flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-[13px] leading-relaxed ${cls}`}>
       {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-hover" aria-hidden />}
-      <p className="min-w-0 flex-1 break-words">{msg.text}</p>
+      <p className="min-w-0 flex-1 break-words">{t(msg.text)}</p>
       {onClose && (
         <button type="button" onClick={onClose} aria-label={t('Fermer le message')} className="-m-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg opacity-70 hover:opacity-100">
           <X className="h-4 w-4" />

@@ -29,6 +29,8 @@ type ApiError = { response?: { status?: number; data?: { code?: string; error?: 
 function apiErrorMessage(err: ApiError | null | undefined, fallback: string): string {
   if (err?.response?.status === 429) return t('Trop de tentatives. Patiente quelques minutes avant de réessayer.');
   if (!err?.response) return t('Connexion au serveur impossible. Vérifie ta connexion internet.');
+  // Adresse e-mail jetable (yopmail…) refusée par le serveur (20/11/2026) : message traduit.
+  if (err.response.data?.code === 'email_jetable') return t('Les adresses e-mail temporaires ne sont pas acceptées. Utilise ton adresse habituelle (Gmail, Outlook…).');
   return err.response.data?.error || fallback;
 }
 

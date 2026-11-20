@@ -153,7 +153,7 @@ export const IdentityGate: React.FC = () => {
               </span>
             </label>
           )}
-          {error && <p className="mt-4 text-sm text-[#a23b34]">{error}</p>}
+          {error && <p className="mt-4 text-sm text-[#a23b34]">{t(error)}</p>}
         </div>
         <div className="px-6 sm:px-7 py-4 border-t border-line flex items-center justify-between gap-3">
           <button type="button" onClick={() => logout()} className="min-h-10 px-1 text-sm text-ink-faint hover:text-ink">{t('Se déconnecter')}</button>

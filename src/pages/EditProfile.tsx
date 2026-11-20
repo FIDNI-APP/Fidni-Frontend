@@ -238,7 +238,7 @@ export function EditProfile() {
   const errorFor = (section: string) =>
     error?.section === section ? (
       <p role="alert" className="mt-4 rounded-xl border border-[#f0d5d1] bg-[#fbecea] px-4 py-3 text-[13.5px] font-medium text-[#a23b34]">
-        {error.message}
+        {t(error.message)}
       </p>
     ) : null;
 
