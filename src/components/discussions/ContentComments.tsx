@@ -18,7 +18,7 @@ import {
 } from '@/lib/api/discussionsApi';
 import type { FileAttachment } from '@/types/fileAttachment';
 import { MessageComposer } from './MessageComposer';
-import { AuthorName, Avatar, RoleBadge, UtileButton, fullDate, timeAgo } from './parts';
+import { AuthorName, Avatar, EnAttente, RoleBadge, UtileButton, fullDate, timeAgo } from './parts';
 import { t } from '@/i18n';
 import { nomAffiche } from '@/lib/nomAffiche';
 
@@ -243,6 +243,7 @@ export const ContentComments: React.FC<{
             <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-tight">
               <AuthorName author={author} className="text-[13.5px]" />
               <RoleBadge author={author} />
+              <EnAttente show={r ? r.en_attente : d.en_attente} />
               {r?.reply_to && (
                 <span className="inline-flex items-center gap-0.5 text-[12px] text-ink-faint">
                   <CornerDownRight className="h-3 w-3" /> {t('à {nom}', { nom: nomAffiche(r.reply_to) })}

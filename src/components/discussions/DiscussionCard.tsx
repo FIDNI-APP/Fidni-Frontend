@@ -6,7 +6,7 @@ import { MathText } from '@/components/skilliq/MathText';
 import { extraitMath } from '@/lib/texteMath';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DiscussionCardData } from '@/lib/api/discussionsApi';
-import { AuthorName, Avatar, ContentTagCard, RepliersStack, RoleBadge, SalonChip, UtileButton, fullDate, timeAgo } from './parts';
+import { AuthorName, Avatar, ContentTagCard, EnAttente, RepliersStack, RoleBadge, SalonChip, UtileButton, fullDate, timeAgo } from './parts';
 import { t } from '@/i18n';
 
 const CARTE = 'group relative flex gap-3 py-4 sm:gap-4 sm:py-5';
@@ -40,6 +40,7 @@ const Auteur: React.FC<{ d: DiscussionCardData }> = ({ d }) => (
   <span className="relative z-10 inline-flex items-center gap-1.5">
     <AuthorName author={d.author} className="text-[13px]" />
     <RoleBadge author={d.author} />
+    <EnAttente show={d.en_attente} />
   </span>
 );
 

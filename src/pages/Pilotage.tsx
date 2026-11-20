@@ -29,6 +29,7 @@ import { SerieModal, type SerieTarget } from '@/components/pilotage/SerieModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
+import { MessagesAValider } from '@/components/pilotage/MessagesAValider';
 import { IATab } from '@/components/pilotage/IATab';
 import { ValidationTab } from '@/components/pilotage/ValidationTab';
 import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
@@ -954,6 +955,7 @@ export default function Pilotage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [reportsOpen, setReportsOpen] = useState<number | null>(null);
+  const [messagesAValider, setMessagesAValider] = useState<number | null>(null);
   // Le direct (/api/pilotage/direct/) : relu toutes les 30 s tant que la page est visible.
   const live = useLivePilotage(!!user?.is_superuser);
   const refreshLive = live.refresh;
@@ -985,7 +987,8 @@ export default function Pilotage() {
   if (isLoading) return null;
   if (!user?.is_superuser) return <Navigate to="/" replace />;
 
-  const todoCount = reportsOpen ?? 0;
+  // À traiter : signalements ouverts + premiers messages des nouveaux comptes (20/11/2026).
+  const todoCount = (reportsOpen ?? 0) + (messagesAValider ?? live.data?.todo.messages_a_valider ?? 0);
   const tabs: { key: TabKey; label: string; badge?: number }[] = [
     { key: 'apercu', label: 'Aperçu' },
     { key: 'a-traiter', label: 'À traiter', badge: todoCount },
@@ -1066,6 +1069,7 @@ export default function Pilotage() {
           signupSeries={{ values: data.series.map((d) => d.signups), dates: data.series.map((d) => d.date) }} />
       ) : tab === 'a-traiter' ? (
         <div>
+          <ErrorBoundary variant="block" label="Messages à valider" resetKey={data.generated_at}><MessagesAValider onCountChange={setMessagesAValider} /></ErrorBoundary>
           <ErrorBoundary variant="block" label="Signalements" resetKey={data.generated_at}><ReportsPanel onOpenCountChange={setReportsOpen} /></ErrorBoundary>
           {data.todo.difficulty_gaps && (
             <ErrorBoundary variant="block" label="Écarts de difficulté" resetKey={data.generated_at}><DifficultyGapsPanel items={data.todo.difficulty_gaps} /></ErrorBoundary>

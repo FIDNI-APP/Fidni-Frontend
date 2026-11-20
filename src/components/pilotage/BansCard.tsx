@@ -11,11 +11,11 @@ import { Ban, ChevronDown, Loader2, Undo2 } from 'lucide-react';
 import { api } from '@/lib/api/apiClient';
 
 interface BanRow {
-  id: number; kind: 'email' | 'google' | 'ip'; value: string; username: string; motif: string;
+  id: number; kind: 'email' | 'google' | 'ip' | 'appareil'; value: string; username: string; motif: string;
   created_at: string; expires_at: string | null; created_by: string | null;
 }
 
-const KIND: Record<BanRow['kind'], string> = { email: 'Adresse e-mail', google: 'Compte Google', ip: 'Adresse IP' };
+const KIND: Record<BanRow['kind'], string> = { email: 'Adresse e-mail', google: 'Compte Google', ip: 'Adresse IP', appareil: 'Appareil' };
 const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export const BansCard: React.FC = () => {

@@ -113,5 +113,8 @@
   "{n} nouvelles réponses": "{n} أجوبة جديدة",
   "dans": "في",
   "a répondu dans": "أجاب في",
-  "t’a mentionné dans": "ذكرك في"
+  "t’a mentionné dans": "ذكرك في",
+  "Visible seulement par toi tant que l’équipe ne l’a pas validé.": "يظهر لك وحدك إلى أن يوافق عليه الفريق.",
+  "En attente de validation": "في انتظار الموافقة",
+  "Ton compte est tout neuf : tu pourras écrire dans {n} h. En attendant, entraîne-toi sur les exercices.": "حسابك جديد: يمكنك الكتابة بعد {n} ساعة. في الأثناء، تدرّب على التمارين."
 }

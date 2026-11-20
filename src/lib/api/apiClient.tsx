@@ -26,6 +26,27 @@ export function clearTokens() {
   delete api.defaults.headers.common['Authorization'];
 }
 
+/**
+ * Identifiant de cet appareil (20/11/2026, backend users/bans.py) : un nombre au hasard gardé dans le navigateur,
+ * envoyé avec chaque requête. Quand l'équipe bannit un compte, ses appareils ne peuvent plus créer de compte. Rien
+ * d'autre n'est lu sur l'appareil. Stockage indisponible (navigation privée stricte) : pas d'en-tête.
+ */
+const APPAREIL_KEY = 'fidni:appareil';
+export function appareilId(): string | null {
+  try {
+    let id = localStorage.getItem(APPAREIL_KEY);
+    if (!id || !/^[A-Za-z0-9-]{16,64}$/.test(id)) {
+      id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      localStorage.setItem(APPAREIL_KEY, id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
 /** Émis quand la session ne peut plus être renouvelée : l'AuthContext repasse en visiteur. */
 export const SESSION_EXPIRED_EVENT = 'fidni:session-expired';
 
@@ -34,6 +55,8 @@ api.interceptors.request.use(
   config => {
     // Get the token from localStorage on each request
     const token = localStorage.getItem(ACCESS_KEY);
+    const appareil = appareilId();
+    if (appareil) config.headers['X-Fidni-Appareil'] = appareil;
 
     // Only add the Authorization header if token exists
     if (token) {
@@ -49,6 +72,11 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+function appareilHeaders(): Record<string, string> {
+  const id = appareilId();
+  return id ? { 'X-Fidni-Appareil': id } : {};
+}
 
 let refreshing: Promise<string | null> | null = null;
 
@@ -74,7 +102,7 @@ export function refreshAccessToken(): Promise<string | null> {
   if (!refreshing) {
     const refresh = localStorage.getItem(REFRESH_KEY);
     refreshing = (refresh
-      ? axios.post(`${api.defaults.baseURL}/token/refresh/`, { refresh })
+      ? axios.post(`${api.defaults.baseURL}/token/refresh/`, { refresh }, { headers: appareilHeaders() })
           .then((r) => { storeTokens(r.data.access, r.data.refresh); return r.data.access as string; })
           .catch(() => renouveleAilleurs(refresh))
       : Promise.resolve(null)

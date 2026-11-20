@@ -15,6 +15,7 @@ import { ContentTagPicker } from '@/components/discussions/ContentTagPicker';
 import { MessageComposer } from '@/components/discussions/MessageComposer';
 import { SALONS } from '@/components/discussions/parts';
 import { t } from '@/i18n';
+import { messageCompteRecent } from '@/lib/compteRecent';
 
 const TITLE_MIN = 6;
 const TITLE_MAX = 160;
@@ -121,8 +122,8 @@ const DiscussionEditor: React.FC<{ id?: string }> = ({ id }) => {
       navigate(`/discussions/${d.id}`, { replace: editing });
     } catch (e) {
       const status = (e as { response?: { status?: number } })?.response?.status;
-      setError(status === 429 ? t('Beaucoup de discussions d’un coup : réessaie dans un moment.')
-        : t('La discussion n’a pas pu être publiée. Vérifie ta connexion et réessaie.'));
+      setError(messageCompteRecent(e) ?? (status === 429 ? t('Beaucoup de discussions d’un coup : réessaie dans un moment.')
+        : t('La discussion n’a pas pu être publiée. Vérifie ta connexion et réessaie.')));
     } finally {
       setBusy(false);
     }

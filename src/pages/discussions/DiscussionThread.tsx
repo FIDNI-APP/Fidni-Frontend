@@ -21,7 +21,7 @@ import {
 import type { FileAttachment } from '@/types/fileAttachment';
 import { MessageComposer } from '@/components/discussions/MessageComposer';
 import {
-  AuthorName, Avatar, ContentTagCard, RoleBadge, SalonChip, UtileButton, fullDate, timeAgo,
+  AuthorName, Avatar, ContentTagCard, EnAttente, RoleBadge, SalonChip, UtileButton, fullDate, timeAgo,
 } from '@/components/discussions/parts';
 import { t } from '@/i18n';
 import { nomAffiche } from '@/lib/nomAffiche';
@@ -180,7 +180,7 @@ export const DiscussionThread: React.FC = () => {
             <div className="mt-3 flex items-center gap-2.5">
               <Avatar user={d.author} size={36} />
               <div className="min-w-0 leading-tight">
-                <span className="flex flex-wrap items-center gap-1.5 text-[14px]"><AuthorName author={d.author} /> <RoleBadge author={d.author} /></span>
+                <span className="flex flex-wrap items-center gap-1.5 text-[14px]"><AuthorName author={d.author} /> <RoleBadge author={d.author} /> <EnAttente show={d.en_attente} /></span>
                 <time dateTime={d.created_at} title={fullDate(d.created_at)} className="text-[12.5px] text-ink-faint">
                   {timeAgo(d.created_at)}{d.edited_at ? ` · ${t('modifiée')}` : ''}
                 </time>
@@ -237,7 +237,7 @@ export const DiscussionThread: React.FC = () => {
                     <Avatar user={r.author} size={32} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px]">
-                        <AuthorName author={r.author} /> <RoleBadge author={r.author} />
+                        <AuthorName author={r.author} /> <RoleBadge author={r.author} /> <EnAttente show={r.en_attente} />
                         {r.reply_to && (
                           <a href={`#reponse-${r.reply_to.id}`} className="inline-flex items-center gap-0.5 text-[12px] text-ink-faint hover:text-ink">
                             <CornerDownRight className="h-3 w-3" /> {t('à {nom}', { nom: nomAffiche(r.reply_to) })}

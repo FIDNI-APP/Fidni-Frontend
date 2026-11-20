@@ -188,3 +188,12 @@ export const RepliersStack: React.FC<{ users: { username: string; display_name?:
     </span>
   ) : null
 );
+
+/** Premier message d'un nouveau compte, pas encore validé par l'équipe (20/11/2026, backend discussions/moderation.py) :
+ *  son auteur le voit avec cette étiquette ; personne d'autre ne le voit. */
+export const EnAttente: React.FC<{ show?: boolean }> = ({ show }) => (show ? (
+  <span title={t('Visible seulement par toi tant que l’équipe ne l’a pas validé.')}
+    className="inline-flex items-center rounded-md bg-gold-soft px-1.5 py-0.5 text-[11.5px] font-semibold text-gold-strong">
+    {t('En attente de validation')}
+  </span>
+) : null);

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api/apiClient';
 
 export interface LiveDay { views: number; active: number; signups: number; work: number; visitors: number }
-export interface LiveTodo { reports_open: number; ia_en_cours: number; ia_a_relire: number; brouillons: number; defis_a_valider: number }
+export interface LiveTodo { reports_open: number; ia_en_cours: number; ia_a_relire: number; brouillons: number; defis_a_valider: number; messages_a_valider: number }
 export interface LiveContent { id: number; type: string; title: string; url: string }
 export interface LiveEvent {
   /** Clé stable d'un évènement (sert à repérer les nouveaux à chaque relecture). */
@@ -66,6 +66,7 @@ export function normalizeLive(raw: unknown): LiveData {
     todo: {
       reports_open: num(todo.reports_open),
       ia_en_cours: num(todo.ia_en_cours), ia_a_relire: num(todo.ia_a_relire), brouillons: num(todo.brouillons), defis_a_valider: num(todo.defis_a_valider),
+      messages_a_valider: num(todo.messages_a_valider),
     },
     activity,
   };
