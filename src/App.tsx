@@ -98,6 +98,7 @@ const ConcoursTipsListPage = page(() => import('./pages/concours/ConcoursTips'),
 const ConcoursTipDetailPage = page(() => import('./pages/concours/ConcoursTips'), 'ConcoursTipDetailPage');
 const ConcoursAdminPage = page(() => import('./pages/concours/ConcoursAdmin'), 'default');
 const PilotagePage = page(() => import('./pages/Pilotage'), 'default');
+const ConnexionAtelier = page(() => import('./pages/ConnexionAtelier'), 'default');
 const ConcoursExamQuestionsPage = page(() => import('./pages/concours/ConcoursExamQuestions'), 'default');
 const EditorTestPage = page(() => import('./pages/concours/EditorTest'), 'default');
 const ParcoursContentEditor = page(() => import('./pages/parcours/ParcoursContentEditor'), 'ParcoursContentEditor');
@@ -359,6 +360,7 @@ function App() {
                     } />
 
                     {/* Main routes */}
+                    <Route path="/atelier/connexion" element={<NavbarWrapper><ConnexionAtelier /></NavbarWrapper>} />
                     <Route path="/" element={
                       <NavbarWrapper>
                         <Home />
