@@ -12,7 +12,6 @@
  *  - Visiteurs (09/10/2026) : les visiteurs non connectés, à part (components/pilotage/VisitorsTab) ;
  *  - Membres : aussi « Un membre n'arrive pas à se connecter ? » (components/pilotage/LoginDiagnostic) et
  *    « Comptes bannis » (components/pilotage/BansCard, 11/10/2026) ;
- *  - IA : un document (PDF, Word, photos) → fiches préparées par l'IA, relues puis publiées (components/pilotage/IATab).
  * Audit du 10/10/2026 : « Entonnoir » dans l'Aperçu (aujourd'hui dans MembersCard), « Écarts de difficulté » dans
  * À traiter (DifficultyGapsPanel), « Portes d'inscription » dans Usage (AuthDoorsCard).
  * Données : /api/pilotage/?jours=7|30|90, /api/pilotage/utilisateurs/ (+ /<id>/) — backend apps/users/admin_dashboard.py.
@@ -21,8 +20,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
-  Activity, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, Flag, Gauge, Inbox,
-  Loader2, LineChart, PenLine, RefreshCw, Repeat, Search, ShieldCheck, Sparkles,
+  Activity, ChevronDown, ChevronLeft, ChevronRight, Eye, Flag, Gauge, Inbox,
+  Loader2, LineChart, PenLine, RefreshCw, Repeat, Search, ShieldCheck,
   UserPlus, Users, type LucideIcon,
 } from 'lucide-react';
 import { SerieModal, type SerieTarget } from '@/components/pilotage/SerieModal';
@@ -30,7 +29,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api/apiClient';
 import { ReportsPanel } from '@/components/pilotage/ReportsPanel';
 import { MessagesAValider } from '@/components/pilotage/MessagesAValider';
-import { IATab } from '@/components/pilotage/IATab';
 import { ValidationTab } from '@/components/pilotage/ValidationTab';
 import { QuizAdminTab } from '@/components/pilotage/QuizAdminTab';
 import { DefisAdminTab } from '@/components/pilotage/DefisAdminTab';
@@ -94,7 +92,7 @@ interface UserRow {
 interface UsersPage { count: number; pages: number; results: UserRow[]; counts: Record<string, number> }
 
 const PERIODS = [7, 30, 90];
-type TabKey = 'apercu' | 'a-traiter' | 'validation' | 'membres' | 'enseignants' | 'usage' | 'visiteurs' | 'quiz' | 'defis' | 'ia';
+type TabKey = 'apercu' | 'a-traiter' | 'validation' | 'membres' | 'enseignants' | 'usage' | 'visiteurs' | 'quiz' | 'defis';
 
 /* Réponse de /api/pilotage/ remise en forme une seule fois (10/10/2026) : un champ absent, nul ou d'un autre
  * type (serveur plus ancien ou plus récent que la page) devient une valeur vide au lieu de faire planter
@@ -305,10 +303,6 @@ const OverviewTab: React.FC<{
       onClick: () => onGo('a-traiter'), title: 'Erreurs signalées par les élèves' },
     { key: 'brouillons', count: brouillons, one: 'contenu à valider', many: 'contenus à valider',
       icon: Inbox, tone: 'gold', onClick: () => onGo('validation'), title: 'Exercices, cours et devoirs préparés par Claude' },
-    { key: 'ia-run', count: live ? live.todo.ia_en_cours : null, one: 'travail IA en cours', many: 'travaux IA en cours', icon: Sparkles,
-      tone: 'brand', running: true, onClick: () => onGo('ia') },
-    { key: 'ia-read', count: live ? live.todo.ia_a_relire : null, one: 'à relire (IA)', many: 'à relire (IA)', icon: ClipboardCheck,
-      tone: 'ink', onClick: () => onGo('ia'), title: 'Fiches préparées par l’IA, prêtes à être relues' },
     { key: 'gaps', count: gaps, one: 'ressenti à revoir', many: 'ressentis à revoir', icon: Gauge, tone: 'ink',
       onClick: () => onGo('a-traiter'), title: 'Difficulté affichée et ressenti des élèves trop éloignés' },
   ];
@@ -947,7 +941,7 @@ const MembersTab: React.FC<{ days: number }> = ({ days }) => {
 export default function Pilotage() {
   const { user, isLoading } = useAuth();
   const [params, setParams] = useSearchParams();
-  const tab = (['apercu', 'a-traiter', 'validation', 'membres', 'enseignants', 'usage', 'visiteurs', 'quiz', 'defis', 'ia'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
+  const tab = (['apercu', 'a-traiter', 'validation', 'membres', 'enseignants', 'usage', 'visiteurs', 'quiz', 'defis'].includes(params.get('onglet') ?? '') ? params.get('onglet') : 'apercu') as TabKey;
   const days = PERIODS.includes(Number(params.get('periode'))) ? Number(params.get('periode')) : 30;
   const setParam = (key: string, value: string) => setParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n; }, { replace: true });
 
@@ -999,7 +993,6 @@ export default function Pilotage() {
     { key: 'visiteurs', label: 'Visiteurs' },
     { key: 'quiz', label: 'Quiz' },
     { key: 'defis', label: 'Défis', badge: live.data?.todo.defis_a_valider },
-    { key: 'ia', label: 'IA', badge: live.data?.todo.ia_a_relire },
   ];
 
   return (
@@ -1056,8 +1049,6 @@ export default function Pilotage() {
         <DefisAdminTab />
       ) : tab === 'enseignants' ? (
         <EnseignantsTab />
-      ) : tab === 'ia' ? (
-        <IATab />
       ) : tab === 'validation' ? (
         <ValidationTab />
       ) : !data ? (

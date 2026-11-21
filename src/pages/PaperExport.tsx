@@ -65,7 +65,7 @@ const currentSchoolYear = () => {
 };
 
 interface PaperExportProps {
-  /** ia-draft : brouillon de Pilotage › IA, imprimable avant publication (un devoir pas encore donné). */
+  /** Brouillon imprimable depuis Pilotage › À valider. */
   source: 'revision-list' | 'content' | 'notebook' | 'ia-draft';
 }
 
@@ -232,7 +232,7 @@ export const PaperExport: React.FC<PaperExportProps> = ({ source }) => {
     if (window.history.length > 1) navigate(-1);
     else navigate(source === 'revision-list' ? '/reviser#mes-listes'
       : source === 'notebook' ? (id ? `/notebooks?nb=${id}` : '/enregistrements?onglet=cahiers')
-      : source === 'ia-draft' ? '/pilotage?onglet=ia' : '/');
+      : source === 'ia-draft' ? `/pilotage?onglet=validation&brouillon=${id}` : '/');
   };
 
   // Exercices, leçons et corrigé : construits une seule fois (pas à chaque lettre tapée dans « Personnaliser ») ;
