@@ -59,12 +59,17 @@ export const voteProposedSolution = async (id: number, value: 1 | -1) => {
  * Réduit une photo de téléphone (souvent 4 à 12 Mo) à 2000 px de côté en JPEG avant l'envoi :
  * plus rapide sur les données mobiles et sous la limite de 10 Mo du serveur.
  */
+const EXT_IMAGE = /\.(jpe?g|jfif|jpe|pjpe?g?|png|webp|gif|heic|heif|avif|bmp|tiff?)$/i;
+
 export const compressImage = async (file: File, maxSide = 2000, quality = 0.85): Promise<File> => {
-  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  const image = file.type.startsWith('image/') || EXT_IMAGE.test(file.name);
+  if (!image || file.type === 'image/gif') return file;
+  // Format que le serveur prend tel quel (25/11/2026 : « .jfif », HEIC, type vide… sont convertis en JPEG).
+  const standard = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type) && /\.(jpe?g|png|webp)$/i.test(file.name);
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 1.5 * 1024 * 1024) return file;
+    if (standard && scale === 1 && file.size < 1.5 * 1024 * 1024) return file;
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);
@@ -75,7 +80,7 @@ export const compressImage = async (file: File, maxSide = 2000, quality = 0.85):
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
     if (!blob) return file;
-    const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    const name = (file.name.replace(/\.[^.]+$/, '') || 'photo') + '.jpg';
     return new File([blob], name, { type: 'image/jpeg' });
   } catch {
     return file;
