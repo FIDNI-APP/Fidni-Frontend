@@ -135,7 +135,7 @@ export const MessageComposer: React.FC<{
         <div className="mt-2">
           <FileUpload accept="image/*,.pdf" maxSizeMB={10}
             onUploadComplete={(f) => { setFileList([...files, f]); setShowUpload(false); }}
-            onUploadError={() => setError(t('Le fichier n’a pas pu être envoyé.'))} />
+            onUploadError={(raison) => setError(raison || t('Le fichier n’a pas pu être envoyé.'))} />
         </div>
       )}
       {error && <p role="alert" className="mt-1.5 text-[12.5px] font-medium text-[#a23b34]">{error}</p>}

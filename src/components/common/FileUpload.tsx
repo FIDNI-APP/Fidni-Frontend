@@ -1,8 +1,17 @@
 import React, { useCallback, useState } from 'react';
 import { Upload, File, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
 import { fileAPI } from '@/lib/api/contentItemApi';
+import { compressImage } from '@/lib/api/proposedSolutionsApi';
 import type { FileUploadResponse } from '@/types/fileAttachment';
 import { t } from '@/i18n';
+
+/** Raison donnée par le serveur (« Fichier trop lourd… », « Photo au format HEIC… »), traduite si possible. */
+const raisonServeur = (err: unknown): string | null => {
+  const data = (err as { response?: { data?: unknown } })?.response?.data as Record<string, unknown> | undefined;
+  const brut = data?.file ?? data?.detail ?? data?.error;
+  const texte = Array.isArray(brut) ? brut[0] : brut;
+  return typeof texte === 'string' && texte ? t(texte) : null;
+};
 
 interface FileUploadProps {
   onUploadComplete: (file: FileUploadResponse) => void;
@@ -48,9 +57,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     return null;
   };
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (original: File) => {
+    // Photo de téléphone (souvent 4 à 15 Mo, parfois HEIC ou « .jfif ») : réduite et convertie en JPEG
+    // avant l'envoi, comme pour les solutions proposées (25/11/2026, photos refusées au forum).
+    setUploading(true);
+    const file = await compressImage(original);
     const error = validateFile(file);
     if (error) {
+      setUploading(false);
       onUploadError?.(error);
       return;
     }
@@ -77,8 +91,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         setUploadProgress(0);
       }, 500);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('Upload failed');
-      onUploadError?.(message);
+      onUploadError?.(raisonServeur(err) ?? t('Le fichier n’a pas pu être envoyé.'));
       setUploading(false);
       setUploadProgress(0);
     }
