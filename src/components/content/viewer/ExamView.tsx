@@ -24,6 +24,7 @@ import { DIFFICULTY, feltTooltip } from '@/components/content/listing/listingUti
 import { trackAction } from '@/lib/usage';
 import { questionNumbering } from '@/lib/reportTargets';
 import { QuestionChart } from './QuestionChart';
+import { BarreFeuille, PleinEcran, useVueSujet } from './SheetMode';
 import { t } from '@/i18n';
 
 /** L'examen propose « En partie » (la moitié des points) ; l'exercice garde Réussi / À revoir. */
@@ -203,6 +204,10 @@ export const ExamView: React.FC<Props> = ({
   const { intro, parts } = useMemo(() => splitExam(structure), [structure]);
   const durationMin = Number(content.duration_minutes) || 0;
   const [showAll, setShowAll] = useState(false);
+  // Feuille (comme le PDF, par défaut) ou lecture détaillée ; plein écran (27/11/2026).
+  const [vue, setVue] = useVueSujet();
+  const feuille = vue === 'feuille';
+  const [pleinEcran, setPleinEcran] = useState(false);
 
   const setSessionIdRef = useRef<(id: string | number) => void>(() => {});
   const epreuve = useEpreuve(content.id, durationMin, (seconds) => {
@@ -462,6 +467,96 @@ export const ExamView: React.FC<Props> = ({
   );
 
   const noParts = parts.length === 1 && parts[0].id === 'sujet';
+
+  // Fiche du sujet. Feuille : une ligne, comme l'en-tête du PDF ; détaillée : les grandes cases d'avant.
+  const faits = [
+    durationMin > 0 && { label: t('Durée'), value: durationLabel(durationMin) },
+    total > 0 && { label: t('Barème'), value: t('{n} points', { n: fmtPts(total) }) },
+    !noParts && parts.length > 0 && { label: t('Exercices'), value: String(parts.length) },
+    levelName && { label: t('Niveau'), value: levelName },
+    content.is_national_exam && { label: t('Session'), value: content.national_year ? t('Bac {annee}', { annee: content.national_year }) : t('Bac national') },
+    felt && feltLabel && { label: t('Ressenti des élèves'), value: feltLabel, title: feltTooltip(felt) },
+  ].filter(Boolean) as { label: string; value: string; title?: string }[];
+
+  // Le sujet : une seule feuille, la fiche en tête (comme la copie distribuée en classe), puis les exercices.
+  const sujet = (
+    <section className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
+      <div className={`border-b border-line bg-[#fcfbf9] px-4 sm:px-8 ${feuille ? 'py-4' : 'py-5 sm:py-6'}`} data-tour="examen-fiche">
+        {feuille ? (
+          <dl className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5 text-[13.5px]">
+            {faits.map((f) => (
+              <div key={f.label} title={f.title} className="flex items-baseline gap-1.5">
+                <dt className="text-ink-faint">{f.label}</dt>
+                <dd className="font-semibold text-ink fd-nums">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-10">
+            {faits.map((f) => <Fact key={f.label} label={f.label} value={f.value} title={f.title} />)}
+          </dl>
+        )}
+        <div className={feuille ? '[&>*:first-child]:mt-3.5 [&>*:first-child]:pt-3.5' : ''}>{epreuveBlock}</div>
+      </div>
+      {intro.length > 0 && (
+        <div className="border-b border-line px-4 py-5 text-[14.5px] sm:px-8">
+          <p className="mb-1.5 text-[12.5px] font-medium text-ink-faint">{t('Consignes')}</p>
+          <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} variant={feuille ? 'sheet' : 'reading'} />
+        </div>
+      )}
+
+      {/* Exercices : un intertitre (titre, barème, tes points). Détaillée : un trait entre deux exercices. */}
+      <div className={feuille ? 'px-4 pb-6 pt-4 sm:px-8 sm:pb-8 sm:pt-6' : ''}>
+        {parts.map((p, i) => {
+          const sc = scores[i];
+          const heading = !(noParts && !sc.max);
+          return (
+            <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 ${feuille
+              ? (i > 0 ? 'mt-6' : '')
+              : `px-4 pb-9 sm:px-8 sm:pb-10 ${heading ? 'pt-7 sm:pt-8' : 'pt-6 sm:pt-8'} ${i > 0 ? 'border-t border-line' : ''}`}`}>
+              {heading && (
+                <div className={`flex items-baseline justify-between gap-3 ${feuille ? 'mb-2' : 'mb-5'}`}>
+                  <h2 className={`fd-paper min-w-0 leading-snug text-ink [&_p]:m-0 ${feuille ? 'text-[16.5px] font-bold' : 'text-[20px] font-semibold'}`}
+                    dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {sc.corrected > 0 && !locked && (
+                      <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title={t('Tes points (auto-évaluation)')}>
+                        {fmtPts(sc.got)} / {fmtPts(sc.max)}
+                      </span>
+                    )}
+                    {sc.max > 0 && (feuille ? (
+                      <span className="text-[13px] font-semibold text-ink-faint fd-nums">({sc.max > 1 ? t('{n} pts', { n: fmtPts(sc.max) }) : t('{n} pt', { n: fmtPts(sc.max) })})</span>
+                    ) : (
+                      <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-gold-strong fd-nums">
+                        {sc.max > 1 ? t('{n} pts', { n: fmtPts(sc.max) }) : t('{n} pt', { n: fmtPts(sc.max) })}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
+              <ExerciseRenderer
+                structure={{ version: structure?.version || '2.1', blocks: p.blocks }}
+                progress={progressData}
+                onAssess={assessOne}
+                onAssessMany={assessMany}
+                assessOptions={EXAM_OPTIONS}
+                onSolutionOpen={onSolutionOpen}
+                onHintOpen={onHintOpen}
+                interactive={isAuthenticated}
+                showAllSolutions={showAll}
+                compact={false}
+                variant={feuille ? 'sheet' : 'reading'}
+                locked={locked}
+                onReport={onReport}
+              />
+            </div>
+          );
+        })}
+      </div>
+      {footer}
+    </section>
+  );
+
   return (
     // Deux colonnes seulement si la feuille garde la largeur du PDF (ReadingStyles : .fd-exam-*).
     <div className="fd-exam-layout">
@@ -487,69 +582,29 @@ export const ExamView: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Le sujet : une seule feuille, la fiche en tête (comme la copie distribuée en classe), puis les exercices. */}
-          <section className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
-            <div className="border-b border-line bg-[#fcfbf9] px-4 py-5 sm:px-8 sm:py-6" data-tour="examen-fiche">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-10">
-                {durationMin > 0 && <Fact label={t('Durée')} value={durationLabel(durationMin)} />}
-                {total > 0 && <Fact label={t('Barème')} value={t('{n} points', { n: fmtPts(total) })} />}
-                {!noParts && parts.length > 0 && <Fact label={t('Exercices')} value={String(parts.length)} />}
-                {levelName && <Fact label={t('Niveau')} value={levelName} />}
-                {content.is_national_exam && <Fact label={t('Session')} value={content.national_year ? t('Bac {annee}', { annee: content.national_year }) : t('Bac national')} />}
-                {felt && feltLabel && <Fact label={t('Ressenti des élèves')} value={feltLabel} title={feltTooltip(felt)} />}
-              </dl>
-              {epreuveBlock}
+          <BarreFeuille vue={vue} onVue={setVue} onPleinEcran={() => setPleinEcran(true)} />
+          {pleinEcran ? (
+            <div className="rounded-2xl border border-dashed border-line px-5 py-10 text-center text-[13.5px] text-ink-faint">
+              {t('Le sujet est ouvert en plein écran.')}{' '}
+              <button type="button" onClick={() => setPleinEcran(false)} className="font-semibold text-brand-hover hover:underline">{t('Revenir ici')}</button>
             </div>
-            {intro.length > 0 && (
-              <div className="border-b border-line px-4 py-5 text-[14.5px] sm:px-8">
-                <p className="mb-1.5 text-[12.5px] font-medium text-ink-faint">{t('Consignes')}</p>
-                <ExerciseRenderer structure={{ version: structure?.version || '2.1', blocks: intro }} compact={false} locked={locked} variant="reading" />
-              </div>
-            )}
-
-            {/* Exercices : un intertitre (titre, barème, tes points) et un trait entre deux exercices. */}
-            {parts.map((p, i) => {
-              const sc = scores[i];
-              const heading = !(noParts && !sc.max);
-              return (
-                <div key={p.id} id={`exam-part-${p.id}`} className={`scroll-mt-24 px-4 pb-9 sm:px-8 sm:pb-10 ${heading ? 'pt-7 sm:pt-8' : 'pt-6 sm:pt-8'} ${i > 0 ? 'border-t border-line' : ''}`}>
-                  {heading && (
-                    <div className="mb-5 flex items-baseline justify-between gap-3">
-                      <h2 className="fd-paper min-w-0 text-[20px] font-semibold leading-snug text-ink [&_p]:m-0" dangerouslySetInnerHTML={{ __html: renderContentHtml(p.titleHtml) }} />
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        {sc.corrected > 0 && !locked && (
-                          <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-brand-hover fd-nums" title={t('Tes points (auto-évaluation)')}>
-                            {fmtPts(sc.got)} / {fmtPts(sc.max)}
-                          </span>
-                        )}
-                        {sc.max > 0 && (
-                          <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[12.5px] font-semibold text-gold-strong fd-nums">
-                            {sc.max > 1 ? t('{n} pts', { n: fmtPts(sc.max) }) : t('{n} pt', { n: fmtPts(sc.max) })}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  <ExerciseRenderer
-                    structure={{ version: structure?.version || '2.1', blocks: p.blocks }}
-                    progress={progressData}
-                    onAssess={assessOne}
-                    onAssessMany={assessMany}
-                    assessOptions={EXAM_OPTIONS}
-                    onSolutionOpen={onSolutionOpen}
-                    onHintOpen={onHintOpen}
-                    interactive={isAuthenticated}
-                    showAllSolutions={showAll}
-                    compact={false}
-                    variant="reading"
-                    locked={locked}
-                    onReport={onReport}
-                  />
-                </div>
-              );
-            })}
-            {footer}
-          </section>
+          ) : sujet}
+          <PleinEcran open={pleinEcran} onClose={() => setPleinEcran(false)} titre={content.title}
+            actions={locked ? (
+              <span className="flex items-center gap-1.5">
+                <span role="timer" className={`fd-nums text-[15px] font-semibold ${epreuve.status === 'paused' ? 'text-ink-faint' : 'text-ink'}`}>{clockLabel}</span>
+                <button type="button" onClick={confirmFinish} className="h-9 rounded-full bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-hover">{t('Terminer')}</button>
+              </span>
+            ) : solutionCount > 0 ? (
+              <button type="button" onClick={() => { if (!showAll) { trackAction('toutes-solutions'); onSolutionOpen?.('*'); } setShowAll((v) => !v); }}
+                aria-pressed={showAll}
+                className={`hidden h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold sm:inline-flex ${showAll ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-white'}`}>
+                {showAll ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+                {showAll ? t('Masquer le corrigé') : t('Tout le corrigé')}
+              </button>
+            ) : null}>
+            {sujet}
+          </PleinEcran>
         </div>
 
         {/* Téléphone : la copie et « Question par question » après le sujet (pas pendant l'épreuve). */}

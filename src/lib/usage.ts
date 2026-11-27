@@ -43,6 +43,7 @@ export const PAGES: { pattern: string; label: string; group: string }[] = [
   { pattern: '/messages/:id', label: 'Une conversation', group: 'Discussions' },
   { pattern: '/defis', label: 'Défi du jour', group: 'Mon espace' },
   { pattern: '/defis/:date', label: 'Défi précédent', group: 'Mon espace' },
+  { pattern: '/astuces', label: 'Astuces (bêta)', group: 'Mon espace' },
   { pattern: '/enregistrements', label: 'Mes enregistrements', group: 'Mon espace' },
   { pattern: '/documents', label: 'Mes documents', group: 'Mon espace' },
   { pattern: '/documents/:id', label: 'Éditeur de documents', group: 'Mon espace' },
@@ -80,6 +81,8 @@ export const pageInfo = (pattern: string) => LABELS.get(pattern) ?? { pattern, l
 export type UsageAction =
   | 'defi-repondu' | 'defi-trouve' | 'defi-indice' | 'defi-solution' | 'defi-archives'
   | 'voir-solution' | 'voir-indication' | 'toutes-solutions' | 'tout-reussi' | 'trouve-apres-solution' | 'rattrapage-liste' | 'imprimer'
+  // 27/11/2026 : vue « feuille » d'un sujet, plein écran, leçons interactives, astuces (bêta)
+  | 'vue-sujet-feuille' | 'vue-sujet-detaillee' | 'plein-ecran' | 'lecon-interactive' | 'astuce-ouverte'
   | 'visite-guidee' | 'recherche' | 'onglet-activite' | 'onglet-solutions' | 'mode-sombre' | 'langue-ar' | 'langue-fr'
   | 'filtre-niveau' | 'filtre-matiere' | 'filtre-sous-domaine' | 'filtre-chapitre' | 'filtre-theoreme'
   | 'filtre-enseignant' | 'enseignant-carte' | 'enseignant-page'

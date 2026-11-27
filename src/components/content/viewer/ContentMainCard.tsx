@@ -30,6 +30,7 @@ import { FoldedSolution } from './FoldedSolution';
 import { trackAction } from '@/lib/usage';
 import { questionNumbering } from '@/lib/reportTargets';
 import { QuestionChart } from './QuestionChart';
+import { BarreFeuille, PleinEcran, useVueSujet } from './SheetMode';
 import { t } from '@/i18n';
 
 type ContentItem = ContentExercise | ContentExam | ContentLesson;
@@ -89,6 +90,29 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
     setShowAllSolutions(!showAllSolutions);
   };
   const isLesson = contentType === 'lesson';
+
+  // Lien vers une question précise (#question-…, depuis les Astuces par exemple) : on y descend une fois la feuille
+  // affichée, et la question est surlignée un instant.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#question-')) return;
+    let essais = 0;
+    const timer = window.setInterval(() => {
+      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+      if (el || ++essais > 30) {
+        window.clearInterval(timer);
+        if (!el) return;
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('fd-cible');
+        window.setTimeout(() => el.classList.remove('fd-cible'), 2600);
+      }
+    }, 150);
+    return () => window.clearInterval(timer);
+  }, [content.id]);
+  // Exercice : feuille serrée (comme le PDF) ou lecture détaillée, et plein écran (27/11/2026).
+  const [vue, setVue] = useVueSujet();
+  const feuille = vue === 'feuille';
+  const [pleinEcran, setPleinEcran] = useState(false);
 
   // Sommaire de la leçon : dès qu'elle a au moins deux parties.
   const lessonRef = useRef<HTMLDivElement>(null);
@@ -195,7 +219,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
             {/* Feuille de cahier, avec les annotations de l'élève (16/10/2026). */}
             <LessonSheet lessonId={content.id} isAuthenticated={isAuthenticated} footer={sheetFooter}>
               <div ref={lessonRef} data-tour="lecon-contenu" className="pb-4 pt-2 sm:pb-6 sm:pt-4">
-                <LessonReader structure={content.structure as FlexibleLessonStructure} />
+                <LessonReader structure={content.structure as FlexibleLessonStructure} interactive />
               </div>
             </LessonSheet>
           </div>
@@ -215,78 +239,90 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
     <QuestionChart structure={content.structure} progress={questionProgress ?? {}} options={['success', 'review']}
       onAssess={onQuestionAssess ? (path, st) => onQuestionAssess(path, st, 'question') : undefined} />
   ) : null;
+  const feuilleExercice = (
+  <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
+    {/* Barre de la feuille : toutes les solutions à gauche, chrono à droite. */}
+    <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line bg-[#fcfbf9] px-2.5 py-1.5 sm:px-6 print:hidden">
+      {canToggle ? (
+        <button type="button" onClick={toggleAllSolutions} data-tour="detail-solutions" aria-pressed={showAllSolutions}
+          className={`inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+            showAllSolutions ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
+          {showAllSolutions ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+          {/* Téléphone : libellé court, pour laisser la place au chrono. */}
+          {showAllSolutions
+            ? <><span className="sm:hidden">{t('Masquer')}</span><span className="hidden sm:inline">{questionsWithSolutions > 1 ? t('Masquer les solutions') : t('Masquer la solution')}</span></>
+            : questionsWithSolutions > 1
+              ? <><span className="sm:hidden">{t('Solutions')}</span><span className="hidden sm:inline">{t('Toutes les solutions')}</span></>
+              : t('Voir la solution')}
+          {!showAllSolutions && questionsWithSolutions > 1 && (
+            <span className="rounded-full bg-[#f2f1ee] px-1.5 text-[11.5px] text-ink-faint fd-nums">{questionsWithSolutions}</span>
+          )}
+        </button>
+      ) : (
+        <span className="px-2 text-[13px] text-ink-faint">{t('Pas encore de solution détaillée')}</span>
+      )}
+      <Chrono timer={timer} isRunning={isTimerRunning} start={startTimer} stop={stopTimer} reset={resetTimer}
+        save={isAuthenticated ? saveSession : undefined} saving={saving} format={formatCurrentTime}
+        sessionCount={getSessionCount()} onOpenHistory={loadHistory} />
+    </div>
+
+    <div className={feuille ? 'px-4 pb-6 pt-5 sm:px-10 sm:pb-8 sm:pt-6' : 'px-4 pb-8 pt-6 sm:px-10 sm:pb-10 sm:pt-9'}>
+      <ExerciseRenderer
+        structure={content.structure as unknown as FlexibleExerciseStructure}
+        progress={progressData}
+        onAssess={onQuestionAssess}
+        onAssessMany={onAssessMany}
+        interactive={isAuthenticated}
+        showAllSolutions={showAllSolutions}
+        compact={false}
+        variant={feuille ? 'sheet' : 'reading'}
+        onSolutionOpen={onSolutionOpen}
+        onHintOpen={onHintOpen}
+        onReport={onReport}
+      />
+    </div>
+
+    {/* Solution d'ensemble (anciens contenus) : s'ouvre ici, ou avec « Voir la solution ». */}
+    {hasSolution && (
+      <div className="border-t border-line px-4 py-3 sm:px-10">
+        <button type="button" aria-expanded={wholeSolutionShown}
+          onClick={() => {
+            if (!wholeSolutionShown) { trackAction('voir-solution'); onSolutionOpen?.('solution'); }
+            setWholeLocal(!wholeSolutionShown);
+          }}
+          className={`inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold transition-colors ${
+            wholeSolutionShown ? 'bg-[#f2f1ee] text-ink-soft' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
+          {wholeSolutionShown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+          {wholeSolutionShown ? t('Masquer la solution') : t('Voir la solution')}
+        </button>
+        {!wholeSolutionShown && <FoldedSolution html={wholeSolution?.html} />}
+        {wholeSolutionShown && wholeSolution?.html && (
+          <div className="fd-read relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
+            <span className="absolute inset-y-0 start-0 w-[3px] bg-brand" aria-hidden />
+            <div className="fd-sol px-4 py-3.5 sm:px-5"><TipTapRenderer content={wholeSolution.html} /></div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {sheetFooter}
+  </article>
+  );
   return (
     <div className="fd-exam-layout">
     <div className={hasChart ? 'fd-exam-grid' : ''}>
     <div className={`flex min-w-0 flex-col gap-8 sm:gap-10 ${hasChart ? 'fd-exam-main' : ''}`}>
       <ReadingStyles />
-      <article className="overflow-hidden rounded-2xl border border-line bg-white sm:rounded-3xl">
-        {/* Barre de la feuille : toutes les solutions à gauche, chrono à droite. */}
-        <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line bg-[#fcfbf9] px-2.5 py-1.5 sm:px-6 print:hidden">
-          {canToggle ? (
-            <button type="button" onClick={toggleAllSolutions} data-tour="detail-solutions" aria-pressed={showAllSolutions}
-              className={`inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-[13.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                showAllSolutions ? 'bg-brand-soft text-brand-hover' : 'text-ink-soft hover:bg-[#f2f1ee] hover:text-ink'}`}>
-              {showAllSolutions ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-              {/* Téléphone : libellé court, pour laisser la place au chrono. */}
-              {showAllSolutions
-                ? <><span className="sm:hidden">{t('Masquer')}</span><span className="hidden sm:inline">{questionsWithSolutions > 1 ? t('Masquer les solutions') : t('Masquer la solution')}</span></>
-                : questionsWithSolutions > 1
-                  ? <><span className="sm:hidden">{t('Solutions')}</span><span className="hidden sm:inline">{t('Toutes les solutions')}</span></>
-                  : t('Voir la solution')}
-              {!showAllSolutions && questionsWithSolutions > 1 && (
-                <span className="rounded-full bg-[#f2f1ee] px-1.5 text-[11.5px] text-ink-faint fd-nums">{questionsWithSolutions}</span>
-              )}
-            </button>
-          ) : (
-            <span className="px-2 text-[13px] text-ink-faint">{t('Pas encore de solution détaillée')}</span>
-          )}
-          <Chrono timer={timer} isRunning={isTimerRunning} start={startTimer} stop={stopTimer} reset={resetTimer}
-            save={isAuthenticated ? saveSession : undefined} saving={saving} format={formatCurrentTime}
-            sessionCount={getSessionCount()} onOpenHistory={loadHistory} />
-        </div>
-
-        <div className="px-4 pb-8 pt-6 sm:px-10 sm:pb-10 sm:pt-9">
-          <ExerciseRenderer
-            structure={content.structure as unknown as FlexibleExerciseStructure}
-            progress={progressData}
-            onAssess={onQuestionAssess}
-            onAssessMany={onAssessMany}
-            interactive={isAuthenticated}
-            showAllSolutions={showAllSolutions}
-            compact={false}
-            variant="reading"
-            onSolutionOpen={onSolutionOpen}
-            onHintOpen={onHintOpen}
-            onReport={onReport}
-          />
-        </div>
-
-        {/* Solution d'ensemble (anciens contenus) : s'ouvre ici, ou avec « Voir la solution ». */}
-        {hasSolution && (
-          <div className="border-t border-line px-4 py-3 sm:px-10">
-            <button type="button" aria-expanded={wholeSolutionShown}
-              onClick={() => {
-                if (!wholeSolutionShown) { trackAction('voir-solution'); onSolutionOpen?.('solution'); }
-                setWholeLocal(!wholeSolutionShown);
-              }}
-              className={`inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold transition-colors ${
-                wholeSolutionShown ? 'bg-[#f2f1ee] text-ink-soft' : 'bg-brand-soft text-brand-hover hover:bg-brand-line'}`}>
-              {wholeSolutionShown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-              {wholeSolutionShown ? t('Masquer la solution') : t('Voir la solution')}
-            </button>
-            {!wholeSolutionShown && <FoldedSolution html={wholeSolution?.html} />}
-            {wholeSolutionShown && wholeSolution?.html && (
-              <div className="fd-read relative mt-3 overflow-hidden rounded-xl border border-line bg-[#fcfbf9]">
-                <span className="absolute inset-y-0 start-0 w-[3px] bg-brand" aria-hidden />
-                <div className="fd-sol px-4 py-3.5 sm:px-5"><TipTapRenderer content={wholeSolution.html} /></div>
-              </div>
-            )}
+      <div>
+        <BarreFeuille vue={vue} onVue={setVue} onPleinEcran={() => setPleinEcran(true)} />
+        {pleinEcran ? (
+          <div className="rounded-2xl border border-dashed border-line px-5 py-10 text-center text-[13.5px] text-ink-faint">
+            {t('L’exercice est ouvert en plein écran.')}{' '}
+            <button type="button" onClick={() => setPleinEcran(false)} className="font-semibold text-brand-hover hover:underline">{t('Revenir ici')}</button>
           </div>
-        )}
-
-        {sheetFooter}
-      </article>
+        ) : feuilleExercice}
+        <PleinEcran open={pleinEcran} onClose={() => setPleinEcran(false)} titre={content.title}>{feuilleExercice}</PleinEcran>
+      </div>
       {chart && <div className="fd-exam-narrow print:hidden">{chart}</div>}
       <AdSlot />
       <div className="flex flex-col gap-8 sm:gap-10 print:hidden">{children}</div>

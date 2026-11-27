@@ -117,6 +117,8 @@ const DiscussionsHub = page(() => import('./pages/discussions/DiscussionsHub'), 
 const DiscussionThread = page(() => import('./pages/discussions/DiscussionThread'), 'DiscussionThread');
 const DiscussionForm = page(() => import('./pages/discussions/DiscussionForm'), 'DiscussionForm');
 const Defis = page(() => import('./pages/defis/Defis'), 'Defis');
+// Astuces par chapitre (bêta du 27/11/2026, équipe seulement : la page renvoie les autres à l'accueil).
+const Astuces = page(() => import('./pages/astuces/Astuces'), 'default');
 const Membres = page(() => import('./pages/communaute/Membres'), 'Membres');
 // Messages, appels, travail à plusieurs entre abonnés mutuels (13/11/2026).
 const MessagesPage = page(() => import('./pages/messages/Messages'), 'MessagesPage');
@@ -488,6 +490,7 @@ function App() {
                     <Route path="/messages/:id" element={MESSAGERIE_ACTIVE ? <NavbarWrapper><MessagesPage /></NavbarWrapper> : <Navigate to="/" replace />} />
                     <Route path="/membres" element={MEMBRES_OUVERT ? <NavbarWrapper><Membres /></NavbarWrapper> : <MembresFerme />} />
                     <Route path="/defis" element={<NavbarWrapper><Defis /></NavbarWrapper>} />
+                    <Route path="/astuces" element={<NavbarWrapper><Astuces /></NavbarWrapper>} />
                     <Route path="/defis/:date" element={<NavbarWrapper><DefiPasse /></NavbarWrapper>} />
                     <Route path="/pilotage" element={
                       <NavbarWrapper><PilotagePage /></NavbarWrapper>
