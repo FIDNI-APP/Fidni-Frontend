@@ -17,10 +17,10 @@ import { t } from '@/i18n';
  * `interactive` (page d'une leçon, 27/11/2026) : sous le théorème ou la définition d'une notion (TVI, Rolle,
  * accroissements finis, nombre dérivé, réciproque, suites), une visualisation qu'on manipule (lesson/visualisations).
  */
-export const LessonReader: React.FC<{ structure?: FlexibleLessonStructure; interactive?: boolean }> = ({ structure, interactive = false }) => {
+export const LessonReader: React.FC<{ structure?: FlexibleLessonStructure; interactive?: boolean; chapitres?: string[] }> = ({ structure, interactive = false, chapitres = [] }) => {
   const sections = structure?.sections ?? [];
   const ref = useRef<HTMLDivElement>(null);
-  const visus = useVisualisations(ref, interactive, [structure, interactive]);
+  const visus = useVisualisations(ref, interactive, [structure, interactive, chapitres.join('|')], chapitres);
   if (sections.length === 0) {
     return <p className="py-10 text-center text-[14.5px] text-ink-faint">{t('Cette leçon n’a pas encore de contenu.')}</p>;
   }
