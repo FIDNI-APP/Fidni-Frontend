@@ -73,11 +73,22 @@ ${PAPER_GLYPHS_FACE}
 .fd-lesson .tiptap-full-renderer [data-callout-type="warning"] { border-left-color: #a23b34; }
 .fd-lesson .tiptap-full-renderer [data-callout-type="warning"] .callout-kind { color: #a23b34; }
 
+/* Feuille (27/11/2026) : serrée comme le PDF — tout le sujet se lit d'un coup d'œil. */
+.fd-sheet .tiptap-full-renderer .ProseMirror,
+.fd-sheet .fd-qnum { font-size: 16px; line-height: 1.5; }
+.fd-sheet .tiptap-full-renderer .ProseMirror p { margin-bottom: .2em; }
+.fd-sheet .tiptap-full-renderer .math-display { margin: .3em 0; }
+.fd-sheet .fd-sheet-q + .fd-sheet-q { margin-top: .55rem; }
+.fd-sheet .fd-sheet-sub { margin-top: .3rem; }
+.fd-sheet .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 15.5px; line-height: 1.55; }
+.fd-sheet .fd-sol .tiptap-full-renderer .ProseMirror p { margin-bottom: .4em; }
+
 @media (max-width: 640px) {
   .fd-read .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.6; }
   .fd-read .fd-qnum { font-size: 16.5px; line-height: 1.6; }
   .fd-read .fd-sol .tiptap-full-renderer .ProseMirror { font-size: 15.5px; }
   .fd-read .tiptap-full-renderer .katex { font-size: 1.05em; }
+  .fd-sheet .tiptap-full-renderer .ProseMirror, .fd-sheet .fd-qnum { font-size: 15.5px; line-height: 1.5; }
   .fd-lesson .tiptap-full-renderer .ProseMirror { font-size: 16.5px; line-height: 1.58; }
   .fd-lesson .tiptap-full-renderer .katex { font-size: 1.05em; }
   .fd-lesson-h2 { font-size: 20px; }
@@ -86,8 +97,15 @@ ${PAPER_GLYPHS_FACE}
   .fd-lesson .tiptap-full-renderer [data-callout-type] { padding: 9px 12px 10px; margin: 12px 0; }
 }
 
+/* Question visée par un lien (#question-…) : surlignée un instant. */
+.fd-cible { background: #fbf3e2; box-shadow: 0 0 0 8px #fbf3e2; border-radius: 6px; transition: background-color .6s, box-shadow .6s; }
+
+/* Visualisations des notions dans une leçon (27/11/2026) : textes de l'interface, pas la police de la feuille. */
+.fd-lesson .fd-visu { font-family: var(--fd-sans); }
+
 @media print {
   .fd-lesson .tiptap-full-renderer [data-callout-type] { break-inside: avoid; }
+  .fd-visu-hote { display: none !important; }
 }
 
 /* Examen : la colonne « copie » à droite seulement s'il reste la place d'une feuille à la largeur du PDF

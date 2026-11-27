@@ -33,7 +33,7 @@ import { trackAction } from '@/lib/usage';
 import type { AssessSource } from '@/lib/api/contentItemApi';
 import { useRegisterPrompt } from './pageHelpers';
 import { FoldedSolution } from './FoldedSolution';
-import { QuestionFacts } from './QuestionDifficultyTag';
+import { QuestionDifficultyTag, QuestionFacts } from './QuestionDifficultyTag';
 import { t } from '@/i18n';
 
 // =====================
@@ -81,7 +81,7 @@ interface ExerciseRendererProps {
   /** Signaler une erreur sur une question (chemin « q2 », « q2.sq1 ») ; absent = pas de bouton. */
   onReport?: (path: string) => void;
   /** « reading » : rendu de la page d'un contenu (voir l'en-tête du fichier). Défaut : rendu compact des listes. */
-  variant?: 'default' | 'reading';
+  variant?: 'default' | 'reading' | 'sheet';
 }
 
 /** Ancre d'une question (onglet Activité → « Revoir la question »). */
@@ -828,6 +828,130 @@ const ReadingSectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> 
 );
 
 // =====================
+// VARIANTE « FEUILLE » (27/11/2026)
+// =====================
+//
+// Natsu : « que la carte soit comme le rendu final de l'impression PDF, avec les petits boutons voir la solution,
+// voir l'indication […] on n'arrive pas à voir tout d'un seul coup ». Une ligne par question comme sur la feuille
+// imprimée : numéro, énoncé, et dans la marge droite le barème et deux petites pastilles (indication, solution).
+// Ce qu'on ouvre se déplie sous la question ; le résultat de l'auto-évaluation devient une marque dans la marge.
+
+const SHEET_MARK: Partial<Record<AssessmentStatus, { icon: React.ElementType; cls: string; label: string }>> = {
+  success: { icon: Check, cls: 'bg-brand-soft text-brand-hover', label: 'Réussi' },
+  partial: { icon: Contrast, cls: 'bg-[#f2f1ee] text-ink', label: 'En partie' },
+  review: { icon: RotateCcw, cls: 'bg-gold-soft text-gold-strong', label: 'À revoir' },
+  failed: { icon: RotateCcw, cls: 'bg-gold-soft text-gold-strong', label: 'À revoir' },
+};
+
+const SheetPill: React.FC<{ on: boolean; onClick: () => void; label: string; tone: 'gold' | 'brand'; tour?: string; children: React.ReactNode }> = ({
+  on, onClick, label, tone, tour, children,
+}) => (
+  <button type="button" onClick={(e) => { e.stopPropagation(); onClick(); }} aria-expanded={on} aria-label={label} title={label} data-tour={tour}
+    className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9 ${
+      tone === 'gold'
+        ? (on ? 'bg-gold-soft text-gold-strong ring-1 ring-gold-line' : 'text-ink-faint hover:bg-gold-soft hover:text-gold-strong focus-visible:ring-gold/40')
+        : (on ? 'bg-brand-soft text-brand-hover ring-1 ring-brand-line' : 'text-brand-hover/80 hover:bg-brand-soft hover:text-brand-hover focus-visible:ring-brand/40')}`}>
+    {children}
+  </button>
+);
+
+const SheetLine: React.FC<{
+  path: string; num: string; sub?: boolean; content?: ContentBlock; points?: number; difficulty?: string | null;
+  hint?: ContentBlock; solution?: ContentBlock; locked: boolean; globalShow: boolean; progress?: ProgressData;
+  onAssess?: AssessHandler; canAssess: boolean; assessOptions?: AssessmentStatus[];
+  onSolutionOpen?: (path: string) => void; onHintOpen?: (path: string) => void; onReport?: (path: string) => void;
+}> = ({ path, num, sub = false, content, points, difficulty, hint, solution, locked, globalShow, progress, onAssess, canAssess,
+  assessOptions = DEFAULT_OPTIONS, onSolutionOpen, onHintOpen, onReport }) => {
+  const hasSolution = Boolean(solution?.html) && !locked;
+  const { shown, toggle, openedHere } = useSolutionState(path, globalShow, locked, onSolutionOpen);
+  const hasHint = Boolean(hint?.html) && !locked;
+  const [hintOpen, setHintOpen] = useState(false);
+  const toggleHint = () => {
+    if (!hintOpen) { trackAction('voir-indication'); onHintOpen?.(path); }
+    setHintOpen(!hintOpen);
+  };
+  const hintShown = hasHint && hintOpen && !(hasSolution && shown);
+  const current = progress?.[path]?.status;
+  const mark = canAssess && current ? SHEET_MARK[current] : undefined;
+  const assess = (s: AssessmentStatus, source: AssessSource) => onAssess?.(path, s, source);
+  const report = onReport ? () => onReport(path) : undefined;
+  const MarkIcon = mark?.icon;
+  return (
+    <div id={questionAnchor(path)} className={`group/q scroll-mt-24 ${sub ? 'fd-sheet-sub' : 'fd-sheet-q'}`}>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-x-3">
+        <span className={`fd-qnum shrink-0 ${sub ? 'text-ink-soft' : 'text-ink'}`}>{num}{sub ? '' : '.'}</span>
+        <div className="min-w-0"><RenderContent content={content} /></div>
+        {/* Marge : tout est aligné à droite (barème de largeur fixe, puis solution, indication) : les pastilles
+            restent l'une sous l'autre d'une question à l'autre ; la difficulté passe devant. */}
+        <div className="col-start-2 row-start-2 flex items-center justify-end gap-0.5 sm:col-start-3 sm:row-start-1 sm:pt-[3px]">
+          {report && <ReportQuestionButton group="q" onClick={report} />}
+          {!locked && <QuestionDifficultyTag difficulty={difficulty} className="me-1" />}
+          {MarkIcon && (
+            <button type="button" onClick={(e) => { e.stopPropagation(); if (hasSolution && !shown) toggle(); }}
+              title={t('Ton résultat : {label}', { label: t(mark!.label) })}
+              className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${mark!.cls}`}>
+              <MarkIcon className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
+          {hasHint && <SheetPill on={hintShown} onClick={toggleHint} tone="gold" tour="indication" label={hintShown ? t('Masquer l’indication') : t('Indication')}><Lightbulb className="h-4 w-4" aria-hidden /></SheetPill>}
+          {hasSolution && <SheetPill on={shown} onClick={toggle} tone="brand" tour="solution" label={shown ? t('Masquer la solution') : t('Voir la solution')}>{shown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}</SheetPill>}
+          <span className="ms-1 min-w-[4.4rem] text-end text-[0.75rem] leading-none text-ink-faint fd-nums">{points ? `(${formatPoints(points)})` : ''}</span>
+        </div>
+      </div>
+      <div className={sub ? 'ms-9 sm:ms-10' : 'ms-6 sm:ms-7'}>
+        {hintShown && <ReadingHint hint={hint!} />}
+        {hasSolution && shown && (
+          <ReadingSolution solution={solution} onReport={report}
+            footer={canAssess ? <ReadingFound current={current} options={assessOptions} openedHere={openedHere} onAssess={assess}
+              extra={report ? <ReportLink onReport={report} /> : undefined} /> : undefined} />
+        )}
+        {!hasSolution && canAssess && !locked && (
+          <div className="mt-1.5"><ReadingAssess current={current} options={assessOptions} onPick={(s) => assess(s, 'question')} /></div>
+        )}
+        {hasHint && !hintShown && <FoldedSolution html={hint?.html} />}
+        {hasSolution && !shown && <FoldedSolution html={solution?.html} />}
+      </div>
+    </div>
+  );
+};
+
+/** Question en variante « feuille » : une ligne, ou une ligne de tête puis ses sous-questions (5.1, 5.2). */
+const SheetQuestion: React.FC<QuestionRendererProps> = ({
+  block, questionIndex, globalShowSolutions, progress, onAssess, assessOptions, onSolutionOpen, onHintOpen,
+  interactive, locked = false, onReport,
+}) => {
+  const subs = block.subQuestions ?? [];
+  const canAssess = interactive && !!onAssess && !locked;
+  const common = { locked, globalShow: globalShowSolutions, progress, onAssess, canAssess, assessOptions, onSolutionOpen, onHintOpen, onReport };
+  if (!subs.length) {
+    return <SheetLine path={block.id} num={String(questionIndex)} content={block.content} points={block.points}
+      difficulty={block.meta?.difficulty} hint={block.hint} solution={block.solution} {...common} />;
+  }
+  return (
+    <div className="fd-sheet-q">
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <span className="fd-qnum shrink-0 text-ink">{questionIndex}.</span>
+        <div className="min-w-0 flex-1"><RenderContent content={block.content} /></div>
+      </div>
+      <div className="ms-2 sm:ms-4">
+        {subs.map((sq, i) => (
+          <SheetLine key={sq.id} sub path={`${block.id}.${sq.id}`} num={`${questionIndex}.${i + 1}`} content={sq.content} points={sq.points}
+            difficulty={sq.meta?.difficulty ?? block.meta?.difficulty} hint={sq.hint} solution={sq.solution} {...common} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** Partie en variante « feuille » : titre en gras à gauche, barème entre parenthèses à droite (comme le PDF). */
+const SheetSectionHeading: React.FC<{ block: ExerciseBlock; first: boolean }> = ({ block, first }) => (
+  <div className={`fd-paper flex items-baseline justify-between gap-3 ${first ? '' : 'mt-6'} mb-1.5`}>
+    <div className="min-w-0 font-bold text-ink [&_p]:m-0"><TipTapRenderer content={block.content?.html || ''} /></div>
+    {Number(block.points) > 0 && <span className="shrink-0 text-[13px] text-ink-faint fd-nums">({formatPoints(Number(block.points))})</span>}
+  </div>
+);
+
+// =====================
 // MAIN RENDERER
 // =====================
 
@@ -854,13 +978,14 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
     );
   }
 
-  const reading = variant === 'reading';
+  const sheet = variant === 'sheet';
+  const reading = variant === 'reading' || sheet;
   const isCompact = compact && !reading;
-  const Question = reading ? ReadingQuestion : QuestionRenderer;
-  const Heading = reading ? ReadingSectionHeading : SectionHeading;
+  const Question = sheet ? SheetQuestion : reading ? ReadingQuestion : QuestionRenderer;
+  const Heading = sheet ? SheetSectionHeading : reading ? ReadingSectionHeading : SectionHeading;
 
   return (
-    <div className={isCompact ? 'content-compact-view fd-ltr bg-white rounded-xl border border-line' : reading ? 'fd-read' : 'fd-ltr'}>
+    <div className={isCompact ? 'content-compact-view fd-ltr bg-white rounded-xl border border-line' : sheet ? 'fd-read fd-sheet' : reading ? 'fd-read' : 'fd-ltr'}>
       {isCompact && <CompactStyles />}
       <div className={isCompact ? 'p-4' : ''}>
         {(() => {
@@ -873,7 +998,7 @@ export const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
             if (block.type === 'context') {
               const prev = structure.blocks[index - 1];
               return (
-                <div key={block.id} className={index === 0 ? '' : reading ? (prev?.type === 'section' ? '' : 'mt-8 sm:mt-10') : 'mt-2'}>
+                <div key={block.id} className={index === 0 ? '' : sheet ? (prev?.type === 'section' ? '' : 'mt-2.5') : reading ? (prev?.type === 'section' ? '' : 'mt-8 sm:mt-10') : 'mt-2'}>
                   <RenderContent content={block.content} />
                 </div>
               );

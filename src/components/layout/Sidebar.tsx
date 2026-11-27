@@ -6,7 +6,7 @@ import {
   User as UserIcon, Bookmark as BookmarkIcon, Settings, LogOut, LogIn,
   X, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, ChevronDown,
   Brain, TrendingUp, Gauge, Landmark, CalendarCheck, UserPlus,
-  FileText, FilePlus2, Moon, Sun, MessagesSquare, MessageSquareText, MessageCircle, Flame, Check, Users,
+  FileText, FilePlus2, Moon, Sun, MessagesSquare, MessageSquareText, MessageCircle, Flame, Check, Users, Lightbulb,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
 import { RESSORT_FEUILLE, SORTIE_FEUILLE, useGlisserPourFermer } from '@/components/ui/glisserPourFermer';
@@ -19,10 +19,11 @@ import { useMessagerieFacultative } from '@/contexts/MessagerieContext';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOpenSignup } from '@/components/auth/SignupPrompt';
 import { getClassLevels } from '@/lib/api';
-import { MEMBRES_OUVERT, MESSAGERIE_ACTIVE, canCreateContent, canSeeParcours, isTeacherOrAdmin } from '@/lib/features';
+import { MEMBRES_OUVERT, MESSAGERIE_ACTIVE, canCreateContent, canSeeParcours, isModerator, isTeacherOrAdmin } from '@/lib/features';
 import type { User } from '@/types';
 import { useQuizNouveau } from '@/components/skilliq/annonce';
 import { sectionHome, useHasClassroom, useDiscussionCount, useDefiMenu } from './nav';
+import { useAstucesOuvertes } from '@/components/astuces/etatAstuces';
 import LogoFidni from '@/assets/logo-fidni.svg';
 import LogoFidniSombre from '@/assets/logo-fidni-sombre.svg';
 import { t, useLang } from '@/i18n';
@@ -46,6 +47,8 @@ interface NavItem {
   compteur?: boolean;
   /** Défi du jour : pastille tant qu'il n'est pas fait, puis la série (nav.ts useDefiMenu). */
   defi?: boolean;
+  /** Fonction en bêta : l'équipe seulement, avec la mention « bêta ». */
+  beta?: boolean;
   /** Membres connectés seulement. */
   membres?: boolean;
   /** Messages : nombre de conversations non lues (MessagerieContext). */
@@ -84,6 +87,8 @@ const WORK_GROUP: NavGroup = {
     { to: '/lessons', label: 'Leçons', icon: LessonIcon, match: ['/lessons', '/lesson'], exclude: NEW_CONTENT, levels: '/lessons' },
     { to: '/parcours', label: 'Parcours', icon: Route, match: ['/parcours', '/learning-path'] },
     { to: '/exercises', label: 'Exercices', icon: BookOpen, match: ['/exercises', '/exercise', '/new', '/edit'], exclude: NEW_CONTENT, levels: '/exercises' },
+    // Astuces : bêta du 27/11/2026, l'équipe seulement (filtrée plus bas).
+    { to: '/astuces', label: 'Astuces', icon: Lightbulb, match: ['/astuces'], beta: true },
     { to: '/exams', label: 'Devoirs (DS)', icon: APlusIcon, match: ['/exams', '/exam'], exclude: ['/exams/nationaux', ...NEW_CONTENT], levels: '/exams' },
     { to: '/exams/nationaux', label: 'Bac national', icon: Landmark, match: ['/exams/nationaux'] },
     { to: '/concours', label: 'Concours', icon: Trophy, match: ['/concours'] },
@@ -275,10 +280,15 @@ const SidebarInner: React.FC<{
   const levels = useLevels();
   const teacherTools = isTeacherOrAdmin(user);
   const canCreate = canCreateContent(user);
+  const equipe = isModerator(user);
+  // Astuces : l'équipe toujours, les autres membres quand l'équipe a ouvert la section.
+  const astucesOuvertes = useAstucesOuvertes();
 
   const groups = useMemo(() => {
     // Parcours n'est pas terminé : entrée visible des admins seulement (lib/features.ts).
-    const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => showParcours || it.to !== '/parcours') };
+    const work = { ...WORK_GROUP, items: WORK_GROUP.items.filter((it) => (showParcours || it.to !== '/parcours') && (!it.beta || equipe || (it.to === '/astuces' && astucesOuvertes)))
+      // La mention « bêta » ne s'affiche que pour l'équipe.
+      .map((it) => (it.beta && !equipe ? { ...it, beta: false } : it)) };
     if (!isAuthenticated) return [HOME_GROUP, work, { ...COMMUNITY_GROUP, items: COMMUNITY_GROUP.items.filter((it) => !it.membres) }];
     if (teacherTools) {
       // « Ajouter un contenu » : l'équipe seulement pour l'instant (12/10/2026).
@@ -286,7 +296,7 @@ const SidebarInner: React.FC<{
       return [HOME_GROUP, work, COMMUNITY_GROUP, tools, FOLLOW_GROUP];
     }
     return hasClassroom ? [HOME_GROUP, work, COMMUNITY_GROUP, FOLLOW_GROUP, CLASS_GROUP] : [HOME_GROUP, work, COMMUNITY_GROUP, FOLLOW_GROUP];
-  }, [isAuthenticated, showParcours, hasClassroom, teacherTools, canCreate]);
+  }, [isAuthenticated, showParcours, hasClassroom, teacherTools, canCreate, equipe, astucesOuvertes]);
 
   // Section imposée par la page (ex. un sujet du Bac national, sous /exams/123 comme un DS) :
   // explicite (BreadcrumbContext.section), sinon l'adresse du premier élément du fil d'Ariane.
@@ -521,6 +531,7 @@ const NavRow: React.FC<{
       {/* « Nouveau » dans la barre : un point doré à droite (11/11/2026 — sous le libellé, il rendait cette ligne
           plus haute que les autres ; à côté, le mot ne tient pas dans 240 px). Le mot reste dans le tiroir. */}
       {!collapsed && <span className="truncate">{t(item.label)}</span>}
+      {item.beta && !collapsed && <span className="ms-auto rounded-full bg-gold-soft px-1.5 py-px text-[10.5px] font-semibold text-gold-strong">{t('bêta')}</span>}
       {item.nouveau && !collapsed && !drawer && <QuizNouveau place="dot" active={active} />}
       {item.nouveau && (collapsed || drawer) && <QuizNouveau place={collapsed ? 'point' : 'droite'} active={active} />}
       {item.compteur && <DiscussionCount collapsed={collapsed} active={active} />}
