@@ -219,7 +219,7 @@ export const ContentMainCard: React.FC<ContentMainCardProps> = ({
             {/* Feuille de cahier, avec les annotations de l'élève (16/10/2026). */}
             <LessonSheet lessonId={content.id} isAuthenticated={isAuthenticated} footer={sheetFooter}>
               <div ref={lessonRef} data-tour="lecon-contenu" className="pb-4 pt-2 sm:pb-6 sm:pt-4">
-                <LessonReader structure={content.structure as FlexibleLessonStructure} interactive />
+                <LessonReader structure={content.structure as FlexibleLessonStructure} interactive chapitres={(content.chapters ?? []).map((c) => c.name)} />
               </div>
             </LessonSheet>
           </div>
