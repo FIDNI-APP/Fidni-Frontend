@@ -8,6 +8,8 @@ import React, { useMemo } from 'react';
 import { renderContentHtml } from '@/components/editor/TipTapRenderer';
 import { ROMAN } from '@/lib/paperFont';
 import type { SheetBlock } from './PagedSheet';
+import { ImpressionVisu } from '@/components/lesson/visualisations/outils';
+import { notionDuTexte } from '@/components/lesson/visualisations/useVisualisations';
 
 export type SolutionsMode = 'none' | 'end' | 'inline';
 
@@ -33,6 +35,8 @@ export interface PaperItem {
   blocks: Block[];
   /** Leçon : ses parties. */
   sections?: LessonSection[];
+  /** Noms des chapitres (leçon : choix des figures imprimées). */
+  chapitres?: string[];
   /** Cahier : chapitre ouvert par cette leçon, et notes de l'élève sur ce chapitre. */
   chapterHeading?: string;
   chapterNotes?: string;
@@ -60,6 +64,7 @@ export const toItem = (c: any, key: string): PaperItem => ({
   title: c.title || 'Sans titre',
   blocks: Array.isArray(c.structure?.blocks) ? c.structure.blocks : [],
   sections: Array.isArray(c.structure?.sections) ? c.structure.sections : undefined,
+  chapitres: Array.isArray(c.chapters) ? c.chapters.map((ch: { name?: string } | string) => (typeof ch === 'string' ? ch : ch?.name || '')).filter(Boolean) : undefined,
   subject: typeof c.subject === 'string' ? c.subject : c.subject?.name,
   level: c.class_levels?.[0] ? (typeof c.class_levels[0] === 'string' ? c.class_levels[0] : c.class_levels[0].name) : undefined,
   difficulty: c.difficulty,
@@ -200,17 +205,60 @@ export const exerciseBlocks = (item: PaperItem, inlineSolutions: boolean): Sheet
 
 export const stripHtml = (h?: string) => (h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-/** Leçon : parties numérotées I, II… et sous-parties 1, 2…, encadrés (définitions, théorèmes) conservés. */
+/** Largeur des figures imprimées (px) : un peu moins que la ligne de texte d'une feuille A4. */
+const LARGEUR_FIGURE = 600;
+
+/** Figure d'une notion sur la feuille : statique (état de départ), sans consigne ni réglages. */
+const FigureImprimee: React.FC<{ Composant: React.FC }> = ({ Composant }) => (
+  <div className="fp-figure" style={{ maxWidth: LARGEUR_FIGURE + 2, margin: '0 auto' }}>
+    <ImpressionVisu.Provider value={LARGEUR_FIGURE}><Composant /></ImpressionVisu.Provider>
+  </div>
+);
+
+/**
+ * Leçon : parties numérotées I, II… et sous-parties 1, 2…, encadrés (définitions, théorèmes) conservés.
+ * 28/11/2026 : les figures des notions (TVI, Rolle, suites…) sont imprimées comme sur la page, sous l'encadré ou le
+ * titre qui parle de la notion, en version figée (Natsu : « en mode statique »).
+ */
 export const lessonBlocks = (item: PaperItem): SheetBlock[] => {
   const out: SheetBlock[] = [];
+  const deja = new Set<string>();
+  const chapitres = item.chapitres ?? [];
+  let enAttente: { id: string; Composant: React.FC }[] = [];
+  const notions = (texte: string) => {
+    const trouvees: { id: string; Composant: React.FC }[] = [];
+    for (let v = notionDuTexte(texte, chapitres, deja); v; v = notionDuTexte(texte, chapitres, deja)) {
+      deja.add(v.id);
+      trouvees.push(v);
+    }
+    return trouvees;
+  };
+  const figures = (liste: { id: string; Composant: React.FC }[], cle: string) => liste.forEach((v) =>
+    out.push({ key: `${cle}:fig-${v.id}`, node: <FigureImprimee Composant={v.Composant} /> }));
+  const parties = (html: string | undefined, cle: string, className?: string) => {
+    richParts(html).forEach((h, k) => {
+      out.push({ key: `${cle}.${k}`, node: <RichPart html={h} className={className} /> });
+      // Une figure sous l'encadré ou le titre qui parle de la notion ; celle d'un titre de partie, après le 1er bloc.
+      const parle = /data-callout-type|^<h[23]/.test(h) ? notions(stripHtml(h)) : [];
+      figures([...enAttente, ...parle], `${cle}.${k}`);
+      enAttente = [];
+    });
+  };
   (item.sections || []).forEach((sec, i) => {
-    if (sec.title) out.push({ key: `${item.key}:h${i}`, keepWithNext: true, node: <h2 className="fp-l-h2"><span>{ROMAN[i] || i + 1}.</span> {stripHtml(sec.title)}</h2> });
-    richParts(sec.content?.html).forEach((h, k) => out.push({ key: `${item.key}:s${i}.${k}`, node: <RichPart html={h} /> }));
+    if (sec.title) {
+      out.push({ key: `${item.key}:h${i}`, keepWithNext: true, node: <h2 className="fp-l-h2"><span>{ROMAN[i] || i + 1}.</span> {stripHtml(sec.title)}</h2> });
+      enAttente.push(...notions(stripHtml(sec.title)));
+    }
+    parties(sec.content?.html, `${item.key}:s${i}`);
     (sec.subSections || []).forEach((sub, j) => {
-      if (sub.title) out.push({ key: `${item.key}:h${i}.${j}`, keepWithNext: true, node: <h3 className="fp-l-h3 fp-l-indent"><span>{j + 1}.</span> {stripHtml(sub.title)}</h3> });
-      richParts(sub.content?.html).forEach((h, k) => out.push({ key: `${item.key}:s${i}.${j}.${k}`, node: <RichPart html={h} className="fp-l-indent" /> }));
+      if (sub.title) {
+        out.push({ key: `${item.key}:h${i}.${j}`, keepWithNext: true, node: <h3 className="fp-l-h3 fp-l-indent"><span>{j + 1}.</span> {stripHtml(sub.title)}</h3> });
+        enAttente.push(...notions(stripHtml(sub.title)));
+      }
+      parties(sub.content?.html, `${item.key}:s${i}.${j}`, 'fp-l-indent');
     });
   });
+  figures(enAttente, `${item.key}:fin`);
   return out;
 };
 

@@ -105,7 +105,6 @@ ${PAPER_GLYPHS_FACE}
 
 @media print {
   .fd-lesson .tiptap-full-renderer [data-callout-type] { break-inside: avoid; }
-  .fd-visu-hote { display: none !important; }
 }
 
 /* Examen : la colonne « copie » à droite seulement s'il reste la place d'une feuille à la largeur du PDF

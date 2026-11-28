@@ -3,7 +3,7 @@
  * à la souris ou au doigt, courbe lisse qui passe par des points (spline cubique naturelle), recherche des zéros.
  * Palette Fidni : encre, vert (la courbe, ce qui est juste), or (ce qu'on cherche : c, k, la sécante).
  */
-import React, { useCallback, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import katex from 'katex';
 import { trackAction } from '@/lib/usage';
@@ -32,7 +32,15 @@ export function echelle(vue: Vue, w: number, h: number) {
  * Largeur disponible pour le dessin. Ref « callback » : la mesure suit l'élément même s'il est remplacé (la leçon
  * replace parfois ses emplacements) ; une largeur nulle (élément retiré de la page) est ignorée.
  */
+/**
+ * Impression (feuille PDF, 28/11/2026, Natsu : « que les impressions puissent imprimer ces courbes, en mode statique ») :
+ * une largeur fixe (la mise en page mesure les blocs une fois), pas de consigne ni de réglages, la figure dans l'état de
+ * départ avec sa phrase. Valeur = largeur du dessin en px ; null = page du site (figure à manipuler).
+ */
+export const ImpressionVisu = createContext<number | null>(null);
+
 export function useLargeur(min = 280): [(el: HTMLDivElement | null) => void, number] {
+  const fixe = useContext(ImpressionVisu);
   const [w, setW] = useState(0);
   const ro = useRef<ResizeObserver | null>(null);
   const ref = useCallback((el: HTMLDivElement | null) => {
@@ -44,6 +52,7 @@ export function useLargeur(min = 280): [(el: HTMLDivElement | null) => void, num
     ro.current = new ResizeObserver(maj);
     ro.current.observe(el);
   }, [min]);
+  if (fixe) return [ref, fixe];
   return [ref, w || 560];
 }
 
@@ -164,16 +173,25 @@ export const Cadre: React.FC<{ titre: string; consigne: string; message: React.R
 }) => {
   // Mesure : la visualisation a-t-elle été manipulée (une fois par visualisation affichée) ?
   const vu = useRef(false);
+  if (useContext(ImpressionVisu)) {
+    // Feuille imprimée : la figure et sa phrase, sans consigne ni réglages (on ne manipule pas du papier).
+    return (
+      <figure className="fd-visu fd-visu-imprime my-2" style={{ fontFamily: 'var(--fd-sans)', breakInside: 'avoid' }}>
+        <div className="overflow-hidden rounded border border-[#e2ded6] bg-white">{children}</div>
+        <figcaption className="mt-1.5 text-[12.5px] leading-snug text-[#3a362f]"><b className="text-[#15633c]">{titre}.</b> {message}</figcaption>
+      </figure>
+    );
+  }
   return (
-  <figure className="fd-visu fd-fixe my-4 overflow-hidden rounded-xl border border-[#e2ded6] bg-[#fbfaf8]" style={{ fontFamily: 'var(--fd-sans)' }}
+  <figure className="fd-visu fd-fixe my-4 overflow-hidden rounded-xl border border-[#e2ded6] bg-[#fbfaf8]" style={{ fontFamily: 'var(--fd-sans)', breakInside: 'avoid' }}
     onPointerDownCapture={() => { if (!vu.current) { vu.current = true; trackAction('lecon-interactive'); } }}>
     <div className="border-b border-[#e2ded6] px-4 py-2.5">
       <div className="text-[13px] font-semibold text-[#15633c]">{titre}</div>
-      <div className="text-[13px] text-[#5b564d]">{consigne}</div>
+      <div className="text-[13px] text-[#5b564d] print:hidden">{consigne}</div>
     </div>
     <div className="p-3 sm:p-4">
       <div className="overflow-hidden rounded-lg border border-[#ece8e0] bg-white">{children}</div>
-      {reglages && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-[#3a362f]">{reglages}</div>}
+      {reglages && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-[#3a362f] print:hidden">{reglages}</div>}
       <div className="mt-3 rounded-lg bg-[#eef5f0] px-3 py-2 text-[13.5px] leading-snug text-[#1f3a2b]" aria-live="polite">{message}</div>
     </div>
   </figure>
