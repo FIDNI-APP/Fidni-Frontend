@@ -59,6 +59,19 @@ const normaliserMots = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f
 
 export interface Emplacement { id: string; hote: HTMLElement; Composant: React.FC }
 
+type Regle = (typeof VISUALISATIONS)[number];
+
+/** La notion d'un bloc de texte (encadré, titre), ou null ; `deja` : notions déjà placées dans la leçon. */
+export function notionDuTexte(texte: string, chapitres: string[], deja: Set<string>): Regle | null {
+  const chap = normaliserMots(chapitres.join(' | '));
+  const mots = normaliserMots(texte), serre = normaliser(texte);
+  for (const v of VISUALISATIONS) {
+    if (deja.has(v.id) || (v.chapitres && chap && !v.chapitres.test(chap))) continue;
+    if ((v.motif.test(mots) || v.motif.test(serre)) && (!v.exige || v.exige.test(mots) || v.exige.test(serre))) return v;
+  }
+  return null;
+}
+
 /** `chapitres` : noms des chapitres de la leçon ; une visualisation liée à un chapitre ne sort pas ailleurs (forme
  * exponentielle d'un complexe ≠ fonction exponentielle). Inconnus : pas de filtre. */
 export function useVisualisations(container: React.RefObject<HTMLElement | null>, actif: boolean, deps: unknown[], chapitres: string[] = []): Emplacement[] {
